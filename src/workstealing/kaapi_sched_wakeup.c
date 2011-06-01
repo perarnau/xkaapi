@@ -104,8 +104,8 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
     
     if (thread != 0)
     {
-      kaapi_assert_debug( kaapi_cpuset_has(thread->affinity, kproc_thiefid)
-        || (kaapi_cpuset_empty(thread->affinity) && (kproc->kid == kproc_thiefid)) );
+      kaapi_assert_debug( kaapi_cpuset_has( &thread->affinity, kproc_thiefid)
+        || (kaapi_cpuset_empty( &thread->affinity) && (kproc->kid == kproc_thiefid)) );
       return thread;
     }
   }
@@ -127,7 +127,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
     thread = cell->thread;
     
     /* add affinity here because in dfg the signal of suspended thread does not move it to ready list */
-    if ((thread !=0) && kaapi_cpuset_has(thread->affinity, kproc_thiefid) 
+    if ((thread !=0) && kaapi_cpuset_has( &thread->affinity, kproc_thiefid) 
       && kaapi_thread_isready(thread) && (thread == kaapi_wsqueuectxt_steal_cell(cell))
     )
     {

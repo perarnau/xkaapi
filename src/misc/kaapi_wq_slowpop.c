@@ -55,11 +55,10 @@ int kaapi_workqueue_slowpop(
 {
   kaapi_workqueue_index_t size;
   kaapi_workqueue_index_t loc_beg;
-  kaapi_processor_t* const kproc = kaapi_get_current_processor();
 
-  if ( kproc ==0 ) return ESRCH;
+  if ( kwq->lock ==0 ) return ESRCH;
 
-  kaapi_sched_lock(&kproc->lock);
+  kaapi_sched_lock( kwq->lock );
 
   loc_beg = kwq->beg;
   size = kwq->end - loc_beg;
@@ -70,13 +69,13 @@ int kaapi_workqueue_slowpop(
   loc_beg += size;
   kwq->beg = loc_beg;
 
-  kaapi_sched_unlock(&kproc->lock);
+  kaapi_sched_unlock( kwq->lock );
 
   *end = loc_beg;
   *beg = *end - size;
   return 0;
 
 empty_case:
-  kaapi_sched_unlock(&kproc->lock);
+  kaapi_sched_unlock( kwq->lock );
   return EBUSY;
 }

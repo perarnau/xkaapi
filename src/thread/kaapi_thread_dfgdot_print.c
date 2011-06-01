@@ -277,7 +277,7 @@ static inline void _kaapi_print_task(
   fprintf( file, "%lu [label=\"%s\\n task=%p\\n date=%" PRIu64
            "\\n wc=%i, counter=%i, \", shape=%s, style=filled, color=orange];\n", 
     (uintptr_t)task, fname, (void*)task, 
-    td->date, 
+    td->u.acl.date, 
     (int)td->wc,
     (int)KAAPI_ATOMIC_READ(&td->counter),
     shape
@@ -286,7 +286,7 @@ static inline void _kaapi_print_task(
   if (!noprint_activationlink)
   {
     /* display activation link */
-    lk = td->list.front;
+    lk = td->u.acl.list.front;
     while (lk !=0)
     {
       tda = lk->td;
@@ -295,9 +295,9 @@ static inline void _kaapi_print_task(
     }  
 
     /* display bcast link */
-    if (td->bcast !=0)
+    if (td->u.acl.bcast !=0)
     {
-      lk = td->bcast->front;
+      lk = td->u.acl.bcast->front;
       while (lk !=0)
       {
         tda = lk->td;

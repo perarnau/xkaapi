@@ -106,6 +106,7 @@ KAAPI_DECL_BASICTYPEFORMAT(kaapi_ulong_format, unsigned long, "%lu")
 KAAPI_DECL_BASICTYPEFORMAT(kaapi_ulonglong_format, unsigned long long, "%llu")
 KAAPI_DECL_BASICTYPEFORMAT(kaapi_float_format, float, "%e")
 KAAPI_DECL_BASICTYPEFORMAT(kaapi_double_format, double, "%e")  
+KAAPI_DECL_BASICTYPEFORMAT(kaapi_longdouble_format, long double, "%Le")  
 
 /* void pointer format */
 static void voidp_type_cstor(void* addr)
@@ -240,11 +241,12 @@ void kaapi_init_basicformat(void)
   KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ulonglong_format, unsigned long long, "%llu")
   KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_float_format, float, "%e")
   KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_double_format, double, "%e")  
+  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_longdouble_format, long double, "%le")  
 
   kaapi_format_structregister
   ( 
    voidp_type_fnc,
-   "voidp_type",
+   "kaapi_voidp_format",
    sizeof(void*),
    voidp_type_cstor,
    voidp_type_dstor,

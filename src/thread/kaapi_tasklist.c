@@ -108,13 +108,13 @@ void kaapi_tasklist_push_broadcasttask(
   al->td    = td_bcast;
   al->queue = 0;
   al->next  = 0;
-  if (td_writer->bcast ==0) 
-    td_writer->bcast = (kaapi_activationlist_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_activationlist_t));
-  if (td_writer->bcast->back ==0)
-    td_writer->bcast->front = td_writer->bcast->back = al;
+  if (td_writer->u.acl.bcast ==0) 
+    td_writer->u.acl.bcast = (kaapi_activationlist_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_activationlist_t));
+  if (td_writer->u.acl.bcast->back ==0)
+    td_writer->u.acl.bcast->front = td_writer->u.acl.bcast->back = al;
   else {
-    td_writer->bcast->back->next = al;
-    td_writer->bcast->back = al;
+    td_writer->u.acl.bcast->back->next = al;
+    td_writer->u.acl.bcast->back = al;
   }
 }
 
@@ -128,8 +128,8 @@ void kaapi_print_state_tasklist( kaapi_tasklist_t* tl )
   while (curr_activated !=0)
   {
     uint64_t date = 0;
-    if (curr_activated->td->exec_date !=0)
-      date =  curr_activated->td->exec_date-kaapi_default_param.startuptime;
+    if (curr_activated->td->u.acl.exec_date !=0)
+      date =  curr_activated->td->u.acl.exec_date-kaapi_default_param.startuptime;
     if (curr_activated->td->wc ==0)
       str = "";
     else if ((KAAPI_ATOMIC_READ(&curr_activated->td->counter) % curr_activated->td->wc ==0) && (date ==0) )

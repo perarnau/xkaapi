@@ -87,6 +87,9 @@ static kaapi_reducor_t kaapi_format_default_get_reducor
     (const struct kaapi_format_t* f, unsigned int i, const void* sp )
 { return f->_reducor_params[i]; }
 
+static void kaapi_format_default_get_task_binding 
+  (const struct kaapi_format_t* f, const kaapi_task_t* task, kaapi_task_binding_t* b)
+{ b->type = KAAPI_BINDING_ANY; }
 
 /**
 */
@@ -103,8 +106,8 @@ kaapi_format_id_t kaapi_format_taskregister_static(
         const kaapi_offset_t        offset_cwflag[],
         const kaapi_format_t*       fmt_param[],
         const kaapi_memory_view_t   view_param[],
-        const kaapi_reducor_t       reducor_param[]
-)
+        const kaapi_reducor_t       reducor_param[],
+        const kaapi_task_binding_t* task_binding)
 {
   kaapi_format_register( fmt, name );
 
@@ -152,6 +155,9 @@ kaapi_format_id_t kaapi_format_taskregister_static(
     memcpy(fmt->_reducor_params, reducor_param, sizeof(kaapi_reducor_t)*count );
   }
 
+  if (task_binding)
+    fmt->_task_binding = *task_binding;
+
   /* initialize to default functions */
   fmt->get_count_params = kaapi_format_default_get_count_params;
   fmt->get_mode_param   = kaapi_format_default_get_mode_param;
@@ -163,6 +169,7 @@ kaapi_format_id_t kaapi_format_taskregister_static(
   fmt->get_view_param   = kaapi_format_default_get_view_param;
   fmt->reducor          = kaapi_format_default_reduce_param;
   fmt->get_reducor      = kaapi_format_default_get_reducor;
+  fmt->get_task_binding	= kaapi_format_default_get_task_binding;
   
   memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));
   

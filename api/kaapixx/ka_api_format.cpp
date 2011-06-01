@@ -122,8 +122,10 @@ FormatTask::FormatTask(
   const kaapi_offset_t        offset_cwflag[],
   const kaapi_format_t*       fmt_param[],
   const kaapi_memory_view_t   view_param[],
-  const kaapi_reducor_t       reducor_param[]
-) : Format((kaapi_format_t*)0)
+  const kaapi_reducor_t       reducor_param[],
+  const kaapi_task_binding_t* task_bind
+) 
+ : Format((kaapi_format_t*)0)
 {
   std::string fmt_name = std::string("__Z4TypeI")+name;
   if (fmt ==0)
@@ -141,7 +143,8 @@ FormatTask::FormatTask(
           offset_cwflag,
           fmt_param,
           view_param,
-          reducor_param
+          reducor_param,
+          task_bind
     );
   }
 }
@@ -162,8 +165,10 @@ FormatTask::FormatTask(
   kaapi_memory_view_t       (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*),
   void                      (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
   void                      (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*),
-  kaapi_reducor_t           (*get_reducor )    (const struct kaapi_format_t*, unsigned int, const void*)
-) : Format((kaapi_format_t*)0)
+  kaapi_reducor_t           (*get_reducor )    (const struct kaapi_format_t*, unsigned int, const void*),
+  void                      (*get_task_binding)(const struct kaapi_format_t*, const kaapi_task_t*, kaapi_task_binding_t*)
+) 
+ : Format((kaapi_format_t*)0)
 {
   std::string fmt_name = std::string("__Z4TypeI")+name;
   if (fmt ==0) {
@@ -184,7 +189,8 @@ FormatTask::FormatTask(
   /**/    get_view_param,
   /**/    set_view_param,
           reducor,
-          get_reducor
+          get_reducor,
+          get_task_binding
     );
   }
 }

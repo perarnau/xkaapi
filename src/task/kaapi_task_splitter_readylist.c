@@ -60,12 +60,17 @@ int kaapi_task_splitter_readylist(
   kaapi_taskstealready_arg_t* argsteal;
   kaapi_reply_t*              stealreply;
 
+  kaapi_assert_debug( taskdescr_beg != taskdescr_end );
 #if defined(KAAPI_SCHED_LOCK_CAS)
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&thread->proc->lock) != 0 );
 #endif
   size_t blocsize = (taskdescr_end-taskdescr_beg+countreq-1)/countreq;
   
   /* find the first request in the list */
+
+  /* one single increment in place of several */
+  KAAPI_ATOMIC_ADD(&tasklist->count_thief, taskdescr_end-taskdescr_beg);
+
   while (taskdescr_beg != taskdescr_end)
   {
     request = kaapi_listrequest_iterator_get( lrequests, lrrange );
@@ -82,10 +87,7 @@ int kaapi_task_splitter_readylist(
       The original body is saved as the extra body of the original task data structure.
     */
     argsteal = (kaapi_taskstealready_arg_t*)stealreply->udata;
-    argsteal->origin_thread         = thread;
     argsteal->origin_tasklist       = tasklist;
-//        (tasklist->master == 0 ? tasklist : tasklist->master);
-    argsteal->origin_cnttasks       = tasklist->cnt_tasks;
     argsteal->origin_td_beg         = taskdescr_beg;
     taskdescr_beg += blocsize;
     if (taskdescr_beg > taskdescr_end)
@@ -97,9 +99,6 @@ int kaapi_task_splitter_readylist(
 
     stealreply->u.s_task.body       = kaapi_taskstealready_body;
     
-    /* one more thief */
-    KAAPI_ATOMIC_INCR(&tasklist->count_thief);
-
     _kaapi_request_reply( request, KAAPI_REPLY_S_TASK); /* success of steal */
   
     /* update next request to process */

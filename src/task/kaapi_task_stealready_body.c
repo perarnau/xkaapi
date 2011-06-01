@@ -87,10 +87,11 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
      - they are directly pushed into the workqueue.
   */
   kaapi_thread_tasklistready_push_init_fromsteal( &tasklist->rtl, arg->origin_td_beg, arg->origin_td_end);
-  kaapi_thread_tasklist_commit_ready( tasklist );
-  
+
   /* keep the first task to execute outside the workqueue */
   tasklist->context.chkpt = 2;
+  tasklist->context.td    =  kaapi_thread_tasklist_commit_ready_and_steal( tasklist );
+  
 
 #if 0//defined(KAAPI_DEBUG)
   kaapi_sched_lock( &thread->proc->lock );

@@ -77,12 +77,12 @@ static int kaapi_task_descriptor_print( FILE* file, int pad, kaapi_taskdescr_t* 
 
   kaapi_print_pad(file, pad);
   fprintf(file, "td:%p  date:%" PRIu64 "  task->%p  name:%s", 
-    (void*)td, td->date, (void*)&td->task,
+    (void*)td, td->u.acl.date, (void*)&td->task,
     name
   );
 
   /* activation list */
-  lk = td->list.front;
+  lk = td->u.acl.list.front;
   if (lk !=0) 
   {
     kaapi_taskdescr_t* tda;
@@ -98,7 +98,7 @@ static int kaapi_task_descriptor_print( FILE* file, int pad, kaapi_taskdescr_t* 
   }
   
   /* bcast list */
-  bcast = td->bcast;
+  bcast = td->u.acl.bcast;
   if (bcast !=0)
   {
     kaapi_taskdescr_t* tda;
@@ -132,8 +132,8 @@ static int kaapi_insert_unvisited_td( kaapi_hashmap_t* khm, kaapi_activationlink
     {
       entry->u.data.tag = 1; /* task inserted */
       entry->u.data.ptr = tda;
-      if (tda->list.front !=0)
-        kaapi_insert_unvisited_td(khm, tda->list.front);
+      if (tda->u.acl.list.front !=0)
+        kaapi_insert_unvisited_td(khm, tda->u.acl.list.front);
     }
     lk = lk->next;
   }
@@ -164,7 +164,7 @@ int kaapi_thread_tasklist_print( FILE* file, kaapi_tasklist_t* tl )
       entry->u.data.ptr = curr->td; 
 
       /* add other td */
-      kaapi_insert_unvisited_td( &visit_khm, curr->td->list.front );
+      kaapi_insert_unvisited_td( &visit_khm, curr->td->u.acl.list.front );
     }
     curr = curr->next;
   }

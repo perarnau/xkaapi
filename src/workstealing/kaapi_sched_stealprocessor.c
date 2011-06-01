@@ -45,6 +45,9 @@
 */
 #include "kaapi_impl.h"
 
+
+extern unsigned long kaapi_numa_get_kid_binding(unsigned int);
+
 /** Most important assumption here:
     kaapi_sched_lock was locked.
 */
@@ -54,7 +57,11 @@ int kaapi_sched_stealprocessor(
   kaapi_listrequest_iterator_t* lrrange
 )
 {
-  kaapi_request_t* request;
+  kaapi_request_t*          request;
+  kaapi_reply_t*            reply;
+  kaapi_wsqueuectxt_cell_t* cell;
+  kaapi_thread_context_t*   thread;
+  unsigned int              thiefid;
 
   /* test should be done before calling the function */
   kaapi_assert_debug( !kaapi_listrequest_iterator_empty(lrrange) );
@@ -62,52 +69,50 @@ int kaapi_sched_stealprocessor(
   /* first request */
   request = kaapi_listrequest_iterator_get( lrequests, lrrange );
 
-  /* try to steal ready threads until nore more request is available */
+  /* 1/ steal in ready list */
   while ((request !=0) && !kaapi_sched_readyempty(kproc))
   {
-    kaapi_thread_context_t* thread;
-    thread = kaapi_sched_stealready( kproc, kaapi_request_getthiefid(request) );
+    thread = kaapi_sched_stealready( kproc, thiefid);
     if (thread != 0)
     {
-      kaapi_assert_debug( kaapi_cpuset_has(thread->affinity, kaapi_request_getthiefid(request)) );
       /* reply */
-      kaapi_reply_t* reply = kaapi_request_getreply(request);
       reply->u.s_thread = thread;
       _kaapi_request_reply(request, KAAPI_REPLY_S_THREAD);
       request = kaapi_listrequest_iterator_next( lrequests, lrrange );
-      continue;
-    }
-    break;
-  }
-
-#if 1  
-  if (1)
-  { /* try to steal into suspended list of threads
-       The only condition to ensure is that a thread context that will be destroy should
-       lock the kprocessor to avoid iterations.
-    */
-    kaapi_wsqueuectxt_cell_t* cell;
-    cell = kproc->lsuspend.tail;
-    while ( !kaapi_listrequest_iterator_empty(lrrange) && (cell !=0))
-    {
-      kaapi_thread_context_t* thread = cell->thread;
-      if (thread !=0)
-      {
-        kaapi_sched_stealstack( thread, 0, lrequests, lrrange );
-      }
-      cell = cell->prev;
     }
   }
-#endif
 
-  /* steal current thread */
-  kaapi_thread_context_t*  thread = kproc->thread;
-  if ( (thread !=0) 
-    && (kproc->issteal ==0) /* last: if a thread is stealing, its current thread will be used to receive work... */ 
-  )
+  /* 2/ steal in suspended threads */
+  cell = kproc->lsuspend.tail;
+  if ( !kaapi_listrequest_iterator_empty(lrrange) && (cell !=0))
   {
+    thread = cell->thread;
+    if (thread != 0)
+    {
+      kaapi_sched_stealstack( thread, 0, lrequests, lrrange );
+
+#if 0 /* not working */
+      /* some get stolen */
+      if (request != kaapi_listrequest_iterator_get( lrequests, lrrange ))
+	goto steal_bound_task;
+#endif
+    }
+  }
+
+  /* 3/ steal current thread */
+  if ((kproc->thread !=0) && (kproc->issteal ==0))
+  {
+    thread = kproc->thread;
+
     /* signal that count thefts are waiting */
     kaapi_sched_stealstack( thread, 0, lrequests, lrrange );
-  }  
+
+#if 0 /* not working */
+    /* some get stolen */
+    if (request != kaapi_listrequest_iterator_get( lrequests, lrrange ))
+      goto steal_bound_task;
+#endif
+  }
+
   return 0;
 }

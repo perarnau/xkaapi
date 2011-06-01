@@ -60,7 +60,7 @@ kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_p
   /* extra condition pre->affinity ==0 & kproc->kid == thief_kid is used to wakeup suspended thread (affinity ==0)
      on a kproc
   */
-  if (kaapi_cpuset_has(pre->affinity, thief_kid) || (kaapi_cpuset_empty(pre->affinity) && (kproc->kid == thief_kid)) )
+  if (kaapi_cpuset_has( &pre->affinity, thief_kid) || (kaapi_cpuset_empty( &pre->affinity) && (kproc->kid == thief_kid)) )
   {
     /* unlink the thread */
     pos = list->_front;
@@ -74,7 +74,7 @@ kaapi_thread_context_t* kaapi_sched_stealready(kaapi_processor_t* kproc, kaapi_p
   while (pos != 0) 
   {
     /* see comment above about the condition after the "||" */
-    if (kaapi_cpuset_has(pos->affinity, thief_kid) || (kaapi_cpuset_empty(pos->affinity) && (kproc->kid == thief_kid)))
+    if (kaapi_cpuset_has( &pos->affinity, thief_kid) || (kaapi_cpuset_empty( &pos->affinity) && (kproc->kid == thief_kid)))
     {
       /* unlink the thread */
       pre->_next = pos->_next;

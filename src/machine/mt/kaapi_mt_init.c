@@ -130,6 +130,9 @@ int kaapi_mt_init(void)
       * memory
    */
   kaapi_hw_init();
+  
+  /* Build global scheduling queue on the hierarchy */
+  kaapi_sched_affinity_initialize();  
 
 #ifdef KAAPI_MAX_PROCESSOR_GENERIC
   /* Choosing an implementation depending on the available ones */ 

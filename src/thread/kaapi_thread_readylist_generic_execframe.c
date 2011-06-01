@@ -120,9 +120,9 @@ redo_once:
       taskdescr_executor( td, arg_executor );
 
       /* push in the front the activated tasks */
-      if (!kaapi_activationlist_isempty(&td->list))
+      if (!kaapi_activationlist_isempty(&td->u.acl.list))
       {
-        kaapi_activationlink_t* curr_activated = td->list.front;
+        kaapi_activationlink_t* curr_activated = td->u.acl.list.front;
         while (curr_activated !=0)
         {
           if (kaapi_taskdescr_activated(curr_activated->td))
@@ -137,9 +137,9 @@ redo_once:
       }
 
       /* do bcast after child execution (they can produce output data) */
-      if (td->bcast !=0) 
+      if (td->u.acl.bcast !=0) 
       {
-        kaapi_activationlink_t* curr_activated = td->bcast->front;
+        kaapi_activationlink_t* curr_activated = td->u.acl.bcast->front;
         while (curr_activated !=0)
         {
           //always ready task.... after td if (kaapi_taskdescr_activated(curr_activated->td))

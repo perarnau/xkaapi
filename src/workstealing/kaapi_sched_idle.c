@@ -82,6 +82,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     }
     
     ctxt = 0;
+
     /* local wake up first, inline test to avoid function call */
     if (!kaapi_sched_readyempty(kproc) || !kaapi_wsqueuectxt_empty(kproc) )
     {

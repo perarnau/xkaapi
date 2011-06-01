@@ -44,13 +44,13 @@
 
 /*
 */
-const char* kaapi_cpuset2string( int nproc, kaapi_cpuset_t affinity )
+const char* kaapi_cpuset2string( int nproc, kaapi_cpuset_t* cupset )
 {
   static char string[128];
   kaapi_assert( nproc < 128 );
   for (int i=0; i<nproc; ++i)
   {
-    if (kaapi_cpuset_has(affinity, nproc-i-1))
+    if (kaapi_cpuset_has( cupset, nproc-i-1))
       string[i] = '1';
     else
       string[i] = '0';

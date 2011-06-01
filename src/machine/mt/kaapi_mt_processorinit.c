@@ -71,6 +71,7 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
   kproc->issteal      = 0;
  
   /* init hierarchy information */
+  kproc->numa_nodeid = ~0;
   kproc->hlevel.depth = 0;
   for (i=0; i<ENCORE_UNE_MACRO_DETAILLEE; ++i)
   {
@@ -98,6 +99,9 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
   
   /* workload */
   kproc->workload._counter= 0;
+  
+  /* seed */
+  kproc->seed_data = rand();
 
   /* memory: as[0] for cpu, as[1 + gpuindex] for gpu */
   if (kpi->proc_type == KAAPI_PROC_TYPE_CPU)

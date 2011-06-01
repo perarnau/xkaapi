@@ -65,7 +65,8 @@ kaapi_format_id_t kaapi_format_taskregister_func(
     kaapi_memory_view_t         (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*),
     void                        (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
     void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*),
-    kaapi_reducor_t             (*get_reducor )        (const struct kaapi_format_t*, unsigned int, const void*)
+    kaapi_reducor_t             (*get_reducor )    (const struct kaapi_format_t*, unsigned int, const void*),
+    void			            (*get_task_binding)(const struct kaapi_format_t*, const kaapi_task_t*, kaapi_task_binding_t*)
 )
 {
 //  kaapi_format_t* fmt = (*fmt_fnc)();
@@ -87,6 +88,7 @@ kaapi_format_id_t kaapi_format_taskregister_func(
   fmt->set_view_param   = set_view_param;
   fmt->reducor          = reducor;
   fmt->get_reducor      = get_reducor;
+  fmt->get_task_binding	= get_task_binding;
   
   memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));
   

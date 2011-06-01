@@ -1,14 +1,12 @@
 /*
-** kaapi_hashmap.c
 ** xkaapi
 ** 
-** 
-** Copyright 2010 INRIA.
+** Created on Tue Mar 31 15:19:14 2009
+** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -45,21 +43,52 @@
 */
 #include "kaapi_impl.h"
 
-/** This function set new bounds for the workqueue.
-    The only garantee is that is a concurrent thread tries
-    to access to the size of the queue while a thread set the workqueue, 
-    then the concurrent thread will see the size of the queue before the call to set
-    or it will see a nul size queue.
+/** Activate and push ready tasks of an activation link.
+    Return 1 if at least one ready task has been pushed into ready queue.
+    Else return 0.
 */
-int kaapi_workqueue_set
-( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t beg, kaapi_workqueue_index_t end)
+int kaapi_thread_tasklistready_pushactivated( 
+    kaapi_readytasklist_t*  rtl, 
+    kaapi_activationlink_t* head 
+)
 {
-  if ( kwq->lock ==0 ) return ESRCH;
-
-  kaapi_sched_lock( kwq->lock );
-  kwq->beg = beg;
-  kwq->end = end;
-  kaapi_sched_unlock( kwq->lock );
-  return 0;
+  kaapi_taskdescr_t** base = rtl->base;
+  kaapi_workqueue_index_t local_beg = rtl->next; /* reuse the position of the previous executed task */
+  kaapi_taskdescr_t* td;
+  int task_pushed = 0;
+  while (head !=0)
+  {
+    td = head->td;
+    if (kaapi_taskdescr_activated(td))
+    {
+      /* if non local -> push on remote queue ? */
+      if ( kaapi_cpuset_empty(&td->u.acl.mapping) )
+      {
+        /* push on local queue */
+        kaapi_assert_debug((char*)&base[local_beg] > (char*)(kaapi_self_thread()->sp_data));
+        base[local_beg--] = head->td;
+        task_pushed = 1;
+      }
+      else 
+      {
+        /* push on a remote queue */
+        kaapi_affinity_queue_t* queue = kaapi_sched_affinity_lookup_queue(&td->u.acl.mapping);
+        if (queue == 0)
+        {
+          kaapi_assert_debug((char*)&base[local_beg] > (char*)(kaapi_self_thread()->sp_data));
+          base[local_beg--] = head->td;
+          task_pushed = 1;
+        }
+        else {
+          /* push the task in the bounded queue */
+          KAAPI_ATOMIC_INCR(&td->tl->count_thief);
+          kaapi_sched_affinity_thief_pushtask(queue, td );
+        }
+      }
+    }
+    head = head->next;
+  }
+  rtl->next = local_beg+1;   /* position of the last pushed task (next to execute) */
+  rtl->task_pushed = task_pushed;
+  return task_pushed;
 }
-

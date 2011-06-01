@@ -63,9 +63,9 @@ int kaapi_numa_get_page_node(const void* addr)
     errno = EINVAL;
     return -1;
   }
-
   return kaapi_bitmap_first1_and_zero(&nodemask)-1;
 }
+
 
 /*
 */
@@ -213,10 +213,10 @@ kaapi_numaid_t kaapi_numa_procid_to_numaid(kaapi_procid_t procid)
 
 #else //if defined(KAAPI_USE_NUMA)
 
+/* NO numa support: return 0 as if the machine has only one numa node */
 int kaapi_numa_get_page_node(const void* addr)
 { 
-  errno = ENOENT;
-  return -1; 
+  return 0; 
 }
 
 int kaapi_numa_bind_bloc1dcyclic

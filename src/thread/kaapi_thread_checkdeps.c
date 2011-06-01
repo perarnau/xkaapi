@@ -78,6 +78,7 @@ int kaapi_thread_computedep_task(
   kaapi_handle_t          handle;
   kaapi_version_t*        version;
   int                     islocal;
+  kaapi_task_binding_t    binding;
 
   /* assume task list  */
   kaapi_assert( tasklist != 0);
@@ -93,6 +94,15 @@ int kaapi_thread_computedep_task(
   /* new task descriptor in the task list */
   taskdescr = kaapi_tasklist_allocate_td( tasklist, task, task_fmt );
   
+
+  /* compute binding and ocr if required before renaming of task' parameters to kaapi_global_data*/
+  task_fmt->get_task_binding(task_fmt, task, &binding);
+  if ((binding.type == KAAPI_BINDING_OCR_ADDR) || (binding.type == KAAPI_BINDING_OCR_PARAM)) /* others: default */
+  { 
+    kaapi_sched_affinity_binding2mapping( &taskdescr->u.acl.mapping, &binding, task_fmt, task, 0 );
+  }
+  
+
   /* Compute for each access i if it is ready or not.
      If all accesses of the task are ready then the taskdescr is pushed into readylist
      of the tasklist.

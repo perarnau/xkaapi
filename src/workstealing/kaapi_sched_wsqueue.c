@@ -151,7 +151,7 @@ kaapi_thread_context_t* kaapi_wsqueuectxt_steal_cell( kaapi_wsqueuectxt_cell_t* 
 //  kaapi_wsqueuectxt_t* ls = &kproc->lsuspend;
   kaapi_thread_context_t* thread = 0;
 
-  int opok = !kaapi_cpuset_empty(cell->affinity) && KAAPI_ATOMIC_CAS( &cell->state, KAAPI_WSQUEUECELL_INLIST, KAAPI_WSQUEUECELL_STEALLIST);
+  int opok = !kaapi_cpuset_empty( &cell->affinity) && KAAPI_ATOMIC_CAS( &cell->state, KAAPI_WSQUEUECELL_INLIST, KAAPI_WSQUEUECELL_STEALLIST);
   if (opok)
   {
     thread       = cell->thread;

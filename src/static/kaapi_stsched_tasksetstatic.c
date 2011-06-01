@@ -88,6 +88,9 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   save_state = thread->unstealable;
   kaapi_thread_set_unstealable(1);
 
+  /* kaapi_sched_lock(&thread->proc->lock); */
+  /* kaapi_sched_unlock(&thread->proc->lock); */
+
   /* some information to pass to the task : TODO */
   arg->schedinfo.nkproc[KAAPI_PROC_TYPE_MPSOC] = 0;
 
@@ -227,6 +230,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
 #if 1 /* TODO: do not allocate if multiple uses of tasklist */
   kaapi_tasklist_destroy( tasklist );
   free(tasklist);
+
 //HERE: hack to do loop over SetStaticSched because memory state
 // is leaved in inconsistant state.
 //  kaapi_memory_destroy();

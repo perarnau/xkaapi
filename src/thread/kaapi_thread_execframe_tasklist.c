@@ -89,7 +89,8 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
       goto redo_frameexecution;
 
     case 2:
-      /* nothing to restart: the state of the tasklist should ok */
+      /* set up the td to start from previously select task */
+      td = tasklist->context.td;
       goto execute_first;
 
     default:
@@ -101,11 +102,10 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 
   while (!kaapi_tasklist_isempty( tasklist ))
   {
-    err = kaapi_thread_tasklistready_pop( &tasklist->rtl );
+    err = kaapi_readylist_pop( &tasklist->rtl, &td );
     if (err ==0)
     {
 execute_first:
-      td = kaapi_thread_tasklistready_getpoped( &tasklist->rtl );
       pc = &td->task;
       if (pc !=0)
       {
@@ -125,17 +125,19 @@ execute_first:
         thread->sfp[1].sp = kaapi_thread_tasklist_getsp(tasklist); 
         thread->sfp[1].pc = thread->sfp[1].sp;
         thread->sfp[1].sp_data = fp->sp_data;
-        //kaapi_writemem_barrier();
+
+        /* kaapi_writemem_barrier(); */
+
         fp = ++thread->sfp;
         kaapi_assert_debug((char*)fp->sp > (char*)fp->sp_data);
         kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
         
         /* start execution of the user body of the task */
-        KAAPI_DEBUG_INST(kaapi_assert( td->exec_date == 0 ));
+        KAAPI_DEBUG_INST(kaapi_assert( td->u.acl.exec_date == 0 ));
         kaapi_event_push1(thread->proc, thread, KAAPI_EVT_TASK_BEG, pc );
         body( pc->sp, (kaapi_thread_t*)thread->sfp );
         kaapi_event_push1(thread->proc, thread, KAAPI_EVT_TASK_END, pc );  
-        KAAPI_DEBUG_INST( td->exec_date = kaapi_get_elapsedns() );
+        KAAPI_DEBUG_INST( td->u.acl.exec_date = kaapi_get_elapsedns() );
         ++cnt_exec;
 
         /* new tasks created ? */
@@ -158,12 +160,12 @@ redo_frameexecution:
       }
 
       /* push in the front the activated tasks */
-      if (!kaapi_activationlist_isempty(&td->list))
-        kaapi_thread_tasklistready_pushactivated( &tasklist->rtl, td->list.front );
+      if (!kaapi_activationlist_isempty(&td->u.acl.list))
+        kaapi_thread_tasklistready_pushactivated( &tasklist->rtl, td->u.acl.list.front );
 
       /* do bcast after child execution (they can produce output data) */
-      if (td->bcast !=0) 
-        kaapi_thread_tasklistready_pushactivated( &tasklist->rtl, td->bcast->front );
+      if (td->u.acl.bcast !=0) 
+        kaapi_thread_tasklistready_pushactivated( &tasklist->rtl, td->u.acl.bcast->front );
     }
     
     /* recv incomming synchronisation 
@@ -174,8 +176,8 @@ redo_frameexecution:
     {
     }
 
-    /* ok, now push pushed task into the wq */
-    if (kaapi_thread_tasklist_commit_ready( tasklist ))
+    /* ok, now push pushed task into the wq and restore the next td to execute */
+    if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0)
       goto execute_first;
             
   } /* while */
@@ -196,7 +198,7 @@ redo_frameexecution:
 #endif 
 
     /* else: main tasklist, wait a little before return EWOULDBLOCK */
-    for (int i=0; (KAAPI_ATOMIC_READ(&tasklist->count_thief) != 0) && (i<1000); ++i)
+    for (int i=0; (KAAPI_ATOMIC_READ(&tasklist->count_thief) != 0) && (i<100); ++i)
       kaapi_slowdown_cpu();
 
     kaapi_sched_lock(&thread->proc->lock);

@@ -635,6 +635,7 @@ extern struct kaapi_format_t* kaapi_ulong_format;
 extern struct kaapi_format_t* kaapi_ulonglong_format;
 extern struct kaapi_format_t* kaapi_float_format;
 extern struct kaapi_format_t* kaapi_double_format;
+extern struct kaapi_format_t* kaapi_longdouble_format;
 extern struct kaapi_format_t* kaapi_voidp_format;
 /*@}*/
 
@@ -697,8 +698,8 @@ typedef struct kaapi_threadgrouprep_t* kaapi_threadgroup_t;
 typedef struct kaapi_task_t {
 #if (__SIZEOF_POINTER__ == 4)
   struct task_and_body {
-    kaapi_task_bodyid_t     body;      /** task body  */
-    kaapi_atomic32_t        state;     /** bit */
+    kaapi_task_bodyid_t   body;      /** task body  */
+    kaapi_atomic32_t      state;     /** bit */
   } u;
 #else
   union task_and_body {
@@ -710,6 +711,37 @@ typedef struct kaapi_task_t {
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
 #define kaapi_task_getuserbody( t ) (t)->u.body
+
+
+/* ========================================================================= */
+/* Task binding
+   \ingroup TASK
+   Definition of owner compute rules constraints to map task where is located
+   a data.
+   The data may be specify in 2 exclusive forms:
+   - with respect to one physical address
+   - with respecto to one or several pointer parameters of a task
+ */
+typedef enum {
+  KAAPI_BINDING_ANY = 0,       /* bound to any core */
+  KAAPI_BINDING_OCR_ADDR,      /* bound to one address of u.ocr_addr */
+  KAAPI_BINDING_OCR_PARAM      /* bound to one or several parameter of the task (bitmap in u.ocr_param)*/
+/* missing: hierarchical level, eg: L3, NUMA, MACHINE, CLUSTER... */
+} kaapi_task_binding_type_t;
+
+
+typedef struct kaapi_task_binding
+{
+  kaapi_task_binding_type_t type;
+  union {
+    struct {
+      uintptr_t addr;
+    } ocr_addr; 
+    struct {
+      uint64_t  bitmap;
+    } ocr_param;
+  } u;
+} kaapi_task_binding_t;
 
 
 /* ========================================================================= */
@@ -770,7 +802,7 @@ typedef struct kaapi_stealcontext_t {
   void* volatile                 argsplitter;
   
   /* needed for steal sync protocol */
-  kaapi_task_t*		               ownertask;
+  kaapi_task_t*		             ownertask;
 
   kaapi_task_splitter_t          save_splitter;
   void*                          save_argsplitter;
@@ -821,14 +853,14 @@ typedef struct kaapi_taskadaptive_result_t {
   void* volatile                      arg_from_victim;  /* arg from the victim after preemption of one victim */
   void* volatile                      arg_from_thief;   /* arg of the thief passed at the preemption point */
 
-  volatile uint64_t*	          status;	          /* reply status pointer */
-  volatile uint64_t*	          preempt;          /* preemption pointer */
+  volatile uint64_t*	              status;	          /* reply status pointer */
+  volatile uint64_t*	              preempt;          /* preemption pointer */
 
 #if defined(KAAPI_COMPILE_SOURCE)
-  kaapi_task_t			      state;		/* ktr state represented by a task */
+  kaapi_task_t			              state;		/* ktr state represented by a task */
 
-#define KAAPI_RESULT_DATAUSR    0x01
-#define KAAPI_RESULT_DATARTS    0x02
+#define KAAPI_RESULT_DATAUSR          0x01
+#define KAAPI_RESULT_DATARTS          0x02
   int                                 flag;             /* where is allocated data */
 
   struct kaapi_taskadaptive_result_t* rhead;            /* double linked list of thieves of this thief */
@@ -837,7 +869,7 @@ typedef struct kaapi_taskadaptive_result_t {
   struct kaapi_taskadaptive_result_t* next;             /* link fields in kaapi_taskadaptive_t */
   struct kaapi_taskadaptive_result_t* prev;             /* */
 
-  void*				                        addr_tofree;	    /* the non aligned malloc()ed addr */
+  void*				                  addr_tofree;	    /* the non aligned malloc()ed addr */
 #endif /* defined(KAAPI_COMPILE_SOURCE) */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_taskadaptive_result_t;
 
@@ -914,6 +946,7 @@ typedef struct kaapi_reply_t {
 */
 typedef struct kaapi_request_t {
   kaapi_processor_id_t         kid;            /* system wide kproc id */
+  kaapi_affinity_t             mapping;        /* mapping of the thief onto the architecture */
   kaapi_reply_t*               reply;          /* points to thief thread reply data structure */
   kaapi_taskadaptive_result_t* ktr;            /* only used in adaptive interface to avoid  */
   uint8_t                data[1];        /* not used data[0]...data[XX] ? */
@@ -966,9 +999,9 @@ static inline void kaapi_access_init(kaapi_access_t* a, void* value )
 /** \ingroup TASK
     Return a pointer to parameter of the task (void*) pointer
 */
-static inline void* kaapi_task_getargs(kaapi_task_t* task) 
+static inline void* kaapi_task_getargs( const kaapi_task_t* task) 
 {
-  return task->sp;
+  return (void*)task->sp;
 }
 
 /** \ingroup TASK
@@ -1024,6 +1057,7 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, uint32_t coun
   }
 }
 
+
 /** \ingroup TASK
     same as kaapi_thread_pushdata, but with alignment constraints.
     note the alignment must be a power of 2 and not 0
@@ -1039,6 +1073,9 @@ static inline void* kaapi_thread_pushdata_align(kaapi_thread_t* thread, uint32_t
 
   return kaapi_thread_pushdata(thread, count);
 }
+
+static inline void* kaapi_alloca( kaapi_thread_t* thread, uint32_t count)
+{ return kaapi_thread_pushdata(thread, count); }
 
 /** \ingroup TASK
     The function kaapi_thread_pushdata() will return the pointer to the next top data.
@@ -1118,17 +1155,30 @@ extern int kaapi_thread_pushtask_withpartitionid(kaapi_thread_t* thread, int pid
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
     \retval EINVAL invalid argument: bad stack pointer.
 */
-extern int kaapi_thread_pushtask_withocr(kaapi_thread_t* thread, const void* ptr);
+static inline int kaapi_thread_pushtask_withocr(kaapi_thread_t* thread, const void* ptr)
+{
+  kaapi_task_binding_t* attribut = 
+   (kaapi_task_binding_t*)kaapi_thread_pushdata( thread, sizeof(kaapi_task_binding_t) );
+  attribut->type = KAAPI_BINDING_OCR_ADDR;
+  attribut->u.ocr_addr.addr = (uintptr_t)ptr;
+  /* see kaapi_impl.h KAAPI_MASK_BODY_OCR */
+#if (__SIZEOF_POINTER__ == 4)
+  KAAPI_ATOMIC_WRITE( &thread->sp->state, KAAPI_ATOMIC_READ(&thread->sp->state) | 0x9);
+#else
+  thread->sp->u.body = (kaapi_task_body_t)((uintptr_t)thread->sp->u.body | (0x9UL << 58UL));
+#endif
+  kaapi_thread_pushtask(thread);
+  return 0;
+}
 
 
 /** \ingroup TASK
     Task initialization routines
 */
 static inline void kaapi_task_initdfg_with_state
-(kaapi_task_t* task, kaapi_task_body_t body, uintptr_t state, void* arg)
+  (kaapi_task_t* task, kaapi_task_body_t body, uintptr_t state, void* arg)
 {
   task->sp = arg;
-
 #if (__SIZEOF_POINTER__ == 4)
   KAAPI_ATOMIC_WRITE(&task->u.state, state);
   task->u.body = body;
@@ -1138,13 +1188,13 @@ static inline void kaapi_task_initdfg_with_state
 }
 
 static inline void kaapi_task_init_with_state
-(kaapi_task_t* task, kaapi_task_body_t body, uintptr_t state, void* arg)
+  (kaapi_task_t* task, kaapi_task_body_t body, uintptr_t state, void* arg)
 {
   kaapi_task_initdfg_with_state(task, body, state, arg);
 }
 
 static inline void kaapi_task_initdfg
-(kaapi_task_t* task, kaapi_task_body_t body, void* arg)
+  (kaapi_task_t* task, kaapi_task_body_t body, void* arg)
 {
   task->sp = arg;
 
@@ -1157,7 +1207,7 @@ static inline void kaapi_task_initdfg
 }
 
 static inline int kaapi_task_init
-( kaapi_task_t* task, kaapi_task_bodyid_t taskbody, void* arg ) 
+  ( kaapi_task_t* task, kaapi_task_bodyid_t taskbody, void* arg ) 
 {
   kaapi_task_initdfg(task, taskbody, arg);
   return 0;
@@ -1619,6 +1669,7 @@ extern int kaapi_steal_thiefreturn( kaapi_stealcontext_t* stc );
       size[0] rows of size[1] rowwidth. lda is used to pass from
       one row to the next one.
     The base (kaapi_pointer_t) is not part of the view description
+    
 */
 #define KAAPI_MEMORY_VIEW_1D 1
 #define KAAPI_MEMORY_VIEW_2D 2  /* assume row major */
@@ -1886,25 +1937,31 @@ typedef long kaapi_workqueue_index_t;
 typedef struct {
   volatile kaapi_workqueue_index_t beg __attribute__((aligned(64)));
   volatile kaapi_workqueue_index_t end __attribute__((aligned(64)));
+  kaapi_atomic_t*                  lock;
 } kaapi_workqueue_t;
 
 
 /** Initialize the workqueue to be an empty (null) range workqueue.
     Do memory barrier before updating the queue.
+    Attach the workqueue to the current kprocessor, ie the lock to ensure consistent concurrent operation
+    is the lock of the current kprocessor.
 */
-static inline int kaapi_workqueue_init( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e )
-{
-  kaapi_mem_barrier();
-#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)||defined(__ppc__)
-  kaapi_assert_debug( (((unsigned long)&kwq->beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
-  kaapi_assert_debug( (((unsigned long)&kwq->end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
-#else
-#  error "May be alignment constraints exit to garantee atomic read write"
-#endif
-  kwq->beg = b;
-  kwq->end = e;
-  return 0;
-}
+extern int kaapi_workqueue_init( 
+    kaapi_workqueue_t* kwq, 
+    kaapi_workqueue_index_t b, 
+    kaapi_workqueue_index_t e 
+);
+
+/** Initialize the workqueue to be an empty (null) range workqueue.
+    Do memory barrier before updating the queue.
+    Explicit specification of the lock to used to ensure consistent concurrent operations.
+*/
+extern int kaapi_workqueue_init_with_lock( 
+    kaapi_workqueue_t* kwq, 
+    kaapi_workqueue_index_t b, 
+    kaapi_workqueue_index_t e, 
+    kaapi_atomic_t* thelock 
+);
 
 /** destroy 
 */
@@ -1987,7 +2044,7 @@ extern int kaapi_workqueue_slowpop(
   kaapi_workqueue_t* kwq, 
   kaapi_workqueue_index_t* beg,
   kaapi_workqueue_index_t* end,
-  kaapi_workqueue_index_t size
+  kaapi_workqueue_index_t  size
 );
 
 
@@ -2253,7 +2310,8 @@ extern kaapi_format_id_t kaapi_format_taskregister_static(
     const kaapi_offset_t        offset_cwflag[],
     const struct kaapi_format_t*fmt_param[],
     const kaapi_memory_view_t   view_param[],
-    const kaapi_reducor_t       reducor_param[]
+    const kaapi_reducor_t       reducor_param[],
+    const kaapi_task_binding_t*     task_binding
 );
 
 /** \ingroup TASK
@@ -2276,7 +2334,8 @@ extern kaapi_format_id_t kaapi_format_taskregister_func(
     kaapi_memory_view_t         (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*),
     void                        (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
     void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*),
-    kaapi_reducor_t             (*get_reducor )    (const struct kaapi_format_t*, unsigned int, const void*)
+    kaapi_reducor_t             (*get_reducor )    (const struct kaapi_format_t*, unsigned int, const void*),
+    void                        (*get_task_binding)(const struct kaapi_format_t*, const kaapi_task_t*, kaapi_task_binding_t*)
 );
 
 /** \ingroup TASK
@@ -2364,7 +2423,7 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     static int isinit = 0;\
     if (isinit) return;\
     isinit = 1;\
-    kaapi_format_taskregister_static( formatobject(), fnc_body, 0, name, ##__VA_ARGS__,  0 /* for reduction operators not supported in C */);\
+    kaapi_format_taskregister_static( formatobject(), fnc_body, 0, name, ##__VA_ARGS__,  0 /* for reduction operators not supported in C */, 0);\
   }
 
 

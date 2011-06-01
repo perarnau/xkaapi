@@ -113,7 +113,7 @@ int kaapi_thread_insert_synchro(
     */
     kaapi_tasklist_t*       tl_master = version->master->tl;
     kaapi_taskdescr_t*      td_writer = version_master->writer_task;
-    kaapi_activationlist_t* ltd_bcast = td_writer->bcast;
+    kaapi_activationlist_t* ltd_bcast = td_writer->u.acl.bcast;
     kaapi_taskdescr_t*      td_bcast  = 0;
     kaapi_taskdescr_t*      td_recv;
     
@@ -157,7 +157,7 @@ int kaapi_thread_insert_synchro(
       link->td         = td_bcast;
       link->queue      = tl_master;
       link->next       = 0;
-      kaapi_activationlist_pushback( td_writer->bcast, link );
+      kaapi_activationlist_pushback( td_writer->u.acl.bcast, link );
     }
   }
   return 0;

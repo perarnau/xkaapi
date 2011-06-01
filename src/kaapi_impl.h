@@ -188,6 +188,14 @@ extern int kaapi_mt_finalize(void);
 */
 extern int kaapi_hw_init(void);
 
+/** Initialization of the NUMA affinity workqueue
+*/
+extern int kaapi_sched_affinity_initialize(void);
+
+/** Destroy
+*/
+extern void kaapi_sched_affinity_destroy(void);
+
 /* Fwd declaration 
 */
 struct kaapi_listrequest_t;
@@ -353,28 +361,40 @@ extern void kaapi_init_basicformat(void);
 /**
 */
 enum kaapi_memory_type_t {
-  KAAPI_MEM_NODE,
-  KAAPI_MEM_CACHE
+  KAAPI_MEM_MACHINE   = 0,
+  KAAPI_MEM_NODE      = 1,
+  KAAPI_MEM_CACHE     = 2
 };
 
-/**
+enum kaapi_memory_id_t {
+  KAAPI_MEMORY_ID_NODE      = 0,
+  KAAPI_MEMORY_ID_CACHE     = 1,
+  KAAPI_MAX_MEMORY_ID       = 4  /* reserve 2 and 3 */
+};
+
+/** cpuset: at most 128 differents ressources
 */
 typedef uint64_t kaapi_cpuset_t[2];
+
+struct kaapi_taskdescr_t;
+struct kaapi_format_t;
 
 /**
 */
 typedef struct kaapi_affinityset_t {
-    kaapi_cpuset_t        who; /* who is in this set */
-    size_t                mem_size;
-    int                   ncpu;
-    short                 type;
+    kaapi_cpuset_t                 who;       /* who is in this set */
+    size_t                         mem_size;
+    int                            os_index;  /* numa node id or ??? */
+    int                            ncpu;
+    short                          type;      /* see kaapi_memory_t */
+    struct kaapi_affinity_queue_t* queue;     /* yes ! */ 
 } kaapi_affinityset_t;
 
 /**
 */
 typedef struct kaapi_hierarchy_one_level_t {
-  unsigned short          count;           /* number of kaapi_affinityset_t at this level */
-  kaapi_affinityset_t*    affinity;  
+  unsigned short                count;           /* number of kaapi_affinityset_t at this level */
+  kaapi_affinityset_t*          affinity; 
 } kaapi_hierarchy_one_level_t;
 
 /** Memory hierarchy of the local machine
@@ -396,7 +416,7 @@ typedef struct kaapi_rtparam_t {
   unsigned int             syscpucount;                     /* number of physical cpus of the system */
   unsigned int             cpucount;                        /* number of physical cpu used for execution */
   kaapi_selectvictim_fnc_t wsselect;                        /* default method to select a victim */
-  unsigned int		         use_affinity;                    /* use cpu affinity */
+  unsigned int		       use_affinity;                    /* use cpu affinity */
   int                      display_perfcounter;             /* set to 1 iff KAAPI_DISPLAY_PERF */
   uint64_t                 startuptime;                     /* time at the end of kaapi_init */
   int                      alarmperiod;                     /* period for alarm */
@@ -404,8 +424,8 @@ typedef struct kaapi_rtparam_t {
   struct kaapi_procinfo_list_t* kproc_list;                 /* list of kprocessors to initialized */
   kaapi_cpuset_t           usedcpu;                         /* cpuset of used physical ressources */
   kaapi_hierarchy_t        memory;                          /* memory hierarchy */
-  unsigned int	           *kid2cpu;                        /* mapping: kid->phys cpu  */
-  unsigned int  	         *cpu2kid;                        /* mapping: phys cpu -> kid */
+  unsigned int*	           kid2cpu;                        /* mapping: kid->phys cpu  */
+  unsigned int*  	       cpu2kid;                        /* mapping: phys cpu -> kid */
 } kaapi_rtparam_t;
 
 extern kaapi_rtparam_t kaapi_default_param;
@@ -469,6 +489,7 @@ typedef struct kaapi_format_t {
   struct kaapi_format_t*     *_fmt_params;                             /* format for each params */
   kaapi_memory_view_t        *_view_params;                            /* sizeof of each params */
   kaapi_reducor_t            *_reducor_params;                         /* array of reducor in case of cw */
+  kaapi_task_binding_t       _task_binding;
 
   /* case of format for a structure or for a task with flag= KAAPI_FORMAT_FUNC_FIELD
      - the unsigned int argument is the index of the parameter 
@@ -481,11 +502,12 @@ typedef struct kaapi_format_t {
   kaapi_access_t        (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*);
   void                  (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*);
   void                  (*set_cwaccess_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*, int wa);
-  const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*);
-  kaapi_memory_view_t   (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*);
-  void (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t* );
-  void                  (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*);
-  kaapi_reducor_t       (*get_reducor )        (const struct kaapi_format_t*, unsigned int, const void*);
+  const struct kaapi_format_t*(*get_fmt_param)(const struct kaapi_format_t*, unsigned int, const void*);
+  kaapi_memory_view_t   (*get_view_param)(const struct kaapi_format_t*, unsigned int, const void*);
+  void                  (*set_view_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t* );
+  void                  (*reducor )       (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*);
+  kaapi_reducor_t       (*get_reducor )   (const struct kaapi_format_t*, unsigned int, const void*);
+  void			        (*get_task_binding)(const struct kaapi_format_t*, const kaapi_task_t*, kaapi_task_binding_t*);
 
   /* fields to link the format is the internal tables */
   struct kaapi_format_t      *next_bybody;                            /* link in hash table */
@@ -758,7 +780,7 @@ typedef struct kaapi_thread_context_t {
   struct kaapi_wsqueuectxt_cell_t* wcs;          /** point to the cell in the suspended list, iff thread is suspended */
 
   /* statically allocated reply */
-  kaapi_reply_t			             static_reply;
+  kaapi_reply_t			         static_reply;
   /* enough space to store a stealcontext that begins at static_reply->udata+static_reply->offset */
   char	                         sc_data[sizeof(kaapi_stealcontext_t)-sizeof(kaapi_stealheader_t)];
 
@@ -855,6 +877,7 @@ extern void kaapi_taskfinalizer_body( void*, kaapi_thread_t* );
 #  define KAAPI_MASK_BODY_AFTER   (0x2)
 #  define KAAPI_MASK_BODY_EXEC    (0x4)
 #  define KAAPI_MASK_BODY_STEAL   (0x8)
+#  define KAAPI_MASK_BODY_OCR     (0x10) /* if it exist ocr constraints */
 
 
 #  define KAAPI_TASK_ATOMIC_OR(a, v) KAAPI_ATOMIC_OR_ORIG(a, v)
@@ -869,13 +892,14 @@ extern void kaapi_taskfinalizer_body( void*, kaapi_thread_t* );
     KAAPI_ATOMIC_WRITE_BARRIER( (kaapi_atomic_t*)a, (uint32_t)v)
 
 #elif (__SIZEOF_POINTER__ == 8)
-#  define KAAPI_MASK_BODY_TERM    (0x1UL << 60UL)
-#  define KAAPI_MASK_BODY_PREEMPT (0x2UL << 60UL) /* must be different from term */
-#  define KAAPI_MASK_BODY_AFTER   (0x2UL << 60UL)
-#  define KAAPI_MASK_BODY_EXEC    (0x4UL << 60UL)
-#  define KAAPI_MASK_BODY_STEAL   (0x8UL << 60UL)
-#  define KAAPI_MASK_BODY         (0xFUL << 60UL)
-#  define KAAPI_MASK_BODY_SHIFTR   60UL
+#  define KAAPI_MASK_BODY_TERM    (0x1UL << 58UL)
+#  define KAAPI_MASK_BODY_PREEMPT (0x2UL << 58UL) /* must be different from term */
+#  define KAAPI_MASK_BODY_AFTER   (0x2UL << 58UL)
+#  define KAAPI_MASK_BODY_EXEC    (0x4UL << 58UL)
+#  define KAAPI_MASK_BODY_STEAL   (0x8UL << 58UL)
+#  define KAAPI_MASK_BODY_OCR     (0x10UL << 58UL) /* if it exist ocr constraints */
+#  define KAAPI_MASK_BODY         (0x1FUL << 58UL)
+#  define KAAPI_MASK_BODY_SHIFTR   58UL
 #  define KAAPI_TASK_ATOMIC_OR(a, v) KAAPI_ATOMIC_OR64_ORIG(a, v)
 
 #  define KAAPI_ATOMIC_CASPTR(a, o, n) \
@@ -912,11 +936,6 @@ static inline void kaapi_task_setstate_barrier(kaapi_task_t* task, uintptr_t sta
   KAAPI_ATOMIC_WRITE_BARRIER(&task->u.state, state);
 }
 
-static inline uintptr_t kaapi_task_state_get(uintptr_t state)
-{
-  return state;
-}
-
 static inline unsigned int kaapi_task_state_issteal(uintptr_t state)
 {
   return state & KAAPI_MASK_BODY_STEAL;
@@ -944,7 +963,7 @@ static inline unsigned int kaapi_task_state_ispreempted(uintptr_t state)
 
 static inline unsigned int kaapi_task_state_isspecial(uintptr_t state)
 {
-  return !(state == 0);
+  return !((state & ~KAAPI_MASK_BODY_OCR) == 0);
 }
 
 static inline unsigned int kaapi_task_state_isnormal(uintptr_t state)
@@ -960,6 +979,11 @@ static inline unsigned int kaapi_task_state_isready(uintptr_t state)
 static inline unsigned int kaapi_task_state_isstealable(uintptr_t state)
 {
   return (state & (KAAPI_MASK_BODY_STEAL | KAAPI_MASK_BODY_EXEC)) == 0;
+}
+
+static inline unsigned int kaapi_task_state_hasocr(uintptr_t state)
+{
+  return state & KAAPI_MASK_BODY_OCR;
 }
 
 static inline unsigned int kaapi_task_state2int(uintptr_t state)
@@ -978,6 +1002,9 @@ static inline unsigned int kaapi_task_state2int(uintptr_t state)
 
 #define kaapi_task_state_setafter(__state)      \
     ((__state) | KAAPI_MASK_BODY_AFTER)
+
+#define kaapi_task_state_setocr(__state)      \
+    ((__state) | KAAPI_MASK_BODY_OCR)
 
 /** \ingroup TASK
     Set the body of the task
@@ -1006,9 +1033,6 @@ static inline kaapi_task_bodyid_t kaapi_task_getbody(const kaapi_task_t* task)
 #define kaapi_task_setstate_barrier(task, value)\
       { kaapi_writemem_barrier(); (task)->u.state = (value); }
 
-#define kaapi_task_state_get(state)\
-      (((state) & KAAPI_MASK_BODY) >> KAAPI_MASK_BODY_SHIFTR)
-
 #define kaapi_task_state_issteal(state)       \
       ((state) & KAAPI_MASK_BODY_STEAL)
 
@@ -1025,10 +1049,10 @@ static inline kaapi_task_bodyid_t kaapi_task_getbody(const kaapi_task_t* task)
       ((state) & KAAPI_MASK_BODY_PREEMPT)
 
 #define kaapi_task_state_isspecial(state)     \
-      ((state) & KAAPI_MASK_BODY)
+      ((state & ~KAAPI_MASK_BODY_OCR) & KAAPI_MASK_BODY)
 
 #define kaapi_task_state_isnormal(state)     \
-      (((state) & KAAPI_MASK_BODY) ==0)
+      (((state & ~KAAPI_MASK_BODY_OCR) & KAAPI_MASK_BODY) ==0)
 
 /* this macro should only be called on a theft task to determine if it is ready */
 #define kaapi_task_state_isready(state)       \
@@ -1036,6 +1060,14 @@ static inline kaapi_task_bodyid_t kaapi_task_getbody(const kaapi_task_t* task)
 
 #define kaapi_task_state_isstealable(state)   \
       (((state) & (KAAPI_MASK_BODY_STEAL|KAAPI_MASK_BODY_EXEC)) ==0)
+
+#define kaapi_task_state_hasocr(state)   \
+      ((state) & KAAPI_MASK_BODY_OCR)
+
+static inline unsigned int kaapi_task_state2int(uintptr_t state)
+{
+  return (unsigned int)state;
+}
 
 #define kaapi_task_state_setsteal(state)      \
     ((state) | KAAPI_MASK_BODY_STEAL)
@@ -1048,6 +1080,9 @@ static inline kaapi_task_bodyid_t kaapi_task_getbody(const kaapi_task_t* task)
 
 #define kaapi_task_state_setafter(state)       \
     ((state) | KAAPI_MASK_BODY_AFTER)
+
+#define kaapi_task_state_setocr(state)       \
+    ((state) | KAAPI_MASK_BODY_OCR)
     
 #define kaapi_task_body2state(body)           \
     ((uintptr_t)body)
@@ -1376,7 +1411,7 @@ static inline int kaapi_thread_reset(kaapi_thread_context_t* th )
 
 /**
 */
-extern const char* kaapi_cpuset2string( int nproc, kaapi_cpuset_t affinity );
+extern const char* kaapi_cpuset2string( int nproc, kaapi_cpuset_t* affinity );
 
 
 /**
@@ -1390,16 +1425,25 @@ static inline void kaapi_cpuset_clear(kaapi_cpuset_t* affinity )
 
 /**
 */
-static inline int kaapi_cpuset_intersect(kaapi_cpuset_t s1, kaapi_cpuset_t s2)
+static inline void kaapi_cpuset_full(kaapi_cpuset_t* affinity )
 {
-  return ((s1[0] & s2[0]) != 0) || ((s1[1] & s2[1]) != 0);
+  (*affinity)[0] = ~0UL;
+  (*affinity)[1] = ~0UL;
+}
+
+
+/**
+*/
+static inline int kaapi_cpuset_intersect(kaapi_cpuset_t* s1, kaapi_cpuset_t* s2)
+{
+  return (((*s1)[0] & (*s2)[0]) != 0) || (((*s1)[1] & (*s2)[1]) != 0);
 }
 
 /**
 */
-static inline int kaapi_cpuset_empty(kaapi_cpuset_t affinity)
+static inline int kaapi_cpuset_empty(kaapi_cpuset_t* affinity)
 {
-  return (affinity[0] == 0) && (affinity[1] == 0);
+  return ((*affinity)[0] == 0) && ((*affinity)[1] == 0);
 }
 
 /**
@@ -1416,7 +1460,7 @@ static inline int kaapi_cpuset_set(kaapi_cpuset_t* affinity, kaapi_processor_id_
 
 /**
 */
-static inline int kaapi_cpuset_copy(kaapi_cpuset_t* dest, const kaapi_cpuset_t* src )
+static inline int kaapi_cpuset_copy(kaapi_cpuset_t* dest, kaapi_cpuset_t* src )
 {
   (*dest)[0] = (*src)[0];
   (*dest)[1] = (*src)[1];
@@ -1426,18 +1470,34 @@ static inline int kaapi_cpuset_copy(kaapi_cpuset_t* dest, const kaapi_cpuset_t* 
 
 /** Return non 0 iff th as affinity with kid
 */
-static inline int kaapi_cpuset_has(const kaapi_cpuset_t affinity, kaapi_processor_id_t kid )
+static inline int kaapi_cpuset_has(kaapi_cpuset_t* affinity, kaapi_processor_id_t kid )
 {
   kaapi_assert_debug( (kid >=0) && (kid < sizeof(kaapi_cpuset_t)*8) );
   if (kid <64)
-    return ( affinity[0] & ((uint64_t)1)<< (uint64_t)kid) != (uint64_t)0;
+    return ( (*affinity)[0] & ((uint64_t)1)<< (uint64_t)kid) != (uint64_t)0;
   else
-    return ( affinity[1] & ((uint64_t)1)<< (uint64_t)(kid-64)) != (uint64_t)0;
+    return ( (*affinity)[1] & ((uint64_t)1)<< (uint64_t)(kid-64)) != (uint64_t)0;
+}
+
+/** Return *dest &= mask
+*/
+static inline void kaapi_cpuset_and(kaapi_cpuset_t* dest, kaapi_cpuset_t* mask )
+{
+  (*dest)[0] &= (*mask)[0];
+  (*dest)[1] &= (*mask)[1];
+}
+
+/** Return *dest |= mask
+*/
+static inline void kaapi_cpuset_or(kaapi_cpuset_t* dest, kaapi_cpuset_t* mask )
+{
+  (*dest)[0] |= (*mask)[0];
+  (*dest)[1] |= (*mask)[1];
 }
 
 /** Return *dest &= ~mask
 */
-static inline void kaapi_cpuset_notand(kaapi_cpuset_t* dest, const kaapi_cpuset_t* mask )
+static inline void kaapi_cpuset_notand(kaapi_cpuset_t* dest, kaapi_cpuset_t* mask )
 {
   (*dest)[0] ^= (*mask)[0];
   (*dest)[1] ^= (*mask)[1];
@@ -1450,7 +1510,6 @@ static inline int kaapi_sched_suspendlist_empty(kaapi_processor_t* kproc)
   if (kproc->lsuspend.head ==0) return 1;
   return 0;
 }
-
 
 /** Note on scheduler lock:
   KAAPI_SCHED_LOCK_CAS -> lock state == 1 iff lock is taken, else 0
@@ -1602,6 +1661,96 @@ static inline int kaapi_sched_readyempty(kaapi_processor_t* kproc)
   return kproc->lready._front == NULL;
 }
 
+
+
+/** Affinity queue:
+    - the affinity queues is attached to a certain level in the memory hierarchy, more
+    generally it is attached to an identifier.
+    - Several threads may push and pop into the queue.
+    - Several threads are considered to the owner of the queue if they have affinity
+    with it.
+    - The owners push and pop in a LIFO maner (in the head of the queue)
+    - The thieves push and pop in the LIFO maner (in the tail of the queue)
+    - The owners and the thieves push/pop in the FIFO maner
+*/
+typedef struct kaapi_affinity_queue_t {
+  kaapi_atomic_t                     lock;         /* to serialize operation */
+  struct kaapi_taskdescr_t* volatile head;         /* owned by the owner */
+  struct kaapi_taskdescr_t* volatile tail;         /* owner by the thief */
+  kaapi_allocator_t                  allocator;    /* where to allocate task descriptor and other data structure */
+} kaapi_affinity_queue_t;
+
+
+/** Policy to convert a binding to a mapping (a bitmap) of kaapi_cpuset.
+    flag ==0 if task is a dfg task.
+*/
+extern int kaapi_sched_affinity_binding2mapping(
+    kaapi_cpuset_t*              mapping, 
+    const kaapi_task_binding_t*  binding,
+    const struct kaapi_format_t* task_fmt,
+    const struct kaapi_task_t*   task,
+    int                          flag
+);
+
+
+/** Return the workqueue that match the mapping
+*/
+extern kaapi_affinity_queue_t* kaapi_sched_affinity_lookup_queue(
+    kaapi_cpuset_t* mapping
+);
+
+/**
+*/
+extern kaapi_affinity_queue_t* kaapi_sched_affinity_lookup_numa_queue(
+  int numanodeid
+);
+
+/*
+*/
+extern kaapi_affinity_queue_t* kaapi_sched_affinity_random_queue( kaapi_processor_t* kproc );
+
+/**
+*/
+extern struct kaapi_taskdescr_t* kaapi_sched_affinity_allocate_td_dfg( 
+    kaapi_affinity_queue_t* queue, 
+    kaapi_thread_context_t* thread, 
+    struct kaapi_task_t*    task, 
+    const kaapi_format_t*   task_fmt, 
+    unsigned int            war_param
+);
+
+/**
+*/
+extern int kaapi_sched_affinity_owner_pushtask
+(
+    kaapi_affinity_queue_t* queue,
+    struct kaapi_taskdescr_t* td
+);
+
+/**
+*/
+extern struct kaapi_taskdescr_t* kaapi_sched_affinity_owner_poptask
+(
+  kaapi_affinity_queue_t* queue
+);
+
+/**
+*/
+extern int kaapi_sched_affinity_thief_pushtask
+(
+    kaapi_affinity_queue_t* queue,
+    struct kaapi_taskdescr_t* td
+);
+
+/**
+*/
+extern struct kaapi_taskdescr_t* kaapi_sched_affinity_thief_poptask
+(
+  kaapi_affinity_queue_t* queue
+);
+
+
+
 /**
 */
 extern int kaapi_thread_clear( kaapi_thread_context_t* thread );
@@ -1700,8 +1849,8 @@ extern int kaapi_sched_sync_(kaapi_thread_context_t* thread);
     \retval a pointer to a stack that is the result of one workstealing operation.
 */
 extern int kaapi_sched_stealprocessor ( 
-  kaapi_processor_t* kproc, 
-  kaapi_listrequest_t* lrequests, 
+  kaapi_processor_t*            kproc, 
+  kaapi_listrequest_t*          lrequests, 
   kaapi_listrequest_iterator_t* lrrange
 );
 
@@ -1763,9 +1912,22 @@ extern int kaapi_sched_advance ( kaapi_processor_t* proc );
 extern int kaapi_task_splitter_dfg(
   kaapi_thread_context_t*       thread, 
   kaapi_task_t*                 task, 
+  const kaapi_format_t*         task_fmt,
   unsigned int                  war_param, 
   kaapi_listrequest_t*          lrequests, 
   kaapi_listrequest_iterator_t* lrrange
+);
+
+/** \ingroup TASK
+    Splitter for a single DFG
+*/
+extern void kaapi_task_splitter_dfg_single
+(
+  kaapi_thread_context_t*       thread, 
+  kaapi_task_t*                 task, 
+  const kaapi_format_t*         task_fmt,
+  unsigned int                  war_param, 
+  kaapi_request_t*		request
 );
 
 /** \ingroup WS
@@ -1865,7 +2027,7 @@ static inline kaapi_reply_t* kaapi_replysync_data( kaapi_reply_t* reply )
 typedef struct kaapi_tasksteal_arg_t {
   kaapi_thread_context_t* origin_thread;     /* stack where task was stolen */
   kaapi_task_t*           origin_task;       /* the stolen task into origin_stack */
-  kaapi_format_t*         origin_fmt;        /* set by tasksteal the stolen task into origin_stack */
+  const kaapi_format_t*   origin_fmt;        /* the format of the stolen taskx */
   unsigned int            war_param;         /* bit i=1 iff it is a w mode with war dependency */
   void*                   copy_task_args;    /* set by tasksteal a copy of the task args */
 } kaapi_tasksteal_arg_t;
@@ -1873,13 +2035,10 @@ typedef struct kaapi_tasksteal_arg_t {
 /** Args for taskstealready
 */
 typedef struct kaapi_taskstealready_arg_t {
-  kaapi_thread_context_t*    origin_thread;   /* stack where task was stolen */
   struct kaapi_tasklist_t*   origin_tasklist; /* the original task list */
-  size_t                     origin_cnttasks; /* maximal number of tasks */
   struct kaapi_taskdescr_t** origin_td_beg;   /* range of stolen task into origin_tasklist */
   struct kaapi_taskdescr_t** origin_td_end;   /* range of stolen task into origin_tasklist */
 } kaapi_taskstealready_arg_t;
-
 
 /** User task + args for kaapi_adapt_body. 
     This area represents the part to be sent by the combinator during the remote

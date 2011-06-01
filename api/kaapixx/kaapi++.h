@@ -160,7 +160,8 @@ namespace ka {
       const kaapi_offset_t        offset_cwflag[],
       const kaapi_format_t*       fmt_param[],
       const kaapi_memory_view_t   view_param[],
-      const kaapi_reducor_t       reducor_param[]
+      const kaapi_reducor_t       reducor_param[],
+      const kaapi_task_binding_t* task_bind
     );
 
     /* task with dynamic format */
@@ -178,7 +179,8 @@ namespace ka {
       kaapi_memory_view_t       (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*),
       void                      (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
       void                      (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*),
-      kaapi_reducor_t           (*get_reducor )        (const struct kaapi_format_t*, unsigned int, const void*)
+      kaapi_reducor_t           (*get_reducor )    (const struct kaapi_format_t*, unsigned int, const void*),
+      void                      (*get_task_binding)(const struct kaapi_format_t*, const kaapi_task_t*, kaapi_task_binding_t*)
     );
   };
   
@@ -2854,6 +2856,16 @@ namespace ka {
   struct OCRAttribut;
 
   template<typename T>  
+  struct OCRAttribut<T,false> { /* not a ka::pointer type, do nothing */
+    OCRAttribut<T,false>(const T* a) {}
+    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    { 
+      kaapi_thread_pushtask(thread); 
+      return 0;
+    }
+  };
+
+  template<typename T>  /* case of a ka::pointer type */
   struct OCRAttribut<T,true> {
     const void* _ptr;
     OCRAttribut<T,true>(const T* a)
@@ -2863,16 +2875,6 @@ namespace ka {
     void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
     { 
       kaapi_thread_pushtask_withocr(thread, _ptr); 
-      return 0;
-    }
-  };
-
-  template<typename T>  
-  struct OCRAttribut<T,false> {
-    OCRAttribut<T,false>(const T* a) {}
-    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
-    { 
-      kaapi_thread_pushtask(thread); 
       return 0;
     }
   };

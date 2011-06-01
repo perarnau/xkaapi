@@ -77,12 +77,14 @@ libkaapi_la_SOURCES=\
   workstealing/kaapi_sched_sync.c \
   workstealing/kaapi_sched_criticalsteal.c \
   workstealing/kaapi_sched_lready.c \
-  workstealing/kaapi_sched_wsqueue.c 
+  workstealing/kaapi_sched_wsqueue.c \
+  workstealing/kaapi_sched_affinity_queue.c 
 
 #Libtask
 libkaapi_la_SOURCES+=\
   kaapi_tasklist.h\
   thread/kaapi_tasklist.c \
+  thread/kaapi_thread_tasklist_activate.c \
   thread/kaapi_thread_dfg_print.c \
   thread/kaapi_thread_rdl_print.c \
   thread/kaapi_thread_dfgdot_print.c \
@@ -145,7 +147,6 @@ endif
   static/kaapi_threadgroup_print.c\
   static/kaapi_threadgroup_saverestore.c\
   static/kaapi_threadgroup_synchronize.c
-
 
 if KAAPI_TARGET_MT
 libkaapi_la_SOURCES+=\

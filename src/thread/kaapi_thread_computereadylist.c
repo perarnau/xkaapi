@@ -71,16 +71,24 @@ int kaapi_sched_clearreadylist( void )
 {
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
   if (thread ==0) return EINVAL;
+
   kaapi_tasklist_t* tasklist = thread->sfp->tasklist;
-  kaapi_sched_lock(&thread->proc->lock);
-  thread->sfp->tasklist = 0;
-  kaapi_sched_unlock(&thread->proc->lock);
-  kaapi_tasklist_destroy(tasklist);
-  free( tasklist );
-//HERE: hack to do loop over SetStaticSched because memory state
-// is leaved in inconsistant state.
+
+  if (tasklist != 0)
+  {
+    kaapi_sched_lock(&thread->proc->lock);
+    thread->sfp->tasklist = 0;
+    kaapi_sched_unlock(&thread->proc->lock);
+    kaapi_tasklist_destroy(tasklist);
+    free( tasklist );
+  }
+
+  /* HERE: hack to do loop over SetStaticSched because memory state
+     is leaved in inconsistant state.
+  */
   kaapi_memory_destroy();
   kaapi_memory_init();
+
   return 0;
 }
 

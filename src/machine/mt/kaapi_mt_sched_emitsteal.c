@@ -48,19 +48,95 @@
 #define KAAPI_USE_AGGREGATION
 
 #if defined(KAAPI_USE_AGGREGATION)
+
+extern unsigned int kaapi_numa_get_kid_binding(unsigned int);
+
+/* steal on a global queue.
+   return a thread in case of success else 0
+*/
+static kaapi_thread_context_t* _kaapi_sched_emitsteal_onglobal_queue( 
+  kaapi_processor_t*      kproc, 
+  kaapi_affinity_queue_t* queue 
+)
+{
+  kaapi_reply_t*     reply;
+  kaapi_thread_t*	 self_thread;
+  kaapi_taskdescr_t* td = kaapi_sched_affinity_owner_poptask( queue );
+
+  if ( td !=0 )
+  {
+    reply = &kproc->thread->static_reply;
+    self_thread = kaapi_threadcontext2thread(kproc->thread);
+    
+    if (td->type == KAAPI_TASKDFG_CASE)
+    {
+      kaapi_tasksteal_arg_t* arg;
+
+      /* allocate reply data on the stack */
+      reply->offset = 0;
+
+      /* recopy the task */
+      kaapi_task_t* copytask = (kaapi_task_t*)reply->udata;
+      *copytask = td->task;
+
+      arg = (kaapi_tasksteal_arg_t*) (copytask +1);
+      arg->origin_thread = td->u.dfg.thread;
+      arg->origin_task   = copytask;
+      arg->war_param     = td->u.dfg.war;  
+
+      /* push a tasksteal task */
+      kaapi_task_init(kaapi_thread_toptask(self_thread), kaapi_tasksteal_body, arg);
+      kaapi_thread_pushtask(self_thread);
+
+      return kproc->thread;
+    }
+    else {
+      kaapi_taskstealready_arg_t* arg;
+
+      /* - this code is similar to code of kaapi_task_splitter_readylist
+      */
+      kaapi_assert_debug( td->type == KAAPI_TASKACL_CASE );
+
+      /* Reply with the task to execute the task descriptor
+         - kaapi_taskstealready_body, with (if possible) stack allocation of the tasklist & allocator ?
+      */
+      kaapi_taskdescr_t**  arg_copytd = (kaapi_taskdescr_t**)reply->udata;
+      *arg_copytd          = td;
+      arg                  = (kaapi_taskstealready_arg_t*)(arg_copytd+1);
+      arg->origin_tasklist = td->tl;
+      arg->origin_td_beg   = arg_copytd;
+      arg->origin_td_end   = 1+arg_copytd;
+      kaapi_task_init(kaapi_thread_toptask(self_thread), kaapi_taskstealready_body, arg);
+      kaapi_thread_pushtask(self_thread);
+
+      return kproc->thread;
+    }
+  }
+  return 0;
+}
+
+
+/*
+*/
 kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
 {
-  kaapi_victim_t          victim;
-  kaapi_thread_t*	        self_thread;
-  kaapi_reply_t*          reply;
-  kaapi_listrequest_t*    victim_hlr;
-  int                     err;
+  kaapi_thread_context_t*      thread;
+  kaapi_victim_t               victim;
+  kaapi_thread_t*	           self_thread;
+  kaapi_reply_t*               reply;
+  kaapi_listrequest_t*         victim_hlr;
+  int                          err;
   kaapi_listrequest_iterator_t lri;
   
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc->thread !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
 
+  /* steal in the local queue first */
+  kaapi_affinity_queue_t* queue = kaapi_sched_affinity_lookup_numa_queue(kproc->numa_nodeid);
+  thread = _kaapi_sched_emitsteal_onglobal_queue( kproc, queue );
+  if (thread !=0) return thread;
+  
   if (kaapi_count_kprocessors <2) return 0;
   
   /* allocate reply data on the stack */
@@ -95,7 +171,7 @@ redo_select:
 #endif
 
   /* (2)
-     lock and retest if they are yet posted requests on victim or not 
+     lock and re-test if they are yet posted requests on victim or not 
      if during tentaive of locking, a reply occurs, then return with reply
   */
 #if defined(KAAPI_SCHED_LOCK_CAS)
@@ -243,6 +319,10 @@ return_value:
     default:
       kaapi_assert_debug_m(0, "Bad request status" );
   }
+  
+  /* here means failure: test to steal global queues at random */
+  queue = kaapi_sched_affinity_random_queue(kproc);
+  return _kaapi_sched_emitsteal_onglobal_queue( kproc, queue );
   return 0;  
 }
 
