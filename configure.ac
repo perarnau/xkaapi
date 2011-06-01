@@ -656,6 +656,72 @@ AC_SUBST(KATAKNETLIB_BUILD_LIBS)
 AM_CONDITIONAL([KAAPI_TARGET_TAKNET],[test x"$KAAPI_USE_TAKNET" = x"yes"])
 
 
+dnl -----------------------------------------------------------------------
+dnl The "--with-boost" required for kacc compiler with rose
+dnl -----------------------------------------------------------------------
+AC_ARG_WITH([boost],[AS_HELP_STRING([--with-boost=<dir>],
+		 [choose boost directory. required for if enable kaapi compiler])],
+     [],
+     [with_boost=no]
+)
+
+AS_CASE([$with_boost],
+  [no], [dnl
+  ], 
+  [*], [dnl
+    AC_MSG_NOTICE([Adding boost support '$with_boost'])
+    # not using AC*DEFINE as we want this available for examples too
+    KAAPI_USE_BOOST=yes
+    BOOST_BUILD_CPPFLAGS=-I$with_boost/include
+    BOOST_BUILD_CFLAGS=
+    BOOST_BUILD_LDFLAGS=-L$with_boost/lib
+    BOOST_BUILD_LIBS=
+    AC_MSG_NOTICE([BOOST_BUILD_CPPFLAGS=$BOOST_BUILD_CPPFLAGS])
+    AC_MSG_NOTICE([BOOST_BUILD_CFLAGS=$BOOST_BUILD_CFLAGS])
+    AC_MSG_NOTICE([BOOST_BUILD_LDFLAGS=$BOOST_BUILD_LDFLAGS])
+    AC_MSG_NOTICE([BOOST_BUILD_LIBS=$BOOST_BUILD_LIBS])
+  ]
+)
+AC_SUBST(BOOST_BUILD_CPPFLAGS)
+AC_SUBST(BOOST_BUILD_CFLAGS)
+AC_SUBST(BOOST_BUILD_LDFLAGS)
+AC_SUBST(BOOST_BUILD_LIBS)
+
+
+dnl -----------------------------------------------------------------------
+dnl The "--with-rose"
+dnl -----------------------------------------------------------------------
+AC_ARG_WITH([rose],[AS_HELP_STRING([--with-rose=<dir>],
+		 [choose Rose installation directory to compile kacc])],
+     [],
+     [with_rose=no]
+)
+
+AS_CASE([$with_rose],
+  [no], [dnl
+  ], 
+  [*], [dnl
+    AC_MSG_NOTICE([Adding Rose '$with_rose' for compiler generation])
+    # not using AC*DEFINE as we want this available for examples too
+    KAAPI_USE_ROSE=yes
+    ROSE_BUILD_CPPFLAGS="-I$with_rose/include $BOOST_BUILD_CPPFLAGS"
+    ROSE_BUILD_CFLAGS=
+    ROSE_BUILD_LDFLAGS="-framework JavaVM -Wl,-bind_at_load $with_rose/lib/librose.dylib -L$with_rose/lib $BOOST_BUILD_LDFLAGS -lm -lboost_date_time -lboost_thread -lboost_filesystem -lboost_program_options -lboost_regex -lboost_system -lboost_wave -ldl"
+    ROSE_BUILD_LIBS=
+    AC_MSG_NOTICE([ROSE_BUILD_CPPFLAGS=$ROSE_BUILD_CPPFLAGS])
+    AC_MSG_NOTICE([ROSE_BUILD_CFLAGS=$ROSE_BUILD_CFLAGS])
+    AC_MSG_NOTICE([ROSE_BUILD_LDFLAGS=$ROSE_BUILD_LDFLAGS])
+    AC_MSG_NOTICE([ROSE_BUILD_LIBS=$ROSE_BUILD_LIBS])
+  ]
+)
+AC_SUBST(ROSE_BUILD_CPPFLAGS)
+AC_SUBST(ROSE_BUILD_CFLAGS)
+AC_SUBST(ROSE_BUILD_LDFLAGS)
+AC_SUBST(ROSE_BUILD_LIBS)
+AM_CONDITIONAL([KAAPI_TARGET_ROSE],[test x"$KAAPI_USE_ROSE" = x"yes"])
+
+
+
 
 
 dnl -----------------------------------------------------------------------
@@ -731,6 +797,7 @@ AC_CONFIG_FILES([
 	network/taknet/Makefile
 	src/Makefile
 	bin/Makefile
+	bin/kacc.cpp
 	tests/static/Makefile
 
 	atha.pc
