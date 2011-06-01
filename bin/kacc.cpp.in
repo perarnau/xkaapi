@@ -1,0 +1,275 @@
+/*
+** xkaapi
+** 
+** Copyright 2011 INRIA.
+**
+** Contributors :
+**
+** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+** 
+** This software is a computer program whose purpose is to execute
+** multithreaded computation with data flow synchronization between
+** threads.
+** 
+** This software is governed by the CeCILL-C license under French law
+** and abiding by the rules of distribution of free software.  You can
+** use, modify and/ or redistribute the software under the terms of
+** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
+** following URL "http://www.cecill.info".
+** 
+** As a counterpart to the access to the source code and rights to
+** copy, modify and redistribute granted by the license, users are
+** provided only with a limited warranty and the software's author,
+** the holder of the economic rights, and the successive licensors
+** have only limited liability.
+** 
+** In this respect, the user's attention is drawn to the risks
+** associated with loading, using, modifying and/or developing or
+** reproducing the software by the user in light of its specific
+** status of free software, that may mean that it is complicated to
+** manipulate, and that also therefore means that it is reserved for
+** developers and experienced professionals having in-depth computer
+** knowledge. Users are therefore encouraged to load and test the
+** software's suitability as regards their requirements in conditions
+** enabling the security of their systems and/or data to be ensured
+** and, more generally, to use and operate it in the same conditions
+** as regards security.
+** 
+** The fact that you are presently reading this means that you have
+** had knowledge of the CeCILL-C license and that you accept its
+** terms.
+** 
+*/
+#include "config.h"
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <string>
+#include <list>
+#include <stdlib.h>
+
+#define COMPILER   "g++"
+#define COMPILER_E "g++ -E -P -C"
+
+typedef std::list<std::string> ListOptions;
+
+/**/
+static std::string List2String( const ListOptions& lo )
+{
+  std::string retval;
+  ListOptions::const_iterator ibeg;
+  for (ibeg = lo.begin(); ibeg != lo.end(); ++ibeg)
+    retval = retval + " " + *ibeg;
+  return retval;
+}
+
+
+/** Parse options:
+    -keep: keep kaapi intermediate files
+    -c
+    -S
+    -E
+    -std=standard
+    -g -pg
+    -Warn -pedantic
+    -Idir -Ldir
+    -Dmacro[defn] -Umacro
+    -foption -mmachine-option
+    -o outfile
+    
+    -Wl: option for the linker
+    -Wc: specific options for the underlaying compiler backend
+    
+    All recognized options are pass directly to the underlaying compiler.
+    We only want to known: 1/files to compile in order to preprocess them
+    before calling the underlaying compiler.
+*/
+int main( int argc, char** argv)
+{
+  bool verbose = false;  
+  bool keep = false;
+  bool nolink = false;
+  int  err;
+  ListOptions preprocess_options;
+  ListOptions compiler_options;
+  ListOptions file_tocompile;
+  ListOptions file_tocompile_kaapi;
+  
+  for (int i=1; i<argc; ++i)
+  {
+    std::string option= argv[i];
+    
+    if (option.find("-v")  ==0) 
+    {
+      verbose = true;
+      compiler_options.push_back( option );
+    }
+    else if (option.find("-c")  ==0) {
+      compiler_options.push_back( option );
+      nolink = true;
+    }
+    else if (option.find("-O")  ==0) 
+      compiler_options.push_back( option );
+    else if (option.find("-S")  ==0) 
+      compiler_options.push_back( option );
+    else if (option.find("-E")  ==0) 
+      preprocess_options.push_back( option );
+    else if (option.find("-D")  ==0) {
+      preprocess_options.push_back( option ); compiler_options.push_back( option );
+    } else if (option.find("-U")  ==0) {
+      preprocess_options.push_back( option ); compiler_options.push_back( option );
+    } else if (option.find("-std")==0) {
+      preprocess_options.push_back(option); compiler_options.push_back( option );
+    } else if (option.find("-g")==0) 
+      compiler_options.push_back( option );
+    else if (option.find("-pg")==0) 
+      compiler_options.push_back( option );
+    else if (option.find("-Wl,")==0) 
+      compiler_options.push_back( option );
+    else if (option.find("-Wc,")==0) 
+      compiler_options.push_back( option );
+    else if (option.find("-W")==0) 
+      compiler_options.push_back( option );
+    else if (option.find("-pedantic")==0) 
+      compiler_options.push_back( option );
+    else if (option.find("-f")==0) 
+      compiler_options.push_back( option );
+    else if (option.find("-m")==0) 
+      compiler_options.push_back( option );
+    else if (option.find("-m")==0) 
+      compiler_options.push_back( option );
+    else if (option.find("-I")==0) {
+      preprocess_options.push_back(option); compiler_options.push_back( option );
+    } else if (option.find("-L")==0)
+      compiler_options.push_back( option );
+    else if (option.find("-o")==0) {
+      if (i+1 == argc) {
+        std::cerr << argv[0] << ": error, option '-o filename'" << std::endl;
+        return -1;
+      }
+      ++i;
+      option = option + " " + argv[i];
+      compiler_options.push_back( option );
+    } else if (option.find("-keep")==0) {
+      keep = true;
+      std::cout << "Msg: Keep intermediate file" << std::endl;
+    } else 
+      file_tocompile.push_back(option);
+  }
+  
+//NOT REQUIRED for preprocessing preprocess_options.push_back( std::string("-I@prefix@/include") );
+  compiler_options.push_back( std::string("-I@prefix@/include") );
+  if (!nolink)
+  {
+    compiler_options.push_back( std::string("-L@prefix@/lib -lkaapi") );
+  }
+  
+  /* small verification ?*/
+  
+  ListOptions::const_iterator ibeg;
+  for (ibeg = file_tocompile.begin(); ibeg != file_tocompile.end(); ++ibeg)
+  {
+    std::ifstream file( ibeg->c_str() );
+    if (!file.good())
+    {
+      std::cerr << argv[0] << ": error, no such file'" << *ibeg << "'" << std::endl;
+    }
+    /* file exist: ok */
+    std::string o_file_format = "format-" + *ibeg;
+    std::string o_file_kacc = "kaapi-" + *ibeg;
+
+#if 0
+    std::string o_file_preprocessor = "pre-" + *ibeg;
+
+    /* call the preprocessor */
+    std::ostringstream cmdline1;
+    cmdline1 << (getenv("CPP") == 0 ? COMPILER_E : getenv("CPP"))
+             << List2String( preprocess_options )
+             << " " << *ibeg << " > " << o_file_preprocessor;
+    if (verbose)
+      std::cout << "Commande1: " << cmdline1.str() << std::endl;
+    err = system(cmdline1.str().c_str());
+    if (err != 0)
+    {
+      std::cerr << "*** error of '" << cmdline1.str() << "': " << err << std::endl;
+      return err;
+    }
+
+    /* call the source 2 source Kaapi compiler */
+    std::ostringstream cmdline2;
+    cmdline2 << "@prefix@/bin/kaapi_c2c " << o_file_preprocessor 
+            << " -rose:o " << o_file_kacc;
+#else
+    /* call the source 2 source Kaapi compiler */
+    std::ostringstream cmdline2;
+    cmdline2 << "@prefix@/bin/kaapi_c2c " << *ibeg 
+            << " -rose:o " << o_file_kacc;
+#endif
+
+    if (verbose)
+      std::cout << "Commande2: " << cmdline2.str() << std::endl;
+    err = system(cmdline2.str().c_str());
+    if (err != 0)
+    {
+      std::cerr << "*** error: status of '" << cmdline2.str() << "': " << err << std::endl;
+      return err;
+    }
+
+    /* rename kaapi-format.cpp to "format-" + *ibeg */
+    std::ostringstream cmdrename;
+    cmdrename << "\\mv kaapi-format.cpp " << o_file_format;
+    err = system(cmdrename.str().c_str());
+    if (err != 0)
+    {
+      std::cerr << "*** error: status of '" << cmdrename.str() << "': " << err << std::endl;
+      return err;
+    }
+
+    file_tocompile_kaapi.push_back( o_file_kacc );
+    file_tocompile_kaapi.push_back( o_file_format );
+
+#if 0
+    if (!keep)
+    {
+      /* erase o_file_preprocessor */
+      std::ostringstream cmdline;
+      cmdline << "\\rm " << o_file_preprocessor;
+      if (verbose)
+        std::cout << "Commande RM: " << cmdline.str() << std::endl;
+      err = system(cmdline.str().c_str());
+      if (err != 0)
+        std::cerr << "*** warning: status of '" << cmdline.str() << "': " << err << std::endl;
+    }
+#endif
+  }
+
+
+  /* call the true compiler */
+  std::ostringstream cmdline3;
+  cmdline3 << (getenv("CXX") == 0 ? COMPILER : getenv("CXX")) 
+           << List2String( compiler_options )
+           << List2String(file_tocompile_kaapi);
+  if (verbose)
+    std::cout << "Commande3: " << cmdline3.str() << std::endl;
+  err = system(cmdline3.str().c_str());
+  if (err != 0)
+  {
+    std::cerr << "*** error: status of '" << cmdline3.str() << "': " << err << std::endl;
+    return err;
+  }
+  
+  if (!keep)
+  {
+    /* erase o_file_preprocessor */
+    std::ostringstream cmdline;
+    cmdline << "\\rm " << List2String(file_tocompile_kaapi);
+    if (verbose)
+      std::cout << "Commande RM: " << cmdline.str() << std::endl;
+    err = system(cmdline.str().c_str());
+    if (err != 0)
+      std::cerr << "Status of '" << cmdline.str() << "': " << err << std::endl;
+  }
+
+  return 0;
+}
