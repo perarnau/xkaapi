@@ -457,6 +457,15 @@ extern int kaapi_init(int* argc, char*** argv);
 */
 extern int kaapi_finalize(void);
 
+
+/** Declare the beginning of a parallel region
+*/
+extern void kaapi_begin_parallel(void);
+
+/** Declare the end of a parallel region
+*/
+extern void kaapi_end_parallel(void);
+
 /* Get the current processor kid. 
    \retval the current processor id
 */
@@ -1059,6 +1068,8 @@ static inline void kaapi_thread_allocateshareddata(kaapi_access_t* a, kaapi_thre
   thread->sp_data += count;
   return;
 }
+static inline void* kaapi_alloca( kaapi_thread_t* thread, uint32_t count )
+{ return kaapi_thread_pushdata(thread, count); }
 
 /** \ingroup TASK
     The function kaapi_thread_toptask() will return the top task.

@@ -95,6 +95,7 @@ int main( int argc, char** argv)
   ListOptions compiler_options;
   ListOptions file_tocompile;
   ListOptions file_tocompile_kaapi;
+  std::string outfile;
   
   for (int i=1; i<argc; ++i)
   {
@@ -143,19 +144,27 @@ int main( int argc, char** argv)
       preprocess_options.push_back(option); compiler_options.push_back( option );
     } else if (option.find("-L")==0)
       compiler_options.push_back( option );
+    else if (option.find("-l")==0)
+      compiler_options.push_back( option );
     else if (option.find("-o")==0) {
       if (i+1 == argc) {
         std::cerr << argv[0] << ": error, option '-o filename'" << std::endl;
         return -1;
       }
       ++i;
+      outfile = argv[i];
       option = option + " " + argv[i];
       compiler_options.push_back( option );
     } else if (option.find("-keep")==0) {
       keep = true;
-      std::cout << "Msg: Keep intermediate file" << std::endl;
+      std::cout << "****[kacc]: Keep intermediate file" << std::endl;
     } else 
       file_tocompile.push_back(option);
+      if (option == outfile)
+      {
+        std::cerr << "****[kacc]: output file is the same as input file";
+        return -1;
+      }
   }
   
 //NOT REQUIRED for preprocessing preprocess_options.push_back( std::string("-I@prefix@/include") );
@@ -198,12 +207,12 @@ int main( int argc, char** argv)
 
     /* call the source 2 source Kaapi compiler */
     std::ostringstream cmdline2;
-    cmdline2 << "@prefix@/bin/kaapi_c2c " << o_file_preprocessor 
+    cmdline2 << "@prefix@/bin/kaapi_c2c --edg:no_warnings " << o_file_preprocessor 
             << " -rose:o " << o_file_kacc;
 #else
     /* call the source 2 source Kaapi compiler */
     std::ostringstream cmdline2;
-    cmdline2 << "@prefix@/bin/kaapi_c2c " << *ibeg 
+    cmdline2 << "@prefix@/bin/kaapi_c2c --edg:no_warnings " << *ibeg 
             << " -rose:o " << o_file_kacc;
 #endif
 
@@ -245,11 +254,13 @@ int main( int argc, char** argv)
   }
 
 
-  /* call the true compiler */
+  /* call the true compiler 
+     TODO: call gcc or g++ depending of the input file type
+  */
   std::ostringstream cmdline3;
   cmdline3 << (getenv("CXX") == 0 ? COMPILER : getenv("CXX")) 
-           << List2String( compiler_options )
-           << List2String(file_tocompile_kaapi);
+           << List2String(file_tocompile_kaapi)
+           << List2String( compiler_options );
   if (verbose)
     std::cout << "Commande3: " << cmdline3.str() << std::endl;
   err = system(cmdline3.str().c_str());

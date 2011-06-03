@@ -13,12 +13,14 @@
 struct KaapiTaskAttribute; 
 
 static std::list<KaapiTaskAttribute*> all_tasks;
+static std::map<std::string,KaapiTaskAttribute*> all_manglename2tasks;
 
 typedef std::list<std::pair<SgFunctionDeclaration*, std::string> > ListTaskFunctionDeclaration;
 static ListTaskFunctionDeclaration all_task_func_decl;
 
 /* used to mark already instanciated template */
 static std::set<std::string> all_template_instanciate; 
+static std::set<SgFunctionDefinition*> all_template_instanciate_definition; 
 
 /* list of all SgBasicBlock where a __kaapi_thread variable was insert */
 static std::set<SgBasicBlock*>           all_listbb;
@@ -103,6 +105,7 @@ enum KaapiAccessMode_t {
   KAAPI_V_MODE
 };
 
+
 /* Store view of each parameter */
 class KaapiParamAttribute : public AstAttribute {
 public:
@@ -110,7 +113,7 @@ public:
    : lda(0), dim(0) 
   { }
   SgExpression* lda;
-  size_t dim;
+  size_t        dim;
   SgExpression* ndim[3];
 };
 
@@ -133,6 +136,7 @@ public:
   KaapiTaskAttribute () 
   { }
 
+  std::string                       mangled_name;      /* internal name of the task */
   std::vector<KaapiTaskFormalParam> formal_param;
   std::map<std::string,int>         lookup;
   SgScopeStatement                  scope;             /* for the formal parameter */
@@ -179,14 +183,22 @@ std::string GenerateSetDimensionExpression(
 
 
 
-/** Parse C/C++ identifier and return the last un recognized char which putback into the stream
-    [a-zA-Z_]*[0-9]
-*/
+/* fwd decl */
+static SgExpression* ParseExpression( 
+    Sg_File_Info* fileInfo, 
+    std::istringstream& input, 
+    SgScopeStatement* scope 
+);
+
 static inline int isletter( char c)
 { return (c == '_') || isalpha(c); }
 static inline int isletternum( char c)
 { return (c == '_') || isalnum(c); }
 
+/** Parse C/C++ identifier and return the last unrecognized char 
+    which is putted back into the stream
+    [a-zA-Z_]*[0-9]
+*/
 static int ParseIdentifier( std::string& ident, std::istringstream& input )
 {
   char c;
@@ -244,7 +256,7 @@ static SgUnsignedLongVal* ParseExprIntegralNumber( std::istringstream& input )
   return SageBuilder::buildUnsignedLongVal( value );
 }
 
-static SgExpression* ParseExprIdentifier( 
+static SgVarRefExp* ParseExprIdentifier( 
     Sg_File_Info* fileInfo, 
     std::istringstream& input, 
     SgScopeStatement* scope 
@@ -254,10 +266,11 @@ static SgExpression* ParseExprIdentifier(
   ParseIdentifier(ident, input);
   if (ident.empty())
   {
-    std::cerr << "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
-              << "\n Bad identifier. Identifier should begin by a letter or '_'."
+    std::cerr << "****[kaapi_c2c] Empty identifier."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
               << std::endl;
-    KaapiAbort("*** Error");
+    KaapiAbort("**** error");
   }
   return SageBuilder::buildVarRefExp (ident, scope );
 }
@@ -278,6 +291,233 @@ static SgExpression* ParseExprConstant(
   return ParseExprIdentifier(fileInfo,input,scope);
 }
 
+/**/
+static SgExpression* ParsePrimaryExpression( 
+    Sg_File_Info* fileInfo, 
+    std::istringstream& input, 
+    SgScopeStatement* scope 
+)
+{
+  std::cout << ">> ParsePrimaryExpression" << std::endl;
+  SgExpression* expr;
+  char c;
+  input >> std::ws >> c;
+  if (c == '(')
+  {
+    expr = ParseExpression(fileInfo, input, scope );
+    if (c != ')') 
+    {
+      std::cerr << "****[kaapi_c2c] Error found '" << c 
+                << "'. Missing ')' in primary expression."
+                << "     In filename '" << fileInfo->get_filename() 
+                << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+      KaapiAbort("**** error");
+    }
+    std::cout << ">> ParsePrimaryExpression" 
+              << expr->unparseToString() << std::endl;
+    return expr;
+  }
+  input.putback(c);
+  expr = ParseExprConstant(fileInfo, input, scope );
+  std::cout << ">> ParsePrimaryExpression: " 
+            << expr->unparseToString() << std::endl;
+  return expr;
+}
+
+/**/
+static SgExpression* ParseUnaryExpression( 
+    Sg_File_Info* fileInfo, 
+    std::istringstream& input, 
+    SgScopeStatement* scope 
+)
+{
+  std::cout << ">> ParseUnaryExpression" << std::endl;
+  SgExpression* expr;
+  
+#if 0 
+  input >> std::ws;
+/* currently do not handle sizeof expression 
+   putback seems to be limited to 1 char.
+*/
+  char ci[7] = {0,0,0,0,0,0,0}; /* s i z e o f + 0 */
+  input.getline(ci, 7);
+  if (strcmp(ci,"sizeof") == 0) 
+  {
+    char c;
+    input >> std::ws >> c;
+    if (c == '(')
+    {
+      std::string type_name;
+      ParseIdentifier( type_name, input );
+      SgType* type = SageInterface::lookupNamedTypeInParentScopes(type_name, scope); 
+      /* should be a type !!! */
+      if (type ==0)
+      {
+        std::cerr << "****[kaapi_c2c] Error. Unknown type in cast expression.\n"
+                  << "     In filename '" << fileInfo->get_filename() 
+                  << "' LINE: " << fileInfo->get_line()
+                  << std::endl;
+        KaapiAbort("**** error");
+      }
+
+      input >> std::ws >> c;
+      if (c != ')') 
+      {
+        std::cerr << "****[kaapi_c2c] Error. Missing ')' in cast expression.\n"
+                  << "     In filename '" << fileInfo->get_filename() 
+                  << "' LINE: " << fileInfo->get_line()
+                  << std::endl;
+        KaapiAbort("**** error");
+      }
+      expr = SageBuilder::buildSizeOfOp(type);
+      std::cout << ">> ParseUnaryExpression: " 
+                << expr->unparseToString() << std::endl;
+      return expr;
+    }
+    else 
+    {
+      input.putback(c);
+      expr = ParseUnaryExpression(fileInfo, input, scope );
+      expr = SageBuilder::buildSizeOfOp(expr);
+      std::cout << ">> ParseUnaryExpression" 
+                << expr->unparseToString() << std::endl;
+      return expr;
+    }
+  }
+  else {
+    int rsize= input.gcount();
+    for (int i=0; i<rsize; ++i)
+      input.putback(ci[i]);
+  }
+#endif
+
+  expr = ParsePrimaryExpression( fileInfo, input, scope);
+  std::cout << ">> ParseUnaryExpression: " 
+            << expr->unparseToString() << std::endl;
+  return expr;
+}
+
+/**/
+static SgExpression* ParseCastExpression( 
+    Sg_File_Info* fileInfo, 
+    std::istringstream& input, 
+    SgScopeStatement* scope 
+)
+{
+  std::cout << ">> ParseCastExpression" << std::endl;
+  SgExpression* expr;
+  char c;
+  input >> std::ws >> c;
+  if (c == '(') 
+  {
+    std::string type_name;
+    ParseIdentifier( type_name, input );
+    SgType* type = SageInterface::lookupNamedTypeInParentScopes(type_name, scope); 
+    /* should be a type !!! */
+    if (type ==0)
+    {
+      std::cerr << "****[kaapi_c2c] Error. Unknown type in cast expression."
+                << "     In filename '" << fileInfo->get_filename() 
+                << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+      KaapiAbort("**** error");
+    }
+
+    input >> std::ws >> c;
+    if (c != ')')
+    {
+      std::cerr << "****[kaapi_c2c] Error. Missing ')' in cast expression."
+                << "     In filename '" << fileInfo->get_filename() 
+                << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+      KaapiAbort("**** error");
+    }
+    expr = ParseCastExpression(fileInfo, input, scope);
+    expr = SageBuilder::buildCastExp (expr, type );
+    std::cout << ">> ParseCastExpression: " << expr->unparseToString() << std::endl;
+    return expr;
+  }
+  input.putback(c);
+  expr= ParseUnaryExpression( fileInfo, input, scope);
+  std::cout << ">> ParseCastExpression: " << expr->unparseToString() << std::endl;
+  return expr;
+}
+
+/**/
+static SgExpression* ParseMultiplicativeExpression( 
+    Sg_File_Info* fileInfo, 
+    std::istringstream& input, 
+    SgScopeStatement* scope 
+)
+{
+  std::cout << ">> ParseMultiplicativeExpression" << std::endl;
+  char c;
+  SgExpression* expr= ParseCastExpression( fileInfo, input, scope);
+redo:
+  input >> std::ws >> c;
+  if (c == '*')
+  {
+    expr = SageBuilder::buildMultiplyOp( expr, ParseCastExpression( fileInfo, input, scope) );
+    goto redo;
+  }
+  else if (c == '/')
+  {
+    expr = SageBuilder::buildDivideOp( expr, ParseCastExpression( fileInfo, input, scope) );
+    goto redo;
+  }
+  else if (c == '%')
+  {
+    expr = SageBuilder::buildModOp( expr, ParseCastExpression( fileInfo, input, scope) );
+    goto redo;
+  }
+  else 
+    input.putback(c);
+  std::cout << "<< ParseMultiplicativeExpression: " << expr->unparseToString() << std::endl;
+  return expr;
+}
+
+/**/
+static SgExpression* ParseAdditiveExpression( 
+    Sg_File_Info* fileInfo, 
+    std::istringstream& input, 
+    SgScopeStatement* scope 
+)
+{
+  std::cout << ">> ParseAdditiveExpression" << std::endl;
+  char c;
+  SgExpression* expr= ParseMultiplicativeExpression( fileInfo, input, scope);
+redo:
+  input >> std::ws >> c;
+  if (c == '+')
+  {
+    expr = SageBuilder::buildAddOp( expr, ParseMultiplicativeExpression( fileInfo, input, scope) );
+    goto redo;
+  }
+  else if (c == '-')
+  {
+    expr = SageBuilder::buildSubtractOp( expr, ParseMultiplicativeExpression( fileInfo, input, scope) );
+    goto redo;
+  }
+  else 
+    input.putback(c);
+  std::cout << "<< ParseAdditiveExpression: " << expr->unparseToString() << std::endl;
+  return expr;
+}
+
+static SgExpression* ParseExpression( 
+    Sg_File_Info* fileInfo, 
+    std::istringstream& input, 
+    SgScopeStatement* scope 
+)
+{
+  SgExpression* expr;
+  std::cout << ">> Parse Expression" << std::endl;
+  expr = ParseAdditiveExpression( fileInfo, input, scope);
+  std::cout << "<< Parse Expression:" << expr->unparseToString() << std::endl;
+  return expr;
+}
+
 static void ParseDimension( 
     Sg_File_Info* fileInfo, 
     KaapiParamAttribute* kpa, 
@@ -293,37 +533,67 @@ redo_onedim:
     input.putback(c);
     return;
   }
-  kpa->ndim[kpa->dim] = ParseExprConstant( fileInfo, input, scope );
+  kpa->ndim[kpa->dim] = ParseExpression( fileInfo, input, scope );
   input >> std::ws >> c;
   if (c != ']') 
   {
-    std::cerr << "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
-              << "\n Bad syntax for dimension expression list of parameters. Waiting ']', found: '" << c << "'"
+    std::cerr << "****[kaapi_c2c] Error. Missing ']' in dimension expression."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
               << std::endl;
-    KaapiAbort("*** Error");
+    KaapiAbort("**** error");
   }
-  if (++kpa->dim == 3) {
-    std::cerr << "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
-              << "\n Too high dimension for array (current hard limit= 2)"
+  if (++kpa->dim == 3) 
+  {
+    std::cerr << "****[kaapi_c2c] Error. Too high dimension for array (hard limit=2)."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
               << std::endl;
-    KaapiAbort("*** Error");
+    KaapiAbort("**** error");
   }
 
   goto redo_onedim;
 }
 
-/* Parse one formal parameter definition and return its view
-   grammar if more or less:
-     param :=
-          ident | ident dimension | ident '{' lda ';' dimension '}'
-     dimension :=
+/* Parse one formal parameter definition and return its attribut
+   after parsing the expression defining the view.
+        
+      dimension :=
           one_dimension | dimension one_dimension
-     one_dimension :=
-          '[' identifier_constant ']'
-     lda :=
+      one_dimension :=
+          '[' expression ']'
+
+      lda :=
         identifier
-     identifier_constant :=
-        identifier | integral_number
+
+      expression :=
+        additive_expression
+
+      additive_expression :=
+          multiplicative_expression
+        | additive_expression '+' multiplicative_expression
+        | additive_expression '-' multiplicative_expression
+        
+      multiplicative_expression
+          cast_expression
+        | multiplicative_expression '*' cast_expression
+        | multiplicative_expression '/' cast_expression
+        | multiplicative_expression '%' cast_expression
+
+      cast_expression
+          unary_expression
+        | '(' type_name ')' cast_expression
+
+      unary_expression
+          primary_expression
+        | SIZEOF unary_expression
+        | SIZEOF '(' type_name ')'
+      
+      primary_expression
+          identifier
+        | integral
+        | '(' expression ')'
+
 */
 static KaapiParamAttribute* ParseParamDecl( 
     Sg_File_Info* fileInfo, 
@@ -387,6 +657,52 @@ static KaapiParamAttribute* ParseParamDecl(
 }
 
 
+/* Parse the list of formal parameter definitions
+   The grammar is:
+      list_param :=
+          access_param
+        | list_param access_param
+      
+      access_param :=
+          mode '(' list_declaration ')
+      
+      list_declaration :=
+          range_declaration
+        | list_declaration ',' range_declaration
+        
+      range_declaration :=
+          identifier
+        | identifier dimension
+        | identifier '{' complex_view '}
+        | '[' identifier '..' identifier ']'
+      
+      complex_view :=
+          element_view
+        | complex_dimension ',' element_view
+      
+      element_view :=
+          storage
+        | lda
+        | dimension
+        
+      mode :=
+          'write' | 'w' | 'output'
+        | 'read' | 'r' | 'input'
+        | 'exclusive' | 'x' | 'inout'
+        | 'value' | 'v'
+        | 'reduction' | 'cw'
+      
+      storage :=
+          'rowmajor' | 'C'
+        | 'columnmajor' | 'Fortran'
+      
+      lda :=
+          identifier
+          
+      See in the grammar above for the remainders rules about dimension,
+      lda etc.
+      
+*/
 static void ParseListParamDecl( 
     Sg_File_Info* fileInfo, 
     KaapiTaskAttribute* kta, 
@@ -407,7 +723,7 @@ static void ParseListParamDecl(
       mode = KAAPI_W_MODE;
     else if ((name == "read") || (name == "r") || (name == "input"))
       mode = KAAPI_R_MODE;
-    else if ((name == "exlusive") || (name == "x") || (name == "inout"))
+    else if ((name == "exclusive") || (name == "x") || (name == "inout"))
       mode = KAAPI_R_MODE;
     else if ((name == "value") || (name == "v"))
       mode = KAAPI_V_MODE;
@@ -505,6 +821,19 @@ void DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration, std::is
   /* */
   KaapiTaskAttribute* kta = new KaapiTaskAttribute;
   kta->func_decl = functionDeclaration;
+  
+  /* Mark the body of the function as a "kaapiisparallelregion" */
+  if (functionDeclaration->get_definition() !=0)
+  {
+    SgBasicBlock* body = functionDeclaration->get_definition()->get_body();
+    body->setAttribute("kaapiisparallelregion", (AstAttribute*)-1);
+#if 0
+    std::cout << "Set the body:" << body << " of the function: "<<functionDeclaration->get_name().str() 
+              << " as an implicit parallel region"
+              << std::endl;
+#endif
+  }
+
 
   /* Store formal parameter in the KaapiTaskAttribute structure */
   SgFunctionParameterList* func_param = functionDeclaration->get_parameterList();
@@ -548,6 +877,7 @@ void DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration, std::is
     std::ostringstream name;
     name << "f" << i;
     SgType* member_type = 0;
+redo_selection:
     if (kta->formal_param[i].mode == KAAPI_V_MODE)
     {
       member_type = kta->formal_param[i].type;
@@ -558,11 +888,15 @@ void DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration, std::is
     else
     {
       if (!isSgPointerType(kta->formal_param[i].type))
-      { /* read/write/reduction should be pointer */
-        std::cerr <<  "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
-                  << " Formal parameter '" << kta->formal_param[i].initname->get_name().str()
-                  << "' is declared as read/write/reduction and should be declared as a pointer."
+      { /* read/write/reduction should be pointer: else move them to be by value */
+        std::cerr << "****[kaapi_c2c] Warning: incorrect access mode.\n"
+                  << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
+                  << " formal parameter '" << kta->formal_param[i].initname->get_name().str()
+                  << "' is declared as read/write/reduction and should be declared as a pointer.\n"
+                  << "      Change access mode to be a value.\n"
                   << std::endl;
+        kta->formal_param[i].mode = KAAPI_V_MODE;
+        goto redo_selection;
         KaapiAbort("**** error");
       }
       kta->formal_param[i].kaapi_format = ConvertCType2KaapiFormat(
@@ -628,9 +962,9 @@ void DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration, std::is
      to generate the function parameter list because it cannot be shared between
      2 delcarations and deep copy == seg fault
    */
-  kta->name_wrapper = std::string("__kaapi_wrapper_") + 
-      functionDeclaration->get_name().str() + 
+  kta->mangled_name = std::string(functionDeclaration->get_name().str()) + 
       functionDeclaration->get_mangled_name().str();
+  kta->name_wrapper = std::string("__kaapi_wrapper_") + kta->mangled_name;
 
   SgFunctionParameterList* fwd_parameterList = SageBuilder::buildFunctionParameterList();
   SageInterface::appendArg(fwd_parameterList, 
@@ -705,6 +1039,7 @@ void DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration, std::is
       argscall,
       wrapper_body
   );
+  callStmt->setAttribute("kaapiwrappercall", (AstAttribute*)-1);
   SageInterface::insertStatement( truearg_decl, callStmt, false );
     
 //  SageInterface::insertStatement( kta->typedefparamclass, kta->wrapper_decl, false );
@@ -718,7 +1053,7 @@ void DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration, std::is
     kta
   );
   all_tasks.push_back( kta );
-
+  all_manglename2tasks.insert( std::make_pair(kta->mangled_name, kta) );
 #if 0
   std::cout << "***** Attach Task attribut to declaration: " << functionDeclaration 
             << " name: " << functionDeclaration->get_name().str()
@@ -761,7 +1096,7 @@ void DoKaapiPragmaNoTask( SgPragmaDeclaration* sgp, std::istringstream& input )
 */
 void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
 {
-  std::cout << "**** Task's generation format for function: " << kta->func_decl->get_name().str()
+  std::cout << "****[kaapi_c2c] Task's generation format for function: " << kta->func_decl->get_name().str()
             << std::endl;
   
   kta->name_format = kta->name_paramclass + "_format";
@@ -816,7 +1151,7 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
     fout << "    case " << i << ": return &arg->f" << i << ";\n";
   }
   fout << "  }\n"
-       << " return 0;\n"
+       << "  return 0;\n"
        << "}\n"
        << std::endl;
 
@@ -838,7 +1173,7 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
       fout << "    case " << i << ": retval = arg->f" << i << "; break; \n" ;/* because it is an access here */
   }
   fout << "  }\n"
-       << " return retval;\n"
+       << "  return retval;\n"
        << "}\n"
        << std::endl;
   
@@ -914,7 +1249,7 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
   {
     if (kta->formal_param[i].mode != KAAPI_V_MODE)
     {
-      if (kta->formal_param[i].attr->dim == 2)
+      if ((kta->formal_param[i].attr->dim == 2) && (kta->formal_param[i].attr->lda !=0))
         fout << "    case " << i << ": {\n "
              << "      " << GenerateSetDimensionExpression(kta, kta->formal_param[i].attr->lda, -1) << "\n"
              << "    return; }\n";
@@ -938,10 +1273,12 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
        << "{ kaapi_reducor_t a; return a; }\n"
        << std::endl;
 
+#if 0
   /* format::get_task_binding */
   fout << "void " << kta->name_format << "_get_task_binding(const struct kaapi_format_t* fmt, const kaapi_task_t* t, kaapi_task_binding_t* tb)\n"
        << "{ return; }\n"
        << std::endl;
+#endif
        
   /* Generate constructor function that register the format */
   fout << "/* constructor method */\n" 
@@ -966,8 +1303,8 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
        << "    " << kta->name_format << "_get_view_param,\n" /* get_view_param */
        << "    " << kta->name_format << "_set_view_param,\n" /* set_view_param */
        << "    " << kta->name_format << "_reducor,\n" /* reducor */
-       << "    " << kta->name_format << "_get_reducor,\n" /* get_reducor */
-       << "    " << kta->name_format << "_get_task_binding\n" /* get_task_binding */
+       << "    " << kta->name_format << "_get_reducor\n" /* get_reducor */
+//NO BINDING IN THIS VERSION       << "    " << kta->name_format << "_get_task_binding\n" /* get_task_binding */
        << "  );\n"
        << "}\n"
        << std::endl;
@@ -1213,7 +1550,71 @@ void DoKaapiPragmaWaiton( SgPragmaDeclaration* sgp, std::istringstream& input )
 }
 
 
-/** #pragma kaapi waiton parsing
+/** #pragma kaapi parallel
+*/
+void DoKaapiPragmaParallelRegion( SgPragmaDeclaration* sgp, std::istringstream& input )
+{
+  SgBasicBlock* bbnode = isSgBasicBlock(sgp->get_parent());
+  if (bbnode ==0)
+  {
+    Sg_File_Info* fileInfo = sgp->get_file_info();
+    std::cerr <<  "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
+              << " #pragma kaapi parallel: invalid scope declaration"
+              << std::endl;
+    KaapiAbort("**** error");
+  }
+  SgNode* nextnode = 
+          sgp->get_parent()-> get_traversalSuccessorByIndex( 
+              sgp->get_parent()->get_childIndex( sgp ) + 1);
+
+  SgExprStatement* callinitStmt;
+  SgExprStatement* callfinishStmt;
+  if (isSgStatement(nextnode) !=0)
+  {
+    /* add a new fictif basicblock that contains only the Statement nextnode */
+    SgStatement* nextstmt = isSgStatement(nextnode);
+    SgBasicBlock* newbb = SageBuilder::buildBasicBlock();
+    SageInterface::insertStatement( nextstmt, newbb, false );
+    SageInterface::removeStatement( nextstmt );
+    SageInterface::appendStatement( nextstmt, newbb );
+    nextnode = newbb;
+  }
+  if (isSgBasicBlock(nextnode))
+  {
+    SgStatement* first_stmt;
+    SgStatement* last_stmt;
+    callinitStmt = SageBuilder::buildFunctionCallStmt
+    (    "kaapi_begin_parallel", 
+         SageBuilder::buildVoidType(), 
+         SageBuilder::buildExprListExp(),
+         bbnode
+    );
+    callfinishStmt = SageBuilder::buildFunctionCallStmt
+    (    "kaapi_end_parallel", 
+         SageBuilder::buildVoidType(), 
+         SageBuilder::buildExprListExp(),
+         bbnode
+    );
+
+    nextnode->setAttribute("kaapiisparallelregion", (AstAttribute*)-1);
+    nextnode->setAttribute("kaapiparallelregion", (AstAttribute*)callinitStmt);
+    first_stmt = SageInterface::getFirstStatement(isSgBasicBlock(nextnode), true);
+    last_stmt = SageInterface::getLastStatement(isSgBasicBlock(nextnode));
+
+    SageInterface::insertStatement( first_stmt, callinitStmt, true );
+    SageInterface::insertStatement( last_stmt, callfinishStmt, false );
+  } 
+  else {
+    Sg_File_Info* fileInfo = sgp->get_file_info();
+    std::cerr << "****[kaapi_c2c] invalid scope for #pragma kaapi parallel."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    KaapiAbort("**** error");
+  }
+}
+
+/** #pragma kaapi init/finish: flag == true if init
 */
 void DoKaapiPragmaInit( SgPragmaDeclaration* sgp, std::istringstream& input, bool flag )
 {
@@ -1228,6 +1629,7 @@ void DoKaapiPragmaInit( SgPragmaDeclaration* sgp, std::istringstream& input, boo
               << std::endl;
     KaapiAbort("**** error");
   }
+  bbnode->setAttribute("kaapiisparallelregion", (AstAttribute*)-1);
   SgNode* nextnode = 
           sgp->get_parent()-> get_traversalSuccessorByIndex( 
               sgp->get_parent()->get_childIndex( sgp ) + 1);
@@ -1281,14 +1683,111 @@ struct OneCall {
 class KaapiTaskCallTraversal : public AstSimpleProcessing {
 public:
   KaapiTaskCallTraversal()
-   : exprstatement(0)
   {}
   virtual void visit(SgNode* node)
   {
+    /* propagate the parallelregion attribut to all nodes which has parent within */
+    if ((node->get_parent() !=0) && (node->get_parent()->getAttribute("kaapiisparallelregion") !=0))
+    {
+      node->setAttribute("kaapiisparallelregion", (AstAttribute*)-1);
+    }
+
+#if 0
+    if (isSgScopeStatement(node))
+    {
+      SgScopeStatement* bb = isSgScopeStatement(node);
+      if (bb->get_parent()->getAttribute("kaapiisparallelregion") !=0)
+      {
+        bb->setAttribute("kaapiisparallelregion", (AstAttribute*)-1);
+#if 0
+        std::cout << "Set the scope statement: " << bb << ", name:" << bb->class_name()
+                  << " as a parallel region because its parent:" << bb->get_parent() 
+                  << " was also a parallel region"
+                  << std::endl;
+#endif
+        switch (bb->variantT()) /* see ROSE documentation if missing node or node */
+        {
+          case V_SgIfStmt:
+          {
+            SgIfStmt* ifstmt = isSgIfStmt(bb);
+            bb = isSgScopeStatement( ifstmt->get_true_body() );
+            if (bb !=0)
+              bb->setAttribute("kaapiisparallelregion", (AstAttribute*)-1);
+            
+            bb = isSgScopeStatement( ifstmt->get_false_body() );
+            if (bb !=0)
+              bb->setAttribute("kaapiisparallelregion", (AstAttribute*)-1);
+            break;
+          }
+          case V_SgDoWhileStmt: 
+          {
+            SgDoWhileStmt* dostmt = isSgDoWhileStmt(bb);
+            bb = isSgScopeStatement( dostmt->get_body() );
+            if (bb !=0)
+              bb->setAttribute("kaapiisparallelregion", (AstAttribute*)-1);
+            break;
+          }
+          case V_SgWhileStmt:
+          {
+            SgWhileStmt* whilestmt = isSgWhileStmt(bb);
+            bb = isSgScopeStatement( whilestmt->get_body() );
+            if (bb !=0)
+              bb->setAttribute("kaapiisparallelregion", (AstAttribute*)-1);
+            break;
+          }
+
+          case V_SgForStatement:
+          {
+            SgForStatement* forstmt = isSgForStatement(bb);
+            bb = isSgScopeStatement( forstmt->get_loop_body() );
+            if (bb !=0)
+              bb->setAttribute("kaapiisparallelregion", (AstAttribute*)-1);
+            break;
+          }
+
+          case V_SgSwitchStatement:
+          {
+            SgSwitchStatement* switchstmt = isSgSwitchStatement(bb);
+            bb = isSgScopeStatement( switchstmt->get_body() );
+            if (bb !=0)
+              bb->setAttribute("kaapiisparallelregion", (AstAttribute*)-1);
+            break;
+          }
+          
+          case V_SgForAllStatement: /* for fortran */
+          case V_SgFortranDo:
+          default: break;
+        }
+      }
+    }
+    if (isSgCaseOptionStmt(node))
+    {
+      SgCaseOptionStmt* casestmt = isSgCaseOptionStmt(node);
+      if (casestmt->get_parent()->getAttribute("kaapiisparallelregion") !=0)
+      {
+        casestmt->setAttribute("kaapiisparallelregion", (AstAttribute*)-1);
+        casestmt->get_body()->setAttribute("kaapiisparallelregion", (AstAttribute*)-1);
+      }
+    }
+#endif
+    
     if (isSgExprStatement(node))
     {
-      exprstatement = isSgExprStatement(node);
-      if (exprstatement->getAttribute("kaapinotask") !=0) return;
+      SgExprStatement*    exprstatement = isSgExprStatement(node);
+      if (SageInterface::getScope(exprstatement)->getAttribute("kaapiisparallelregion") ==0) 
+      {
+#if 0
+        std::cout << "Function call is not a task, because its scope is not parallel:"
+                  << SageInterface::getScope(exprstatement) 
+                  << std::endl;
+#endif
+        return;
+      }
+      if (exprstatement->getAttribute("kaapinotask") !=0) 
+        return;
+      if (exprstatement->getAttribute("kaapiwrappercall") !=0) 
+        return; /* call made by the wrapper */
+        
       SgFunctionCallExp* fc = isSgFunctionCallExp( exprstatement->get_expression() );
       if (fc !=0)
       {
@@ -1304,9 +1803,11 @@ public:
           if (kta !=0)
           {
 #if 0
+            std::string mangled_name = fdecl->get_name().str();
+            mangled_name = mangled_name + fdecl->get_mangled_name();
             Sg_File_Info* fileInfo = fc->get_file_info();
-            std::cerr <<  "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
-                      << " *********** This is a task call to function: '" << fdecl->get_name().str() 
+            std::cerr << "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
+                      << " \n*********** This is a task call to function: '" << mangled_name 
                       << "', Parent node is a: '" << fc->get_parent()->class_name()
                       << "', Grand Parent node is a: '" << fc->get_parent()->get_parent()->class_name() << "'\n"
                       << std::endl;
@@ -1315,6 +1816,23 @@ public:
             SgBasicBlock* bbnode = isSgBasicBlock( fc->get_parent()->get_parent() );
             all_listbb.insert( bbnode );
             _listcall.push_back( OneCall(bbnode, fc, exprstatement, kta) );
+
+#if 0 // TG no important here: see below in the main: when TemplateInstance are processed
+            SgTemplateInstantiationFunctionDecl* sg_tmpldecl = isSgTemplateInstantiationFunctionDecl( fdecl );
+            if (sg_tmpldecl !=0)
+            {
+              std::cerr << "This is a call to a template function instanciation\n" << std::endl;
+              KaapiPragmaString* kps 
+                = (KaapiPragmaString*)sg_tmpldecl->get_templateDeclaration()->getAttribute("kaapi_templatetask");
+              if (kps != 0)
+              {
+                std::cerr << "This is a call to a TASK template function instanciation, definition=" 
+                          << sg_tmpldecl->get_definition() << "\n" << std::endl;
+                if (sg_tmpldecl->get_definition() !=0)
+                  all_template_instanciate_definition.insert(sg_tmpldecl->get_definition());
+              }
+            }
+#endif
           }
         }
       }
@@ -1323,7 +1841,6 @@ public:
 
 public:
   std::list<OneCall> _listcall;
-  SgExprStatement*    exprstatement;
 };
 
 
@@ -1346,7 +1863,6 @@ void DoKaapiTaskCall( KaapiTaskCallTraversal* ktct, SgGlobal* gscope )
       buildInsertDeclarationKaapiThread(*ibb);
     }
   }
-
 
   std::list<OneCall>::iterator ifc;
   for (ifc = ktct->_listcall.begin(); ifc != ktct->_listcall.end(); ++ifc)
@@ -1464,8 +1980,6 @@ void DoKaapiTaskCall( KaapiTaskCallTraversal* ktct, SgGlobal* gscope )
     kaapi_task_ROSE_type
     kaapi_task_initdfg( task1, fibo_body, kaapi_thread_pushdata(thread, sizeof(fibo_arg_t)) );
 #endif
-
-    
   }
 }
 
@@ -1500,10 +2014,18 @@ public:
       
       input >> std::ws >> name;
       
+      /* Parallel kaapi region
+         add begin_parallel_region and end_parallel_region between the basic block
+      */
+      if (name == "parallel")
+      {
+        DoKaapiPragmaParallelRegion( sgp, input );
+      } 
+
       /* Case of task definition: because do no processing but register what to do
          then also pass the string in order the next step will be able to do parsing.
       */
-      if (name == "task")
+      else if (name == "task")
       {
         DoKaapiPragmaTask( sgp, pragma_string );
       } /* end for task */
@@ -1511,7 +2033,7 @@ public:
       else if (name == "notask")
       {
         DoKaapiPragmaNoTask( sgp, input );
-      } /* end for task */
+      } 
        
       /* Case of barrier definition
       */
@@ -1536,7 +2058,7 @@ public:
 
       /* Case of init/finalize
       */
-      else if (name == "init") 
+      else if ((name == "init") || (name == "start"))
       {
         DoKaapiPragmaInit( sgp, input, true );
       }
@@ -1609,6 +2131,28 @@ int main(int argc, char **argv)
           (name_finalize, SageBuilder::buildVoidType(), SageBuilder::buildFunctionParameterList(),gscope);
       ((decl_kaapi_finalize->get_declarationModifier()).get_storageModifier()).setExtern();
 
+
+      /* declare kaapi_begin_parallel */
+      static SgName name_beginparallel("kaapi_begin_parallel");
+      SgFunctionDeclaration *decl_kaapi_beginparallel 
+        = SageBuilder::buildNondefiningFunctionDeclaration(
+                name_beginparallel, 
+                SageBuilder::buildVoidType(), SageBuilder::
+                buildFunctionParameterList(),
+                gscope
+      );
+      ((decl_kaapi_beginparallel->get_declarationModifier()).get_storageModifier()).setExtern();
+
+      /* declare kaapi_end_parallel */
+      static SgName name_endparallel("kaapi_end_parallel");
+      SgFunctionDeclaration *decl_kaapi_endparallel 
+        = SageBuilder::buildNondefiningFunctionDeclaration(
+                name_endparallel, 
+                SageBuilder::buildVoidType(), SageBuilder::
+                buildFunctionParameterList(),
+                gscope
+      );
+      ((decl_kaapi_endparallel->get_declarationModifier()).get_storageModifier()).setExtern();
 
       /* declare kaapi_sync */
       static SgName name_sync("kaapi_sched_sync");
@@ -1709,6 +2253,10 @@ int main(int argc, char **argv)
           = (KaapiPragmaString*)sg_tmpldecl->get_templateDeclaration()->getAttribute("kaapi_templatetask");
         if (kps != 0)
         {
+          /* here two cases: 
+              1/ add the declaration of an instance to generate the wrapper & task arguments
+              2/ add the definition to be generated if null
+          */
           std::string mangled_name = sg_tmpldecl->get_templateName().str();
           mangled_name = mangled_name + sg_tmpldecl->get_mangled_name();
           
@@ -1716,9 +2264,17 @@ int main(int argc, char **argv)
           {
             all_task_func_decl.push_back( std::make_pair(sg_tmpldecl, kps->pragma_string) );
             all_template_instanciate.insert( mangled_name );
+#if 0
             std::cout << "*** Found Task TemplateFunctionDeclaration !!!!!, node=" << sg_tmpldecl 
                       << ", name: '" << sg_tmpldecl->get_mangled_name().str() << "'"
+                      << ", definition: " << sg_tmpldecl->get_definition()
                       << std::endl;
+#endif
+          }
+
+          if (sg_tmpldecl->get_definition() !=0)
+          {
+            all_template_instanciate_definition.insert(sg_tmpldecl->get_definition());
           }
         }
       }
@@ -1738,10 +2294,51 @@ int main(int argc, char **argv)
       }      
 
 
-      /* traverse all the expression inside the project and try to find function call expr or statement */
+      /* traverse all the expression inside the project and try to find function call expr or statement 
+         and replace them by task creation if the instruction is in a kaapiisparallelregion.
+         Preorder traversal in order to traverse root nodes before childs.
+      */
       KaapiTaskCallTraversal taskcall_replace;
-      taskcall_replace.traverse(project,postorder);
+      taskcall_replace.traverse(project,preorder);
       DoKaapiTaskCall( &taskcall_replace, gscope );
+      
+      /* Add explicit instanciation to template instance */
+      std::set<SgFunctionDefinition*>::iterator func_def_i;
+      for ( func_def_i =all_template_instanciate_definition.begin(); 
+            func_def_i != all_template_instanciate_definition.end(); 
+            ++func_def_i
+      )
+      {
+//        std::cerr << "Found a template instanciation function to generate" << std::endl;
+        SgTemplateInstantiationFunctionDecl* sg_tmpldecl 
+            = isSgTemplateInstantiationFunctionDecl((*func_def_i)->get_parent() );
+        if (sg_tmpldecl ==0)
+          KaapiAbort("*** Error: bad assertion, should be a SgTemplateInstantiationFunctionDecl");
+
+        KaapiPragmaString* kps 
+          = (KaapiPragmaString*)sg_tmpldecl->get_templateDeclaration()->getAttribute("kaapi_templatetask");
+        if (kps ==0)
+          KaapiAbort("*** Error: bad assertion, should be a TemplateFunction declaration task");
+
+        /* ok add textual definition after the forward declaration of the wrapper */
+        std::string mangled_name = sg_tmpldecl->get_templateName().str();
+        mangled_name = mangled_name + sg_tmpldecl->get_mangled_name();
+        std::map<std::string,KaapiTaskAttribute*>::iterator itask = all_manglename2tasks.find(mangled_name);
+        if (itask == all_manglename2tasks.end())
+          KaapiAbort("*** Error: bad assertion, should found the task definition");
+        
+        SgUnparse_Info* sg_info = new SgUnparse_Info;
+        sg_info->unset_forceQualifiedNames();            
+#if 0
+        std::cerr << "Core=='\n" 
+                  << sg_tmpldecl->get_definition()->unparseToString(sg_info)
+                  << "\n'" << std::endl;
+#endif
+        SageInterface::addTextForUnparser(itask->second->wrapper_decl,
+                    sg_tmpldecl->get_definition()->unparseToString(sg_info),
+                    AstUnparseAttribute::e_before
+        );
+      } 
     }
   }
 
@@ -2104,32 +2701,63 @@ SgVariableDeclaration* buildStructPointerVariable (
 /***/
 void buildInsertDeclarationKaapiThread( SgBasicBlock* bbnode )
 {
-  SgVariableDeclaration* newkaapi_thread = SageBuilder::buildVariableDeclaration ( 
-    "__kaapi_thread", 
-    SageBuilder::buildPointerType( kaapi_thread_ROSE_type ), 
-    SageBuilder::buildAssignInitializer(
-      SageBuilder::buildFunctionCallExp(
-        "kaapi_self_thread",
-        SageBuilder::buildPointerType(kaapi_thread_ROSE_type),
-        SageBuilder::buildExprListExp(
+  SgExprStatement* initregion = (SgExprStatement*)bbnode->getAttribute("kaapiparallelregion");
+  if (initregion == 0)
+  {
+    SgVariableDeclaration* newkaapi_thread = SageBuilder::buildVariableDeclaration ( 
+      "__kaapi_thread", 
+      SageBuilder::buildPointerType( kaapi_thread_ROSE_type ), 
+      SageBuilder::buildAssignInitializer(
+        SageBuilder::buildFunctionCallExp(
+          "kaapi_self_thread",
+          SageBuilder::buildPointerType(kaapi_thread_ROSE_type),
+          SageBuilder::buildExprListExp(
+          ),
+          bbnode
         ),
-        bbnode
+        0
       ),
-      0
-    ),
-    bbnode
-  );
-  SageInterface::prependStatement(newkaapi_thread, bbnode);
+      bbnode
+    );
+    SageInterface::prependStatement(newkaapi_thread, bbnode);
+  }
+  else {
+    /* declare the variable and initialize it after the begin_parallel_region*/
+    SgVariableDeclaration* newkaapi_thread = SageBuilder::buildVariableDeclaration ( 
+      "__kaapi_thread", 
+      SageBuilder::buildPointerType( kaapi_thread_ROSE_type ), 
+      0,
+      bbnode
+    );
+    SageInterface::prependStatement(newkaapi_thread, bbnode);
+    
+    SgExprStatement* exprstmt = SageBuilder::buildExprStatement(
+      SageBuilder::buildAssignOp(
+        SageBuilder::buildVarRefExp(
+          "__kaapi_thread", 
+          bbnode
+        ),
+        SageBuilder::buildFunctionCallExp(
+          "kaapi_self_thread",
+          SageBuilder::buildPointerType(kaapi_thread_ROSE_type),
+          SageBuilder::buildExprListExp(
+          ),
+          bbnode
+        )
+      )
+    );
+    SageInterface::insertStatement( initregion, exprstmt, false );
+  }
 }
 
 
 /***/
-std::string GenerateGetDimensionExpression(
+static void RecGenerateGetDimensionExpression(
+    std::ostringstream& sout,
     KaapiTaskAttribute* kta, 
-    SgExpression* expr
+    SgExpression*       expr
 )
 {
-  std::ostringstream expr_str;
   if (isSgVarRefExp(expr))
   {
     SgVarRefExp* var = isSgVarRefExp(expr);
@@ -2138,17 +2766,93 @@ std::string GenerateGetDimensionExpression(
     std::map<std::string,int>::iterator iparam = kta->lookup.find( sym->get_name().str() );
     if (iparam == kta->lookup.end())
       KaapiAbort("*** Cannot find which parameter is involved in dimension expression");
-    expr_str << "arg->f" << iparam->second;
+    sout << "((" 
+         << kta->formal_param[iparam->second].type->unparseToString() 
+         << ")" << "arg->f" << iparam->second;
+    if (kta->formal_param[iparam->second].mode != KAAPI_V_MODE)
+      sout << ".data";
+    sout << ")";
   }
   else if (isSgUnsignedLongVal(expr))
   {
     SgUnsignedLongVal* value = isSgUnsignedLongVal(expr);
-    expr_str << value->get_value();
+    sout << value->get_value();
+  }
+  else if (isSgSizeOfOp(expr))
+  {
+    SgSizeOfOp* esizeof = isSgSizeOfOp(expr);
+    sout << " sizeof( ";
+    if (esizeof->get_operand_expr() !=0)
+      RecGenerateGetDimensionExpression(sout, kta, esizeof->get_operand_expr() );
+    else /* here ??? */
+      sout << SageInterface::get_name(esizeof->get_type());
+  }
+  else if (isSgCastExp(expr))
+  {
+    SgCastExp* cast = isSgCastExp(expr);
+    sout << " ( " << SageInterface::get_name(cast->get_type()) << ")";
+    RecGenerateGetDimensionExpression(sout, kta, cast->get_originalExpressionTree());
+  }
+  else if (isSgMultiplyOp(expr))
+  {
+    SgMultiplyOp* op = isSgMultiplyOp(expr);
+    sout << "(";
+    RecGenerateGetDimensionExpression(sout, kta, op->get_lhs_operand());
+    sout << " * ";
+    RecGenerateGetDimensionExpression(sout, kta, op->get_rhs_operand());
+    sout << ")";
+  }
+  else if (isSgDivideOp(expr))
+  {
+    SgDivideOp* op = isSgDivideOp(expr);
+    sout << "(";
+    RecGenerateGetDimensionExpression(sout, kta, op->get_lhs_operand());
+    sout << " / ";
+    RecGenerateGetDimensionExpression(sout, kta, op->get_rhs_operand());
+    sout << ")";
+  }
+  else if (isSgModOp(expr))
+  {
+    SgModOp* op = isSgModOp(expr);
+    sout << "(";
+    RecGenerateGetDimensionExpression(sout, kta, op->get_lhs_operand());
+    sout << " % ";
+    RecGenerateGetDimensionExpression(sout, kta, op->get_rhs_operand());
+    sout << ")";
+  }
+  else if (isSgAddOp(expr))
+  {
+    SgAddOp* op = isSgAddOp(expr);
+    sout << "(";
+    RecGenerateGetDimensionExpression(sout, kta, op->get_lhs_operand());
+    sout << " + ";
+    RecGenerateGetDimensionExpression(sout, kta, op->get_rhs_operand());
+    sout << ")";
+  }
+  else if (isSgSubtractOp(expr))
+  {
+    SgSubtractOp* op = isSgSubtractOp(expr);
+    sout << "(";
+    RecGenerateGetDimensionExpression(sout, kta, op->get_lhs_operand());
+    sout << " - ";
+    RecGenerateGetDimensionExpression(sout, kta, op->get_rhs_operand());
+    sout << ")";
   }
   else {
-    std::cerr << "Found and expression: @expr:" << expr << "  " << (expr == 0? "" : expr->class_name()) << std::endl;
+    std::cerr << "Found an expression: @expr:" << expr << "  " << (expr == 0? "" : expr->class_name()) << std::endl;
     KaapiAbort("*** Bad expression for dimension");
   }
+}
+
+
+/***/
+std::string GenerateGetDimensionExpression(
+    KaapiTaskAttribute* kta, 
+    SgExpression*       expr
+)
+{
+  std::ostringstream expr_str;
+  RecGenerateGetDimensionExpression( expr_str, kta, expr );
   return expr_str.str();
 }
 
@@ -2171,13 +2875,14 @@ std::string GenerateSetDimensionExpression(
     /* look up sym->get_name() in the list of formal parameter of the declaration */
     std::map<std::string,int>::iterator iparam = kta->lookup.find( sym->get_name().str() );
     if (iparam == kta->lookup.end())
-      KaapiAbort("*** Cannot find which parameter is involved in lda expression");
+      KaapiAbort("****[kaapi_c2c] Cannot find which parameter is involved in lda expression");
     expr_str << "arg->f" << iparam->second;
     expr_str << " = view->lda;\n";
   }
   else {
-    std::cerr << "Found and expression: @expr:" << expr << "  " << (expr == 0? "" : expr->class_name()) << std::endl;
-    KaapiAbort("*** Bad expression for lda assignement. Should be an identifier.");
+    std::cerr << "****[kaapi_c2c] error. Cannot found lhs expression type for lda: @expr:" 
+              << expr << "  " << (expr == 0? "" : expr->class_name()) << std::endl;
+    KaapiAbort("****[kaapi_c2c] Expression for lda should be an identifier.");
   }
 
   return expr_str.str();
