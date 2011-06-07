@@ -1349,6 +1349,10 @@ struct OneCall {
   KaapiTaskAttribute* kta;
 };
 
+
+/** This method traverse all the AST tree to find call to function task:
+    - the call is registered into the _listcall of the object
+*/
 class KaapiTaskCallTraversal : public AstSimpleProcessing {
 public:
   KaapiTaskCallTraversal()
@@ -1443,7 +1447,8 @@ public:
     if (isSgExprStatement(node))
     {
       SgExprStatement*    exprstatement = isSgExprStatement(node);
-//      if (SageInterface::getScope(exprstatement)->getAttribute("kaapiisparallelregion") ==0) 
+#if 0
+      if (SageInterface::getScope(exprstatement)->getAttribute("kaapiisparallelregion") ==0) 
       {
 #if 0
         std::cout << "Function call is not a task, because its scope is not parallel:"
@@ -1452,6 +1457,7 @@ public:
 #endif
         return;
       }
+#endif
       if (exprstatement->getAttribute("kaapinotask") !=0) 
         return;
       if (exprstatement->getAttribute("kaapiwrappercall") !=0) 
