@@ -12,6 +12,8 @@
 OK   - gestion des args si paramètre range: begin -> access, end -> size_t (taille)
    - reduction & parsing de la declaration des fonctions + support moteur executif
      - init à 0 le 1er appel en CW ?
+     
+   - vérification des accès effectués en fonction des modes déclarés
 
    - adaptive loop. See OpenMP canonical form of Loop. Not all kind of expression
    can occurs in expressions of the for loop (init_expr; cond_expr; incr_expr )
