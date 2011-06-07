@@ -40,43 +40,75 @@
 ** terms.
 ** 
 */
-#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <sys/time.h>
 
-#pragma kaapi task write(result) read(r1,r2)
-void sum( long* result, const long* r1, const long* r2)
+/**
+*/
+double get_elapsedtime(void)
 {
-  *result = *r1 + *r2;
+  struct timeval tv;
+  int err = gettimeofday( &tv, 0);
+  if (err  !=0) return 0;
+  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
 }
 
-#pragma kaapi task write(result) value(n)
-void fibonacci(long* result, const long n)
+/*value(op)*/
+void for_each( double* array, size_t size, void (*op)(double*) )
 {
-  if (n<2)
-    *result = n;
-  else 
+#pragma kaapi parallel for
+  for (size_t i=0; i<size; ++i)
+    op(&array[i]);
+}
+
+
+/**
+ */
+static void apply_cos( double* v )
+{
+  *v += cos(*v);
+}
+
+/**
+ */
+int main(int ac, char** av)
+{
+  double t0,t1;
+  double sum = 0.f;
+  size_t i;
+  size_t iter;
+  
+#define ITEM_COUNT 100000
+  static double array[ITEM_COUNT];
+  
+#pragma kaapi parallel  
+  /* initialize the runtime */
+  for (iter = 0; iter < 100; ++iter)
   {
-#pragma kaapi data alloca(r1,r2)
-    long r1,r2;
-    fibonacci( &r1, n-1 );
-#pragma kaapi notask
-    fibonacci( &r2, n-2 );
-    sum( result, &r1, &r2);
-  }
-}
+    /* initialize, apply, check */
+    for (i = 0; i < ITEM_COUNT; ++i)
+      array[i] = 0.f;
 
-#pragma kaapi task read(result) 
-void print_result( const long* result )
-{
-  printf("Fibonacci(30)=%li\n", *result);
-}
+#pragma kaapi barrier
+    t0 = get_elapsedtime();
+    for_each( array, ITEM_COUNT, apply_cos );
+#pragma kaapi barrier
+    t1 = get_elapsedtime();
+    sum += (t1-t0)*1000; /* ms */
 
-int main()
-{
-  long result;
-#pragma kaapi parallel
-  {
-    fibonacci(&result, 30);
-    print_result(&result);
+    for (i = 0; i < ITEM_COUNT; ++i)
+      if (array[i] != 1.f)
+      {
+        printf("invalid @%lu == %lf\n", i, array[i]);
+        break ;
+      }
   }
+
+  printf("done: %lf (ms)\n", sum / 100);
+
+  /* finalize the runtime */
+#pragma kaapi finish
+  
   return 0;
 }

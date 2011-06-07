@@ -44,6 +44,7 @@
 #include <math.h>
 #include <sys/time.h>
 #include <iostream>
+#include <algorithm>
 
 /**
 */
@@ -55,29 +56,30 @@ double get_elapsedtime(void)
   return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
 }
 
-#pragma kaapi task value(size) write(array[size]) value (op)
+#pragma kaapi task readwrite( [begin:end]) value (op)
 template<class T, class OP>
-void for_each( T* array, size_t size, OP op )
+void for_each( T* begin, T* end, OP op )
 {
-  if (size <2)
-  {
-    for (size_t i=0; i<size; ++i)
-      op(&array[i]);
-  }
+  size_t size = (end-begin);
+  if (size < 128)
+    std::for_each( begin, end, op);
   else {
+#pragma kaapi parallel
+  {
     /* simple recursive for_each */
     size_t med = size/2;
-    for_each( array, med, op);
-    for_each( array+med, size-med, op);
+    for_each( begin, begin+med, op);
+    for_each( begin + med, end, op);
+  }
   }
 }
 
 
 /**
  */
-static void apply_cos( double* v )
+static void apply_cos( double& v )
 {
-  *v += cos(*v);
+  v += cos(v);
 }
 
 /**
@@ -105,7 +107,8 @@ int main(int ac, char** av)
 
 #pragma kaapi barrier
     t0 = get_elapsedtime();
-    for_each( array, size, apply_cos );
+#pragma kaapi parallel
+    for_each( array, array+size, apply_cos );
 #pragma kaapi barrier
     t1 = get_elapsedtime();
     sum += (t1-t0)*1000; /* ms */

@@ -42,41 +42,20 @@
 */
 #include <stdio.h>
 
-#pragma kaapi task write(result) read(r1,r2)
-void sum( long* result, const long* r1, const long* r2)
+#pragma kaapi task value(msg)
+void say_hello(const char* msg)
 {
-  *result = *r1 + *r2;
+  printf("Hello world: %s\n", msg);
 }
 
-#pragma kaapi task write(result) value(n)
-void fibonacci(long* result, const long n)
+
+int main(int argc, char** argv)
 {
-  if (n<2)
-    *result = n;
-  else 
+#pragma kaapi parallel 
   {
-#pragma kaapi data alloca(r1,r2)
-    long r1,r2;
-    fibonacci( &r1, n-1 );
-#pragma kaapi notask
-    fibonacci( &r2, n-2 );
-    sum( result, &r1, &r2);
-  }
-}
-
-#pragma kaapi task read(result) 
-void print_result( const long* result )
-{
-  printf("Fibonacci(30)=%li\n", *result);
-}
-
-int main()
-{
-  long result;
-#pragma kaapi parallel
-  {
-    fibonacci(&result, 30);
-    print_result(&result);
+    say_hello("I want to be printed first");
+    #pragma kaapi barrier
+    say_hello("I want to be printed second");
   }
   return 0;
 }

@@ -40,43 +40,85 @@
 ** terms.
 ** 
 */
-#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <sys/time.h>
 
-#pragma kaapi task write(result) read(r1,r2)
-void sum( long* result, const long* r1, const long* r2)
+/**
+*/
+double get_elapsedtime(void)
 {
-  *result = *r1 + *r2;
+  struct timeval tv;
+  int err = gettimeofday( &tv, 0);
+  if (err  !=0) return 0;
+  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
 }
 
-#pragma kaapi task write(result) value(n)
-void fibonacci(long* result, const long n)
+#pragma kaapi task write([begin:end)) value (op)
+/*value(op)*/
+void for_each( double* begin, double* end, void (*op)(double*) )
 {
-  if (n<2)
-    *result = n;
-  else 
+   size_t size = (end-begin);
+  if (size <2)
   {
-#pragma kaapi data alloca(r1,r2)
-    long r1,r2;
-    fibonacci( &r1, n-1 );
-#pragma kaapi notask
-    fibonacci( &r2, n-2 );
-    sum( result, &r1, &r2);
+    while (begin != end)
+      op(begin++);
+  }
+  else {
+    /* simple recursive for_each */
+    size_t med = size/2;
+    for_each( begin, begin+med, op);
+    for_each( begin+med, end, op);
   }
 }
 
-#pragma kaapi task read(result) 
-void print_result( const long* result )
+
+/**
+ */
+static void apply_cos( double* v )
 {
-  printf("Fibonacci(30)=%li\n", *result);
+  *v += cos(*v);
 }
 
-int main()
+/**
+ */
+int main(int ac, char** av)
 {
-  long result;
-#pragma kaapi parallel
+  double t0,t1;
+  double sum = 0.f;
+  size_t i;
+  size_t iter;
+  
+#define ITEM_COUNT 100000
+  static double array[ITEM_COUNT];
+  
+#pragma kaapi parallel  
+  /* initialize the runtime */
+  for (iter = 0; iter < 100; ++iter)
   {
-    fibonacci(&result, 30);
-    print_result(&result);
+    /* initialize, apply, check */
+    for (i = 0; i < ITEM_COUNT; ++i)
+      array[i] = 0.f;
+
+#pragma kaapi barrier
+    t0 = get_elapsedtime();
+    for_each( array, array+ITEM_COUNT, apply_cos );
+#pragma kaapi barrier
+    t1 = get_elapsedtime();
+    sum += (t1-t0)*1000; /* ms */
+
+    for (i = 0; i < ITEM_COUNT; ++i)
+      if (array[i] != 1.f)
+      {
+        printf("invalid @%lu == %lf\n", i, array[i]);
+        break ;
+      }
   }
+
+  printf("done: %lf (ms)\n", sum / 100);
+
+  /* finalize the runtime */
+#pragma kaapi finish
+  
   return 0;
 }

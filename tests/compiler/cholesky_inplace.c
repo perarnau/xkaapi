@@ -37,7 +37,7 @@
 //----------------------------------------------------------------------------------------------
 
 #pragma css task input(NB) inout(A[NB][NB]) highpriority 
-void smpSs_spotrf_tile(float *A,unsigned long NB)
+void smpSs_spotrf_tile(float *A, unsigned long NB)
 {
 unsigned char LO='L';
 int INFO;
