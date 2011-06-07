@@ -160,11 +160,13 @@ int kaapi_task_print(
           (*fmt_param->print)(file, access.version );
         }
 #endif
+#if 0 /* deprecated */
         if (KAAPI_ACCESS_IS_CUMULWRITE(m))
         {
           int wa = *kaapi_format_get_cwflag( fmt, i, sp);
           fprintf(file, ", cw_iswrite=%s", (wa !=0 ? "yes" : "no") );
         }
+#endif
       }
       if (i < count_params-1)
       {

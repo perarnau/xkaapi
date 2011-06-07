@@ -55,6 +55,7 @@ static size_t kaapi_task_computeready(
   void*                 sp, 
   const kaapi_format_t* task_fmt, 
   unsigned int*         war_param, 
+  unsigned int*         cw_param, 
   kaapi_hashmap_t*      map 
 )
 {
@@ -86,7 +87,11 @@ static size_t kaapi_task_computeready(
       --wc;
       if (  (KAAPI_ACCESS_IS_ONLYWRITE(m) && KAAPI_ACCESS_IS_READ(gd->last_mode))
          || (KAAPI_ACCESS_IS_CUMULWRITE(m) && KAAPI_ACCESS_IS_CONCURRENT(m,gd->last_mode)) )
+      {
         *war_param |= 1<<i;
+        if (KAAPI_ACCESS_IS_CUMULWRITE(m))
+          *cw_param |= 1<<i;
+      }
     }
     /* optimization: break from enclosest loop here */
     
@@ -95,10 +100,9 @@ static size_t kaapi_task_computeready(
       gd->last_mode = m;
     
     /* Datum produced by aftersteal_task may be made visible to thief in order to augment
-     the parallelism by breaking chain of versions (W->R -> W->R ), the second W->R may
-     be used (the middle R->W is splitted -renaming is also used in other context-).
-     But we do not take into account of this extra parallelism.
-     
+       the parallelism by breaking chain of versions (W->R -> W->R ), the second W->R may
+       be used (the middle R->W is splitted -renaming is also used in other context-).
+       But we do not take into account of this extra parallelism.
      */
   }
   return wc;
@@ -186,6 +190,7 @@ static int kaapi_sched_stealframe
       if (task_fmt !=0)
       {
         unsigned int war_param = 0;
+        unsigned int cw_param = 0;
         size_t wc = kaapi_task_computeready( task_top, kaapi_task_getargs(task_top), task_fmt, &war_param, map );
         if ((wc ==0) && kaapi_task_isstealable(task_top))
         {
@@ -197,7 +202,7 @@ static int kaapi_sched_stealframe
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD)
               kaapi_assert_m(0,"Not implemented for work stealing"
 #endif
-              kaapi_task_splitter_dfg(thread, task_top, war_param, lrequests, lrrange );
+              kaapi_task_splitter_dfg(thread, task_top, war_param, cw_param, lrequests, lrrange );
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
           }

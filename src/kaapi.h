@@ -107,8 +107,11 @@ typedef uint32_t kaapi_format_id_t;
 typedef uint32_t kaapi_offset_t;
 typedef uint64_t kaapi_gpustream_t;
 
-/** Reducor to accumulate value with cw access mode */
-typedef void (*kaapi_reducor_t)(void*, const void*);
+/** Reducor to reduce value with cw access mode */
+typedef void (*kaapi_reducor_t)(void* /*result*/, const void* /*value*/);
+
+/** Redinit: build a neutral element for the reduction law */
+typedef void (*kaapi_redinit_t)(void* /*result*/);
 
 /* Fwd decl
 */

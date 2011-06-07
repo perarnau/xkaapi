@@ -461,14 +461,14 @@ typedef struct kaapi_format_t {
   kaapi_task_body_t          entrypoint_wh[KAAPI_PROC_TYPE_MAX];      /* same as entrypoint, except that shared params are handle to memory location */
 
   /* case of format for a structure or for a task with flag= KAAPI_FORMAT_STATIC_FIELD */
-  int                         _count_params;                           /* number of parameters */
-  kaapi_access_mode_t        *_mode_params;                            /* only consider value with mask 0xF0 */
-  kaapi_offset_t             *_off_params;                             /* access to the i-th parameter: a value or a shared */
-  kaapi_offset_t             *_off_versions;                           /* access to the i-th parameter: a value or a shared */
-  kaapi_offset_t             *_off_cwflag;                             /* cw special flag of the i-th parameter: a value or a shared */
-  struct kaapi_format_t*     *_fmt_params;                             /* format for each params */
-  kaapi_memory_view_t        *_view_params;                            /* sizeof of each params */
-  kaapi_reducor_t            *_reducor_params;                         /* array of reducor in case of cw */
+  int                         _count_params;                          /* number of parameters */
+  kaapi_access_mode_t        *_mode_params;                           /* only consider value with mask 0xF0 */
+  kaapi_offset_t             *_off_params;                            /*access to the i-th parameter: a value or a shared */
+  kaapi_offset_t             *_off_versions;                          /*access to the i-th parameter: a value or a shared */
+  struct kaapi_format_t*     *_fmt_params;                            /* format for each params */
+  kaapi_memory_view_t        *_view_params;                           /* sizeof of each params */
+  kaapi_reducor_t            *_reducor_params;                        /* array of reducor in case of cw */
+  kaapi_redinit_t            *_redinit_params;                        /* array of redinit in case of cw */
 
   /* case of format for a structure or for a task with flag= KAAPI_FORMAT_FUNC_FIELD
      - the unsigned int argument is the index of the parameter 
@@ -477,20 +477,18 @@ typedef struct kaapi_format_t {
   size_t                (*get_count_params)(const struct kaapi_format_t*, const void*);
   kaapi_access_mode_t   (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*);
   void*                 (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*);
-  int*                  (*get_cwflag)      (const struct kaapi_format_t*, unsigned int, const void*);
   kaapi_access_t        (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*);
   void                  (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*);
-  void                  (*set_cwaccess_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*, int wa);
   const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*);
   kaapi_memory_view_t   (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*);
-  void (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t* );
-  void                  (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*);
-  kaapi_reducor_t       (*get_reducor )        (const struct kaapi_format_t*, unsigned int, const void*);
+  void (*set_view_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t* );
+
+  void                  (*reducor )        (const struct kaapi_format_t*, unsigned int, const void* sp, const void* value);
+  void                  (*redinit )        (const struct kaapi_format_t*, unsigned int, const void* sp );
 
   /* fields to link the format is the internal tables */
   struct kaapi_format_t      *next_bybody;                            /* link in hash table */
   struct kaapi_format_t      *next_byfmtid;                           /* link in hash table */
-
   
   /* only for Monotonic bound format */
   int    (*update_mb)(void* data, const struct kaapi_format_t* fmtdata,
@@ -541,42 +539,17 @@ kaapi_access_t         kaapi_format_get_access_param  (const struct kaapi_format
 }
 
 static inline 
-int*         kaapi_format_get_cwflag  (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp)
-{
-  kaapi_assert_debug( KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(fmt, ith, sp)) != KAAPI_ACCESS_MODE_V );
-  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) {
-    return (int*)(fmt->_off_cwflag[ith] + (char*)sp);
-  }
-  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
-  return (*fmt->get_cwflag)(fmt, ith, sp);
-}
-
-static inline 
 void         kaapi_format_set_access_param  (const struct kaapi_format_t* fmt, unsigned int ith, void* sp, const kaapi_access_t* a)
 {
   kaapi_assert_debug( KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(fmt, ith, sp)) != KAAPI_ACCESS_MODE_V );
-  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) {
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) 
+  {
     *(void**)(fmt->_off_params[ith] + (char*)sp) = a->data;
     *(void**)(fmt->_off_versions[ith] + (char*)sp) = a->version;
     return;
   }
   kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
   (*fmt->set_access_param)(fmt, ith, sp, a);
-}
-
-
-static inline 
-void         kaapi_format_set_cwaccess_param  (const struct kaapi_format_t* fmt, unsigned int ith, void* sp, const kaapi_access_t* a, int wa)
-{
-  kaapi_assert_debug( KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(fmt, ith, sp)) != KAAPI_ACCESS_MODE_V );
-  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) {
-    *(void**)(fmt->_off_params[ith] + (char*)sp) = a->data;
-    *(void**)(fmt->_off_versions[ith] + (char*)sp) = a->version;
-    *(int*)(fmt->_off_cwflag[ith] + (char*)sp) = wa;
-    return;
-  }
-  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
-  (*fmt->set_cwaccess_param)(fmt, ith, sp, a, wa);
 }
 
 
@@ -609,26 +582,26 @@ void kaapi_format_set_view_param (const struct kaapi_format_t* fmt, unsigned int
 }
 
 static inline 
-void          kaapi_format_reduce_param (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp, void* result, const void* value)
+void          kaapi_format_reduce_param (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp, const void* value)
 {
   if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) 
   {
-    (*fmt->_reducor_params[ith])(result, value);
+    (*fmt->_reducor_params[ith])( *(void**)(fmt->_off_params[ith] + (char*)sp), value);
     return;
   }
   kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
-  (*fmt->reducor)(fmt, ith, sp, result, value);
+  (*fmt->reducor)(fmt, ith, sp, value);
 }
 
 static inline 
-kaapi_reducor_t kaapi_format_get_reducor (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp )
+void kaapi_format_redinit_neutral (const struct kaapi_format_t* fmt, unsigned int ith, const void* sp )
 {
   if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) 
   {
-    return fmt->_reducor_params[ith];
+    return (*fmt->_redinit_params[ith])( *(void**)(fmt->_off_params[ith] + (char*)sp) );
   }
   kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
-  return (*fmt->get_reducor)(fmt, ith, sp);
+  return (*fmt->redinit)(fmt, ith, sp);
 }
 
 
@@ -1752,6 +1725,7 @@ extern int kaapi_task_splitter_dfg(
   kaapi_thread_context_t*       thread, 
   kaapi_task_t*                 task, 
   unsigned int                  war_param, 
+  unsigned int                  cw_param, 
   kaapi_listrequest_t*          lrequests, 
   kaapi_listrequest_iterator_t* lrrange
 );
@@ -1855,6 +1829,7 @@ typedef struct kaapi_tasksteal_arg_t {
   kaapi_task_t*           origin_task;       /* the stolen task into origin_stack */
   kaapi_format_t*         origin_fmt;        /* set by tasksteal the stolen task into origin_stack */
   unsigned int            war_param;         /* bit i=1 iff it is a w mode with war dependency */
+  unsigned int            cw_param;          /* bit i=1 iff it is a cw mode */
   void*                   copy_task_args;    /* set by tasksteal a copy of the task args */
 } kaapi_tasksteal_arg_t;
 
