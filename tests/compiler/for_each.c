@@ -1,13 +1,11 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:09 2009
-** Copyright 2009 INRIA.
+** Copyright 2011 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** vincent.danjean@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -42,58 +40,84 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
-#include "kaapi_network.h"
-#include "kaapi_compiler.h"
+#include <stdlib.h>
+#include <math.h>
+#include <sys/time.h>
 
-/* Weak symbols that will be overloaded by libkanet when
- * linked with it
+/**
+*/
+double get_elapsedtime(void)
+{
+  struct timeval tv;
+  int err = gettimeofday( &tv, 0);
+  if (err  !=0) return 0;
+  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
+}
+
+#pragma kaapi task value(size) write(array[size]) value (op)
+/*value(op)*/
+void for_each( double* array, size_t size, void (*op)(double*) )
+{
+  if (size <2)
+  {
+    for (size_t i=0; i<size; ++i)
+      op(&array[i]);
+  }
+  else {
+    /* simple recursive for_each */
+    size_t med = size/2;
+    for_each( array, med, op);
+    for_each( array+med, size-med, op);
+  }
+}
+
+
+/**
  */
-
-/**
-*/
-__KA_COMPILER_WEAK int kaapi_network_init (int* argc, char*** argv) 
+static void apply_cos( double* v )
 {
-///  printf("Use default weak symbol...\n");
-  return 0;
+  *v += cos(*v);
 }
 
 /**
-*/
-__KA_COMPILER_WEAK int kaapi_network_finalize(void)
-{  
-  return 0;
-}
-
-
-/**
-*/
-__KA_COMPILER_WEAK kaapi_globalid_t kaapi_network_get_current_globalid(void)
+ */
+int main(int ac, char** av)
 {
-  return 0;
-}
+  double t0,t1;
+  double sum = 0.f;
+  size_t i;
+  size_t iter;
+  
+#define ITEM_COUNT 100000
+  static double array[ITEM_COUNT];
+  
+#pragma kaapi parallel  
+  /* initialize the runtime */
+  for (iter = 0; iter < 100; ++iter)
+  {
+    /* initialize, apply, check */
+    for (i = 0; i < ITEM_COUNT; ++i)
+      array[i] = 0.f;
 
+#pragma kaapi barrier
+    t0 = get_elapsedtime();
+    for_each( array, ITEM_COUNT, apply_cos );
+#pragma kaapi barrier
+    t1 = get_elapsedtime();
+    sum += (t1-t0)*1000; /* ms */
 
-/**
-*/
-__KA_COMPILER_WEAK uint32_t kaapi_network_get_count(void)
-{
-  return 1;
-}
+    for (i = 0; i < ITEM_COUNT; ++i)
+      if (array[i] != 1.f)
+      {
+        printf("invalid @%lu == %lf\n", i, array[i]);
+        break ;
+      }
+  }
 
+  printf("done: %lf (ms)\n", sum / 100);
 
-__KA_COMPILER_WEAK void kaapi_network_poll(void)
-{
-}
-
-__KA_COMPILER_WEAK void kaapi_network_barrier(void)
-{
-}
-
-__KA_COMPILER_WEAK int kaapi_network_get_seginfo(kaapi_address_space_t* retval,
-			      kaapi_globalid_t gid )
-{
-  retval->segaddr = 0;
-  retval->segsize = (size_t)-1;
+  /* finalize the runtime */
+#pragma kaapi finish
+  
   return 0;
 }

@@ -157,10 +157,10 @@ namespace ka {
       const kaapi_access_mode_t   mode_param[],
       const kaapi_offset_t        offset_param[],
       const kaapi_offset_t        offset_version[],
-      const kaapi_offset_t        offset_cwflag[],
       const kaapi_format_t*       fmt_param[],
       const kaapi_memory_view_t   view_param[],
       const kaapi_reducor_t       reducor_param[],
+      const kaapi_redinit_t       redinit_param[],
       const kaapi_task_binding_t* task_bind
     );
 
@@ -171,15 +171,13 @@ namespace ka {
       size_t                    (*get_count_params)(const struct kaapi_format_t*, const void*),
       kaapi_access_mode_t       (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
       void*                     (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
-      int*                      (*get_cwflag)      (const struct kaapi_format_t*, unsigned int, const void*),
       kaapi_access_t            (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
       void                      (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
-      void                      (*set_cwaccess_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*, int),
       const struct kaapi_format_t*(*get_fmt_param) (const struct kaapi_format_t*, unsigned int, const void*),
       kaapi_memory_view_t       (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*),
       void                      (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
-      void                      (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*),
-      kaapi_reducor_t           (*get_reducor )    (const struct kaapi_format_t*, unsigned int, const void*),
+      void                      (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, const void*),
+      void                      (*redinit )        (const struct kaapi_format_t*, unsigned int, const void*, void*),
       void                      (*get_task_binding)(const struct kaapi_format_t*, const kaapi_task_t*, kaapi_task_binding_t*)
     );
   };
@@ -1003,6 +1001,7 @@ namespace ka {
     static void              set_view_param( type_inclosure_t* a, unsigned int i, const kaapi_memory_view_t*  view ) 
     { }
     static void              reducor_fnc(void*, const void*) {}
+    static void              redinit_fnc(void*) {}
   };
 
   template<typename T>
@@ -1027,6 +1026,7 @@ namespace ka {
     static void              set_view_param( type_inclosure_t* a, unsigned int i, const kaapi_memory_view_t*  view ) 
     { }
     static void              reducor_fnc(void*, const void*) {}
+    static void              redinit_fnc(void*) {}
   };
 
   template<typename T>
@@ -1051,6 +1051,7 @@ namespace ka {
     static void              set_view_param( type_inclosure_t* a, unsigned int i, const kaapi_memory_view_t*  view ) 
     { }
     static void              reducor_fnc(void*, const void*) {}
+    static void              redinit_fnc(void*) {}
   };
 
   template<typename T>
@@ -1071,6 +1072,7 @@ namespace ka {
     static void              set_cwaccess( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r, int f ) {}
     static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
     static void              reducor_fnc(void*, const void*) {}
+    static void              redinit_fnc(void*) {}
   };
 
   template<typename T>
@@ -1132,6 +1134,7 @@ namespace ka {
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
     static void              set_cwaccess( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r, int f ) {}
     static void              reducor_fnc(void*, const void*) {}
+    static void              redinit_fnc(void*) {}
   };
 
   template<typename T>
@@ -1157,6 +1160,7 @@ namespace ka {
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
     static void              set_cwaccess( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r, int f ) {}
     static void              reducor_fnc(void*, const void*) {}
+    static void              redinit_fnc(void*) {}
   };
 
   template<typename T>
@@ -1182,6 +1186,7 @@ namespace ka {
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
     static void              set_cwaccess( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r, int f ) {}
     static void              reducor_fnc(void*, const void*) {}
+    static void              redinit_fnc(void*) {}
   };
 
   template<typename T>
@@ -1207,6 +1212,7 @@ namespace ka {
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
     static void              set_cwaccess( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r, int f ) {}
     static void              reducor_fnc(void*, const void*) {}
+    static void              redinit_fnc(void*) {}
   };
 
   template<typename T>
@@ -1232,6 +1238,7 @@ namespace ka {
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
     static void              set_cwaccess( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r, int f ) {}
     static void              reducor_fnc(void*, const void*) {}
+    static void              redinit_fnc(void*) {}
   };
 
   template<typename T>
@@ -1257,6 +1264,7 @@ namespace ka {
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
     static void              set_cwaccess( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r, int f ) {}
     static void              reducor_fnc(void*, const void*) {}
+    static void              redinit_fnc(void*) {}
   };  
 
  template<typename T, typename OP>
@@ -1290,6 +1298,10 @@ namespace ka {
       const T* v = static_cast<const T*> (value);
       OP()(*r, *v);
     }
+    static void              redinit_fnc(void* value) 
+    { 
+      new (value)T;
+    }
   };
 
   template<typename T>
@@ -1314,7 +1326,8 @@ namespace ka {
     static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
     static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
     static void              reducor_fnc(void*, const void*) {}
-  };  
+    static void              redinit_fnc(void* value) { }
+  }; 
 
   template<typename T>
   struct TraitFormalParam<W<T> > : public TraitFormalParam<pointer_w<T> > { };

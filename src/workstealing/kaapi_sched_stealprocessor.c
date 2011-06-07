@@ -52,16 +52,14 @@ extern unsigned long kaapi_numa_get_kid_binding(unsigned int);
     kaapi_sched_lock was locked.
 */
 int kaapi_sched_stealprocessor(
-  kaapi_processor_t* kproc, 
-  kaapi_listrequest_t* lrequests, 
+  kaapi_processor_t*            kproc, 
+  kaapi_listrequest_t*          lrequests, 
   kaapi_listrequest_iterator_t* lrrange
 )
 {
   kaapi_request_t*          request;
-  kaapi_reply_t*            reply;
   kaapi_wsqueuectxt_cell_t* cell;
   kaapi_thread_context_t*   thread;
-  unsigned int              thiefid;
 
   /* test should be done before calling the function */
   kaapi_assert_debug( !kaapi_listrequest_iterator_empty(lrrange) );
@@ -72,11 +70,11 @@ int kaapi_sched_stealprocessor(
   /* 1/ steal in ready list */
   while ((request !=0) && !kaapi_sched_readyempty(kproc))
   {
-    thread = kaapi_sched_stealready( kproc, thiefid);
+    thread = kaapi_sched_stealready( kproc, request->kid);
     if (thread != 0)
     {
       /* reply */
-      reply->u.s_thread = thread;
+      request->reply->u.s_thread = thread;
       _kaapi_request_reply(request, KAAPI_REPLY_S_THREAD);
       request = kaapi_listrequest_iterator_next( lrequests, lrrange );
     }

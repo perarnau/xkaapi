@@ -56,8 +56,8 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
   const kaapi_format_t* fmt_param;
   kaapi_access_t        access_param;
   
-//  printf( "[taskaftersteal] task: @=%p, stack: @=%p\n", task, stack);
-//  fflush(stdout);
+  printf( "[taskaftersteal] task: @=%p, stack: @=%p\n", task, thread);
+  fflush(stdout);
 
   /* the task has been stolen: the body contains the original task body */
   task = thread[-1].pc;
@@ -73,7 +73,7 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
      If the access is a W (or CW) access then, version contains the newly produced data.
      The purpose here is to merge the version into the original data
         - if W mode -> copy + free of the data
-        - if CW mode -> accumulation (data is the left side of the accumulation, version the righ side)
+        - if CW mode -> accumulation (data is the left side of the accumulation, version the right side)
   */
   for (i=0; i<count_params; ++i)
   {
@@ -86,10 +86,11 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
       fmt_param    = kaapi_format_get_fmt_param(fmt, i, taskarg);
       access_param = kaapi_format_get_access_param(fmt, i, taskarg);
 
-      /* if m == W and data == version it means that data used by W was not copied due to non WAR dependency */
+      /* if m == W || CW and data == version it means that data used by W was not copied due 
+         to non WAR dependency or no CW access 
+      */
       if (access_param.data != access_param.version )
       {
-
         /* add an assign + dstor function will avoid 2 calls to function, especially for basic types which do not
            required to be dstor.
         */
@@ -115,7 +116,7 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
             (*fmt_param->assign)( access_param.data, &view_dest, access_param.version, &view_src );
         }
         else {
-          kaapi_format_reduce_param( fmt, i, taskarg, access_param.data, access_param.version );
+          kaapi_format_reduce_param( fmt, i, taskarg, access_param.version );
         }
         if (fmt_param->dstor !=0) (*fmt_param->dstor) ( access_param.version );
         free(access_param.version);

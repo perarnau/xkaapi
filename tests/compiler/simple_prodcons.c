@@ -1,13 +1,11 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:09 2009
-** Copyright 2009 INRIA.
+** Copyright 2011 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** vincent.danjean@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -42,58 +40,28 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
-#include "kaapi_network.h"
-#include "kaapi_compiler.h"
+#include <stdio.h>
 
-/* Weak symbols that will be overloaded by libkanet when
- * linked with it
- */
-
-/**
-*/
-__KA_COMPILER_WEAK int kaapi_network_init (int* argc, char*** argv) 
+#pragma kaapi task write(buffer) value(size) read(msg)
+void write_msg(int size, char* buffer, const char* msg)
 {
-///  printf("Use default weak symbol...\n");
-  return 0;
+  snprintf(buffer, size, "%s", msg);
 }
 
-/**
-*/
-__KA_COMPILER_WEAK int kaapi_network_finalize(void)
-{  
-  return 0;
+#pragma kaapi task read(msg)
+void print_msg(const char* msg)
+{
+  printf("%s\n", msg);
 }
 
-
-/**
-*/
-__KA_COMPILER_WEAK kaapi_globalid_t kaapi_network_get_current_globalid(void)
+int main(int argc, char** argv)
 {
-  return 0;
-}
+  char buffer[32];
+#pragma kaapi parallel 
+  {
+    write_msg(32,buffer, "This is may be a too long message for the buffer.");
+    print_msg(buffer);
+  }
 
-
-/**
-*/
-__KA_COMPILER_WEAK uint32_t kaapi_network_get_count(void)
-{
-  return 1;
-}
-
-
-__KA_COMPILER_WEAK void kaapi_network_poll(void)
-{
-}
-
-__KA_COMPILER_WEAK void kaapi_network_barrier(void)
-{
-}
-
-__KA_COMPILER_WEAK int kaapi_network_get_seginfo(kaapi_address_space_t* retval,
-			      kaapi_globalid_t gid )
-{
-  retval->segaddr = 0;
-  retval->segsize = (size_t)-1;
   return 0;
 }

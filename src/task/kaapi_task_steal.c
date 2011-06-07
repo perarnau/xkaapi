@@ -66,6 +66,7 @@ void kaapi_taskwrite_body(
   kaapi_access_mode_t   mode_param;
   const kaapi_format_t* fmt_param;
   unsigned int          war_param;     /* */
+  unsigned int          cw_param;     /* */
 
   void*                 copy_task_args;
   void*                 copy_data_param;
@@ -75,6 +76,7 @@ void kaapi_taskwrite_body(
   orig_task_args             = kaapi_task_getargs(arg->origin_task);
   copy_task_args             = arg->copy_task_args;
   war_param                  = arg->war_param;
+  cw_param                   = arg->cw_param;
   
   if (copy_task_args !=0)
   {
@@ -99,7 +101,6 @@ printf("WriteBody(war) task:%p\n", arg->origin_task );
 
       if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param) || KAAPI_ACCESS_IS_CUMULWRITE(mode_param))
       {
-        //fmt_param         = kaapi_format_get_fmt_param(fmt, i, orig_task_args);
         access_param      = kaapi_format_get_access_param(fmt, i, orig_task_args); 
         copy_access_param = kaapi_format_get_access_param(fmt, i, copy_task_args); 
 
@@ -114,14 +115,13 @@ printf("WriteBody task:%p\n", arg->origin_task );
   }
 
   /* if signaled thread was suspended, move it to the local queue */
-#if 1
   kaapi_wsqueuectxt_cell_t* wcs = arg->origin_thread->wcs;
   if ((wcs != 0) && (arg->origin_thread->sfp->pc == arg->origin_task)) /* means thread has been suspended on this task */
   { 
     kaapi_readmem_barrier();
     kaapi_processor_t* kproc = arg->origin_thread->proc;
-    //kaapi_processor_t* kproc = kaapi_get_current_processor();
     kaapi_assert_debug( kproc != 0);
+
     if (kaapi_cpuset_has( &wcs->affinity, kproc->kid))
     //  /*kaapi_sched_readyempty(kproc) &&*/ kaapi_thread_hasaffinity(wcs->affinity, kproc->kid))
     {
@@ -129,13 +129,13 @@ printf("WriteBody task:%p\n", arg->origin_task );
       if (kthread !=0)
       {
         kaapi_wsqueuectxt_finish_steal_cell(wcs);
-//    printf("Put thread %p, on myqueue: %li\n", (void*)thread, kproc->kid ); fflush(stdout);
+
         /* Ok, here we have theft the thread and no body else can steal it
            Signal the end of execution of forked task: 
-           -if no war => mark the task as terminated 
-           -if war and due to copy => mark the task as aftersteal in order to merge value
+           -if no war && no cw => mark the task as terminated 
+           -if war or cw and due to copy => mark the task as aftersteal in order to merge value
         */
-        if (war_param ==0)
+        if ((war_param ==0) && (cw_param ==0))
           kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
         else
           kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
@@ -148,7 +148,6 @@ printf("WriteBody task:%p\n", arg->origin_task );
       }
     }
   }
-#endif
 
   /* signal the task : mark it as executed, the old returned body should have steal flag */
   kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate( arg->origin_task) ) );
@@ -175,15 +174,12 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 
   unsigned int           i;
   size_t                 count_params;
-#if 0 /* remove unused warning */
-  int                    push_write;
-  int                    w_param;
-#endif
   kaapi_task_t*          task;
   kaapi_tasksteal_arg_t* arg;
   kaapi_task_body_t      body;          /* format of the stolen task */
   kaapi_format_t*        fmt;
   unsigned int           war_param;     /* */
+  unsigned int           cw_param;      /* */
 
   void*                  orig_task_args;
   void*                  data_param;
@@ -218,10 +214,12 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   
   /**/
   war_param = arg->war_param;
+  cw_param  = arg->cw_param;
   
-  if (!war_param)
+  if (!war_param && !cw_param)
   {
-    /* Execute the orinal body function with the original args */
+    /* Execute the orinal body function with the original args.
+    */
 #if defined(KAAPI_USE_CUDA)
     if (self_proc->proc_type == KAAPI_PROC_TYPE_CUDA)
     {
@@ -242,13 +240,13 @@ printf("StealBody task:%p\n", arg->origin_task );
     kaapi_task_init( task, kaapi_taskwrite_body, arg );
     kaapi_thread_pushtask( thread );
   }
-  else /* it exists at least one w parameter with war dependency */
+  else /* it exists at least one w parameter with war dependency or a cw_param: recopies the arguments */
   {
     copy_task_args       = kaapi_thread_pushdata( thread, fmt->size);
     arg->copy_task_args  = copy_task_args;
     arg->origin_fmt      = fmt;
 
-    /* there are possibly non formated params  */
+    /* there are possibly non formated params */
     memcpy(copy_task_args, orig_task_args, fmt->size);
 
     for (i=0; i<count_params; ++i)
@@ -272,9 +270,9 @@ printf("StealBody task:%p\n", arg->origin_task );
       
       if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param) || KAAPI_ACCESS_IS_CUMULWRITE(mode_param) )
       {
-        if ((war_param & (1<<i)) !=0)
+        if (((war_param & (1<<i)) !=0) || ((cw_param & (1<<i)) !=0))
         { 
-          /* allocate new data */
+          /* allocate new data for the war or cw param, else points to the original data !*/
           kaapi_memory_view_t view = kaapi_format_get_view_param(fmt, i, orig_task_args);
 #if defined(KAAPI_DEBUG)
           copy_access_param.data    = calloc(1, kaapi_memory_view_size(&view));
@@ -283,6 +281,10 @@ printf("StealBody task:%p\n", arg->origin_task );
 #endif
           if (fmt_param->cstor !=0) 
             (*fmt_param->cstor)(copy_access_param.data);
+            
+          /* if cw: init with neutral element with respect to the reduction */
+          if ((cw_param & (1<<i)) !=0)
+            kaapi_format_redinit_neutral(fmt, i, copy_task_args, copy_access_param.data );
           
           /* set new data to copy of the data with new view */
           kaapi_format_set_access_param(fmt, i, copy_task_args, &copy_access_param );

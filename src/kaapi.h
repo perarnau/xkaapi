@@ -107,8 +107,11 @@ typedef uint32_t kaapi_format_id_t;
 typedef uint32_t kaapi_offset_t;
 typedef uint64_t kaapi_gpustream_t;
 
-/** Reducor to accumulate value with cw access mode */
-typedef void (*kaapi_reducor_t)(void*, const void*);
+/** Reducor to reduce value with cw access mode */
+typedef void (*kaapi_reducor_t)(void* /*result*/, const void* /*value*/);
+
+/** Redinit: build a neutral element for the reduction law */
+typedef void (*kaapi_redinit_t)(void* /*result*/);
 
 /* Fwd decl
 */
@@ -457,6 +460,15 @@ extern int kaapi_init(int* argc, char*** argv);
 */
 extern int kaapi_finalize(void);
 
+
+/** Declare the beginning of a parallel region
+*/
+extern void kaapi_begin_parallel(void);
+
+/** Declare the end of a parallel region
+*/
+extern void kaapi_end_parallel(void);
+
 /* Get the current processor kid. 
    \retval the current processor id
 */
@@ -687,32 +699,6 @@ struct kaapi_threadgrouprep_t;
 #endif
 typedef struct kaapi_threadgrouprep_t* kaapi_threadgroup_t;
 
-
-/* ========================================================================= */
-/** Kaapi task definition
-    \ingroup TASK
-    A Kaapi task is the basic unit of computation. It has a constant size including some task's specific values.
-    Variable size task has to store pointer to the memory where found extra data.
-    The body field is the pointer to the function to execute. The special value 0 correspond to a nop instruction.
-*/
-typedef struct kaapi_task_t {
-#if (__SIZEOF_POINTER__ == 4)
-  struct task_and_body {
-    kaapi_task_bodyid_t   body;      /** task body  */
-    kaapi_atomic32_t      state;     /** bit */
-  } u;
-#else
-  union task_and_body {
-    kaapi_task_bodyid_t   body;      /** task body  */
-    kaapi_atomic64_t      state;     /** bit */
-  } u;
-#endif
-  void*                   sp;        /** data stack pointer of the data frame for the task  */
-} kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
-
-#define kaapi_task_getuserbody( t ) (t)->u.body
-
-
 /* ========================================================================= */
 /* Task binding
    \ingroup TASK
@@ -742,6 +728,33 @@ typedef struct kaapi_task_binding
     } ocr_param;
   } u;
 } kaapi_task_binding_t;
+
+
+/* ========================================================================= */
+/** Kaapi task definition
+    \ingroup TASK
+    A Kaapi task is the basic unit of computation. It has a constant size including some task's specific values.
+    Variable size task has to store pointer to the memory where found extra data.
+    The body field is the pointer to the function to execute. The special value 0 correspond to a nop instruction.
+*/
+typedef struct kaapi_task_t {
+#if (__SIZEOF_POINTER__ == 4)
+  struct task_and_body {
+    kaapi_task_bodyid_t   body;      /** task body  */
+    kaapi_atomic32_t      state;     /** bit */
+  } u;
+#else
+  union task_and_body {
+    kaapi_task_bodyid_t   body;      /** task body  */
+    kaapi_atomic64_t      state;     /** bit */
+  } u;
+#endif
+  void*                   sp;        /** data stack pointer of the data frame for the task  */
+  kaapi_task_binding_t    binding;   /** binding information or 0  */
+} kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
+
+#define kaapi_task_getuserbody( t ) (t)->u.body
+
 
 
 /* ========================================================================= */
@@ -2307,34 +2320,32 @@ extern kaapi_format_id_t kaapi_format_taskregister_static(
     const kaapi_access_mode_t   mode_param[],
     const kaapi_offset_t        offset_param[],
     const kaapi_offset_t        offset_version[],
-    const kaapi_offset_t        offset_cwflag[],
     const struct kaapi_format_t*fmt_param[],
     const kaapi_memory_view_t   view_param[],
     const kaapi_reducor_t       reducor_param[],
-    const kaapi_task_binding_t*     task_binding
+    const kaapi_redinit_t       redinit_param[],
+    const kaapi_task_binding_t* task_binding
 );
 
 /** \ingroup TASK
     Register a task format with dynamic definition
 */
 extern kaapi_format_id_t kaapi_format_taskregister_func( 
-    struct kaapi_format_t*       fmt, 
-    kaapi_task_body_t            body,
-    kaapi_task_body_t            bodywh,
-    const char*                  name,
-    size_t                       size,
+    struct kaapi_format_t*        fmt, 
+    kaapi_task_body_t             body,
+    kaapi_task_body_t             bodywh,
+    const char*                   name,
+    size_t                        size,
     size_t                      (*get_count_params)(const struct kaapi_format_t*, const void*),
     kaapi_access_mode_t         (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
     void*                       (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
-    int*                        (*get_cwflag)      (const struct kaapi_format_t*, unsigned int, const void*),
     kaapi_access_t              (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
     void                        (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
-    void                        (*set_cwaccess_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*, int ),
     const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
     kaapi_memory_view_t         (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*),
     void                        (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
-    void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, void*, const void*),
-    kaapi_reducor_t             (*get_reducor )    (const struct kaapi_format_t*, unsigned int, const void*),
+    void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, const void*),
+    void                        (*redinit )        (const struct kaapi_format_t*, unsigned int, const void* sp, void* ),
     void                        (*get_task_binding)(const struct kaapi_format_t*, const kaapi_task_t*, kaapi_task_binding_t*)
 );
 
@@ -2355,13 +2366,6 @@ extern void kaapi_fmt_set_access_param
 */
 extern void* kaapi_fmt_get_off_param
 (const struct kaapi_format_t* f, size_t i, const void* p);
-
-/** \ingroup TASK
-    format accessor
-*/
-extern int* kaapi_fmt_get_off_cwflag
-(const struct kaapi_format_t* f, size_t i, const void* p);
-
 
 /** \ingroup TASK
     Register a task format 

@@ -1,13 +1,11 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:09 2009
-** Copyright 2009 INRIA.
+** Copyright 2011 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** vincent.danjean@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -42,58 +40,70 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
-#include "kaapi_network.h"
-#include "kaapi_compiler.h"
+#include <stdio.h>
+#include <sys/time.h>
 
-/* Weak symbols that will be overloaded by libkanet when
- * linked with it
+/**
+*/
+double get_elapsedtime(void)
+{
+  struct timeval tv;
+  int err = gettimeofday( &tv, 0);
+  if (err  !=0) return 0;
+  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
+}
+
+
+// --------------------------------------------------------------------
+/* Sequential fibo function
  */
+#pragma kaapi task write(result) value(n)
+void fibonacci(long* result, const long n)
+{
+  if (n<2)
+    *result = n;
+  else 
+  {
+    long r1,r2;
+    fibonacci( &r1, n-1 );
+    fibonacci( &r2, n-2 );
+#pragma kaapi barrier
+    *result = r1 + r2;
+  }
+}
 
-/**
+
+/* main entry point : Kaapi initialization
 */
-__KA_COMPILER_WEAK int kaapi_network_init (int* argc, char*** argv) 
+int main(int argc, char** argv)
 {
-///  printf("Use default weak symbol...\n");
-  return 0;
-}
+#pragma kaapi init
+  long result;
+  int n;
+  double t0, t1;
+  int niter;
+  int i;
 
-/**
-*/
-__KA_COMPILER_WEAK int kaapi_network_finalize(void)
-{  
-  return 0;
-}
+  if (argc >1)
+    n = atoi(argv[1]);
+  else 
+    n = 30;
+  if (argc >2)
+    niter =  atoi(argv[2]);
+  else 
+    niter = 1;
 
+  t0 = get_elapsedtime();
+  for ( i=-1; i<niter; ++i)
+  {
+    if (i ==0) t0 = get_elapsedtime();
+    fibonacci(&result, n);
+  }
+#pragma kaapi barrier
+  t1 = kaapi_get_elapsedtime();
 
-/**
-*/
-__KA_COMPILER_WEAK kaapi_globalid_t kaapi_network_get_current_globalid(void)
-{
-  return 0;
-}
-
-
-/**
-*/
-__KA_COMPILER_WEAK uint32_t kaapi_network_get_count(void)
-{
-  return 1;
-}
-
-
-__KA_COMPILER_WEAK void kaapi_network_poll(void)
-{
-}
-
-__KA_COMPILER_WEAK void kaapi_network_barrier(void)
-{
-}
-
-__KA_COMPILER_WEAK int kaapi_network_get_seginfo(kaapi_address_space_t* retval,
-			      kaapi_globalid_t gid )
-{
-  retval->segaddr = 0;
-  retval->segsize = (size_t)-1;
+  printf("After sync: Fibo(%i)=%li\n", n, result);
+  printf("Time Fibo(%i): %f\n", n, (t1-t0)/niter);
+#pragma kaapi finish
   return 0;
 }

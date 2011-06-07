@@ -59,10 +59,6 @@ static void* kaapi_format_default_get_off_param
     (const struct kaapi_format_t* f, unsigned int i, const void* p)
 { return (void*)((uintptr_t)p + f->_off_params[i]); }
 
-static int* kaapi_format_default_get_cwflag
-(const struct kaapi_format_t* f, unsigned int i, const void* p)
-{ return (int*)((uintptr_t)p + f->_off_cwflag[i]); }
-
 static kaapi_access_t kaapi_format_default_get_access_param
     (const struct kaapi_format_t* f, unsigned int i, const void* p)
 { return *(kaapi_access_t*)((uintptr_t)p + f->_off_params[i]); }
@@ -80,12 +76,12 @@ static kaapi_memory_view_t kaapi_format_default_get_view_param
 { return f->_view_params[i]; }
 
 static void kaapi_format_default_reduce_param 
-    (const struct kaapi_format_t* f, unsigned int i, const void* sp, void* result, const void* value)
-{ (*f->_reducor_params[i])(result, value); }
+    (const struct kaapi_format_t* f, unsigned int i, const void* p, const void* value)
+{ (*f->_reducor_params[i])((void*)((uintptr_t)p + f->_off_params[i]), value); }
 
-static kaapi_reducor_t kaapi_format_default_get_reducor 
-    (const struct kaapi_format_t* f, unsigned int i, const void* sp )
-{ return f->_reducor_params[i]; }
+static void kaapi_format_default_redinit_param 
+    (const struct kaapi_format_t* f, unsigned int i, const void* sp, void* value )
+{ (*f->_redinit_params[i])(value); }
 
 static void kaapi_format_default_get_task_binding 
   (const struct kaapi_format_t* f, const kaapi_task_t* task, kaapi_task_binding_t* b)
@@ -103,10 +99,10 @@ kaapi_format_id_t kaapi_format_taskregister_static(
         const kaapi_access_mode_t   mode_param[],
         const kaapi_offset_t        offset_param[],
         const kaapi_offset_t        offset_version[],
-        const kaapi_offset_t        offset_cwflag[],
         const kaapi_format_t*       fmt_param[],
         const kaapi_memory_view_t   view_param[],
         const kaapi_reducor_t       reducor_param[],
+        const kaapi_redinit_t       redinit_param[],
         const kaapi_task_binding_t* task_binding)
 {
   kaapi_format_register( fmt, name );
@@ -127,14 +123,6 @@ kaapi_format_id_t kaapi_format_taskregister_static(
   fmt->_off_versions = malloc( sizeof(kaapi_offset_t)*count );
   kaapi_assert( fmt->_off_versions !=0);
   memcpy(fmt->_off_versions, offset_version, sizeof(kaapi_offset_t)*count );
-
-  fmt->_off_cwflag = 0;
-  if (offset_cwflag != 0)
-  {
-    fmt->_off_cwflag = malloc( sizeof(kaapi_offset_t)*count );
-    kaapi_assert( fmt->_off_cwflag !=0);
-    memcpy(fmt->_off_cwflag, offset_cwflag, sizeof(kaapi_offset_t)*count );
-  }
   
   fmt->_fmt_params = malloc( sizeof(kaapi_format_t*)*count );
   kaapi_assert( fmt->_fmt_params !=0);
@@ -154,6 +142,12 @@ kaapi_format_id_t kaapi_format_taskregister_static(
     kaapi_assert( fmt->_reducor_params !=0);
     memcpy(fmt->_reducor_params, reducor_param, sizeof(kaapi_reducor_t)*count );
   }
+  if (redinit_param !=0)
+  {
+    fmt->_redinit_params = malloc( sizeof(kaapi_redinit_t)*count );
+    kaapi_assert( fmt->_redinit_params !=0);
+    memcpy(fmt->_redinit_params, redinit_param, sizeof(kaapi_redinit_t)*count );
+  }
 
   if (task_binding)
     fmt->_task_binding = *task_binding;
@@ -162,13 +156,12 @@ kaapi_format_id_t kaapi_format_taskregister_static(
   fmt->get_count_params = kaapi_format_default_get_count_params;
   fmt->get_mode_param   = kaapi_format_default_get_mode_param;
   fmt->get_off_param    = kaapi_format_default_get_off_param;
-  fmt->get_cwflag	= kaapi_format_default_get_cwflag;
   fmt->get_access_param = kaapi_format_default_get_access_param;
   fmt->set_access_param = kaapi_format_default_set_access_param;
   fmt->get_fmt_param    = kaapi_format_default_get_fmt_param;
   fmt->get_view_param   = kaapi_format_default_get_view_param;
   fmt->reducor          = kaapi_format_default_reduce_param;
-  fmt->get_reducor      = kaapi_format_default_get_reducor;
+  fmt->redinit          = kaapi_format_default_redinit_param;
   fmt->get_task_binding	= kaapi_format_default_get_task_binding;
   
   memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));

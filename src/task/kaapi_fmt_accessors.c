@@ -61,9 +61,3 @@ void* kaapi_fmt_get_off_param
 {
   return f->get_off_param(f, i, p);
 }
-
-int* kaapi_fmt_get_off_cwflag
-(const kaapi_format_t* f, size_t i, const void* p)
-{
-  return f->get_cwflag(f, i, p);
-}

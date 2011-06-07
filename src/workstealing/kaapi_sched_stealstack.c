@@ -51,12 +51,13 @@
  Return the number of non ready data
  */
 static size_t kaapi_task_computeready( 
-                                      kaapi_task_t*         task __attribute__((unused)),
-                                      void*                 sp, 
-                                      const kaapi_format_t* task_fmt, 
-                                      unsigned int*         war_param, 
-                                      kaapi_hashmap_t*      map 
-                                      )
+  kaapi_task_t*         task __attribute__((unused)),
+  void*                 sp, 
+  const kaapi_format_t* task_fmt, 
+  unsigned int*         war_param, 
+  unsigned int*         cw_param, 
+  kaapi_hashmap_t*      map 
+)
 {
   size_t count_params;
   size_t wc;
@@ -85,8 +86,12 @@ static size_t kaapi_task_computeready(
     {
       --wc;
       if (  (KAAPI_ACCESS_IS_ONLYWRITE(m) && KAAPI_ACCESS_IS_READ(gd->last_mode))
-          || (KAAPI_ACCESS_IS_CUMULWRITE(m) && KAAPI_ACCESS_IS_CONCURRENT(m,gd->last_mode)) )
+         || (KAAPI_ACCESS_IS_CUMULWRITE(m) && KAAPI_ACCESS_IS_CONCURRENT(m,gd->last_mode)) )
+      {
         *war_param |= 1<<i;
+        if (KAAPI_ACCESS_IS_CUMULWRITE(m))
+          *cw_param |= 1<<i;
+      }
     }
     /* optimization: break from enclosest loop here */
     
@@ -95,10 +100,9 @@ static size_t kaapi_task_computeready(
       gd->last_mode = m;
     
     /* Datum produced by aftersteal_task may be made visible to thief in order to augment
-     the parallelism by breaking chain of versions (W->R -> W->R ), the second W->R may
-     be used (the middle R->W is splitted -renaming is also used in other context-).
-     But we do not take into account of this extra parallelism.
-     
+       the parallelism by breaking chain of versions (W->R -> W->R ), the second W->R may
+       be used (the middle R->W is splitted -renaming is also used in other context-).
+       But we do not take into account of this extra parallelism.
      */
   }
   return wc;
@@ -232,7 +236,8 @@ static int kaapi_sched_stealframe
       if (task_fmt !=0)
       {
         unsigned int war_param = 0;
-        size_t wc = kaapi_task_computeready( task_top, kaapi_task_getargs(task_top), task_fmt, &war_param, map );
+        unsigned int cw_param = 0;
+        size_t wc = kaapi_task_computeready( task_top, kaapi_task_getargs(task_top), task_fmt, &war_param, &cw_param, map );
         if ((wc ==0) && kaapi_task_isstealable(task_top))
         {
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
@@ -243,7 +248,6 @@ static int kaapi_sched_stealframe
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD)
             kaapi_assert_m(0,"Not implemented for work stealing");
 #endif
-            
             /* get binding for the task or no binding */
             kaapi_task_binding_t binding;
             task_fmt->get_task_binding(task_fmt, task_top, &binding);
@@ -256,13 +260,13 @@ static int kaapi_sched_stealframe
               kaapi_request_t* const req = _kaapi_matching_request(lrequests, lrrange, &mapping);
               
               if (req != NULL)
-                kaapi_task_splitter_dfg_single(thread, task_top, task_fmt, war_param, req);
+                kaapi_task_splitter_dfg_single(thread, task_top, task_fmt, war_param, cw_param, req);
               else 
               {
                 /* get queue where to push task */
                 kaapi_affinity_queue_t* queue = kaapi_sched_affinity_lookup_queue(&mapping);
                 if (queue == 0)
-                  kaapi_task_splitter_dfg_single(thread, task_top, task_fmt, war_param, req);
+                  kaapi_task_splitter_dfg_single(thread, task_top, task_fmt, war_param, cw_param, req);
                 else {
                   /* push the task in the bound queue */
                   kaapi_taskdescr_t* td = kaapi_sched_affinity_allocate_td_dfg( queue, thread, task_top, task_fmt, war_param);
@@ -274,7 +278,7 @@ static int kaapi_sched_stealframe
             {
               /* default, reply to the current request */
               kaapi_task_splitter_dfg
-              (thread, task_top, task_fmt, war_param, lrequests, lrrange );
+                  (thread, task_top, task_fmt, war_param, cw_param, lrequests, lrrange );
             }
             
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)

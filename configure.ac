@@ -692,7 +692,7 @@ dnl -----------------------------------------------------------------------
 dnl The "--with-rose"
 dnl -----------------------------------------------------------------------
 AC_ARG_WITH([rose],[AS_HELP_STRING([--with-rose=<dir>],
-		 [choose Rose installation directory to compile kacc])],
+		 [choose Rose (http://www.rosecompiler.org/) installation directory to compile kacc])],
      [],
      [with_rose=no]
 )
@@ -706,20 +706,45 @@ AS_CASE([$with_rose],
     KAAPI_USE_ROSE=yes
     ROSE_BUILD_CPPFLAGS="-I$with_rose/include $BOOST_BUILD_CPPFLAGS"
     ROSE_BUILD_CFLAGS=
-    ROSE_BUILD_LDFLAGS="-framework JavaVM -Wl,-bind_at_load $with_rose/lib/librose.dylib -L$with_rose/lib $BOOST_BUILD_LDFLAGS -lm -lboost_date_time -lboost_thread -lboost_filesystem -lboost_program_options -lboost_regex -lboost_system -lboost_wave -ldl"
-    ROSE_BUILD_LIBS=
+    ROSE_BUILD_LDFLAGS="-L$with_rose/lib $BOOST_BUILD_LDFLAGS"
+    ROSE_BUILD_LIBS="-framework JavaVM -Wl,-bind_at_load $with_rose/lib/librose.dylib $ROSE_BUILD_LDFLAGS  $BOOST_BUILD_LDFLAGS -lm -lboost_date_time -lboost_thread -lboost_filesystem -lboost_program_options -lboost_regex -lboost_system -lboost_wave -ldl"
     AC_MSG_NOTICE([ROSE_BUILD_CPPFLAGS=$ROSE_BUILD_CPPFLAGS])
     AC_MSG_NOTICE([ROSE_BUILD_CFLAGS=$ROSE_BUILD_CFLAGS])
     AC_MSG_NOTICE([ROSE_BUILD_LDFLAGS=$ROSE_BUILD_LDFLAGS])
     AC_MSG_NOTICE([ROSE_BUILD_LIBS=$ROSE_BUILD_LIBS])
   ]
 )
-AC_SUBST(ROSE_BUILD_CPPFLAGS)
-AC_SUBST(ROSE_BUILD_CFLAGS)
-AC_SUBST(ROSE_BUILD_LDFLAGS)
-AC_SUBST(ROSE_BUILD_LIBS)
 AM_CONDITIONAL([KAAPI_TARGET_ROSE],[test x"$KAAPI_USE_ROSE" = x"yes"])
 
+
+dnl -----------------------------------------------------------------------
+dnl The "--enable-kacc"
+dnl -----------------------------------------------------------------------
+KAAPI_FEATURE([kacc], [Kaapi C/C++ compiler],
+  [KaCC generated], [no],
+  [
+    AC_DEFINE([KAAPI_USE_KACC],1,[defined to 1 when compiling with kacc support])
+    KAAPI_USE_KACC=yes
+    KACC_BUILD_CPPFLAGS="$ROSE_BUILD_CPPFLAGS $BOOST_BUILD_CPPFLAGS"
+    KACC_BUILD_CFLAGS="$ROSE_BUILD_CFLAGS $BOOST_BUILD_CFLAGS"
+    KACC_BUILD_LDFLAGS="$ROSE_BUILD_LDFLAGS"
+    KACC_BUILD_LIBS="$ROSE_BUILD_LIBS"
+    AC_MSG_NOTICE([KACC_BUILD_CPPFLAGS=$KACC_BUILD_CPPFLAGS])
+    AC_MSG_NOTICE([KACC_BUILD_CFLAGS=$KACC_BUILD_CFLAGS])
+    AC_MSG_NOTICE([KACC_BUILD_LDFLAGS=$KACC_BUILD_LDFLAGS])
+    AC_MSG_NOTICE([KACC_BUILD_LIBS=$KACC_BUILD_LIBS])
+  ],
+  [],
+  [KAAPI_TARGET_KACC],
+  [
+    FEATURE_ENABLE
+  ])
+
+AC_SUBST(KACC_BUILD_CPPFLAGS)
+AC_SUBST(KACC_BUILD_CFLAGS)
+AC_SUBST(KACC_BUILD_LDFLAGS)
+AC_SUBST(KACC_BUILD_LIBS)
+AM_CONDITIONAL([KAAPI_TARGET_KACC],[test x"$KAAPI_USE_KACC" = x"yes"])
 
 
 

@@ -196,10 +196,10 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalPa
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_access_mode_t   array_mode[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_offset_t        array_offset_data[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_offset_t        array_offset_version[KAAPI_NUMBER_PARAMS];')
-    ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_offset_t        array_offset_cwflag[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static const kaapi_format_t* array_format[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_memory_view_t   array_view[KAAPI_NUMBER_PARAMS];')
     ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_reducor_t       array_reducor[KAAPI_NUMBER_PARAMS];')
+    ifelse(KAAPI_NUMBER_PARAMS,0,`',`static kaapi_redinit_t       array_redinit[KAAPI_NUMBER_PARAMS];')
     TaskArg_t* dummy =0;
     M4_PARAM(`array_mode[$1-1] = (kaapi_access_mode_t)TraitFormalParam$1::mode_t::value;
     ',`', `')
@@ -207,13 +207,13 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalPa
     ',`', `')
     M4_PARAM(`array_offset_version[$1-1] = (char*)TraitFormalParam$1::get_version( &dummy->f$1, 0 ) - (char*)dummy;
     ',`', `')
-    M4_PARAM(`array_offset_cwflag[$1-1] = (char*)TraitFormalParam$1::get_cwflag( &dummy->f$1, 0 ) - (char*)dummy;
-    ',`', `')
     M4_PARAM(`array_format[$1-1] = WrapperFormat<typename TraitFormalParam$1::type_t>::get_c_format();
     ',`', `')
     M4_PARAM(`array_view[$1-1]   = TraitFormalParam$1::get_view_param(&dummy->f$1, $1-1);
     ',`', `')
     M4_PARAM(`array_reducor[$1-1]= &TraitFormalParam$1::reducor_fnc;
+    ',`', `')
+    M4_PARAM(`array_redinit[$1-1]= &TraitFormalParam$1::redinit_fnc;
     ',`', `')
     static FormatTask task_fmt( 
           typeid(TASK).name(),
@@ -222,10 +222,11 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalPa
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_mode'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset_data'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset_version'),
-          ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset_cwflag'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_format'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_view'),
-          ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_reducor')
+          ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_reducor'),
+          ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_redinit'),
+          0
     );
       
     return task_fmt.get_c_format();
@@ -275,18 +276,6 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
     return 0;
   }
 
-  static int* get_cwflag(const struct kaapi_format_t*, unsigned int ith, const void* _taskarg)
-  {
-    TaskArg_t* taskarg = static_cast<TaskArg_t*>((void*)_taskarg);
-    size_t countp __attribute__((unused)) = 0, count __attribute__((unused)) = 0;
-   M4_PARAM(`count += TraitFormalParam$1::get_nparam(&taskarg->f$1);
-    if (ith < count) return TraitFormalParam$1::get_cwflag(&taskarg->f$1, ith-countp);
-    countp = count; 
-    ', ` ', `
-    ')
-    return 0;
-  }
-
   static kaapi_access_t get_access_param(const struct kaapi_format_t*, unsigned int ith, const void* _taskarg)
   {
     kaapi_access_t retval = {0, 0};
@@ -314,21 +303,6 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
     if (ith < count) 
     {
       TraitFormalParam$1::set_access(&taskarg->f$1, ith-countp, a);
-      return;
-    }
-    countp = count; 
-    ', ` ', `
-    ')
-  }
-
-  static void set_cwaccess_param(const struct kaapi_format_t*, unsigned int ith, void* _taskarg, const kaapi_access_t* a, int flag)
-  {
-    TaskArg_t* taskarg = static_cast<TaskArg_t*>(_taskarg);
-    size_t countp __attribute__((unused)) = 0, count __attribute__((unused)) = 0;
-   M4_PARAM(`count += TraitFormalParam$1::get_nparam(&taskarg->f$1);
-    if (ith < count) 
-    {
-      TraitFormalParam$1::set_cwaccess(&taskarg->f$1, ith-countp, a, flag);
       return;
     }
     countp = count; 
@@ -368,22 +342,30 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
     ')
   }
 
-  static void reducor(const struct kaapi_format_t*, unsigned int ith, const void* _taskarg, void* result, const void* value)
+  static void reducor(const struct kaapi_format_t*, unsigned int ith, const void* _taskarg, const void* value)
   {
     const TaskArg_t* taskarg = static_cast<const TaskArg_t*>(_taskarg);
-    size_t count __attribute__((unused)) = 0;
+    size_t countp __attribute__((unused)) = 0, count __attribute__((unused)) = 0;
    M4_PARAM(`count += TraitFormalParam$1::get_nparam(&taskarg->f$1);
-    if (ith < count) { TraitFormalParam$1::reducor_fnc(result, value); return; }
+    if (ith < count) { 
+      TraitFormalParam$1::reducor_fnc(
+          (void*)TraitFormalParam$1::get_data(&taskarg->f$1, ith-count), value
+      ); 
+      return; 
+    }
+    countp = count;         
     ', ` ', `
     ')
   }
 
-  static kaapi_reducor_t get_reducor(const struct kaapi_format_t*, unsigned int ith, const void* _taskarg)
+  static void redinit(const struct kaapi_format_t*, unsigned int ith, const void* _taskarg, const void* value)
   {
     const TaskArg_t* taskarg = static_cast<const TaskArg_t*>(_taskarg);
     size_t count __attribute__((unused)) = 0;
    M4_PARAM(`count += TraitFormalParam$1::get_nparam(&taskarg->f$1);
-    if (ith < count) { return TraitFormalParam$1::reducor_fnc; }
+    if (ith < count) { 
+      TraitFormalParam$1::redinit_fnc(value); 
+    }
     ', ` ', `
     ')
     return 0;
@@ -398,15 +380,14 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
           &get_count_params,
           &get_mode_param,
           &get_off_param,
-          &get_cwflag,
           &get_access_param,
           &set_access_param,
-          &set_cwaccess_param,
           &get_fmt_param,
           &get_view_param,
           &set_view_param,
           &reducor,
-          &get_reducor
+          &redinit,
+          0
     );
       
     return task_fmt.get_c_format();

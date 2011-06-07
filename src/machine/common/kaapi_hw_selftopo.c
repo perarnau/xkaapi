@@ -321,7 +321,7 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
     }
   }
   
-#if 1
+#if defined(KAAPI_DEBUG)
   kaapi_sched_lock( &print_lock );
   char buffer1[1024];
   char buffer2[1024];

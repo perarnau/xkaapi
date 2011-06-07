@@ -295,3 +295,30 @@ int kaapi_finalize(void)
 
   return 0;
 }
+
+
+/** begin parallel & and parallel
+    - it should not have any concurrency on the first increment
+    because only the main thread is running before parallel computation
+    - after that serveral threads may declare parallel region that
+    will implies concurrency
+*/
+static kaapi_atomic_t stack_parallel = {0};
+void kaapi_begin_parallel(void)
+{
+  if (KAAPI_ATOMIC_INCR(&stack_parallel) == 1)
+    kaapi_init(0,0);
+}
+
+
+/**
+*/
+void kaapi_end_parallel(void)
+{
+  if (KAAPI_ATOMIC_DECR(&stack_parallel) == 0)
+  {
+    kaapi_sched_sync();
+    kaapi_finalize();
+  }
+}
+
