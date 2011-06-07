@@ -49,8 +49,10 @@
 #include <list>
 #include <stdlib.h>
 
-#define COMPILER   "g++"
-#define COMPILER_E "g++ -E -P -C"
+#define COMPILER_CC    "gcc -std=gnu99"
+#define COMPILER_CXX   "g++ -std=gnu++98"
+#define COMPILER_CC_E  "gcc -E -P -C -std=gnu99"
+#define COMPILER_CXX_E "g++ -E -P -C -std=gnu++98"
 
 typedef std::list<std::string> ListOptions;
 
@@ -92,6 +94,7 @@ int main( int argc, char** argv)
   bool nolink = false;
   int  err;
   ListOptions preprocess_options;
+  ListOptions include_options;
   ListOptions compiler_options;
   ListOptions file_tocompile;
   ListOptions file_tocompile_kaapi;
@@ -116,7 +119,25 @@ int main( int argc, char** argv)
       compiler_options.push_back( option );
     else if (option.find("-E")  ==0) 
       preprocess_options.push_back( option );
-    else if (option.find("-D")  ==0) {
+    else if (option.find("-MT")  ==0) {
+      if (i+1 == argc) {
+        std::cerr << argv[0] << ": error, option '-MT filename'" << std::endl;
+        return -1;
+      }
+      ++i;
+      option = option + " " + argv[i];
+      preprocess_options.push_back( option ); compiler_options.push_back( option );
+    } else if (option.find("-MF")  ==0) {
+      if (i+1 == argc) {
+        std::cerr << argv[0] << ": error, option '-MF filename'" << std::endl;
+        return -1;
+      }
+      ++i;
+      option = option + " " + argv[i];
+      preprocess_options.push_back( option ); compiler_options.push_back( option );
+    }  else if (option.find("-M")  ==0) {
+      preprocess_options.push_back( option ); compiler_options.push_back( option );
+    } else if (option.find("-D")  ==0) {
       preprocess_options.push_back( option ); compiler_options.push_back( option );
     } else if (option.find("-U")  ==0) {
       preprocess_options.push_back( option ); compiler_options.push_back( option );
@@ -142,6 +163,8 @@ int main( int argc, char** argv)
       compiler_options.push_back( option );
     else if (option.find("-I")==0) {
       preprocess_options.push_back(option); compiler_options.push_back( option );
+      option = "-edg:" + option.substr(1);
+      include_options.push_back(option);
     } else if (option.find("-L")==0)
       compiler_options.push_back( option );
     else if (option.find("-l")==0)
@@ -179,14 +202,18 @@ int main( int argc, char** argv)
   ListOptions::const_iterator ibeg;
   for (ibeg = file_tocompile.begin(); ibeg != file_tocompile.end(); ++ibeg)
   {
-    std::ifstream file( ibeg->c_str() );
-    if (!file.good())
     {
-      std::cerr << argv[0] << ": error, no such file'" << *ibeg << "'" << std::endl;
+      std::ifstream file( ibeg->c_str() );
+      if (!file.good())
+      {
+        std::cerr << argv[0] << ": error, no such file'" << *ibeg << "'" << std::endl;
+        return -1;
+      }
     }
+    
     /* file exist: ok */
-    std::string o_file_format = "format-" + *ibeg;
     std::string o_file_kacc = "kaapi-" + *ibeg;
+    std::string o_file_format = "format-" + o_file_kacc;
 
 #if 0
     std::string o_file_preprocessor = "pre-" + *ibeg;
@@ -212,8 +239,10 @@ int main( int argc, char** argv)
 #else
     /* call the source 2 source Kaapi compiler */
     std::ostringstream cmdline2;
-    cmdline2 << "@prefix@/bin/kaapi_c2c --edg:no_warnings " << *ibeg 
-            << " -rose:o " << o_file_kacc;
+    cmdline2 << "@prefix@/bin/kaapi_c2c --edg:no_warnings " 
+             << List2String( include_options ) << " "
+             << *ibeg 
+             << " -rose:o " << o_file_kacc;
 #endif
 
     if (verbose)
@@ -236,7 +265,6 @@ int main( int argc, char** argv)
     }
 
     file_tocompile_kaapi.push_back( o_file_kacc );
-    file_tocompile_kaapi.push_back( o_file_format );
 
 #if 0
     if (!keep)
@@ -253,21 +281,36 @@ int main( int argc, char** argv)
 #endif
   }
 
-
   /* call the true compiler 
      TODO: call gcc or g++ depending of the input file type
   */
-  std::ostringstream cmdline3;
-  cmdline3 << (getenv("CXX") == 0 ? COMPILER : getenv("CXX")) 
-           << List2String(file_tocompile_kaapi)
-           << List2String( compiler_options );
-  if (verbose)
-    std::cout << "Commande3: " << cmdline3.str() << std::endl;
-  err = system(cmdline3.str().c_str());
-  if (err != 0)
+  for (ibeg = file_tocompile_kaapi.begin(); ibeg != file_tocompile_kaapi.end(); ++ibeg)
   {
-    std::cerr << "*** error: status of '" << cmdline3.str() << "': " << err << std::endl;
-    return err;
+    const std::string& filename = *ibeg;
+    std::ostringstream cmdline3;
+    
+    /* .C, .cpp, .cxx, .c++ is for C ++
+       .c is for C 
+    */
+    size_t length = filename.size();
+    if (  (filename.rfind(".C") == length - 2)
+        ||(filename.rfind(".cpp") == length - 4)
+        ||(filename.rfind(".cxx") == length - 4)
+        ||(filename.rfind(".c++") == length - 4) )
+      cmdline3 << (getenv("CXX") == 0 ? COMPILER_CXX : getenv("CXX"));
+    else
+      cmdline3 << (getenv("CC") == 0 ? COMPILER_CC : getenv("CC"));
+    
+    cmdline3 << " " << filename << " format-" << filename << " "
+             << List2String( compiler_options );
+    if (verbose)
+      std::cout << "Commande3: " << cmdline3.str() << std::endl;
+    err = system(cmdline3.str().c_str());
+    if (err != 0)
+    {
+      std::cerr << "*** error: status of '" << cmdline3.str() << "': " << err << std::endl;
+      return err;
+    }
   }
   
   if (!keep)

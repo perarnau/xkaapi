@@ -55,7 +55,7 @@
 /* Return the size of the kids array
 */
 static int kaapi_cpuset2kids( 
-  kaapi_cpuset_t*       cpuset, 
+  kaapi_cpuset_t* const cpuset, 
   kaapi_processor_id_t* kids, 
   int nproc
 )
@@ -64,7 +64,7 @@ static int kaapi_cpuset2kids(
   cnt = 0;
   for (int i=0; i<nproc; ++i)
   {
-    if (kaapi_cpuset_has(*cpuset, i))
+    if (kaapi_cpuset_has( cpuset, i))
     {
       kids[cnt] = kaapi_default_param.cpu2kid[i];
       if (kids[cnt] !=(kaapi_processor_id_t)-1) ++cnt;
@@ -73,11 +73,15 @@ static int kaapi_cpuset2kids(
   return cnt;
 }
 
-#if 1//defined(KAAPI_DEBUG)
-__attribute__((unused)) static const char* kaapi_kids2string
-(int nkids, kaapi_processor_id_t* kids)
+#if defined(KAAPI_DEBUG)
+static kaapi_atomic_t print_lock = { 1 };
+// warning about buffer overflow: buffer should has at least 1024 entries
+static const char* kaapi_kids2string
+(
+  char* buffer,
+  int nkids, kaapi_processor_id_t* kids
+)
 {
-  static char buffer[1024];
   int i, err, size;
   size = 0;
   
@@ -104,8 +108,13 @@ __attribute__((unused)) static const char* kaapi_kids2string
  */
 int kaapi_processor_computetopo(kaapi_processor_t* kproc)
 {
-  int	processor;
+  int processor;
   int depth;
+  kaapi_cpuset_t cpuset; 
+  kaapi_affinityset_t*  curr_set;
+  kaapi_processor_id_t* curr_kids;
+  int                   curr_nsize;
+  int                   curr_nkids;
 
 #if defined(__linux__)
   int	pid;
@@ -148,7 +157,7 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
   int	exit_signal;
   unsigned int	rt_priority;
   unsigned int	policy;
-  unsigned long long int	delayacct_blkio_ticks;
+  unsigned long long int delayacct_blkio_ticks;
   unsigned long int	guest_time;
   long int	cguest_time;
   
@@ -232,56 +241,114 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
   kaapi_assert_m(kaapi_default_param.memory.depth <ENCORE_UNE_MACRO_DETAILLEE, "To increase..." );
 
   kproc->hlevel.depth = 0;
+  curr_set   = 0;
+  curr_kids  = 0;
+  curr_nsize = 0;
+  curr_nkids = 0;
   for (depth=0; depth < kaapi_default_param.memory.depth; ++depth)
   {
     int i;
-    size_t ncpu;
+    int ncpu;
     for (i=0; i< kaapi_default_param.memory.levels[depth].count; ++i)
     {
-      if (kaapi_cpuset_has(kaapi_default_param.memory.levels[depth].affinity[i].who, kproc->cpuid))
+      /* look if current processor is par of this affinity_set or not and the set contains at least 2 processors ? */
+      if (kaapi_cpuset_has( &kaapi_default_param.memory.levels[depth].affinity[i].who, kproc->cpuid))
       {
-        kproc->hlevel.levels[depth].set = &kaapi_default_param.memory.levels[depth].affinity[i];
-        ncpu = kproc->hlevel.levels[depth].set->ncpu;
-        if (ncpu > kproc->hlevel.levels[depth].nsize) 
+        curr_set = &kaapi_default_param.memory.levels[depth].affinity[i];
+        if (curr_set->type == KAAPI_MEM_NODE)
+          kproc->numa_nodeid = curr_set->os_index;
+        ncpu = curr_set->ncpu;
+
+        /* allocate curr_kids to compute number of kids before storing it into the hierarchy if > 1 */
+        if (curr_kids == 0)
         {
-          kaapi_processor_id_t* newkids = (kaapi_processor_id_t*)calloc(ncpu, sizeof(kaapi_processor_id_t));
-          memcpy( newkids, kproc->hlevel.levels[depth].kids, kproc->hlevel.levels[depth].nsize * sizeof(kaapi_processor_id_t) );
-          free(kproc->hlevel.levels[depth].kids);
-          kproc->hlevel.levels[depth].nsize = ncpu;
-          kproc->hlevel.levels[depth].kids  = newkids;
-        }
-        else if (kproc->hlevel.levels[depth].kids == 0)
+          curr_nsize = ncpu;
+          curr_kids  = (kaapi_processor_id_t*)calloc(curr_nsize, sizeof(kaapi_processor_id_t));
+        } 
+        else if (curr_nsize < ncpu)
         {
-          kproc->hlevel.levels[depth].nsize = ncpu;
-          kproc->hlevel.levels[depth].kids  = (kaapi_processor_id_t*)calloc(ncpu, sizeof(kaapi_processor_id_t));
+          free( curr_kids );
+          curr_nsize = ncpu;
+          curr_kids  = (kaapi_processor_id_t*)calloc(curr_nsize, sizeof(kaapi_processor_id_t));
         }
-        
         /* compute the kids array for this processor */
-        kproc->hlevel.levels[depth].nkids = kaapi_cpuset2kids(
-            &kproc->hlevel.levels[depth].set->who, 
-            kproc->hlevel.levels[depth].kids, 
+        curr_nkids = kaapi_cpuset2kids(
+            &curr_set->who, 
+            curr_kids, 
+            curr_nsize
+        );
+
+        if (curr_nkids >1) // ok store it into the hierarchy 
+        {
+          kproc->hlevel.levels[kproc->hlevel.depth].set   = curr_set;
+          kproc->hlevel.levels[kproc->hlevel.depth].nkids = curr_nkids;
+          kproc->hlevel.levels[kproc->hlevel.depth].kids  = curr_kids;
+          kproc->hlevel.levels[kproc->hlevel.depth].nsize = curr_nsize;
+          
+          curr_nkids = 0;
+          curr_nsize = 0;
+          curr_kids  = 0;
+          curr_set   = 0;
+
+          ++kproc->hlevel.depth;
+        }
+      } // if kaapi_cpuset_has
+    }
+  }
+
+
+  for (depth=0; depth < kproc->hlevel.depth; ++depth)
+  {
+    size_t ncpu;
+
+    /* compute notself set */
+    if (depth +1 < kproc->hlevel.depth)
+    {
+      ncpu = kproc->hlevel.levels[depth].nnotself 
+           = kproc->hlevel.levels[depth+1].nkids - kproc->hlevel.levels[depth].nkids;
+      if (ncpu >0)
+      {
+        kaapi_processor_id_t* notselfkids = (kaapi_processor_id_t*)calloc(ncpu, sizeof(kaapi_processor_id_t));
+        kaapi_cpuset_copy( &cpuset, &(kproc->hlevel.levels[depth+1].set->who) );
+        kaapi_cpuset_notand( &cpuset, &(kproc->hlevel.levels[depth].set->who) );
+        kproc->hlevel.levels[depth].nnotself = kaapi_cpuset2kids(
+            &cpuset,
+            notselfkids,
             kaapi_default_param.cpucount
         );
-        break;
+        kproc->hlevel.levels[depth].notself = notselfkids;
       }
     }
   }
-  kproc->hlevel.depth = depth;
   
-#if 0
+#if 1
+  kaapi_sched_lock( &print_lock );
+  char buffer1[1024];
+  char buffer2[1024];
   printf("\nNew topo for K-processor: %i\n", kproc->kid );
   for (depth = 0; depth <kproc->hlevel.depth; ++depth)
   {
-    const char* str = kaapi_cpuset2string(kaapi_default_param.syscpucount, kproc->hlevel.levels[depth].set->who);
-    printf("cpu:%i, kid:%i, level:%i [size:%lu, cpuset:'%s', kids: '%s', type:%u] \n", processor, kproc->kid, depth, 
-    (unsigned long)kproc->hlevel.levels[depth].set->mem_size,
-    str, 
-    kaapi_kids2string(
+    const char* str = kaapi_cpuset2string( 
+        kaapi_default_param.syscpucount, 
+       &kproc->hlevel.levels[depth].set->who 
+    );
+    printf("cpu:%3i, kid:%3i, level:%i [size:%14lu, cpuset:'%s', kids: '%s', notself: '%s', type:%u] \n", processor, kproc->kid, depth, 
+      (unsigned long)kproc->hlevel.levels[depth].set->mem_size,
+      str, 
+      kaapi_kids2string(
+        buffer1,
         kproc->hlevel.levels[depth].nkids, 
         kproc->hlevel.levels[depth].kids), 
-    (unsigned int)kproc->hlevel.levels[depth].set->type
+      (kproc->hlevel.levels[depth].nnotself == 0 ? "":
+        kaapi_kids2string(
+          buffer2,
+          kproc->hlevel.levels[depth].nnotself, 
+          kproc->hlevel.levels[depth].notself) ), 
+      (unsigned int)kproc->hlevel.levels[depth].set->type
     );
+    fflush(stdout);
   }
+  kaapi_sched_unlock( &print_lock );
 #endif
 
   return 0;

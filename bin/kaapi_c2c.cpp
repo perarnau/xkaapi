@@ -7,6 +7,17 @@
 #include <iomanip>
 #include <ctype.h>
 #include <time.h>
+#include <stdexcept>
+/* TODO:
+OK   - gestion des args si paramètre range: begin -> access, end -> size_t (taille)
+   - reduction & parsing de la declaration des fonctions + support moteur executif
+     - init à 0 le 1er appel en CW ?
+
+   - adaptive loop. See OpenMP canonical form of Loop. Not all kind of expression
+   can occurs in expressions of the for loop (init_expr; cond_expr; incr_expr )
+
+   - generation of serialization operators
+*/
 
 #define SOURCE_POSITION Sg_File_Info::generateDefaultFileInfoForTransformationNode()
 
@@ -97,24 +108,53 @@ public:
 
 /* link a kaapi task AST function declaration to the pragma kaapi task */
 enum KaapiAccessMode_t {
-  KAAPI_VOID_MODE,
+  KAAPI_VOID_MODE = 0,
   KAAPI_W_MODE,
   KAAPI_R_MODE,
   KAAPI_RW_MODE,
   KAAPI_CW_MODE,
-  KAAPI_V_MODE
+  KAAPI_V_MODE,
+  
+  KAAPI_HIGHPRIORITY_MODE /* not really a mode. Only used to parse css program */
 };
 
+enum KaapiStorage_t {
+  KAAPI_BAD_STORAGE = 0,
+  KAAPI_ROW_MAJOR = 1,
+  KAAPI_COL_MAJOR = 2
+};
+
+enum KaapiParamAttribute_t {
+  KAAPI_BAD_PARAM_TYPE = 0,
+  KAAPI_ARRAY_NDIM_TYPE = 1,
+  KAAPI_OPEN_RANGE_TYPE = 2,
+  KAAPI_CLOSE_RANGE_TYPE = 3
+};
 
 /* Store view of each parameter */
 class KaapiParamAttribute : public AstAttribute {
 public:
   KaapiParamAttribute ()
-   : lda(0), dim(0) 
+   : type(KAAPI_BAD_PARAM_TYPE),  storage(KAAPI_ROW_MAJOR), lda(0), dim(0) 
   { }
-  SgExpression* lda;
-  size_t        dim;
-  SgExpression* ndim[3];
+  KaapiParamAttribute_t type;
+  union {
+    struct {
+      const char*           name;
+      KaapiStorage_t        storage;
+      SgExpression*         lda;
+      size_t                dim;
+      SgExpression*         ndim[3];
+    };
+    struct {
+      const char*           first_bound;
+      SgExpression*         expr_firstbound;
+      int                   index_firstbound;
+      const char*           second_bound;
+      SgExpression*         expr_secondbound;
+      int                   index_secondbound;
+    };
+  };
 };
 
 struct KaapiTaskFormalParam {
@@ -138,6 +178,7 @@ public:
 
   std::string                       mangled_name;      /* internal name of the task */
   std::vector<KaapiTaskFormalParam> formal_param;
+  std::vector<int>                  israngedecl;       /* for range declaration: 0 no, 1:begin, 2: end*/
   std::map<std::string,int>         lookup;
   SgScopeStatement                  scope;             /* for the formal parameter */
   std::string                       name_paramclass;   /* name of the type for arguments */
@@ -183,593 +224,169 @@ std::string GenerateSetDimensionExpression(
 
 
 
-/* fwd decl */
-static SgExpression* ParseExpression( 
-    Sg_File_Info* fileInfo, 
-    std::istringstream& input, 
-    SgScopeStatement* scope 
-);
-
 static inline int isletter( char c)
 { return (c == '_') || isalpha(c); }
 static inline int isletternum( char c)
 { return (c == '_') || isalnum(c); }
 
-/** Parse C/C++ identifier and return the last unrecognized char 
-    which is putted back into the stream
-    [a-zA-Z_]*[0-9]
-*/
-static int ParseIdentifier( std::string& ident, std::istringstream& input )
-{
-  char c;
-  ident.clear();
-  input >> c;
-  if ( !isletter(c) )
+
+class Parser {
+  const char* buffer;
+  const char* rpos;
+  const char* rlast;
+  
+  void skip_ws()
   {
-    input.putback(c);
-    return c;
+    while ((*rpos == ' ') || (*rpos == '\t') || (*rpos == '\n'))
+      ++rpos;
   }
 
-  ident.push_back(c);
-  do {
-    if (!input.good()) 
+  char readchar() throw(std::overflow_error)
+  {
+    if (rpos == rlast) 
+    {
+      ++rpos;
       return EOF;
-    input >> c;
-    if (isletternum(c))
-      ident.push_back(c);
-    else if (isdigit(c))
-      goto digits;
-    else {
-      input.putback(c);
-      return c;
     }
-  } while ( 1 );
-
-digits:
-  ident.push_back(c);
-  do {
-    if (!input.good()) 
-      return EOF;
-    input >> c;
-    if (isdigit(c))
-      ident.push_back(c);
-    else {
-      input.putback(c);
-      return c;
-    }
-  } while ( 1 );
-}
-
-
-static SgUnsignedLongVal* ParseExprIntegralNumber( std::istringstream& input )
-{
-  unsigned long value = 0;
-  char c;
-  input >> c;
-  while (isdigit(c))
-  {
-    value *= 10;
-    value += c - '0';
-    input >> c;
+    if (rpos > rlast) throw std::overflow_error("empty buffer");
+    return *rpos++;
   }
-  input.putback(c);
-  return SageBuilder::buildUnsignedLongVal( value );
-}
+  void putback() 
+  { --rpos; }
 
-static SgVarRefExp* ParseExprIdentifier( 
-    Sg_File_Info* fileInfo, 
-    std::istringstream& input, 
-    SgScopeStatement* scope 
-)
-{
-  std::string ident;
-  ParseIdentifier(ident, input);
-  if (ident.empty())
-  {
-    std::cerr << "****[kaapi_c2c] Empty identifier."
-              << "     In filename '" << fileInfo->get_filename() 
-              << "' LINE: " << fileInfo->get_line()
-              << std::endl;
-    KaapiAbort("**** error");
-  }
-  return SageBuilder::buildVarRefExp (ident, scope );
-}
-
-static SgExpression* ParseExprConstant( 
-    Sg_File_Info* fileInfo, 
-    std::istringstream& input, 
-    SgScopeStatement* scope 
-)
-{
-  char c;
-  input >> c;
-  input.putback(c);
-  if (isdigit(c))
-  {
-    return ParseExprIntegralNumber( input );
-  }
-  return ParseExprIdentifier(fileInfo,input,scope);
-}
-
-/**/
-static SgExpression* ParsePrimaryExpression( 
-    Sg_File_Info* fileInfo, 
-    std::istringstream& input, 
-    SgScopeStatement* scope 
-)
-{
-  std::cout << ">> ParsePrimaryExpression" << std::endl;
-  SgExpression* expr;
-  char c;
-  input >> std::ws >> c;
-  if (c == '(')
-  {
-    expr = ParseExpression(fileInfo, input, scope );
-    if (c != ')') 
-    {
-      std::cerr << "****[kaapi_c2c] Error found '" << c 
-                << "'. Missing ')' in primary expression."
-                << "     In filename '" << fileInfo->get_filename() 
-                << "' LINE: " << fileInfo->get_line()
-                << std::endl;
-      KaapiAbort("**** error");
-    }
-    std::cout << ">> ParsePrimaryExpression" 
-              << expr->unparseToString() << std::endl;
-    return expr;
-  }
-  input.putback(c);
-  expr = ParseExprConstant(fileInfo, input, scope );
-  std::cout << ">> ParsePrimaryExpression: " 
-            << expr->unparseToString() << std::endl;
-  return expr;
-}
-
-/**/
-static SgExpression* ParseUnaryExpression( 
-    Sg_File_Info* fileInfo, 
-    std::istringstream& input, 
-    SgScopeStatement* scope 
-)
-{
-  std::cout << ">> ParseUnaryExpression" << std::endl;
-  SgExpression* expr;
-  
-#if 0 
-  input >> std::ws;
-/* currently do not handle sizeof expression 
-   putback seems to be limited to 1 char.
-*/
-  char ci[7] = {0,0,0,0,0,0,0}; /* s i z e o f + 0 */
-  input.getline(ci, 7);
-  if (strcmp(ci,"sizeof") == 0) 
-  {
-    char c;
-    input >> std::ws >> c;
-    if (c == '(')
-    {
-      std::string type_name;
-      ParseIdentifier( type_name, input );
-      SgType* type = SageInterface::lookupNamedTypeInParentScopes(type_name, scope); 
-      /* should be a type !!! */
-      if (type ==0)
-      {
-        std::cerr << "****[kaapi_c2c] Error. Unknown type in cast expression.\n"
-                  << "     In filename '" << fileInfo->get_filename() 
-                  << "' LINE: " << fileInfo->get_line()
-                  << std::endl;
-        KaapiAbort("**** error");
-      }
-
-      input >> std::ws >> c;
-      if (c != ')') 
-      {
-        std::cerr << "****[kaapi_c2c] Error. Missing ')' in cast expression.\n"
-                  << "     In filename '" << fileInfo->get_filename() 
-                  << "' LINE: " << fileInfo->get_line()
-                  << std::endl;
-        KaapiAbort("**** error");
-      }
-      expr = SageBuilder::buildSizeOfOp(type);
-      std::cout << ">> ParseUnaryExpression: " 
-                << expr->unparseToString() << std::endl;
-      return expr;
-    }
-    else 
-    {
-      input.putback(c);
-      expr = ParseUnaryExpression(fileInfo, input, scope );
-      expr = SageBuilder::buildSizeOfOp(expr);
-      std::cout << ">> ParseUnaryExpression" 
-                << expr->unparseToString() << std::endl;
-      return expr;
-    }
-  }
-  else {
-    int rsize= input.gcount();
-    for (int i=0; i<rsize; ++i)
-      input.putback(ci[i]);
-  }
-#endif
-
-  expr = ParsePrimaryExpression( fileInfo, input, scope);
-  std::cout << ">> ParseUnaryExpression: " 
-            << expr->unparseToString() << std::endl;
-  return expr;
-}
-
-/**/
-static SgExpression* ParseCastExpression( 
-    Sg_File_Info* fileInfo, 
-    std::istringstream& input, 
-    SgScopeStatement* scope 
-)
-{
-  std::cout << ">> ParseCastExpression" << std::endl;
-  SgExpression* expr;
-  char c;
-  input >> std::ws >> c;
-  if (c == '(') 
-  {
-    std::string type_name;
-    ParseIdentifier( type_name, input );
-    SgType* type = SageInterface::lookupNamedTypeInParentScopes(type_name, scope); 
-    /* should be a type !!! */
-    if (type ==0)
-    {
-      std::cerr << "****[kaapi_c2c] Error. Unknown type in cast expression."
-                << "     In filename '" << fileInfo->get_filename() 
-                << "' LINE: " << fileInfo->get_line()
-                << std::endl;
-      KaapiAbort("**** error");
-    }
-
-    input >> std::ws >> c;
-    if (c != ')')
-    {
-      std::cerr << "****[kaapi_c2c] Error. Missing ')' in cast expression."
-                << "     In filename '" << fileInfo->get_filename() 
-                << "' LINE: " << fileInfo->get_line()
-                << std::endl;
-      KaapiAbort("**** error");
-    }
-    expr = ParseCastExpression(fileInfo, input, scope);
-    expr = SageBuilder::buildCastExp (expr, type );
-    std::cout << ">> ParseCastExpression: " << expr->unparseToString() << std::endl;
-    return expr;
-  }
-  input.putback(c);
-  expr= ParseUnaryExpression( fileInfo, input, scope);
-  std::cout << ">> ParseCastExpression: " << expr->unparseToString() << std::endl;
-  return expr;
-}
-
-/**/
-static SgExpression* ParseMultiplicativeExpression( 
-    Sg_File_Info* fileInfo, 
-    std::istringstream& input, 
-    SgScopeStatement* scope 
-)
-{
-  std::cout << ">> ParseMultiplicativeExpression" << std::endl;
-  char c;
-  SgExpression* expr= ParseCastExpression( fileInfo, input, scope);
-redo:
-  input >> std::ws >> c;
-  if (c == '*')
-  {
-    expr = SageBuilder::buildMultiplyOp( expr, ParseCastExpression( fileInfo, input, scope) );
-    goto redo;
-  }
-  else if (c == '/')
-  {
-    expr = SageBuilder::buildDivideOp( expr, ParseCastExpression( fileInfo, input, scope) );
-    goto redo;
-  }
-  else if (c == '%')
-  {
-    expr = SageBuilder::buildModOp( expr, ParseCastExpression( fileInfo, input, scope) );
-    goto redo;
-  }
-  else 
-    input.putback(c);
-  std::cout << "<< ParseMultiplicativeExpression: " << expr->unparseToString() << std::endl;
-  return expr;
-}
-
-/**/
-static SgExpression* ParseAdditiveExpression( 
-    Sg_File_Info* fileInfo, 
-    std::istringstream& input, 
-    SgScopeStatement* scope 
-)
-{
-  std::cout << ">> ParseAdditiveExpression" << std::endl;
-  char c;
-  SgExpression* expr= ParseMultiplicativeExpression( fileInfo, input, scope);
-redo:
-  input >> std::ws >> c;
-  if (c == '+')
-  {
-    expr = SageBuilder::buildAddOp( expr, ParseMultiplicativeExpression( fileInfo, input, scope) );
-    goto redo;
-  }
-  else if (c == '-')
-  {
-    expr = SageBuilder::buildSubtractOp( expr, ParseMultiplicativeExpression( fileInfo, input, scope) );
-    goto redo;
-  }
-  else 
-    input.putback(c);
-  std::cout << "<< ParseAdditiveExpression: " << expr->unparseToString() << std::endl;
-  return expr;
-}
-
-static SgExpression* ParseExpression( 
-    Sg_File_Info* fileInfo, 
-    std::istringstream& input, 
-    SgScopeStatement* scope 
-)
-{
-  SgExpression* expr;
-  std::cout << ">> Parse Expression" << std::endl;
-  expr = ParseAdditiveExpression( fileInfo, input, scope);
-  std::cout << "<< Parse Expression:" << expr->unparseToString() << std::endl;
-  return expr;
-}
-
-static void ParseDimension( 
-    Sg_File_Info* fileInfo, 
-    KaapiParamAttribute* kpa, 
-    std::istringstream& input, 
-    SgScopeStatement* scope 
-)
-{
-  char c;
-redo_onedim:
-  input >> std::ws >> c;
-  if (c != '[') 
-  {
-    input.putback(c);
-    return;
-  }
-  kpa->ndim[kpa->dim] = ParseExpression( fileInfo, input, scope );
-  input >> std::ws >> c;
-  if (c != ']') 
-  {
-    std::cerr << "****[kaapi_c2c] Error. Missing ']' in dimension expression."
-              << "     In filename '" << fileInfo->get_filename() 
-              << "' LINE: " << fileInfo->get_line()
-              << std::endl;
-    KaapiAbort("**** error");
-  }
-  if (++kpa->dim == 3) 
-  {
-    std::cerr << "****[kaapi_c2c] Error. Too high dimension for array (hard limit=2)."
-              << "     In filename '" << fileInfo->get_filename() 
-              << "' LINE: " << fileInfo->get_line()
-              << std::endl;
-    KaapiAbort("**** error");
-  }
-
-  goto redo_onedim;
-}
-
-/* Parse one formal parameter definition and return its attribut
-   after parsing the expression defining the view.
-        
-      dimension :=
-          one_dimension | dimension one_dimension
-      one_dimension :=
-          '[' expression ']'
-
-      lda :=
-        identifier
-
-      expression :=
-        additive_expression
-
-      additive_expression :=
-          multiplicative_expression
-        | additive_expression '+' multiplicative_expression
-        | additive_expression '-' multiplicative_expression
-        
-      multiplicative_expression
-          cast_expression
-        | multiplicative_expression '*' cast_expression
-        | multiplicative_expression '/' cast_expression
-        | multiplicative_expression '%' cast_expression
-
-      cast_expression
-          unary_expression
-        | '(' type_name ')' cast_expression
-
-      unary_expression
-          primary_expression
-        | SIZEOF unary_expression
-        | SIZEOF '(' type_name ')'
-      
-      primary_expression
-          identifier
-        | integral
-        | '(' expression ')'
-
-*/
-static KaapiParamAttribute* ParseParamDecl( 
-    Sg_File_Info* fileInfo, 
-    std::string& ident, 
-    std::istringstream& input, 
-    SgScopeStatement* scope 
-)
-{
-  char c;
-  ParseIdentifier( ident, input );
-  input >> std::ws >> c;
-  KaapiParamAttribute* kpa = new KaapiParamAttribute;
-  if ((c == ',') || (c == ')'))
-  {
-    input.putback(c);
-    return kpa;
+public:
+  Parser( const char* line )
+   : buffer(line), rpos(line)
+  { 
+    rlast = rpos + strlen(line);
   }
   
-  if (c == '{') 
-  { /* complex form */
-    kpa->lda = ParseExprIdentifier(fileInfo,input,scope);
-    input >> std::ws >> c;
-    if (c != ';') {
-      std::cerr << "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
-                << "\n Bad syntax for complex view description of a formal parameter. Waiting ';'. Found: '" << c << "'"
-                << std::endl;
-      KaapiAbort("*** Error");
-    }
-    ParseDimension( fileInfo, kpa, input, scope );
-    input >> std::ws >> c;
-    if (c != '}')
-    {
-      std::cerr << "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
-                << "\n Bad syntax for complex view description of a formal parameter. Waiting '}'. Found: '" << c << "'"
-                << std::endl;
-      KaapiAbort("*** Error");
-    }
-    return kpa;
-  }
-  if (c != '[')
-  {
-    std::cerr << "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
-              << "\n Bad syntax for view description of a formal parameter. Waiting '['. Found: '" << c << "'"
-              << std::endl;
-    KaapiAbort("*** Error");
-  }
+  /** Return the string of the remainder part of the line
+  */
+  void ParseGetLine( std::string& ident );
 
-  input.putback(c);
-  ParseDimension( fileInfo, kpa, input, scope );
-  input >> std::ws >> c;
-  if ((c == ',') || (c == ')'))
-  {
-    input.putback(c);
-    return kpa;
-  }
-  std::cerr << "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
-            << "\n Bad syntax for view description of a formal parameter. Waiting ',' or ')'. Found: '" << c << "'"
-            << std::endl;
-  KaapiAbort("*** Error");
-  return 0;
-}
+  /** Parse C/C++ identifier and return the last unrecognized char 
+      which is putted back into the stream
+      [a-zA-Z_]*[0-9]
+  */
+  int ParseIdentifier( std::string& ident );
 
+  /* arithmetic grammar ... */
+  /**/
+  SgUnsignedLongVal* ParseExprIntegralNumber( );
 
-/* Parse the list of formal parameter definitions
-   The grammar is:
-      list_param :=
-          access_param
-        | list_param access_param
-      
-      access_param :=
-          mode '(' list_declaration ')
-      
-      list_declaration :=
-          range_declaration
-        | list_declaration ',' range_declaration
-        
-      range_declaration :=
-          identifier
-        | identifier dimension
-        | identifier '{' complex_view '}
-        | '[' identifier '..' identifier ']'
-      
-      complex_view :=
-          element_view
-        | complex_dimension ',' element_view
-      
-      element_view :=
-          storage
-        | lda
-        | dimension
-        
-      mode :=
-          'write' | 'w' | 'output'
-        | 'read' | 'r' | 'input'
-        | 'exclusive' | 'x' | 'inout'
-        | 'value' | 'v'
-        | 'reduction' | 'cw'
-      
-      storage :=
-          'rowmajor' | 'C'
-        | 'columnmajor' | 'Fortran'
-      
-      lda :=
-          identifier
-          
-      See in the grammar above for the remainders rules about dimension,
-      lda etc.
-      
-*/
-static void ParseListParamDecl( 
-    Sg_File_Info* fileInfo, 
-    KaapiTaskAttribute* kta, 
-    std::istringstream& input 
-)
-{
-  std::string name;
-  std::string ident;
-  char c;
-  KaapiParamAttribute* kpa;
-  KaapiAccessMode_t    mode;
+  /**/
+  SgVarRefExp* ParseExprIdentifier( 
+      Sg_File_Info* fileInfo, 
+      SgScopeStatement* scope 
+  );
+
+  /**/
+  SgExpression* ParseExprConstant( 
+      Sg_File_Info* fileInfo, 
+      SgScopeStatement* scope 
+  );
+
+  /**/
+  SgExpression* ParsePrimaryExpression( 
+      Sg_File_Info* fileInfo, 
+      SgScopeStatement* scope 
+  );
   
-  while (input.good())
-  {
-    input >> std::ws >> name;
-    if (!input.good()) return;
-    if ((name == "write") || (name == "w") || (name == "output"))
-      mode = KAAPI_W_MODE;
-    else if ((name == "read") || (name == "r") || (name == "input"))
-      mode = KAAPI_R_MODE;
-    else if ((name == "exclusive") || (name == "x") || (name == "inout"))
-      mode = KAAPI_R_MODE;
-    else if ((name == "value") || (name == "v"))
-      mode = KAAPI_V_MODE;
-    else if ((name == "reduction") || (name == "cw"))
-      mode = KAAPI_CW_MODE;
-    else
-      KaapiAbort("*** Error list of parameters should defined access mode");
+  /**/
+  SgExpression* ParseUnaryExpression( 
+      Sg_File_Info* fileInfo, 
+      SgScopeStatement* scope 
+  );
 
-    input >> std::ws >> c;
-    if (c != '(') 
-    {
-      std::cerr << "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
-                << "\n Bad syntax for view description of formal parameter. "
-                << "Within scope of '" << name << "' access mode, missing '('. Found: '" << c << "'"
-                << std::endl;
-      KaapiAbort("*** Error");
-    }
+  /**/
+  SgExpression* ParseCastExpression( 
+      Sg_File_Info* fileInfo, 
+      SgScopeStatement* scope 
+  );
 
-redo_oneparam:
-    kpa = ParseParamDecl( fileInfo, ident, input, &kta->scope );
-    if (kpa !=0) 
-    {
-      std::map<std::string,int>::iterator curr = kta->lookup.find( ident );
-      if (curr == kta->lookup.end())
-      {
-        std::cerr << "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
-                  << "\n Cannot find formal parameter '" << ident << "' in the task's formal parameter list"
-                  << std::endl;
-        KaapiAbort("*** Error");
-      }
+  /**/
+  SgExpression* ParseMultiplicativeExpression( 
+      Sg_File_Info* fileInfo, 
+      SgScopeStatement* scope 
+  );
 
-      int ith = curr->second;
-      kta->formal_param[ith].mode = mode;
-      kta->formal_param[ith].attr = kpa;
-    }
+  /**/
+  SgExpression* ParseAdditiveExpression( 
+      Sg_File_Info* fileInfo, 
+      SgScopeStatement* scope 
+  );
 
-    input >> std::ws >> c;
-    if (c == ')') continue;
-    goto redo_oneparam;
-  }
-}
+  SgExpression* ParseExpression( 
+      Sg_File_Info* fileInfo, 
+      SgScopeStatement* scope 
+  );
+
+  KaapiStorage_t ParseStorage( 
+      Sg_File_Info*       fileInfo, 
+      SgScopeStatement*   scope 
+  );
+
+
+  KaapiAccessMode_t ParseAccessMode( 
+      Sg_File_Info* fileInfo
+  );
+
+  void ParseDimension( 
+      Sg_File_Info* fileInfo, 
+      KaapiParamAttribute* kpa, 
+      SgScopeStatement* scope 
+  );
+
+  void ParseNDimensions( 
+      Sg_File_Info* fileInfo, 
+      KaapiParamAttribute* kpa, 
+      SgScopeStatement* scope 
+  );
+
+  void ParseRangeDeclaration( 
+      Sg_File_Info*        fileInfo, 
+      KaapiParamAttribute* kpa, 
+      SgScopeStatement*    scope 
+  );
+
+  void ParseComplexView( 
+      Sg_File_Info*        fileInfo, 
+      KaapiParamAttribute* kpa, 
+      SgScopeStatement*    scope 
+  );
+
+  void ParseListParamDecl( 
+      Sg_File_Info*       fileInfo, 
+      KaapiTaskAttribute* kta,
+      KaapiAccessMode_t   mode,
+      SgScopeStatement*   scope 
+  );
+
+  void ParseListParam( 
+      Sg_File_Info*       fileInfo, 
+      KaapiTaskAttribute* kta,
+      SgScopeStatement*   scope 
+  );
+
+  void DoKaapiPragmaTask( SgPragmaDeclaration* sgp );
+  void DoKaapiPragmaData( SgNode* node );
+  void DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration );
+  void DoKaapiPragmaNoTask( SgPragmaDeclaration* sgp );
+  void DoKaapiPragmaBarrier( SgPragmaDeclaration* sgp );
+  void DoKaapiPragmaWaiton( SgPragmaDeclaration* sgp );
+  void DoKaapiPragmaParallelRegion( SgPragmaDeclaration* sgp );
+  void DoKaapiPragmaInit( SgPragmaDeclaration* sgp, bool flag );
   
+  
+}; /* end parser class */
+
+
+
 
 /** #pragma kaapi task parsing
 */
-void DoKaapiPragmaTask( SgPragmaDeclaration* sgp, const std::string& pragma_string )
+void Parser::DoKaapiPragmaTask( SgPragmaDeclaration* sgp )
 {
 #if 0
   std::cout << "This is a kaapi task definition, parent class name: " 
@@ -786,6 +403,9 @@ void DoKaapiPragmaTask( SgPragmaDeclaration* sgp, const std::string& pragma_stri
   SgNode* fnode = 
           sgp->get_parent()-> get_traversalSuccessorByIndex( 
               1+ sgp->get_parent()->get_childIndex( sgp ) );
+
+  std::string pragma_string;
+  ParseGetLine( pragma_string );
 
   if (isSgTemplateDeclaration(fnode))
   {
@@ -814,7 +434,7 @@ void DoKaapiPragmaTask( SgPragmaDeclaration* sgp, const std::string& pragma_stri
 }
 
 
-void DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration, std::istringstream& input )
+void Parser::DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration )
 {
   Sg_File_Info* fileInfo = functionDeclaration->get_file_info();
 
@@ -840,6 +460,7 @@ void DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration, std::is
   SgInitializedNamePtrList& args = func_param->get_args();
   SgScopeStatement* scope_declaration = functionDeclaration->get_scope();
   kta->formal_param.resize( args.size() );
+  kta->israngedecl.resize( args.size() );
   for (unsigned int i=0; i<args.size(); ++i)
   {
     SgInitializedName* initname   = args[i];
@@ -859,7 +480,7 @@ void DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration, std::is
   
   /* parse the end of the stream of declaration
   */
-  ParseListParamDecl( fileInfo, kta, input );
+  ParseListParam( fileInfo, kta, scope_declaration );
   
   /* Add the class declaration for the parameters */
   kta->name_paramclass = std::string("__kaapi_args_") + 
@@ -899,10 +520,18 @@ redo_selection:
         goto redo_selection;
         KaapiAbort("**** error");
       }
-      kta->formal_param[i].kaapi_format = ConvertCType2KaapiFormat(
-        isSgPointerType(kta->formal_param[i].type)->get_base_type()
-      );
-      member_type = kaapi_access_ROSE_type;
+      if (kta->israngedecl[i] <= 1) /* 2 was the size */
+      {
+        kta->formal_param[i].kaapi_format = ConvertCType2KaapiFormat(
+          isSgPointerType(kta->formal_param[i].type)->get_base_type()
+        );
+        member_type = kaapi_access_ROSE_type;
+      }
+      else {
+        kta->formal_param[i].mode = KAAPI_V_MODE;
+        kta->formal_param[i].kaapi_format = "kaapi_int_format";
+        member_type = SageBuilder::buildIntType();
+      }
     }
 
     SgVariableDeclaration* memberDeclaration =
@@ -1025,9 +654,21 @@ redo_selection:
   for (unsigned int i=0; i<kta->formal_param.size(); ++i)
   {
     std::ostringstream fieldname;
-    fieldname << "(" << kta->formal_param[i].type->unparseToString() << ")thearg->f" << i;
-    if (kta->formal_param[i].mode != KAAPI_V_MODE)
-      fieldname << ".data";
+    if (kta->israngedecl[i] <=1)
+    {
+      if (kta->formal_param[i].mode == KAAPI_V_MODE)
+        fieldname << "thearg->f" << i;
+      else {
+        fieldname << "(" << kta->formal_param[i].type->unparseToString() << ")"
+                   << "thearg->f" << i << ".data";
+      }
+    }
+    else { /* bound end of a range store the size: rebuild the pointer */
+      KaapiParamAttribute* kpa = kta->formal_param[i].attr;
+      fieldname << "((" << kta->formal_param[kpa->index_firstbound].type->unparseToString() << ")"
+                << "thearg->f" << kpa->index_firstbound << ".data)"
+                << " + thearg->f" << i;
+    }
     SageInterface::appendExpression(argscall,
       SageBuilder::buildOpaqueVarRefExp(fieldname.str(),wrapper_body)
     );
@@ -1065,7 +706,7 @@ redo_selection:
 
 /**
 */
-void DoKaapiPragmaNoTask( SgPragmaDeclaration* sgp, std::istringstream& input )
+void Parser::DoKaapiPragmaNoTask( SgPragmaDeclaration* sgp )
 {
   /* #pragma kaapi task: find next function declaration to have the name */
   if (sgp->get_parent() ==0)
@@ -1213,27 +854,58 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
   for (unsigned int i=0; i < kta->formal_param.size(); ++i)
   {
     if (kta->formal_param[i].mode == KAAPI_V_MODE)
-      fout << "    case " << i << ": return kaapi_memory_view_make1d( 1, sizeof(arg->f" << i << "));\n";
-    else {
-      if (kta->formal_param[i].attr->dim == 1)
-        fout << "    case " << i << ": return kaapi_memory_view_make1d( " 
-                            << GenerateGetDimensionExpression(kta, kta->formal_param[i].attr->ndim[0])
-                            << ", sizeof(arg->f" << i << "));\n";
-      else if (kta->formal_param[i].attr->dim == 2)
+    {
+      if (kta->israngedecl[i] <= 1)
       {
-        fout << "    case " << i << ": return kaapi_memory_view_make2d( "
-                            << GenerateGetDimensionExpression(kta, kta->formal_param[i].attr->ndim[0]) << ","
-                            << GenerateGetDimensionExpression(kta, kta->formal_param[i].attr->ndim[1]) << ",";
-        if (kta->formal_param[i].attr->lda == 0) /* means contigous & row major == lda = dimj */
-          fout              << GenerateGetDimensionExpression(kta, kta->formal_param[i].attr->ndim[1]);
-        else
-          fout              << GenerateGetDimensionExpression(kta, kta->formal_param[i].attr->lda);
-        fout                << ", sizeof(arg->f" << i << "));\n";
+        fout << "    case " << i << ": return kaapi_memory_view_make1d( 1, sizeof("
+             << kta->formal_param[i].type->unparseToString()
+             << "));\n";
       }
-      else if (kta->formal_param[i].attr->dim == 3)
+      else { /* end of range type == int */
+        fout << "    case " << i << ": return kaapi_memory_view_make1d( 1, sizeof(int));\n"; 
+      }
+    }
+    else 
+    {
+      SgPointerType* ptrtype = isSgPointerType(kta->formal_param[i].type);
+      if (ptrtype ==0) KaapiAbort("**** Error: bad internal assertion");
+      SgType* type = ptrtype->get_base_type();
+      // TODO here: add definition of the type, else we cannot compile it */
+      while (isSgTypedefType( type ))
       {
-        fout << "    case " << i << ": kaapi_abort();\n";
-      }      
+        type = isSgTypedefType(type)->get_base_type();
+      }
+      
+      if (kta->formal_param[i].attr->type == KAAPI_ARRAY_NDIM_TYPE)
+      {          
+        if (kta->formal_param[i].attr->dim == 1)
+        {
+          fout << "    case " << i << ": return kaapi_memory_view_make1d( " 
+                              << GenerateGetDimensionExpression(kta, kta->formal_param[i].attr->ndim[0])
+                              << ", sizeof(" << type->unparseToString() << "));\n";
+        } 
+        else if (kta->formal_param[i].attr->dim == 2)
+        {
+          fout << "    case " << i << ": return kaapi_memory_view_make2d( "
+                              << GenerateGetDimensionExpression(kta, kta->formal_param[i].attr->ndim[0]) << ","
+                              << GenerateGetDimensionExpression(kta, kta->formal_param[i].attr->ndim[1]) << ",";
+          if (kta->formal_param[i].attr->lda == 0) /* means contigous & row major == lda = dimj */
+            fout              << GenerateGetDimensionExpression(kta, kta->formal_param[i].attr->ndim[1]);
+          else
+            fout              << GenerateGetDimensionExpression(kta, kta->formal_param[i].attr->lda);
+          fout                << ", sizeof(" << type->unparseToString() << "));\n";
+        }
+        else if (kta->formal_param[i].attr->dim == 3)
+        {
+          fout << "    case " << i << ": kaapi_abort();\n";
+        }
+      }
+      else { /* this is a begin of a range */
+        fout << "    case " << i << ": return kaapi_memory_view_make1d( " 
+//                            << GenerateGetDimensionExpression(kta, kta->formal_param[i].attr->expr_firstbound)
+                            << "arg->f" << kta->formal_param[i].attr->index_secondbound
+                            << ",  sizeof(" << type->unparseToString() << "));\n";
+      }
     }
   }
   fout << "  }\n"
@@ -1282,7 +954,7 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
        
   /* Generate constructor function that register the format */
   fout << "/* constructor method */\n" 
-       << "static void __attribute__ ((constructor)) " << kta->name_format << "_constructor(void)\n"
+       << "__attribute__ ((constructor)) void " << kta->name_format << "_constructor(void)\n"
        << "{\n"
        << "  if (" << kta->name_format << " !=0) return;\n"
        << "  " << kta->name_format << " = kaapi_format_allocate();\n"
@@ -1346,12 +1018,13 @@ public:
 
 /**
 */
-void DoKaapiPragmaData( SgNode* node, std::istringstream& input )
+void Parser::DoKaapiPragmaData( SgNode* node )
 {
   std::string name;
+  char c;
   SgPragmaDeclaration* sgp = isSgPragmaDeclaration(node);
   
-  input >> std::ws >> name;
+  ParseIdentifier( name );
   if (name != "alloca")
   {
     Sg_File_Info* fileInfo = sgp->get_file_info();
@@ -1374,8 +1047,9 @@ void DoKaapiPragmaData( SgNode* node, std::istringstream& input )
   SgSymbolTable* symtable = bbnode->get_symbol_table();
   
   /* parse the variables declaration in the pragma string */
-  input >> std::ws >> name;
-  if (name != "(") 
+  skip_ws();
+  c = readchar();
+  if (c != '(') 
   {
     Sg_File_Info* fileInfo = sgp->get_file_info();
     std::cerr <<  "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
@@ -1385,10 +1059,10 @@ void DoKaapiPragmaData( SgNode* node, std::istringstream& input )
   }
   
   bool findend = false;
-  while (input.good())
+  while (1)
   {
-    input >> std::ws;
-    ParseIdentifier( name, input );
+    skip_ws();
+    ParseIdentifier( name );
     if (name.size() >0)
     {
 #if 0
@@ -1454,8 +1128,8 @@ void DoKaapiPragmaData( SgNode* node, std::istringstream& input )
                   << std::endl;
         KaapiAbort("**** error");
     }
-    char c;
-    input >> std::ws >> c;
+    skip_ws();
+    c = readchar();
     if (c == ')') 
     {
       findend = true;
@@ -1469,6 +1143,8 @@ void DoKaapiPragmaData( SgNode* node, std::istringstream& input )
                   << std::endl;
         KaapiAbort("**** error");
     }
+    if (c == EOF)
+      break;
   }
   if (!findend) 
   {
@@ -1491,7 +1167,7 @@ void DoKaapiPragmaData( SgNode* node, std::istringstream& input )
 
 /** #pragma kaapi barrier parsing
 */
-void DoKaapiPragmaBarrier( SgPragmaDeclaration* sgp, std::istringstream& input )
+void Parser::DoKaapiPragmaBarrier( SgPragmaDeclaration* sgp )
 {
   std::string name;
 
@@ -1504,7 +1180,7 @@ void DoKaapiPragmaBarrier( SgPragmaDeclaration* sgp, std::istringstream& input )
               << std::endl;
     KaapiAbort("**** error");
   }
-  SgNode* nextnode = 
+//unused  SgNode* nextnode = 
           sgp->get_parent()-> get_traversalSuccessorByIndex( 
               sgp->get_parent()->get_childIndex( sgp ) + 1);
 
@@ -1522,7 +1198,7 @@ void DoKaapiPragmaBarrier( SgPragmaDeclaration* sgp, std::istringstream& input )
 
 /** #pragma kaapi waiton parsing
 */
-void DoKaapiPragmaWaiton( SgPragmaDeclaration* sgp, std::istringstream& input )
+void Parser::DoKaapiPragmaWaiton( SgPragmaDeclaration* sgp )
 {
   std::string name;
 
@@ -1535,7 +1211,7 @@ void DoKaapiPragmaWaiton( SgPragmaDeclaration* sgp, std::istringstream& input )
               << std::endl;
     KaapiAbort("**** error");
   }
-  SgNode* nextnode = 
+//  SgNode* nextnode = 
           sgp->get_parent()-> get_traversalSuccessorByIndex( 
               sgp->get_parent()->get_childIndex( sgp ) + 1);
 
@@ -1547,12 +1223,15 @@ void DoKaapiPragmaWaiton( SgPragmaDeclaration* sgp, std::istringstream& input )
   );
 //  SageInterface::prependStatement(decl_sync,bbnode);
   SageInterface::replaceStatement(sgp,callStmt);
+
+// TODO: parse list of variables 
 }
 
 
 /** #pragma kaapi parallel
+    TODO: parse num_threads(num)
 */
-void DoKaapiPragmaParallelRegion( SgPragmaDeclaration* sgp, std::istringstream& input )
+void Parser::DoKaapiPragmaParallelRegion( SgPragmaDeclaration* sgp )
 {
   SgBasicBlock* bbnode = isSgBasicBlock(sgp->get_parent());
   if (bbnode ==0)
@@ -1616,7 +1295,7 @@ void DoKaapiPragmaParallelRegion( SgPragmaDeclaration* sgp, std::istringstream& 
 
 /** #pragma kaapi init/finish: flag == true if init
 */
-void DoKaapiPragmaInit( SgPragmaDeclaration* sgp, std::istringstream& input, bool flag )
+void Parser::DoKaapiPragmaInit( SgPragmaDeclaration* sgp, bool flag )
 {
   std::string name;
 
@@ -1630,7 +1309,7 @@ void DoKaapiPragmaInit( SgPragmaDeclaration* sgp, std::istringstream& input, boo
     KaapiAbort("**** error");
   }
   bbnode->setAttribute("kaapiisparallelregion", (AstAttribute*)-1);
-  SgNode* nextnode = 
+//  SgNode* nextnode = 
           sgp->get_parent()-> get_traversalSuccessorByIndex( 
               sgp->get_parent()->get_childIndex( sgp ) + 1);
 
@@ -1769,7 +1448,7 @@ public:
         casestmt->get_body()->setAttribute("kaapiisparallelregion", (AstAttribute*)-1);
       }
     }
-#endif
+#endif // if 0
     
     if (isSgExprStatement(node))
     {
@@ -1903,8 +1582,13 @@ void DoKaapiTaskCall( KaapiTaskCallTraversal* ktct, SgGlobal* gscope )
     int i = 0;
     for (iebeg = listexpr.begin(); iebeg != listexpr.end(); ++iebeg, ++i)
     {
+      /* generate end of interval initialization after all previous field init */
+      if (oc.kta->israngedecl[i] == 2) 
+        continue;
+
       SgStatement* assign_statement;
       std::ostringstream fieldname;
+      
       if (oc.kta->formal_param[i].mode == KAAPI_V_MODE)
         fieldname << arg_name.str() << "->f" << i;
       else 
@@ -1921,6 +1605,40 @@ void DoKaapiTaskCall( KaapiTaskCallTraversal* ktct, SgGlobal* gscope )
       SageInterface::insertStatement(last_statement, assign_statement, false);
       last_statement = assign_statement;
     }
+    /* generate initialization of end of range */
+    i = 0;
+    for (iebeg = listexpr.begin(); iebeg != listexpr.end(); ++iebeg, ++i)
+    {
+      if (oc.kta->israngedecl[i] <= 1) continue;
+
+      SgStatement* assign_statement;
+      std::ostringstream fieldname;
+      fieldname << arg_name.str() << "->f" << i;
+
+      std::ostringstream fieldname_firstbound;
+      fieldname_firstbound << "f" << oc.kta->formal_param[i].attr->index_firstbound << ".data";
+      
+      assign_statement = SageBuilder::buildExprStatement(
+        SageBuilder::buildAssignOp(
+          /* dummy-> */
+          SageBuilder::buildOpaqueVarRefExp (fieldname.str(),oc.bb),
+          /* expr = *iebeg - (cast)arg_name->f_index_firstbound */
+          SageBuilder::buildSubtractOp( 
+            *iebeg,
+            SageBuilder::buildCastExp(
+              SageBuilder::buildArrowExp(
+                SageBuilder::buildVarRefExp(arg_name.str(),oc.bb),
+                SageBuilder::buildOpaqueVarRefExp( fieldname_firstbound.str(), oc.bb )
+              ),
+              oc.kta->formal_param[i].type
+            )
+          )
+        )
+      );
+      SageInterface::insertStatement(last_statement, assign_statement, false);
+      last_statement = assign_statement;
+    }
+
     
     static int task_cnt = 0;
     std::ostringstream task_name;
@@ -2003,23 +1721,23 @@ public:
       
       // Parse if it is a Kaapi Pragma
       std::string pragma_string = sgp->get_pragma()->get_pragma();
+      Parser parser( pragma_string.c_str() );
 
-      std::istringstream input( pragma_string );
       std::string name;
-      input >> std::ws >> name;
+      parser.ParseIdentifier( name );
       
       /* css compatibility */
       if (name == "css") name = "kaapi";
       if (name != "kaapi") return;
       
-      input >> std::ws >> name;
-      
+      parser.ParseIdentifier( name );
+
       /* Parallel kaapi region
          add begin_parallel_region and end_parallel_region between the basic block
       */
       if (name == "parallel")
       {
-        DoKaapiPragmaParallelRegion( sgp, input );
+        parser.DoKaapiPragmaParallelRegion( sgp );
       } 
 
       /* Case of task definition: because do no processing but register what to do
@@ -2027,44 +1745,44 @@ public:
       */
       else if (name == "task")
       {
-        DoKaapiPragmaTask( sgp, pragma_string );
+        parser.DoKaapiPragmaTask( sgp );
       } /* end for task */
 
       else if (name == "notask")
       {
-        DoKaapiPragmaNoTask( sgp, input );
+        parser.DoKaapiPragmaNoTask( sgp );
       } 
        
       /* Case of barrier definition
       */
-      else if (name == "barrier") 
+      else if ((name == "barrier") || (name == "sync")) // css compability
       {
-        DoKaapiPragmaBarrier( sgp, input );
+        parser.DoKaapiPragmaBarrier( sgp );
       }
 
       /* Case of waiton clause
       */
       else if (name == "waiton") 
       {
-        DoKaapiPragmaWaiton( sgp, input );
+        parser.DoKaapiPragmaWaiton( sgp );
       }
 
       /* Case of variable scope
       */
       else if (name == "data") 
       {
-        DoKaapiPragmaData( node, input );
+        parser.DoKaapiPragmaData( node );
       }
 
       /* Case of init/finalize
       */
       else if ((name == "init") || (name == "start"))
       {
-        DoKaapiPragmaInit( sgp, input, true );
+        parser.DoKaapiPragmaInit( sgp, true );
       }
       else if (name == "finish") 
       {
-        DoKaapiPragmaInit( sgp, input, false );
+        parser.DoKaapiPragmaInit( sgp, false );
       }
       else {
         Sg_File_Info* fileInfo = sgp->get_file_info();
@@ -2283,14 +2001,19 @@ int main(int argc, char **argv)
       ListTaskFunctionDeclaration::iterator func_decl_i;
       for (func_decl_i =all_task_func_decl.begin(); func_decl_i != all_task_func_decl.end(); ++func_decl_i)
       {
-        std::string& pragma_string = func_decl_i->second;
-        std::istringstream input(pragma_string);
-        /* re-parse 'kaapi' or 'css' and 'task' */
         std::string name;
-        input >> std::ws >> name >> std::ws >> name;
+        std::string& pragma_string = func_decl_i->second;
+        Parser parser(pragma_string.c_str());
+
+#if 0 // was suppressed with new parsing strategy
+        /* re-parse 'kaapi' or 'css' and 'task' */
+        Parser.parseIdentifier( name ); // == kaapi
+
+        Parser.parseIdentifier( name ); // == task
+#endif        
         
         /* ok inputstream is correctly positionned */
-        DoKaapiTaskDeclaration( func_decl_i->first, input );
+        parser.DoKaapiTaskDeclaration( func_decl_i->first );
       }      
 
 
@@ -2765,7 +2488,10 @@ static void RecGenerateGetDimensionExpression(
     /* look up sym->get_name() in the list of formal parameter of the declaration */
     std::map<std::string,int>::iterator iparam = kta->lookup.find( sym->get_name().str() );
     if (iparam == kta->lookup.end())
+    {
+      std::cerr << "Parameter:" << sym->get_name().str() << " unknown in parameter list" << std::endl;
       KaapiAbort("*** Cannot find which parameter is involved in dimension expression");
+    }
     sout << "((" 
          << kta->formal_param[iparam->second].type->unparseToString() 
          << ")" << "arg->f" << iparam->second;
@@ -2928,3 +2654,779 @@ std::string ConvertCType2KaapiFormat(SgType* type)
     }
   }
 }
+
+
+
+/*** Parser
+*/
+void Parser::ParseGetLine( std::string& ident )
+{
+  ident = std::string(rpos);
+  rpos = rlast;
+}
+
+
+int Parser::ParseIdentifier( std::string& ident )
+{
+  char c;
+  ident.clear();
+  skip_ws();
+  c = readchar();
+  if ( !isletter(c) )
+  {
+    putback();
+    return c;
+  }
+
+  ident.push_back(c);
+  do {
+    c = readchar();
+    if (isletternum(c))
+      ident.push_back(c);
+    else if (isdigit(c))
+      goto digits;
+    else {
+      putback();
+      return c;
+    }
+  } while ( 1 );
+
+digits:
+  ident.push_back(c);
+  do {
+    c = readchar();
+    if (isdigit(c))
+      ident.push_back(c);
+    else {
+      putback();
+      return c;
+    }
+  } while ( 1 );
+}
+
+
+SgUnsignedLongVal* Parser::ParseExprIntegralNumber( )
+{
+  unsigned long value = 0;
+  char c;
+  skip_ws();
+  c = readchar();
+  while (isdigit(c))
+  {
+    value *= 10;
+    value += c - '0';
+    c = readchar();
+  }
+  --rpos;
+  return SageBuilder::buildUnsignedLongVal( value );
+}
+
+SgVarRefExp* Parser::ParseExprIdentifier( 
+    Sg_File_Info* fileInfo, 
+    SgScopeStatement* scope 
+)
+{
+  std::string ident;
+  ParseIdentifier(ident);
+  if (ident.empty())
+  {
+    std::cerr << "****[kaapi_c2c] Empty identifier."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    KaapiAbort("**** error");
+  }
+  return SageBuilder::buildVarRefExp (ident, scope );
+}
+
+SgExpression* Parser::ParseExprConstant( 
+    Sg_File_Info* fileInfo, 
+    SgScopeStatement* scope 
+)
+{
+  char c;
+  c = readchar();
+  putback();
+  if (isdigit(c))
+  {
+    return ParseExprIntegralNumber( );
+  }
+  return ParseExprIdentifier(fileInfo,scope);
+}
+
+SgExpression* Parser::ParsePrimaryExpression( 
+    Sg_File_Info* fileInfo, 
+    SgScopeStatement* scope 
+)
+{
+  SgExpression* expr;
+  char c;
+  skip_ws();
+  c = readchar();
+  if (c == '(')
+  {
+    expr = ParseExpression(fileInfo, scope );
+    skip_ws();
+    c = readchar();
+    if (c != ')') 
+    {
+      std::cerr << "****[kaapi_c2c] Error found '" << c 
+                << "'. Missing ')' in primary expression."
+                << "     In filename '" << fileInfo->get_filename() 
+                << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+      KaapiAbort("**** error");
+    }
+    return expr;
+  }
+  putback();
+  expr = ParseExprConstant(fileInfo, scope );
+  return expr;
+}
+
+
+/**/
+SgExpression* Parser::ParseUnaryExpression( 
+    Sg_File_Info* fileInfo, 
+    SgScopeStatement* scope 
+)
+{
+  SgExpression* expr;
+
+/* currently do not handle sizeof expression 
+   putback seems to be limited to 1 char.
+*/
+  const char* save_rpos = rpos;
+  skip_ws();
+  char sizeof_name[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+  int nitem = sscanf(rpos, "%7s", sizeof_name);
+  if ((nitem !=0) && (strcmp(sizeof_name, "sizeof") == 0))
+  {
+    char c;
+    skip_ws();
+    c = readchar();
+    if (c == '(')
+    {
+      std::string type_name;
+      ParseIdentifier( type_name );
+      SgType* type = SageInterface::lookupNamedTypeInParentScopes(type_name, scope); 
+      /* should be a type !!! */
+      if (type ==0)
+      {
+        std::cerr << "****[kaapi_c2c] Error. Unknown type in cast expression.\n"
+                  << "     In filename '" << fileInfo->get_filename() 
+                  << "' LINE: " << fileInfo->get_line()
+                  << std::endl;
+        KaapiAbort("**** error");
+      }
+
+      skip_ws();
+      c = readchar();
+      if (c != ')') 
+      {
+        std::cerr << "****[kaapi_c2c] Error. Missing ')' in cast expression.\n"
+                  << "     In filename '" << fileInfo->get_filename() 
+                  << "' LINE: " << fileInfo->get_line()
+                  << std::endl;
+        KaapiAbort("**** error");
+      }
+      expr = SageBuilder::buildSizeOfOp(type);
+      return expr;
+    }
+    else 
+    {
+      putback();
+      expr = ParseUnaryExpression(fileInfo, scope );
+      expr = SageBuilder::buildSizeOfOp(expr);
+      return expr;
+    }
+  }
+  else {
+    /* putback what has been read */
+    rpos = save_rpos;
+  }
+  
+  expr = ParsePrimaryExpression( fileInfo, scope);
+
+  return expr;
+}
+
+
+/**/
+SgExpression* Parser::ParseCastExpression( 
+    Sg_File_Info* fileInfo, 
+    SgScopeStatement* scope 
+)
+{
+  SgExpression* expr;
+  char c;
+  skip_ws();
+  c = readchar();
+  if (c == '(') 
+  {
+    std::string type_name;
+    ParseIdentifier( type_name );
+    SgType* type = SageInterface::lookupNamedTypeInParentScopes(type_name, scope); 
+    /* should be a type !!! */
+    if (type ==0)
+    {
+      std::cerr << "****[kaapi_c2c] Error. Unknown type in cast expression."
+                << "     In filename '" << fileInfo->get_filename() 
+                << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+      KaapiAbort("**** error");
+    }
+
+    skip_ws();
+    c = readchar();
+    if (c != ')')
+    {
+      std::cerr << "****[kaapi_c2c] Error. Missing ')' in cast expression."
+                << "     In filename '" << fileInfo->get_filename() 
+                << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+      KaapiAbort("**** error");
+    }
+    expr = ParseCastExpression(fileInfo, scope);
+    expr = SageBuilder::buildCastExp (expr, type );
+    return expr;
+  }
+  putback();
+  expr= ParseUnaryExpression( fileInfo, scope);
+  return expr;
+}
+
+
+/**/
+SgExpression* Parser::ParseMultiplicativeExpression( 
+    Sg_File_Info* fileInfo, 
+    SgScopeStatement* scope 
+)
+{
+  char c;
+  SgExpression* expr= ParseCastExpression( fileInfo, scope);
+redo:
+  skip_ws();
+  c = readchar();
+  if (c == '*')
+  {
+    expr = SageBuilder::buildMultiplyOp( expr, ParseCastExpression( fileInfo, scope) );
+    goto redo;
+  }
+  else if (c == '/')
+  {
+    expr = SageBuilder::buildDivideOp( expr, ParseCastExpression( fileInfo, scope) );
+    goto redo;
+  }
+  else if (c == '%')
+  {
+    expr = SageBuilder::buildModOp( expr, ParseCastExpression( fileInfo, scope) );
+    goto redo;
+  }
+  else 
+    putback();
+  return expr;
+}
+
+
+SgExpression* Parser::ParseAdditiveExpression( 
+    Sg_File_Info* fileInfo, 
+    SgScopeStatement* scope 
+)
+{
+  char c;
+  SgExpression* expr= ParseMultiplicativeExpression( fileInfo, scope);
+redo:
+  skip_ws();
+  c = readchar();
+  if (c == '+')
+  {
+    expr = SageBuilder::buildAddOp( expr, ParseMultiplicativeExpression( fileInfo, scope) );
+    goto redo;
+  }
+  else if (c == '-')
+  {
+    expr = SageBuilder::buildSubtractOp( expr, ParseMultiplicativeExpression( fileInfo, scope) );
+    goto redo;
+  }
+  else 
+    putback();
+  return expr;
+}
+
+
+SgExpression* Parser::ParseExpression( 
+    Sg_File_Info* fileInfo, 
+    SgScopeStatement* scope 
+)
+{
+  SgExpression* expr;
+  expr = ParseAdditiveExpression( fileInfo, scope);
+  return expr;
+}
+
+
+KaapiStorage_t Parser::ParseStorage( 
+    Sg_File_Info*       fileInfo, 
+    SgScopeStatement*   scope 
+)
+{
+  std::string name;
+  const char* save_rpos = rpos;
+  ParseIdentifier( name );
+  for (size_t i=0; i<name.size(); ++i)
+    name[i] = tolower(name[i]);
+
+  if ((name == "c") || (name == "rowmajor")) return KAAPI_ROW_MAJOR;
+  if ((name == "fortran") || (name == "columnmajor")) return KAAPI_COL_MAJOR;
+
+  rpos = save_rpos;
+  return KAAPI_BAD_STORAGE;
+}
+
+
+KaapiAccessMode_t Parser::ParseAccessMode( 
+    Sg_File_Info* fileInfo
+)
+{
+  std::string name;
+  const char* save_rpos = rpos;
+  ParseIdentifier( name );
+  for (size_t i=0; i<name.size(); ++i)
+    name[i] = tolower(name[i]);
+
+  if ((name == "write") || (name == "w") || (name == "output")) return KAAPI_W_MODE;
+  if ((name == "read") || (name == "r") || (name == "input")) return KAAPI_R_MODE;
+  if ((name == "readwrite") || (name == "rw") || (name == "inout")) return KAAPI_RW_MODE;
+  if ((name == "reduction") || (name == "cw")) return KAAPI_CW_MODE;
+  if ((name == "value") || (name == "v")) return KAAPI_V_MODE;
+  if (name == "highpriority") return KAAPI_HIGHPRIORITY_MODE;
+
+  rpos = save_rpos;
+  return KAAPI_VOID_MODE;
+}
+
+
+
+void Parser::ParseDimension( 
+    Sg_File_Info* fileInfo, 
+    KaapiParamAttribute* kpa, 
+    SgScopeStatement* scope 
+)
+{
+  char c;
+
+  skip_ws();
+  c = readchar();
+  if (c != '[') 
+  {
+    std::cerr << "****[kaapi_c2c] Error. Missing '[' in dimension expression."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    KaapiAbort("**** error");
+  }
+  kpa->ndim[kpa->dim] = ParseExpression( fileInfo, scope );
+  if (kpa->ndim[kpa->dim] ==0)
+  {
+    std::cerr << "****[kaapi_c2c] Error. BAd expression in dimension."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    KaapiAbort("**** error");
+  }
+  
+  skip_ws();
+  c = readchar();
+  if (c != ']') 
+  {
+    std::cerr << "****[kaapi_c2c] Error. Missing ']' in dimension expression."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    KaapiAbort("**** error");
+  }
+  if (++kpa->dim == 3) 
+  {
+    std::cerr << "****[kaapi_c2c] Error. Too high dimension for array (hard limit=2)."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    KaapiAbort("**** error");
+  }
+}
+
+
+void Parser::ParseNDimensions( 
+    Sg_File_Info* fileInfo, 
+    KaapiParamAttribute* kpa, 
+    SgScopeStatement* scope 
+)
+{
+  char c;
+
+next_dimension:
+  skip_ws();
+  c = readchar();
+  if (c == '[')
+  {
+    putback();
+    ParseDimension( fileInfo, kpa, scope );
+    goto next_dimension;
+  }
+  putback();
+  return;
+}
+
+
+void Parser::ParseComplexView( 
+    Sg_File_Info*        fileInfo, 
+    KaapiParamAttribute* kpa, 
+    SgScopeStatement*    scope 
+)
+{
+  std::string name;
+  char c;
+  const char* save_rpos;
+  
+  skip_ws();
+  c = readchar();
+  if (c != '{')
+  {
+    putback();
+    return;
+  }
+  
+redo:
+  skip_ws();
+  save_rpos = rpos;
+  ParseIdentifier( name );
+  
+  if ((name == "storage") || (name == "lda"))
+  {
+    skip_ws();
+    c = readchar();
+    if (c != '=') 
+    {
+      std::cerr << "****[kaapi_c2c] Error. Missing '=' after '" << name << "'."
+                << "     In filename '" << fileInfo->get_filename() 
+                << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+      KaapiAbort("**** error");
+    }
+    if (name =="storage")
+    {
+      if (kpa->storage != KAAPI_BAD_STORAGE) 
+      {
+        std::cerr << "****[kaapi_c2c] Error. Storage attribut already defined for same identifier."
+                  << "     In filename '" << fileInfo->get_filename() 
+                  << "' LINE: " << fileInfo->get_line()
+                  << std::endl;
+        KaapiAbort("**** error");
+      }
+      kpa->storage = ParseStorage( fileInfo, scope );
+      if (kpa->storage != KAAPI_BAD_STORAGE) 
+      {
+        std::cerr << "****[kaapi_c2c] Error. Bad storage name: waiting 'C', 'RowMajor', 'Fortran' or 'ColumnMajor'."
+                  << "     In filename '" << fileInfo->get_filename() 
+                  << "' LINE: " << fileInfo->get_line()
+                  << std::endl;
+        KaapiAbort("**** error");
+      }
+    }
+    else 
+    { /* name == lda */
+      if (kpa->lda != 0) 
+      {
+        std::cerr << "****[kaapi_c2c] Error. LDA attribut already defined for same identifier."
+                  << "     In filename '" << fileInfo->get_filename() 
+                  << "' LINE: " << fileInfo->get_line()
+                  << std::endl;
+        KaapiAbort("**** error");
+      }
+      kpa->lda = ParseExprIdentifier(fileInfo,scope);
+      if (kpa->lda == 0) 
+      {
+        std::cerr << "****[kaapi_c2c] Error. LDA attribut, waiting identifier."
+                  << "     In filename '" << fileInfo->get_filename() 
+                  << "' LINE: " << fileInfo->get_line()
+                  << std::endl;
+        KaapiAbort("**** error");
+      }
+    }
+    
+    /* here: c==';' or '}' */
+    skip_ws();
+    c = readchar();
+    if (c == ';') goto redo; /* next attribut */
+    if (c == '}') return;
+    std::cerr << "****[kaapi_c2c] Error. Missing ';' or '}' in complex view definition. Found: '" << c << "'."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    KaapiAbort("**** error");
+  }
+  else {
+    rpos = save_rpos; /* putback token */
+  }
+
+  ParseNDimensions( fileInfo, kpa, scope );
+  skip_ws();
+  c = readchar();
+  if (c == ';') goto redo;
+  if (c == '}') return;
+  
+  std::cerr << "****[kaapi_c2c] Error. Missing ';' or '}' in complex view definition. Found: '" << c << "'."
+            << "     In filename '" << fileInfo->get_filename() 
+            << "' LINE: " << fileInfo->get_line()
+            << std::endl;
+  KaapiAbort("**** error");
+}
+
+
+void Parser::ParseRangeDeclaration( 
+    Sg_File_Info*        fileInfo, 
+    KaapiParamAttribute* kpa, 
+    SgScopeStatement*    scope 
+)
+{
+  std::string name;
+  char c;
+
+  skip_ws();
+  c = readchar();
+  if (c == '[')
+  {
+    SgVarRefExp* expr_first_bound;
+    SgVarRefExp* expr_second_bound;
+
+    /* range 1D definition */
+    expr_first_bound = ParseExprIdentifier( fileInfo, scope );
+    /* parse .. */
+    skip_ws();
+    c= readchar();
+    if (c != ':')
+    {
+      std::cerr << "****[kaapi_c2c] Error. Missing ':' for range declaration. Found'" << c << "'."
+                << "     In filename '" << fileInfo->get_filename() 
+                << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+      KaapiAbort("**** error");
+    }
+    expr_second_bound = ParseExprIdentifier( fileInfo, scope );
+
+    skip_ws();
+    c= readchar();
+    /* parse ')' or ']' */
+    if ( (c != ')') && ( c != ']'))
+    {
+      std::cerr << "****[kaapi_c2c] Error. Missing ')' or ']' for end of range declaration. Found'" << c << "'."
+                << "     In filename '" << fileInfo->get_filename() 
+                << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+      KaapiAbort("**** error");
+    }
+    
+    if (c == ')') /* open range declaration */
+      kpa->type = KAAPI_OPEN_RANGE_TYPE;
+    if (c == ']') /* closed range declaration */
+      kpa->type = KAAPI_CLOSE_RANGE_TYPE;
+    kpa->expr_firstbound  = expr_first_bound;
+    kpa->first_bound = expr_first_bound->get_symbol()->get_name().str();
+    kpa->expr_secondbound = expr_second_bound;
+    kpa->second_bound = expr_second_bound->get_symbol()->get_name().str();
+  }
+  else {
+    putback();
+    ParseIdentifier( name );
+    if (name == "")
+    {
+      std::cerr << "****[kaapi_c2c] Error. Missing identifier for range declaration."
+                << "     In filename '" << fileInfo->get_filename() 
+                << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+      KaapiAbort("**** error");
+    }
+    kpa->type = KAAPI_ARRAY_NDIM_TYPE;
+    kpa->name = strdup(name.c_str());
+    skip_ws();
+    c = readchar();
+    if (c == '{')
+    {
+      putback();
+      ParseComplexView( fileInfo, kpa, scope );
+      return;
+    }
+    else if (c == '[')
+    {
+      putback();
+      ParseNDimensions( fileInfo, kpa, scope );
+      return;
+    }
+    else if ((c == ')') || (c == ','))
+    {
+      putback();
+      return;
+    }
+    std::cerr << "****[kaapi_c2c] Error. Missing end ')' or ','."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    KaapiAbort("**** error");
+  }
+}
+
+
+
+/* Parse the list of formal parameter definitions      
+*/
+void Parser::ParseListParamDecl( 
+    Sg_File_Info*       fileInfo, 
+    KaapiTaskAttribute* kta,
+    KaapiAccessMode_t   mode,
+    SgScopeStatement*    scope 
+)
+{
+  char c;
+  KaapiParamAttribute* kpa;
+  
+redo:
+  kpa = new KaapiParamAttribute;
+  ParseRangeDeclaration( fileInfo, kpa, scope );
+  
+  switch (kpa->type)
+  {
+    case KAAPI_ARRAY_NDIM_TYPE:
+    {
+      std::map<std::string,int>::iterator curr = kta->lookup.find( kpa->name );
+      if (curr == kta->lookup.end())
+      {
+        std::cerr << "****[kaapi_c2c] Error. Unkown formal parameter identifier in declaration '" << kpa->name << "'."
+                  << "     In filename '" << fileInfo->get_filename() 
+                  << "' LINE: " << fileInfo->get_line()
+                  << std::endl;
+        KaapiAbort("**** error");
+      }
+
+      int ith = curr->second;
+      kta->formal_param[ith].mode = mode;
+      kta->formal_param[ith].attr = kpa;
+      kta->israngedecl[ith]       = 0;
+    } break;
+    
+    case KAAPI_OPEN_RANGE_TYPE:
+    case KAAPI_CLOSE_RANGE_TYPE:
+    {
+      std::map<std::string,int>::iterator curr1 = kta->lookup.find( kpa->first_bound );
+      if (curr1 == kta->lookup.end())
+      {
+        std::cerr << "****[kaapi_c2c] Error. Unkown formal parameter identifier in range declaration '" << kpa->first_bound << "'."
+                  << "     In filename '" << fileInfo->get_filename() 
+                  << "' LINE: " << fileInfo->get_line()
+                  << std::endl;
+        KaapiAbort("**** error");
+      }
+      std::map<std::string,int>::iterator curr2 = kta->lookup.find( kpa->second_bound );
+      if (curr2 == kta->lookup.end())
+      {
+        std::cerr << "****[kaapi_c2c] Error. Unkown formal parameter identifier in range declaration '" << kpa->second_bound << "'."
+                  << "     In filename '" << fileInfo->get_filename() 
+                  << "' LINE: " << fileInfo->get_line()
+                  << std::endl;
+        KaapiAbort("**** error");
+      }
+      kpa->index_firstbound  = curr1->second;
+      kpa->index_secondbound = curr2->second;
+      kta->formal_param[curr1->second].mode = mode;
+      kta->formal_param[curr1->second].attr = kpa;
+      kta->israngedecl[curr1->second]       = 1;
+
+      kta->formal_param[curr2->second].mode = mode;
+      kta->formal_param[curr2->second].attr = kpa;
+      kta->israngedecl[curr2->second]       = 2;
+    } break;
+
+    
+    case KAAPI_BAD_PARAM_TYPE:
+    default:
+      std::cerr << "****[kaapi_c2c] Error. Bad list of declaration."
+                << "     In filename '" << fileInfo->get_filename() 
+                << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+      KaapiAbort("**** error");
+  }
+  
+  skip_ws();
+  c = readchar();
+  if (c == ',') goto redo;
+  if (c == ')') 
+  {
+    putback();
+    return;
+  }
+
+  std::cerr << "****[kaapi_c2c] Error. Missing ',' or ')' at the end of list of declaration."
+            << "     In filename '" << fileInfo->get_filename() 
+            << "' LINE: " << fileInfo->get_line()
+            << std::endl;
+  KaapiAbort("**** error");
+}
+
+
+void Parser::ParseListParam( 
+    Sg_File_Info*       fileInfo, 
+    KaapiTaskAttribute* kta,
+    SgScopeStatement*   scope 
+)
+{
+  char c;
+  KaapiAccessMode_t mode;
+
+redo:
+  mode = ParseAccessMode( fileInfo );
+  
+  if (mode == KAAPI_VOID_MODE)
+  {
+    std::cerr << "****[kaapi_c2c] Error. Bad access mode."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    KaapiAbort("**** error");
+  }
+  
+  skip_ws();
+  c = readchar();
+  if (c == EOF) return;
+  
+  if (mode == KAAPI_HIGHPRIORITY_MODE) 
+  { /* ignore the mode */
+    goto redo;
+  }
+  
+  if (c != '(')
+  {
+    std::cerr << "****[kaapi_c2c] Error. Missing '(' in access mode list."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    KaapiAbort("**** error");
+  }
+
+  ParseListParamDecl( fileInfo, kta, mode, scope );
+  
+  skip_ws();
+  c = readchar();
+  if (c != ')')
+  {
+    std::cerr << "****[kaapi_c2c] Error. Missing ')' at the end of access mode list."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    KaapiAbort("**** error");
+  }
+  
+  c = readchar();
+  if (c == EOF) return;
+  goto redo;
+}
+
