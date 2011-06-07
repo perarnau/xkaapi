@@ -80,7 +80,6 @@ void kaapi_taskwrite_body(
   
   if (copy_task_args !=0)
   {
-printf("WriteBody(war) task:%p\n", arg->origin_task );
     /* for each parameter of the copy of the theft' task on mode:
        - V: we destroy the data
        - R,RW: do nothing
@@ -109,9 +108,6 @@ printf("WriteBody(war) task:%p\n", arg->origin_task );
         kaapi_format_set_access_param(fmt, i, orig_task_args, &access_param );
       }
     }
-  }
-  else {
-printf("WriteBody task:%p\n", arg->origin_task );
   }
 
   /* if signaled thread was suspended, move it to the local queue */
@@ -143,7 +139,6 @@ printf("WriteBody task:%p\n", arg->origin_task );
         kaapi_sched_lock(&kproc->lock);
         kaapi_sched_pushready(kproc, kthread );
         kaapi_sched_unlock(&kproc->lock);
-    printf("Signal/push ready task:%p\n", arg->origin_task );
         return;
       }
     }
@@ -152,14 +147,10 @@ printf("WriteBody task:%p\n", arg->origin_task );
   /* signal the task : mark it as executed, the old returned body should have steal flag */
   kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate( arg->origin_task) ) );
   uintptr_t oldstate __attribute__((unused));
-  if (war_param ==0) {
+  if ((war_param ==0) && (cw_param ==0))
     oldstate = kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
-    printf("Signal task:%p\n", arg->origin_task );
-  }
-  else {
+  else 
     oldstate = kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
-    printf("Signal task:%p\n", arg->origin_task );
-  }
 }
 
 
@@ -232,7 +223,6 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     }
     else
 #endif
-printf("StealBody task:%p\n", arg->origin_task );
     body(orig_task_args, thread);
 
     /* push task that will be executed after all created task by the user task */
@@ -314,7 +304,6 @@ printf("StealBody task:%p\n", arg->origin_task );
     }
     else
 #endif
-printf("StealBody(war) task:%p\n", arg->origin_task );
     body( copy_task_args, thread);
 
     /* push task that will be executed after all created task by the user task */

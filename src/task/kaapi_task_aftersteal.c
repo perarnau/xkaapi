@@ -56,9 +56,6 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
   const kaapi_format_t* fmt_param;
   kaapi_access_t        access_param;
   
-  printf( "[taskaftersteal] task: @=%p, stack: @=%p\n", task, thread);
-  fflush(stdout);
-
   /* the task has been stolen: the body contains the original task body */
   task = thread[-1].pc;
   kaapi_assert_debug( task->sp == taskarg );

@@ -32,6 +32,7 @@ libkaapi_la_SOURCES=\
   misc/kaapi_allocator_allocate.c \
   misc/kaapi_wq_slowpop.c\
   misc/kaapi_wq_set.c\
+  misc/kaapi_wq_init.c\
   misc/kaapi_cpuset2str.c\
   misc/kaapi_get_self_kid.c\
   misc/kaapi_default_netapi.c\

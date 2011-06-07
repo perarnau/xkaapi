@@ -162,7 +162,7 @@ FormatTask::FormatTask(
   const kaapi_format_t*     (*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
   kaapi_memory_view_t       (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*),
   void                      (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
-  void                      (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, const void*),
+  void                      (*reducor )        (const struct kaapi_format_t*, unsigned int, void*, const void*),
   void                      (*redinit )        (const struct kaapi_format_t*, unsigned int, const void*, void*),
   void                      (*get_task_binding)(const struct kaapi_format_t*, const kaapi_task_t*, kaapi_task_binding_t*)
 ) 

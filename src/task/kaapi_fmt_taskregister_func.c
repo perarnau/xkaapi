@@ -45,6 +45,9 @@
 #include "kaapi_impl.h"
 #include <string.h>
 
+static void kaapi_format_default_get_task_binding 
+  (const struct kaapi_format_t* f, const kaapi_task_t* task, kaapi_task_binding_t* b)
+{ b->type = KAAPI_BINDING_ANY; }
 
 /**
 */
@@ -62,7 +65,7 @@ kaapi_format_id_t kaapi_format_taskregister_func(
     const struct kaapi_format_t*(*get_fmt_param)   (const struct kaapi_format_t*, unsigned int, const void*),
     kaapi_memory_view_t         (*get_view_param)  (const struct kaapi_format_t*, unsigned int, const void*),
     void                        (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
-    void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, const void*, const void*),
+    void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, void*, const void*),
     void                        (*redinit )        (const struct kaapi_format_t*, unsigned int, const void* sp, void* ),
     void			            (*get_task_binding)(const struct kaapi_format_t*, const kaapi_task_t*, kaapi_task_binding_t*)
 )
@@ -85,6 +88,8 @@ kaapi_format_id_t kaapi_format_taskregister_func(
   fmt->reducor          = reducor;
   fmt->redinit          = redinit;
   fmt->get_task_binding	= get_task_binding;
+  if (get_task_binding ==0)
+    fmt->get_task_binding = kaapi_format_default_get_task_binding;
   
   memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));
   

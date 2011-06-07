@@ -52,8 +52,9 @@ struct KAAPI_CLOSURE(KAAPI_NUMBER_PARAMS){
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_mode'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset_data'),
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_offset_version'),
-          0,
           ifelse(KAAPI_NUMBER_PARAMS,0,`0',`array_format'),
+          0,
+          0,
           0,
           0
       );

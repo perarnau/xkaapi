@@ -47,17 +47,17 @@
 kaapi_access_mode_t kaapi_fmt_get_mode_param
 (const kaapi_format_t* f, size_t i, const void* p)
 {
-  return f->get_mode_param(f, i, p);
+  return f->get_mode_param(f, (int)i, p);
 }
 
 void kaapi_fmt_set_access_param
 (const kaapi_format_t* f, size_t i, void* p, const kaapi_access_t* a)
 {
-  f->set_access_param(f, i, p, a);
+  f->set_access_param(f, (int)i, p, a);
 }
 
 void* kaapi_fmt_get_off_param
 (const kaapi_format_t* f, size_t i, const void* p)
 {
-  return f->get_off_param(f, i, p);
+  return f->get_off_param(f, (int)i, p);
 }

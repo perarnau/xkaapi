@@ -76,7 +76,7 @@ static kaapi_memory_view_t kaapi_format_default_get_view_param
 { return f->_view_params[i]; }
 
 static void kaapi_format_default_reduce_param 
-    (const struct kaapi_format_t* f, unsigned int i, const void* p, const void* value)
+    (const struct kaapi_format_t* f, unsigned int i, void* p, const void* value)
 { (*f->_reducor_params[i])((void*)((uintptr_t)p + f->_off_params[i]), value); }
 
 static void kaapi_format_default_redinit_param 
