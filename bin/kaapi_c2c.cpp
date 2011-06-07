@@ -798,11 +798,6 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
        << "}\n"
        << std::endl;
 
-  /* format::get_cwflag */
-  fout << "int* " << kta->name_format << "_get_cwflag(const struct kaapi_format_t* fmt, unsigned int i, const void* sp)\n"
-       << "{ return 0; }\n"
-       << std::endl;
-       
   /* format::get_access_param */
   fout << "kaapi_access_t " << kta->name_format << "_get_access_param(const struct kaapi_format_t* fmt, unsigned int i, const void* sp)\n"
        << "{\n  " << kta->name_paramclass << "* arg = (" << kta->name_paramclass << "*)sp;\n"
@@ -834,11 +829,6 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
        << "}\n"
        << std::endl;
 
-  /* format::set_access_param */
-  fout << "void " << kta->name_format << "_set_cwaccess_param(const struct kaapi_format_t* fmt, unsigned int i, void* sp, const kaapi_access_t* a, int wa)\n"
-       << "{ return; }\n"
-       << std::endl;
-  
   /* format::get_fmt_param */
   fout << "const struct kaapi_format_t* " << kta->name_format << "_get_fmt_param(const struct kaapi_format_t* fmt, unsigned int i, const void* sp)\n"
        << "{\n  " << kta->name_paramclass << "* arg = (" << kta->name_paramclass << "*)sp;\n"
@@ -938,16 +928,16 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
        << std::endl;
 
   /* format::reducor */
-  fout << "void " << kta->name_format << "_reducor(const struct kaapi_format_t* fmt, unsigned int i, const void* sp, void* result, const void* value)\n"
+  fout << "void " << kta->name_format << "_reducor(const struct kaapi_format_t* fmt, unsigned int i, void* sp, const void* value)\n"
        << "{ return; }\n"
        << std::endl;
 
-  /* format::reducor */
-  fout << "kaapi_reducor_t " << kta->name_format << "_get_reducor(const struct kaapi_format_t* fmt, unsigned int i, const void* sp)\n"
-       << "{ kaapi_reducor_t a; return a; }\n"
+  /* format::redinit */
+  fout << "void " << kta->name_format << "_redinit(const struct kaapi_format_t* fmt, unsigned int i, const void* sp, void* value)\n"
+       << "{ }\n"
        << std::endl;
 
-#if 0
+#if 1
   /* format::get_task_binding */
   fout << "void " << kta->name_format << "_get_task_binding(const struct kaapi_format_t* fmt, const kaapi_task_t* t, kaapi_task_binding_t* tb)\n"
        << "{ return; }\n"
@@ -969,16 +959,14 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
        << "    " << kta->name_format << "_get_count_params,\n" /* get_count_params */
        << "    " << kta->name_format << "_get_mode_param,\n" /* get_mode_param */
        << "    " << kta->name_format << "_get_off_param,\n" /* get_off_param */
-       << "    " << kta->name_format << "_get_cwflag,\n" /* get_cwflag */
        << "    " << kta->name_format << "_get_access_param,\n" /* get_access_param */
        << "    " << kta->name_format << "_set_access_param,\n" /* set_access_param */
-       << "    " << kta->name_format << "_set_cwaccess_param,\n" /* set_cwaccess_param */
        << "    " << kta->name_format << "_get_fmt_param,\n" /* get_fmt_param */
        << "    " << kta->name_format << "_get_view_param,\n" /* get_view_param */
        << "    " << kta->name_format << "_set_view_param,\n" /* set_view_param */
        << "    " << kta->name_format << "_reducor,\n" /* reducor */
-       << "    " << kta->name_format << "_get_reducor\n" /* get_reducor */
-//NO BINDING IN THIS VERSION       << "    " << kta->name_format << "_get_task_binding\n" /* get_task_binding */
+       << "    " << kta->name_format << "_redinit,\n" /* reducor */
+       << "    " << kta->name_format << "_get_task_binding\n" /* get_task_binding */
        << "  );\n"
        << "}\n"
        << std::endl;
@@ -1455,7 +1443,7 @@ public:
     if (isSgExprStatement(node))
     {
       SgExprStatement*    exprstatement = isSgExprStatement(node);
-      if (SageInterface::getScope(exprstatement)->getAttribute("kaapiisparallelregion") ==0) 
+//      if (SageInterface::getScope(exprstatement)->getAttribute("kaapiisparallelregion") ==0) 
       {
 #if 0
         std::cout << "Function call is not a task, because its scope is not parallel:"
@@ -1467,7 +1455,7 @@ public:
       if (exprstatement->getAttribute("kaapinotask") !=0) 
         return;
       if (exprstatement->getAttribute("kaapiwrappercall") !=0) 
-        return; /* call made by the wrapper */
+        return; /* call made by the wrapper do not replace it by task creation */
         
       SgFunctionCallExp* fc = isSgFunctionCallExp( exprstatement->get_expression() );
       if (fc !=0)
