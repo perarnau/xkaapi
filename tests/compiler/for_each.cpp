@@ -64,13 +64,10 @@ void for_each( T* begin, T* end, OP op )
   if (size < 128)
     std::for_each( begin, end, op);
   else {
-#pragma kaapi parallel
-  {
     /* simple recursive for_each */
     size_t med = size/2;
     for_each( begin, begin+med, op);
     for_each( begin + med, end, op);
-  }
   }
 }
 
@@ -105,11 +102,10 @@ int main(int ac, char** av)
     for (i = 0; i < size; ++i)
       array[i] = 0.f;
 
-#pragma kaapi barrier
+#pragma kaapi sync
     t0 = get_elapsedtime();
-#pragma kaapi parallel
     for_each( array, array+size, apply_cos );
-#pragma kaapi barrier
+#pragma kaapi sync
     t1 = get_elapsedtime();
     sum += (t1-t0)*1000; /* ms */
 
