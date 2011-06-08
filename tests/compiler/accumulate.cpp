@@ -43,6 +43,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include <sys/time.h>
+#include <iostream>
+#include <algorithm>
 
 /**
 */
@@ -54,51 +56,53 @@ double get_elapsedtime(void)
   return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
 }
 
-#pragma kaapi task value(size) write(array[size]) value (op)
-void for_each( double* array, size_t size, void (*op)(double*) )
+
+
+#pragma kaapi task read([begin:end]) reduction(+: sum)
+template<class T>
+void accumulate( const T* begin, const T* end, T* sum )
 {
-  for (size_t i=0; i<size; ++i)
-    op(&array[i]);
+  size_t size = (end-begin);
+  if (size < 128)
+  {
+    T tmp = *sum;
+    while (begin != end)
+      tmp += *begin;
+    *sum = tmp;
+  }
+  else {
+    /* simple recursive for_each */
+    size_t med = size/2;
+    accumulate( begin, begin+med, sum);
+    accumulate( begin + med, end, sum);
+  }
 }
 
 
 /**
  */
-static void apply_cos( double* v )
-{
-  *v += cos(*v);
-}
-
-/**
- */
-int main(int argc, char** argv)
+int main(int ac, char** av)
 {
   double t0,t1;
   double sum = 0.f;
-  size_t i;
+  double result;
   size_t iter;
-  size_t niter;
+  size_t size;
   
-  niter = atoi(argv[1]);
-  
-#define ITEM_COUNT 100000
-  static double array[ITEM_COUNT];
+  if (ac >1)
+    size = atoi(av[1]); 
 
-  /* initialize, apply, check */
-  for (i = 0; i < ITEM_COUNT; ++i)
-    array[i] = 0.f;
+  double* array = new double[size];
   
-#pragma kaapi parallel 
-{
   /* initialize the runtime */
-  t0 = get_elapsedtime();
-  for (iter = 0; iter < niter; ++iter)
+#pragma kaapi parallel
   {
-    for_each( array, ITEM_COUNT, apply_cos );
+    t0 = get_elapsedtime();
+    for (iter = 0; iter < 100; ++iter)
+      accumulate( array, array+size, &result);
+    t1 = get_elapsedtime();
+    sum += (t1-t0)*1000; /* ms */
   }
-  t1 = get_elapsedtime();
-  sum += (t1-t0)*1000/niter; /* ms */
-}
 
   printf("done: %lf (ms)\n", sum / 100);
 

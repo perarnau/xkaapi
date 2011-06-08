@@ -40,67 +40,33 @@
 ** terms.
 ** 
 */
-#include <stdlib.h>
-#include <math.h>
-#include <sys/time.h>
+#include <stdio.h>
 
-/**
-*/
-double get_elapsedtime(void)
+#pragma kaapi task reduction(+:result) value(n)
+void fibonacci(long* result, const long n)
 {
-  struct timeval tv;
-  int err = gettimeofday( &tv, 0);
-  if (err  !=0) return 0;
-  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
-}
-
-#pragma kaapi task value(size) write(array[size]) value (op)
-void for_each( double* array, size_t size, void (*op)(double*) )
-{
-  for (size_t i=0; i<size; ++i)
-    op(&array[i]);
-}
-
-
-/**
- */
-static void apply_cos( double* v )
-{
-  *v += cos(*v);
-}
-
-/**
- */
-int main(int argc, char** argv)
-{
-  double t0,t1;
-  double sum = 0.f;
-  size_t i;
-  size_t iter;
-  size_t niter;
-  
-  niter = atoi(argv[1]);
-  
-#define ITEM_COUNT 100000
-  static double array[ITEM_COUNT];
-
-  /* initialize, apply, check */
-  for (i = 0; i < ITEM_COUNT; ++i)
-    array[i] = 0.f;
-  
-#pragma kaapi parallel 
-{
-  /* initialize the runtime */
-  t0 = get_elapsedtime();
-  for (iter = 0; iter < niter; ++iter)
+  if (n<2)
+    *result += n;
+  else 
   {
-    for_each( array, ITEM_COUNT, apply_cos );
+    fibonacci( result, n-1 );
+    fibonacci( result, n-2 );
   }
-  t1 = get_elapsedtime();
-  sum += (t1-t0)*1000/niter; /* ms */
 }
 
-  printf("done: %lf (ms)\n", sum / 100);
+#pragma kaapi task read(result) 
+void print_result( const long* result )
+{
+  printf("Fibonacci(30)=%li\n", *result);
+}
 
+int main()
+{
+  long result;
+#pragma kaapi parallel
+  {
+    fibonacci(&result, 30);
+    print_result(&result);
+  }
   return 0;
 }
