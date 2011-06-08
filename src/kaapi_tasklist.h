@@ -718,7 +718,11 @@ static inline int kaapi_readylist_pop( kaapi_readytasklist_t* rtl, kaapi_taskdes
 */
 static inline kaapi_task_t* kaapi_thread_tasklist_getsp( kaapi_tasklist_t* tasklist )
 {
+#if (__SIZEOF_POINTER__ == 4)
+  return (kaapi_task_t*)(((uintptr_t)(&tasklist->rtl.base[tasklist->rtl.next] -1)-sizeof(kaapi_task_t)+1) & ~0x7UL);
+#else
   return (kaapi_task_t*)(((uintptr_t)(&tasklist->rtl.base[tasklist->rtl.next] -1)-sizeof(kaapi_task_t)+1) & ~0x7ULL);
+#endif
 }
 
 

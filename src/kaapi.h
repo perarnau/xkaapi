@@ -1165,7 +1165,7 @@ static inline int kaapi_thread_pushtask_withocr(kaapi_thread_t* thread, const vo
   attribut->u.ocr_addr.addr = (uintptr_t)ptr;
   /* see kaapi_impl.h KAAPI_MASK_BODY_OCR */
 #if (__SIZEOF_POINTER__ == 4)
-  KAAPI_ATOMIC_WRITE( &thread->sp->state, KAAPI_ATOMIC_READ(&thread->sp->state) | 0x9);
+  KAAPI_ATOMIC_WRITE( &thread->sp->u.state, KAAPI_ATOMIC_READ(&thread->sp->u.state) | 0x9);
 #else
   thread->sp->u.body = (kaapi_task_body_t)((uintptr_t)thread->sp->u.body | (0x9UL << 58UL));
 #endif
