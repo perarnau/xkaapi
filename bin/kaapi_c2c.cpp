@@ -120,6 +120,35 @@ enum KaapiAccessMode_t {
   KAAPI_HIGHPRIORITY_MODE /* not really a mode. Only used to parse css program */
 };
 
+
+enum KaapiOperator_t {
+  KAAPI_NO_OPERATOR = 0,
+  KAAPI_ADD_OPERATOR,
+  KAAPI_SUB_OPERATOR,
+  KAAPI_MUL_OPERATOR,
+  KAAPI_AND_OPERATOR,
+  KAAPI_OR_OPERATOR,
+  KAAPI_XOR_OPERATOR,
+  KAAPI_LAND_OPERATOR, /* logical and */
+  KAAPI_LOR_OPERATOR, /* logical and */
+  
+  KAAPI_USER_OPERATOR
+};
+
+struct KaapiReduceOperator_t {
+  KaapiReduceOperator_t() 
+   : isbuiltin(false), name(0), name_reducor(0), name_redinit(0)
+  {}
+  KaapiReduceOperator_t(const char* name, const char* reducor, const char* redinit) 
+   : isbuiltin(true), name(name), name_reducor(reducor), name_redinit(redinit)
+  {}
+  bool  isbuiltin;
+  std::string name;
+  std::string name_reducor;
+  std::string name_redinit;
+};
+static std::map<std::string,KaapiReduceOperator_t*> kaapi_user_definedoperator;
+
 enum KaapiStorage_t {
   KAAPI_BAD_STORAGE = 0,
   KAAPI_ROW_MAJOR = 1,
@@ -138,8 +167,10 @@ class KaapiParamAttribute : public AstAttribute {
 public:
   KaapiParamAttribute ()
    : type(KAAPI_BAD_PARAM_TYPE),  storage(KAAPI_ROW_MAJOR), lda(0), dim(0) 
-  { }
-  KaapiParamAttribute_t type;
+  { 
+    memset(ndim, 0, sizeof(ndim) );
+  }
+  KaapiParamAttribute_t  type;
   union {
     struct {
       const char*           name;
@@ -163,11 +194,12 @@ struct KaapiTaskFormalParam {
   KaapiTaskFormalParam()
    : mode(KAAPI_VOID_MODE), attr(0), initname(0), type(0), kaapi_format()
   {}
-  KaapiAccessMode_t    mode;
-  KaapiParamAttribute* attr;
-  SgInitializedName*   initname;
-  SgType*              type;
-  std::string          kaapi_format; 
+  KaapiAccessMode_t      mode;
+  KaapiReduceOperator_t* redop;
+  KaapiParamAttribute*   attr;
+  SgInitializedName*     initname;
+  SgType*                type;
+  std::string            kaapi_format; 
 };
 
 
@@ -334,6 +366,15 @@ public:
       Sg_File_Info* fileInfo
   );
 
+  KaapiReduceOperator_t* ParseReduceOperator( 
+      Sg_File_Info* fileInfo
+  );
+
+  KaapiReduceOperator_t* ParseReductionDeclaration( 
+      Sg_File_Info* fileInfo, 
+      SgScopeStatement* scope 
+  );
+
   void ParseDimension( 
       Sg_File_Info* fileInfo, 
       KaapiParamAttribute* kpa, 
@@ -379,7 +420,7 @@ public:
   void DoKaapiPragmaWaiton( SgPragmaDeclaration* sgp );
   void DoKaapiPragmaParallelRegion( SgPragmaDeclaration* sgp );
   void DoKaapiPragmaInit( SgPragmaDeclaration* sgp, bool flag );
-  
+  void DoKaapiPragmaDeclare( SgPragmaDeclaration* sgp );
   
 }; /* end parser class */
 
@@ -870,7 +911,12 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
       
       if (kta->formal_param[i].attr->type == KAAPI_ARRAY_NDIM_TYPE)
       {          
-        if (kta->formal_param[i].attr->dim == 1)
+        if (kta->formal_param[i].attr->dim == 0) /* in fact single element */
+        {
+          fout << "    case " << i << ": return kaapi_memory_view_make1d( 1" 
+                              << ", sizeof(" << type->unparseToString() << "));\n";
+        } 
+        else if (kta->formal_param[i].attr->dim == 1)
         {
           fout << "    case " << i << ": return kaapi_memory_view_make1d( " 
                               << GenerateGetDimensionExpression(kta, kta->formal_param[i].attr->ndim[0])
@@ -894,7 +940,6 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
       }
       else { /* this is a begin of a range */
         fout << "    case " << i << ": return kaapi_memory_view_make1d( " 
-//                            << GenerateGetDimensionExpression(kta, kta->formal_param[i].attr->expr_firstbound)
                             << "arg->f" << kta->formal_param[i].attr->index_secondbound
                             << ",  sizeof(" << type->unparseToString() << "));\n";
       }
@@ -928,21 +973,138 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
        << std::endl;
 
   /* format::reducor */
-  fout << "void " << kta->name_format << "_reducor(const struct kaapi_format_t* fmt, unsigned int i, void* sp, const void* value)\n"
-       << "{ return; }\n"
+  fout << "void " << kta->name_format << "_reducor(const struct kaapi_format_t* fmt, unsigned int i, void* sp, const void* v)\n"
+       << "{\n  " << kta->name_paramclass << "* arg = (" << kta->name_paramclass << "*)sp;\n"
+       << "  switch (i) {\n";
+  for (unsigned int i=0; i < kta->formal_param.size(); ++i)
+  {
+    if (kta->formal_param[i].mode == KAAPI_CW_MODE)
+    {
+      fout << "    case " << i << ": {\n";
+      SgPointerType* ptrtype = isSgPointerType(kta->formal_param[i].type);
+      if (ptrtype ==0) KaapiAbort("**** Error: bad internal assertion");
+      SgType* type = ptrtype->get_base_type();
+      // TODO here: add definition of the type, else we cannot compile it */
+      while (isSgTypedefType( type ))
+      {
+        type = isSgTypedefType(type)->get_base_type();
+      }
+
+      /* pointer to the data: var */
+      fout << "      " << type->unparseToString() 
+           << "* var = (" << type->unparseToString() << "*) arg->f" << i << ".data;\n";
+      fout << "      const " << type->unparseToString() 
+           << "* value = ( const " << type->unparseToString() << "*)v;\n";
+           
+      KaapiReduceOperator_t* redop = kta->formal_param[i].redop;
+      /* the name of the variable is known: 
+         from the type, find the righ operator or function.
+         If it is a builtin operator, we generate the code for the reduction
+      */
+      if (redop->isbuiltin)
+      {
+        if (kta->formal_param[i].attr->type == KAAPI_ARRAY_NDIM_TYPE)
+        {
+          if (kta->formal_param[i].attr->dim ==0)
+          {
+            fout << "      *var " << redop->name_reducor << " *value;\n";
+          }
+          else {
+            fout << "      kaapi_memory_view_t view = " << kta->name_format << "_get_view_param(fmt, i, sp);\n";
+
+            /* nested loop */
+            for (unsigned int k=0; k<kta->formal_param[i].attr->dim; ++k)
+            {
+              std::ostringstream varindexloop;
+              varindexloop << "ikak" << k;
+              fout << "      for ( unsigned int " << varindexloop.str() << "=0; " 
+                   << varindexloop.str() << " < view.size[" << k << "]; "
+                   << "++" << varindexloop.str() << " )\n"
+                   << "      {\n";
+            }
+
+            /* body */
+            fout << "          var[ikak" << kta->formal_param[i].attr->dim-1
+                 << "] " << redop->name_reducor 
+                 << " value[ikak" << kta->formal_param[i].attr->dim-1 << "];\n";
+
+            /* nested loop */
+            for (unsigned int k=0; k<kta->formal_param[i].attr->dim; ++k)
+            {
+              std::ostringstream varindexloop;
+              varindexloop << "ikak" << k;
+              fout << "      } /*" << varindexloop.str() << "*/\n";
+              if ((k == 0) && (kta->formal_param[i].attr->dim ==2))
+              {
+                fout << "      var += view.kda;\n";
+              }
+            }
+          } /* else dim >0 */
+        } /* else it is range 1d */
+        else {
+          fout << "      for (unsigned int k=0; k < view.size[0]; ++k)\n"
+               << "        *var++ " << redop->name_reducor << " *value++;\n";
+        }
+      }      
+      else /* not a builtin */
+      {
+        
+      }
+      fout << "    } break;\n";
+    }
+  }
+  fout << "  }\n"
+       << "}\n"
        << std::endl;
 
   /* format::redinit */
-  fout << "void " << kta->name_format << "_redinit(const struct kaapi_format_t* fmt, unsigned int i, const void* sp, void* value)\n"
-       << "{ }\n"
+  //isIntegerType
+  fout << "void " << kta->name_format << "_redinit(const struct kaapi_format_t* fmt, unsigned int i, const void* sp, void* v)\n"
+       << "{\n  " << kta->name_paramclass << "* arg = (" << kta->name_paramclass << "*)sp;\n"
+       << "  switch (i) {\n";
+  for (unsigned int i=0; i < kta->formal_param.size(); ++i)
+  {
+    if (kta->formal_param[i].mode == KAAPI_CW_MODE)
+    {
+      fout << "    case " << i << ": {\n";
+      SgPointerType* ptrtype = isSgPointerType(kta->formal_param[i].type);
+      if (ptrtype ==0) KaapiAbort("**** Error: bad internal assertion");
+      SgType* type = ptrtype->get_base_type();
+      // TODO here: add definition of the type, else we cannot compile it */
+      while (isSgTypedefType( type ))
+      {
+        type = isSgTypedefType(type)->get_base_type();
+      }
+
+      /* pointer to the data: var */
+      fout << "      " << type->unparseToString() 
+           << "* var = (" << type->unparseToString() << "*) v;\n";
+           
+      KaapiReduceOperator_t* redop = kta->formal_param[i].redop;
+
+      /* the name of the variable is known: 
+         from the type, find the righ operator or function.
+         If it is a builtin operator, we generate the code for the reduction
+      */
+      if (redop->isbuiltin)
+      {
+        fout << "      *var = " << redop->name_redinit << ";\n";
+      }
+      else {
+        
+      }
+      fout << "    } break;\n";
+    }
+  }
+  fout << "  }\n"
+       << "}\n"
        << std::endl;
 
-#if 1
+
   /* format::get_task_binding */
   fout << "void " << kta->name_format << "_get_task_binding(const struct kaapi_format_t* fmt, const kaapi_task_t* t, kaapi_task_binding_t* tb)\n"
        << "{ return; }\n"
        << std::endl;
-#endif
        
   /* Generate constructor function that register the format */
   fout << "/* constructor method */\n" 
@@ -1331,6 +1493,37 @@ void Parser::DoKaapiPragmaInit( SgPragmaDeclaration* sgp, bool flag )
 }
 
 
+void Parser::DoKaapiPragmaDeclare( SgPragmaDeclaration* sgp )
+{
+  SgScopeStatement* scope = SageInterface::getScope(sgp);
+  Sg_File_Info* fileInfo = sgp->get_file_info();
+  
+  std::string name;
+  ParseIdentifier( name );
+  if (name == "reduction")
+  {
+    KaapiReduceOperator_t* redop = ParseReductionDeclaration( 
+        fileInfo, 
+        scope 
+    );
+    if (redop ==0)
+    {
+      KaapiAbort("**** error");
+    }
+    kaapi_user_definedoperator.insert( std::make_pair( redop->name, redop  ) );
+    std::cout << "Found declaration of reduction operator:"
+              << redop->name
+              << " freduce=" << redop->name_reducor
+              << " finit=" << redop->name_redinit
+              << std::endl;
+    return;
+  }
+  std::cerr << "****[kaapi_c2c] invalid " << name << " in #pragma kaapi declare clause."
+            << "     In filename '" << fileInfo->get_filename() 
+            << "' LINE: " << fileInfo->get_line()
+            << std::endl;
+  KaapiAbort("**** error");
+}
 
 
 /* Find all calls to task 
@@ -1780,6 +1973,10 @@ public:
       {
         parser.DoKaapiPragmaInit( sgp, false );
       }
+      else if (name == "declare") 
+      {
+        parser.DoKaapiPragmaDeclare( sgp );
+      }
       else {
         Sg_File_Info* fileInfo = sgp->get_file_info();
         std::cerr <<  "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
@@ -1797,6 +1994,50 @@ int main(int argc, char **argv)
   SgProject *project = frontend(argc, argv);
     
   KaapiPragma pragmaKaapi;
+  
+  
+  /* Insert builting operator */
+  kaapi_user_definedoperator.insert( 
+    std::make_pair("+", 
+      new KaapiReduceOperator_t("+", "+=", "0") 
+    ) 
+  );
+  kaapi_user_definedoperator.insert( 
+    std::make_pair("-", 
+      new KaapiReduceOperator_t("-", "-=", "0") 
+    ) 
+  );
+  kaapi_user_definedoperator.insert( 
+    std::make_pair("*", 
+      new KaapiReduceOperator_t("*", "*=", "1") 
+    ) 
+  );
+  kaapi_user_definedoperator.insert( 
+    std::make_pair("&", 
+      new KaapiReduceOperator_t("&", "&=", "~0") 
+    ) 
+  );
+  kaapi_user_definedoperator.insert( 
+    std::make_pair("|", 
+      new KaapiReduceOperator_t("|", "|=", "0") 
+    ) 
+  );
+  kaapi_user_definedoperator.insert( 
+    std::make_pair("^", 
+      new KaapiReduceOperator_t("^", "^=", "0") 
+    ) 
+  );
+  kaapi_user_definedoperator.insert( 
+    std::make_pair("&&", 
+      new KaapiReduceOperator_t("&&", "&&=", "1") 
+    ) 
+  );
+  kaapi_user_definedoperator.insert( 
+    std::make_pair("||", 
+      new KaapiReduceOperator_t("||", "||=", "0") 
+    ) 
+  );
+  
   
   /** Add #include <kaapi.h> to each input file
   */
@@ -3003,6 +3244,203 @@ KaapiAccessMode_t Parser::ParseAccessMode(
 }
 
 
+KaapiReduceOperator_t* Parser::ParseReduceOperator( 
+    Sg_File_Info* fileInfo
+)
+{
+  std::string name;
+  const char* save_rpos = rpos;
+  ParseIdentifier( name );
+  
+  if (name.empty()) 
+  {
+    /* try to read char -> basic operator +, - etc */
+    char c;
+    c = readchar();
+    if ( 
+         (c == '+') || (c == '-') || (c == '*')
+      || (c == '^'))
+    {
+      name = c;
+      c = readchar();
+      if (c != ' ')
+      {
+        rpos= save_rpos;
+        return 0;
+      }
+      putback();
+    }
+    else if ((c == '&') || (c == '|'))
+    { /* may be && or || */
+      char c1;
+      c1 = readchar();
+      if (c != c1)
+      {
+        putback();
+        name = c;
+      }
+      else {
+        if (c == '&') name = "&&";
+        else name = "||";
+      }
+    }
+    else {
+      name = "ne cherchepas_ca_n'existe pas";
+      rpos = save_rpos;
+      return 0;
+    }
+  }
+  std::map<std::string,KaapiReduceOperator_t*>::iterator curr =
+    kaapi_user_definedoperator.find(name);
+  if (curr == kaapi_user_definedoperator.end())
+  {
+    std::cerr << "****[kaapi_c2c] Error. Unknown reduce operator name '" << name << "'."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    KaapiAbort("**** error");
+  }
+  
+  return curr->second;
+}
+
+
+KaapiReduceOperator_t* Parser::ParseReductionDeclaration( 
+    Sg_File_Info* fileInfo, 
+    SgScopeStatement* scope 
+)
+{
+  std::string name;
+  char c;
+  const char* save_rpos = rpos;
+  
+  ParseIdentifier(name);
+  if (name != "reduction")
+  {
+    rpos = save_rpos;
+    return 0;
+  }
+  skip_ws();
+  c = readchar();
+  if (c != '(')
+  {
+    std::cerr << "****[kaapi_c2c] Error. Missing '(' in declare reduction clause."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    return 0;
+  }
+  ParseIdentifier(name);
+  if (name.empty())
+  {
+    std::cerr << "****[kaapi_c2c] Error. Invalid name in declare reduction clause."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    return 0;
+  }
+  KaapiReduceOperator_t* newop = new KaapiReduceOperator_t;
+  newop->name = strdup(name.c_str());
+  
+  skip_ws();
+  c = readchar();
+  if (c != ':')
+  {
+    delete newop;
+    std::cerr << "****[kaapi_c2c] Error. Missing ':' in declare reduction clause."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    return 0;
+  }
+  ParseIdentifier(name);
+  if (name.empty())
+  {
+    std::cerr << "****[kaapi_c2c] Error. Invalid name in declare reduction clause."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    return 0;
+  }
+  /* look up for name as a function 
+     - not that due to overloading (C++) a function may appears multiple time.
+     - the concrete type is only known during utilization of a variable reduction
+     Thus we postpone the verification until the definition of variable in reduciton clause
+  */
+  newop->name_reducor = strdup(name.c_str());
+  
+  skip_ws();
+  c = readchar();
+  if (c != ')')
+  {
+    delete newop;
+    std::cerr << "****[kaapi_c2c] Error. Missing ')' in declare reduction clause."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    return 0;
+  }
+  skip_ws();
+  c = readchar();
+  if (c == EOF) 
+   return newop;
+  if (!isletter(c))
+  {
+    delete newop;
+    std::cerr << "****[kaapi_c2c] Error. Waiting for 'identity'  in declare reduction clause."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    return 0;
+  }
+  putback();
+  ParseIdentifier(name);
+  if (name != "identity")
+  {
+    delete newop;
+    std::cerr << "****[kaapi_c2c] Error. Waiting for 'identity'  in declare reduction clause."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    return 0;
+  }
+  
+  skip_ws();
+  c = readchar();
+  if (c != '(')
+  {
+    std::cerr << "****[kaapi_c2c] Error. Missing '(' in declare reduction clause."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    return 0;
+  }
+  
+  ParseIdentifier(name);
+  if (name.empty())
+  {
+    std::cerr << "****[kaapi_c2c] Error. Invalid name for identity function in declare reduction clause."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    return 0;
+  }
+  newop->name_redinit = strdup(name.c_str());
+  
+  skip_ws();
+  c = readchar();
+  if (c != ')')
+  {
+    delete newop;
+    std::cerr << "****[kaapi_c2c] Error. Missing ')' in declare reduction clause."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    return 0;
+  }
+  return newop;
+}
+
 
 void Parser::ParseDimension( 
     Sg_File_Info* fileInfo, 
@@ -3261,6 +3699,7 @@ void Parser::ParseRangeDeclaration(
     }
     else if ((c == ')') || (c == ','))
     {
+      kpa->dim = 0; /* means dim=1, but single element */
       putback();
       return;
     }
@@ -3280,16 +3719,42 @@ void Parser::ParseListParamDecl(
     Sg_File_Info*       fileInfo, 
     KaapiTaskAttribute* kta,
     KaapiAccessMode_t   mode,
-    SgScopeStatement*    scope 
+    SgScopeStatement*   scope 
 )
 {
   char c;
   KaapiParamAttribute* kpa;
-  
+  KaapiReduceOperator_t* redop = 0;
+
+  if (mode == KAAPI_CW_MODE)
+  {
+    /* parse operator */
+    redop = ParseReduceOperator(fileInfo );
+    if (redop ==0)
+    {
+      std::cerr << "****[kaapi_c2c] Error. Unknown reduction operator."
+                << "     In filename '" << fileInfo->get_filename() 
+                << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+      KaapiAbort("**** error");
+    }
+    
+    /* parse : */
+    skip_ws();
+    c = readchar();
+    if (c != ':')
+    {
+      std::cerr << "****[kaapi_c2c] Error. Missing ':' in reduction clause"
+                << "     In filename '" << fileInfo->get_filename() 
+                << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+      KaapiAbort("**** error");
+    }
+  }
+    
 redo:
   kpa = new KaapiParamAttribute;
   ParseRangeDeclaration( fileInfo, kpa, scope );
-  
   switch (kpa->type)
   {
     case KAAPI_ARRAY_NDIM_TYPE:
@@ -3307,6 +3772,7 @@ redo:
       int ith = curr->second;
       kta->formal_param[ith].mode = mode;
       kta->formal_param[ith].attr = kpa;
+      kta->formal_param[ith].redop = redop;
       kta->israngedecl[ith]       = 0;
     } break;
     
@@ -3333,13 +3799,15 @@ redo:
       }
       kpa->index_firstbound  = curr1->second;
       kpa->index_secondbound = curr2->second;
-      kta->formal_param[curr1->second].mode = mode;
-      kta->formal_param[curr1->second].attr = kpa;
-      kta->israngedecl[curr1->second]       = 1;
+      kta->formal_param[curr1->second].mode  = mode;
+      kta->formal_param[curr1->second].attr  = kpa;
+      kta->israngedecl[curr1->second]        = 1;
+      kta->formal_param[curr1->second].redop = redop;
 
-      kta->formal_param[curr2->second].mode = mode;
-      kta->formal_param[curr2->second].attr = kpa;
-      kta->israngedecl[curr2->second]       = 2;
+      kta->formal_param[curr2->second].mode  = mode;
+      kta->formal_param[curr2->second].attr  = kpa;
+      kta->israngedecl[curr2->second]        = 2;
+      kta->formal_param[curr2->second].redop = redop;
     } break;
 
     
