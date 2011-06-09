@@ -50,7 +50,7 @@ void say_hello(const char* msg)
 
 int main(int argc, char** argv)
 {
-#pragma kaapi parallel 
+#pragma kaapi parallel
   say_hello("Hello World!");
   return 0;
 }
