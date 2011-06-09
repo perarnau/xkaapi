@@ -56,28 +56,28 @@ double get_elapsedtime(void)
   return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
 }
 
-#pragma kaapi task readwrite( [begin:end]) value (op)
-template<class T, class OP>
-void for_each( T* begin, T* end, OP op )
+
+
+#pragma kaapi task read([begin:end]) reduction(+: sum)
+template<class T>
+void accumulate( const T* begin, const T* end, T* sum )
 {
   size_t size = (end-begin);
   if (size < 128)
-    std::for_each( begin, end, op);
+  {
+    T tmp = *sum;
+    while (begin != end)
+      tmp += *begin;
+    *sum = tmp;
+  }
   else {
     /* simple recursive for_each */
     size_t med = size/2;
-    for_each( begin, begin+med, op);
-    for_each( begin + med, end, op);
+    accumulate( begin, begin+med, sum);
+    accumulate( begin + med, end, sum);
   }
 }
 
-
-/**
- */
-static void apply_cos( double& v )
-{
-  v += cos(v);
-}
 
 /**
  */
@@ -85,7 +85,7 @@ int main(int ac, char** av)
 {
   double t0,t1;
   double sum = 0.f;
-  size_t i;
+  double result;
   size_t iter;
   size_t size;
   
@@ -95,32 +95,16 @@ int main(int ac, char** av)
   double* array = new double[size];
   
   /* initialize the runtime */
-#pragma kaapi init  
-  for (iter = 0; iter < 100; ++iter)
+#pragma kaapi parallel
   {
-    /* initialize, apply, check */
-    for (i = 0; i < size; ++i)
-      array[i] = 0.f;
-
-#pragma kaapi sync
     t0 = get_elapsedtime();
-    for_each( array, array+size, apply_cos );
-#pragma kaapi sync
+    for (iter = 0; iter < 100; ++iter)
+      accumulate( array, array+size, &result);
     t1 = get_elapsedtime();
     sum += (t1-t0)*1000; /* ms */
-
-    for (i = 0; i < size; ++i)
-      if (array[i] != 1.f)
-      {
-        printf("invalid @%lu == %lf\n", i, array[i]);
-        break ;
-      }
   }
 
   printf("done: %lf (ms)\n", sum / 100);
 
-  /* finalize the runtime */
-#pragma kaapi finish
-  
   return 0;
 }

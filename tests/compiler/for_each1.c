@@ -54,10 +54,9 @@ double get_elapsedtime(void)
   return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
 }
 
-/*value(op)*/
+#pragma kaapi task value(size) write(array[size]) value (op)
 void for_each( double* array, size_t size, void (*op)(double*) )
 {
-#pragma kaapi parallel for
   for (size_t i=0; i<size; ++i)
     op(&array[i]);
 }
@@ -72,43 +71,36 @@ static void apply_cos( double* v )
 
 /**
  */
-int main(int ac, char** av)
+int main(int argc, char** argv)
 {
   double t0,t1;
   double sum = 0.f;
   size_t i;
   size_t iter;
+  size_t niter;
+  
+  niter = atoi(argv[1]);
   
 #define ITEM_COUNT 100000
   static double array[ITEM_COUNT];
+
+  /* initialize, apply, check */
+  for (i = 0; i < ITEM_COUNT; ++i)
+    array[i] = 0.f;
   
-#pragma kaapi parallel  
+#pragma kaapi parallel 
+{
   /* initialize the runtime */
-  for (iter = 0; iter < 100; ++iter)
+  t0 = get_elapsedtime();
+  for (iter = 0; iter < niter; ++iter)
   {
-    /* initialize, apply, check */
-    for (i = 0; i < ITEM_COUNT; ++i)
-      array[i] = 0.f;
-
-#pragma kaapi barrier
-    t0 = get_elapsedtime();
     for_each( array, ITEM_COUNT, apply_cos );
-#pragma kaapi barrier
-    t1 = get_elapsedtime();
-    sum += (t1-t0)*1000; /* ms */
-
-    for (i = 0; i < ITEM_COUNT; ++i)
-      if (array[i] != 1.f)
-      {
-        printf("invalid @%lu == %lf\n", i, array[i]);
-        break ;
-      }
   }
+  t1 = get_elapsedtime();
+  sum += (t1-t0)*1000/niter; /* ms */
+}
 
   printf("done: %lf (ms)\n", sum / 100);
 
-  /* finalize the runtime */
-#pragma kaapi finish
-  
   return 0;
 }

@@ -40,87 +40,33 @@
 ** terms.
 ** 
 */
-#include <stdlib.h>
-#include <math.h>
-#include <sys/time.h>
-#include <iostream>
-#include <algorithm>
+#include <stdio.h>
 
-/**
-*/
-double get_elapsedtime(void)
+#pragma kaapi task reduction(+:result) value(n)
+void fibonacci(long* result, const long n)
 {
-  struct timeval tv;
-  int err = gettimeofday( &tv, 0);
-  if (err  !=0) return 0;
-  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
-}
-
-#pragma kaapi task readwrite( [begin:end]) value (op)
-template<class T, class OP>
-void for_each( T* begin, T* end, OP op )
-{
-  size_t size = (end-begin);
-  if (size < 128)
-    std::for_each( begin, end, op);
-  else {
-    /* simple recursive for_each */
-    size_t med = size/2;
-    for_each( begin, begin+med, op);
-    for_each( begin + med, end, op);
-  }
-}
-
-
-/**
- */
-static void apply_cos( double& v )
-{
-  v += cos(v);
-}
-
-/**
- */
-int main(int ac, char** av)
-{
-  double t0,t1;
-  double sum = 0.f;
-  size_t i;
-  size_t iter;
-  size_t size;
-  
-  if (ac >1)
-    size = atoi(av[1]); 
-
-  double* array = new double[size];
-  
-  /* initialize the runtime */
-#pragma kaapi init  
-  for (iter = 0; iter < 100; ++iter)
+  if (n<2)
+    *result += n;
+  else 
   {
-    /* initialize, apply, check */
-    for (i = 0; i < size; ++i)
-      array[i] = 0.f;
-
-#pragma kaapi sync
-    t0 = get_elapsedtime();
-    for_each( array, array+size, apply_cos );
-#pragma kaapi sync
-    t1 = get_elapsedtime();
-    sum += (t1-t0)*1000; /* ms */
-
-    for (i = 0; i < size; ++i)
-      if (array[i] != 1.f)
-      {
-        printf("invalid @%lu == %lf\n", i, array[i]);
-        break ;
-      }
+    fibonacci( result, n-1 );
+    fibonacci( result, n-2 );
   }
+}
 
-  printf("done: %lf (ms)\n", sum / 100);
+#pragma kaapi task read(result) 
+void print_result( const long* result )
+{
+  printf("Fibonacci(30)=%li\n", *result);
+}
 
-  /* finalize the runtime */
-#pragma kaapi finish
-  
+int main()
+{
+  long result;
+#pragma kaapi parallel
+  {
+    fibonacci(&result, 30);
+    print_result(&result);
+  }
   return 0;
 }
