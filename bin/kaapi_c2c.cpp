@@ -279,6 +279,8 @@ public:
   { }
 
   std::string                       mangled_name;      /* internal name of the task */
+  bool				    has_retval;
+  KaapiTaskFormalParam		    retval;
   std::vector<KaapiTaskFormalParam> formal_param;
   std::vector<int>                  israngedecl;       /* for range declaration: 0 no, 1:begin, 2: end*/
   std::map<std::string,int>         lookup;
@@ -552,7 +554,8 @@ void Parser::DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration 
   /* */
   KaapiTaskAttribute* kta = new KaapiTaskAttribute;
   kta->func_decl = functionDeclaration;
-  
+  kta->has_retval = false;
+
   /* Mark the body of the function as a "kaapiisparallelregion" */
   if (functionDeclaration->get_definition() !=0)
   {
@@ -569,9 +572,11 @@ void Parser::DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration 
   /* Store formal parameter in the KaapiTaskAttribute structure */
   SgFunctionParameterList* func_param = functionDeclaration->get_parameterList();
   SgInitializedNamePtrList& args = func_param->get_args();
+
+  const unsigned int args_size = args.size();
   SgScopeStatement* scope_declaration = functionDeclaration->get_scope();
-  kta->formal_param.resize( args.size() );
-  kta->israngedecl.resize( args.size() );
+  kta->formal_param.resize( args_size );
+  kta->israngedecl.resize( args_size );
   for (unsigned int i=0; i<args.size(); ++i)
   {
     SgInitializedName* initname   = args[i];
@@ -588,11 +593,11 @@ void Parser::DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration 
     /* try to find the parameter through the scope */
     kta->lookup.insert( std::make_pair(initname->get_name().str(), i ) );
   }
-  
+
   /* parse the end of the stream of declaration
   */
   ParseListParam( fileInfo, kta, scope_declaration );
-  
+
   /* Add the class declaration for the parameters */
   kta->name_paramclass = std::string("__kaapi_args_") + 
       functionDeclaration->get_name().str() + 
@@ -603,9 +608,9 @@ void Parser::DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration 
       kta->name_paramclass,
       scope_declaration
     );
+
   for (unsigned int i=0; i<kta->formal_param.size(); ++i)
   {
-    
     std::ostringstream name;
     name << "f" << i;
     SgType* member_type = 0;
@@ -657,6 +662,49 @@ redo_selection:
     
     kta->paramclass->get_definition()->append_member(memberDeclaration);
   }
+
+#if 1 // handle return value
+  SgType* ret_type = functionDeclaration->get_orig_return_type();
+  if (isSgTypeVoid(ret_type) == NULL)
+  {
+    static const char* const retval_name = "__kaapi_retval";
+
+    SgPointerType* const ret_ptrtype =
+      SageBuilder::buildPointerType(ret_type);
+
+    SgInitializedName* const init_name =
+      new SgInitializedName(SgName(retval_name), ret_ptrtype);
+
+    kta->has_retval = true;
+
+    KaapiTaskFormalParam& param = kta->retval;
+
+    param.mode = KAAPI_W_MODE;
+    param.redop = NULL;
+    param.attr = NULL;
+    param.initname = init_name;
+    param.type = ret_ptrtype;
+    param.kaapi_format = ConvertCType2KaapiFormat
+      (isSgPointerType(ret_ptrtype)->get_base_type());
+
+    kta->lookup.insert
+      (std::make_pair(init_name->get_name().str(), args_size));
+
+    std::ostringstream member_name;
+    member_name << "f" << args_size;
+
+    SgVariableDeclaration* const member_decl =
+      SageBuilder::buildVariableDeclaration
+      (
+       member_name.str(), 
+       kaapi_access_ROSE_type,
+       0,
+       kta->paramclass->get_definition()
+       );
+    member_decl->set_endOfConstruct(SOURCE_POSITION);
+    kta->paramclass->get_definition()->append_member(member_decl);
+  }
+#endif // handle return value
 
 #if 0 // Here is a tentative to add extra member to represent a view: not good
       // should always be constant (and so define in the code of the format)
@@ -785,16 +833,44 @@ redo_selection:
       SageBuilder::buildOpaqueVarRefExp(fieldname.str(),wrapper_body)
     );
   }
+
+#if 1 // handle return value
+  if (kta->has_retval)
+  {
+    KaapiTaskFormalParam& param = kta->retval;
+    std::ostringstream fieldname;
+    fieldname
+      << "*((" << param.type->unparseToString() << ")"
+      << "thearg->f" << args_size << ".data)";
+
+    SgVarRefExp* const retval_expr =
+      SageBuilder::buildOpaqueVarRefExp(fieldname.str(), wrapper_body);
+
+    SgExprStatement* const callStmt = SageBuilder::buildFunctionCallStmt
+      (functionDeclaration->get_name(), ret_type, argscall, wrapper_body);
+
+    SgExprStatement* const assign_stmt = SageBuilder::buildAssignStatement
+      (retval_expr, callStmt->get_expression());
+    SageInterface::insertStatement( truearg_decl, assign_stmt, false );
+
+    assign_stmt->setAttribute("kaapiwrappercall", (AstAttribute*)-1);
+  }
+  else
+#endif // handle return value
+  {
+    SgExprStatement* const callStmt =
+      SageBuilder::buildFunctionCallStmt
+      (
+       functionDeclaration->get_name(),
+       SageBuilder::buildVoidType(), 
+       argscall,
+       wrapper_body
+      );
+
+    callStmt->setAttribute("kaapiwrappercall", (AstAttribute*)-1);
+    SageInterface::insertStatement( truearg_decl, callStmt, false );
+  }
   
-  SgExprStatement* callStmt = SageBuilder::buildFunctionCallStmt(    
-      functionDeclaration->get_name(),
-      SageBuilder::buildVoidType(), 
-      argscall,
-      wrapper_body
-  );
-  callStmt->setAttribute("kaapiwrappercall", (AstAttribute*)-1);
-  SageInterface::insertStatement( truearg_decl, callStmt, false );
-    
 //  SageInterface::insertStatement( kta->typedefparamclass, kta->wrapper_decl, false );
   SageInterface::insertStatement( kta->typedefparamclass, kta->fwd_wrapper_decl, false );
 
@@ -2782,6 +2858,36 @@ void buildFunCall2TaskSpawn( OneCall* oc )
     SageInterface::insertStatement(last_statement, assign_statement, false);
     last_statement = assign_statement;
   }
+
+#if 1 // handle return value
+  if (oc->kta->has_retval)
+  {
+    printf("handling return value\n");
+
+    // TODO: retrieve the lhs part...
+    SgNode* const lhs_node = oc->statement->get_traversalSuccessorByIndex(0);
+
+    // assign arg->f[last].data = &lhs;
+    SgStatement* assign_stmt;
+    std::ostringstream fieldname;
+    fieldname << arg_name.str() << "->f" << i << ".data";
+    assign_statement = SageBuilder::buildExprStatement
+    (
+     SageBuilder::buildAssignOp
+     (
+      SageBuilder::buildOpaqueVarRefExp(fieldname.str(), oc->bb),
+      SageBuilder::buildCastExp
+      (
+       lhs_node,
+       SageBuilder::buildPointerType
+       (SageBuilder::buildVoidType())
+      )
+     )
+    );
+    SageInterface::insertStatement(last_statement, assign_stmt, false);
+    last_statement = assign_stmt;
+  }
+#endif // handle return value
 
   /* generate initialization of end of range */
   i = 0;
