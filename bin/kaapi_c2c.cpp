@@ -88,12 +88,17 @@ NOK   - parsing de fin des pragmas: on ne vérifie pas la fin de la phrase...
    can occurs in expressions of the for loop (init_expr; cond_expr; incr_expr )
         - for_each: ok
 
+NOK   - global variable:
+        - add extra parameter (ok in struct args + function call)
+        - recover the global variable in the task execution body: NOK
+        
    - generation of serialization operators
 */
 
 #define SOURCE_POSITION Sg_File_Info::generateDefaultFileInfoForTransformationNode()
 
 struct KaapiTaskAttribute; 
+struct OneCall;
 
 static std::list<KaapiTaskAttribute*> all_tasks;
 static std::map<std::string,KaapiTaskAttribute*> all_manglename2tasks;
@@ -109,6 +114,8 @@ static SgType* kaapi_access_ROSE_type;
 static SgType* kaapi_task_ROSE_type;
 static SgType* kaapi_thread_ROSE_type;
 static SgType* kaapi_frame_ROSE_type;
+static SgType* kaapi_workqueue_ROSE_type;
+static SgType* kaapi_stealcontext_ROSE_type;
 
 static std::string ConvertCType2KaapiFormat(SgType* type);
 
@@ -154,9 +161,15 @@ SgVariableDeclaration* buildStructPointerVariable (
 );
 
 
+/* Replace function call by task spawn
+*/
+void buildFunCall2TaskSpawn( OneCall* oc );
+void buildInsertSaveRestoreFrame( SgScopeStatement* forloop );
+SgScopeStatement* buildConvertLoop2Adaptative( SgScopeStatement* loop );
+
 /* Build expression to declare a __kaapi_thread variable 
 */
-void buildInsertDeclarationKaapiThread( SgScopeStatement* bbnode );
+SgVariableDeclaration* buildInsertDeclarationKaapiThread( SgScopeStatement* bbnode );
 
 
 /*
@@ -185,6 +198,7 @@ enum KaapiAccessMode_t {
   KAAPI_RW_MODE,
   KAAPI_CW_MODE,
   KAAPI_V_MODE,
+  KAAPI_GLOBAL_MODE,
   
   KAAPI_HIGHPRIORITY_MODE /* not really a mode. Only used to parse css program */
 };
@@ -281,6 +295,7 @@ public:
 
   std::string                       mangled_name;      /* internal name of the task */
   std::vector<KaapiTaskFormalParam> formal_param;
+  std::vector<KaapiTaskFormalParam> extra_param;
   std::vector<int>                  israngedecl;       /* for range declaration: 0 no, 1:begin, 2: end*/
   std::map<std::string,int>         lookup;
   SgScopeStatement                  scope;             /* for the formal parameter */
@@ -294,6 +309,25 @@ public:
   SgFunctionDeclaration*            fwd_wrapper_decl;      /* its declaration */
 
   std::string                       name_format;       /* name of the format */
+};
+
+
+/* Find all calls to task 
+*/
+struct OneCall {
+  OneCall( 
+    SgScopeStatement*   _bb,
+    SgFunctionCallExp*  _fc,
+    SgExprStatement*    _s,
+    KaapiTaskAttribute* _kta,
+    SgScopeStatement*   _fl
+  ) : bb(_bb), fc(_fc), statement(_s), kta(_kta), forloop(_fl) {}
+
+  SgScopeStatement*   bb;
+  SgFunctionCallExp*  fc;
+  SgExprStatement*    statement;
+  KaapiTaskAttribute* kta;
+  SgScopeStatement*   forloop;
 };
 
 
@@ -483,6 +517,7 @@ public:
 
   void DoKaapiPragmaTask( SgPragmaDeclaration* sgp );
   void DoKaapiPragmaData( SgNode* node );
+  void DoKaapiPragmaLoop( SgPragmaDeclaration* sgp );
   void DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration );
   void DoKaapiPragmaNoTask( SgPragmaDeclaration* sgp );
   void DoKaapiPragmaBarrier( SgPragmaDeclaration* sgp );
@@ -512,9 +547,7 @@ void Parser::DoKaapiPragmaTask( SgPragmaDeclaration* sgp )
     KaapiAbort( "*** Internal compiler error: mal formed AST" );
     
   /* it is assumed that the statement following the #pragma kaapi task is a declaration */
-  SgNode* fnode = 
-          sgp->get_parent()-> get_traversalSuccessorByIndex( 
-              1+ sgp->get_parent()->get_childIndex( sgp ) );
+  SgStatement* fnode = SageInterface::getNextStatement ( sgp );
 
   std::string pragma_string;
   ParseGetLine( pragma_string );
@@ -545,6 +578,30 @@ void Parser::DoKaapiPragmaTask( SgPragmaDeclaration* sgp )
   all_task_func_decl.push_back( std::make_pair(functionDeclaration, pragma_string) );
 }
 
+void Parser::DoKaapiPragmaLoop( SgPragmaDeclaration* sgp )
+{
+  Sg_File_Info* fileInfo = sgp->get_file_info();
+  std::cerr << "****[kaapi_c2c] Found #pragma kaapi loop directive !!!!."
+            << "     In filename '" << fileInfo->get_filename() 
+            << "' LINE: " << fileInfo->get_line()
+            << std::endl;
+  SgForStatement* forloop = isSgForStatement(SageInterface::getNextStatement ( sgp ));
+  if (forloop ==0)
+  {
+    std::cerr << "****[kaapi_c2c] #pragma kaapi loop directive must be followed by a for loop statement."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    KaapiAbort("**** error");
+  }
+  SgScopeStatement* newloop = buildConvertLoop2Adaptative( forloop );
+  if (newloop !=0)
+  {
+    SageInterface::insertStatement( forloop, newloop );
+    SageInterface::removeStatement( forloop );
+  }
+}
+
 
 void Parser::DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration )
 {
@@ -565,7 +622,6 @@ void Parser::DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration 
               << std::endl;
 #endif
   }
-
 
   /* Store formal parameter in the KaapiTaskAttribute structure */
   SgFunctionParameterList* func_param = functionDeclaration->get_parameterList();
@@ -604,6 +660,8 @@ void Parser::DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration 
       kta->name_paramclass,
       scope_declaration
     );
+  
+  /* Add member for each parameter */
   for (unsigned int i=0; i<kta->formal_param.size(); ++i)
   {
     
@@ -611,14 +669,14 @@ void Parser::DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration 
     name << "f" << i;
     SgType* member_type = 0;
 redo_selection:
-    if (kta->formal_param[i].mode == KAAPI_V_MODE)
+    if (kta->formal_param[i].mode == KAAPI_V_MODE) 
     {
       member_type = kta->formal_param[i].type;
       if (isSgModifierType(member_type))
         member_type = isSgModifierType(member_type)->get_base_type();
       kta->formal_param[i].kaapi_format = ConvertCType2KaapiFormat(kta->formal_param[i].type);
     }
-    else
+    else 
     {
       if (!isSgPointerType(kta->formal_param[i].type))
       { /* read/write/reduction should be pointer: else move them to be by value */
@@ -659,38 +717,32 @@ redo_selection:
     kta->paramclass->get_definition()->append_member(memberDeclaration);
   }
 
-#if 0 // Here is a tentative to add extra member to represent a view: not good
-      // should always be constant (and so define in the code of the format)
-      // or an identifier of a formal parameter
-  for (unsigned int i=0; i<kta->formal_param.size(); ++i)
+  /* Add extra parameter */
+  for (unsigned int i=0; i<kta->extra_param.size(); ++i)
   {
-    if (kta->formal_param[i].attr->dim >=1)
-    {
-      int d;
-      switch(kta->formal_param[i].attr->dim)
-      {
-        case 1: d = 1; break; /* only store 1d size */
-        case 2: d = 3; break; /* store n, m and lda */
-        case 3: KaapiAbort("****To high dimension"); 
-      }
-      std::ostringstream name;
-      name << "view" << i << "[" << d << "]";
-      SgType* member_type = 0;
-        member_type = SageBuilder::buildIntType();
+    
+    std::ostringstream name;
+    name << "f" << i+kta->formal_param.size();
+    SgType* member_type = 0;
 
-        SgVariableDeclaration* memberDeclaration =
-          SageBuilder::buildVariableDeclaration (
-            name.str(), 
-            member_type,
-            0, 
-            kta->paramclass->get_definition()
-        );
-        memberDeclaration->set_endOfConstruct(SOURCE_POSITION);
-        
-        kta->paramclass->get_definition()->append_member(memberDeclaration);
+    member_type = kta->extra_param[i].type;
+    if (isSgModifierType(member_type)) 
+    {
+      member_type = isSgModifierType(member_type)->get_base_type();
+      kta->formal_param[i].kaapi_format = ConvertCType2KaapiFormat(kta->formal_param[i].type);
     }
+
+    SgVariableDeclaration* memberDeclaration =
+      SageBuilder::buildVariableDeclaration (
+        name.str(), 
+        member_type,
+        0, 
+        kta->paramclass->get_definition()
+    );
+    memberDeclaration->set_endOfConstruct(SOURCE_POSITION);
+    
+    kta->paramclass->get_definition()->append_member(memberDeclaration);
   }
-#endif
 
   kta->typedefparamclass = SageBuilder::buildTypedefDeclaration(
       kta->name_paramclass, 
@@ -1382,7 +1434,7 @@ void Parser::DoKaapiPragmaData( SgNode* node )
 
   /* replace #pragma kaapi data alloca by the extern definition of kaapi_alloca(size_t) */
   //  SageInterface::prependStatement(decl_alloca, bbnode);
-  SageInterface::removeStatement(sgp);
+//  SageInterface::removeStatement(sgp);
   
   /* traverse all the expression inside the bbnode to replace use of variables */
   nestedVarRefVisitorTraversal replace;
@@ -1412,8 +1464,8 @@ void Parser::DoKaapiPragmaBarrier( SgPragmaDeclaration* sgp )
        SageBuilder::buildExprListExp(),
        bbnode
   );
-  /* insert before */
-  SageInterface::insertStatement(sgp,callStmt,true);
+  /* insert after */
+  SageInterface::insertStatement(sgp,callStmt,false);
 //  SageInterface::replaceStatement(sgp,callStmt);
 }
 
@@ -1443,8 +1495,10 @@ void Parser::DoKaapiPragmaWaiton( SgPragmaDeclaration* sgp )
        SageBuilder::buildExprListExp(),
        bbnode
   );
-//  SageInterface::prependStatement(decl_sync,bbnode);
-  SageInterface::replaceStatement(sgp,callStmt);
+
+  /* Insert after */
+  SageInterface::insertStatement(sgp,callStmt,false);
+//  SageInterface::replaceStatement(sgp,callStmt);
 
 // TODO: parse list of variables 
 }
@@ -1558,8 +1612,8 @@ void Parser::DoKaapiPragmaInit( SgPragmaDeclaration* sgp, bool flag )
          bbnode
     );
   }
-//  SageInterface::prependStatement(decl_sync,bbnode);
-  SageInterface::replaceStatement(sgp,callStmt);
+  /* Insert after */
+  SageInterface::insertStatement(sgp,callStmt,false);
 }
 
 
@@ -1602,30 +1656,6 @@ void Parser::DoKaapiPragmaDeclare( SgPragmaDeclaration* sgp )
 
   return;
 }
-
-
-/* Find all calls to task 
-*/
-struct OneCall {
-  OneCall( 
-    SgScopeStatement*   _bb,
-    SgFunctionCallExp*  _fc,
-    SgExprStatement*    _s,
-    KaapiTaskAttribute* _kta,
-    SgScopeStatement*   _fl
-  ) : bb(_bb), fc(_fc), statement(_s), kta(_kta), forloop(_fl) {}
-
-  SgScopeStatement*   bb;
-  SgFunctionCallExp*  fc;
-  SgExprStatement*    statement;
-  KaapiTaskAttribute* kta;
-  SgScopeStatement*   forloop;
-};
-
-/* Replace function call by task spawn
-*/
-void buildFunCall2TaskSpawn( OneCall* oc );
-void buildInsertSaveRestoreFrame( SgScopeStatement* forloop );
 
 
 /** This method traverse all the AST tree to find call to function task:
@@ -1772,8 +1802,12 @@ public:
             /* store both the container (basic block) and the funccall expr */
 //            SgBasicBlock* bbnode = isSgBasicBlock( fc->get_parent()->get_parent() );
             SgScopeStatement* scope = SageInterface::getScope( fc );
-            SgForStatement* loop = isSgForStatement(SageInterface::findEnclosingLoop( exprstatement ));
+            SgScopeStatement* loop = SageInterface::findEnclosingLoop( exprstatement );
             _listcall.push_back( OneCall(scope, fc, exprstatement, kta, loop) );
+if (loop !=0)
+std::cout << "Find enclosing loop of a task declaration:" << loop->class_name() << std::endl
+          << "At line: " << loop->get_file_info()->get_line()
+          << std::endl;
 
 #if 0 // TG no important here: see below in the main: when TemplateInstance are processed
 {            SgTemplateInstantiationFunctionDecl* sg_tmpldecl = isSgTemplateInstantiationFunctionDecl( fdecl );
@@ -1883,6 +1917,13 @@ public:
       {
         parser.DoKaapiPragmaBarrier( sgp );
       }
+
+      /* Case of adaptive loop 
+      */
+      else if (name == "loop")
+      {
+        parser.DoKaapiPragmaLoop( sgp );
+      } /* end for task */
 
       /* Case of waiton clause
       */
@@ -1995,6 +2036,8 @@ int main(int argc, char **argv)
         kaapi_task_ROSE_type = SageBuilder::buildOpaqueType ("kaapi_task_t", gscope);
         kaapi_thread_ROSE_type = SageBuilder::buildOpaqueType ("kaapi_thread_t", gscope);
         kaapi_frame_ROSE_type = SageBuilder::buildOpaqueType ("kaapi_frame_t", gscope);
+        kaapi_workqueue_ROSE_type = SageBuilder::buildOpaqueType ("kaapi_workqueue_t", gscope);
+        kaapi_stealcontext_ROSE_type = SageBuilder::buildOpaqueType ("kaapi_stealcontext_t", gscope);
         
   #if 0
         SageInterface::insertHeader ("kaapi.h", PreprocessingInfo::after, false, gscope);
@@ -2179,7 +2222,55 @@ int main(int argc, char **argv)
             gscope);
         ((decl_pop_frame->get_declarationModifier()).get_storageModifier()).setExtern();
 
-        /* Process #pragma */
+        /* declare kaapi_workqueue_init function */
+          static SgName name_wq_init("kaapi_workqueue_init");
+          SgFunctionDeclaration *decl_wq_init = SageBuilder::buildNondefiningFunctionDeclaration(
+              name_wq_init, 
+              SageBuilder::buildVoidType(),
+              SageBuilder::buildFunctionParameterList( 
+                  SageBuilder::buildFunctionParameterTypeList( 
+                    SageBuilder::buildPointerType(kaapi_workqueue_ROSE_type),
+                    SageBuilder::buildLongType(),
+                    SageBuilder::buildLongType()
+                  )
+              ),
+              gscope);
+          ((decl_wq_init->get_declarationModifier()).get_storageModifier()).setExtern();
+        
+
+        {/* declare kaapi_task_begin_adaptive function */
+          static SgName name("kaapi_task_begin_adaptive");
+          SgFunctionDeclaration *decl = SageBuilder::buildNondefiningFunctionDeclaration(
+              name, 
+              SageBuilder::buildPointerType(kaapi_stealcontext_ROSE_type),
+              SageBuilder::buildFunctionParameterList( 
+                  SageBuilder::buildFunctionParameterTypeList( 
+                    SageBuilder::buildPointerType(kaapi_thread_ROSE_type),
+                    SageBuilder::buildIntType(), /* flag */
+                    SageBuilder::buildIntType(), /* splitter */
+                    SageBuilder::buildPointerType(SageBuilder::buildVoidType())
+                  )
+              ),
+              gscope);
+          ((decl->get_declarationModifier()).get_storageModifier()).setExtern();
+        }
+
+        {/* declare kaapi_task_end_adaptive function */
+          static SgName name("kaapi_task_end_adaptive");
+          SgFunctionDeclaration *decl = SageBuilder::buildNondefiningFunctionDeclaration(
+              name, 
+              SageBuilder::buildVoidType(),
+              SageBuilder::buildFunctionParameterList( 
+                  SageBuilder::buildFunctionParameterTypeList( 
+                    SageBuilder::buildPointerType(kaapi_stealcontext_ROSE_type)
+                  )
+              ),
+              gscope);
+          ((decl->get_declarationModifier()).get_storageModifier()).setExtern();
+        }
+
+
+        /* Process all #pragma */
         Rose_STL_Container<SgNode*> pragmaDeclarationList = NodeQuery::querySubTree (project,V_SgPragmaDeclaration);
         Rose_STL_Container<SgNode*>::iterator i;
         for (  i = pragmaDeclarationList.begin(); i != pragmaDeclarationList.end(); i++)
@@ -2328,130 +2419,67 @@ buildClassDeclarationAndDefinition (
   const std::string& name, 
   SgScopeStatement* scope
 )
-   {
+{
   // This function builds a class declaration and definition 
   // (both the defining and nondefining declarations as required).
 
   // Build a file info object marked as a transformation
-     Sg_File_Info* fileInfo = Sg_File_Info::generateDefaultFileInfoForTransformationNode();
-     assert(fileInfo != NULL);
+  Sg_File_Info* fileInfo = Sg_File_Info::generateDefaultFileInfoForTransformationNode();
+  assert(fileInfo != NULL);
 
   // This is the class definition (the fileInfo is the position of the opening brace)
-     SgClassDefinition* classDefinition   = new SgClassDefinition(fileInfo);
-     assert(classDefinition != NULL);
+  SgClassDefinition* classDefinition   = new SgClassDefinition(fileInfo);
+  assert(classDefinition != NULL);
 
   // Set the end of construct explictly (where not a transformation this is the location of the closing brace)
-     classDefinition->set_endOfConstruct(fileInfo);
+  classDefinition->set_endOfConstruct(fileInfo);
 
   // This is the defining declaration for the class (with a reference to the class definition)
-     SgClassDeclaration* classDeclaration = new SgClassDeclaration(fileInfo,name.c_str(),SgClassDeclaration::e_struct,NULL,classDefinition);
-     assert(classDeclaration != NULL);
+  SgClassDeclaration* classDeclaration 
+    = new SgClassDeclaration(fileInfo,name.c_str(),SgClassDeclaration::e_struct,NULL,classDefinition);
+  assert(classDeclaration != NULL);
 
   // Set the defining declaration in the defining declaration!
-     classDeclaration->set_definingDeclaration(classDeclaration);
+  classDeclaration->set_definingDeclaration(classDeclaration);
 
   // Set the non defining declaration in the defining declaration (both are required)
-     SgClassDeclaration* nondefiningClassDeclaration = new SgClassDeclaration(fileInfo,name.c_str(),SgClassDeclaration::e_struct,NULL,NULL);
-     assert(classDeclaration != NULL);
-     nondefiningClassDeclaration->set_type(SgClassType::createType(nondefiningClassDeclaration));
+  SgClassDeclaration* nondefiningClassDeclaration 
+    = new SgClassDeclaration(fileInfo,name.c_str(),SgClassDeclaration::e_struct,NULL,NULL);
+  assert(classDeclaration != NULL);
+  nondefiningClassDeclaration->set_type(SgClassType::createType(nondefiningClassDeclaration));
 
   // Set the internal reference to the non-defining declaration
-     classDeclaration->set_firstNondefiningDeclaration(nondefiningClassDeclaration);
-     classDeclaration->set_type(nondefiningClassDeclaration->get_type());
+  classDeclaration->set_firstNondefiningDeclaration(nondefiningClassDeclaration);
+  classDeclaration->set_type(nondefiningClassDeclaration->get_type());
 
   // Set the defining and no-defining declarations in the non-defining class declaration!
-     nondefiningClassDeclaration->set_firstNondefiningDeclaration(nondefiningClassDeclaration);
-     nondefiningClassDeclaration->set_definingDeclaration(classDeclaration);
+  nondefiningClassDeclaration->set_firstNondefiningDeclaration(nondefiningClassDeclaration);
+  nondefiningClassDeclaration->set_definingDeclaration(classDeclaration);
 
   // Set the nondefining declaration as a forward declaration!
-     nondefiningClassDeclaration->setForward();
+  nondefiningClassDeclaration->setForward();
 
   // Don't forget the set the declaration in the definition (IR node constructors are side-effect free!)!
-     classDefinition->set_declaration(classDeclaration);
+  classDefinition->set_declaration(classDeclaration);
 
   // set the scope explicitly (name qualification tricks can imply it is not always the parent IR node!)
-     classDeclaration->set_scope(scope);
-     nondefiningClassDeclaration->set_scope(scope);
+  classDeclaration->set_scope(scope);
+  nondefiningClassDeclaration->set_scope(scope);
 
   // some error checking
-     assert(classDeclaration->get_definingDeclaration() != NULL);
-     assert(classDeclaration->get_firstNondefiningDeclaration() != NULL);
-     assert(classDeclaration->get_definition() != NULL);
+  assert(classDeclaration->get_definingDeclaration() != NULL);
+  assert(classDeclaration->get_firstNondefiningDeclaration() != NULL);
+  assert(classDeclaration->get_definition() != NULL);
 
   // DQ (9/8/2007): Need to add function symbol to global scope!
-//     printf ("Fixing up the symbol table in scope = %p = %s for class = %p = %s \n",scope,scope->class_name().c_str(),classDeclaration,classDeclaration->get_name().str());
-     SgClassSymbol* classSymbol = new SgClassSymbol(classDeclaration);
-     scope->insert_symbol(classDeclaration->get_name(),classSymbol);
-     ROSE_ASSERT(scope->lookup_class_symbol(classDeclaration->get_name()) != NULL);
+  //     printf ("Fixing up the symbol table in scope = %p = %s for class = %p = %s \n",scope,scope->class_name().c_str(),classDeclaration,classDeclaration->get_name().str());
+  SgClassSymbol* classSymbol = new SgClassSymbol(classDeclaration);
+  scope->insert_symbol(classDeclaration->get_name(),classSymbol);
+  ROSE_ASSERT(scope->lookup_class_symbol(classDeclaration->get_name()) != NULL);
 
-     return classDeclaration;
-   }
+  return classDeclaration;
+}
 
-
-#if 0
-SgClassDeclaration*
-buildClassDeclarationAndDefinition (const std::string& name, SgScopeStatement* scope)
-   {
-  // This function builds a class declaration and definition 
-  // (both the defining and nondefining declarations as required).
-
-  // This is the class definition (the fileInfo is the position of the opening brace)
-     SgClassDefinition* classDefinition   = new SgClassDefinition(SOURCE_POSITION);
-     assert(classDefinition != NULL);
-
-  // Set the end of construct explictly (where not a transformation this is the location of the closing brace)
-     classDefinition->set_endOfConstruct(SOURCE_POSITION);
-
-  // This is the defining declaration for the class (with a reference to the class definition)
-     SgClassDeclaration* classDeclaration = new SgClassDeclaration(SOURCE_POSITION,name.c_str(),SgClassDeclaration::e_struct,NULL,classDefinition);
-     assert(classDeclaration != NULL);
-     classDeclaration->set_endOfConstruct(SOURCE_POSITION);
-
-  // Set the defining declaration in the defining declaration!
-     classDeclaration->set_definingDeclaration(classDeclaration);
-
-  // Set the non defining declaration in the defining declaration (both are required)
-     SgClassDeclaration* nondefiningClassDeclaration = new SgClassDeclaration(SOURCE_POSITION,name.c_str(),SgClassDeclaration::e_struct,NULL,NULL);
-     assert(classDeclaration != NULL);
-     nondefiningClassDeclaration->set_endOfConstruct(SOURCE_POSITION);
-     nondefiningClassDeclaration->set_type(SgClassType::createType(nondefiningClassDeclaration));
-
-  // Set the internal reference to the non-defining declaration
-     classDeclaration->set_firstNondefiningDeclaration(nondefiningClassDeclaration);
-     classDeclaration->set_type (nondefiningClassDeclaration->get_type());
-
-  // Set the defining and no-defining declarations in the non-defining class declaration!
-     nondefiningClassDeclaration->set_firstNondefiningDeclaration(nondefiningClassDeclaration);
-     nondefiningClassDeclaration->set_definingDeclaration(classDeclaration);
-
-  // Set the nondefining declaration as a forward declaration!
-     nondefiningClassDeclaration->setForward();
-
-  // Liao (2/13/2008), symbol for the declaration
-     SgClassSymbol* mysymbol = new SgClassSymbol(nondefiningClassDeclaration);
-     scope->insert_symbol(name, mysymbol);
-
-  // Don't forget the set the declaration in the definition (IR node constructors are side-effect free!)!
-     classDefinition->set_declaration(classDeclaration);
-
-  // set the scope explicitly (name qualification tricks can imply it is not always the parent IR node!)
-     classDeclaration->set_scope(scope);
-     nondefiningClassDeclaration->set_scope(scope);
-
-  //set parent
-     classDeclaration->set_parent(scope);
-     nondefiningClassDeclaration->set_parent(scope);
-
-  // some error checking
-     assert(classDeclaration->get_definingDeclaration() != NULL);
-     assert(classDeclaration->get_firstNondefiningDeclaration() != NULL);
-     assert(classDeclaration->get_definition() != NULL);
-
-     ROSE_ASSERT(classDeclaration->get_definition()->get_parent() != NULL);
-
-     return classDeclaration;
-   }
-#endif
 
 
 SgClassDeclaration* buildStructDeclaration ( 
@@ -2461,19 +2489,6 @@ SgClassDeclaration* buildStructDeclaration (
     const std::string& structName
 )
 {
-#if 0
-     SgClassDefinition* classDefinition   = new SgClassDefinition(SOURCE_POSITION);
-     assert(classDefinition != NULL);
-
-     classDefinition->set_endOfConstruct(SOURCE_POSITION);
-     SgClassDeclaration* classDeclaration = new SgClassDeclaration(
-         SOURCE_POSITION,name.c_str(),SgClassDeclaration::e_struct,NULL,classDefinition);
-     assert(classDeclaration != NULL);
-     classDeclaration->set_endOfConstruct(SOURCE_POSITION);
-
-     classDeclaration->set_definingDeclaration(classDeclaration);
-
-#else
   ROSE_ASSERT(memberTypes.size() == memberNames.size());
   SgClassDeclaration* classDeclaration = buildClassDeclarationAndDefinition(structName,scope);
   std::vector<SgType*>::const_iterator typeIterator            = memberTypes.begin();
@@ -2506,7 +2521,6 @@ SgClassDeclaration* buildStructDeclaration (
   }
   
   return classDeclaration;
-#endif
 }
 
 
@@ -2655,7 +2669,7 @@ SgVariableDeclaration* buildStructPointerVariable (
 
 
 /***/
-void buildInsertDeclarationKaapiThread( SgScopeStatement* scope )
+SgVariableDeclaration* buildInsertDeclarationKaapiThread( SgScopeStatement* scope )
 {
   SgVariableDeclaration* newkaapi_thread = SageBuilder::buildVariableDeclaration ( 
     "__kaapi_thread", 
@@ -2664,8 +2678,7 @@ void buildInsertDeclarationKaapiThread( SgScopeStatement* scope )
       SageBuilder::buildFunctionCallExp(
         "kaapi_self_thread",
         SageBuilder::buildPointerType(kaapi_thread_ROSE_type),
-        SageBuilder::buildExprListExp(
-        ),
+        SageBuilder::buildExprListExp(),
         scope
       ),
       0
@@ -2673,6 +2686,7 @@ void buildInsertDeclarationKaapiThread( SgScopeStatement* scope )
     scope
   );
   SageInterface::prependStatement(newkaapi_thread, scope);
+  return newkaapi_thread;
 }
 
 SgVariableDeclaration* buildThreadVariableDecl( SgScopeStatement* scope )
@@ -2839,6 +2853,37 @@ void buildFunCall2TaskSpawn( OneCall* oc )
             oc->kta->formal_param[i].type
           )
         )
+      )
+    );
+    SageInterface::insertStatement(last_statement, assign_statement, false);
+    last_statement = assign_statement;
+  }
+
+  /* generate copy of global parameter */
+  i = oc->kta->formal_param.size();
+  std::vector<KaapiTaskFormalParam>::iterator ibeg;
+  for (ibeg = oc->kta->extra_param.begin(); ibeg != oc->kta->extra_param.end(); ++ibeg, ++i)
+  {
+    SgStatement* assign_statement;
+    std::ostringstream fieldname;
+    fieldname << arg_name.str() << "->f" << i;
+
+    assign_statement = SageBuilder::buildExprStatement(
+      SageBuilder::buildFunctionCallExp(
+        "memcpy",
+        SageBuilder::buildPointerType(SageBuilder::buildVoidType()),
+        SageBuilder::buildExprListExp(
+          SageBuilder::buildAddressOfOp(
+            SageBuilder::buildOpaqueVarRefExp (fieldname.str(),oc->bb)
+          ),
+          SageBuilder::buildAddressOfOp(
+            SageBuilder::buildVarRefExp(ibeg->initname,oc->bb)
+          ),
+          SageBuilder::buildSizeOfOp(
+            SageBuilder::buildVarRefExp(ibeg->initname,oc->bb)
+          )
+        ),
+        oc->bb
       )
     );
     SageInterface::insertStatement(last_statement, assign_statement, false);
@@ -3072,6 +3117,359 @@ void buildInsertSaveRestoreFrame( SgScopeStatement* forloop )
     SageInterface::insertStatement(syncframe_statement, restoreframe_statement, false);
   }
 }
+
+
+
+
+/** Transform a loop with independent iteration in an adaptive form
+    The loop must have a cannonical form:
+       for ( i = begin; i<end; ++i)
+         body
+         
+    The transformation will inline the function depending of input parameters (begin,end)
+    and all other variables passed by references.:
+    for_loop_adaptive(begin,end)
+    {
+      work = kaapi_workqueue(begin, end);
+
+      begin_adaptive()
+      
+      while (range = wq.pop(popsize))
+      {
+        for (i = range.begin; i<range.end; ++i)
+          body
+      }
+      end_adaptive()
+    }
+    
+    The splitter generated call create tasks that call for_loop_adaptive(stolen_range.begin, stolen_range.end),
+    all variables in the body are accessed either through copies or by references.
+    The clause will indicate the sharing rule (shared or private) in a similar fashion as for openMP.
+    Note on popsize:
+      - currently the popsize is computed...from scratch ? = N/(K*kaapi_get_concurrency()) as for
+      auto-partitionner with intel TBB.
+  
+   On success, return a SgScopeStatement that correspond to rewrite of the loop execution.  
+*/
+SgScopeStatement* buildConvertLoop2Adaptative( SgScopeStatement* loop )
+{
+  if (loop ==0) return 0;
+  
+  switch (loop->variantT()) /* see ROSE documentation if missing node or node */
+  {
+    case V_SgForStatement:
+      break;
+    default: /* should never enter here, because verification was made during pragma directive */
+      return 0;
+  }
+
+  SgForStatement* forloop = isSgForStatement( loop );
+  SgScopeStatement* scope = SageInterface::getScope( forloop->get_parent() );
+
+  if (!SageInterface::forLoopNormalization (forloop))
+  {
+    /* cannot */
+    Sg_File_Info* fileInfo = forloop->get_file_info();
+    std::cerr << "****[kaapi_c2c] wraning. Loop cannot be normalized."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    return 0;
+  }
+
+  SgInitializedName* ivar;
+  SgExpression* begin_iter;
+  SgExpression* end_iter;
+  SgExpression* step;
+  SgStatement*  body;
+  bool hasIncrementalIterationSpace;
+  bool isInclusiveUpperBound;
+  
+  bool retval = SageInterface::isCanonicalForLoop (forloop, 
+        &ivar,
+        &begin_iter,
+        &end_iter,
+        &step,
+        &body,
+        &hasIncrementalIterationSpace,
+        &isInclusiveUpperBound
+  );
+  if (!retval)
+  {
+    /* cannot put it in canonical form */
+    Sg_File_Info* fileInfo = forloop->get_file_info();
+    std::cerr << "****[kaapi_c2c] wraning. Loop is not in canonical form."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    return 0;
+  }
+    
+  /* Generate the header:
+     kaapi_workqueue_t work;
+     kaapi_workqueue_init( &work, 0, __kaapi_end );
+     The interval [0,__kaapi_end] is the number of iteration in the loop.
+     Each pop of range [i,j) will iterate to the original index [begin+i*incr
+  */
+  SgBasicBlock* bb = SageBuilder::buildBasicBlock( );
+  bb->set_parent( loop->get_parent() );
+
+  SgVariableSymbol* newkaapi_threadvar = 
+    SageInterface::lookupVariableSymbolInParentScopes(
+        "__kaapi_thread", 
+        scope 
+  );
+  if (newkaapi_threadvar ==0)
+  {
+    buildInsertDeclarationKaapiThread( scope );
+    newkaapi_threadvar = 
+        SageInterface::lookupVariableSymbolInParentScopes(
+            "__kaapi_thread", 
+            scope 
+      );
+    if (newkaapi_threadvar ==0) 
+      KaapiAbort("*** internal error");
+  }
+
+  SgVariableDeclaration* work = SageBuilder::buildVariableDeclaration (
+      "__kaapi_work",
+      kaapi_workqueue_ROSE_type,
+      0, 
+      bb
+  );
+  SageInterface::appendStatement( work, bb );
+
+  SgVariableDeclaration* local_ivar = SageBuilder::buildVariableDeclaration (
+      ivar->get_name(),
+      ivar->get_type(),
+      0,
+      bb
+  );
+  /* do not include: already included in the scope */
+
+  SgVariableDeclaration* local_ivar_end = SageBuilder::buildVariableDeclaration (
+      ivar->get_name()+"_end",
+      ivar->get_type(),
+      0,
+      bb
+  );
+  SageInterface::appendStatement( local_ivar_end, bb );
+  
+  SgVariableDeclaration* local_beg = SageBuilder::buildVariableDeclaration (
+      "__kaapi_range_beg",
+      SageBuilder::buildLongType(),
+      0,
+      bb
+  );
+  SageInterface::appendStatement( local_beg, bb );
+  
+  SgVariableDeclaration* local_end = SageBuilder::buildVariableDeclaration (
+      "__kaapi_range_end",
+      SageBuilder::buildLongType(),
+      0,
+      bb
+  );
+  SageInterface::appendStatement( local_end, bb );
+  
+  SgVariableDeclaration* wc = SageBuilder::buildVariableDeclaration (
+      "__kaapi_wc",
+      SageBuilder::buildPointerType(kaapi_stealcontext_ROSE_type),
+      0, 
+      bb
+  );
+  SageInterface::appendStatement( wc, bb );
+  
+  /* size wq */
+  SgExpression* exp_size = 0;
+  if (isInclusiveUpperBound)
+  {
+    exp_size = SageBuilder::buildDivideOp(
+          SageBuilder::buildSubtractOp(
+            SageBuilder::buildAddOp(
+              end_iter,
+              SageBuilder::buildLongIntVal(1)
+            ),
+            begin_iter
+          ),
+          step
+        );
+  }
+  else 
+  {
+    exp_size = SageBuilder::buildDivideOp(
+          SageBuilder::buildSubtractOp(
+            end_iter,
+            begin_iter
+          ),
+          step
+        );
+  }
+
+  SgVariableDeclaration* wqsize = SageBuilder::buildVariableDeclaration (
+      "__kaapi_wqsize",
+      SageBuilder::buildLongType(),
+      SageBuilder::buildAssignInitializer(
+        exp_size
+      ),
+      bb
+  );
+  SageInterface::appendStatement( wqsize, bb );
+
+  SgVariableDeclaration* popsize = SageBuilder::buildVariableDeclaration (
+      "__kaapi_popsize",
+      SageBuilder::buildLongType(),
+      SageBuilder::buildAssignInitializer(
+        SageBuilder::buildDivideOp(
+          SageBuilder::buildVarRefExp(wqsize),
+          SageBuilder::buildMultiplyOp(
+            SageBuilder::buildIntVal(4),
+            SageBuilder::buildFunctionCallExp(    
+              "kaapi_getconcurrency",
+              SageBuilder::buildIntType(), 
+              SageBuilder::buildExprListExp(),
+              bb
+            )
+          )
+        )
+      ),
+      bb
+  );
+  SageInterface::appendStatement( popsize, bb );
+
+  SgExprStatement* callinit_stmt = SageBuilder::buildFunctionCallStmt(    
+      "kaapi_workqueue_init",
+      SageBuilder::buildVoidType(), 
+      SageBuilder::buildExprListExp(
+        SageBuilder::buildAddressOfOp(
+          SageBuilder::buildVarRefExp(work)
+        ),
+        SageBuilder::buildLongIntVal(0),
+        SageBuilder::buildVarRefExp(wqsize)
+      ),
+      bb
+  );
+  SageInterface::appendStatement( callinit_stmt, bb );
+
+  SgExprStatement* wc_init = SageBuilder::buildExprStatement(
+    SageBuilder::buildAssignOp(
+      SageBuilder::buildVarRefExp(wc),
+      SageBuilder::buildFunctionCallExp(    
+        "kaapi_task_begin_adaptive",
+        SageBuilder::buildPointerType(kaapi_stealcontext_ROSE_type), 
+        SageBuilder::buildExprListExp(
+          SageBuilder::buildVarRefExp(newkaapi_threadvar),
+#if 0
+          SageBuilder::buildIntVal(0), /* flag !! */
+#else
+          SageBuilder::buildBitOrOp(
+            SageBuilder::buildOpaqueVarRefExp( "KAAPI_SC_CONCURRENT", bb),
+            SageBuilder::buildOpaqueVarRefExp( "KAAPI_SC_NOPREEMPTION", bb)
+          ),
+#endif
+          SageBuilder::buildIntVal(0),
+          SageBuilder::buildAddressOfOp( SageBuilder::buildVarRefExp(work) )
+        ),
+        bb
+      )
+    )
+  );
+  SageInterface::appendStatement( wc_init, bb );
+  
+  SgStatement* init_ivar_local =
+    SageBuilder::buildAssignStatement(
+      SageBuilder::buildVarRefExp(local_ivar),
+      SageBuilder::buildAddOp(
+        begin_iter,
+        SageBuilder::buildMultiplyOp(
+          SageBuilder::buildVarRefExp(local_beg),
+          step
+        )
+      )
+    );
+  SageInterface::appendStatement( init_ivar_local, bb );
+
+  SgWhileStmt* while_popsizeloop = 
+    SageBuilder::buildWhileStmt(
+      /* !kaapi_workqueue_pop() */
+      SageBuilder::buildNotOp(
+        SageBuilder::buildFunctionCallExp(    
+          "kaapi_workqueue_pop",
+          SageBuilder::buildIntType(), 
+          SageBuilder::buildExprListExp(
+            SageBuilder::buildAddressOfOp(SageBuilder::buildVarRefExp(work)),
+            SageBuilder::buildAddressOfOp(SageBuilder::buildVarRefExp(local_beg)),
+            SageBuilder::buildAddressOfOp(SageBuilder::buildVarRefExp(local_end)),
+            SageBuilder::buildVarRefExp( popsize )
+          ),
+          bb
+        )
+      ),
+      SageBuilder::buildBasicBlock( )
+  );
+  
+  /* iter_end = affine function of range_end */
+  SgStatement* init_ivar_local_end =
+    SageBuilder::buildAssignStatement(
+      SageBuilder::buildVarRefExp(local_ivar_end),
+      SageBuilder::buildAddOp(
+        begin_iter,
+        SageBuilder::buildMultiplyOp(
+          SageBuilder::buildVarRefExp(local_end),
+          step
+        )
+      )
+    );
+  SageInterface::appendStatement( init_ivar_local_end, isSgBasicBlock(while_popsizeloop->get_body( )) );
+
+  
+  SgStatement* new_forloop = 
+    SageBuilder::buildForStatement(
+      0,
+      SageBuilder::buildExprStatement(
+        SageBuilder::buildLessThanOp(
+          SageBuilder::buildVarRefExp(local_ivar),
+          SageBuilder::buildVarRefExp(local_ivar_end)
+        )
+      ), 
+      SageBuilder::buildPlusAssignOp(
+        SageBuilder::buildVarRefExp(local_ivar),
+        step
+      ),
+      body
+    );
+  SageInterface::appendStatement( new_forloop, isSgBasicBlock(while_popsizeloop->get_body( ))  );
+
+  /* iter = iter_end at the end of the local loop */
+  SgStatement* swap_ivars_local =
+    SageBuilder::buildAssignStatement(
+      SageBuilder::buildVarRefExp(local_ivar),
+      SageBuilder::buildVarRefExp(local_ivar_end)
+    );
+  SageInterface::appendStatement( swap_ivars_local, isSgBasicBlock(while_popsizeloop->get_body( )) );
+
+  SageInterface::appendStatement( while_popsizeloop, bb  );
+  
+  /* end_adaptive
+  */
+  SgExprStatement* wc_term = SageBuilder::buildFunctionCallStmt(    
+      "kaapi_task_end_adaptive",
+      SageBuilder::buildVoidType(), 
+      SageBuilder::buildExprListExp(
+        SageBuilder::buildVarRefExp(wc)
+      ),
+      bb
+  );
+  SageInterface::appendStatement( wc_term, bb );
+
+
+  /* 
+  */
+  SageInterface::movePreprocessingInfo( forloop, bb );
+
+  return bb;
+}
+
+
 
 
 /***/
@@ -3600,6 +3998,7 @@ KaapiAccessMode_t Parser::ParseAccessMode(
   if ((name == "readwrite") || (name == "rw") || (name == "inout")) return KAAPI_RW_MODE;
   if ((name == "reduction") || (name == "cw")) return KAAPI_CW_MODE;
   if ((name == "value") || (name == "v")) return KAAPI_V_MODE;
+  if ((name == "global") || (name == "g")) return KAAPI_GLOBAL_MODE;
   if (name == "highpriority") return KAAPI_HIGHPRIORITY_MODE;
 
   rpos = save_rpos;
@@ -4117,21 +4516,40 @@ redo:
   {
     case KAAPI_ARRAY_NDIM_TYPE:
     {
-      std::map<std::string,int>::iterator curr = kta->lookup.find( kpa->name );
-      if (curr == kta->lookup.end())
+      if (mode != KAAPI_GLOBAL_MODE)
       {
-        std::cerr << "****[kaapi_c2c] Error. Unkown formal parameter identifier in declaration '" << kpa->name << "'."
-                  << "     In filename '" << fileInfo->get_filename() 
-                  << "' LINE: " << fileInfo->get_line()
-                  << std::endl;
-        KaapiAbort("**** error");
+        std::map<std::string,int>::iterator curr = kta->lookup.find( kpa->name );
+        if (curr == kta->lookup.end())
+        {
+          std::cerr << "****[kaapi_c2c] Error. Unkown formal parameter identifier in declaration '" << kpa->name << "'."
+                    << "     In filename '" << fileInfo->get_filename() 
+                    << "' LINE: " << fileInfo->get_line()
+                    << std::endl;
+          KaapiAbort("**** error");
+        }
+        int ith = curr->second;
+        kta->formal_param[ith].mode = mode;
+        kta->formal_param[ith].attr = kpa;
+        kta->formal_param[ith].redop = redop;
+        kta->israngedecl[ith]       = 0;
+      }
+      else { /* global variable */
+        SgVariableSymbol* var = SageInterface::lookupVariableSymbolInParentScopes( kpa->name, scope );
+        if (var ==0)
+        {
+          std::cerr << "****[kaapi_c2c] Error. Unkown global variable identifier '" << kpa->name << "'."
+                    << "     In filename '" << fileInfo->get_filename() 
+                    << "' LINE: " << fileInfo->get_line()
+                    << std::endl;
+          KaapiAbort("**** error");
+        }
+        KaapiTaskFormalParam kpa_extra;
+        kpa_extra.mode     = mode;
+        kpa_extra.initname = var->get_declaration();
+        kpa_extra.type     = var->get_type();
+        kta->extra_param.push_back( kpa_extra );
       }
 
-      int ith = curr->second;
-      kta->formal_param[ith].mode = mode;
-      kta->formal_param[ith].attr = kpa;
-      kta->formal_param[ith].redop = redop;
-      kta->israngedecl[ith]       = 0;
     } break;
     
     case KAAPI_OPEN_RANGE_TYPE:
