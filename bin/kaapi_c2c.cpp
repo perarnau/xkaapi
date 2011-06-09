@@ -1755,35 +1755,17 @@ bool isValidTaskWithRetValCallExpression(SgFunctionCallExp* fc, SgStatement* sta
     case V_SgExprStatement:  /* in sg->get_expression() where may reside a function call to a task */
                            /* in this form, if sg->get_expression() == SgAssignOp, the lhs = sg->get_lhs_operand () */
     {
-      SgExpression* parent;
-      SgExpression* expr = fc;
-      /* go up to oc->statement */
-      while ( (parent = isSgExpression(expr->get_parent())) !=0)
-      {
-        if (isSgAssignOp(parent))
-        {
-          /* verify that oc->fc is not in a lhs of an expression */
-          if (isSgAssignOp(parent)->get_lhs_operand() == expr)
-          {
-            Sg_File_Info* fileInfo = fc->get_file_info();
-            std::cerr << "****[kaapi_c2c] Error: Function call is in an enclosed lhs."
-                      << "     In filename '" << fileInfo->get_filename() 
-                      << "' LINE: " << fileInfo->get_line()
-                      << std::endl;
-          }
-          expr = parent;
-        }
-        else {
-          Sg_File_Info* fileInfo = fc->get_file_info();
-          std::cerr << "****[kaapi_c2c] Error: Function call is an non assignement expression."
-                    << "     In filename '" << fileInfo->get_filename() 
-                    << "' LINE: " << fileInfo->get_line()
-                    << std::endl;
-        }
-      }
-      SgStatement* sgs_parent = isSgStatement(expr->get_parent());
-      if ((sgs_parent ==0) || (sgs_parent != statement))
-        KaapiAbort("**** internal error");
+      /* only accepted form:
+          <expression> = <func call>; 
+      */
+      SgExpression* expr = isSgExprStatement(statement)->get_expression();
+      if (isSgAssignOp(expr) == 0)
+        break;
+
+      SgAssignOp* expr_assign = isSgAssignOp( expr );
+      if (isSgFunctionCallExp(expr_assign->get_rhs_operand()) != fc)
+        break;
+      
       return true;
     }
 
@@ -1801,15 +1783,15 @@ bool isValidTaskWithRetValCallExpression(SgFunctionCallExp* fc, SgStatement* sta
                                    statement
                                  */
     default:
-    {
-      Sg_File_Info* fileInfo = fc->get_file_info();
-      std::cerr << "****[kaapi_c2c] Function call to task is not in a canonical expression or statement."
-                << "     In filename '" << fileInfo->get_filename() 
-                << "' LINE: " << fileInfo->get_line()
-                << std::endl;
-      KaapiAbort("**** error");
-    };
+      break;
   } /* switch */
+
+  Sg_File_Info* fileInfo = fc->get_file_info();
+  std::cerr << "****[kaapi_c2c] Function call to task is not in a canonical expression or statement."
+            << "     In filename '" << fileInfo->get_filename() 
+            << "' LINE: " << fileInfo->get_line()
+            << std::endl;
+  KaapiAbort("**** error");
   
   return false;
 }
@@ -2886,7 +2868,21 @@ void buildFunCall2TaskSpawn( OneCall* oc )
     printf("handling return value\n");
 
     // TODO: retrieve the lhs part...
-    SgExpression* const lhs_node = 0;
+    SgExpression* lhs_node = 0;
+    switch (oc->statement->variantT()) 
+    {
+      case V_SgAssignStatement:
+        lhs_node = isSgAssignStatement(oc->statement)->get_label();
+        break;
+      case V_SgExprStatement:
+      {
+        SgExpression* expr = isSgExprStatement(oc->statement)->get_expression();
+        SgAssignOp* expr_assign = isSgAssignOp( expr );
+        lhs_node = expr_assign->get_lhs_operand();
+      } break; 
+      default:
+        KaapiAbort("**** Internal error"); /* isValid... was not call ? */
+    }
       
 
     // assign arg->f[last].data = &lhs;
