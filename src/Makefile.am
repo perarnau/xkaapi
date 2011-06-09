@@ -101,6 +101,7 @@ libkaapi_la_SOURCES+=\
   thread/kaapi_thread_taskmovealloc.c \
   thread/kaapi_version_find.c \
   thread/kaapi_version_addaccess.c \
+  thread/kaapi_version_replicat.c \
   task/kaapi_task_standard.c \
   task/kaapi_task_aftersteal.c \
   task/kaapi_task_steal.c \
