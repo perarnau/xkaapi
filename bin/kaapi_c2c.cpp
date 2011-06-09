@@ -2578,6 +2578,44 @@ void buildInsertDeclarationKaapiThread( SgScopeStatement* scope )
   SageInterface::prependStatement(newkaapi_thread, scope);
 }
 
+SgVariableDeclaration* buildThreadVariableDecl( SgScopeStatement* scope )
+{
+  SgVariableDeclaration* const decl =
+    SageBuilder::buildVariableDeclaration
+    ( 
+     "__kaapi_thread",
+     SageBuilder::buildPointerType( kaapi_thread_ROSE_type )
+    );
+  SageInterface::prependStatement(decl, scope);
+  return decl;
+}
+
+void buildVariableAssignment
+(
+ SgExprStatement* cur_stmt, // current statement
+ SgVariableDeclaration* var_decl, // variable decl
+ SgScopeStatement* scope // needed
+)
+{
+  SgFunctionCallExp* const call_expr =
+    SageBuilder::buildFunctionCallExp
+    (
+     "kaapi_self_thread",
+     SageBuilder::buildPointerType(kaapi_thread_ROSE_type),
+     SageBuilder::buildExprListExp(),
+     scope
+    );
+
+  SgVarRefExp* const var_expr =
+    SageBuilder::buildVarRefExp(var_decl);
+
+  SgExprStatement* const assign_stmt =
+    SageBuilder::buildAssignStatement
+    (var_expr, call_expr);
+
+  SageInterface::insertStatement(cur_stmt, assign_stmt);
+}
+
 
 /** Change functioncall to task creation
 */
@@ -2595,7 +2633,11 @@ void buildFunCall2TaskSpawn( OneCall* oc )
         oc->bb 
   );
   if (newkaapi_threadvar ==0)
-    buildInsertDeclarationKaapiThread( oc->bb );
+    {
+      SgVariableDeclaration* const var_decl =
+	buildThreadVariableDecl(oc->bb);
+      buildVariableAssignment(oc->statement, var_decl, oc->bb);
+    }
 
   /* */
   SgVariableDeclaration* variableDeclaration =
