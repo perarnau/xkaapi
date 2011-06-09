@@ -61,9 +61,10 @@
 OK    - gestion des args si paramètre range: begin -> access, end -> size_t (taille)
 OK    - reduction & parsing de la declaration des fonctions + support moteur executif
 OK/NOK- les boucles sont gérés comme suit:
-        save_frame
+        __kaapi_thread = kaapi_push_frame()
         for(... ) { ... }
-        restore_frame
+        kaapi_sched_sync();
+        __kaapi_thread = kaapi_pop_frame()
 OK     Les break ne pose pas de problème. 
 OK     Les return non plus (l'appelant exécutant les tâches créées).
 NOK    Le cas des gotos n'est pas géré.
