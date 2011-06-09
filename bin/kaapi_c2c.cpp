@@ -2640,23 +2640,34 @@ void buildFunCall2TaskSpawn( OneCall* oc )
     std::ostringstream fieldname;
     
     if (oc->kta->formal_param[i].mode == KAAPI_V_MODE)
+    {
       fieldname << arg_name.str() << "->f" << i;
+      assign_statement = SageBuilder::buildExprStatement(
+        SageBuilder::buildAssignOp(
+          /* dummy-> */
+          SageBuilder::buildOpaqueVarRefExp (fieldname.str(),oc->bb),
+          /* expr */
+            *iebeg
+        )
+      );
+    }
     else 
+    {
       fieldname << arg_name.str() << "->f" << i << ".data";
-
-    assign_statement = SageBuilder::buildExprStatement(
-      SageBuilder::buildAssignOp(
-        /* dummy-> */
-        SageBuilder::buildOpaqueVarRefExp (fieldname.str(),oc->bb),
-        /* expr */
-        SageBuilder::buildCastExp(
-          *iebeg,
-          SageBuilder::buildPointerType(
-            SageBuilder::buildVoidType()
+      assign_statement = SageBuilder::buildExprStatement(
+        SageBuilder::buildAssignOp(
+          /* dummy-> */
+          SageBuilder::buildOpaqueVarRefExp (fieldname.str(),oc->bb),
+          /* expr */
+          SageBuilder::buildCastExp(
+            *iebeg,
+            SageBuilder::buildPointerType(
+              SageBuilder::buildVoidType()
+            )
           )
         )
-      )
-    );
+      );
+    }
     SageInterface::insertStatement(last_statement, assign_statement, false);
     last_statement = assign_statement;
   }
@@ -2812,17 +2823,29 @@ void buildInsertSaveRestoreFrame( SgScopeStatement* forloop )
   SageInterface::insertStatement(variableDeclaration, saveframe_statement, false);
 
   
-  StaticCFG::CFG cfg(forloop);
+  StaticCFG::CFG cfg( isSgForStatement(forloop)->get_loop_body() );
+  cfg.buildCFG();
+  //->get_loop_body() ); //SageInterface::getScope(forloop) ); 
+  //SageInterface::getEnclosingFunctionDefinition(forloop)); // /*forloop*/);
   SgGraphNode* nodeend = cfg.cfgForEnd( forloop );
 
+  /* find the break statements: all instructions that go in the exit node */
   std::vector< SgDirectedGraphEdge * > in = cfg.getInEdges(nodeend);
   for (size_t i=0; i<in.size(); ++i)
   {
     /* from node in the edge is the output to the loop to the loop statement */
     SgStatement* node = isSgStatement(in[i]->get_from()->get_SgNode());
+      std::cout << "1. Find exit loop statement, from:" << in[i]->get_from()->get_SgNode()->class_name() 
+                << " at line: " << in[i]->get_from()->get_SgNode()->get_file_info()->get_line()
+                << " to:" << in[i]->get_to()->get_SgNode()->class_name() 
+                << " at line: " << in[i]->get_to()->get_SgNode()->get_file_info()->get_line()
+                << std::endl;
+                
     
     /* add a kaapi_restore_frame */
-    switch (node->variantT()) {
+    switch (node->variantT()) 
+    {
+      case V_SgGotoStatement:
       case V_SgReturnStmt:
       {
         SgStatement* syncframe_statement = SageBuilder::buildExprStatement(
@@ -2853,10 +2876,25 @@ void buildInsertSaveRestoreFrame( SgScopeStatement* forloop )
         SageInterface::insertStatement(syncframe_statement, saveframe_statement, false);
       } break;
       
-      case V_SgBreakStmt:
+      case V_SgBreakStmt: /* normal control flow break: will execute the epilogue after the loop */
       default:  
         break;
     }
+  }
+  
+  SgGraphNode* nodebeg = cfg.getExit();
+  /* find instruction that go out the current function */
+  std::vector< SgDirectedGraphEdge * > out = cfg.getInEdges(nodebeg); //cfg.getExit()); 
+  //cfgForEnd(isSgForStatement(forloop)->get_loop_body()));
+  for (size_t i=0; i<out.size(); ++i)
+  {
+    /* from node in the edge is the output to the loop to the loop statement */
+    SgStatement* node = isSgStatement(out[i]->get_from()->get_SgNode());
+      std::cout << "2. Find exit loop statement, from:" << out[i]->get_from()->get_SgNode()->class_name() 
+                << " at line: " << out[i]->get_from()->get_SgNode()->get_file_info()->get_line()
+                << " to:" << out[i]->get_to()->get_SgNode()->class_name() 
+                << " at line: " << out[i]->get_to()->get_SgNode()->get_file_info()->get_line()
+                << std::endl;
   }
     
   /* insert kaapi_sched_sync + kaapi_restore_frame after the loop */
