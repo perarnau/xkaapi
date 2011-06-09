@@ -216,9 +216,9 @@ KAAPI_FEATURE([api-fortran], [compile fortran API [[experimental]]],
 ACX_LIB_LINK([KFORTRANLIB], [FORTRAN])
 
 dnl -----------------------------------------------------------------------
-dnl The "--enable-api-kaapi++"
+dnl The "--enable-api-kaapixx"
 dnl -----------------------------------------------------------------------
-KAAPI_FEATURE([api-kaapi++], [compile Kaapi++ API],
+KAAPI_FEATURE([api-kaapixx], [compile Kaapi++ API],
   [Kaapi++ API compiled], [yes],
   [],
   [],
