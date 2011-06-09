@@ -1187,6 +1187,7 @@ static inline void kaapi_task_initdfg_with_state
 #else
   task->u.body = (kaapi_task_body_t)((uintptr_t)body | state);
 #endif
+  task->binding.type = KAAPI_BINDING_ANY;
 }
 
 static inline void kaapi_task_init_with_state
@@ -1206,6 +1207,7 @@ static inline void kaapi_task_initdfg
 #else
   task->u.body = body;
 #endif
+  task->binding.type = KAAPI_BINDING_ANY;
 }
 
 static inline int kaapi_task_init
@@ -1227,6 +1229,25 @@ static inline int kaapi_frame_clear( kaapi_frame_t* fp)
   fp->tasklist = 0;
   return 0;
 }
+
+/** \ingroup TASK
+    The function kaapi_thread_push_frame() saves the current frame of a stack 
+    and push a new frame.
+    If successful, the kaapi_thread_push_frame() return the new kaapi_thread_t
+    where to push task.
+    Otherwise, return 0.
+*/
+extern kaapi_thread_t* kaapi_thread_push_frame(void);
+
+/** \ingroup TASK
+    The function kaapi_thread_pop_frame() pop the current frame of a stack
+    and restore the previous saved frame.
+    If successful, the kaapi_thread_pop_frame() return the new kaapi_thread_t
+    where to push task.
+    Otherwise, return 0.
+*/
+extern kaapi_thread_t* kaapi_thread_pop_frame(void);
+
 
 /** \ingroup TASK
     The function kaapi_thread_save_frame() saves the current frame of a stack into

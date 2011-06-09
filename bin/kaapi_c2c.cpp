@@ -71,7 +71,7 @@ NOK    Le cas des gotos n'est pas géré.
 NOK   - vérification des accès effectués en fonction des modes déclarés
         - mode d'accès R/W/RW/CW
           * arithmetique de pointeurs
-          * accès: R/RW/CW: rhs
+          * accès: R/RW/CW/W: rhs
           * accès: W/CW/RW: lhs
           * accès: CW pas de vérification supplémentaire sur l'ensemble des opérations 
           séquentielle.
@@ -83,7 +83,7 @@ NOK   - vérification des accès effectués en fonction des modes déclarés
 
 NOK   - parsing de fin des pragmas: on ne vérifie pas la fin de la phrase...
 
-   - adaptive loop. See OpenMP canonical form of Loop. Not all kind of expression
+   - adaptive loop. See OpenMP canonical form of Loop. Not all kinds of expression
    can occurs in expressions of the for loop (init_expr; cond_expr; incr_expr )
         - for_each: ok
 
@@ -1395,18 +1395,15 @@ void Parser::DoKaapiPragmaBarrier( SgPragmaDeclaration* sgp )
 {
   std::string name;
 
-  SgBasicBlock* bbnode = isSgBasicBlock(sgp->get_parent());
+  SgScopeStatement* bbnode = isSgBasicBlock(SageInterface::getScope(sgp));
   if (bbnode ==0)
   {
     Sg_File_Info* fileInfo = sgp->get_file_info();
     std::cerr <<  "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
-              << " #pragma kaapi barrier: invalid scope declaration"
+              << " #pragma kaapi sync: invalid scope declaration"
               << std::endl;
     KaapiAbort("**** error");
   }
-//unused  SgNode* nextnode = 
-          sgp->get_parent()-> get_traversalSuccessorByIndex( 
-              sgp->get_parent()->get_childIndex( sgp ) + 1);
 
   SgExprStatement* callStmt = SageBuilder::buildFunctionCallStmt
   (    "kaapi_sched_sync", 
@@ -1414,9 +1411,9 @@ void Parser::DoKaapiPragmaBarrier( SgPragmaDeclaration* sgp )
        SageBuilder::buildExprListExp(),
        bbnode
   );
-//  SageInterface::prependStatement(decl_sync,bbnode);
-  SageInterface::replaceStatement(sgp,callStmt);
-
+  /* insert before */
+  SageInterface::insertStatement(sgp,callStmt,true);
+//  SageInterface::replaceStatement(sgp,callStmt);
 }
 
 
@@ -1570,11 +1567,12 @@ void Parser::DoKaapiPragmaDeclare( SgPragmaDeclaration* sgp )
   SgScopeStatement* scope = SageInterface::getScope(sgp);
   Sg_File_Info* fileInfo = sgp->get_file_info();
   
+  const char* save_rpos = rpos;
   std::string name;
-  ParseIdentifier( name );
+  ParseIdentifier(name);
   if (name == "reduction")
   {
-    KaapiReduceOperator_t* redop = ParseReductionDeclaration( 
+    KaapiReduceOperator_t* redop = ParseReductionDeclaration(
         fileInfo, 
         scope 
     );
@@ -1583,6 +1581,7 @@ void Parser::DoKaapiPragmaDeclare( SgPragmaDeclaration* sgp )
       KaapiAbort("**** error");
     }
     kaapi_user_definedoperator.insert( std::make_pair( redop->name, redop  ) );
+
     std::cout << "Found declaration of reduction operator:"
               << redop->name
               << " freduce=" << redop->name_reducor
@@ -1590,11 +1589,17 @@ void Parser::DoKaapiPragmaDeclare( SgPragmaDeclaration* sgp )
               << std::endl;
     return;
   }
-  std::cerr << "****[kaapi_c2c] invalid " << name << " in #pragma kaapi declare clause."
-            << "     In filename '" << fileInfo->get_filename() 
-            << "' LINE: " << fileInfo->get_line()
-            << std::endl;
-  KaapiAbort("**** error");
+  else {
+    std::cerr << "****[kaapi_c2c] #pragma kaapi declare '" << name << "' clause."
+              << "     In filename '" << fileInfo->get_filename() 
+              << "' LINE: " << fileInfo->get_line()
+              << std::endl;
+    KaapiAbort("**** error");
+    rpos = save_rpos;
+    return;
+  }
+
+  return;
 }
 
 
@@ -2137,7 +2142,7 @@ int main(int argc, char **argv)
             gscope);
         ((decl_save_frame->get_declarationModifier()).get_storageModifier()).setExtern();
 
-        /* declare kaapi_thread_pushtask function */
+        /* declare kaapi_thread_restore_frame function */
         static SgName name_restore_frame("kaapi_thread_restore_frame");
         SgFunctionDeclaration *decl_restore_frame = SageBuilder::buildNondefiningFunctionDeclaration(
             name_restore_frame, 
@@ -2150,6 +2155,28 @@ int main(int argc, char **argv)
             ),
             gscope);
         ((decl_restore_frame->get_declarationModifier()).get_storageModifier()).setExtern();
+
+        /* declare kaapi_thread_push_frame function */
+        static SgName name_push_frame("kaapi_thread_push_frame");
+        SgFunctionDeclaration *decl_push_frame = SageBuilder::buildNondefiningFunctionDeclaration(
+            name_push_frame, 
+            SageBuilder::buildPointerType(kaapi_thread_ROSE_type),
+            SageBuilder::buildFunctionParameterList( 
+                SageBuilder::buildFunctionParameterTypeList( )
+            ),
+            gscope);
+        ((decl_push_frame->get_declarationModifier()).get_storageModifier()).setExtern();
+
+        /* declare kaapi_thread_pop_frame function */
+        static SgName name_pop_frame("kaapi_thread_pop_frame");
+        SgFunctionDeclaration *decl_pop_frame = SageBuilder::buildNondefiningFunctionDeclaration(
+            name_pop_frame, 
+            SageBuilder::buildPointerType(kaapi_thread_ROSE_type),
+            SageBuilder::buildFunctionParameterList( 
+                SageBuilder::buildFunctionParameterTypeList( )
+            ),
+            gscope);
+        ((decl_pop_frame->get_declarationModifier()).get_storageModifier()).setExtern();
 
         /* Process #pragma */
         Rose_STL_Container<SgNode*> pragmaDeclarationList = NodeQuery::querySubTree (project,V_SgPragmaDeclaration);
@@ -2882,6 +2909,9 @@ void buildFunCall2TaskSpawn( OneCall* oc )
 void buildInsertSaveRestoreFrame( SgScopeStatement* forloop )
 {
   if (forloop ==0) return;
+  if (forloop->getAttribute("kaapifor_ok") !=0) return;
+  forloop->setAttribute("kaapifor_ok", (AstAttribute*)-1);
+  
   switch (forloop->variantT()) /* see ROSE documentation if missing node or node */
   {
     case V_SgDoWhileStmt: 
@@ -2892,9 +2922,6 @@ void buildInsertSaveRestoreFrame( SgScopeStatement* forloop )
       return;
   }
 
-  static int cnt = 0;
-  std::ostringstream arg_name;
-  arg_name << "__kaapi_frame_" << cnt++;
 
   SgScopeStatement* scope = SageInterface::getScope( forloop->get_parent() );
   
@@ -2906,6 +2933,10 @@ void buildInsertSaveRestoreFrame( SgScopeStatement* forloop )
   if (newkaapi_threadvar ==0)
     buildInsertDeclarationKaapiThread( scope );
 
+#if 0        
+  static int cnt = 0;
+  std::ostringstream arg_name;
+  arg_name << "__kaapi_frame_" << cnt++;
   SgVariableDeclaration* variableDeclaration =
     SageBuilder::buildVariableDeclaration (
       arg_name.str(), 
@@ -2916,125 +2947,129 @@ void buildInsertSaveRestoreFrame( SgScopeStatement* forloop )
   
   /* insert before */
   SageInterface::insertStatement(forloop, variableDeclaration, true);
+#endif
 
   SgStatement* saveframe_statement = SageBuilder::buildExprStatement(
-    SageBuilder::buildFunctionCallExp(
-      "kaapi_thread_save_frame",
-      SageBuilder::buildIntType(),
-      SageBuilder::buildExprListExp(
-        SageBuilder::buildVarRefExp ("__kaapi_thread", scope ),
-        SageBuilder::buildAddressOfOp( 
-          SageBuilder::buildVarRefExp (arg_name.str(), scope )
-        )
-      ),
-      scope
+    SageBuilder::buildAssignOp(
+      SageBuilder::buildVarRefExp ("__kaapi_thread", scope ),
+      SageBuilder::buildFunctionCallExp(
+        "kaapi_thread_push_frame",
+        SageBuilder::buildIntType(),
+        SageBuilder::buildExprListExp(
+        ),
+        scope
+      )
     )
   );
+#if 0
   /* insert after declaration */
   SageInterface::insertStatement(variableDeclaration, saveframe_statement, false);
+#else
+  /* insert before statement */
+  SageInterface::insertStatement(forloop, saveframe_statement, true);
+#endif
 
-  
-  StaticCFG::CFG cfg( isSgForStatement(forloop)->get_loop_body() );
-  cfg.buildCFG();
-  //->get_loop_body() ); //SageInterface::getScope(forloop) ); 
-  //SageInterface::getEnclosingFunctionDefinition(forloop)); // /*forloop*/);
-  SgGraphNode* nodeend = cfg.cfgForEnd( forloop );
-
-  /* find the break statements: all instructions that go in the exit node */
-  std::vector< SgDirectedGraphEdge * > in = cfg.getInEdges(nodeend);
-  for (size_t i=0; i<in.size(); ++i)
   {
-    /* from node in the edge is the output to the loop to the loop statement */
-    SgStatement* node = isSgStatement(in[i]->get_from()->get_SgNode());
-      std::cout << "1. Find exit loop statement, from:" << in[i]->get_from()->get_SgNode()->class_name() 
-                << " at line: " << in[i]->get_from()->get_SgNode()->get_file_info()->get_line()
-                << " to:" << in[i]->get_to()->get_SgNode()->class_name() 
-                << " at line: " << in[i]->get_to()->get_SgNode()->get_file_info()->get_line()
-                << std::endl;
-                
-    
-    /* add a kaapi_restore_frame */
-    switch (node->variantT()) 
+    StaticCFG::CFG cfg( forloop );
+    cfg.buildCFG();
+    //->get_loop_body() ); //SageInterface::getScope(forloop) ); 
+    //SageInterface::getEnclosingFunctionDefinition(forloop)); // /*forloop*/);
+    SgGraphNode* nodeend = cfg.cfgForEnd( forloop );
+
+    /* find the break statements: all instructions that go in the exit node */
+    std::vector< SgDirectedGraphEdge * > in = cfg.getInEdges(nodeend);
+    for (size_t i=0; i<in.size(); ++i)
     {
-      case V_SgGotoStatement:
-      case V_SgReturnStmt:
-      {
-        SgStatement* syncframe_statement = SageBuilder::buildExprStatement(
-          SageBuilder::buildFunctionCallExp(
-            "kaapi_sched_sync",
-            SageBuilder::buildIntType(),
-            SageBuilder::buildExprListExp(),
-            scope
-          )
-        );
-        /* insert before */
-        SageInterface::insertStatement(node, syncframe_statement, true);
-
-        SgStatement* saveframe_statement = SageBuilder::buildExprStatement(
-          SageBuilder::buildFunctionCallExp(
-            "kaapi_thread_restore_frame",
-            SageBuilder::buildIntType(),
-            SageBuilder::buildExprListExp(
-              SageBuilder::buildVarRefExp ("__kaapi_thread", scope ),
-              SageBuilder::buildAddressOfOp( 
-                SageBuilder::buildVarRefExp (arg_name.str(), scope )
-              )
-            ),
-            scope
-          )
-        );
-        /* insert after */
-        SageInterface::insertStatement(syncframe_statement, saveframe_statement, false);
-      } break;
+      /* from node in the edge is the output to the loop to the loop statement */
+      SgStatement* node = isSgStatement(in[i]->get_from()->get_SgNode());
+        std::cout << "1. Find exit loop statement, from:" << in[i]->get_from()->get_SgNode()->class_name() 
+                  << " at line: " << in[i]->get_from()->get_SgNode()->get_file_info()->get_line()
+                  << " to:" << in[i]->get_to()->get_SgNode()->class_name() 
+                  << " at line: " << in[i]->get_to()->get_SgNode()->get_file_info()->get_line()
+                  << std::endl;
+                  
       
-      case V_SgBreakStmt: /* normal control flow break: will execute the epilogue after the loop */
-      default:  
-        break;
-    }
-  }
-  
-  SgGraphNode* nodebeg = cfg.getExit();
-  /* find instruction that go out the current function */
-  std::vector< SgDirectedGraphEdge * > out = cfg.getInEdges(nodebeg); //cfg.getExit()); 
-  //cfgForEnd(isSgForStatement(forloop)->get_loop_body()));
-  for (size_t i=0; i<out.size(); ++i)
-  {
-    /* from node in the edge is the output to the loop to the loop statement */
-    SgStatement* node = isSgStatement(out[i]->get_from()->get_SgNode());
-      std::cout << "2. Find exit loop statement, from:" << out[i]->get_from()->get_SgNode()->class_name() 
-                << " at line: " << out[i]->get_from()->get_SgNode()->get_file_info()->get_line()
-                << " to:" << out[i]->get_to()->get_SgNode()->class_name() 
-                << " at line: " << out[i]->get_to()->get_SgNode()->get_file_info()->get_line()
-                << std::endl;
-  }
-    
-  /* insert kaapi_sched_sync + kaapi_restore_frame after the loop */
-  SgStatement* syncframe_statement = SageBuilder::buildExprStatement(
-    SageBuilder::buildFunctionCallExp(
-      "kaapi_sched_sync",
-      SageBuilder::buildIntType(),
-      SageBuilder::buildExprListExp(),
-      scope
-    )
-  );
-  /* insert after */
-  SageInterface::insertStatement(isSgStatement(nodeend->get_SgNode()), syncframe_statement, false);
+      /* add a kaapi_restore_frame */
+      switch (node->variantT()) 
+      {
+        case V_SgGotoStatement:
+        case V_SgReturnStmt:
+        {
+          SgStatement* syncframe_statement = SageBuilder::buildExprStatement(
+            SageBuilder::buildFunctionCallExp(
+              "kaapi_sched_sync",
+              SageBuilder::buildIntType(),
+              SageBuilder::buildExprListExp(),
+              scope
+            )
+          );
+          /* insert before */
+          SageInterface::insertStatement(node, syncframe_statement, true);
 
-  SgStatement* restoreframe_statement = SageBuilder::buildExprStatement(
-    SageBuilder::buildFunctionCallExp(
-      "kaapi_thread_restore_frame",
-      SageBuilder::buildIntType(),
-      SageBuilder::buildExprListExp(
+          SgStatement* saveframe_statement = SageBuilder::buildExprStatement(
+            SageBuilder::buildAssignOp(
+              SageBuilder::buildVarRefExp ("__kaapi_thread", scope ),
+              SageBuilder::buildFunctionCallExp(
+                "kaapi_thread_pop_frame",
+                SageBuilder::buildIntType(),
+                SageBuilder::buildExprListExp(
+                ),
+                scope
+              )
+            )
+          );
+          /* insert after */
+          SageInterface::insertStatement(syncframe_statement, saveframe_statement, false);
+        } break;
+        
+        case V_SgBreakStmt: /* normal control flow break: will execute the epilogue after the loop */
+        default:  
+          break;
+      }
+    }
+    
+    SgGraphNode* nodebeg = cfg.getExit();
+    /* find instruction that go out the current function */
+    std::vector< SgDirectedGraphEdge * > out = cfg.getInEdges(nodebeg); //cfg.getExit()); 
+    //cfgForEnd(isSgForStatement(forloop)->get_loop_body()));
+    for (size_t i=0; i<out.size(); ++i)
+    {
+      /* from node in the edge is the output to the loop to the loop statement */
+      SgStatement* node = isSgStatement(out[i]->get_from()->get_SgNode());
+        std::cout << "2. Find exit loop statement, from:" << out[i]->get_from()->get_SgNode()->class_name() 
+                  << " at line: " << out[i]->get_from()->get_SgNode()->get_file_info()->get_line()
+                  << " to:" << out[i]->get_to()->get_SgNode()->class_name() 
+                  << " at line: " << out[i]->get_to()->get_SgNode()->get_file_info()->get_line()
+                  << std::endl;
+    }
+      
+    /* insert kaapi_sched_sync + kaapi_restore_frame after the loop */
+    SgStatement* syncframe_statement = SageBuilder::buildExprStatement(
+      SageBuilder::buildFunctionCallExp(
+        "kaapi_sched_sync",
+        SageBuilder::buildIntType(),
+        SageBuilder::buildExprListExp(),
+        scope
+      )
+    );
+    /* insert after */
+    SageInterface::insertStatement(isSgStatement(nodeend->get_SgNode()), syncframe_statement, false);
+
+    SgStatement* restoreframe_statement = SageBuilder::buildExprStatement(
+      SageBuilder::buildAssignOp(
         SageBuilder::buildVarRefExp ("__kaapi_thread", scope ),
-        SageBuilder::buildAddressOfOp( 
-          SageBuilder::buildVarRefExp (arg_name.str(), scope )
+        SageBuilder::buildFunctionCallExp(
+          "kaapi_thread_pop_frame",
+          SageBuilder::buildIntType(),
+          SageBuilder::buildExprListExp(
+          ),
+          scope
         )
-      ),
-      scope
-    )
-  );
-  /* insert after */
-  SageInterface::insertStatement(syncframe_statement, restoreframe_statement, false);
+      )
+    );
+    /* insert after */
+    SageInterface::insertStatement(syncframe_statement, restoreframe_statement, false);
+  }
 }
 
 
@@ -3632,6 +3667,7 @@ KaapiReduceOperator_t* Parser::ParseReduceOperator(
 }
 
 
+
 KaapiReduceOperator_t* Parser::ParseReductionDeclaration( 
     Sg_File_Info* fileInfo, 
     SgScopeStatement* scope 
@@ -3641,12 +3677,6 @@ KaapiReduceOperator_t* Parser::ParseReductionDeclaration(
   char c;
   const char* save_rpos = rpos;
   
-  ParseIdentifier(name);
-  if (name != "reduction")
-  {
-    rpos = save_rpos;
-    return 0;
-  }
   skip_ws();
   c = readchar();
   if (c != '(')
