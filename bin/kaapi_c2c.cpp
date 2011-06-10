@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 /*
 ** kaapi_staticsched.h
 ** xkaapi
@@ -2864,11 +2862,10 @@ void buildFunCall2TaskSpawn( OneCall* oc )
     last_statement = assign_statement;
   }
 
-#if 1 // handle return value
+#if 0 // handle return value
   if (oc->kta->has_retval)
   {
     printf("handling return value\n");
-
     // TODO: retrieve the lhs part...
     SgExpression* lhs_node = 0;
     switch (oc->statement->variantT()) 
@@ -2885,7 +2882,6 @@ void buildFunCall2TaskSpawn( OneCall* oc )
       default:
         KaapiAbort("**** Internal error"); /* isValid... was not call ? */
     }
-      
 
     // assign arg->f[last].data = &lhs;
     SgStatement* assign_stmt;
@@ -2902,6 +2898,33 @@ void buildFunCall2TaskSpawn( OneCall* oc )
     );
     SageInterface::insertStatement(last_statement, assign_stmt, false);
     last_statement = assign_stmt;
+  }
+#else
+  if (oc->kta->has_retval)
+  {
+    SgExpression* const expr =
+      isSgExprStatement(oc->statement)->get_expression();
+    SgAssignOp* const assign_op = isSgAssignOp(expr);
+    if (assign_op)
+    {
+      SgExpression* const lhs_expr = assign_op->get_lhs_operand();
+      SgExpression* const lhs_ref = SageBuilder::buildAddressOfOp(lhs_expr);
+
+      // assign arg->f[last].data = &lhs;
+      SgStatement* assign_stmt;
+      std::ostringstream fieldname;
+      fieldname << arg_name.str() << "->r.data";
+      assign_stmt = SageBuilder::buildExprStatement
+      (
+       SageBuilder::buildAssignOp
+       (
+	SageBuilder::buildOpaqueVarRefExp(fieldname.str(), oc->scope),
+	lhs_ref
+       )
+      );
+      SageInterface::insertStatement(last_statement, assign_stmt, false);
+      last_statement = assign_stmt;
+    } // assign_op
   }
 #endif // handle return value
 
@@ -4749,5 +4772,3 @@ redo:
   if (c == EOF) return;
   goto redo;
 }
-
->>>>>>> 5e8e1bc2e843839ac793895ea6ac031aba4cdf2f
