@@ -73,7 +73,7 @@ NOK   - vérification des accès effectués en fonction des modes déclarés
         - mode d'accès R/W/RW/CW
           * arithmetique de pointeurs
           * accès: R/RW/CW/W: rhs
-          * accès: W/CW/RW: lhs
+          * accès: W/CW/RW: lvalue
           * accès: CW pas de vérification supplémentaire sur l'ensemble des opérations 
           séquentielle.
         - portée des variables:
@@ -166,6 +166,7 @@ SgVariableDeclaration* buildStructPointerVariable (
 void buildFunCall2TaskSpawn( OneCall* oc );
 void buildInsertSaveRestoreFrame( SgScopeStatement* forloop );
 SgScopeStatement* buildConvertLoop2Adaptative( SgScopeStatement* loop );
+void buildFreeVariable(SgScopeStatement* scope);
 
 /* Build expression to declare a __kaapi_thread variable 
 */
@@ -596,6 +597,7 @@ void Parser::DoKaapiPragmaLoop( SgPragmaDeclaration* sgp )
               << std::endl;
     KaapiAbort("**** error");
   }
+  buildFreeVariable(forloop);
   SgScopeStatement* newloop = buildConvertLoop2Adaptative( forloop );
   if (newloop !=0)
   {
@@ -3197,6 +3199,112 @@ void buildInsertSaveRestoreFrame( SgScopeStatement* forloop )
 }
 
 
+/** Preorder traversal: */
+class LHSVisitorTraversal : public AstSimpleProcessing {
+public:
+  LHSVisitorTraversal( )
+  { }
+  virtual void visit(SgNode* n)
+  {
+    SgBinaryOp* binop = isSgBinaryOp(n);
+    if (binop !=0)
+    {
+      std::cout << "Binop " << binop->class_name() << std::endl;
+      switch (binop->variantT())
+      {
+        case V_SgAssignOp:
+        case V_SgPlusAssignOp:
+        case V_SgMinusAssignOp:
+        case V_SgAndAssignOp:
+        case V_SgIorAssignOp:
+        case V_SgMultAssignOp:
+        case V_SgDivAssignOp:
+        case V_SgModAssignOp:
+        case V_SgXorAssignOp:
+        case V_SgLshiftAssignOp:
+        case V_SgRshiftAssignOp:
+        case V_SgPointerAssignOp: /* kesako ? */
+          binop->get_lhs_operand()->setAttribute("kaapiOUT", (AstAttribute*)-1);
+          std::cout << "    set LHS " << binop->get_lhs_operand()->class_name() << std::endl;
+          break;
+
+        case V_SgPntrArrRefExp:
+        default:
+          if (binop->/*get_parent()->*/getAttribute("kaapiOUT") != 0)
+          {
+            binop->get_lhs_operand()->setAttribute("kaapiOUT", (AstAttribute*)-1);
+            std::cout << "    inherited LHS " << binop->get_lhs_operand()->class_name() << std::endl;
+          }
+          break;
+      }
+    }
+
+    SgVarRefExp* varref = isSgVarRefExp(n);
+    if (varref !=0)
+    {
+      if (n->getAttribute("kaapiOUT"))
+{
+//        outputvar.insert( std::make_pair(varref->get_symbol(), true) );
+          outputvar[varref->get_symbol()] = true;
+std::cout << varref->get_symbol()->get_name().str() << " " << varref->get_symbol() << " is output" << std::endl;
+}
+      else
+      {
+//        if (outputvar.find(varref->get_symbol()) == outputvar.end())
+//          outputvar.insert( std::make_pair(varref->get_symbol(), false) );
+std::cout << varref->get_symbol()->get_name().str() << " " << varref->get_symbol() << " is input" << std::endl;
+          outputvar[varref->get_symbol()] |= false;
+      }
+    }
+  }
+
+  std::map<SgVariableSymbol*,bool> outputvar;
+};
+
+
+/* Return the list of free variables, ie variable defined outside the scope.
+*/
+void buildFreeVariable(SgScopeStatement* scope)
+{
+  /* set kaapiOUT to all node that are part of lhs of operand */
+  LHSVisitorTraversal lhsvisitor;
+  lhsvisitor.traverse(scope,preorder);
+
+  std::cout << "List of variables in scope:" << scope->class_name() 
+            << " at line:" << scope->get_file_info()->get_line()
+            << std::endl;
+  std::map<SgVariableSymbol*,bool>::iterator i;
+  for (i = lhsvisitor.outputvar.begin(); i != lhsvisitor.outputvar.end(); ++i)
+  {
+    SgName name = i->first->get_name();
+    SgVariableSymbol* sym = scope->lookup_variable_symbol( name );
+    if (sym == 0)
+    {
+      std::cout << "  " << (i->second ? "[OUT var]" : "[IN var] ") 
+                << name << " is defined outside the scope" 
+                << std::endl;
+    }
+  }
+  
+#if 0
+  Rose_STL_Container<SgNode*> listvaref = NodeQuery::querySubTree (scope,V_SgVarRefExp);
+  Rose_STL_Container<SgNode*>::iterator i;
+  for (  i = listvaref.begin(); i != listvaref.end(); i++)
+  {
+    SgName name = isSgVarRefExp(*i)->get_symbol()->get_name();
+    SgVariableSymbol* sym = scope->lookup_variable_symbol( name );
+    if (sym == 0)
+      std::cout << "  -" << name << " is defined outside the scope" 
+                << (isSgVarRefExp(*i)->getAttribute("kaapiOUT") !=0 ? " LHS" : "" )
+                << std::endl;
+//    else
+//      std::cout << "  +" << name << " is defined inside the scope" << std::endl;
+  }
+#endif
+  std::cout << std::endl;
+  
+  
+}
 
 
 /** Transform a loop with independent iteration in an adaptive form
@@ -3227,7 +3335,7 @@ void buildInsertSaveRestoreFrame( SgScopeStatement* forloop )
       - currently the popsize is computed...from scratch ? = N/(K*kaapi_get_concurrency()) as for
       auto-partitionner with intel TBB.
   
-   On success, return a SgScopeStatement that correspond to rewrite of the loop execution.  
+   On success, return a SgScopeStatement that correspond to rewrite of the loop statement.  
 */
 SgScopeStatement* buildConvertLoop2Adaptative( SgScopeStatement* loop )
 {
@@ -3539,14 +3647,13 @@ SgScopeStatement* buildConvertLoop2Adaptative( SgScopeStatement* loop )
   );
   SageInterface::appendStatement( wc_term, bb );
 
-
   /* 
   */
   SageInterface::movePreprocessingInfo( forloop, bb );
 
+//  buildFreeVariable(bb);
   return bb;
 }
-
 
 
 
