@@ -893,23 +893,52 @@ redo_selection:
 #if 1 // handle return value
   if (kta->has_retval)
   {
-    KaapiTaskFormalParam& param = kta->retval;
-    std::ostringstream fieldname;
-    fieldname
-      << "*((" << param.type->unparseToString() << ")"
-      << "thearg->r.data)";
-
-    SgVarRefExp* const retval_expr =
-      SageBuilder::buildOpaqueVarRefExp(fieldname.str(), wrapper_body);
+    // generate: typename res = original_body(xxx);
 
     SgExprStatement* const callStmt = SageBuilder::buildFunctionCallStmt
       (functionDeclaration->get_name(), ret_type, argscall, wrapper_body);
 
-    SgExprStatement* const assign_stmt = SageBuilder::buildAssignStatement
-      (retval_expr, callStmt->get_expression());
-    SageInterface::insertStatement( truearg_decl, assign_stmt, false );
+    SgAssignInitializer* const res_initializer =
+      SageBuilder::buildAssignInitializer(callStmt->get_expression());
 
-    assign_stmt->setAttribute("kaapiwrappercall", (AstAttribute*)-1);
+    static const char* const res_name = "res";
+    SgVariableDeclaration* const res_decl = SageBuilder::buildVariableDeclaration
+      (res_name, ret_type, res_initializer, wrapper_body);
+
+    SageInterface::appendStatement(res_decl, wrapper_body);
+    res_initializer->setAttribute("kaapiwrappercall", (AstAttribute*)-1);
+
+    // generate: if (fu->r.data != NULL) *fu->r.data = res;
+    // todo: iamlazymode == 1 ...
+
+    std::ostringstream zero("0");
+    SgExpression* const zero_expr = SageBuilder::buildOpaqueVarRefExp
+      (zero.str(), wrapper_body);
+    SgExpression* const null_expr = SageBuilder::buildCastExp
+      (zero_expr, SageBuilder::buildPointerType(SageBuilder::buildVoidType()));
+
+    SgPointerType* const ret_ptrtype =
+      SageBuilder::buildPointerType(ret_type);
+
+    SgVarRefExp* const field_expr = SageBuilder::buildOpaqueVarRefExp
+      ("(void*)thearg->r.data", wrapper_body);
+    SgNotEqualOp* const cond_stmt = SageBuilder::buildNotEqualOp
+      (field_expr, null_expr);
+
+    std::ostringstream fieldname;
+    fieldname << "*((" << ret_ptrtype->unparseToString() << ")thearg->r.data)";
+    SgVarRefExp* const retval_expr =
+      SageBuilder::buildOpaqueVarRefExp(fieldname.str(), wrapper_body);
+    SgExpression* const res_expr = SageBuilder::buildVarRefExp
+      ("res", wrapper_body);
+    SgExprStatement* const true_stmt = SageBuilder::buildAssignStatement
+      (retval_expr, res_expr);
+
+    SgStatement* const false_stmt = NULL;
+
+    SgIfStmt* const if_stmt = SageBuilder::buildIfStmt
+      (cond_stmt, true_stmt, false_stmt);
+    SageInterface::appendStatement(if_stmt, wrapper_body);
   }
   else
 #endif // handle return value
@@ -1837,8 +1866,10 @@ bool isValidTaskWithRetValCallExpression(SgFunctionCallExp* fc, SgStatement* sta
           <expression> = <func call>; 
       */
       SgExpression* expr = isSgExprStatement(statement)->get_expression();
-      if (isSgAssignOp(expr) == 0)
-        break;
+
+      if (isSgFunctionCallExp(expr)) return true;
+
+      if (isSgAssignOp(expr) == 0) break;
 
       SgAssignOp* expr_assign = isSgAssignOp( expr );
       if (isSgFunctionCallExp(expr_assign->get_rhs_operand()) != fc)
@@ -2983,26 +3014,35 @@ void buildFunCall2TaskSpawn( OneCall* oc )
     SgExpression* const expr =
       isSgExprStatement(oc->statement)->get_expression();
     SgAssignOp* const assign_op = isSgAssignOp(expr);
+    SgExpression* lhs_ref;
     if (assign_op)
     {
       SgExpression* const lhs_expr = assign_op->get_lhs_operand();
-      SgExpression* const lhs_ref = SageBuilder::buildAddressOfOp(lhs_expr);
-
-      // assign arg->f[last].data = &lhs;
-      SgStatement* assign_stmt;
-      std::ostringstream fieldname;
-      fieldname << arg_name.str() << "->r.data";
-      assign_stmt = SageBuilder::buildExprStatement
-      (
-       SageBuilder::buildAssignOp
-       (
-	SageBuilder::buildOpaqueVarRefExp(fieldname.str(), oc->scope),
-	lhs_ref
-       )
-      );
-      SageInterface::insertStatement(last_statement, assign_stmt, false);
-      last_statement = assign_stmt;
+      lhs_ref = SageBuilder::buildAddressOfOp(lhs_expr);
     } // assign_op
+    else
+    {
+      // build NULL expression
+      std::ostringstream zero("0");
+      SgExpression* const zero_expr =
+	SageBuilder::buildOpaqueVarRefExp(zero.str(), oc->scope);
+      lhs_ref = SageBuilder::buildCastExp
+	(zero_expr, SageBuilder::buildPointerType(SageBuilder::buildVoidType()));
+    }
+
+    SgStatement* assign_stmt;
+    std::ostringstream fieldname;
+    fieldname << arg_name.str() << "->r.data";
+    assign_stmt = SageBuilder::buildExprStatement
+    (
+     SageBuilder::buildAssignOp
+     (
+      SageBuilder::buildOpaqueVarRefExp(fieldname.str(), oc->scope),
+      lhs_ref
+     )
+    );
+    SageInterface::insertStatement(last_statement, assign_stmt, false);
+    last_statement = assign_stmt;
   }
 #endif // handle return value
 
