@@ -92,9 +92,12 @@ void Check(void)
     COUNT8++;
     //Display();
 }
+
+
 /**********************************************/
 /* First queen is inside                      */
 /**********************************************/
+#pragma kaapi task value(y,left,down,right) global(BOARD)
 void Backtrack2(int y, int left, int down, int right)
 {
     int  bitmap, bit;
@@ -121,9 +124,12 @@ void Backtrack2(int y, int left, int down, int right)
         }
     }
 }
+
+
 /**********************************************/
 /* First queen is in the corner               */
 /**********************************************/
+#pragma kaapi task value(y,left,down,right) global(BOARD)
 void Backtrack1(int y, int left, int down, int right)
 {
     int  bitmap, bit;
@@ -146,6 +152,8 @@ void Backtrack1(int y, int left, int down, int right)
         }
     }
 }
+
+
 /**********************************************/
 /* Search of N-Queens                         */
 /**********************************************/
@@ -179,6 +187,7 @@ void NQueens(void)
         LASTMASK |= LASTMASK>>1 | LASTMASK<<1;
         ENDBIT >>= 1;
     }
+#pragma kaapi sync
 
     /* Unique and Total Solutions */
     UNIQUE = COUNT8     + COUNT4     + COUNT2;
@@ -217,6 +226,7 @@ int main(int argc, char** argv)
     printf("<------  N-Queens Solutions  -----> <---- time ---->\n");
     printf(" N:           Total          Unique days hh:mm:ss.--\n");
     SIZE = atoi(argv[1]);
+#pragma kaapi parallel
     {
         starttime = gettime();
         NQueens();

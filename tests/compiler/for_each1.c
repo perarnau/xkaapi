@@ -92,7 +92,8 @@ int main(int argc, char** argv)
 {
   /* initialize the runtime */
   t0 = get_elapsedtime();
-  for (iter = 0; iter < niter; ++iter)
+  iter =0;
+  for (iter =0; iter<niter; ++iter)
   {
     for_each( array, ITEM_COUNT, apply_cos );
   }

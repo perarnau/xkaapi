@@ -53,8 +53,6 @@ int main(int argc, char** argv)
 #pragma kaapi start
   say_hello("Hello World!");
   say_hello("Hello World!");
-#pragma kaapi barrier
 #pragma kaapi finish
-
   return 0;
 }

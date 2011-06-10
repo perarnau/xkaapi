@@ -52,7 +52,7 @@ void fibonacci(long* result, const long n)
     long r1,r2;
     fibonacci( &r1, n-1 );
     fibonacci( &r2, n-2 );
-#pragma kaapi barrier
+#pragma kaapi sync
     *result = r1 + r2;
   }
 }

@@ -90,6 +90,7 @@ libkaapi_la_SOURCES+=\
   thread/kaapi_thread_rdl_print.c \
   thread/kaapi_thread_dfgdot_print.c \
   thread/kaapi_thread_saveframe.c \
+  thread/kaapi_thread_pushpopframe.c \
   thread/kaapi_thread_clear.c \
   thread/kaapi_thread_execframe.c \
   thread/kaapi_thread_execframe_tasklist.c \

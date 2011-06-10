@@ -43,8 +43,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include <sys/time.h>
-#include <iostream>
-#include <algorithm>
 
 /**
 */
@@ -56,58 +54,59 @@ double get_elapsedtime(void)
   return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
 }
 
-
-template<class T>
-void sumop( T& result, const T& value )
-{ result += value; }
-
-#pragma kaapi declare reduction( mysumop: sumop )
-
-#pragma kaapi task read([begin:end]) reduction(mysumop: sum)
-template<class T>
-void accumulate( const T* begin, const T* end, T* sum )
+#pragma kaapi task value(size) write(array[size]) value (op)
+void for_each( double* array, size_t size, void (*op)(double*) )
 {
-  size_t size = (end-begin);
-  if (size < 128)
-  {
-    T tmp = *sum;
-    while (begin != end)
-      tmp += *begin;
-    *sum = tmp;
-  }
-  else {
-    /* simple recursive for_each */
-    size_t med = size/2;
-    accumulate( begin, begin+med, sum);
-    accumulate( begin + med, end, sum);
-  }
+  for (size_t i=0; i<size; ++i)
+    op(&array[i]);
 }
 
 
 /**
  */
-int main(int ac, char** av)
+static void apply_cos( double* v )
+{
+  *v += cos(*v);
+}
+
+/**
+ */
+int main(int argc, char** argv)
 {
   double t0,t1;
   double sum = 0.f;
-  double result;
+  size_t i;
   size_t iter;
-  size_t size;
+  size_t iter2;
+  size_t niter;
+  int n = 3;
   
-  if (ac >1)
-    size = atoi(av[1]); 
+  niter = atoi(argv[1]);
+  
+#define ITEM_COUNT 100000
+  static double array[ITEM_COUNT];
 
-  double* array = new double[size];
+  /* initialize, apply, check */
+  for (i = 0; i < ITEM_COUNT; ++i)
+    array[i] = 0.f;
   
+#pragma kaapi parallel 
+{
   /* initialize the runtime */
-#pragma kaapi parallel
+  t0 = get_elapsedtime();
+  iter =0;
+  #pragma kaapi loop
+  for (iter =0; iter<niter; iter += n)
   {
-    t0 = get_elapsedtime();
-    for (iter = 0; iter < 100; ++iter)
-      accumulate( array, array+size, &result);
-    t1 = get_elapsedtime();
-    sum += (t1-t0)*1000; /* ms */
+    #pragma kaapi loop
+    for (iter2 =0; iter2<niter; iter2 += 4)
+    {
+      apply_cos(&array[iter*n+iter2]);
+    }
   }
+  t1 = get_elapsedtime();
+  sum += (t1-t0)*1000/niter; /* ms */
+}
 
   printf("done: %lf (ms)\n", sum / 100);
 

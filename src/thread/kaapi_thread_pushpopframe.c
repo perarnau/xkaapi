@@ -1,7 +1,8 @@
 /*
 ** xkaapi
 ** 
-** Copyright 2011 INRIA.
+** Created on Tue Mar 31 15:19:14 2009
+** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
@@ -40,76 +41,29 @@
 ** terms.
 ** 
 */
-#include <stdlib.h>
-#include <math.h>
-#include <sys/time.h>
-#include <iostream>
-#include <algorithm>
+#include "kaapi_impl.h"
 
 /**
 */
-double get_elapsedtime(void)
+kaapi_thread_t* kaapi_thread_push_frame( void )
 {
-  struct timeval tv;
-  int err = gettimeofday( &tv, 0);
-  if (err  !=0) return 0;
-  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
-}
-
-
-template<class T>
-void sumop( T& result, const T& value )
-{ result += value; }
-
-#pragma kaapi declare reduction( mysumop: sumop )
-
-#pragma kaapi task read([begin:end]) reduction(mysumop: sum)
-template<class T>
-void accumulate( const T* begin, const T* end, T* sum )
-{
-  size_t size = (end-begin);
-  if (size < 128)
-  {
-    T tmp = *sum;
-    while (begin != end)
-      tmp += *begin;
-    *sum = tmp;
-  }
-  else {
-    /* simple recursive for_each */
-    size_t med = size/2;
-    accumulate( begin, begin+med, sum);
-    accumulate( begin + med, end, sum);
-  }
+  kaapi_thread_context_t* thread = kaapi_self_thread_context();
+  kaapi_frame_t* fp = (kaapi_frame_t*)thread->sfp;
+  /* save the top frame */
+  thread->sfp[1].sp_data   = fp->sp_data;
+  thread->sfp[1].pc        = fp->sp;
+  thread->sfp[1].sp        = fp->sp;
+  /* push a new frame */
+  return (kaapi_thread_t*)++thread->sfp;
 }
 
 
 /**
- */
-int main(int ac, char** av)
+*/
+kaapi_thread_t*  kaapi_thread_pop_frame( void )
 {
-  double t0,t1;
-  double sum = 0.f;
-  double result;
-  size_t iter;
-  size_t size;
-  
-  if (ac >1)
-    size = atoi(av[1]); 
-
-  double* array = new double[size];
-  
-  /* initialize the runtime */
-#pragma kaapi parallel
-  {
-    t0 = get_elapsedtime();
-    for (iter = 0; iter < 100; ++iter)
-      accumulate( array, array+size, &result);
-    t1 = get_elapsedtime();
-    sum += (t1-t0)*1000; /* ms */
-  }
-
-  printf("done: %lf (ms)\n", sum / 100);
-
-  return 0;
+  kaapi_thread_context_t* thread = kaapi_self_thread_context();
+  return (kaapi_thread_t*)--thread->sfp;
+  return 0;  
 }
+
