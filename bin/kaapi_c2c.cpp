@@ -1812,8 +1812,14 @@ public:
         return;
       if (exprstatement->getAttribute("kaapiwrappercall") !=0) 
         return; /* call made by the wrapper do not replace it by task creation */
-        
-      SgFunctionCallExp* fc = isSgFunctionCallExp( exprstatement->get_expression() );
+
+      SgFunctionCallExp* fc;
+      SgAssignOp* const assign_op = isSgAssignOp(exprstatement->get_expression());
+      if (assign_op)
+	fc = isSgFunctionCallExp( assign_op->get_rhs_operand() );
+      else
+	fc = isSgFunctionCallExp( exprstatement->get_expression() );
+
       if (fc !=0)
       {
         SgFunctionDeclaration* fdecl = fc->getAssociatedFunctionDeclaration();
@@ -2860,28 +2866,25 @@ void buildFunCall2TaskSpawn( OneCall* oc )
   }
 
 #if 1 // handle return value
-  if (oc->kta->has_retval)
-  {
-    printf("handling return value\n");
+  // SgAssignStatement* const assign_stmt = isSgAssignStatement(oc->statement);
+  // if (assign_stmt) printf("isAnAssign\n");
 
-    // TODO: retrieve the lhs part...
-    SgNode* const lhs_node = oc->statement->get_traversalSuccessorByIndex(0);
+  SgAssignOp* const assign_op = isSgAssignOp(oc->statement->get_expression());
+  if (oc->kta->has_retval && assign_op)
+  {
+    SgExpression* const lhs_expr = assign_op->get_lhs_operand();
+    SgExpression* const lhs_ref = SageBuilder::buildAddressOfOp(lhs_expr);
 
     // assign arg->f[last].data = &lhs;
     SgStatement* assign_stmt;
     std::ostringstream fieldname;
     fieldname << arg_name.str() << "->f" << i << ".data";
-    assign_statement = SageBuilder::buildExprStatement
+    assign_stmt = SageBuilder::buildExprStatement
     (
      SageBuilder::buildAssignOp
      (
       SageBuilder::buildOpaqueVarRefExp(fieldname.str(), oc->bb),
-      SageBuilder::buildCastExp
-      (
-       lhs_node,
-       SageBuilder::buildPointerType
-       (SageBuilder::buildVoidType())
-      )
+      lhs_ref
      )
     );
     SageInterface::insertStatement(last_statement, assign_stmt, false);
