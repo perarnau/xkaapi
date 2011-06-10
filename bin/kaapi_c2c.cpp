@@ -769,7 +769,10 @@ redo_selection:
 
     param.mode = KAAPI_W_MODE;
     param.redop = NULL;
-    param.attr = NULL;
+    param.attr = new KaapiParamAttribute;
+    param.attr->type = KAAPI_ARRAY_NDIM_TYPE;
+    param.attr->storage = KAAPI_COL_MAJOR;
+    param.attr->dim = 0;
     param.initname = init_name;
     param.type = ret_ptrtype;
     param.kaapi_format = ConvertCType2KaapiFormat
@@ -892,23 +895,52 @@ redo_selection:
 #if 1 // handle return value
   if (kta->has_retval)
   {
-    KaapiTaskFormalParam& param = kta->retval;
-    std::ostringstream fieldname;
-    fieldname
-      << "*((" << param.type->unparseToString() << ")"
-      << "thearg->r.data)";
-
-    SgVarRefExp* const retval_expr =
-      SageBuilder::buildOpaqueVarRefExp(fieldname.str(), wrapper_body);
+    // generate: typename res = original_body(xxx);
 
     SgExprStatement* const callStmt = SageBuilder::buildFunctionCallStmt
       (functionDeclaration->get_name(), ret_type, argscall, wrapper_body);
 
-    SgExprStatement* const assign_stmt = SageBuilder::buildAssignStatement
-      (retval_expr, callStmt->get_expression());
-    SageInterface::insertStatement( truearg_decl, assign_stmt, false );
+    SgAssignInitializer* const res_initializer =
+      SageBuilder::buildAssignInitializer(callStmt->get_expression());
 
-    assign_stmt->setAttribute("kaapiwrappercall", (AstAttribute*)-1);
+    static const char* const res_name = "res";
+    SgVariableDeclaration* const res_decl = SageBuilder::buildVariableDeclaration
+      (res_name, ret_type, res_initializer, wrapper_body);
+
+    SageInterface::appendStatement(res_decl, wrapper_body);
+    res_initializer->setAttribute("kaapiwrappercall", (AstAttribute*)-1);
+
+    // generate: if (fu->r.data != NULL) *fu->r.data = res;
+    // todo: iamlazymode == 1 ...
+
+    std::ostringstream zero("0");
+    SgExpression* const zero_expr = SageBuilder::buildOpaqueVarRefExp
+      (zero.str(), wrapper_body);
+    SgExpression* const null_expr = SageBuilder::buildCastExp
+      (zero_expr, SageBuilder::buildPointerType(SageBuilder::buildVoidType()));
+
+    SgPointerType* const ret_ptrtype =
+      SageBuilder::buildPointerType(ret_type);
+
+    SgVarRefExp* const field_expr = SageBuilder::buildOpaqueVarRefExp
+      ("(void*)thearg->r.data", wrapper_body);
+    SgNotEqualOp* const cond_stmt = SageBuilder::buildNotEqualOp
+      (field_expr, null_expr);
+
+    std::ostringstream fieldname;
+    fieldname << "*((" << ret_ptrtype->unparseToString() << ")thearg->r.data)";
+    SgVarRefExp* const retval_expr =
+      SageBuilder::buildOpaqueVarRefExp(fieldname.str(), wrapper_body);
+    SgExpression* const res_expr = SageBuilder::buildVarRefExp
+      ("res", wrapper_body);
+    SgExprStatement* const true_stmt = SageBuilder::buildAssignStatement
+      (retval_expr, res_expr);
+
+    SgStatement* const false_stmt = NULL;
+
+    SgIfStmt* const if_stmt = SageBuilder::buildIfStmt
+      (cond_stmt, true_stmt, false_stmt);
+    SageInterface::appendStatement(if_stmt, wrapper_body);
   }
   else
 #endif // handle return value
@@ -978,6 +1010,21 @@ void Parser::DoKaapiPragmaNoTask( SgPragmaDeclaration* sgp )
 
 /**
 */
+
+static inline void KaapiGenerateMode
+(std::ostream& fout, enum KaapiAccessMode_t mode)
+{
+  switch (mode) {
+ case KAAPI_V_MODE: fout << "    KAAPI_ACCESS_MODE_V, "; break;
+ case KAAPI_W_MODE: fout << "    KAAPI_ACCESS_MODE_W, "; break;
+ case KAAPI_R_MODE: fout << "    KAAPI_ACCESS_MODE_R, "; break;
+ case KAAPI_RW_MODE:fout << "    KAAPI_ACCESS_MODE_RW, "; break;
+ case KAAPI_CW_MODE:fout << "    KAAPI_ACCESS_MODE_CW, "; break;
+ default:
+   break;
+  }
+}
+
 void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
 {
   std::cout << "****[kaapi_c2c] Task's generation format for function: " << kta->func_decl->get_name().str()
@@ -1010,17 +1057,12 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
        << "{ \n"
        << "  static kaapi_access_mode_t mode_param[] = {\n";
   for (unsigned int i=0; i < kta->formal_param.size(); ++i)
-  {
-    switch (kta->formal_param[i].mode) {
-      case KAAPI_V_MODE: fout << "    KAAPI_ACCESS_MODE_V, "; break;
-      case KAAPI_W_MODE: fout << "    KAAPI_ACCESS_MODE_W, "; break;
-      case KAAPI_R_MODE: fout << "    KAAPI_ACCESS_MODE_R, "; break;
-      case KAAPI_RW_MODE:fout << "    KAAPI_ACCESS_MODE_RW, "; break;
-      case KAAPI_CW_MODE:fout << "    KAAPI_ACCESS_MODE_CW, "; break;
-      default:
-        break;
-    }
-  }
+    KaapiGenerateMode(fout, kta->formal_param[i].mode);
+
+#if 1 // handle return value
+  if (kta->has_retval) KaapiGenerateMode(fout, kta->retval.mode);
+#endif // handle return value
+
   fout << "    KAAPI_ACCESS_MODE_VOID\n  };\n"; /* marker for end of mode */
   fout << "  return mode_param[i];\n"
        << "}\n" 
@@ -1034,6 +1076,10 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
   {
     fout << "    case " << i << ": return &arg->f" << i << ";\n";
   }
+#if 1 // handle return value
+  if (kta->has_retval)
+    fout << "    case " << kta->formal_param.size() << ": return &arg->r;\n";
+#endif // handle return value
   fout << "  }\n"
        << "  return 0;\n"
        << "}\n"
@@ -1051,6 +1097,17 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
     else
       fout << "    case " << i << ": retval = arg->f" << i << "; break; \n" ;/* because it is an access here */
   }
+
+#if 1 // handle return value
+  if (kta->has_retval)
+  {
+    const unsigned int i = kta->formal_param.size();
+    fout << "    case " << i << ": ";
+    fout << "retval = arg->r;";
+    fout << "break;\n";
+  }
+#endif // handle return value
+
   fout << "  }\n"
        << "  return retval;\n"
        << "}\n"
@@ -1066,6 +1123,16 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
     if (kta->formal_param[i].mode != KAAPI_V_MODE)
       fout << "    case " << i << ": arg->f" << i << " = *a" << "; return; \n"; /* because it is an access here */
   }
+
+#if 1 // handle return value
+  if (kta->has_retval)
+  {
+    const unsigned int i = kta->formal_param.size();
+    // we know this is an access
+    fout << "    case " << i << ": arg->r = *a; return; \n";
+  }
+#endif // handle return value
+
   fout << "  }\n"
        << "}\n"
        << std::endl;
@@ -1076,6 +1143,15 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
        << "  switch (i) {\n";
   for (unsigned int i=0; i < kta->formal_param.size(); ++i)
     fout << "    case " << i << ": return " << kta->formal_param[i].kaapi_format << ";\n";
+
+#if 1 // handle return value
+  if (kta->has_retval)
+  {
+    const unsigned int i = kta->formal_param.size();
+    fout << "    case " << i << ": return " << kta->retval.kaapi_format << ";\n";
+  }
+#endif // handle return value
+
   fout << "  }\n"
        << "}\n"
        << std::endl;
@@ -1145,6 +1221,37 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
       }
     }
   }
+
+#if 1 // handle return value
+  if (kta->has_retval)
+  {
+    const unsigned int i = kta->formal_param.size();
+    SgPointerType* const ptrtype = isSgPointerType(kta->retval.type);
+    if (ptrtype ==0) KaapiAbort("**** Error: bad internal assertion");
+
+    SgType* type = ptrtype->get_base_type();
+    while (isSgTypedefType(type))
+      type = isSgTypedefType(type)->get_base_type();
+
+    if (kta->retval.attr->type == KAAPI_ARRAY_NDIM_TYPE)
+    {
+      if (kta->retval.attr->dim == 0) /* in fact single element */
+      {
+	fout << "    case " << i << ": return kaapi_memory_view_make1d( 1" 
+	     << ", sizeof(" << type->unparseToString() << "));\n";
+      }
+      else
+      {
+	KaapiAbort("**** Error: bad internal assertion");	
+      }
+    }
+    else
+    {
+      KaapiAbort("**** Error: bad internal assertion");
+    }
+  }
+#endif // handle return value
+
   fout << "  }\n"
        << "}\n"
        << std::endl;
@@ -1761,8 +1868,10 @@ bool isValidTaskWithRetValCallExpression(SgFunctionCallExp* fc, SgStatement* sta
           <expression> = <func call>; 
       */
       SgExpression* expr = isSgExprStatement(statement)->get_expression();
-      if (isSgAssignOp(expr) == 0)
-        break;
+
+      if (isSgFunctionCallExp(expr)) return true;
+
+      if (isSgAssignOp(expr) == 0) break;
 
       SgAssignOp* expr_assign = isSgAssignOp( expr );
       if (isSgFunctionCallExp(expr_assign->get_rhs_operand()) != fc)
@@ -2864,11 +2973,10 @@ void buildFunCall2TaskSpawn( OneCall* oc )
     last_statement = assign_statement;
   }
 
-#if 1 // handle return value
+#if 0 // handle return value
   if (oc->kta->has_retval)
   {
     printf("handling return value\n");
-
     // TODO: retrieve the lhs part...
     SgExpression* lhs_node = 0;
     switch (oc->statement->variantT()) 
@@ -2885,7 +2993,6 @@ void buildFunCall2TaskSpawn( OneCall* oc )
       default:
         KaapiAbort("**** Internal error"); /* isValid... was not call ? */
     }
-      
 
     // assign arg->f[last].data = &lhs;
     SgStatement* assign_stmt;
@@ -2899,6 +3006,42 @@ void buildFunCall2TaskSpawn( OneCall* oc )
           SageBuilder::buildPointerType(SageBuilder::buildVoidType())
         )
       )
+    );
+    SageInterface::insertStatement(last_statement, assign_stmt, false);
+    last_statement = assign_stmt;
+  }
+#else
+  if (oc->kta->has_retval)
+  {
+    SgExpression* const expr =
+      isSgExprStatement(oc->statement)->get_expression();
+    SgAssignOp* const assign_op = isSgAssignOp(expr);
+    SgExpression* lhs_ref;
+    if (assign_op)
+    {
+      SgExpression* const lhs_expr = assign_op->get_lhs_operand();
+      lhs_ref = SageBuilder::buildAddressOfOp(lhs_expr);
+    } // assign_op
+    else
+    {
+      // build NULL expression
+      std::ostringstream zero("0");
+      SgExpression* const zero_expr =
+	SageBuilder::buildOpaqueVarRefExp(zero.str(), oc->scope);
+      lhs_ref = SageBuilder::buildCastExp
+	(zero_expr, SageBuilder::buildPointerType(SageBuilder::buildVoidType()));
+    }
+
+    SgStatement* assign_stmt;
+    std::ostringstream fieldname;
+    fieldname << arg_name.str() << "->r.data";
+    assign_stmt = SageBuilder::buildExprStatement
+    (
+     SageBuilder::buildAssignOp
+     (
+      SageBuilder::buildOpaqueVarRefExp(fieldname.str(), oc->scope),
+      lhs_ref
+     )
     );
     SageInterface::insertStatement(last_statement, assign_stmt, false);
     last_statement = assign_stmt;
@@ -4854,4 +4997,3 @@ redo:
   if (c == EOF) return;
   goto redo;
 }
-
