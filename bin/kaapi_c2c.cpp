@@ -2026,7 +2026,14 @@ private:
 
   static inline bool is_returned_call(SgNode* node)
   {
-    return node->variantT() == V_SgReturnStmt;
+    node = node->get_parent();
+    while (node)
+    {
+      if (node->variantT() == V_SgReturnStmt)
+	return true;
+      node = node->get_parent();
+    }
+    return false;
   }
 
 public:
@@ -2053,9 +2060,9 @@ public:
     // this is only for retvaled calls
     if ((kta == NULL) || (kta->has_retval == false)) return ;
 
-    if (is_nested_call(node))
+    if (is_nested_call(node) || is_returned_call(node))
     {
-      // code transformation:
+      // nested call code transformation:
       // <<<
       // bar(fu(42), fu(24));
       // >>>
@@ -2066,8 +2073,15 @@ public:
       // __tmp_yyy = fu(24);
       // kaapi_sched_sync();
       // bar(__tmp_xxx, __tmp_yyy);
-
-      printf("NESTED_CALL(%lu)\n", call_expr->get_file_info()->get_line());
+      //
+      // returned call code transformation:
+      // <<<
+      // return fu(42) + 5;
+      // >>>
+      // type __tmp_xxx;
+      // __tmp_xxx = fu(42);
+      // kaapi_sched_sync();
+      // return __tmp_xxx + 5;
 
       // create a tmp variable
       std::string tmp_name =
@@ -2101,13 +2115,9 @@ public:
 	);
       SageInterface::insertStatement(assign_stmt, sync_stmt, false);
 
-      // todo: replace nested call by tmp
+      // replace by tmp
       SgExpression* const parent_expr =	isSgExpression(prev_parent);
       parent_expr->replace_expression(call_expr, tmp_expr);
-    }
-    else if (is_returned_call(node))
-    {
-      // TODO
     }
   }
 };

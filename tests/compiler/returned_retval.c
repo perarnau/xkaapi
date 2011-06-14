@@ -10,7 +10,7 @@ static double fu(double n)
 
 static double bar(double m, double n)
 {
-  return fu(m) + n;
+  return fu(m) + fu(n);
 }
 
 int main(int ac, char** av)
@@ -19,7 +19,7 @@ int main(int ac, char** av)
 
 #pragma kaapi start
   {
-    res = bar(41, 1);
+    res = bar(40, 0);
   }
 #pragma kaapi barrier
 #pragma kaapi finish
