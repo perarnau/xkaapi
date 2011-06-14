@@ -2130,7 +2130,7 @@ public:
 
 // kaapi mode analysis
 
-void DoKaapiModeAnalysis(void)
+bool DoKaapiModeAnalysis(void)
 {
   ListTaskFunctionDeclaration::iterator pos = all_task_func_decl.begin();
   ListTaskFunctionDeclaration::iterator end = all_task_func_decl.end();
@@ -2154,9 +2154,25 @@ void DoKaapiModeAnalysis(void)
     for (; wpos != wend; ++wpos)
     {
       // todo: recurse
-      printf("WRITE(%s)\n", (*wpos)->get_qualified_name().str());
+
+      std::map<std::string, int>::iterator iparam =
+	kta->lookup.find((*wpos)->get_qualified_name().str());
+      if (iparam == kta->lookup.end()) continue ;
+
+      KaapiTaskFormalParam& param = kta->formal_param[iparam->second];
+      if (param.mode == KAAPI_W_MODE) continue ;
+      else if (param.mode == KAAPI_RW_MODE) continue ;
+      else if (param.mode == KAAPI_CW_MODE) continue ;
+      else if (param.mode == KAAPI_GLOBAL_MODE) continue ;
+
+      // invalid access
+      printf("INVALID_WRITE(%s)\n", (*wpos)->get_qualified_name().str());
+
+      return false;
     }
   }
+
+  return true;
 }
 
 
