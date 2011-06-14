@@ -1912,20 +1912,6 @@ public:
   KaapiTaskCallTraversal()
   {}
 
-#if 0 // TODO_NESTED_CALL
-  static bool is_nested_call(SgNode* node)
-  {
-    node = node->get_parent();
-    while (node)
-    {
-      if (isSgFunctionCallExp(node))
-	return true;
-      node = node->get_parent();
-    }
-    return false;
-  }
-#endif // TODO_NESTED_CALL
-
   virtual void visit(SgNode* node)
   {
     /* propagate the parallelregion attribut to all nodes which has parent within */
@@ -1960,61 +1946,6 @@ public:
 
             if ((kta->has_retval) && isValidTaskWithRetValCallExpression(fc, exprstatement ))
 	    {
-#if 0 // TODO_NESTED_CALL
-	      if (is_nested_call(node))
-	      {
-		// code transformation:
-		// <<<
-		// bar(fu(42), fu(24));
-		// >>>
- 		// type __tmp_xxx;
- 		// type __tmp_yyy;
-		// __tmp_xxx = fu(42);
-		// kaapi_sched_sync();
-		// __tmp_yyy = fu(24);
-		// kaapi_sched_sync();
-		// bar(__tmp_xxx, __tmp_yyy);
-
-		printf("NESTED_CALL(%lu)\n", fc->get_file_info()->get_line());
-
-		const char* const tmp_name = "__kaapi_tmp";
-
-		// create a tmp varible
-		SgType* const tmp_type =
-		  isSgPointerType(kta->retval.type)->get_base_type();
-		SgVariableDeclaration* const tmp_decl =
-		  SageBuilder::buildVariableDeclaration
-		  (tmp_name, tmp_type, 0, scope);
-		SageInterface::prependStatement(tmp_decl, scope);
-
-		// assign call to tmp
-		SgExpression* const tmp_expr =
-		  SageBuilder::buildVarRefExp(tmp_name, scope);
-		SgStatement* const assign_stmt =
-		  SageBuilder::buildAssignStatement(tmp_expr, fc);
-		SageInterface::insertStatement(exprstatement, assign_stmt);
-
-		// kaapi_sched_sync();
-		SgExprStatement* sync_stmt =
-		  SageBuilder::buildFunctionCallStmt
-		  (
-		   "kaapi_sched_sync", 
-		   SageBuilder::buildIntType(), 
-		   SageBuilder::buildExprListExp(),
-		   scope
-		  );
-		SageInterface::insertStatement(assign_stmt, sync_stmt, false);
-
-		// todo: replace nested call by tmp
-		SgExpression* const parent_expr =
-		  isSgExpression(node->get_parent());
-		parent_expr->replace_expression(fc, tmp_expr);
-		// SageInterface::replaceExpression(fc, tmp_expr);
-		// todo: make a new statement
-		// exprstatement = newstatement();
-	      }
-#endif // TODO_NESTED_CALL
-
               _listcall.push_back( OneCall(scope, fc, exprstatement, kta, loop) );
 	    }
 
@@ -2071,6 +2002,115 @@ void DoKaapiTaskCall( KaapiTaskCallTraversal* ktct, SgGlobal* gscope )
     buildFunCall2TaskSpawn( &oc );
   }
 }
+
+
+class KaapiSSATraversal : public AstSimpleProcessing
+{
+  // turn every call into a single assignement form
+  // let fu be a task function
+  // bar(fu(42)); -> tmp = fu(42); bar(tmp);
+  // return fu(42); -> tmp = fu(42); return tmp;
+
+private:
+  static bool is_nested_call(SgNode* node)
+  {
+    node = node->get_parent();
+    while (node)
+    {
+      if (isSgFunctionCallExp(node))
+	return true;
+      node = node->get_parent();
+    }
+    return false;
+  }
+
+  static inline bool is_returned_call(SgNode* node)
+  {
+    return node->variantT() == V_SgReturnStmt;
+  }
+
+public:
+  KaapiSSATraversal()
+  {
+  }
+
+  virtual void visit(SgNode* node)
+  {
+    SgFunctionCallExp* const call_expr = isSgFunctionCallExp(node);
+    if (call_expr == NULL) return ;
+
+    SgStatement* const call_stmt =
+      SageInterface::getEnclosingStatement(call_expr);
+    if (call_stmt->getAttribute("kaapinotask") != 0) return ;
+    if (call_stmt->getAttribute("kaapiwrappercall") != 0) return ;
+
+    SgFunctionDeclaration* const func_decl =
+      call_expr->getAssociatedFunctionDeclaration();
+    SgScopeStatement* const scope = SageInterface::getScope(call_expr);
+    KaapiTaskAttribute* const kta = (KaapiTaskAttribute*)
+      func_decl->getAttribute("kaapitask");
+
+    // this is only for retvaled calls
+    if ((kta == NULL) || (kta->has_retval == false)) return ;
+
+    if (is_nested_call(node))
+    {
+      // code transformation:
+      // <<<
+      // bar(fu(42), fu(24));
+      // >>>
+      // type __tmp_xxx;
+      // type __tmp_yyy;
+      // __tmp_xxx = fu(42);
+      // kaapi_sched_sync();
+      // __tmp_yyy = fu(24);
+      // kaapi_sched_sync();
+      // bar(__tmp_xxx, __tmp_yyy);
+
+      printf("NESTED_CALL(%lu)\n", call_expr->get_file_info()->get_line());
+
+      // create a tmp variable
+      std::string tmp_name =
+	SageInterface::generateUniqueName(node, true);
+      SgType* const tmp_type =
+	isSgPointerType(kta->retval.type)->get_base_type();
+      SgVariableDeclaration* const tmp_decl =
+	SageBuilder::buildVariableDeclaration
+	(tmp_name, tmp_type, 0, scope);
+      SageInterface::prependStatement(tmp_decl, scope);
+
+      // save parent
+      SgNode* const prev_parent = node->get_parent();
+
+      // assign call to tmp
+      SgExpression* const tmp_expr =
+	SageBuilder::buildVarRefExp(tmp_name, scope);
+      SgStatement* const assign_stmt =
+	SageBuilder::buildAssignStatement(tmp_expr, call_expr);
+      assign_stmt->set_file_info(call_stmt->get_file_info());
+      SageInterface::insertStatement(call_stmt, assign_stmt);
+
+      // kaapi_sched_sync();
+      SgExprStatement* sync_stmt =
+	SageBuilder::buildFunctionCallStmt
+	(
+	 "kaapi_sched_sync", 
+	 SageBuilder::buildIntType(), 
+	 SageBuilder::buildExprListExp(),
+	 scope
+	);
+      SageInterface::insertStatement(assign_stmt, sync_stmt, false);
+
+      // todo: replace nested call by tmp
+      SgExpression* const parent_expr =	isSgExpression(prev_parent);
+      parent_expr->replace_expression(call_expr, tmp_expr);
+    }
+    else if (is_returned_call(node))
+    {
+      // TODO
+    }
+  }
+};
 
 
 /* Apply to every pragma to process #pragma kaapi 
@@ -2550,6 +2590,9 @@ int main(int argc, char **argv)
           parser.DoKaapiTaskDeclaration( func_decl_i->first );
         }      
 
+	// turn call into ssa form
+        KaapiSSATraversal ssa_traversal;
+        ssa_traversal.traverse(project,preorder);
 
         /* traverse all the expression inside the project and try to find function call expr or statement 
            and replace them by task creation if the instruction is in a kaapiisparallelregion.
