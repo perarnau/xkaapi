@@ -1884,11 +1884,10 @@ bool isValidTaskWithRetValCallExpression(SgFunctionCallExp* fc, SgStatement* sta
 */
     case V_SgAssignStatement:   /* var = expr, var == sg->get_label() and expr == sg->get_value() */
       return true;
-  
 
 /* NOT Accepted */
     case V_SgVariableDefinition:/* in sg->get_vardefn()->get_initializer() (an SgExpression*) */
-    case V_SgReturnStmt:        /* return expr , expr == sg->get_expression() */
+    case V_SgReturnStmt:	/* return expr , expr == sg->get_expression() */
     case V_SgForInitStatement:  /* may be in the SgStatement of the initialization list (get_init_stmt)
                                    but in that case, EnclosingStatement should have returned one of the concrete
                                    statement
@@ -1914,6 +1913,21 @@ class KaapiTaskCallTraversal : public AstSimpleProcessing {
 public:
   KaapiTaskCallTraversal()
   {}
+
+#if 0 // TODO_NESTED_CALL
+  static bool is_nested_call(SgNode* node)
+  {
+    node = node->get_parent();
+    while (node)
+    {
+      if (isSgFunctionCallExp(node))
+	return true;
+      node = node->get_parent();
+    }
+    return false;
+  }
+#endif // TODO_NESTED_CALL
+
   virtual void visit(SgNode* node)
   {
     /* propagate the parallelregion attribut to all nodes which has parent within */
@@ -1928,7 +1942,7 @@ public:
     {
       SgFunctionCallExp* fc = isSgFunctionCallExp(node);
       SgStatement* exprstatement = SageInterface::getEnclosingStatement( fc );
-      
+
       if (exprstatement->getAttribute("kaapinotask") !=0) 
         return;
       if (exprstatement->getAttribute("kaapiwrappercall") !=0) 
@@ -1947,7 +1961,64 @@ public:
             SgScopeStatement* loop = SageInterface::findEnclosingLoop( exprstatement );
 
             if ((kta->has_retval) && isValidTaskWithRetValCallExpression(fc, exprstatement ))
+	    {
+#if 0 // TODO_NESTED_CALL
+	      if (is_nested_call(node))
+	      {
+		// code transformation:
+		// <<<
+		// bar(fu(42), fu(24));
+		// >>>
+ 		// type __tmp_xxx;
+ 		// type __tmp_yyy;
+		// __tmp_xxx = fu(42);
+		// kaapi_sched_sync();
+		// __tmp_yyy = fu(24);
+		// kaapi_sched_sync();
+		// bar(__tmp_xxx, __tmp_yyy);
+
+		printf("NESTED_CALL(%lu)\n", fc->get_file_info()->get_line());
+
+		const char* const tmp_name = "__kaapi_tmp";
+
+		// create a tmp varible
+		SgType* const tmp_type =
+		  isSgPointerType(kta->retval.type)->get_base_type();
+		SgVariableDeclaration* const tmp_decl =
+		  SageBuilder::buildVariableDeclaration
+		  (tmp_name, tmp_type, 0, scope);
+		SageInterface::prependStatement(tmp_decl, scope);
+
+		// assign call to tmp
+		SgExpression* const tmp_expr =
+		  SageBuilder::buildVarRefExp(tmp_name, scope);
+		SgStatement* const assign_stmt =
+		  SageBuilder::buildAssignStatement(tmp_expr, fc);
+		SageInterface::insertStatement(exprstatement, assign_stmt);
+
+		// kaapi_sched_sync();
+		SgExprStatement* sync_stmt =
+		  SageBuilder::buildFunctionCallStmt
+		  (
+		   "kaapi_sched_sync", 
+		   SageBuilder::buildIntType(), 
+		   SageBuilder::buildExprListExp(),
+		   scope
+		  );
+		SageInterface::insertStatement(assign_stmt, sync_stmt, false);
+
+		// todo: replace nested call by tmp
+		SgExpression* const parent_expr =
+		  isSgExpression(node->get_parent());
+		parent_expr->replace_expression(fc, tmp_expr);
+		// SageInterface::replaceExpression(fc, tmp_expr);
+		// todo: make a new statement
+		// exprstatement = newstatement();
+	      }
+#endif // TODO_NESTED_CALL
+
               _listcall.push_back( OneCall(scope, fc, exprstatement, kta, loop) );
+	    }
 
 if (loop !=0)
 std::cout << "Find enclosing loop of a task declaration:" << loop->class_name() << std::endl
