@@ -2105,6 +2105,10 @@ public:
       SageInterface::insertStatement(call_stmt, assign_stmt);
 
       // kaapi_sched_sync();
+      // TODO: associate the list of variable to be synchronized
+      // as a call_expr attribute. add every synced variable to
+      // this list and generate the kaapi_sched_sync(list) at
+      // finalization time (to solve: what is finalization time).
       SgExprStatement* sync_stmt =
 	SageBuilder::buildFunctionCallStmt
 	(

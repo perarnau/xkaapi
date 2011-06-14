@@ -18,7 +18,7 @@ int main(int ac, char** av)
 
 #pragma kaapi start
   {
-    res = bar(fu(11), fu(29));
+    res = bar(fu(10) + fu(0), fu(29));
   }
 #pragma kaapi barrier
 #pragma kaapi finish
