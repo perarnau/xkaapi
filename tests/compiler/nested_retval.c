@@ -4,7 +4,6 @@
 #pragma kaapi task value(n)
 static double fu(double n)
 {
-  /* printf("%s(%lf)\n", __FUNCTION__, n); */
   return n + 1;
 }
 
@@ -19,8 +18,7 @@ int main(int ac, char** av)
 
 #pragma kaapi start
   {
-    /* bar(fu(42), fu(24)); */
-    res = bar(fu(40), 1);
+    res = bar(fu(11), fu(29));
   }
 #pragma kaapi barrier
 #pragma kaapi finish
