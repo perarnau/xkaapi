@@ -49,6 +49,7 @@
 #include <iostream>
 #include <map>
 #include <list>
+#include <set>
 #include <sstream>
 #include <iomanip>
 #include <ctype.h>
@@ -2127,6 +2128,38 @@ public:
 };
 
 
+// kaapi mode analysis
+
+void DoKaapiModeAnalysis(void)
+{
+  ListTaskFunctionDeclaration::iterator pos = all_task_func_decl.begin();
+  ListTaskFunctionDeclaration::iterator end = all_task_func_decl.end();
+
+  for (; pos != end; ++pos)
+  {
+    SgFunctionDeclaration* const func_decl = pos->first;
+    SgStatement* const func_stmt = isSgStatement(func_decl);
+    // assume(func_stmt);
+
+    KaapiTaskAttribute* const kta = (KaapiTaskAttribute*)
+      func_decl->getAttribute("kaapitask");
+    // assume(kta);
+
+    std::set<SgInitializedName*> rvars, wvars;
+    SageInterface::collectReadWriteVariables(func_stmt, rvars, wvars);
+
+    // check all write operations are allowed
+    std::set<SgInitializedName*>::iterator wpos = wvars.begin();
+    std::set<SgInitializedName*>::iterator wend = wvars.end();
+    for (; wpos != wend; ++wpos)
+    {
+      // todo: recurse
+      printf("WRITE(%s)\n", (*wpos)->get_qualified_name().str());
+    }
+  }
+}
+
+
 /* Apply to every pragma to process #pragma kaapi 
    - for each #pragma kaapi task : stores the signature information and verify some assumption
    about the expression. When the function call has 
@@ -2615,6 +2648,9 @@ int main(int argc, char **argv)
         KaapiTaskCallTraversal taskcall_replace;
         taskcall_replace.traverse(project,preorder);
         DoKaapiTaskCall( &taskcall_replace, gscope );
+
+	// do mode analysis
+	DoKaapiModeAnalysis();
         
         /* Add explicit instanciation to template instance */
         std::set<SgFunctionDefinition*>::iterator func_def_i;
