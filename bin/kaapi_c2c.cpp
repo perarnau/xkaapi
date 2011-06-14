@@ -2109,7 +2109,7 @@ public:
       // as a call_expr attribute. add every synced variable to
       // this list and generate the kaapi_sched_sync(list) at
       // finalization time (to solve: what is finalization time).
-      SgExprStatement* sync_stmt =
+      SgExprStatement* const sync_stmt =
 	SageBuilder::buildFunctionCallStmt
 	(
 	 "kaapi_sched_sync", 
