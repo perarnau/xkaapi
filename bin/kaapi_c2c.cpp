@@ -45,6 +45,7 @@
 */
 
 #include <rose.h>
+#include <interproceduralCFG.h>
 #include <string>
 #include <iostream>
 #include <map>
@@ -2135,49 +2136,166 @@ public:
 
 // kaapi mode analysis
 
-bool DoKaapiModeAnalysis(void)
+#if 0
+static SgFunctionDeclaration* getInterproceduralEdge
+(std::vector<SgDirectedGraphEdge*>& out_edges)
 {
-  ListTaskFunctionDeclaration::iterator pos = all_task_func_decl.begin();
-  ListTaskFunctionDeclaration::iterator end = all_task_func_decl.end();
-
+  std::vector<SgDirectedGraphEdge*>::iterator pos = out_edges.begin();
+  std::vector<SgDirectedGraphEdge*>::iterator end = out_edges.end();
   for (; pos != end; ++pos)
+    if ((*pos)->condition() == eckInterprocedural)
+      return isSgFunctionDeclaration((*pos)->get_to());
+  return NULL;
+}
+#endif
+
+static void getCalledFunctionDecls
+(
+ SgFunctionDeclaration* func_decl,
+ std::vector<SgFunctionDeclaration*>& called_decls
+)
+{
+  // retrieve the set of functions called by func_decl
+
+  called_decls.clear();
+
+  SgFunctionDefinition* const func_def = func_decl->get_definition();
+
+  // StaticCFG::CFG cfg(func_def);
+  StaticCFG::InterproceduralCFG cfg(func_def, true);
+  // cfg.cfgToDot(func_def, "/tmp/bar.dot");
+  // SgGraphNode* const graph_node = isSgGraphNode(func_def);
+
+#if 0
   {
-    SgFunctionDeclaration* const func_decl = pos->first;
-    SgStatement* const func_stmt = isSgStatement(func_decl);
-    // assume(func_stmt);
-
-    KaapiTaskAttribute* const kta = (KaapiTaskAttribute*)
-      func_decl->getAttribute("kaapitask");
-    // assume(kta);
-
-    std::set<SgInitializedName*> rvars, wvars;
-    SageInterface::collectReadWriteVariables(func_stmt, rvars, wvars);
-
-    // check all write operations are allowed
-    std::set<SgInitializedName*>::iterator wpos = wvars.begin();
-    std::set<SgInitializedName*>::iterator wend = wvars.end();
-    for (; wpos != wend; ++wpos)
+    SgGraphNode* pos = cfg.cfgForBeginning(func_def);
+    SgGraphNode* end = cfg.cfgForEnd(func_def);
+    for (; pos != end; ++pos)
     {
-      // todo: recurse
+      // SgFunctionDeclaration* const called_decl =
+      // 	getInterproceduralEdge(cfg.getOutEdges(pos));
+      if (called_decl != NULL) printf("inter\n");
+      // std::vector<SgDirectedGraphEdge*> out_edges = 
+      // printf("out_edges == %u\n", out_edges.size());
+      // if (pos->condition() == eckInterprocedural)
+      // 	printf("FU\n");
 
-      std::map<std::string, int>::iterator iparam =
-	kta->lookup.find((*wpos)->get_qualified_name().str());
-      if (iparam == kta->lookup.end()) continue ;
-
-      KaapiTaskFormalParam& param = kta->formal_param[iparam->second];
-      if (param.mode == KAAPI_W_MODE) continue ;
-      else if (param.mode == KAAPI_RW_MODE) continue ;
-      else if (param.mode == KAAPI_CW_MODE) continue ;
-      else if (param.mode == KAAPI_GLOBAL_MODE) continue ;
-
-      // invalid access
-      printf("INVALID_WRITE(%s)\n", (*wpos)->get_qualified_name().str());
-
-      return false;
+      // if (pos)
+      // if (out_edges.size())
+      // 	printf("ICALL found %s\n", (*out_edges.begin())->class_name().c_str());
     }
   }
+#endif
 
-  return true;
+  SgGraphNode* const graph_node = cfg.cfgForEnd(func_def);
+  if (graph_node == NULL)
+  {
+    printf("invalid node: %s\n", func_decl->get_qualified_name().str());
+    return ;
+  }
+
+  std::vector<SgDirectedGraphEdge*> out_edges = cfg.getOutEdges(graph_node);
+  std::vector<SgDirectedGraphEdge*>::iterator pos = out_edges.begin();
+  std::vector<SgDirectedGraphEdge*>::iterator end = out_edges.end();
+  for (; pos != end; ++pos)
+  {
+    SgGraphNode* const dest_node = (*pos)->get_to();
+
+    SgFunctionParameterList* const called_params =
+      isSgFunctionParameterList(dest_node->get_SgNode());
+    if (called_params == NULL)
+    {
+      printf("node not a param list\n");
+      continue ;
+    }
+
+    SgFunctionDeclaration* const called_decl =
+      isSgFunctionDeclaration(called_params->get_parent());
+    if (called_decl == NULL)
+    {
+      printf("parent not a function decl\n");
+      continue ;
+    }
+
+    printf("pushing: %s\n", called_decl->get_qualified_name().str());
+    called_decls.push_back(called_decl);
+  }
+
+  printf("calledset size: %u\n", called_decls.size());
+}
+
+static bool DoKaapiModeAnalysis(SgFunctionDeclaration* func_decl)
+{
+  // do mode analysis on a given function decl
+
+  bool is_success = true;
+
+  SgStatement* const func_stmt = isSgStatement(func_decl);
+  // assume(func_stmt);
+
+  KaapiTaskAttribute* const kta = (KaapiTaskAttribute*)
+    func_decl->getAttribute("kaapitask");
+  // assume(kta);
+
+  std::set<SgInitializedName*> rvars, wvars;
+
+  if (!SageInterface::collectReadWriteVariables(func_stmt, rvars, wvars))
+  {
+    // may fail due to side analysis, ie. function call
+    return false;
+  }
+
+  // check all write operations are allowed
+  std::set<SgInitializedName*>::iterator wpos = wvars.begin();
+  std::set<SgInitializedName*>::iterator wend = wvars.end();
+  for (; wpos != wend; ++wpos)
+  {
+    std::map<std::string, int>::iterator iparam =
+      kta->lookup.find((*wpos)->get_qualified_name().str());
+    if (iparam == kta->lookup.end()) continue ;
+
+    printf("WRITE(%s)\n", (*wpos)->get_qualified_name().str());
+
+    KaapiTaskFormalParam& param = kta->formal_param[iparam->second];
+    if (param.mode == KAAPI_W_MODE) continue ;
+    else if (param.mode == KAAPI_RW_MODE) continue ;
+    else if (param.mode == KAAPI_CW_MODE) continue ;
+    else if (param.mode == KAAPI_GLOBAL_MODE) continue ;
+
+    // invalid access
+    printf("INVALID_WRITE(%s)\n", (*wpos)->get_qualified_name().str());
+
+    is_success = false;
+  }
+
+  return is_success;
+}
+
+bool DoKaapiModeAnalysis(void)
+{
+  bool is_success = true;
+
+  // check modes of each access
+  ListTaskFunctionDeclaration::iterator decl_pos = all_task_func_decl.begin();
+  ListTaskFunctionDeclaration::iterator decl_end = all_task_func_decl.end();
+  for (; decl_pos != decl_end; ++decl_pos)
+  {
+    SgFunctionDeclaration* const func_decl = decl_pos->first;
+    if (DoKaapiModeAnalysis(func_decl) == false)
+      is_success = false;
+
+    std::vector<SgFunctionDeclaration*> called_decls;
+    getCalledFunctionDecls(func_decl, called_decls);
+    std::vector<SgFunctionDeclaration*>::iterator
+      called_pos = called_decls.begin();
+    std::vector<SgFunctionDeclaration*>::iterator
+      called_end = called_decls.end();
+    for (; called_pos != called_end; ++called_pos)
+      if (DoKaapiModeAnalysis(*called_pos))
+	is_success = false;
+  }
+
+  return is_success;
 }
 
 
@@ -2656,7 +2774,10 @@ int main(int argc, char **argv)
           
           /* ok inputstream is correctly positionned */
           parser.DoKaapiTaskDeclaration( func_decl_i->first );
-        }      
+        }
+
+        // do mode analysis
+        DoKaapiModeAnalysis();
 
         // turn call into ssa form
         KaapiSSATraversal ssa_traversal;
@@ -2670,9 +2791,6 @@ int main(int argc, char **argv)
         taskcall_replace.traverse(project,preorder);
         DoKaapiTaskCall( &taskcall_replace, gscope );
 
-        // do mode analysis
-        DoKaapiModeAnalysis();
-        
         /* Add explicit instanciation to template instance */
         std::set<SgFunctionDefinition*>::iterator func_def_i;
         for ( func_def_i =all_template_instanciate_definition.begin(); 
