@@ -875,10 +875,10 @@ In the STL, the righ bound is not part of the interval and it is called the 'pas
 \kaapi declaration follows idea of the BLAS storage for dense matrix. 
 The syntax of the clause for 2-D array is:
 \begin{verbatim}
-#pragma kaapi task mode( array[n][m] }
-#pragma kaapi task mode( array{ lda ; [n][m] }
-#pragma kaapi task mode( array{ C; lda ; [n][m] }
-#pragma kaapi task mode( array{ Fortran; lda ; [n][m] }
+#pragma kaapi task mode( array[n][m] )
+#pragma kaapi task mode( array{ lda ; [n][m] } )
+#pragma kaapi task mode( array{ C; lda ; [n][m] } )
+#pragma kaapi task mode( array{ Fortran; lda ; [n][m] } )
 \end{verbatim}
 Where the \texttt{lda} must be a reference to a formal parameter name. The dimension must follows the sub set of the C grammar for expression. 
 C or Fortran keyword are used to specify the storage of the matrix (row major or column major).
