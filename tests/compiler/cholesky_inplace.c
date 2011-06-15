@@ -1,281 +1,304 @@
 /*
-* Copyright (c) 2008, BSC (Barcelon Supercomputing Center)
-* All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions are met:
-*     * Redistributions of source code must retain the above copyright
-*       notice, this list of conditions and the following disclaimer.
-*     * Redistributions in binary form must reproduce the above copyright
-*       notice, this list of conditions and the following disclaimer in the
-*       documentation and/or other materials provided with the distribution.
-*     * Neither the name of the <organization> nor the
-*       names of its contributors may be used to endorse or promote products
-*       derived from this software without specific prior written permission.
-*
-* THIS SOFTWARE IS PROVIDED BY BSC ''AS IS'' AND ANY
-* EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-* DISCLAIMED. IN NO EVENT SHALL <copyright holder> BE LIABLE FOR ANY
-* DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-* LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-* ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+** xkaapi
+** 
+** Created on Tue Mar 31 15:19:09 2009
+** Copyright 2009 INRIA.
+**
+** Contributors :
+**
+** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+** 
+** This software is a computer program whose purpose is to execute
+** multithreaded computation with data flow synchronization between
+** threads.
+** 
+** This software is governed by the CeCILL-C license under French law
+** and abiding by the rules of distribution of free software.  You can
+** use, modify and/ or redistribute the software under the terms of
+** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
+** following URL "http://www.cecill.info".
+** 
+** As a counterpart to the access to the source code and rights to
+** copy, modify and redistribute granted by the license, users are
+** provided only with a limited warranty and the software's author,
+** the holder of the economic rights, and the successive licensors
+** have only limited liability.
+** 
+** In this respect, the user's attention is drawn to the risks
+** associated with loading, using, modifying and/or developing or
+** reproducing the software by the user in light of its specific
+** status of free software, that may mean that it is complicated to
+** manipulate, and that also therefore means that it is reserved for
+** developers and experienced professionals having in-depth computer
+** knowledge. Users are therefore encouraged to load and test the
+** software's suitability as regards their requirements in conditions
+** enabling the security of their systems and/or data to be ensured
+** and, more generally, to use and operate it in the same conditions
+** as regards security.
+** 
+** The fact that you are presently reading this means that you have
+** had knowledge of the CeCILL-C license and that you accept its
+** terms.
+** 
 */
-
-#include <errno.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+#include <math.h>
+#include <sys/types.h>
 #include <sys/time.h>
-#include <time.h>
-#include <cblas.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <cblas.h> 
+#include <clapack.h> /* assume MKL/ATLAS clapack version */
 
-//----------------------------------------------------------------------------------------------
 
-#pragma css task input(NB) inout(A[NB][NB]) highpriority 
-void smpSs_spotrf_tile(float *A, unsigned long NB)
+#pragma kaapi task value(Order, Uplo, N, lda) readwrite(A{lda=lda; [N][N]})
+int clapack_dpotrf(const enum ATLAS_ORDER Order, const enum ATLAS_UPLO Uplo,
+                   const int N, double *A, const int lda);
+
+
+#pragma kaapi task value(Order, Side, Uplo, TransA, Diag, M, N, alpha, lda, ldb) read(A{lda=lda; [N][N]}) readwrite(B{lda=ldb; [N][N]})
+void cblas_dtrsm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
+                 const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
+                 const enum CBLAS_DIAG Diag, const int M, const int N,
+                 const double alpha, const double *A, const int lda,
+                 double *B, const int ldb);
+
+#pragma kaapi task value(Order, Uplo, Trans, N, K, alpha, lda, beta, ldc) read(A{lda=lda; [N][N]}) readwrite(C{lda=ldc; [N][N]})
+void cblas_dsyrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
+                 const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
+                 const double alpha, const double *A, const int lda,
+                 const double beta, double *C, const int ldc);
+
+#pragma kaapi task value(Order, TransA, TransB, M, N, K, alpha, lda, ldb, beta, ldc) read(A{lda=lda; [M][K]}, B{lda=ldb; [K][N]}) readwrite(C{lda=ldc; [M][N]})
+void cblas_dgemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA,
+                 const enum CBLAS_TRANSPOSE TransB, const int M, const int N,
+                 const int K, const double alpha, const double *A,
+                 const int lda, const double *B, const int ldb,
+                 const double beta, double *C, const int ldc);
+
+double _cholesky_global_time;
+
+/**
+*/
+double get_elapsedtime(void)
 {
-unsigned char LO='L';
-int INFO;
-int nn=NB;
-   spotrf_(&LO,
-          &nn,
-          A,&nn,
-          &INFO);
+  struct timeval tv;
+  int err = gettimeofday( &tv, 0);
+  if (err  !=0) return 0;
+  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
 }
 
-#pragma css task input(A[NB][NB], B[NB][NB], NB) inout(C[NB][NB])
-void smpSs_sgemm_tile(float  *A, float *B, float *C, unsigned long NB)
+#if 1
+/* Generate a random matrix symetric definite positive matrix of size m x m 
+   - it will be also interesting to generate symetric diagonally dominant 
+   matrices which are known to be definite postive.
+*/
+static void generate_matrix(double* A, size_t m)
 {
-unsigned char TR='T', NT='N';
-float DONE=1.0, DMONE=-1.0;
-
-//    sgemm_2(&NT, &TR,       /* TRANSA, TRANSB */
-//           &NB, &NB, &NB,   /* M, N, K        */
-//           &DMONE,          /* ALPHA          */
-//           A, &NB,          /* A, LDA         */
-//           B, &NB,          /* B, LDB         */
-//           &DONE,           /* BETA           */
-//           C, &NB);         /* C, LDC         */
-
- // using CBLAS
-    cblas_sgemm(
-        CblasColMajor,
-        CblasNoTrans, CblasTrans,
-        NB, NB, NB,
-        -1.0, A, NB,
-              B, NB,
-         1.0, C, NB);
-
-
-}
-
-#pragma css task input(T[NB][NB], NB) inout(B[NB][NB])
-void smpSs_strsm_tile(float *T, float *B, unsigned long NB)
-{
-unsigned char LO='L', TR='T', NU='N', RI='R';
-float DONE=1.0;
-
-//  strsm_2(&RI, &LO, &TR, &NU,  /* SIDE, UPLO, TRANSA, DIAG */
-//          &NB, &NB,             /* M, N                     */
-//         &DONE,                /* ALPHA                    */
-//         T, &NB,               /* A, LDA                   */
-//         B, &NB);              /* B, LDB                   */
-
- // using CBLAS
-    cblas_strsm(
-        CblasColMajor,
-        CblasRight, CblasLower, CblasTrans, CblasNonUnit,
-        NB, NB,
-        1.0, T, NB,
-             B, NB);
-
-}
-
-#pragma css task input(A[NB][NB], NB) inout(C[NB][NB])
-void smpSs_ssyrk_tile( float *A, float *C, long NB)
-{
-unsigned char LO='L', NT='N';
-float DONE=1.0, DMONE=-1.0;
-
-//    ssyrk_2(&LO, &NT,          /* UPLO, TRANSA */
-//           &NB, &NB,           /* M, N         */
-//           &DMONE,             /* ALPHA        */
-//           A, &NB,             /* A, LDA       */
-//           &DONE,              /* BETA         */
-//           C, &NB);            /* C, LDC       */
-
- // using CBLAS
-    cblas_ssyrk(
-        CblasColMajor,
-        CblasLower,CblasNoTrans,
-        NB, NB,
-        -1.0, A, NB,
-         1.0, C, NB);
-
-
-}
-
-//----------------------------------------------------------------------------------------------
-
-
-void compute(struct timeval *start, struct timeval *stop, long NB, long DIM, float **A)
-{
-  #pragma css start 
-  gettimeofday(start,NULL);
-  for (long j = 0; j < DIM; j++)
+  // 
+  for (size_t i = 0; i< m; ++i)
   {
-    for (long k= 0; k< j; k++)
+    for (size_t j = 0; j< m; ++j)
+      A[i*m+j] = 1.0 / (1.0+i+j);
+    A[i*m+i] = m*1.0; 
+  }
+}
+#else
+/* Generate a random matrix symetric definite positive matrix of size m x m 
+*/
+static void generate_matrix(double* A, size_t N)
+{
+  double* L = new double[N*N];
+  // Lower random part
+  for (size_t i = 0; i< N; ++i)
+  {  
+    size_t j;
+    for (j = 0; j< i+1; ++j)
+      L[i*N+j] = drand48();
+    for (; j< N; ++j)
+      L[i*N+j] = 0.0;
+    L[i*N+i] = N; /* add dominant diagonal, else very ill conditionning */
+  }
+
+  cblas_dgemm
+  (
+    CblasRowMajor, CblasNoTrans,CblasTrans,
+    N, N, N, 1.0, L, N, L, N, 0.0, A, N
+  );
+#pragma kaapi sync(A)    
+}
+#endif
+
+
+/* Block Cholesky factorization A <- L * L^t
+   Lower triangular matrix, with the diagonal, stores the Cholesky factor.
+*/
+void Cholesky( double* A, int N, size_t blocsize )
+{
+  for (size_t k=0; k < N; k += blocsize)
+  {
+//    ka::rangeindex rk(k, k+blocsize);
+//    TaskDPOTRF( CblasLower, A(rk,rk) );
+    clapack_dpotrf(
+      CblasRowMajor, CblasLower, blocsize, &A[k*N+k], N
+    );
+
+    for (size_t m=k+blocsize; m < N; m += blocsize)
     {
-      for (long i = j+1; i < DIM; i++) 
+//      ka::rangeindex rm(m, m+blocsize);
+//      ka::Spawn<TaskDTRSM>()(CblasRight, CblasLower, CblasTrans, CblasNonUnit, 1.0, A(rk,rk), A(rm,rk));
+      cblas_dtrsm
+      (
+        CblasRowMajor, CblasLeft, CblasLower, CblasNoTrans, CblasUnit,
+        blocsize, blocsize, 1., &A[k*N+k], N, &A[m*N+k], N
+      );
+    }
+
+    for (size_t m=k+blocsize; m < N; m += blocsize)
+    {
+//      ka::rangeindex rm(m, m+blocsize);
+//      ka::Spawn<TaskDSYRK>()( CblasLower, CblasNoTrans, -1.0, A(rm,rk), 1.0, A(rm,rm));
+      cblas_dsyrk
+      (
+        CblasRowMajor, CblasLower, CblasNoTrans,
+        blocsize, blocsize, -1.0, &A[m*N+k], N, 1.0, &A[m*N+m], N
+      );
+      for (size_t n=k+blocsize; n < m; n += blocsize)
       {
-        // A[i,j] = A[i,j] - A[i,k] * (A[j,k])^t
-        smpSs_sgemm_tile( A[i*DIM+k], A[j*DIM+k], A[i*DIM+j], NB);
+//        ka::rangeindex rn(n, n+blocsize);
+//        ka::Spawn<TaskDGEMM>()(CblasNoTrans, CblasTrans, -1.0, A(rm,rk), A(rn,rk), 1.0, A(rm,rn));
+        cblas_dgemm
+        (
+          CblasRowMajor, CblasNoTrans, CblasTrans,
+          blocsize, blocsize, blocsize, -1.0, &A[m*N+k], N, &A[n*N+k], N, 1.0, &A[m*N+n], N
+        );
       }
-
     }
+  }
+}
 
-    for (long i = 0; i < j; i++)
-    {
-      // A[j,j] = A[j,j] - A[j,i] * (A[j,i])^t
-      smpSs_ssyrk_tile( A[j*DIM+i], A[j*DIM+j], NB);
-    }
 
-    // Cholesky Factorization of A[j,j]
-    smpSs_spotrf_tile( A[j*DIM+j], NB);
+/* Main of the program
+*/
+void doone_exp( int N, int block_count, int niter, int verif )
+{
+  size_t blocsize = N / block_count;
+
+  double t0, t1;
+  double* A = 0;
+  if (0 != posix_memalign((void**)&A, 4096, N*N*sizeof(double)))
+  {
+    printf("Fatal Error. Cannot allocate matrice A, errno: %i\n", errno);
+    return;
+  }
+
+  // Cholesky factorization of A 
+  double sumt = 0.0;
+  double sumgf = 0.0;
+  double sumgf2 = 0.0;
+  double sd;
+  double sumt_exec = 0.0;
+  double sumgf_exec = 0.0;
+  double sumgf2_exec = 0.0;
+  double sd_exec;
+  double gflops;
+  double gflops_max = 0.0;
+  double gflops_exec;
+  double gflops_exec_max = 0.0;
+
+  /* formula used by plasma in time_dpotrf.c */
+  double fp_per_mul = 1;
+  double fp_per_add = 1;
+  double fmuls = (N * (1.0 / 6.0 * N + 0.5 ) * N);
+  double fadds = (N * (1.0 / 6.0 * N ) * N);
       
-    for (long i = j+1; i < DIM; i++)
-    {
-      // A[i,j] <- A[i,j] = X * (A[j,j])^t
-      smpSs_strsm_tile( A[j*DIM+j], A[i*DIM+j], NB);
-    }
-   
-  }	
-  #pragma css barrier
-  gettimeofday(stop,NULL);
+  printf("%6d %5d ", (int)N, (int)(N/blocsize) );
+  for (int i=0; i<niter; ++i)
+  {
+    generate_matrix(A, N);
+
+    _cholesky_global_time = 0;
+    t0 = get_elapsedtime();
+    Cholesky(A, N, blocsize);
+    t1 = get_elapsedtime();
+
+    gflops = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / (t1-t0);
+    if (gflops > gflops_max) gflops_max = gflops;
+
+    sumt += (double)(t1-t0);
+    sumgf += gflops;
+    sumgf2 += gflops*gflops;
+
+    gflops_exec = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / _cholesky_global_time;
+    if (gflops_exec > gflops_exec_max) gflops_exec_max = gflops_exec;
+    
+    sumt_exec += (double)(_cholesky_global_time);
+    sumgf_exec += gflops_exec;
+    sumgf2_exec += gflops_exec*gflops_exec;
+  }
+
+  gflops = sumgf/niter;
+  gflops_exec = sumgf_exec/niter;
+  if (niter ==1) 
+  {
+    sd = 0.0;
+    sd_exec = 0.0;
+  } else {
+    sd = sqrt((sumgf2 - (sumgf*sumgf)/niter)/niter);
+    sd_exec = sqrt((sumgf2_exec - (sumgf_exec*sumgf_exec)/niter)/niter);
+  }
+  
+  printf("%9.3f %9.3f %9.3f %9.3f %9.3f %9.3f %9.3f %9.3f\n", 
+      sumt/niter, 
+      gflops, 
+      sd, 
+      sumt_exec/niter, 
+      gflops_exec,
+      sd_exec,
+      gflops_max,
+      gflops_exec_max 
+  );
+
+  free(A);
 }
 
-//--------------------------------------------------------------------------------
 
 
-static void  init(int argc, char **argv, long *NB_p, long *N_p, long *DIM_p);
-
-float **A;
-float * Alin; // private in init
-
-long NB, N, DIM; // private in main
-
-int
-main(int argc, char *argv[])
+/* main entry point : Kaapi initialization
+*/
+int main(int argc, char** argv)
 {
-  // local vars
- 
-unsigned char LO='L';
-int  INFO;
- 
-  struct timeval start;
-  struct timeval stop;
-  double elapsed;
 
-  // application inicializations
-  init(argc, argv, &NB, &N, &DIM);
-  // compute with CellSs
+printf("Sizeof enum CBLAS_ORDER = %i\n", sizeof(enum CBLAS_ORDER) );
+return 0;
+  // matrix dimension
+  int n = 32;
+  if (argc > 1)
+    n = atoi(argv[1]);
 
-  compute(&start, &stop, NB, DIM, (void *)A);
+  // block count
+  int block_count = 2;
+  if (argc > 2)
+    block_count = atoi(argv[2]);
+    
+  // Number of iterations
+  int niter = 1;
+  if (argc >3)
+    niter = atoi(argv[3]);
 
-int nn=N;
-// compute with library
+  // Make verification ?
+  int verif = 0;
+  if (argc >4)
+    verif = atoi(argv[4]);
   
-//  spotrf(&LO, &nn, Alin, &nn, &INFO);
-
-  elapsed = 1000000.0 * (stop.tv_sec - start.tv_sec);
-  elapsed += 1.0*(stop.tv_usec - start.tv_usec);
-
-// time in usecs
-  printf ("%e (s)\n", 1e-6*elapsed);
-// perfonrmance in MFLOPS
-  printf("%f (GFlops)\n", ((0.33*N*N*N+0.5*N*N+0.17*N)/1000.0/elapsed));
-
-	return 0;
+  //int nmax = n+16*incr;
+  printf("size   #threads #bs    time      GFlop/s   Deviation\n");
+  //for (int k=9; k<15; ++k, ++n )
+  {
+    //doone_exp( 1<<k, block_count, niter, verif );
+    doone_exp( n, block_count, niter, verif );
+  }
+  return 0;
 }
-
-
-static void convert_to_blocks(long NB,long DIM, long N, float *Alin, float **A)
-{
-  for (long i = 0; i < N; i++)
-  {
-    for (long j = 0; j < N; j++)
-    {
-      A[j/NB*DIM+i/NB][(i%NB)*NB+j%NB] = Alin[i*N+j];
-    }
-  }
-
-}
-
-
-//void slarnv_(long *idist, long *iseed, long *n, float *x);
-
-void fill_random(float *Alin, int NN)
-{
-  int i;
-  for (i = 0; i < NN; i++)
-  {
-    Alin[i]=((float)rand())/((float)RAND_MAX);
-  }
-}
-
-
-static void init(int argc, char **argv, long *NB_p, long *N_p, long *DIM_p)
-{
-  long ISEED[4] = {0,0,0,1};
-  long IONE=1;
-  long DIM;
-  long NB;
-
-  
-  if (argc==3)
-  {
-    NB=(long)atoi(argv[1]);
-    DIM=(long)atoi(argv[2]);
-  }
-  else
-  {
-    printf("usage: %s NB DIM\n",argv[0]);
-    exit(0);
-  }
-
-  // matrix init
-  
-  long N = NB*DIM;
-  long NN = N * N;
-
-  *NB_p=NB;
-  *N_p = N;
-  *DIM_p = DIM;
-  
-  // linear matrix
-   Alin = (float *) malloc(NN * sizeof(float));
-
-  // fill the matrix with random values
-//  slarnv_(&IONE, ISEED, &NN, Alin);
-  fill_random(Alin,NN);
-
-  // make it positive definite
-  for(long i=0; i<N; i++)
-  {
-    Alin[i*N + i] += N;
-  }
-  
-  // blocked matrix
-  A = (float **) malloc(DIM*DIM*sizeof(float *));
-  for (long i = 0; i < DIM*DIM; i++)
-     A[i] = (float *) malloc(NB*NB*sizeof(float));
-
-  convert_to_blocks(NB, DIM, N, Alin, (void *)A);
-  
-}
-
