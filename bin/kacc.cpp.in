@@ -213,7 +213,9 @@ int main( int argc, char** argv)
     
     /* file exist: ok */
     std::string o_file_kacc = "kaapi-" + *ibeg;
+#if 0
     std::string o_file_format = "format-" + o_file_kacc;
+#endif
 
 #if 0
     std::string o_file_preprocessor = "pre-" + *ibeg;
@@ -254,6 +256,7 @@ int main( int argc, char** argv)
       return err;
     }
 
+#if 0
     /* rename kaapi-format.cpp to "format-" + *ibeg */
     std::ostringstream cmdrename;
     cmdrename << "\\mv kaapi-format.cpp " << o_file_format;
@@ -263,6 +266,7 @@ int main( int argc, char** argv)
       std::cerr << "*** error: status of '" << cmdrename.str() << "': " << err << std::endl;
       return err;
     }
+#endif
 
     file_tocompile_kaapi.push_back( o_file_kacc );
 
@@ -301,8 +305,13 @@ int main( int argc, char** argv)
     else
       cmdline3 << (getenv("CC") == 0 ? COMPILER_CC : getenv("CC"));
     
+#if 0
     cmdline3 << " " << filename << " format-" << filename << " "
              << List2String( compiler_options );
+#else
+    cmdline3 << " " << filename 
+             << List2String( compiler_options );
+#endif
     if (verbose)
       std::cout << "Commande3: " << cmdline3.str() << std::endl;
     err = system(cmdline3.str().c_str());
