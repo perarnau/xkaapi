@@ -842,7 +842,7 @@ The syntax is the following:
 \begin{verbatim}
 #pragma kaapi task value( list_declaration )
 \end{verbatim}
-\verb+list_declaration+ is a rule in the grammar given in the appendix A.
+\verb+list_declaration+ is a rule in the grammar given in the appendix~\ref{sec:grammar}.
 
 \subsubsection{Passing rule by reference}
 All description of memory region in \kaapi must be defined on C/C++ pointer type formal parameter. At runtime, the pointer, the declaration of the memory region and the access mode (read, write, ...) made by the task allow to detect dependencies.
@@ -883,7 +883,7 @@ The syntax of the clause for 2-D array is:
 Where the \texttt{lda} must be a reference to a formal parameter name. The dimension must follows the sub set of the C grammar for expression. 
 C or Fortran keyword are used to specify the storage of the matrix (row major or column major).
 
-All this rules are defined in the grammar of the appendix A.
+All this rules are defined in the grammar of the appendix~\ref{sec:grammar}.
 
 
 %%%%
@@ -1204,42 +1204,6 @@ specify to have the same scope of the spawned task using directive \texttt{\#pra
 
 %%%
 %%%
-\newpage \section{Compiler and runtime options}\label{sec:compilo}
-
-\subsection{Compilation process with KaCC}
-
-The compilation process with KaCC of a file is the following:
-\begin{enumerate}
-\item Each \kaapi directive  that begins \texttt{\#pragma kaapi} is interpreted and the code is rewritten to call function of the \kaapi library. Invalid use of \kaapi directive and some warning are outputed.
-\item The backend compiler (C or C++) is called on the rewritten code to generate an object file.
-\item To create an executable, KaCC pass the \kaapi library to the linker.
-\end{enumerate}
-
-
-\subsection{Compilation flags}
-The KaCC compiler add \texttt{--keep} to the option of the backend compiler.
-This option allows to keep the intermediate file generated during the source to source translation.
-
-\subsection{Backend compiler}
-
-The backend compiler is the default C or C++ compilers defined during the installation step (see options with \texttt{configure --help}). It could be changed by the environment variables \texttt{CC} and \texttt{CXX}.
-
-\subsection{Runtime options}
-They are mainly two environment variables that control the execution of \kaapi programs:
-\begin{description}
-\item [KAAPI\_CPUSET]: if defined, and if the operating system support it, then the variable specifies the set of core to use in \kaapi program. If no defined, the operating system decides to schedule \kaapi threads onto the cores.
-The syntax is a list of core identifiers or a range of core identifiers:
-\begin{verbatim}
-KAAPI_CPUSET=1,2,6,8,21
-KAAPI_CPUSET=0-11,20-31
-\end{verbatim}
-The identifier corresponds to system identifier of the core.
-\item [KAAPI\_CPUCOUNT]: if defined, then the variable specifies the number of core to use. This number should be less than the number of cores specified with \texttt{KAAPI\_CPUSET}.
-\end{description}
-
-
-%%%
-%%%
 \newpage \section{Examples}\label{sec:exp}
 
 
@@ -1252,15 +1216,24 @@ The identifier corresponds to system identifier of the core.
 \subsection{NQueens}
 
 
-\subsection{ SMPSs examples}
+\subsection{SMPSs examples}
 
+SMPSs is the implementation of the StartSs programming model for multicore architecture.
+SMPSs is developed by the Barcelona Supercomputing Center (\url{http://www.bsc.es}) and is freely available for download.
+
+All examples from SMPSs are accepted by the KaCC compiler.
+The user may have a look at \url{http://www.bsc.es/plantillaG.php?cat_id=385} to download SMPSs software that contains examples.
+
+\kaapi programming model defines a set of directives which are a superset of the StartSs directives. The appendix~\ref{app:smpss} describes more in details the differences between \kaapi and StartSs/SMPSs.
 
 %%%
 %%%
-\newpage
 \appendix 
 
-\section{Grammars}
+\newpage  \section{C and C++ support}\label{secC++compatibility}
+
+
+\newpage \section{Grammars}\label{sec:grammar}
 
 In the following grammar, we assume terminal symbols:
 \begin{verbatim}
@@ -1434,7 +1407,17 @@ This is a compiler error to pass a non automatic name (\textit{e.g.} global vari
 %%%
 %%%
 \newpage
-\section{KaCC compiler and runtime options}
+\section{KaCC compiler and runtime options}\label{sec:compilo}
+
+\subsection{Compilation process with KaCC}
+
+The compilation process with KaCC of a file is the following:
+\begin{enumerate}
+\item Each \kaapi directive  that begins \texttt{\#pragma kaapi} is interpreted and the code is rewritten to call function of the \kaapi library. Invalid use of \kaapi directive and some warning are outputed.
+\item The backend compiler (C or C++) is called on the rewritten code to generate an object file.
+\item To create an executable, KaCC pass the \kaapi library to the linker.
+\end{enumerate}
+
 
 \subsection{KaCC options}
 The KaCC compiler recognized all the options of Gcc compiler suite (gcc, g++) and add an extra option:
@@ -1442,7 +1425,11 @@ The KaCC compiler recognized all the options of Gcc compiler suite (gcc, g++) an
 \item [-\,-keep]: keep the intermediate files. For each file, 2 intermediate files are generated. The first one is prefixed by \texttt{kaapi-} and is the translation of the file with replacement of function call by task creation.
 \end{description}
 
-\subsection{Environment variables}
+
+\subsection{Backend compiler selection}
+The backend compiler is the default C or C++ compilers defined during the installation step (see options with \texttt{configure --help}). It could be changed by the environment variables \texttt{CC} and \texttt{CXX}.
+
+\subsection{Runtime environment variables}
 \begin{description}
 \item [KAAPI\_CPUSET]: if defined, and if the operating system support it, then the variable specifies the set of core to use in \kaapi program. If no defined, the operating system decides to schedule \kaapi threads onto the cores.
 The syntax is a list of core identifiers or a range of core identifiers:
@@ -1458,7 +1445,7 @@ The identifier corresponds to system identifier for the core.
 %%%
 %%%
 \newpage
-\section{ SMPSs task model compatibility}
+\section{ SMPSs task model compatibility}\label{app:smpss}
 
 A parallel  SMPSs program running on a multicore is composed of several threads sharing the address space of a process. The threads perform tasks which may shared values in the address space, that we call shared memory between threads.
 A task is a function call: a function and the list of its effective parameters. 
