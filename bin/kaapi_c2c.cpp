@@ -2391,7 +2391,7 @@ static bool DoKaapiModeAnalysis
     func_decl->getAttribute("kaapitask");
   // assume(kta);
 
-#if 0 // use readwrite analysis, bugged 
+#if 0 // use readwrite analysis, bugged in rose-0.9.5a-14391
 
   std::set<SgInitializedName*> rvars, wvars;
 
