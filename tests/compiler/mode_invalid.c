@@ -1,4 +1,4 @@
-#pragma kaapi task read(m) write(n)
+#pragma kaapi task write(m) read(n)
 static void fu(double* m, double* n)
 {
   *n = 42;
