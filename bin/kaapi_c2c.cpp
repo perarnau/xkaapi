@@ -1,5 +1,4 @@
 /*
-** kaapi_staticsched.h
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:09 2009
@@ -580,6 +579,12 @@ void Parser::DoKaapiPragmaTask( SgPragmaDeclaration* sgp )
               << std::endl;
     KaapiAbort("**** error");
   } 
+
+std::cerr << "****[kaapi_c2c] Found #pragma kaapi task. "
+          << " Function declaration: @" << functionDeclaration
+          << " Function declaration Symbol: @" << functionDeclaration->search_for_symbol_from_symbol_table()  
+          << std::endl;
+          
   all_task_func_decl.push_back( std::make_pair(functionDeclaration, pragma_string) );
 }
 
@@ -1944,6 +1949,11 @@ public:
       SgFunctionCallExp* fc = isSgFunctionCallExp(node);
       SgStatement* exprstatement = SageInterface::getEnclosingStatement( fc );
 
+      Sg_File_Info* fileInfo = node->get_file_info();
+      std::cerr << "****[kaapi_c2c] Message: found function call expression.\n"
+                << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+
       if (exprstatement->getAttribute("kaapinotask") !=0) 
         return;
       if (exprstatement->getAttribute("kaapiwrappercall") !=0) 
@@ -1962,14 +1972,14 @@ public:
             SgScopeStatement* loop = SageInterface::findEnclosingLoop( exprstatement );
 
             if ((kta->has_retval) && isValidTaskWithRetValCallExpression(fc, exprstatement ))
-	    {
+            {
               _listcall.push_back( OneCall(scope, fc, exprstatement, kta, loop) );
-	    }
+            }
 
-if (loop !=0)
-std::cout << "Find enclosing loop of a task declaration:" << loop->class_name() << std::endl
-          << "At line: " << loop->get_file_info()->get_line()
-          << std::endl;
+            if (loop !=0)
+              std::cout << "Find enclosing loop of a task declaration:" << loop->class_name() << std::endl
+                        << "At line: " << loop->get_file_info()->get_line()
+                        << std::endl;
 
 #if 0 // TG no important here: see below in the main: when TemplateInstance are processed
 {            SgTemplateInstantiationFunctionDecl* sg_tmpldecl = isSgTemplateInstantiationFunctionDecl( fdecl );
@@ -1988,7 +1998,23 @@ std::cout << "Find enclosing loop of a task declaration:" << loop->class_name() 
             }
 }
 #endif
-          } // decl !=0 & kta != 0
+          } // fdecl !=0 & kta != 0
+          else {
+            Sg_File_Info* fileInfo = node->get_file_info();
+            std::cerr << "****[kaapi_c2c] Message: function call expression to " << fdecl->get_name().str() 
+                      << " with empty task declaration. "
+                      << " Function declaration: @" << fdecl
+                      << " Function Symbol: @" << fdecl->search_for_symbol_from_symbol_table()
+                      << ". Ignored.\n"
+                      << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
+                      << std::endl;
+          }
+        }
+        else {
+          Sg_File_Info* fileInfo = node->get_file_info();
+          std::cerr << "****[kaapi_c2c] Warning: function call expression with empty declaration is ignored.\n"
+                    << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
+                    << std::endl;
         }
       }
     }
@@ -2072,6 +2098,10 @@ public:
       call_expr->getAssociatedFunctionDeclaration();
     if (func_decl ==0) 
     {
+      Sg_File_Info* fileInfo = node->get_file_info();
+      std::cerr << "****[kaapi_c2c] Warning: function call expression with empty declaration is ignored.\n"
+                << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
+                << std::endl;
       /* no declaration (may be incomplete code or expression call (pointer to function) */
       return;
     }
@@ -2791,8 +2821,10 @@ int main(int argc, char **argv)
           parser.DoKaapiTaskDeclaration( func_decl_i->first );
         }
 
+#if 0 //Do not do mode analysis because of buggy ROSE implementation
         // do mode analysis
         DoKaapiModeAnalysis();
+#endif
 
         // turn call into ssa form
         KaapiSSATraversal ssa_traversal;
