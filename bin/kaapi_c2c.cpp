@@ -684,6 +684,12 @@ redo_selection:
         member_type = isSgModifierType(member_type)->get_base_type();
       kta->formal_param[i].kaapi_format = ConvertCType2KaapiFormat(kta->formal_param[i].type);
     }
+    else if (kta->formal_param[i].mode == KAAPI_VOID_MODE) 
+    {
+        std::cerr << "****[kaapi_c2c] Error: undefined access mode for parameter '" << kta->formal_param[i].initname->get_name().str() << "'\n"
+                  << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
+                  << std::endl;
+        KaapiAbort("**** error");    } 
     else 
     {
       if (!isSgPointerType(kta->formal_param[i].type))
@@ -692,11 +698,10 @@ redo_selection:
                   << "                         Change access mode declaration to value.\n"
                   << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
                   << " formal parameter '" << kta->formal_param[i].initname->get_name().str()
-                  << "' is declared as read/write/reduction but is not a pointer type. Should be declared as a value.\n"
+                  << "' is declared as read/write/reduction but is not a pointer type. Move it as declared as a value.\n"
                   << std::endl;
         kta->formal_param[i].mode = KAAPI_V_MODE;
         goto redo_selection;
-        KaapiAbort("**** error");
       }
       if (kta->israngedecl[i] <= 1) /* 2 was the size */
       {
@@ -2065,6 +2070,11 @@ public:
 
     SgFunctionDeclaration* const func_decl =
       call_expr->getAssociatedFunctionDeclaration();
+    if (func_decl ==0) 
+    {
+      /* no declaration (may be incomplete code or expression call (pointer to function) */
+      return;
+    }
     SgScopeStatement* const scope = SageInterface::getScope(call_expr);
     KaapiTaskAttribute* const kta = (KaapiTaskAttribute*)
       func_decl->getAttribute("kaapitask");
