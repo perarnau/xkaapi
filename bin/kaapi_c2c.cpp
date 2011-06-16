@@ -223,10 +223,10 @@ enum KaapiOperator_t {
 
 struct KaapiReduceOperator_t {
   KaapiReduceOperator_t() 
-   : isbuiltin(false), name(0), name_reducor(0), name_redinit(0)
+   : isbuiltin(false), name(), name_reducor(), name_redinit()
   {}
-  KaapiReduceOperator_t(const char* name, const char* reducor, const char* redinit) 
-   : isbuiltin(true), name(name), name_reducor(reducor), name_redinit(redinit)
+  KaapiReduceOperator_t(const char* n, const char* reducor, const char* redinit) 
+   : isbuiltin(true), name(n), name_reducor(reducor), name_redinit(redinit)
   {}
   bool  isbuiltin;
   std::string name;
@@ -1304,9 +1304,10 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
 
       /* pointer to the data: var */
       fout << "      " << type->unparseToString() 
-           << "* var = (" << type->unparseToString() << "*) arg->f" << i << ".data;\n";
-      fout << "      const " << type->unparseToString() 
-           << "* value = ( const " << type->unparseToString() << "*)v;\n";
+           << "* var = (" << type->unparseToString() << "*) arg->f" << i << ".data;\n"
+           << "      const " << type->unparseToString() 
+           << "* value = ( const " << type->unparseToString() << "*)v;\n"
+           << "      kaapi_memory_view_t view = " << kta->name_format << "_get_view_param(fmt, i, sp);\n";
            
       KaapiReduceOperator_t* redop = kta->formal_param[i].redop;
       /* the name of the variable is known: 
@@ -1322,8 +1323,6 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
             fout << "      *var " << redop->name_reducor << " *value;\n";
           }
           else {
-            fout << "      kaapi_memory_view_t view = " << kta->name_format << "_get_view_param(fmt, i, sp);\n";
-
             /* nested loop */
             for (unsigned int k=0; k<kta->formal_param[i].attr->dim; ++k)
             {
@@ -1358,9 +1357,10 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
                << "        *var++ " << redop->name_reducor << " *value++;\n";
         }
       }      
-      else /* not a builtin */
+      else /* not a builtin: generate a call to the user defined function */
       {
-        
+          fout << "      for (unsigned int k=0; k < view.size[0]; ++k)\n"
+               << "        " << redop->name_reducor << "( var++, value++);\n";        
       }
       fout << "    } break;\n";
     }
@@ -1382,11 +1382,13 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
       SgPointerType* ptrtype = isSgPointerType(kta->formal_param[i].type);
       if (ptrtype ==0) KaapiAbort("**** Error: bad internal assertion");
       SgType* type = ptrtype->get_base_type();
+#if 0 // NO MORE REQUIRED: generated code are included into the translation unit
       // TODO here: add definition of the type, else we cannot compile it */
       while (isSgTypedefType( type ))
       {
         type = isSgTypedefType(type)->get_base_type();
       }
+#endif
 
       /* pointer to the data: var */
       fout << "      " << type->unparseToString() 
@@ -1403,7 +1405,10 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
         fout << "      *var = " << redop->name_redinit << ";\n";
       }
       else {
-        
+        if (redop->name_redinit.empty())
+          fout << "      memset(var, 0, sizeof(*var));\n";
+        else
+          fout << "      " << redop->name_redinit << "(var);\n";
       }
       fout << "    } break;\n";
     }
@@ -4733,7 +4738,7 @@ KaapiReduceOperator_t* Parser::ParseReductionDeclaration(
     return 0;
   }
   KaapiReduceOperator_t* newop = new KaapiReduceOperator_t;
-  newop->name = strdup(name.c_str());
+  newop->name = name;
   
   skip_ws();
   c = readchar();
@@ -4760,7 +4765,7 @@ KaapiReduceOperator_t* Parser::ParseReductionDeclaration(
      - the concrete type is only known during utilization of a variable reduction
      Thus we postpone the verification until the definition of variable in reduciton clause
   */
-  newop->name_reducor = strdup(name.c_str());
+  newop->name_reducor = name;
   
   skip_ws();
   c = readchar();
@@ -4818,7 +4823,7 @@ KaapiReduceOperator_t* Parser::ParseReductionDeclaration(
               << std::endl;
     return 0;
   }
-  newop->name_redinit = strdup(name.c_str());
+  newop->name_redinit = name;
   
   skip_ws();
   c = readchar();
