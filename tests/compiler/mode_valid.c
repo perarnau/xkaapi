@@ -1,5 +1,8 @@
-static void bar(unsigned int m)
+extern void baz(unsigned int*);
+
+static void bar(unsigned int* m)
 {
+  if (*m > 3) bar(m);
 }
 
 #pragma kaapi task write(n) read(m)
@@ -14,7 +17,8 @@ static void fu(unsigned int* m, unsigned int* n)
   n[*m] = 0;
   n[*m + 5] = 0;
   *(unsigned int*)(*m + 2) = 0;
-  bar(m[0]);
+  bar(m);
+  baz(m);
 }
 
 int main(int ac, char** av)
