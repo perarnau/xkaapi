@@ -2204,10 +2204,20 @@ static inline bool isDerefExpr(SgNode* node, SgNode* child)
 
 // fwd decl
 static bool DoKaapiModeAnalysis
-(SgProject*, SgFunctionDeclaration*, std::vector<SgInitializedName*>);
+(
+ SgProject*,
+ std::set<SgFunctionDeclaration*>&,
+ SgFunctionDeclaration*,
+ std::vector<SgInitializedName*>&
+);
 
 static inline bool mayHaveSideEffects
-(SgProject* project, SgNode* node, SgNode* child)
+(
+ SgProject* project,
+ std::set<SgFunctionDeclaration*>& explored_decls,
+ SgNode* node,
+ SgNode* child
+)
 {
   SgFunctionCallExp* const call_expr = isSgFunctionCallExp(node);
   if (call_expr == NULL) return false;
@@ -2256,10 +2266,17 @@ static inline bool mayHaveSideEffects
   param_names[0] = name_list[i];
 
   // run the mode analysis
-  return DoKaapiModeAnalysis(project, func_decl, param_names);
+  const bool is_success = DoKaapiModeAnalysis
+    (project, explored_decls, func_decl, param_names);
+  return is_success ? false : true;
 }
 
-static bool isWriteVarRefExp(SgProject* project, SgVarRefExp* ref_expr)
+static bool isWriteVarRefExp
+(
+ SgProject* project,
+ std::set<SgFunctionDeclaration*>& explored_decls,
+ SgVarRefExp* ref_expr
+)
 {
   // TODO: handle recursive calls
 
@@ -2321,7 +2338,7 @@ static bool isWriteVarRefExp(SgProject* project, SgVarRefExp* ref_expr)
     }
     else if (deref_level <= 0)
     {
-      if (mayHaveSideEffects(project, node, last_expr))
+      if (mayHaveSideEffects(project, explored_decls, node, last_expr))
 	return true;
       // continue otherwise
     }
@@ -2350,12 +2367,18 @@ static SgStatement* getStatement(SgVarRefExp* ref_expr)
 static bool DoKaapiModeAnalysis
 (
  SgProject* project,
+ std::set<SgFunctionDeclaration*>& explored_decls,
  SgFunctionDeclaration* func_decl,
- std::vector<SgInitializedName*> param_names
+ std::vector<SgInitializedName*>& param_names
 )
 {
   // param_names the names of the parameters
   // which we want detect write access on
+
+  // already explored
+  if (explored_decls.find(func_decl) != explored_decls.end())
+    return true;
+  explored_decls.insert(func_decl);
 
   DefUseAnalysis project_dfa(project);
   DefUseAnalysisPF func_dfa(false, &project_dfa);
@@ -2399,7 +2422,7 @@ static bool DoKaapiModeAnalysis
       if (ref_name->get_qualified_name() != param_name->get_qualified_name())
 	continue ;
 
-      if (isWriteVarRefExp(project, ref_expr))
+      if (isWriteVarRefExp(project, explored_decls, ref_expr))
       {
 	printf("[ MODE ANALYSIS WARNING ]\n");
 	printf("  INVALID WRITE TO VARIABLE %s\n",
@@ -2409,6 +2432,8 @@ static bool DoKaapiModeAnalysis
       }
     }
   }
+
+  return true;
 }
 
 static bool DoKaapiModeAnalysis
@@ -2417,6 +2442,8 @@ static bool DoKaapiModeAnalysis
   // do mode analysis on a given task
 
   // build a list of param names and analyze
+
+  std::set<SgFunctionDeclaration*> explored_decls;
 
   std::vector<SgInitializedName*> param_names;
 
@@ -2431,7 +2458,8 @@ static bool DoKaapiModeAnalysis
     param_names.push_back(param_pos->initname);
   }
 
-  return DoKaapiModeAnalysis(project, kta->func_decl, param_names);
+  return DoKaapiModeAnalysis
+    (project, explored_decls, kta->func_decl, param_names);
 }
 
 bool DoKaapiModeAnalysis(SgProject* project)
