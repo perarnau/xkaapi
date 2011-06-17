@@ -2278,7 +2278,10 @@ static bool isWriteVarRefExp
  SgVarRefExp* ref_expr
 )
 {
-  // TODO: handle recursive calls
+  // TODO: explored_decls is not enough. there should
+  // be the parameter position to handle calls to the
+  // same function but with different args position.
+  // ie. foo(bar, baz) is different from foo(baz, bar)
 
   // a more correct algorithm should consider:
   // . enclosing expression: if we gets out of this
