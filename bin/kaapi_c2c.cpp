@@ -181,6 +181,7 @@ SgVariableDeclaration* buildInsertDeclarationKaapiThread( SgScopeStatement* bbno
 static void KaapiAbort( const std::string& msg )
 {
   std::cerr << msg << std::endl;
+  std::cerr << "Aborting" << std::endl;
   exit(1);
 }
 
@@ -248,6 +249,7 @@ enum KaapiParamAttribute_t {
   KAAPI_OPEN_RANGE_TYPE = 2,
   KAAPI_CLOSE_RANGE_TYPE = 3
 };
+
 
 /* Store view of each parameter */
 class KaapiParamAttribute : public AstAttribute {
@@ -2194,98 +2196,6 @@ public:
 
 // kaapi mode analysis
 
-#if 0
-static SgFunctionDeclaration* getInterproceduralEdge
-(std::vector<SgDirectedGraphEdge*>& out_edges)
-{
-  std::vector<SgDirectedGraphEdge*>::iterator pos = out_edges.begin();
-  std::vector<SgDirectedGraphEdge*>::iterator end = out_edges.end();
-  for (; pos != end; ++pos)
-    if ((*pos)->condition() == eckInterprocedural)
-      return isSgFunctionDeclaration((*pos)->get_to());
-  return NULL;
-}
-#endif
-
-#if 0 // UNUSED_RECUSIVE_ANALYSIS
-
-static void getCalledFunctionDecls
-(
- SgFunctionDeclaration* func_decl,
- std::vector<SgFunctionDeclaration*>& called_decls
-)
-{
-  // retrieve the set of functions called by func_decl
-
-  called_decls.clear();
-
-  SgFunctionDefinition* const func_def = func_decl->get_definition();
-
-  // StaticCFG::CFG cfg(func_def);
-  StaticCFG::InterproceduralCFG cfg(func_def, true);
-  // cfg.cfgToDot(func_def, "/tmp/bar.dot");
-  // SgGraphNode* const graph_node = isSgGraphNode(func_def);
-
-#if 0
-  {
-    SgGraphNode* pos = cfg.cfgForBeginning(func_def);
-    SgGraphNode* end = cfg.cfgForEnd(func_def);
-    for (; pos != end; ++pos)
-    {
-      // SgFunctionDeclaration* const called_decl =
-      // 	getInterproceduralEdge(cfg.getOutEdges(pos));
-      if (called_decl != NULL) printf("inter\n");
-      // std::vector<SgDirectedGraphEdge*> out_edges = 
-      // printf("out_edges == %u\n", out_edges.size());
-      // if (pos->condition() == eckInterprocedural)
-      // 	printf("FU\n");
-
-      // if (pos)
-      // if (out_edges.size())
-      // 	printf("ICALL found %s\n", (*out_edges.begin())->class_name().c_str());
-    }
-  }
-#endif
-
-  SgGraphNode* const graph_node = cfg.cfgForEnd(func_def);
-  if (graph_node == NULL)
-  {
-    printf("invalid node: %s\n", func_decl->get_qualified_name().str());
-    return ;
-  }
-
-  std::vector<SgDirectedGraphEdge*> out_edges = cfg.getOutEdges(graph_node);
-  std::vector<SgDirectedGraphEdge*>::iterator pos = out_edges.begin();
-  std::vector<SgDirectedGraphEdge*>::iterator end = out_edges.end();
-  for (; pos != end; ++pos)
-  {
-    SgGraphNode* const dest_node = (*pos)->get_to();
-
-    SgFunctionParameterList* const called_params =
-      isSgFunctionParameterList(dest_node->get_SgNode());
-    if (called_params == NULL)
-    {
-      printf("node not a param list\n");
-      continue ;
-    }
-
-    SgFunctionDeclaration* const called_decl =
-      isSgFunctionDeclaration(called_params->get_parent());
-    if (called_decl == NULL)
-    {
-      printf("parent not a function decl\n");
-      continue ;
-    }
-
-    printf("pushing: %s\n", called_decl->get_qualified_name().str());
-    called_decls.push_back(called_decl);
-  }
-
-  printf("calledset size: %u\n", called_decls.size());
-}
-
-#endif // UNUSED_RECUSIVE_ANALYSIS
-
 __attribute__((unused))
 static SgNode* getDeclByInitializedName
 (SgFunctionDeclaration* func_decl, SgInitializedName* name)
@@ -2350,16 +2260,88 @@ static inline bool isDerefExpr(SgNode* node, SgNode* child)
   return false;
 }
 
-static inline bool mayHaveSideEffects(SgNode* node)
+// fwd decl
+static bool DoKaapiModeAnalysis
+(
+ SgProject*,
+ std::set<SgFunctionDeclaration*>&,
+ SgFunctionDeclaration*,
+ std::vector<SgInitializedName*>&
+);
+
+static inline bool mayHaveSideEffects
+(
+ SgProject* project,
+ std::set<SgFunctionDeclaration*>& explored_decls,
+ SgNode* node,
+ SgNode* child
+)
 {
-  if (isSgFunctionCallExp(node)) return true;
-  return false;
+  SgFunctionCallExp* const call_expr = isSgFunctionCallExp(node);
+  if (call_expr == NULL) return false;
+
+  SgExpressionPtrList const args_expr =
+    call_expr->get_args()->get_expressions();
+
+  // find the argument pos, then its parameter name
+  SgExpressionPtrList::const_iterator pos = args_expr.begin();
+  SgExpressionPtrList::const_iterator end = args_expr.end();
+  unsigned int i = 0;
+  for (; pos != end; ++pos, ++i)
+    if (isSgNode(*pos) == child)
+      break ;
+
+  // not found
+  if (pos == end) return false;
+
+  // find the function parameter list
+  SgExpression* const func_expr = call_expr->get_function();
+
+  // tutorial/resolveOverloadedFunction.C
+  SgFunctionRefExp* const func_ref = isSgFunctionRefExp(func_expr);
+  SgFunctionSymbol* func_sym = NULL;
+  if (func_ref != NULL)
+  {
+    // non member function
+    func_sym = func_ref->get_symbol();
+  }
+  else
+  {
+    SgDotExp* const dot_expr = isSgDotExp(func_expr);
+    // assume(dot_expr);
+    func_sym = isSgMemberFunctionRefExp
+      (dot_expr->get_rhs_operand())->get_symbol();
+  }
+  SgFunctionDeclaration* const func_decl = func_sym->get_declaration();
+  // assume(func_decl);
+  SgFunctionParameterList* const func_params = func_decl->get_parameterList();
+  // assume(func_params);
+  SgInitializedNamePtrList& name_list = func_params->get_args();
+
+  // get the ith argument name
+  std::vector<SgInitializedName*> param_names;
+  param_names.resize(1);
+  param_names[0] = name_list[i];
+
+  // run the mode analysis
+  const bool is_success = DoKaapiModeAnalysis
+    (project, explored_decls, func_decl, param_names);
+  return is_success ? false : true;
 }
 
-static bool isWriteVarRefExp(SgVarRefExp* ref_expr)
+static bool isWriteVarRefExp
+(
+ SgProject* project,
+ std::set<SgFunctionDeclaration*>& explored_decls,
+ SgVarRefExp* ref_expr
+)
 {
+  // TODO: explored_decls is not enough. there should
+  // be the parameter position to handle calls to the
+  // same function but with different args position.
+  // ie. foo(bar, baz) is different from foo(baz, bar)
+
   // a more correct algorithm should consider:
-  // . deref_level: a stacked counter instead of bool
   // . enclosing expression: if we gets out of this
   // expression, stop the analysis: either the statement
   // is reached (current case), or we get out of the
@@ -2367,7 +2349,12 @@ static bool isWriteVarRefExp(SgVarRefExp* ref_expr)
 
   SgNode* child = isSgNode(ref_expr);
   SgNode* node = child->get_parent();
-  bool has_deref = false;
+
+  // last expression seen
+  SgNode* last_expr = NULL;
+
+  // deref_level == 1 means a value access
+  int deref_level = 0;
 
   while (1)
   {
@@ -2377,19 +2364,22 @@ static bool isWriteVarRefExp(SgVarRefExp* ref_expr)
     if (node == NULL) break ;
     else if (isSgStatement(node)) break ;
 
+    // needed for tracking call args
+    if (isSgExprListExp(child) == NULL)
+      last_expr = child;
+
     // check first for deref expression
     // sgPntrArrayRefExp is a binop too
     if (isDerefExpr(node, child) == true)
     {
-      // already deref, not the value anymore
-      // this is wrong since the addrof operator
-      // could lower the indirection level. if
-      // it becomes a problem, use deref_level
-      // instead of has_deref.
-      if (has_deref == true) return false;
-      has_deref = true;
+      ++deref_level;
     }
-    else if (has_deref == true) // check for modifying op
+    // check for underef expr
+    else if (isSgAddressOfOp(node))
+    {
+      --deref_level;
+    }
+    else if (deref_level == 1) // check for modifying op
     {
       SgBinaryOp* const binop = isSgBinaryOp(node);
       SgUnaryOp* const unop = isSgUnaryOp(node);
@@ -2407,9 +2397,11 @@ static bool isWriteVarRefExp(SgVarRefExp* ref_expr)
 	}
       }
     }
-    else if (mayHaveSideEffects(node)) // and deref == false
+    else if (deref_level <= 0)
     {
-      return true;
+      if (mayHaveSideEffects(project, explored_decls, node, last_expr))
+	return true;
+      // continue otherwise
     }
 
     // one level up
@@ -2433,80 +2425,44 @@ static SgStatement* getStatement(SgVarRefExp* ref_expr)
   return NULL;
 }
 
-static bool DoKaapiModeAnalysis(SgProject* project, SgFunctionDeclaration* func_decl)
+static bool DoKaapiModeAnalysis
+(
+ SgProject* project,
+ std::set<SgFunctionDeclaration*>& explored_decls,
+ SgFunctionDeclaration* func_decl,
+ std::vector<SgInitializedName*>& param_names
+)
 {
-  // do mode analysis on a given function decl
+  // param_names the names of the parameters
+  // which we want detect write access on
 
-  bool is_success = true;
-
-  SgStatement* const func_stmt = isSgStatement(func_decl);
-  // assume(func_stmt);
-
-  SgSymbol* symb = func_decl->search_for_symbol_from_symbol_table();
-  KaapiTaskAttribute* const kta = (KaapiTaskAttribute*)
-    symb->getAttribute("kaapitask");
-  // assume(kta);
-
-#if 0 // use readwrite analysis, bugged in rose-0.9.5a-14391
-
-  std::set<SgInitializedName*> rvars, wvars;
-
-  if (!SageInterface::collectReadWriteVariables(func_stmt, rvars, wvars))
-  {
-    // may fail due to side analysis, ie. function call
-    return false;
-  }
-
-  // check all write operations are allowed
-  std::set<SgInitializedName*>::iterator wpos = wvars.begin();
-  std::set<SgInitializedName*>::iterator wend = wvars.end();
-  for (; wpos != wend; ++wpos)
-  {
-    std::map<std::string, int>::iterator iparam =
-      kta->lookup.find((*wpos)->get_qualified_name().str());
-    if (iparam == kta->lookup.end()) continue ;
-
-    printf("WRITE(%s)\n", (*wpos)->get_qualified_name().str());
-
-    KaapiTaskFormalParam& param = kta->formal_param[iparam->second];
-    if (param.mode == KAAPI_W_MODE) continue ;
-    else if (param.mode == KAAPI_RW_MODE) continue ;
-    else if (param.mode == KAAPI_CW_MODE) continue ;
-    else if (param.mode == KAAPI_GLOBAL_MODE) continue ;
-
-    // invalid access
-    printf("INVALID_WRITE(%s)\n", (*wpos)->get_qualified_name().str());
-
-    is_success = false;
-  }
-
-#else // use defuse analysis
+  // already explored
+  if (explored_decls.find(func_decl) != explored_decls.end())
+    return true;
+  explored_decls.insert(func_decl);
 
   DefUseAnalysis project_dfa(project);
   DefUseAnalysisPF func_dfa(false, &project_dfa);
   bool abortme = false;
-  func_dfa.run(func_decl->get_definition(), abortme);
-  // project_dfa.printUseMap();
 
-  std::vector<KaapiTaskFormalParam>::iterator
-    param_pos = kta->formal_param.begin();
-  std::vector<KaapiTaskFormalParam>::iterator
-    param_end = kta->formal_param.end();
-  for (; param_pos != param_end; ++param_pos)
+  // possible for a decl not to have a definition
+  SgFunctionDefinition* const func_def = func_decl->get_definition();
+  if (func_def == NULL)
   {
-    // analyze only if readonly
-    if (param_pos->mode != KAAPI_R_MODE) continue ;
+    printf("[ MODE ANALYSIS ]\n");
+    printf("  ABORTED DUE TO MISSING DEFINITION %s\n",
+	   func_decl->get_name().str());
+    return false;
+  }
 
-    std::vector<SgNode*> uses;
-    SgInitializedName* const param_name = param_pos->initname;
+  func_dfa.run(func_def, abortme);
 
-    printf("[USE] analysis for %s\n", param_name->get_qualified_name().str());
+  std::vector<SgInitializedName*>::iterator name_pos = param_names.begin();
+  std::vector<SgInitializedName*>::iterator name_end = param_names.end();
+  for (; name_pos != name_end; ++name_pos)
+  {
+    SgInitializedName* const param_name = *name_pos;
 
-#if 0 // dont understand how to use it
-    SgNode* const node = getDeclByInitializedName(func_decl, param_name);
-    if (node == NULL) continue ;
-    project_dfa.getUseFor(node, param_name);
-#else // so done by hand
     typedef std::vector<std::pair<SgInitializedName*, SgNode*> > multitype;
     std::map<SgNode*, multitype> use_map = project_dfa.getUseMap();
     std::map<SgNode*, multitype>::iterator use_pos = use_map.begin();
@@ -2527,39 +2483,49 @@ static bool DoKaapiModeAnalysis(SgProject* project, SgFunctionDeclaration* func_
       if (ref_name->get_qualified_name() != param_name->get_qualified_name())
 	continue ;
 
-      if (isWriteVarRefExp(ref_expr))
+      if (isWriteVarRefExp(project, explored_decls, ref_expr))
       {
-	printf("MODE ANALYSIS WARNING\n");
-	printf("INVALID WRITE TO VARIABLE %s\n",
+	printf("[ MODE ANALYSIS WARNING ]\n");
+	printf("  INVALID WRITE TO VARIABLE %s\n",
 	       param_name->get_qualified_name().str());
-	printf("STATEMENT: \"%s\"\n",
+	printf("  STATEMENT: \"%s\"\n",
 	       getStatement(ref_expr)->unparseToString().c_str());
       }
-
-#if 0 // unused
-      multitype::iterator ref_pos = use_pos->second.begin();
-      multitype::iterator ref_end = use_pos->second.end();
-      for (; ref_pos != ref_end; ++ref_pos)
-      {
-	if (isWriteVarRefExp(ref_expr))
-	{
-	  printf("INVALID_WRITE(%s)\n", param_name->get_qualified_name().str());
-	}
-      }
-#endif // unused
-
     }
-#endif // dont understand it
-
   }
 
-#endif
+  return true;
+}
 
-  return is_success;
+static bool DoKaapiModeAnalysis
+(SgProject* project, KaapiTaskAttribute* kta)
+{
+  // do mode analysis on a given task
+
+  // build a list of param names and analyze
+
+  std::set<SgFunctionDeclaration*> explored_decls;
+
+  std::vector<SgInitializedName*> param_names;
+
+  std::vector<KaapiTaskFormalParam>::iterator
+    param_pos = kta->formal_param.begin();
+  std::vector<KaapiTaskFormalParam>::iterator
+    param_end = kta->formal_param.end();
+  for (; param_pos != param_end; ++param_pos)
+  {
+    // analyze only if readonly
+    if (param_pos->mode != KAAPI_R_MODE) continue ;
+    param_names.push_back(param_pos->initname);
+  }
+
+  return DoKaapiModeAnalysis
+    (project, explored_decls, kta->func_decl, param_names);
 }
 
 bool DoKaapiModeAnalysis(SgProject* project)
 {
+  // write on read
   bool is_success = true;
 
   // check modes of each access
@@ -2568,20 +2534,13 @@ bool DoKaapiModeAnalysis(SgProject* project)
   for (; decl_pos != decl_end; ++decl_pos)
   {
     SgFunctionDeclaration* const func_decl = decl_pos->first;
-    if (DoKaapiModeAnalysis(project, func_decl) == false)
-      is_success = false;
 
-#if 0 // UNUSED_RECUSIVE_ANALYSIS
-    std::vector<SgFunctionDeclaration*> called_decls;
-    getCalledFunctionDecls(func_decl, called_decls);
-    std::vector<SgFunctionDeclaration*>::iterator
-      called_pos = called_decls.begin();
-    std::vector<SgFunctionDeclaration*>::iterator
-      called_end = called_decls.end();
-    for (; called_pos != called_end; ++called_pos)
-      if (DoKaapiModeAnalysis(project, *called_pos))
-	is_success = false;
-#endif // UNUSED_RECUSIVE_ANALYSIS
+    SgSymbol* symb = func_decl->search_for_symbol_from_symbol_table();
+    KaapiTaskAttribute* const kta = (KaapiTaskAttribute*)symb->getAttribute("kaapitask");
+    // assume(kta);
+
+    if (DoKaapiModeAnalysis(project, kta) == false)
+      is_success = false;
   }
 
   return is_success;
@@ -3058,7 +3017,7 @@ int main(int argc, char **argv)
           parser.DoKaapiTaskDeclaration( func_decl_i->first );
         }
 
-#if 0
+#if 1
         // do mode analysis
         DoKaapiModeAnalysis(project);
 #endif
@@ -3137,6 +3096,7 @@ int main(int argc, char **argv)
     project->unparse();
   } catch (...)
   {
+    KaapiAbort("****[kaapi_c2c] catch unknown exception");
     return -1;
   }
   return 0;
@@ -3408,11 +3368,13 @@ SgVariableDeclaration* buildInsertDeclarationKaapiThread( SgScopeStatement* scop
 {
   /* Change scope to generate definition outside a loop */
   SgScopeStatement* loop = SageInterface::findEnclosingLoop( scope );
+#if 0
   while (loop != 0)
   {
     scope = loop;
-    loop = SageInterface::findEnclosingLoop( scope, false );
+    loop = SageInterface::findEnclosingLoop( scope );
   }
+#endif
   SgVariableDeclaration* newkaapi_thread = SageBuilder::buildVariableDeclaration ( 
     "__kaapi_thread", 
     SageBuilder::buildPointerType( kaapi_thread_ROSE_type ), 

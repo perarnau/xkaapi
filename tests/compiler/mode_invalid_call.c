@@ -1,13 +1,14 @@
-static void baz(double* n)
+static void baz(unsigned int p, double* q)
 {
-  *n = 0;
+  *q = 0;
 }
 
 #pragma kaapi task read(m) write(n)
 static void fu(double* m, double* n)
 {
   *n = 0;
-  baz(m);
+  baz(42, m + 2);
+  baz(42, m);
 }
 
 int main(int ac, char** av)
