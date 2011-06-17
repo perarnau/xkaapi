@@ -5,7 +5,7 @@ static void fubar(double* r, double* w)
 
 static void baz(double* p, double* q)
 {
-  fubar(q, p);
+  fubar(p, q);
 }
 
 #pragma kaapi task read(m) write(n)
