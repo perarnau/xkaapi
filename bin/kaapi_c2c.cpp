@@ -2303,7 +2303,6 @@ static inline bool mayHaveSideEffects(SgNode* node)
 static bool isWriteVarRefExp(SgVarRefExp* ref_expr)
 {
   // a more correct algorithm should consider:
-  // . deref_level: a stacked counter instead of bool
   // . enclosing expression: if we gets out of this
   // expression, stop the analysis: either the statement
   // is reached (current case), or we get out of the
@@ -2311,7 +2310,7 @@ static bool isWriteVarRefExp(SgVarRefExp* ref_expr)
 
   SgNode* child = isSgNode(ref_expr);
   SgNode* node = child->get_parent();
-  bool has_deref = false;
+  int deref_level = 0;
 
   while (1)
   {
@@ -2325,15 +2324,14 @@ static bool isWriteVarRefExp(SgVarRefExp* ref_expr)
     // sgPntrArrayRefExp is a binop too
     if (isDerefExpr(node, child) == true)
     {
-      // already deref, not the value anymore
-      // this is wrong since the addrof operator
-      // could lower the indirection level. if
-      // it becomes a problem, use deref_level
-      // instead of has_deref.
-      if (has_deref == true) return false;
-      has_deref = true;
+      ++deref_level;
     }
-    else if (has_deref == true) // check for modifying op
+    // check for underef expr
+    else if (isSgAddressOfOp(node))
+    {
+      --deref_level;
+    }
+    else if (deref_level == 1) // check for modifying op
     {
       SgBinaryOp* const binop = isSgBinaryOp(node);
       SgUnaryOp* const unop = isSgUnaryOp(node);
@@ -2351,7 +2349,7 @@ static bool isWriteVarRefExp(SgVarRefExp* ref_expr)
 	}
       }
     }
-    else if (mayHaveSideEffects(node)) // and deref == false
+    else if ((deref_level == 0) && mayHaveSideEffects(node))
     {
       return true;
     }
