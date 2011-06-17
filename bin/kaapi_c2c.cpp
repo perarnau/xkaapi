@@ -2310,6 +2310,8 @@ static bool isWriteVarRefExp(SgVarRefExp* ref_expr)
 
   SgNode* child = isSgNode(ref_expr);
   SgNode* node = child->get_parent();
+
+  // deref_level == 1 means a value access
   int deref_level = 0;
 
   while (1)
@@ -2349,7 +2351,7 @@ static bool isWriteVarRefExp(SgVarRefExp* ref_expr)
 	}
       }
     }
-    else if ((deref_level == 0) && mayHaveSideEffects(node))
+    else if ((deref_level <= 0) && mayHaveSideEffects(node))
     {
       return true;
     }
