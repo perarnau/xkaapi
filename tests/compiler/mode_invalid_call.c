@@ -7,8 +7,7 @@ static void baz(double* n)
 static void fu(double* m, double* n)
 {
   *n = 0;
-  *m = 42;
-  baz(n);
+  baz(m);
 }
 
 int main(int ac, char** av)

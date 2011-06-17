@@ -1,16 +1,17 @@
-#pragma kaapi task write(m) read(n)
-static void fu(double* m, double* n)
+#pragma kaapi task read(m)
+static void fu(unsigned int* m)
 {
-  *n = 42;
+  ++*m;
+  (*m)++;
 }
 
 int main(int ac, char** av)
 {
-  double bar = 0;
+  unsigned int bar = 0;
 
 #pragma kaapi start
   {
-    fu(&bar, &bar);
+    fu(&bar);
   }
 #pragma kaapi barrier
 #pragma kaapi finish

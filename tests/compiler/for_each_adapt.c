@@ -75,6 +75,7 @@ int main(int argc, char** argv)
 {
   double t0,t1;
   double sum = 0.f;
+  size_t j;
   size_t i;
   size_t iter;
   size_t iter2;
@@ -98,10 +99,11 @@ int main(int argc, char** argv)
   #pragma kaapi loop
   for (iter =0; iter<niter; iter += n)
   {
-    #pragma kaapi loop
-    for (iter2 =0; iter2<niter; iter2 += 4)
+    for (iter2 =iter; iter2 < niter; iter2 += 4)
     {
       apply_cos(&array[iter*n+iter2]);
+//      array[iter*n+iter2] = 3;
+      sum += array[i*n+j] = 3;
     }
   }
   t1 = get_elapsedtime();
