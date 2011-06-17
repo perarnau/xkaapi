@@ -2441,20 +2441,76 @@ static bool DoKaapiModeAnalysis
     return true;
   explored_decls.insert(func_decl);
 
-  DefUseAnalysis project_dfa(project);
-  DefUseAnalysisPF func_dfa(false, &project_dfa);
-  bool abortme = false;
-
   // possible for a decl not to have a definition
   SgFunctionDefinition* const func_def = func_decl->get_definition();
   if (func_def == NULL)
   {
+    // run analysis on the task parameters
+
+    SgSymbol* func_sym;
+    KaapiTaskAttribute* kta;
+    std::vector<SgInitializedName*>::iterator name_pos, name_end;
+    std::vector<KaapiTaskFormalParam>::iterator param_pos, param_end;
+    enum { fu, bar, baz } reason = fu;
+
+    func_sym = func_decl->search_for_symbol_from_symbol_table();
+    if (func_sym == NULL) goto on_analysis_failure;
+
+    kta = (KaapiTaskAttribute*)func_sym->getAttribute("kaapitask");
+    if (kta == NULL) goto on_analysis_failure;
+
+    // foreach param_name, check it is a readonly mode
+    name_pos = param_names.begin();
+    name_end = param_names.end();
+    for (; name_pos != name_end; ++name_pos)
+    {
+      // find the corresponding task attribute param
+      param_pos = kta->formal_param.begin();
+      param_end = kta->formal_param.end();
+      for (; param_pos != param_end; ++param_pos)
+	if ((*name_pos)->get_name() == param_pos->initname->get_name())
+	  break ;
+
+      // not found, failure
+      if (param_pos == param_end)
+      {
+	reason = bar;
+	goto on_analysis_failure;
+      }
+
+      // found, is it a readonly mode
+      if (param_pos->mode != KAAPI_R_MODE)
+      {
+	reason = baz;
+	goto on_analysis_failure;
+      }
+    }
+
+    // covered all parameters with success
+    return true;
+
+  on_analysis_failure:
     printf("[ MODE ANALYSIS ]\n");
-    printf("  ABORTED DUE TO MISSING DEFINITION %s\n",
-	   func_decl->get_name().str());
+    printf("  ABORTED DUE TO ");
+    switch (reason)
+    {
+    case fu:
+      printf("MISSING DEFINITION %s\n", func_decl->get_name().str());
+      break ;
+    case bar:
+      printf("PARAMETER NOT FOUND\n");
+      break ;
+    case baz:
+      printf("INVALID MODE\n");
+      break ;
+    default: break ;
+    }
     return false;
   }
 
+  DefUseAnalysis project_dfa(project);
+  DefUseAnalysisPF func_dfa(false, &project_dfa);
+  bool abortme = false;
   func_dfa.run(func_def, abortme);
 
   std::vector<SgInitializedName*>::iterator name_pos = param_names.begin();

@@ -1,4 +1,5 @@
-extern void baz(unsigned int*);
+#pragma kaapi task write(q)
+void baz(unsigned int* q);
 
 #pragma kaapi task write(n) read(m)
 static void fu(unsigned int* m, unsigned int* n)
