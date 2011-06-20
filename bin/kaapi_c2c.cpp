@@ -108,6 +108,7 @@ static std::map<std::string,KaapiTaskAttribute*> all_manglename2tasks;
 
 typedef std::list<std::pair<SgFunctionDeclaration*, std::string> > ListTaskFunctionDeclaration;
 static ListTaskFunctionDeclaration all_task_func_decl;
+static std::set<SgFunctionDeclaration*> all_signature_func_decl;
 
 /* used to mark already instanciated template */
 static std::set<std::string> all_template_instanciate; 
@@ -299,6 +300,7 @@ public:
   KaapiTaskAttribute () 
   { }
 
+  bool				    is_signature;      /* signature pragma */
   std::string                       mangled_name;      /* internal name of the task */
   bool                              has_retval;
   KaapiTaskFormalParam              retval;
@@ -523,7 +525,8 @@ public:
       SgScopeStatement*   scope 
   );
 
-  void DoKaapiPragmaTask( SgPragmaDeclaration* sgp );
+  void DoKaapiPragmaTask( SgPragmaDeclaration* sgp);
+  void DoKaapiPragmaSignature( SgPragmaDeclaration* sgp);
   void DoKaapiPragmaData( SgNode* node );
   void DoKaapiPragmaLoop( SgPragmaDeclaration* sgp );
   void DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration );
@@ -583,8 +586,16 @@ std::cerr << "****[kaapi_c2c] Found #pragma kaapi task. "
           << " Function declaration: @" << functionDeclaration
           << " Function declaration Symbol: @" << functionDeclaration->search_for_symbol_from_symbol_table()  
           << std::endl;
-          
-  all_task_func_decl.push_back( std::make_pair(functionDeclaration, pragma_string) );
+
+ all_task_func_decl.push_back( std::make_pair(functionDeclaration, pragma_string) );
+}
+
+void Parser::DoKaapiPragmaSignature( SgPragmaDeclaration* sgp )
+{
+  DoKaapiPragmaTask(sgp);
+  SgStatement* const next_stmt = SageInterface::getNextStatement(sgp);
+  SgFunctionDeclaration* const func_decl = isSgFunctionDeclaration(next_stmt);
+  if (func_decl) all_signature_func_decl.insert(func_decl);
 }
 
 void Parser::DoKaapiPragmaLoop( SgPragmaDeclaration* sgp )
@@ -613,12 +624,21 @@ void Parser::DoKaapiPragmaLoop( SgPragmaDeclaration* sgp )
 }
 
 
-void Parser::DoKaapiTaskDeclaration( SgFunctionDeclaration* functionDeclaration )
+static inline bool is_signature(SgFunctionDeclaration* func_decl)
+{
+  if (all_signature_func_decl.find(func_decl) != all_signature_func_decl.end())
+    return true;
+  return false;
+}
+
+void Parser::DoKaapiTaskDeclaration
+( SgFunctionDeclaration* functionDeclaration )
 {
   Sg_File_Info* fileInfo = functionDeclaration->get_file_info();
 
   /* */
   KaapiTaskAttribute* kta = new KaapiTaskAttribute;
+  kta->is_signature = is_signature(functionDeclaration);
   kta->func_decl = functionDeclaration;
   kta->has_retval = false;
 
@@ -1975,6 +1995,7 @@ public:
           std::cerr << "****[kaapi_c2c] Message: found function call expression. fdecl: @" << fdecl << " symb: @" << symb
                     << std::endl;
           KaapiTaskAttribute* kta = (KaapiTaskAttribute*)symb->getAttribute("kaapitask");
+	  if (kta && kta->is_signature == true) kta = 0;
           if (kta !=0)
           {
             std::cerr << "****[kaapi_c2c] Message: found function call expression. fdecl: @" << fdecl << " symb: @" << symb
@@ -2121,8 +2142,9 @@ public:
     }
     SgScopeStatement* const scope = SageInterface::getScope(call_expr);
     SgSymbol* symb = func_decl->search_for_symbol_from_symbol_table();
-    KaapiTaskAttribute* const kta = (KaapiTaskAttribute*)
+    KaapiTaskAttribute* kta = (KaapiTaskAttribute*)
       symb->getAttribute("kaapitask");
+    if (kta && kta->is_signature) kta = NULL;
 
     // this is only for retvaled calls
     if ((kta == NULL) || (kta->has_retval == false)) return ;
@@ -2592,8 +2614,11 @@ bool DoKaapiModeAnalysis(SgProject* project)
     SgFunctionDeclaration* const func_decl = decl_pos->first;
 
     SgSymbol* symb = func_decl->search_for_symbol_from_symbol_table();
-    KaapiTaskAttribute* const kta = (KaapiTaskAttribute*)symb->getAttribute("kaapitask");
+    KaapiTaskAttribute* kta = (KaapiTaskAttribute*)
+      symb->getAttribute("kaapitask");
     // assume(kta);
+
+    if (kta->is_signature) continue ;
 
     if (DoKaapiModeAnalysis(project, kta) == false)
       is_success = false;
@@ -2649,6 +2674,11 @@ public:
       {
         parser.DoKaapiPragmaTask( sgp );
       } /* end for task */
+
+      else if (name == "signature" || name == "prototype")
+      {
+      	parser.DoKaapiPragmaSignature( sgp );
+      }
 
       else if (name == "notask")
       {

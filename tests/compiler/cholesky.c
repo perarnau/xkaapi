@@ -36,7 +36,7 @@
 
 //----------------------------------------------------------------------------------------------
 
-#pragma css task input(NB) inout(A[NB][NB]) highpriority 
+#pragma css task value(NB) inout(A[NB][NB]) highpriority 
 void smpSs_spotrf_tile(float *A,unsigned long NB)
 {
 unsigned char LO='L';
@@ -48,7 +48,26 @@ int nn=NB;
           &INFO);
 }
 
-#pragma css task input(A[NB][NB], B[NB][NB], NB) inout(C[NB][NB])
+#pragma css prototype value(Order, TransA, TransB, M, N, K, alpha, beta, lda, ldb, ldc) input(A, B) inout(C)
+void cblas_sgemm
+(
+ const enum CBLAS_ORDER Order,
+ const enum CBLAS_TRANSPOSE TransA,
+ const enum CBLAS_TRANSPOSE TransB,
+ const int M,
+ const int N,
+ const int K,
+ const float alpha,
+ const float* A,
+ const int lda,
+ const float* B,
+ const int ldb,
+ const float beta,
+ float* C,
+ const int ldc
+);
+
+#pragma css task value(NB) input(A[NB][NB], B[NB][NB]) inout(C[NB][NB])
 void smpSs_sgemm_tile(float  *A, float *B, float *C, unsigned long NB)
 {
 unsigned char TR='T', NT='N';
@@ -74,7 +93,25 @@ float DONE=1.0, DMONE=-1.0;
 
 }
 
-#pragma css task input(T[NB][NB], NB) inout(B[NB][NB])
+
+#pragma css prototype value(Order, Side, Uplo, TransA, Diag, M, N, alpha, lda, ldb) input(A) inout(B)
+void cblas_strsm
+(
+ const enum CBLAS_ORDER Order,
+ const enum CBLAS_SIDE Side,
+ const enum CBLAS_UPLO Uplo,
+ const enum CBLAS_TRANSPOSE TransA,
+ const enum CBLAS_DIAG Diag,
+ const int M,
+ const int N,
+ const float alpha,
+ const float* A,
+ const int lda,
+ float* B,
+ const int ldb
+);
+
+#pragma css task value(NB) input(T[NB][NB]) inout(B[NB][NB])
 void smpSs_strsm_tile(float *T, float *B, unsigned long NB)
 {
 unsigned char LO='L', TR='T', NU='N', RI='R';
@@ -96,7 +133,16 @@ float DONE=1.0;
 
 }
 
-#pragma css task input(A[NB][NB], NB) inout(C[NB][NB])
+#pragma css prototype value(Order, Uplo, Trans, N, K, alpha, beta, lda, ldc, A[N][N]) input(A[N][N]) inout(C[N][N])
+void cblas_ssyrk
+(
+ const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
+ const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
+ const float alpha, const float  *A, const int lda,
+ const float beta, float  *C, const int ldc
+);
+
+#pragma css task value(NB) input(A[NB][NB]) inout(C[NB][NB])
 void smpSs_ssyrk_tile( float *A, float *C, long NB)
 {
 unsigned char LO='L', NT='N';
