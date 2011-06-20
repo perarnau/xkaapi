@@ -5665,14 +5665,7 @@ void Parser::ParseListParam(
 redo:
   mode = ParseAccessMode( fileInfo );
   
-  if (mode == KAAPI_VOID_MODE)
-  {
-    std::cerr << "****[kaapi_c2c] Error. Bad access mode."
-              << "     In filename '" << fileInfo->get_filename() 
-              << "' LINE: " << fileInfo->get_line()
-              << std::endl;
-    KaapiAbort("**** error");
-  }
+  if (mode == KAAPI_VOID_MODE) goto next_clause;
   
   skip_ws();
   c = readchar();
@@ -5704,7 +5697,8 @@ redo:
               << std::endl;
     KaapiAbort("**** error");
   }
-  
+
+ next_clause:  
   c = readchar();
   if (c == EOF) return;
   goto redo;
