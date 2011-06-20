@@ -2682,22 +2682,17 @@ private:
   {
     // building a pragma from the statement corrects the multiline related bug
 
-    SgDeclarationStatement* const decl_stmt = isSgDeclarationStatement(sgp);
-    if (decl_stmt != NULL)
-    {
-      std::string decl_string = decl_stmt->unparseToString();
+    SgPragma* const old_pragma = sgp->get_pragma();
+    std::string decl_string = old_pragma->get_pragma();
 
-      // skip the #pragma token, would appear twice
-      const size_t pos = decl_string.find("#pragma");
-      // assume(pos);
-      decl_string.erase(0, pos + (sizeof("#pragma") - 1));
+    std::string::iterator pos = decl_string.begin();
+    std::string::iterator end = decl_string.end();
+    for (; pos != end; ++pos) if (*pos == '\n') *pos = ' ';
 
-      SgPragma* const old_pragma = sgp->get_pragma();
-      SgPragma* const normalized_pragma =
-	new SgPragma(decl_string, old_pragma->get_file_info());
-      sgp->set_pragma(normalized_pragma);
-      delete old_pragma;
-    }
+    SgPragma* const normalized_pragma =
+      new SgPragma(decl_string, old_pragma->get_file_info());
+    sgp->set_pragma(normalized_pragma);
+    delete old_pragma;
   }
 
 public:
