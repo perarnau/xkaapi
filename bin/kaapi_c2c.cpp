@@ -2685,7 +2685,13 @@ private:
     SgDeclarationStatement* const decl_stmt = isSgDeclarationStatement(sgp);
     if (decl_stmt != NULL)
     {
-      std::string decl_string = decl_stmt->unparseToString().c_str();
+      std::string decl_string = decl_stmt->unparseToString();
+
+      // skip the #pragma token, would appear twice
+      const size_t pos = decl_string.find("#pragma");
+      // assume(pos);
+      decl_string.erase(0, pos + (sizeof("#pragma") - 1));
+
       SgPragma* const old_pragma = sgp->get_pragma();
       SgPragma* const normalized_pragma =
 	new SgPragma(decl_string, old_pragma->get_file_info());
