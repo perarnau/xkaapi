@@ -103,6 +103,21 @@ NOK   - global variable:
 struct KaapiTaskAttribute; 
 struct OneCall;
 
+typedef struct synced_stmt
+{
+  // synced calls needs scope + varlist
+  SgScopeStatement* scope_;
+  std::list<SgInitializedName*> var_;
+
+  synced_stmt() : scope_(NULL) {}
+
+} synced_stmt_t;
+
+typedef std::pair<SgStatement*, synced_stmt> synced_stmt_pair_type;
+typedef std::map<SgStatement*, synced_stmt > synced_stmt_map_type;
+typedef synced_stmt_map_type::iterator synced_stmt_iterator_type;
+static synced_stmt_map_type all_synced_stmts;
+
 static std::list<KaapiTaskAttribute*> all_tasks;
 static std::map<std::string,KaapiTaskAttribute*> all_manglename2tasks;
 
@@ -2193,20 +2208,24 @@ public:
       assign_stmt->set_file_info(call_stmt->get_file_info());
       SageInterface::insertStatement(call_stmt, assign_stmt);
 
-      // kaapi_sched_sync();
-      // TODO: associate the list of variable to be synchronized
-      // as a call_expr attribute. add every synced variable to
-      // this list and generate the kaapi_sched_sync(list) at
-      // finalization time (to solve: what is finalization time).
-      SgExprStatement* const sync_stmt =
-	SageBuilder::buildFunctionCallStmt
-	(
-	 "kaapi_sched_sync", 
-	 SageBuilder::buildIntType(), 
-	 SageBuilder::buildExprListExp(),
-	 scope
-	);
-      SageInterface::insertStatement(assign_stmt, sync_stmt, false);
+      // add the stmt to be synced during finalization pass
+      synced_stmt_iterator_type synced_pos =
+	all_synced_stmts.find(call_stmt);
+      if (synced_pos == all_synced_stmts.end())
+      {
+	// not found, insert
+	synced_stmt_pair_type synced_pair;
+	synced_pair.first = call_stmt;
+	synced_pair.second.scope_ = scope;
+
+	std::pair<synced_stmt_iterator_type, bool> ret;
+	ret = all_synced_stmts.insert(synced_pair);
+	// assume(ret.second == true);
+	synced_pos = ret.first;
+      }
+
+      // TODO: when kaapi_sched_sync(varlist) available,
+      // add the variable to be synced on to synced_pos->vars
 
       // replace by tmp
       SgExpression* const parent_expr =	isSgExpression(prev_parent);
@@ -2625,6 +2644,30 @@ bool DoKaapiModeAnalysis(SgProject* project)
   }
 
   return is_success;
+}
+
+
+// kaapi finalization pass
+
+static void DoKaapiFinalization(SgProject* project)
+{
+  // add a kaapi_sched_sync all before each synced_call
+  synced_stmt_iterator_type pos = all_synced_stmts.begin();
+  synced_stmt_iterator_type end = all_synced_stmts.end();
+  for (; pos != end; ++pos)
+  {
+    SgExprStatement* const sync_stmt =
+      SageBuilder::buildFunctionCallStmt
+      (
+       "kaapi_sched_sync", 
+       SageBuilder::buildIntType(), 
+       SageBuilder::buildExprListExp(),
+       pos->second.scope_
+      );
+
+    // insert before stmt
+    SageInterface::insertStatement(pos->first, sync_stmt, true);
+  }
 }
 
 
@@ -3103,10 +3146,8 @@ int main(int argc, char **argv)
           parser.DoKaapiTaskDeclaration( func_decl_i->first );
         }
 
-#if 1
         // do mode analysis
         DoKaapiModeAnalysis(project);
-#endif
 
         // turn call into ssa form
         KaapiSSATraversal ssa_traversal;
@@ -3156,7 +3197,11 @@ int main(int argc, char **argv)
                       sg_tmpldecl->get_definition()->unparseToString(sg_info),
                       AstUnparseAttribute::e_before
           );
-        } 
+        }
+
+	// finalization pass
+	DoKaapiFinalization(project);
+
       }
 
       /* Generate the format */

@@ -8,11 +8,6 @@ static double fu(double n)
   return n + 1;
 }
 
-/* not implemented:
-   fu(fu(0)); -> tmp + barrier
-   return fu(0); -> tmp + barrier
- */
-
 int main(int ac, char** av)
 {
   double res = 0.;
