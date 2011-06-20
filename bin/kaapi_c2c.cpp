@@ -2677,6 +2677,23 @@ static void DoKaapiFinalization(SgProject* project)
    - 
 */
 class KaapiPragma {
+private:
+  static void normalizePragmaDeclaration(SgPragmaDeclaration* sgp)
+  {
+    // building a pragma from the statement corrects the multiline related bug
+
+    SgDeclarationStatement* const decl_stmt = isSgDeclarationStatement(sgp);
+    if (decl_stmt != NULL)
+    {
+      std::string decl_string = decl_stmt->unparseToString().c_str();
+      SgPragma* const old_pragma = sgp->get_pragma();
+      SgPragma* const normalized_pragma =
+	new SgPragma(decl_string, old_pragma->get_file_info());
+      sgp->set_pragma(normalized_pragma);
+      delete old_pragma;
+    }
+  }
+
 public:
   KaapiPragma()
   {
@@ -2688,6 +2705,8 @@ public:
     {
       Sg_File_Info* fileInfo = node->get_file_info();
       SgPragmaDeclaration* sgp = isSgPragmaDeclaration(node);
+
+      normalizePragmaDeclaration(sgp);
       
       // Parse if it is a Kaapi Pragma
       std::string pragma_string = sgp->get_pragma()->get_pragma();
