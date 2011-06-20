@@ -5153,6 +5153,7 @@ KaapiReduceOperator_t* Parser::ParseReductionDeclaration(
   ParseIdentifier(name);
   if (name.empty())
   {
+    delete newop;
     std::cerr << "****[kaapi_c2c] Error. Invalid name in declare reduction clause."
               << "     In filename '" << fileInfo->get_filename() 
               << "' LINE: " << fileInfo->get_line()
@@ -5216,6 +5217,7 @@ KaapiReduceOperator_t* Parser::ParseReductionDeclaration(
   ParseIdentifier(name);
   if (name.empty())
   {
+    delete newop;
     std::cerr << "****[kaapi_c2c] Error. Invalid name for identity function in declare reduction clause."
               << "     In filename '" << fileInfo->get_filename() 
               << "' LINE: " << fileInfo->get_line()
