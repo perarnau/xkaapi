@@ -14,6 +14,7 @@ int main(int ac, char** av)
 
 #pragma kaapi start
   {
+    /* barriers must be explicit when an assignment is used */
     res = fu(0);
 #pragma kaapi barrier
     res = fu(res);

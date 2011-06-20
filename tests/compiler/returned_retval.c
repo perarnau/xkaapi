@@ -10,7 +10,7 @@ static double fu(double n)
 
 static double bar(double m, double n)
 {
-  return fu(m) + fu(n);
+  return fu(m) + fu(n) + fu(42);
 }
 
 int main(int ac, char** av)
