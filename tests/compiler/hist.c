@@ -107,7 +107,9 @@ int main(int ac, char** av)
 
   if (data == NULL) return -1;
 
+#pragma kaapi parallel
   compute_hist(data, CONFIG_DATA_DIM, hist);
+
   free(data);
 
   err = check_hist(hist);
