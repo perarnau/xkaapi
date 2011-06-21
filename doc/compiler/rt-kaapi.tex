@@ -31,6 +31,7 @@
 %% \RRversion{2}
 %% date de publication de la version 2
 %% \RRdater{Novembre  2006}
+\usepackage{listings}
 
 \usepackage{amssymb}
 \usepackage{xspace} 
@@ -1211,13 +1212,366 @@ specify to have the same scope of the spawned task using directive \texttt{\#pra
 \newpage \section{Examples}\label{sec:exp}
 
 
-\subsection{Matrix product}
+\subsection{Fibonacci computation}
+
+\subsubsection{With sync}
+
+\begin{small}
+\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+#include <stdio.h>
+
+#pragma kaapi task write(result) value(n)
+void fibonacci(long* result, const long n)
+{
+  if (n<2)
+    *result = n;
+  else 
+  {
+    long r1,r2;
+    fibonacci( &r1, n-1 );
+    fibonacci( &r2, n-2 );
+#pragma kaapi sync
+    *result = r1 + r2;
+  }
+}
+
+#pragma kaapi task read(result) 
+void print_result( const long* result )
+{
+  printf("Fibonacci(30)=%li\n", *result);
+}
+
+int main()
+{
+  long result;
+#pragma kaapi parallel
+  {
+    fibonacci(&result, 30);
+    print_result(&result);
+  }
+  return 0;
+}
+\end{lstlisting}
+\end{small}
+
+\subsubsection{Without sync}
+\begin{small}
+\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+#include <stdio.h>
+
+#pragma kaapi task write(result) read(r1,r2)
+void sum( long* result, const long* r1, const long* r2)
+{
+  *result = *r1 + *r2;
+}
+
+#pragma kaapi task write(result) value(n)
+void fibonacci(long* result, const long n)
+{
+  if (n<2)
+    *result = n;
+  else 
+  {
+#pragma kaapi data alloca(r1,r2)
+    long r1,r2;
+    fibonacci( &r1, n-1 );
+    fibonacci( &r2, n-2 );
+    sum( result, &r1, &r2);
+  }
+}
+
+#pragma kaapi task read(result) 
+void print_result( const long* result )
+{
+  printf("Fibonacci(30)=%li\n", *result);
+}
+
+int main()
+{
+  long result;
+#pragma kaapi parallel
+  {
+    fibonacci(&result, 30);
+    print_result(&result);
+  }
+  return 0;
+}
+\end{lstlisting}
+\end{small}
+
+\subsubsection{With reduction variable}
+
+\begin{small}
+\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+#include <stdio.h>
+
+#pragma kaapi task reduction(+:result) value(n)
+void fibonacci(long* result, const long n)
+{
+  if (n<2)
+    *result += n;
+  else 
+  {
+    fibonacci( result, n-1 );
+    fibonacci( result, n-2 );
+  }
+}
+
+#pragma kaapi task read(result) 
+void print_result( const long* result )
+{
+  printf("Fibonacci(30)=%li\n", *result);
+}
+
+int main()
+{
+  long result;
+#pragma kaapi parallel
+  {
+    fibonacci(&result, 30);
+    print_result(&result);
+  }
+  return 0;
+}
+\end{lstlisting}
+\end{small}
+
 
 \subsection{Cholesky factorization}
+This example shows one of the main difference between StartSs programming model in its ability to view sub matrix of matrix without necessity to reallocate the user's data structure.\\
 
-\subsection{Merge Sort}
+\begin{tiny}
+\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
+%%\lstset{commentstyle=\textcolor{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+#include <cblas.h> 
+#include <clapack.h> 
 
-\subsection{NQueens}
+
+#pragma kaapi task value(Order, Uplo, N, lda) readwrite(A{lda=lda; [N][N]})
+int clapack_dpotrf(const enum ATLAS_ORDER Order, const enum ATLAS_UPLO Uplo,
+                   const int N, double *A, const int lda);
+
+
+#pragma kaapi task value(Order, Side, Uplo, TransA, Diag, M, N, alpha, lda, ldb) \
+                   read(A{lda=lda; [N][N]}) readwrite(B{lda=ldb; [N][N]})
+void cblas_dtrsm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
+                 const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
+                 const enum CBLAS_DIAG Diag, const int M, const int N,
+                 const double alpha, const double *A, const int lda,
+                 double *B, const int ldb);
+
+#pragma kaapi task value(Order, Uplo, Trans, N, K, alpha, lda, beta, ldc) \
+                   read(A{lda=lda; [N][N]}) \
+                   readwrite(C{lda=ldc; [N][N]})
+void cblas_dsyrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
+                 const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
+                 const double alpha, const double *A, const int lda,
+                 const double beta, double *C, const int ldc);
+
+#pragma kaapi task value(Order, TransA, TransB, M, N, K, alpha, lda, ldb, beta, ldc) \
+                   read(A{lda=lda; [M][K]}, B{lda=ldb; [K][N]}) \
+                   readwrite(C{lda=ldc; [M][N]})
+void cblas_dgemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA,
+                 const enum CBLAS_TRANSPOSE TransB, const int M, const int N,
+                 const int K, const double alpha, const double *A,
+                 const int lda, const double *B, const int ldb,
+                 const double beta, double *C, const int ldc);
+
+
+// Block Cholesky factorization A <- L * L\^t
+// Lower triangular matrix, with the diagonal, stores the Cholesky factor.
+void Cholesky( double* A, int N, size_t blocsize )
+{
+  for (size_t k=0; k < N; k += blocsize)
+  {
+    clapack_dpotrf(
+      CblasRowMajor, CblasLower, blocsize, &A[k*N+k], N
+    );
+
+    for (size_t m=k+blocsize; m < N; m += blocsize)
+    {
+      cblas_dtrsm
+      (
+        CblasRowMajor, CblasLeft, CblasLower, CblasNoTrans, CblasUnit,
+        blocsize, blocsize, 1., &A[k*N+k], N, &A[m*N+k], N
+      );
+    }
+
+    for (size_t m=k+blocsize; m < N; m += blocsize)
+    {
+      cblas_dsyrk
+      (
+        CblasRowMajor, CblasLower, CblasNoTrans,
+        blocsize, blocsize, -1.0, &A[m*N+k], N, 1.0, &A[m*N+m], N
+      );
+      for (size_t n=k+blocsize; n < m; n += blocsize)
+      {
+        cblas_dgemm
+        (
+          CblasRowMajor, CblasNoTrans, CblasTrans,
+          blocsize, blocsize, blocsize, -1.0, 
+          &A[m*N+k], N, 
+          &A[n*N+k], N, 
+          1.0, 
+          &A[m*N+n], N
+        );
+      }
+    }
+  }
+#pragma kaapi sync
+}
+
+
+/* Main of the program
+*/
+void main( int argc, char** argv )
+{
+  // matrix dimension
+  int N = 32;
+  if (argc > 1)
+    N = atoi(argv[1]);
+
+  // block count
+  int block_count = 2;
+  if (argc > 2)
+    block_count = atoi(argv[2]);
+    
+  size_t blocsize = N / block_count;
+
+  double t0, t1;
+  double* A = 0;
+  if (0 != posix_memalign((void**)&A, 4096, N*N*sizeof(double)))
+  {
+    printf("Fatal Error. Cannot allocate matrice A, errno: %i\n", errno);
+    return;
+  }
+
+  // Generate matrix A 
+  generate_matrix(A, N);
+
+  // Cholesky factorization of A 
+  Cholesky(A, N, blocsize);
+
+  free(A);
+  
+  return 0;
+}
+\end{lstlisting}
+\end{tiny}
+
+%%%\subsection{Merge Sort}
+
+%%%\subsection{NQueens}
+
+\subsection{2D Histogram}
+\begin{small}
+\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
+%\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+
+/* some statically configured params
+ */
+#define CONFIG_DATA_LOG2 12
+#define CONFIG_DATA_DIM (1 << CONFIG_DATA_LOG2)
+#define CONFIG_BLOCK_DIM (CONFIG_DATA_DIM / 4)
+
+
+/* histogram reduction
+ */
+#pragma kaapi declare			\
+  reduction(hist_redop: reduce_hist)	\
+  identity(init_hist)
+
+static void init_hist(unsigned int* p)
+{
+  unsigned int i;
+  for (i = 0; i < CONFIG_DATA_DIM; ++i, ++p) *p = 0;
+}
+
+static void reduce_hist(unsigned int* lhs, const unsigned int* rhs)
+{
+  unsigned int i;
+  for (i = 0; i < CONFIG_DATA_DIM; ++i, ++lhs, ++rhs) *lhs += *rhs;
+}
+
+/* accumulate a given block histogram.
+   reduction initialization and operator are specified
+   in the task pragma clause.
+ */
+#pragma kaapi task			\
+  value(dim, lda)			\
+  read(data{lda = lda; [dim][dim]})	\
+  reduction(hist_redop: hist[dim])
+static void accum_block_hist
+(
+ const unsigned int* data,
+ unsigned int dim,
+ unsigned int lda,
+ unsigned int* hist
+)
+{
+  unsigned int x, y;
+  for (y = 0; y < dim; ++y, data += lda)
+    for (x = 0; x < dim; ++x, ++data)
+      ++hist[*data];
+}
+
+/* a task is spawned foreach block to accumulate
+   the histogram. the reduction is handled by the
+   xkaapi runtime.
+ */
+static void compute_hist
+(
+ const unsigned int* data,
+ unsigned int dim,
+ unsigned int* hist
+)
+{
+  static const unsigned int lda = CONFIG_DATA_DIM;
+  static const unsigned int block_size =
+    CONFIG_BLOCK_DIM * CONFIG_BLOCK_DIM;
+
+  const unsigned int block_count = dim / CONFIG_BLOCK_DIM;
+  unsigned int i, j;
+
+  init_hist(hist);
+
+  /* foreach block, accumulate histogram */
+  for (i = 0; i < block_count; ++i)
+  {
+    for (j = 0; j < block_count; ++j)
+    {
+      /* compute start of block */
+      const unsigned int* const p =
+      	data + i * block_size + j * CONFIG_BLOCK_DIM;
+      accum_block_hist(p, CONFIG_BLOCK_DIM, lda, hist);
+    }
+  }
+}
+
+/* main */
+int main(int ac, char** av)
+{
+  static unsigned int hist[CONFIG_DATA_DIM];
+  unsigned int* const data = gen_data(CONFIG_DATA_DIM);
+#pragma kaapi parallel
+  compute_hist(data, CONFIG_DATA_DIM, hist);
+  return 0;
+}
+\end{lstlisting}
+\end{small}
 
 
 \subsection{SMPSs examples}
