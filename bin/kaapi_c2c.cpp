@@ -1440,7 +1440,8 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
 
       /* pointer to the data: var */
       fout << "      " << type->unparseToString() 
-           << "* var = (" << type->unparseToString() << "*) v;\n";
+           << "* var = (" << type->unparseToString() << "*) v;\n"
+           << "      kaapi_memory_view_t view = " << kta->name_format << "_get_view_param(fmt, i, sp);\n";
            
       KaapiReduceOperator_t* redop = kta->formal_param[i].redop;
 
@@ -1450,13 +1451,53 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
       */
       if (redop->isbuiltin)
       {
-        fout << "      *var = " << redop->name_redinit << ";\n";
+        if (kta->formal_param[i].attr->type == KAAPI_ARRAY_NDIM_TYPE)
+        {
+          if (kta->formal_param[i].attr->dim ==0)
+          {
+            fout << "      *var = " << redop->name_redinit << ";\n";
+          }
+          else {
+            /* nested loop */
+            for (unsigned int k=0; k<kta->formal_param[i].attr->dim; ++k)
+            {
+              std::ostringstream varindexloop;
+              varindexloop << "ikak" << k;
+              fout << "      for ( unsigned int " << varindexloop.str() << "=0; " 
+                   << varindexloop.str() << " < view.size[" << k << "]; "
+                   << "++" << varindexloop.str() << " )\n"
+                   << "      {\n";
+            }
+
+            /* body */
+            fout << "          var[ikak" << kta->formal_param[i].attr->dim-1
+                 << "] = " << redop->name_redinit << ";\n";
+
+            /* nested loop */
+            for (unsigned int k=0; k<kta->formal_param[i].attr->dim; ++k)
+            {
+              std::ostringstream varindexloop;
+              varindexloop << "ikak" << k;
+              fout << "      } /*" << varindexloop.str() << "*/\n";
+              if ((k == 0) && (kta->formal_param[i].attr->dim ==2))
+              {
+                fout << "      var += view.kda;\n";
+              }
+            }
+          } /* else dim >0 */
+        } /* else it is range 1d */
+        else {
+          fout << "      for (unsigned int k=0; k < view.size[0]; ++k)\n"
+               << "        *var++ = " << redop->name_redinit << ";\n";
+        }
       }
-      else {
-        if (redop->name_redinit.empty())
-          fout << "      memset(var, 0, sizeof(*var));\n";
+      else
+      {
+	fout << "      for (unsigned int k=0; k < view.size[0]; ++k, ++var)\n";
+	if (redop->name_redinit.empty())
+          fout << "         memset(var, 0, sizeof(*var));\n";
         else
-          fout << "      " << redop->name_redinit << "(var);\n";
+	  fout << "        " << redop->name_redinit << "(var);\n";
       }
       fout << "    } break;\n";
     }
