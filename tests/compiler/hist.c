@@ -17,21 +17,19 @@
 
 static void init_hist(unsigned int* p)
 {
-  unsigned int i;
-  for (i = 0; i < CONFIG_DATA_DIM; ++i, ++p) *p = 0;
+  *p = 0;
 }
 
 __attribute__((unused))
 static void reduce_hist(unsigned int* lhs, const unsigned int* rhs)
 {
-  unsigned int i;
-  for (i = 0; i < CONFIG_DATA_DIM; ++i, ++lhs, ++rhs) *lhs += *rhs;
+  *lhs += *rhs;
 }
 
 #pragma kaapi task			\
   value(dim, lda)			\
   read(data{lda = lda; [dim][dim]})	\
-  reduction(hist_redop: hist)
+  reduction(hist_redop: hist[dim])
 static void compute_block_hist
 (
  const unsigned int* data,
@@ -60,7 +58,8 @@ static void compute_hist
   const unsigned int block_count = dim / CONFIG_BLOCK_DIM;
   unsigned int i, j;
 
-  init_hist(hist);
+  for (i = 0; i < CONFIG_DATA_DIM; ++i)
+    init_hist(hist + i);
 
   for (i = 0; i < block_count; ++i)
   {
