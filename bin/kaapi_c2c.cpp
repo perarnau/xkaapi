@@ -597,10 +597,12 @@ void Parser::DoKaapiPragmaTask( SgPragmaDeclaration* sgp )
     KaapiAbort("**** error");
   } 
 
+#if CONFIG_ENABLE_DEBUG
 std::cerr << "****[kaapi_c2c] Found #pragma kaapi task. "
           << " Function declaration: @" << functionDeclaration
           << " Function declaration Symbol: @" << functionDeclaration->search_for_symbol_from_symbol_table()  
           << std::endl;
+#endif // CONFIG_ENABLE_DEBUG
 
  all_task_func_decl.push_back( std::make_pair(functionDeclaration, pragma_string) );
 }
@@ -616,10 +618,12 @@ void Parser::DoKaapiPragmaSignature( SgPragmaDeclaration* sgp )
 void Parser::DoKaapiPragmaLoop( SgPragmaDeclaration* sgp )
 {
   Sg_File_Info* fileInfo = sgp->get_file_info();
+#if CONFIG_ENABLE_DEBUG
   std::cerr << "****[kaapi_c2c] Found #pragma kaapi loop directive !!!!."
             << "     In filename '" << fileInfo->get_filename() 
             << "' LINE: " << fileInfo->get_line()
             << std::endl;
+#endif // CONFIG_ENABLE_DEBUG
   SgForStatement* forloop = isSgForStatement(SageInterface::getNextStatement ( sgp ));
   if (forloop ==0)
   {
@@ -733,12 +737,14 @@ redo_selection:
     {
       if (!isSgPointerType(kta->formal_param[i].type))
       { /* read/write/reduction should be pointer: else move them to be by value */
+#if CONFIG_ENABLE_DEBUG
         std::cerr << "****[kaapi_c2c] Warning: incorrect access mode: not a pointer type. \n"
                   << "                         Change access mode declaration to value.\n"
                   << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
                   << " formal parameter '" << kta->formal_param[i].initname->get_name().str()
                   << "' is declared as read/write/reduction but is not a pointer type. Move it as declared as a value.\n"
                   << std::endl;
+#endif // CONFIG_ENABLE_DEBUG
         kta->formal_param[i].mode = KAAPI_V_MODE;
         goto redo_selection;
       }
@@ -1076,8 +1082,10 @@ static inline void KaapiGenerateMode
 
 void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
 {
+#if CONFIG_ENABLE_DEBUG
   std::cout << "****[kaapi_c2c] Task's generation format for function: " << kta->func_decl->get_name().str()
             << std::endl;
+#endif // CONFIG_ENABLE_DEBUG
   
   kta->name_format = kta->name_paramclass + "_format";
 
@@ -1557,10 +1565,12 @@ public:
       if (kada !=0)
       {
   #if 0
+#if CONFIG_ENABLE_DEBUG
         Sg_File_Info* fileInfo = varref->get_file_info();
         std::cerr <<  "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
                   << " Found use of VarRef for variable name:" << varsym->get_name().str()
                   << std::endl;
+#endif // CONFIG_ENABLE_DEBUG
   #endif
         
         SgVarRefExp*       newvarref = SageBuilder::buildVarRefExp (kada->symbol );
@@ -1921,11 +1931,13 @@ void Parser::DoKaapiPragmaDeclare( SgPragmaDeclaration* sgp )
     }
     kaapi_user_definedoperator.insert( std::make_pair( redop->name, redop  ) );
 
+#if CONFIG_ENABLE_DEBUG
     std::cout << "Found declaration of reduction operator:"
               << redop->name
               << " freduce=" << redop->name_reducor
               << " finit=" << redop->name_redinit
               << std::endl;
+#endif // CONFIG_ENABLE_DEBUG
     return;
   }
   else {
@@ -2028,10 +2040,12 @@ public:
     {
       SgStatement* exprstatement = SageInterface::getEnclosingStatement( fc );
 
+#if CONFIG_ENABLE_DEBUG
       Sg_File_Info* fileInfo = node->get_file_info();
       std::cerr << "****[kaapi_c2c] Message: found function call expression.\n"
                 << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
                 << std::endl;
+#endif // CONFIG_ENABLE_DEBUG
 
 #if 0
       if (exprstatement->getAttribute("kaapinotask") !=0) 
@@ -2043,19 +2057,25 @@ public:
       if (fc !=0)
       {
         SgFunctionDeclaration* fdecl = fc->getAssociatedFunctionDeclaration();
+#if CONFIG_ENABLE_DEBUG
         std::cerr << "****[kaapi_c2c] Message: found function call expression. fdecl: @" << fdecl
                   << std::endl;
+#endif // CONFIG_ENABLE_DEBUG
         if (fdecl !=0)
         {
           SgSymbol* symb = fdecl->search_for_symbol_from_symbol_table();
+#if CONFIG_ENABLE_DEBUG
           std::cerr << "****[kaapi_c2c] Message: found function call expression. fdecl: @" << fdecl << " symb: @" << symb
                     << std::endl;
+#endif // CONFIG_ENABLE_DEBUG
           KaapiTaskAttribute* kta = (KaapiTaskAttribute*)symb->getAttribute("kaapitask");
 	  if (kta && kta->is_signature == true) kta = 0;
           if (kta !=0)
           {
+#if CONFIG_ENABLE_DEBUG
             std::cerr << "****[kaapi_c2c] Message: found function call expression. fdecl: @" << fdecl << " symb: @" << symb
                       << std::endl;
+#endif // CONFIG_ENABLE_DEBUG
             /* store both the container (basic block) and the funccall expr */
             SgScopeStatement* scope = SageInterface::getScope( fc );
             SgScopeStatement* loop = SageInterface::findEnclosingLoop( exprstatement );
@@ -2065,22 +2085,28 @@ public:
               _listcall.push_back( OneCall(scope, fc, exprstatement, kta, loop) );
             }
 
+#if CONFIG_ENABLE_DEBUG
             if (loop !=0)
               std::cout << "Find enclosing loop of a task declaration:" << loop->class_name() << std::endl
                         << "At line: " << loop->get_file_info()->get_line()
                         << std::endl;
+#endif // CONFIG_ENABLE_DEBUG
 
 #if 0 // TG no important here: see below in the main: when TemplateInstance are processed
 {            SgTemplateInstantiationFunctionDecl* sg_tmpldecl = isSgTemplateInstantiationFunctionDecl( fdecl );
             if (sg_tmpldecl !=0)
             {
+#if CONFIG_ENABLE_DEBUG
               std::cerr << "This is a call to a template function instanciation\n" << std::endl;
+#endif // CONFIG_ENABLE_DEBUG
               KaapiPragmaString* kps 
                 = (KaapiPragmaString*)sg_tmpldecl->get_templateDeclaration()->getAttribute("kaapi_templatetask");
               if (kps != 0)
               {
+#if CONFIG_ENABLE_DEBUG
                 std::cerr << "This is a call to a TASK template function instanciation, definition=" 
                           << sg_tmpldecl->get_definition() << "\n" << std::endl;
+#endif // CONFIG_ENABLE_DEBUG
                 if (sg_tmpldecl->get_definition() !=0)
                   all_template_instanciate_definition.insert(sg_tmpldecl->get_definition());
               }
@@ -2089,6 +2115,7 @@ public:
 #endif
           } // fdecl !=0 & kta != 0
           else {
+#if CONFIG_ENABLE_DEBUG
             Sg_File_Info* fileInfo = node->get_file_info();
             std::cerr << "****[kaapi_c2c] Message: function call expression to " << fdecl->get_name().str() 
                       << " with empty task declaration. "
@@ -2097,13 +2124,16 @@ public:
                       << ". Ignored.\n"
                       << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
                       << std::endl;
+#endif // CONFIG_ENABLE_DEBUG
           }
         }
         else {
+#if CONFIG_ENABLE_DEBUG
           Sg_File_Info* fileInfo = node->get_file_info();
           std::cerr << "****[kaapi_c2c] Warning: function call expression with empty declaration is ignored.\n"
                     << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
                     << std::endl;
+#endif // CONFIG_ENABLE_DEBUG
         }
       }
     }
@@ -2189,10 +2219,13 @@ public:
       call_expr->getAssociatedFunctionDeclaration();
     if (func_decl ==0) 
     {
+#if CONFIG_ENABLE_DEBUG
       Sg_File_Info* fileInfo = node->get_file_info();
       std::cerr << "****[kaapi_c2c] Warning: function call expression with empty declaration is ignored.\n"
                 << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
                 << std::endl;
+#endif // CONFIG_ENABLE_DEBUG
+
       /* no declaration (may be incomplete code or expression call (pointer to function) */
       return;
     }
