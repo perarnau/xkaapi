@@ -58,7 +58,6 @@ void fibonacci(long* result, const long n)
 #pragma kaapi data alloca(r1,r2)
     long r1,r2;
     fibonacci( &r1, n-1 );
-#pragma kaapi notask
     fibonacci( &r2, n-2 );
     sum( result, &r1, &r2);
   }
