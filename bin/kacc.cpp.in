@@ -54,6 +54,19 @@
 #define COMPILER_CC_E  "gcc -E -P -C -std=gnu99"
 #define COMPILER_CXX_E "g++ -E -P -C -std=gnu++98"
 
+
+static inline const std::string& get_cxx()
+{
+  static std::string compiler = (getenv("CXX") == 0 ? COMPILER_CXX : getenv("CXX"));
+  return compiler;
+}
+
+static inline const std::string& get_cc()
+{
+  static std::string compiler = (getenv("CC") == 0 ? COMPILER_CC : getenv("CC"));
+  return compiler;
+}
+
 typedef std::list<std::string> ListOptions;
 
 /**/
@@ -153,6 +166,9 @@ int main( int argc, char** argv)
     
     if (option.find("-v")  ==0) 
     {
+      std::cerr << "****[" << argv[0] << "]: KAAPI Compiler configured with CXX=" << get_cxx() << ", CC=" << get_cc() 
+                << ", Kaapi include dir: @prefix@/include, lib dir: @prefix@/lib"
+                << std::endl;
       verbose = true;
       compiler_options.push_back( option );
     }
@@ -168,7 +184,7 @@ int main( int argc, char** argv)
       preprocess_options.push_back( option );
     else if (option.find("-MT")  ==0) {
       if (i+1 == argc) {
-        std::cerr << argv[0] << ": error, option '-MT filename'" << std::endl;
+        std::cerr << argv[0] << ": error no filename, option '-MT filename'" << std::endl;
         return -1;
       }
       ++i;
@@ -176,7 +192,7 @@ int main( int argc, char** argv)
       preprocess_options.push_back( option ); compiler_options.push_back( option );
     } else if (option.find("-MF")  ==0) {
       if (i+1 == argc) {
-        std::cerr << argv[0] << ": error, option '-MF filename'" << std::endl;
+        std::cerr << argv[0] << ": error no filename, option '-MF filename'" << std::endl;
         return -1;
       }
       ++i;
@@ -218,7 +234,7 @@ int main( int argc, char** argv)
       compiler_options.push_back( option );
     else if (option.find("-o")==0) {
       if (i+1 == argc) {
-        std::cerr << argv[0] << ": error, option '-o filename'" << std::endl;
+        std::cerr << argv[0] << ": error no filename, option '-o filename'" << std::endl;
         return -1;
       }
       ++i;
@@ -227,7 +243,12 @@ int main( int argc, char** argv)
       compiler_options.push_back( option );
     } else if (option.find("-keep")==0) {
       keep = true;
-      std::cout << "****[kacc]: Keep intermediate file" << std::endl;
+      std::cout << "****[" << argv[0] << "]: Keep intermediate file" << std::endl;
+    } else if ((option.find("-help")==0) || (option.find("-h")==0) || (option.find("--help")==0)) {
+      std::cout << "****[" << argv[0] << "]: KAAPI Compiler, Copyright 2011 INRIA, MOAIS project-team (http://moais.imag.fr)\n"
+                << "            please visit http://kaapi.gforge.inria.fr" 
+                << std::endl;
+      return -1;
     } else {
       File_t ftype = Filename2Type(option);
       if ((ftype == File_C) || (ftype == File_CXX))
@@ -305,9 +326,9 @@ int main( int argc, char** argv)
     */
     File_t type = Filename2Type( filename );
     if (type == File_CXX)
-      cmdline3 << (getenv("CXX") == 0 ? COMPILER_CXX : getenv("CXX"));
+      cmdline3 << get_cxx();
     else if (type == File_C)
-      cmdline3 << (getenv("CC") == 0 ? COMPILER_CC : getenv("CC"));
+      cmdline3 << get_cc();
     else {
       std::cerr << "*** error: bad file type: '" << filename << "' not C or CXX file" << err << std::endl;
       return err;
@@ -326,7 +347,7 @@ int main( int argc, char** argv)
     }
   }
   
-  if (!keep)
+  if (!keep && !file_tocompile_kaapi.empty())
   {
     /* erase o_file_preprocessor */
     std::ostringstream cmdline;
