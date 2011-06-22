@@ -5409,7 +5409,7 @@ redo:
   save_rpos = rpos;
   ParseIdentifier( name );
   
-  if ((name == "storage") || (name == "lda"))
+  if ((name == "storage") || (name == "ld") || (name == "lda"))
   {
     skip_ws();
     c = readchar();

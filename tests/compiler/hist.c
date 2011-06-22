@@ -28,7 +28,7 @@ static void reduce_hist(unsigned int* lhs, const unsigned int* rhs)
 
 #pragma kaapi task			\
   value(bdim, hdim, lda)		\
-  read(data{lda = lda; [bdim][bdim]})	\
+  read(data{ld = lda; [bdim][bdim]})	\
   reduction(hist_redop: hist[hdim])
 static void compute_block_hist
 (
