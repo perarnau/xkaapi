@@ -66,6 +66,53 @@ static std::string List2String( const ListOptions& lo )
   return retval;
 }
 
+/** Return type of file using the suffix .xx
+*/
+enum File_t {
+  File_C,
+  File_H,
+  File_CXX,
+  File_SO,  /* .so or .dylib */
+  File_O,   /* .o */
+  File_A,   /* .a */
+  File_Unknown
+};
+static File_t Filename2Type( const std::string& filename)
+{
+  size_t length = filename.size();
+  if (  (filename.rfind(".CC")  == length - 3)
+      ||(filename.rfind(".cc")  == length - 3)
+      ||(filename.rfind(".cpp") == length - 4)
+      ||(filename.rfind(".cxx") == length - 4)
+      ||(filename.rfind(".c++") == length - 4) 
+  )
+    return File_CXX;
+
+  if (  (filename.rfind(".c") == length - 2)
+      ||(filename.rfind(".C") == length - 2)
+  )
+    return File_C;
+
+  if (  (filename.rfind(".h") == length - 2)
+      ||(filename.rfind(".H") == length - 2)
+  )
+    return File_H;
+
+  if (  (filename.rfind(".a") == length - 2) )
+    return File_A;
+
+  if (  (filename.rfind(".o") == length - 2) )
+    return File_O;
+
+  if (  (filename.rfind(".so") == length - 3) )
+    return File_SO;
+
+  if (  (filename.rfind(".dylib") == length - 6) )
+    return File_SO;
+  
+  return File_Unknown;
+}
+
 
 /** Parse options:
     -keep: keep kaapi intermediate files
@@ -181,13 +228,21 @@ int main( int argc, char** argv)
     } else if (option.find("-keep")==0) {
       keep = true;
       std::cout << "****[kacc]: Keep intermediate file" << std::endl;
-    } else 
-      file_tocompile.push_back(option);
-      if (option == outfile)
+    } else {
+      File_t ftype = Filename2Type(option);
+      if ((ftype == File_C) || (ftype == File_CXX))
       {
-        std::cerr << "****[kacc]: output file is the same as input file";
-        return -1;
+        file_tocompile.push_back(option);
+        if (option == outfile)
+        {
+          std::cerr << "****[kacc]: output file is the same as input file";
+          return -1;
+        }
       }
+      else {
+        compiler_options.push_back(option);
+      }
+    }
   }
   
 //NOT REQUIRED for preprocessing preprocess_options.push_back( std::string("-I@prefix@/include") );
@@ -217,35 +272,12 @@ int main( int argc, char** argv)
     std::string o_file_format = "format-" + o_file_kacc;
 #endif
 
-#if 0
-    std::string o_file_preprocessor = "pre-" + *ibeg;
-
-    /* call the preprocessor */
-    std::ostringstream cmdline1;
-    cmdline1 << (getenv("CPP") == 0 ? COMPILER_E : getenv("CPP"))
-             << List2String( preprocess_options )
-             << " " << *ibeg << " > " << o_file_preprocessor;
-    if (verbose)
-      std::cout << "Commande1: " << cmdline1.str() << std::endl;
-    err = system(cmdline1.str().c_str());
-    if (err != 0)
-    {
-      std::cerr << "*** error of '" << cmdline1.str() << "': " << err << std::endl;
-      return err;
-    }
-
-    /* call the source 2 source Kaapi compiler */
-    std::ostringstream cmdline2;
-    cmdline2 << "@prefix@/bin/kaapi_c2c --edg:no_warnings " << o_file_preprocessor 
-            << " -rose:o " << o_file_kacc;
-#else
     /* call the source 2 source Kaapi compiler */
     std::ostringstream cmdline2;
     cmdline2 << "@prefix@/bin/kaapi_c2c --edg:no_warnings " 
              << List2String( include_options ) << " "
              << *ibeg 
              << " -rose:o " << o_file_kacc;
-#endif
 
     if (verbose)
       std::cout << "Commande2: " << cmdline2.str() << std::endl;
@@ -256,33 +288,8 @@ int main( int argc, char** argv)
       return err;
     }
 
-#if 0
-    /* rename kaapi-format.cpp to "format-" + *ibeg */
-    std::ostringstream cmdrename;
-    cmdrename << "\\mv kaapi-format.cpp " << o_file_format;
-    err = system(cmdrename.str().c_str());
-    if (err != 0)
-    {
-      std::cerr << "*** error: status of '" << cmdrename.str() << "': " << err << std::endl;
-      return err;
-    }
-#endif
 
     file_tocompile_kaapi.push_back( o_file_kacc );
-
-#if 0
-    if (!keep)
-    {
-      /* erase o_file_preprocessor */
-      std::ostringstream cmdline;
-      cmdline << "\\rm " << o_file_preprocessor;
-      if (verbose)
-        std::cout << "Commande RM: " << cmdline.str() << std::endl;
-      err = system(cmdline.str().c_str());
-      if (err != 0)
-        std::cerr << "*** warning: status of '" << cmdline.str() << "': " << err << std::endl;
-    }
-#endif
   }
 
   /* call the true compiler 
@@ -296,22 +303,19 @@ int main( int argc, char** argv)
     /* .C, .cpp, .cxx, .c++ is for C ++
        .c is for C 
     */
-    size_t length = filename.size();
-    if (  (filename.rfind(".C") == length - 2)
-        ||(filename.rfind(".cpp") == length - 4)
-        ||(filename.rfind(".cxx") == length - 4)
-        ||(filename.rfind(".c++") == length - 4) )
+    File_t type = Filename2Type( filename );
+    if (type == File_CXX)
       cmdline3 << (getenv("CXX") == 0 ? COMPILER_CXX : getenv("CXX"));
-    else
+    else if (type == File_C)
       cmdline3 << (getenv("CC") == 0 ? COMPILER_CC : getenv("CC"));
+    else {
+      std::cerr << "*** error: bad file type: '" << filename << "' not C or CXX file" << err << std::endl;
+      return err;
+    }
     
-#if 0
-    cmdline3 << " " << filename << " format-" << filename << " "
-             << List2String( compiler_options );
-#else
     cmdline3 << " " << filename 
              << List2String( compiler_options );
-#endif
+
     if (verbose)
       std::cout << "Commande3: " << cmdline3.str() << std::endl;
     err = system(cmdline3.str().c_str());
