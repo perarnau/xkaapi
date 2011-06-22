@@ -139,16 +139,12 @@ void Cholesky( double* A, int N, size_t blocsize )
 {
   for (size_t k=0; k < N; k += blocsize)
   {
-//    ka::rangeindex rk(k, k+blocsize);
-//    TaskDPOTRF( CblasLower, A(rk,rk) );
     clapack_dpotrf(
       CblasRowMajor, CblasLower, blocsize, &A[k*N+k], N
     );
 
     for (size_t m=k+blocsize; m < N; m += blocsize)
     {
-//      ka::rangeindex rm(m, m+blocsize);
-//      ka::Spawn<TaskDTRSM>()(CblasRight, CblasLower, CblasTrans, CblasNonUnit, 1.0, A(rk,rk), A(rm,rk));
       cblas_dtrsm
       (
         CblasRowMajor, CblasLeft, CblasLower, CblasNoTrans, CblasUnit,
@@ -158,8 +154,6 @@ void Cholesky( double* A, int N, size_t blocsize )
 
     for (size_t m=k+blocsize; m < N; m += blocsize)
     {
-//      ka::rangeindex rm(m, m+blocsize);
-//      ka::Spawn<TaskDSYRK>()( CblasLower, CblasNoTrans, -1.0, A(rm,rk), 1.0, A(rm,rm));
       cblas_dsyrk
       (
         CblasRowMajor, CblasLower, CblasNoTrans,
@@ -167,8 +161,6 @@ void Cholesky( double* A, int N, size_t blocsize )
       );
       for (size_t n=k+blocsize; n < m; n += blocsize)
       {
-//        ka::rangeindex rn(n, n+blocsize);
-//        ka::Spawn<TaskDGEMM>()(CblasNoTrans, CblasTrans, -1.0, A(rm,rk), A(rn,rk), 1.0, A(rm,rn));
         cblas_dgemm
         (
           CblasRowMajor, CblasNoTrans, CblasTrans,
@@ -177,6 +169,7 @@ void Cholesky( double* A, int N, size_t blocsize )
       }
     }
   }
+#pragma kaapi sync
 }
 
 
