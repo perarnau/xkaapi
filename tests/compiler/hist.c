@@ -27,20 +27,21 @@ static void reduce_hist(unsigned int* lhs, const unsigned int* rhs)
 }
 
 #pragma kaapi task			\
-  value(dim, lda)			\
-  read(data{lda = lda; [dim][dim]})	\
-  reduction(hist_redop: hist[dim])
+  value(bdim, hdim, lda)		\
+  read(data{lda = lda; [bdim][bdim]})	\
+  reduction(hist_redop: hist[hdim])
 static void compute_block_hist
 (
  const unsigned int* data,
- unsigned int dim,
+ unsigned int bdim, /* block dimension */
  unsigned int lda,
- unsigned int* hist
+ unsigned int* hist,
+ unsigned int hdim /* histogram dimension */
 )
 {
   unsigned int x, y;
-  for (y = 0; y < dim; ++y, data += lda)
-    for (x = 0; x < dim; ++x, ++data)
+  for (y = 0; y < bdim; ++y, data += lda)
+    for (x = 0; x < bdim; ++x, ++data)
       ++hist[*data];
 }
 
@@ -68,7 +69,8 @@ static void compute_hist
       /* compute start of block */
       const unsigned int* const p =
       	data + i * block_size + j * CONFIG_BLOCK_DIM;
-      compute_block_hist(p, CONFIG_BLOCK_DIM, lda, hist);
+      compute_block_hist
+	(p, CONFIG_BLOCK_DIM, lda, hist, CONFIG_DATA_DIM);
     }
   }
 }
