@@ -1769,11 +1769,11 @@ For other instance of type or class that does not have the \verb'+' operator def
 \subsubsection{Note on range declaration}
 
 In the range declaration rule, the programmer has to opportunity to define the set of memory address that the task will access. 
-The set of memory address aims at having any shape. This set serves to detect dependencies between tasks. The implementation has currently 2 limits:
+The set of memory address may have any shape. This set serves to detect dependencies between tasks. The implementation has currently 2 limits:
 \begin{enumerate}
 \item The grammar limits the shape to continuous D dimensional arrays, 
 with an implementation limit to 2D data structures (see next section about the grammar).
-\item The detection of dependency between tasks use an special memory address of the range declaration which is named the \textbf{referent}. This address is the address of the identifier in case of the D-dimensional format. And for 1D definition using the format \verb+[identifier .. identifier]+ this is the memory address given by the value of the first identifier (a pointer).
+\item The detection of dependency between tasks uses a special memory address of the range declaration which is named the \textbf{referent}. This address is the address of the identifier in case of the D-dimensional format. And for 1D definition using the format \verb+[identifier .. identifier]+ this is the memory address given by the value of the first identifier (a pointer).
 \end{enumerate}
 
 The grammar may be extended in the future in order to take into account more complex shape declaration.
@@ -1820,7 +1820,7 @@ The dimension in range specification is described by the following grammar. Expr
 
 
 \subsection{Grammar for reduction operator}
-The compiler directive \verb+#pragma kaapi declare <reduction_declaration>+ follows the next grammar. This grammar may be extended to match the OpenMP directive to declare reduction operators using pseudo variable.
+The compiler directive \verb+#pragma kaapi declares <reduction_declaration>+ follows the next grammar. This grammar may be extended to match the OpenMP directive to declare reduction operators using pseudo variable.
 \begin{verbatim}
       reduction_declaration :=
           reduction_definition
@@ -1865,7 +1865,7 @@ The following grammar is involved in the directive
         | list_of_variables ',' identifier 
 \end{verbatim}
 This directive must be defined in a basic block before the definition of automatic variable.
-This is a compiler error to pass a non automatic name (\textit{e.g.} global variable)  or to declare the pragma after the definition of the variable.
+This is a compiler error to pass a non automatic name (\textit{e.g.} global variable) or to declare the pragma after the definition of the variable.
 
 
 %%%
@@ -1879,19 +1879,19 @@ The compilation process with KaCC of a file is the following:
 \begin{enumerate}
 \item Each \kaapi directive  that begins \texttt{\#pragma kaapi} is interpreted and the code is rewritten to call function of the \kaapi library. Invalid use of \kaapi directive and some warning are outputed.
 \item The backend compiler (C or C++) is called on the rewritten code to generate an object file.
-\item To create an executable, KaCC pass the \kaapi library to the linker.
+\item To create an executable, KaCC passes the \kaapi library to the linker.
 \end{enumerate}
 
 
 \subsection{KaCC options}
-The KaCC compiler recognized all the options of Gcc compiler suite (gcc, g++) and add an extra option:
+The KaCC compiler recognizes all the options of Gcc compiler suite (gcc, g++) and add an extra option:
 \begin{description}
 \item [-\,-keep]: keep the intermediate files. For each file, 2 intermediate files are generated. The first one is prefixed by \texttt{kaapi-} and is the translation of the file with replacement of function call by task creation.
 \end{description}
 
 
 \subsection{Backend compiler selection}
-The backend compiler is the default C or C++ compilers defined during the installation step (see options with \texttt{configure --help}). It could be changed by the environment variables \texttt{CC} and \texttt{CXX}.
+The backend compiler is the default C or C++ compiler defined during the installation step (see options with \texttt{configure --help}). It can be changed at configuration by setting the environment variables \texttt{CC} and \texttt{CXX}.
 
 \subsection{Runtime environment variables}
 \begin{description}
@@ -1899,10 +1899,10 @@ The backend compiler is the default C or C++ compilers defined during the instal
 The syntax is a list of core identifiers or a range of core identifiers:
 \begin{verbatim}
 KAAPI_CPUSET=1,2,6,8,21
-KAAPI_CPUSET=0-11,20-31
+KAAPI_CPUSET=0:11,20:31
 \end{verbatim}
 The identifier corresponds to system identifier for the core.
-\item [KAAPI\_CPUCOUNT]: if defined, then the variable specifies the number of core to use. This number should be less than the number of cores specified with \texttt{KAAPI\_CPUSET}.
+\item [KAAPI\_CPUCOUNT]: if defined, the variable specifies the number of cores to use. This number should be less than the number of cores specified with \texttt{KAAPI\_CPUSET}.
 \end{description}
 
 
@@ -1911,9 +1911,9 @@ The identifier corresponds to system identifier for the core.
 \newpage
 \section{ SMPSs task model compatibility}\label{app:smpss}
 
-A parallel  SMPSs program running on a multicore is composed of several threads sharing the address space of a process. The threads perform tasks which may shared values in the address space, that we call shared memory between threads.
+A parallel  SMPSs program running on a multicore is composed of several threads sharing the process address space. The threads execute tasks which may shared values in the address space, that we call thread shared memory.
 A task is a function call: a function and the list of its effective parameters. 
-In  SMPSs~\cite{smpss-manual} the definition of a task is based on the annotation of the C function definition. Figure~\ref{fig:accumulatesmpss} illustrates the methodology: the original sequential code \verb+accumulate+ is annotated to be a task if compiled with  SMPSs (\verb+#pragma css task+). Each formal parameters is described with the access the task do: \verb+input+ means that the task is required it before execution; \verb+output+ means that the task will produce it. And \verb+inout+ for the both. A depicted  in the code, a formal parameter may be defined with a size in order to identify the memory region accessed by the task.
+In  SMPSs~\cite{smpss-manual} the definition of a task is based on the annotation of the C function definition. Figure~\ref{fig:accumulatesmpss} illustrates the methodology: the original sequential code \verb+accumulate+ is annotated to be a task if compiled with  SMPSs (\verb+#pragma css task+). Each formal parameter is described by the access the task performs: \verb+input+ means that the task requires it to be ready before execution; \verb+output+ means that the task will produce it. And \verb+inout+ for the both. A depicted  in the code, a formal parameter may be defined with a size in order to identify the memory region accessed by the task.
 \begin{figure}[ht]
 \begin{center}
 \hrule\vspace*{1ex}
@@ -1937,9 +1937,9 @@ void accumulate (int n, int* array, int *result)
 \label{fig:accumulatesmpss}
 \end{figure}
 
-All tasks are created asynchronously: the callee returns immediately after the task creation, before its execution.  SMPSs only guarantee that true data flow dependencies (read after write) are verified:  SMPSs ensures that a task that consume a value produced by an other task will be executed in order. Two tasks without direct or indirect data flow dependencies can be executed out of order. To ensure serialization,  SMPSs defines two kind of barriers: a global barrier that wait until all previously created tasks have been executed; a local barrier that wait until a list of values have been produced.
+All tasks are created asynchronously: the callee returns immediately after the task creation, before its execution. SMPSs only guarantees that true data flow dependencies (read after write) are verified: SMPSs ensures that a task consuming a value produced by an other task will be executed in order. Two tasks without direct or indirect data flow dependencies can be executed out of order. To ensure serialization, SMPSs defines two kinds of barrier: a global barrier that waits until all previously created tasks have been executed; a local barrier that waits until a list of values has been produced.
 
-The SMPSs programming model must be initialized before (\texttt{\#pragma css init} / \texttt{\#pragama css finish}), and allows reduction with locking mechanism~\cite{smpss-manual}.
+The SMPSs programming model must be initialized before (\texttt{\#pragma css init} / \texttt{\#pragama css finish}), and allows reduction with locking mechanisms~\cite{smpss-manual}.
 
 
 \subsection{Compatibility}
