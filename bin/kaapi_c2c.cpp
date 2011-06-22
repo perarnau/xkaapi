@@ -4599,15 +4599,19 @@ static void RecGenerateGetDimensionExpression(
     std::map<std::string,int>::iterator iparam = kta->lookup.find( sym->get_name().str() );
     if (iparam == kta->lookup.end())
     {
-      std::cerr << "Parameter:" << sym->get_name().str() << " unknown in parameter list" << std::endl;
-      KaapiAbort("*** Cannot find which parameter is involved in dimension expression");
+      // dump since this may be a macro or something
+      // we dont have access to the defintion of
+      sout << sym->get_name().str();
     }
-    sout << "((" 
-         << kta->formal_param[iparam->second].type->unparseToString() 
-         << ")" << "arg->f" << iparam->second;
-    if (kta->formal_param[iparam->second].mode != KAAPI_V_MODE)
-      sout << ".data";
-    sout << ")";
+    else
+    {
+      sout << "((" 
+	   << kta->formal_param[iparam->second].type->unparseToString() 
+	   << ")" << "arg->f" << iparam->second;
+      if (kta->formal_param[iparam->second].mode != KAAPI_V_MODE)
+	sout << ".data";
+      sout << ")";
+    }
   }
   else if (isSgUnsignedLongVal(expr))
   {
@@ -5409,8 +5413,15 @@ redo:
   save_rpos = rpos;
   ParseIdentifier( name );
   
-  if ((name == "storage") || (name == "ld"))
+  if ((name == "storage") || (name == "ld") || (name == "lda"))
   {
+    if (name == "lda")
+    {
+      std::cerr << "****[kaapi_c2c] warning. Deprecated use of 'lda'"
+                << "     In filename '" << fileInfo->get_filename() 
+                << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+    }
     skip_ws();
     c = readchar();
     if (c != '=') 
