@@ -5409,7 +5409,7 @@ redo:
   save_rpos = rpos;
   ParseIdentifier( name );
   
-  if ((name == "storage") || (name == "lda"))
+  if ((name == "storage") || (name == "ld"))
   {
     skip_ws();
     c = readchar();
@@ -5442,7 +5442,7 @@ redo:
       }
     }
     else 
-    { /* name == lda */
+    { /* name == ld */
       if (kpa->lda != 0) 
       {
         std::cerr << "****[kaapi_c2c] Error. LDA attribut already defined for same identifier."
