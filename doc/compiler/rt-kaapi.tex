@@ -727,9 +727,9 @@ In figure 7, the line 1 and 2 correspond to the task declaration. The line 3 thr
 
 
 \subsubsection{Task creation}
-The creation of a task is simply represented by the call to the function annotated to be a task. The \kaapi replaces all function calls to tasks by the creation of a task structures that capture the effective parameters.
+The creation of a task is simply represented by the call to the function annotated to be a task. The \kaapi replaces all function calls to tasks by the creation of a task structures that captures the effective parameters.
 
-At the difference to the sequential call to function, the \kaapi task creation is a non blocking operation: the callee does not wait the completion of the task before to resume its execution. At runtime, the thread of control that generates tasks that will be executed in concurrence depending of the available resources. The execution flow of C/C++ code and the execution flow of tasks are not synchronized except implicitly on certain point, or on request to the programmer to synchronize them (see section~\ref{sec:synchro}).
+A major difference with the sequential call to function is the \kaapi task creation is a non blocking operation: the callee does not wait for the task completion before the execution continues. At runtime, the thread of control that generates tasks that will be executed in concurrence depending of the available resources. The execution flow of C/C++ code and the execution flow of tasks are not synchronized except implicitly on certain point, or on request to the programmer to synchronize them (see section~\ref{sec:synchro}).
 
 Task creation may be part of the task definition, \textit{i.e.} at the difference of the StarSs programming model, \kaapi allows tasks to be created by task execution.
 See section~\ref{sec:recursive} about recursive computation with~\kaapi.
@@ -766,24 +766,24 @@ a parallel region is a dynamic scope where several threads cooperate to execute 
 \label{fig:accumparallelregion}
 \end{figure}
 
-At the end of a parallel region, there exists an implicit synchronization point that wait for all previously created tasks.
+At the end of a parallel region, an implicit synchronization point waits for all previously created tasks.
 
 \noindent \textit{\paragraph{TODO}: nowait clause ?}\\
 
-Parallel regions may be embedded: the parallel regions share the same set of threads for concurrent execution.
+Parallel regions may be embedded: the parallel regions share the same set of threads as concurrent execution.
 
-Before the control flow encountered a parallel region, the execution is driven by the main thread.
+Before the control flow encounters a parallel region, the execution is driven by the main thread.
 Outside the outermost parallel region, only the main thread drives the execution. This does not imply that synchronization becomes unnecessary: task creation is always a non blocking instruction and synchronization may be required to synchronize the 
 sequential execution flow with the task execution flow.
 
 \subsubsection{Contextual parallel region definition}
-The scope of a parallel region is the next instruction or the next basic block (between '{' and '}') if the directive is placed just before. For instance in figure~\ref{fig:accumparallelregion}, the declaration of the parallel region at line~6 only applies to the statement at line 7 that create a task.
+The scope of a parallel region is the next instruction or the next basic block (between '{' and '}') if the directive is placed just before. For instance in figure~\ref{fig:accumparallelregion}, the declaration of the parallel region at line~6 only applies to the statement at line 7 that creates a task.
 
 \begin{verbatim}
 #pragma kaapi parallel 
 \end{verbatim}
 
-The runtime select the number of threads using 1/ \kaapi environment variables \texttt{KAAPI\_CPUCOUNT} and \texttt{KAAPI\_CPUSET}, that define both the number of cores and a set of cores to used; 2/ else  \kaapi creates one thread per physical core of the machine.
+The runtime select the number of threads using 1/ \kaapi environment variable \texttt{KAAPI\_CPUCOUNT} and \texttt{KAAPI\_CPUSET}, that defines both the number and a set of cores to used; 2/ else  \kaapi creates one thread per physical core of the machine.
 
 %Any instruction that goes out of the parallel region (\texttt{return} instruction or \texttt{goto} instruction) 
 
@@ -794,26 +794,26 @@ The runtime select the number of threads using 1/ \kaapi environment variables \
 %... <code> ...
 %#pragma kaapi parallel_end
 %\end{verbatim}
-%In that case, the begin and end directives of the section must appears in the same block in the C/C++ code. 
+%In that case, the begin and end directives of the section must appears in the same block as in the C/C++ code. 
 %
 
 
 \subsubsection{Enclosed parallel region}
-Parallel region may be defined inside parallel region. At the difference of OpenMP, a parallel region is not associated to a number of threads and the enclosed parallel region does not create another set of threads: the threads are shared among the region and the number of threads is controlled by \kaapi environment variables \texttt{KAAPI\_CPUCOUNT} and \texttt{KAAPI\_CPUSET} (see above).
+Parallel region may be defined inside parallel region. At the difference of OpenMP, a parallel region is not associated with a number of threads and the enclosed parallel region does not create another set of threads: the threads are shared among the region and the number of threads is controlled by \kaapi environment variables \texttt{KAAPI\_CPUCOUNT} and \texttt{KAAPI\_CPUSET} (see above).
 
 The only guarantee is that before any parallel region and outside the outermost parallel region, the tasks are performed by the main thread.
 
 \subsubsection{Implicit parallel region}
-In special context, they are implicit parallel region. Currently the task definition (function body of a task definition) is a parallel region. Recursive calls to a task definition function creates tasks. See section~\ref{sec:recursive} about parallel recursive programming with \kaapi.
+In special context, there are implicit parallel regions. Currently the task definition (function body of a task definition) is a parallel region. Recursive calls to a task definition function creates tasks. See section~\ref{sec:recursive} about parallel recursive programming with \kaapi.
 
 %%%%
 \subsection{Access mode of tasks} \label{sec:accessmode}
- Two tasks sharing data have the same effective parameter, \textit{i.e.} a region into the shared memory. A task should declares how it accesses regions  in the shared memory.   
-Several access modes have been defined since the first vesion Athapascan~\cite{Athapascan98}: \textbf{read}, \textbf{write}, \textbf{readwrite} or \textbf{exclusive} and \textbf{cumulative write}. Each of these access modes limits the kind of operation a task can made to a memory region. For instance, a task that declares an access mode read to one of its effective parameters cannot write value. These access modes have either a direct correspondence in StarSs\footnote{Called direction as in CORBA} or PLASMA; or are similar (reduction in StarSs).
+ Two tasks sharing data have the same effective parameter, \textit{i.e.} a region into the shared memory. A task should declare how it accesses regions in the shared memory.   
+Several access modes have been defined since the first vesion Athapascan~\cite{Athapascan98}: \textbf{read}, \textbf{write}, \textbf{readwrite} or \textbf{exclusive} and \textbf{cumulative write}. Each of these access mode limits the kind of operation a task can perform on a memory region. For instance, a task that declares an access mode read to one of its effective parameters cannot write value. These access modes have either a direct correspondance in StarSs\footnote{Called direction as in CORBA} or PLASMA; or are similar (reduction in StarSs).
 
 %For instance, the StarSs\textbf{input} direction specification corresponds to the \textbf{read} access mode in \kaapi;  \textbf{output} direction corresponds to \textbf{write}; and \textbf{inout} corresponds to \textbf{readwrite}.  
 
-Each formal parameter of a task should be attached to an access mode, else it is a compiler error.
+A task formal parameter not annotated by an access mode is considered as a compilation error.
 The access mode is defined onto a memory region, \textit{i.e.} a set of addresses in the virtual address space of the processus.
 
 In example~\ref{fig:accummainkaapi}, both \texttt{accumulate} and \texttt{printresult} defined a memory region pointed by the formal parameter \texttt{result}: the region is defined by 1 integer.
@@ -838,8 +838,8 @@ cumulative write & \texttt{reduction(op:x)} or \texttt{cw(op:x)} & \texttt{reduc
 \end{table}
 
 \subsubsection{Passing rule by value}
-Any function parameter pass by value must be defined to be of access mode by value.
-In that case, the effective parameter is copied at task's creation time and any modification remains local to the function.
+Any function parameter passed by value must have a value access mode.
+In this case, the effective parameter is copied at task's creation time and any modification remains local to the function.
 
 Any C or C++ type may by defined to be passed by value.
 The syntax is the following:
@@ -849,7 +849,7 @@ The syntax is the following:
 \verb+list_declaration+ is a rule in the grammar given in the appendix~\ref{sec:grammar}.
 
 \subsubsection{Passing rule by reference}
-All description of memory region in \kaapi must be defined on C/C++ pointer type formal parameter. At runtime, the pointer, the declaration of the memory region and the access mode (read, write, ...) made by the task allow to detect dependencies.
+Any memory region description in \kaapi must be defined by a C/C++ pointer type formal parameter. At runtime, the pointer, the declaration of the memory region and the access mode (read, write, ...) made by the task allow to detect dependencies.
 
 The syntax of the clause is:
 \begin{verbatim}
@@ -857,7 +857,7 @@ The syntax of the clause is:
 #pragma kaapi task mode_cw ( operator: list_declaration )
 \end{verbatim}
 The access mode name \texttt{mode} of the clause is given by table~\ref{table:accessmode}.
-The previous example accumulate define 3 arguments. 2 of them are passed by reference: \texttt{array} is an array of size \texttt{n} (known at runtime); \texttt{result} is pointer to one integer.
+The previous example accumulate defines 3 arguments. 2 of them are passed by reference: \texttt{array} is an array of size \texttt{n} (known at runtime); \texttt{result} is pointer to one integer.
 
 \paragraph{1-D array.} They are two classical ways to specify a one dimensional array. The first one is by given a base address and a size:
 \begin{verbatim}
@@ -871,10 +871,10 @@ The second is to specify a interval between two addresses (as used in the most o
 #pragma kaapi task value(n) read( [begin:end] ) write(result)
 void accumulate( int* begin, int* end, int* result );
 \end{verbatim}
-In the STL, the righ bound is not part of the interval and it is called the 'past the last' value of the iterator. The size of the interval is \texttt{b-a}. In C, \texttt{a} and \texttt{b} must be pointer to any type; in C++ they can also be random access iterators.
+In the STL, the right bound is not part of the interval and it is called the 'past the last' value of the iterator. The size of the interval is \texttt{b-a}. In C, \texttt{a} and \texttt{b} must be a pointer to any type; in C++ they can also be random access iterators.
 
 
-\paragraph{2-D array.} 2-D arrays appear de facto in linear algebra subroutines. In order to allows to split data structure in order to execution in parallel sub-computations, it  is necessary to handle sub sets of 2-D arrays.
+\paragraph{2-D array.} 2-D arrays appear de facto in linear algebra subroutines. To allow data structure spliting involved in parallel sub-computations, it is necessary to handle sub sets of 2-D arrays.
 
 \kaapi declaration follows idea of the BLAS storage for dense matrix. 
 The syntax of the clause for 2-D array is:
@@ -888,8 +888,8 @@ The syntax of the clause for 2-D array is:
                                 lda=identifier ; \
                                 [n][m] } )
 \end{verbatim}
-Where the \texttt{lda} must be a reference to a formal parameter name. The dimension must follows the sub set of the C grammar for expression. 
-C or Fortran keyword are used to specify the storage of the matrix (row major or column major).
+Where the \texttt{lda} must be a reference to a formal parameter name. The dimension must follow the subset of the C grammar for expression. 
+C or Fortran keywords are used to specify the storage of the matrix (row major or column major).
 
 All this rules are defined in the grammar of the appendix~\ref{sec:grammar}.
 
@@ -897,7 +897,7 @@ All this rules are defined in the grammar of the appendix~\ref{sec:grammar}.
 %%%%
 \subsubsection{Cumulative access mode}\label{sec:cw}
 In \kaapi, it is possible to reduce variable with only associative operator. The commutativity is not required.
-A task that required an accumulative semantic with respect to one of its formal parameters, must defined it with the \texttt{reduction}  clause in the \texttt{\#pragma kaapi task}. Two tasks having a reduction access mode onto the same memory region are concurrent. 
+A task that required an accumulative semantic with respect to one of its formal parameters, must defined it with the \texttt{reduction} clause in the \texttt{\#pragma kaapi task}. Two tasks having a reduction access mode onto the same memory region are concurrent. 
 As depicted in figure~\ref{fig:exaccu},
 \begin{figure}[ht]
 \hrule\vspace*{1ex}
@@ -918,7 +918,7 @@ void accumulate (int n, int* array, int *result)
 \caption{Kaapi signature for accumulate with reduction}
 \label{fig:exaccu}
 \end{figure}
-the reduction clause specifies: the operator to use during concurrent reduction and a list of  formal parameters on which the clause applied.
+The reduction clause specifies the operator to use during concurrent reduction and a list of formal parameters the clause is applied on.
 For all the scalar types of the C or C++ language, \kaapi predefines a list of known operators.
 For each operator, the neutral element corresponds to the neutral element of the mathematical operator. The list is presented in table~\ref{table:opcumul} follows the same predefined reduction operators in OpenMP-3.0.
 \begin{table}[h]
@@ -941,12 +941,12 @@ For each operator, the neutral element corresponds to the neutral element of the
 \label{table:opcumul}
 \end{table}
 
-The user may have the availability to defined its own reduction operator using \texttt{\#pragma kaapi declare reduction} clause:
+The user has the possibility to define its own reduction operator using \texttt{\#pragma kaapi declare reduction} clause:
 \begin{description}
 \item [\texttt{\#pragma kaapi declare reduction}]~\\
 \verb!(reduction-identifier : function-name)!\\
 \verb![ identity( function-name) ]!\\
-The \verb!function-name! must corresponds to the name of C/C++ function which must satisfies one of the following signature:
+The \verb!function-name! must correspond to the name of C/C++ function which must satisfy one of the following signature:
 \vspace*{-2ex}\begin{verbatim}
   // For  C++
   void function( typename& result, const typename& value )
@@ -954,10 +954,10 @@ The \verb!function-name! must corresponds to the name of C/C++ function which mu
   void function( typename* result, const typename* value )
 \end{verbatim}
 \end{description}
-The type of the parameter are inherited from the declaration of the reduction variable in the \texttt{reduction} clause to describe access mode of formal parameter.
+The parameter type are inherited from the declaration of the reduction variable in the \texttt{reduction} clause to describe access mode of formal parameter.
 
 
-In the same way, the identity function is used to initialized a value of a temporary variable to be the neutral of the reduction operator. The signature of the identity function must be one of the following:
+In the same way, the identity function is used to initialize a value of a temporary variable to be the neutral of the reduction operator. The identity function signature must be one of the following:
 \begin{verbatim}
   // For  C++
   void function( typename& value )
@@ -969,12 +969,12 @@ In the same way, the identity function is used to initialized a value of a tempo
 \subsubsection{Dependencies between tasks}
 Once access modes are defined for the tasks, the runtime is able to detect dependencies between tasks that access to a same memory region.
 \begin{description}
-\item [Read after Write.] This is also called true dependency, it means that a task is reading a memory region produced by an other tasks.
-\item [Write after Write.] This is a false dependency. Such dependency is removed using a renaming technique: the two tasks can be executed concurrently if they works on distinct memory region, thus the runtime may allocated distinct memory region.
-\item [Write after Read.] This false dependency is also called anti-depedency. This kind of dependencies are subject to removal in the similar way as for write after write dependency.
+\item [Read after Write.] This is also called true dependency. It means that a task is reading a memory region produced by other tasks.
+\item [Write after Write.] This is a false dependency. Such dependency is removed using renaming: the two tasks can be executed concurrently if they work on distinct memory region, thus the runtime may allocate distinct memory region.
+\item [Write after Read.] This false dependency is also called anti-depedency. Those kinds of dependency are subject to removal in the similar way as write after write dependency.
 \end{description}
 
-Note that the \kaapi runtime used a lazy approach to remove false dependencies: if it is necessary to execute concurrently two tasks with false dependencies, then the runtime will rename the memory region. Else, the execution is sequential using the creation order between tasks.
+Note that the \kaapi runtime used a lazy approach to remove false dependencies: if it is necessary to execute concurrently two tasks with false dependencies, then the runtime renames the memory region. Else, the execution is sequential using the task creation order.
 
 In both case, the result of the execution remains the same whatever the execution order between tasks.
 
@@ -990,13 +990,13 @@ necessary to synchronize the control flow of the thread that creates tasks with 
 
 The directive forces the synchronization of the current executing control flow with all previously created tasks in the same task's activation frame.
 
-For non recursive task's creations, this directive wait until all previously created tasks in the control flow have been completed.
+For non recursive task creations, this directive waits until all previously created tasks in the control flow have been completed.
 
-For recursive task's creations, the directive wait until all previously created tasks, in the current task activation frame, has been completed.
+For recursive task creations, the directive waits until all previously created tasks, in the current task activation frame, has been completed.
 
 \subsubsection{\#pragma kaapi sync(<list of views>)}
 
-This directive forces the synchronization of the current executing control flow until the execution of the last created tasks, in the same task's activation frame, which write the memory describes by a the list of views.
+This directive forces the synchronization of the current executing control flow until the execution of the last created tasks, in the same task activation frame, which writes the memory described by a the list of views.
 
 
 %%%%
@@ -1031,7 +1031,7 @@ void accumulate (int n, int* array, int *result)
 This example is simple: no temporary data are required at each level of recursion. This not the case with the academic recursive non optimal computation of the fibonacci number.
 
 \subsubsection{Control of the allocation scope of data}
-All data passed by reference to tasks must be valid until the completion of the tasks.
+All data passed by reference to tasks must be valid until the task completion.
 For instance, because task creation is a non blocking call the example of figure~\ref{ex:caplante} is incorrect: the automatic variable \texttt{r} will be suppressed before the execution of the task \texttt{g}.
 \begin{figure}[ht]
 \hrule\vspace*{1ex}
@@ -1052,10 +1052,10 @@ For instance, because task creation is a non blocking call the example of figure
 \label{ex:caplante}
 \end{figure}
 
-In that case, the user has two possibility:
+In that case, the user has two possibilities:
 \begin{itemize}
-\item Add a synchronization point between line 4 and 5. That enforce the execution to wait the completion of \texttt{g} (left solution in figure~\ref{ex:caplanteplus}).
-\item Allocate the data with the same scope as for tasks. In that case, the data is allocated with a scope enough to execution of task \texttt{g} (right solution in figure~\ref{ex:caplanteplus}).
+\item Add a synchronization point between line 4 and 5. It enforces the execution waits for the completion of \texttt{g} (left solution in figure~\ref{ex:caplanteplus}).
+\item Allocate the data in the same scope as the tasks. In that case, the data is allocated with a scope wide enough to execution of task \texttt{g} (right solution in figure~\ref{ex:caplanteplus}).
 \end{itemize}
 
 \begin{figure}[ht]
@@ -1094,7 +1094,7 @@ The syntax of the \texttt{\#pragma kaapi data alloca} is:
 The \verb!<list of variables>! describes a list of automatic variables that hope to be used in task's creations.
 \end{description}
 
-The \kaapi name of the directive was chose with analogy of the \texttt{alloca} function of the C library stdlib.  With sequential C or C++ program, the developer may allocate data in the stack using the \texttt{alloca} function. In that case, the scope of allocation is the same as the activation frame where the call to \texttt{alloca} occured.
+The \kaapi name of the directive was chosen with analogy of the \texttt{alloca} function of the C library stdlib.  With sequential C or C++ program, the developper may allocate data in the stack using the \texttt{alloca} function. In that case, the allocation scope is the same as the activation frame where the call to \texttt{alloca} occured.
 With \kaapi \texttt{\#pragma kaapi alloca}, the user can allocate data within the same scope as created tasks in the same activation frame.
 
 %%%%
@@ -1350,7 +1350,7 @@ int main()
 
 
 \subsection{Cholesky factorization}
-This example shows one of the main difference between StartSs programming model in its ability to view sub matrix of matrix without necessity to reallocate the user's data structure.\\
+This example shows one of the main difference between StartSs programming model is its ability to view sub matrix of matrix without necessity to reallocate the user's data structure.\\
 
 \begin{tiny}
 \lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
@@ -1499,14 +1499,12 @@ void main( int argc, char** argv )
 
 static void init_hist(unsigned int* p)
 {
-  unsigned int i;
-  for (i = 0; i < CONFIG_DATA_DIM; ++i, ++p) *p = 0;
+  *p = 0;
 }
 
 static void reduce_hist(unsigned int* lhs, const unsigned int* rhs)
 {
-  unsigned int i;
-  for (i = 0; i < CONFIG_DATA_DIM; ++i, ++lhs, ++rhs) *lhs += *rhs;
+  *lhs += *rhs;
 }
 
 /* accumulate a given block histogram.
@@ -1514,20 +1512,21 @@ static void reduce_hist(unsigned int* lhs, const unsigned int* rhs)
    in the task pragma clause.
  */
 #pragma kaapi task			\
-  value(dim, lda)			\
-  read(data{lda = lda; [dim][dim]})	\
-  reduction(hist_redop: hist[dim])
+  value(bdim, lda, hdim)		\
+  read(data{lda = lda; [bdim][bdim]})	\
+  reduction(hist_redop: hist[him])
 static void accum_block_hist
 (
  const unsigned int* data,
- unsigned int dim,
+ unsigned int bdim,
  unsigned int lda,
- unsigned int* hist
+ unsigned int* hist,
+ unsigned int hdim
 )
 {
   unsigned int x, y;
-  for (y = 0; y < dim; ++y, data += lda)
-    for (x = 0; x < dim; ++x, ++data)
+  for (y = 0; y < bdim; ++y, data += lda)
+    for (x = 0; x < bdim; ++x, ++data)
       ++hist[*data];
 }
 
@@ -1559,7 +1558,7 @@ static void compute_hist
       /* compute start of block */
       const unsigned int* const p =
       	data + i * block_size + j * CONFIG_BLOCK_DIM;
-      accum_block_hist(p, CONFIG_BLOCK_DIM, lda, hist);
+      accum_block_hist(p, CONFIG_BLOCK_DIM, lda, hist, CONFIG_DATA_DIM);
     }
   }
 }
@@ -1600,14 +1599,12 @@ int main(int ac, char** av)
 
 static void init_hist(unsigned int* p)
 {
-  unsigned int i;
-  for (i = 0; i < CONFIG_DATA_DIM; ++i, ++p) *p = 0;
+  *p = 0;
 }
 
 static void reduce_hist(unsigned int* lhs, const unsigned int* rhs)
 {
-  unsigned int i;
-  for (i = 0; i < CONFIG_DATA_DIM; ++i, ++lhs, ++rhs) *lhs += *rhs;
+  *lhs += *rhs;
 }
 
 
@@ -1617,20 +1614,21 @@ static void reduce_hist(unsigned int* lhs, const unsigned int* rhs)
  */
 
 #pragma kaapi task			\
-  value(dim, lda)			\
-  read(data{lda = lda; [dim][dim]})	\
-  reduction(hist_redop: hist)
+  value(bdim, lda, hdim)		\
+  read(data{lda = lda; [bdim][bdim]})	\
+  reduction(hist_redop: hist[hdim])
 static void accum_block_hist
 (
  const unsigned int* data,
- unsigned int dim,
+ unsigned int bdim,
  unsigned int lda,
- unsigned int* hist
+ unsigned int* hist,
+ unsigned int hdim
 )
 {
   unsigned int x, y;
-  for (y = 0; y < dim; ++y, data += lda)
-    for (x = 0; x < dim; ++x, ++data)
+  for (y = 0; y < bdim; ++y, data += lda)
+    for (x = 0; x < bdim; ++x, ++data)
       ++hist[*data];
 }
 
@@ -1663,7 +1661,7 @@ static void compute_hist
       /* compute start of block */
       const unsigned int* const p =
       	data + i * block_size + j * CONFIG_BLOCK_DIM;
-      accum_block_hist(p, CONFIG_BLOCK_DIM, lda, hist);
+      accum_block_hist(p, CONFIG_BLOCK_DIM, lda, hist, CONFIG_DATA_DIM);
     }
   }
 }
@@ -1684,13 +1682,13 @@ int main(int ac, char** av)
 
 \subsection{SMPSs examples}
 
-SMPSs is the implementation of the StartSs programming model for multicore architecture.
+SMPSs is the implementation of the StartSs programming model for multicore architectures.
 SMPSs is developed by the Barcelona Supercomputing Center (\url{http://www.bsc.es}) and is freely available for download.
 
 All examples from SMPSs are accepted by the KaCC compiler.
 The user may have a look at \url{http://www.bsc.es/plantillaG.php?cat_id=385} to download SMPSs software that contains examples.
 
-\kaapi programming model defines a set of directives which are a superset of the StartSs directives. The appendix~\ref{app:smpss} describes more in details the differences between \kaapi and StartSs/SMPSs.
+\kaapi programming model defines a set of directives which are a superset of the StartSs directives. The appendix~\ref{app:smpss} further details the differences between \kaapi and StartSs/SMPSs.
 
 %%%
 %%%
