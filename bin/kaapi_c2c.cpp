@@ -741,7 +741,7 @@ redo_selection:
     {
       if (!isSgPointerType(kta->formal_param[i].type))
       { /* read/write/reduction should be pointer: else move them to be by value */
-#if CONFIG_ENABLE_DEBUG
+#if 1 // TG: CONFIG_ENABLE_DEBUG
         std::cerr << "****[kaapi_c2c] Warning: incorrect access mode: not a pointer type. \n"
                   << "                         Change access mode declaration to value.\n"
                   << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
@@ -804,6 +804,14 @@ redo_selection:
     SgMemberFunctionType* methodType = isSgMemberFunctionType( memberDecl->get_type() );
     if (methodType == 0) KaapiAbort("Internal error");
 
+    if (memberDecl->get_functionModifier().isVirtual())
+    {
+      std::cerr << "****[kaapi_c2c] Error: Task cannot be defined on virtual method. \n"
+                << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+      KaapiAbort("**** error");
+    }
+    
     /* mode must be R if const method, else RW, else specified in pragma */
     if (methodType->isConstFunc())
       param.mode          = KAAPI_R_MODE;
