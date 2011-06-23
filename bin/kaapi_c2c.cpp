@@ -101,6 +101,7 @@ NOK   - global variable:
 #define SOURCE_POSITION Sg_File_Info::generateDefaultFileInfoForTransformationNode()
 
 struct KaapiTaskAttribute; 
+struct KaapiForLoopAttribute; 
 struct OneCall;
 
 typedef struct synced_stmt
@@ -124,6 +125,9 @@ static std::map<std::string,KaapiTaskAttribute*> all_manglename2tasks;
 typedef std::list<std::pair<SgFunctionDeclaration*, std::string> > ListTaskFunctionDeclaration;
 static ListTaskFunctionDeclaration all_task_func_decl;
 static std::set<SgFunctionDeclaration*> all_signature_func_decl;
+
+typedef std::list<std::pair<SgForStatement*, KaapiForLoopAttribute*> > ListParallelForLoop;
+static ListParallelForLoop all_parallel_forloop;
 
 /* used to mark already instanciated template */
 static std::set<std::string> all_template_instanciate; 
@@ -617,6 +621,7 @@ void Parser::DoKaapiPragmaSignature( SgPragmaDeclaration* sgp )
   if (func_decl) all_signature_func_decl.insert(func_decl);
 }
 
+/* */
 void Parser::DoKaapiPragmaLoop( SgPragmaDeclaration* sgp )
 {
   Sg_File_Info* fileInfo = sgp->get_file_info();
@@ -1890,6 +1895,9 @@ void Parser::DoKaapiPragmaWaiton( SgPragmaDeclaration* sgp )
 */
 void Parser::DoKaapiPragmaParallelRegion( SgPragmaDeclaration* sgp )
 {
+  std::string name;
+  const char* save_rpos;
+  
   SgBasicBlock* bbnode = isSgBasicBlock(sgp->get_parent());
   if (bbnode ==0)
   {
@@ -1899,6 +1907,24 @@ void Parser::DoKaapiPragmaParallelRegion( SgPragmaDeclaration* sgp )
               << std::endl;
     KaapiAbort("**** error");
   }
+
+  /* here 2 cases: #pragma kaapi parallel or #pragma kaapi loop
+  */
+  skip_ws();
+  save_rpos = rpos;
+  ParseIdentifier( name );
+
+  /* Case of adaptive loop 
+  */
+  if (name == "loop")
+  {
+    DoKaapiPragmaLoop( sgp );
+    return;
+  }
+  else {
+    rpos = save_rpos;
+  }
+  
   SgNode* nextnode = 
           sgp->get_parent()-> get_traversalSuccessorByIndex( 
               sgp->get_parent()->get_childIndex( sgp ) + 1);
@@ -2916,13 +2942,6 @@ public:
         parser.DoKaapiPragmaBarrier( sgp );
       }
 
-      /* Case of adaptive loop 
-      */
-      else if (name == "loop")
-      {
-        parser.DoKaapiPragmaLoop( sgp );
-      } /* end for task */
-
       /* Case of waiton clause
       */
       else if (name == "waiton") 
@@ -2935,6 +2954,12 @@ public:
       else if (name == "data") 
       {
         parser.DoKaapiPragmaData( node );
+      }
+
+      else if (name == "loop")
+      {
+        parser.DoKaapiPragmaLoop( sgp );
+        return;
       }
 
       /* Case of init/finalize
