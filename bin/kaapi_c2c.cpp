@@ -1273,7 +1273,7 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
     fout << "    case " << case_retval << ": arg->r = *a; return; \n";
 #endif // handle return value
 #if 1 // handle this value
-  if (kta->has_retval)
+  if (kta->has_this)
     // we know this is an access
     fout << "    case " << case_this << ": arg->thisfield = *a; return; \n";
 #endif // handle this value
