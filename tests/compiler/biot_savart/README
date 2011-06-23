@@ -1,0 +1,2 @@
+magnetic field computation using the biot savart method.
+parallelized  using the kacc kaapi compiler.

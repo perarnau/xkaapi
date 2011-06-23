@@ -711,8 +711,8 @@ void Parser::DoKaapiTaskDeclaration
 
   /* Add the class declaration for the parameters */
   kta->name_paramclass = std::string("__kaapi_args_") + 
-      functionDeclaration->get_name().str() + 
-      functionDeclaration->get_mangled_name().str();
+    functionDeclaration->get_name().str() + 
+    functionDeclaration->get_mangled_name().str();
 
   kta->paramclass = 
     buildClassDeclarationAndDefinition( 
@@ -1171,7 +1171,12 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
   
   SgUnparse_Info* sg_info = new SgUnparse_Info;
   sg_info->unset_forceQualifiedNames();
-  std::string name_paramclass = kta->paramclass->get_qualified_name().str();
+
+  std::string name_paramclass;
+  if (SageInterface::is_C_language())
+    name_paramclass = kta->name_paramclass;
+  else if (SageInterface::is_Cxx_language())
+    name_paramclass = kta->paramclass->get_qualified_name();
   
 /* Not used: because generated into the translation unit
   fout << kta->paramclass->unparseToString(sg_info) << std::endl;
@@ -1273,7 +1278,7 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
     fout << "    case " << case_retval << ": arg->r = *a; return; \n";
 #endif // handle return value
 #if 1 // handle this value
-  if (kta->has_retval)
+  if (kta->has_this)
     // we know this is an access
     fout << "    case " << case_this << ": arg->thisfield = *a; return; \n";
 #endif // handle this value
@@ -1611,6 +1616,12 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
   fout << "void " << kta->name_format << "_get_task_binding(const struct kaapi_format_t* fmt, const kaapi_task_t* t, kaapi_task_binding_t* tb)\n"
        << "{ return; }\n"
        << std::endl;
+
+  std::string wrapper_decl_name;
+  if (SageInterface::is_C_language())
+    wrapper_decl_name = kta->wrapper_decl->get_name();
+  else if (SageInterface::is_Cxx_language())
+    wrapper_decl_name = kta->wrapper_decl->get_qualified_name();
        
   /* Generate constructor function that register the format */
   fout << "/* constructor method */\n" 
@@ -1620,7 +1631,7 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
        << "  " << kta->name_format << " = kaapi_format_allocate();\n"
        << "  kaapi_format_taskregister_func(\n"
        << "    " << kta->name_format << ",\n" /* format object */
-       << "    " << kta->wrapper_decl->get_qualified_name().str() << ",\n" /* body */
+       << "    " << wrapper_decl_name << ",\n" /* body */
        << "    " << 0 << ",\n" /* bodywh */
        << "    \"" << kta->name_format << "\",\n" /* name */
        << "    sizeof(" << name_paramclass << "),\n" /* sizeof the arg struct */
