@@ -50,9 +50,10 @@ void say_hello(const char* msg)
 
 int main(int argc, char** argv)
 {
-#pragma kaapi start
-  say_hello("Hello World!");
-  say_hello("Hello World!");
-#pragma kaapi finish
+#pragma kaapi parallel
+  {
+    say_hello("Hello World!");
+    say_hello("Hello World!");
+  }
   return 0;
 }

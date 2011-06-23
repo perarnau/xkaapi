@@ -266,7 +266,7 @@ int kaapi_hw_init(void)
   /* end of detection of memory hierarchy */
   
   
-#if 1
+#if 0
 {
   unsigned int i;
   /* display result... */

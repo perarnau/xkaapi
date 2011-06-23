@@ -880,16 +880,16 @@ In the STL, the right bound is not part of the interval and it is called the 'pa
 The syntax of the clause for 2-D array is:
 \begin{verbatim}
 #pragma kaapi task mode( array[n][m] )
-#pragma kaapi task mode( array{ lda=identifier; [n][m] } )
+#pragma kaapi task mode( array{ ld=identifier; [n][m] } )
 #pragma kaapi task mode( array{ storage=C; \
-                                lda=identifier ;  \
+                                ld=identifier ;  \
                                 [n][m] } )
 #pragma kaapi task mode( array{ storage=Fortran; \
-                                lda=identifier ; \
+                                ld=identifier ; \
                                 [n][m] } )
 \end{verbatim}
-Where the \texttt{lda} must be a reference to a formal parameter name. The dimension must follow the subset of the C grammar for expression. 
-C or Fortran keywords are used to specify the storage of the matrix (row major or column major).
+Where the \texttt{ld} must be a reference to a formal parameter name. The dimension must follows the sub set of the C grammar for expression. 
+C or Fortran keyword are used to specify the storage of the matrix (row major or column major).
 
 All this rules are defined in the grammar of the appendix~\ref{sec:grammar}.
 
@@ -1361,13 +1361,13 @@ This example shows one of the main difference between StartSs programming model 
 #include <clapack.h> 
 
 
-#pragma kaapi task value(Order, Uplo, N, lda) readwrite(A{lda=lda; [N][N]})
+#pragma kaapi task value(Order, Uplo, N, lda) readwrite(A{ld=lda; [N][N]})
 int clapack_dpotrf(const enum ATLAS_ORDER Order, const enum ATLAS_UPLO Uplo,
                    const int N, double *A, const int lda);
 
 
 #pragma kaapi task value(Order, Side, Uplo, TransA, Diag, M, N, alpha, lda, ldb) \
-                   read(A{lda=lda; [N][N]}) readwrite(B{lda=ldb; [N][N]})
+                   read(A{ld=lda; [N][N]}) readwrite(B{ld=ldb; [N][N]})
 void cblas_dtrsm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
                  const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
                  const enum CBLAS_DIAG Diag, const int M, const int N,
@@ -1375,16 +1375,16 @@ void cblas_dtrsm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
                  double *B, const int ldb);
 
 #pragma kaapi task value(Order, Uplo, Trans, N, K, alpha, lda, beta, ldc) \
-                   read(A{lda=lda; [N][N]}) \
-                   readwrite(C{lda=ldc; [N][N]})
+                   read(A{ld=lda; [N][N]}) \
+                   readwrite(C{ld=ldc; [N][N]})
 void cblas_dsyrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
                  const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
                  const double alpha, const double *A, const int lda,
                  const double beta, double *C, const int ldc);
 
 #pragma kaapi task value(Order, TransA, TransB, M, N, K, alpha, lda, ldb, beta, ldc) \
-                   read(A{lda=lda; [M][K]}, B{lda=ldb; [K][N]}) \
-                   readwrite(C{lda=ldc; [M][N]})
+                   read(A{ld=lda; [M][K]}, B{ld=ldb; [K][N]}) \
+                   readwrite(C{ld=ldc; [M][N]})
 void cblas_dgemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA,
                  const enum CBLAS_TRANSPOSE TransB, const int M, const int N,
                  const int K, const double alpha, const double *A,
@@ -1478,21 +1478,22 @@ void main( int argc, char** argv )
 %%%\subsection{NQueens}
 
 \subsection{2D Histogram}
-\begin{small}
+\begin{tiny}
 \lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
 %\lstset{commentstyle=\color{blue}}
 \lstset{language=C}
 \begin{lstlisting}[frame=tb]
+#include <stdio.h>
+#include <stdlib.h>
 
-/* some statically configured params
- */
-#define CONFIG_DATA_LOG2 12
+/* define the hist level too. assume <= 32. */
+#define CONFIG_DATA_LOG2 13
+/* dont touch */
 #define CONFIG_DATA_DIM (1 << CONFIG_DATA_LOG2)
-#define CONFIG_BLOCK_DIM (CONFIG_DATA_DIM / 4)
+#define CONFIG_BLOCK_DIM (CONFIG_DATA_DIM / 8)
 
 
-/* histogram reduction
- */
+/* histogram reduction */
 #pragma kaapi declare			\
   reduction(hist_redop: reduce_hist)	\
   identity(init_hist)
@@ -1502,128 +1503,23 @@ static void init_hist(unsigned int* p)
   *p = 0;
 }
 
+__attribute__((unused))
 static void reduce_hist(unsigned int* lhs, const unsigned int* rhs)
 {
   *lhs += *rhs;
 }
 
-/* accumulate a given block histogram.
-   reduction initialization and operator are specified
-   in the task pragma clause.
- */
 #pragma kaapi task			\
-  value(bdim, lda, hdim)		\
-  read(data{lda = lda; [bdim][bdim]})	\
-  reduction(hist_redop: hist[him])
-static void accum_block_hist
-(
- const unsigned int* data,
- unsigned int bdim,
- unsigned int lda,
- unsigned int* hist,
- unsigned int hdim
-)
-{
-  unsigned int x, y;
-  for (y = 0; y < bdim; ++y, data += lda)
-    for (x = 0; x < bdim; ++x, ++data)
-      ++hist[*data];
-}
-
-/* a task is spawned foreach block to accumulate
-   the histogram. the reduction is handled by the
-   xkaapi runtime.
- */
-static void compute_hist
-(
- const unsigned int* data,
- unsigned int dim,
- unsigned int* hist
-)
-{
-  static const unsigned int lda = CONFIG_DATA_DIM;
-  static const unsigned int block_size =
-    CONFIG_BLOCK_DIM * CONFIG_BLOCK_DIM;
-
-  const unsigned int block_count = dim / CONFIG_BLOCK_DIM;
-  unsigned int i, j;
-
-  init_hist(hist);
-
-  /* foreach block, accumulate histogram */
-  for (i = 0; i < block_count; ++i)
-  {
-    for (j = 0; j < block_count; ++j)
-    {
-      /* compute start of block */
-      const unsigned int* const p =
-      	data + i * block_size + j * CONFIG_BLOCK_DIM;
-      accum_block_hist(p, CONFIG_BLOCK_DIM, lda, hist, CONFIG_DATA_DIM);
-    }
-  }
-}
-
-/* main */
-int main(int ac, char** av)
-{
-  static unsigned int hist[CONFIG_DATA_DIM];
-  unsigned int* const data = gen_data(CONFIG_DATA_DIM);
-#pragma kaapi parallel
-  compute_hist(data, CONFIG_DATA_DIM, hist);
-  return 0;
-}
-\end{lstlisting}
-\end{small}
-
-\subsection{2D Histogram}
-\begin{tiny}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=2, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
-\begin{lstlisting}[frame=tb]
-
-/* some statically configured params
- */
-
-#define CONFIG_DATA_LOG2 12
-#define CONFIG_DATA_DIM (1 << CONFIG_DATA_LOG2)
-#define CONFIG_BLOCK_DIM (CONFIG_DATA_DIM / 4)
-
-
-/* histogram reduction
- */
-
-#pragma kaapi declare			\
-  reduction(hist_redop: reduce_hist)	\
-  identity(init_hist)
-
-static void init_hist(unsigned int* p)
-{
-  *p = 0;
-}
-
-static void reduce_hist(unsigned int* lhs, const unsigned int* rhs)
-{
-  *lhs += *rhs;
-}
-
-
-/* accumulate a given block histogram.
-   reduction initialization and operator are specified
-   in the task pragma clause.
- */
-
-#pragma kaapi task			\
-  value(bdim, lda, hdim)		\
-  read(data{lda = lda; [bdim][bdim]})	\
+  value(bdim, hdim, lda)		\
+  read(data{ld = lda; [bdim][bdim]})	\
   reduction(hist_redop: hist[hdim])
-static void accum_block_hist
+static void compute_block_hist
 (
  const unsigned int* data,
- unsigned int bdim,
+ unsigned int bdim, /* block dimension */
  unsigned int lda,
  unsigned int* hist,
- unsigned int hdim
+ unsigned int hdim /* histogram dimension */
 )
 {
   unsigned int x, y;
@@ -1631,11 +1527,6 @@ static void accum_block_hist
     for (x = 0; x < bdim; ++x, ++data)
       ++hist[*data];
 }
-
-/* a task is spawned foreach block to accumulate
-   the histogram. the reduction is handled by the
-   xkaapi runtime.
- */
 
 static void compute_hist
 (
@@ -1651,9 +1542,9 @@ static void compute_hist
   const unsigned int block_count = dim / CONFIG_BLOCK_DIM;
   unsigned int i, j;
 
-  init_hist(hist);
+  for (i = 0; i < CONFIG_DATA_DIM; ++i)
+    init_hist(hist + i);
 
-  /* foreach block, accumulate histogram */
   for (i = 0; i < block_count; ++i)
   {
     for (j = 0; j < block_count; ++j)
@@ -1661,24 +1552,55 @@ static void compute_hist
       /* compute start of block */
       const unsigned int* const p =
       	data + i * block_size + j * CONFIG_BLOCK_DIM;
-      accum_block_hist(p, CONFIG_BLOCK_DIM, lda, hist, CONFIG_DATA_DIM);
+      compute_block_hist
+	(p, CONFIG_BLOCK_DIM, lda, hist, CONFIG_DATA_DIM);
     }
   }
 }
 
-/* main */
 
+/* data helpers */
+static unsigned int* gen_data(unsigned int dim)
+{
+  const unsigned int size = dim * dim;
+  unsigned int* const data = malloc(size * sizeof(unsigned int));
+
+  /* arrange so that each value appears dim times */
+  unsigned int i;
+  for (i = 0; i < size; ++i) data[i] = i & (dim - 1);
+  return data;
+}
+
+static int check_hist(const unsigned int* hist)
+{
+  unsigned int i;
+  for (i = 0; i < CONFIG_DATA_DIM; ++i)
+    if (hist[i] != CONFIG_DATA_DIM) return -1;
+  return 0;
+}
+
+
+/* main */
 int main(int ac, char** av)
 {
   static unsigned int hist[CONFIG_DATA_DIM];
   unsigned int* const data = gen_data(CONFIG_DATA_DIM);
+  int err;
+
+  if (data == NULL) return -1;
+
 #pragma kaapi parallel
   compute_hist(data, CONFIG_DATA_DIM, hist);
-  return 0;
+
+  free(data);
+
+  err = check_hist(hist);
+  if (err == -1) printf("invalid\n");
+
+  return err;
 }
 \end{lstlisting}
 \end{tiny}
-
 
 \subsection{SMPSs examples}
 
@@ -1733,8 +1655,8 @@ parameter in the \verb+#pragma kaapi task+ compiler directive.
         | complex_dimension ',' element_view
       
       element_view :=
-          storage
-        | lda
+          'storage' '=' storage_class
+        | 'ld' '=' identifier
         | dimension
 
       mode :=
@@ -1754,12 +1676,9 @@ parameter in the \verb+#pragma kaapi task+ compiler directive.
           '+' | '-' | '*' | '&' | '|' | '^' | '&&' | '||'
         | identifier
 
-      storage :=
+      storage_class :=
           'rowmajor'    | 'C' | 'C++'
-        | 'columnmajor' | 'Fortran'
-      
-      lda :=
-          identifier
+        | 'columnmajor' | 'Fortran'      
 \end{verbatim}
 \subsubsection{Note on access mode}
 Most of the different access modes (\verb+mode_xx :=+ rules) have three formats: long, short and a format compatible with the  SMPSs programming model. 

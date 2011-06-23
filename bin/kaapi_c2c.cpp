@@ -313,12 +313,22 @@ struct KaapiTaskFormalParam {
 class KaapiTaskAttribute : public AstAttribute {
 public:
   KaapiTaskAttribute () 
+    : is_signature(false), 
+      has_retval(false), 
+      has_this(false),
+      paramclass(0),
+      typedefparamclass(0),
+      func_decl(0),
+      wrapper_decl(0),
+      fwd_wrapper_decl(0)
   { }
 
-  bool				    is_signature;      /* signature pragma */
+  bool				                is_signature;      /* signature pragma */
   std::string                       mangled_name;      /* internal name of the task */
   bool                              has_retval;
   KaapiTaskFormalParam              retval;
+  bool                              has_this;
+  KaapiTaskFormalParam              thisval;
   std::vector<KaapiTaskFormalParam> formal_param;
   std::vector<KaapiTaskFormalParam> extra_param;
   std::vector<int>                  israngedecl;       /* for range declaration: 0 no, 1:begin, 2: end*/
@@ -588,14 +598,6 @@ void Parser::DoKaapiPragmaTask( SgPragmaDeclaration* sgp )
               << std::endl;
     KaapiAbort("**** error");
   }
-  SgMemberFunctionDeclaration* methodDeclaration = isSgMemberFunctionDeclaration(fnode );
-  if (methodDeclaration !=0) 
-  {
-    std::cerr << "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
-              << "\n#pragma kaapi task before a method: not yet implemented"
-              << std::endl;
-    KaapiAbort("**** error");
-  } 
 
 #if CONFIG_ENABLE_DEBUG
 std::cerr << "****[kaapi_c2c] Found #pragma kaapi task. "
@@ -651,7 +653,7 @@ static inline bool is_signature(SgFunctionDeclaration* func_decl)
 }
 
 void Parser::DoKaapiTaskDeclaration
-( SgFunctionDeclaration* functionDeclaration )
+  ( SgFunctionDeclaration* functionDeclaration )
 {
   Sg_File_Info* fileInfo = functionDeclaration->get_file_info();
 
@@ -712,6 +714,8 @@ void Parser::DoKaapiTaskDeclaration
       kta->name_paramclass,
       scope_declaration
     );
+
+  SgVariableDeclaration* thismemberDeclaration = 0;
   
   /* Add member for each parameter */
   for (unsigned int i=0; i<kta->formal_param.size(); ++i)
@@ -737,7 +741,7 @@ redo_selection:
     {
       if (!isSgPointerType(kta->formal_param[i].type))
       { /* read/write/reduction should be pointer: else move them to be by value */
-#if CONFIG_ENABLE_DEBUG
+#if 1 // TG: CONFIG_ENABLE_DEBUG
         std::cerr << "****[kaapi_c2c] Warning: incorrect access mode: not a pointer type. \n"
                   << "                         Change access mode declaration to value.\n"
                   << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
@@ -774,7 +778,53 @@ redo_selection:
     
     kta->paramclass->get_definition()->append_member(memberDeclaration);
   }
+  
+  SgMemberFunctionDeclaration* memberDecl = isSgMemberFunctionDeclaration(functionDeclaration);
+  if (memberDecl !=0)
+  {
+    /* add this as extra parameter */
+    std::ostringstream name;
+    name << "thisfield";
+    SgType* member_type = memberDecl->get_associatedClassDeclaration()->get_type();
+    kta->has_this = true;
 
+    thismemberDeclaration =
+      SageBuilder::buildVariableDeclaration (
+        name.str(), 
+        kaapi_access_ROSE_type,
+        0, 
+        kta->paramclass->get_definition()
+    );
+    thismemberDeclaration->set_endOfConstruct(SOURCE_POSITION);
+    
+    kta->paramclass->get_definition()->append_member(thismemberDeclaration);
+
+    KaapiTaskFormalParam& param = kta->thisval;
+    
+    SgMemberFunctionType* methodType = isSgMemberFunctionType( memberDecl->get_type() );
+    if (methodType == 0) KaapiAbort("Internal error");
+
+    if (memberDecl->get_functionModifier().isVirtual())
+    {
+      std::cerr << "****[kaapi_c2c] Error: Task cannot be defined on virtual method. \n"
+                << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+      KaapiAbort("**** error");
+    }
+    
+    /* mode must be R if const method, else RW, else specified in pragma */
+    if (methodType->isConstFunc())
+      param.mode          = KAAPI_R_MODE;
+    else
+      param.mode          = KAAPI_RW_MODE;
+    param.redop         = 0;
+    param.attr          = new KaapiParamAttribute;
+    param.attr->type    = KAAPI_ARRAY_NDIM_TYPE;
+    param.attr->storage = KAAPI_COL_MAJOR;
+    param.attr->dim     = 0;
+    param.type          = member_type;          /* type of the class */
+    param.kaapi_format  = "kaapi_voidp_format"; /* should be the class format */
+  }
 
   /* Add extra parameter */
   for (unsigned int i=0; i<kta->extra_param.size(); ++i)
@@ -873,7 +923,9 @@ redo_selection:
     SageBuilder::buildInitializedName("_k_thread", SageBuilder::buildPointerType(kaapi_thread_ROSE_type) )
   );
 
-  /* fwd declaration before the body of the original function */
+  /* fwd declaration before the body of the original function 
+     except for class method.
+  */
   kta->fwd_wrapper_decl =
     SageBuilder::buildNondefiningFunctionDeclaration (
       kta->name_wrapper, 
@@ -881,7 +933,8 @@ redo_selection:
       fwd_parameterList,
       scope_declaration
   );
-  ((kta->fwd_wrapper_decl->get_declarationModifier()).get_storageModifier()).setExtern();
+  if (!kta->has_this)
+    ((kta->fwd_wrapper_decl->get_declarationModifier()).get_storageModifier()).setExtern();
 
   /* declaration + definition: generated after the #pragma kaapi task */
   SgFunctionParameterList* parameterList = SageBuilder::buildFunctionParameterList();
@@ -899,6 +952,9 @@ redo_selection:
       parameterList, 
       scope_declaration
   );
+  if (kta->has_this)
+    ((kta->wrapper_decl->get_declarationModifier()).get_storageModifier()).setStatic();
+
 //DO not put it extern, fwd declaration already indicates that
 //  ((kta->wrapper_decl->get_declarationModifier()).get_storageModifier()).setExtern();
   SgBasicBlock*  wrapper_body = kta->wrapper_decl->get_definition()->get_body();
@@ -944,14 +1000,33 @@ redo_selection:
     );
   }
 
-#if 1 // handle return value
+  // generate: original_body(xxx) or thisfield->original_body(xxx)
+  SgExprStatement* callStmt = 0;
+  if (kta->has_this)
+  {
+    std::ostringstream fieldname;
+    SgMemberFunctionDeclaration* memberDecl = isSgMemberFunctionDeclaration(functionDeclaration);
+    fieldname << "((" << memberDecl->get_class_scope()->get_qualified_name().str() 
+              << "*)(thearg->thisfield.data))->" 
+              << memberDecl->get_name().str();
+    callStmt = SageBuilder::buildFunctionCallStmt(
+       fieldname.str(),
+       SageBuilder::buildVoidType(), 
+       argscall,
+       wrapper_body
+    );
+  }
+  else {
+    callStmt = SageBuilder::buildFunctionCallStmt(
+       functionDeclaration->get_name(),
+       SageBuilder::buildVoidType(), 
+       argscall,
+       wrapper_body
+    );
+  }
+
   if (kta->has_retval)
   {
-    // generate: typename res = original_body(xxx);
-
-    SgExprStatement* const callStmt = SageBuilder::buildFunctionCallStmt
-      (functionDeclaration->get_name(), ret_type, argscall, wrapper_body);
-
     SgAssignInitializer* const res_initializer =
       SageBuilder::buildAssignInitializer(callStmt->get_expression());
 
@@ -994,24 +1069,14 @@ redo_selection:
       (cond_stmt, true_stmt, false_stmt);
     SageInterface::appendStatement(if_stmt, wrapper_body);
   }
-  else
-#endif // handle return value
-  {
-    SgExprStatement* const callStmt =
-      SageBuilder::buildFunctionCallStmt
-      (
-       functionDeclaration->get_name(),
-       SageBuilder::buildVoidType(), 
-       argscall,
-       wrapper_body
-      );
-
+  else {
     callStmt->setAttribute("kaapiwrappercall", (AstAttribute*)-1);
     SageInterface::insertStatement( truearg_decl, callStmt, false );
   }
   
 //  SageInterface::insertStatement( kta->typedefparamclass, kta->wrapper_decl, false );
-  SageInterface::insertStatement( kta->typedefparamclass, kta->fwd_wrapper_decl, false );
+  if (!kta->has_this)
+    SageInterface::insertStatement( kta->typedefparamclass, kta->fwd_wrapper_decl, false );
 
   SageInterface::insertStatement( kta->func_decl, kta->wrapper_decl, false );
 
@@ -1088,6 +1153,12 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
 #endif // CONFIG_ENABLE_DEBUG
   
   kta->name_format = kta->name_paramclass + "_format";
+  size_t cnt_param   = kta->formal_param.size() + (kta->has_retval ? +1 : 0) + (kta->has_this ? +1 : 0);
+  size_t case_retval;
+  size_t case_this;
+  case_retval = (kta->has_retval ? kta->formal_param.size() : -1);
+  case_this   = (kta->has_this ? 1+case_retval : -1);
+
 
   fout << "/*** Format for task argument:" 
        << kta->name_paramclass
@@ -1095,6 +1166,7 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
   
   SgUnparse_Info* sg_info = new SgUnparse_Info;
   sg_info->unset_forceQualifiedNames();
+  std::string name_paramclass = kta->paramclass->get_qualified_name().str();
   
 /* Not used: because generated into the translation unit
   fout << kta->paramclass->unparseToString(sg_info) << std::endl;
@@ -1108,7 +1180,7 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
 
   /* format::get_count_params */
   fout << "size_t " << kta->name_format << "_get_count_params(const struct kaapi_format_t* fmt, const void* sp)\n"
-       << "{ return " << kta->formal_param.size() << "; }\n"
+       << "{ return " << cnt_param << "; }\n"
        << std::endl;
 
   /* format::get_mode_param */
@@ -1122,6 +1194,10 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
   if (kta->has_retval) KaapiGenerateMode(fout, kta->retval.mode);
 #endif // handle return value
 
+#if 1 // handle this value
+  if (kta->has_this) KaapiGenerateMode(fout, kta->thisval.mode);
+#endif // handle return value
+
   fout << "    KAAPI_ACCESS_MODE_VOID\n  };\n"; /* marker for end of mode */
   fout << "  return mode_param[i];\n"
        << "}\n" 
@@ -1129,7 +1205,7 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
   
   /* format::get_off_param */
   fout << "void* " << kta->name_format << "_get_off_param(const struct kaapi_format_t* fmt, unsigned int i, const void* sp)\n"
-       << "{\n  " << kta->name_paramclass << "* arg = (" << kta->name_paramclass << "*)sp;\n"
+       << "{\n  " << name_paramclass << "* arg = (" << name_paramclass << "*)sp;\n"
        << "  switch (i) {\n";
   for (unsigned int i=0; i < kta->formal_param.size(); ++i)
   {
@@ -1137,8 +1213,12 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
   }
 #if 1 // handle return value
   if (kta->has_retval)
-    fout << "    case " << kta->formal_param.size() << ": return &arg->r;\n";
+    fout << "    case " << case_retval << ": return &arg->r;\n";
 #endif // handle return value
+#if 1 // handle this value
+  if (kta->has_this)
+    fout << "    case " << case_this << ": return &arg->thisfield;\n";
+#endif // handle this value
   fout << "  }\n"
        << "  return 0;\n"
        << "}\n"
@@ -1146,7 +1226,7 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
 
   /* format::get_access_param */
   fout << "kaapi_access_t " << kta->name_format << "_get_access_param(const struct kaapi_format_t* fmt, unsigned int i, const void* sp)\n"
-       << "{\n  " << kta->name_paramclass << "* arg = (" << kta->name_paramclass << "*)sp;\n"
+       << "{\n  " << name_paramclass << "* arg = (" << name_paramclass << "*)sp;\n"
        << "  kaapi_access_t retval = {0,0};\n"
        << "  switch (i) {\n";
   for (unsigned int i=0; i < kta->formal_param.size(); ++i)
@@ -1159,13 +1239,12 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
 
 #if 1 // handle return value
   if (kta->has_retval)
-  {
-    const unsigned int i = kta->formal_param.size();
-    fout << "    case " << i << ": ";
-    fout << "retval = arg->r;";
-    fout << "break;\n";
-  }
+    fout << "    case " << case_retval << ": retval = arg->r;  break;\n";
 #endif // handle return value
+#if 1 // handle this value
+  if (kta->has_this)
+    fout << "    case " << case_this << ": retval = arg->thisfield;  break;\n";
+#endif // handle this value
 
   fout << "  }\n"
        << "  return retval;\n"
@@ -1174,7 +1253,7 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
   
   /* format::set_access_param */
   fout << "void " << kta->name_format << "_set_access_param(const struct kaapi_format_t* fmt, unsigned int i, void* sp, const kaapi_access_t* a)\n"
-       << "{\n  " << kta->name_paramclass << "* arg = (" << kta->name_paramclass << "*)sp;\n"
+       << "{\n  " << name_paramclass << "* arg = (" << name_paramclass << "*)sp;\n"
        << "  kaapi_access_t retval = {0,0};\n"
        << "  switch (i) {\n";
   for (unsigned int i=0; i < kta->formal_param.size(); ++i)
@@ -1185,12 +1264,14 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
 
 #if 1 // handle return value
   if (kta->has_retval)
-  {
-    const unsigned int i = kta->formal_param.size();
     // we know this is an access
-    fout << "    case " << i << ": arg->r = *a; return; \n";
-  }
+    fout << "    case " << case_retval << ": arg->r = *a; return; \n";
 #endif // handle return value
+#if 1 // handle this value
+  if (kta->has_retval)
+    // we know this is an access
+    fout << "    case " << case_this << ": arg->thisfield = *a; return; \n";
+#endif // handle this value
 
   fout << "  }\n"
        << "}\n"
@@ -1198,18 +1279,19 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
 
   /* format::get_fmt_param */
   fout << "const struct kaapi_format_t* " << kta->name_format << "_get_fmt_param(const struct kaapi_format_t* fmt, unsigned int i, const void* sp)\n"
-       << "{\n  " << kta->name_paramclass << "* arg = (" << kta->name_paramclass << "*)sp;\n"
+       << "{\n  " << name_paramclass << "* arg = (" << name_paramclass << "*)sp;\n"
        << "  switch (i) {\n";
   for (unsigned int i=0; i < kta->formal_param.size(); ++i)
     fout << "    case " << i << ": return " << kta->formal_param[i].kaapi_format << ";\n";
 
 #if 1 // handle return value
   if (kta->has_retval)
-  {
-    const unsigned int i = kta->formal_param.size();
-    fout << "    case " << i << ": return " << kta->retval.kaapi_format << ";\n";
-  }
+    fout << "    case " << case_retval << ": return " << kta->retval.kaapi_format << ";\n";
 #endif // handle return value
+#if 1 // handle this value
+  if (kta->has_this)
+    fout << "    case " << case_this << ": return " << kta->thisval.kaapi_format << ";\n";
+#endif // handle this value
 
   fout << "  }\n"
        << "}\n"
@@ -1217,7 +1299,7 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
        
   /* format::get_view_param */
   fout << "kaapi_memory_view_t " << kta->name_format << "_get_view_param(const struct kaapi_format_t* fmt, unsigned int i, const void* sp)\n"
-       << "{\n  " << kta->name_paramclass << "* arg = (" << kta->name_paramclass << "*)sp;\n"
+       << "{\n  " << name_paramclass << "* arg = (" << name_paramclass << "*)sp;\n"
        << "  switch (i) {\n";
   for (unsigned int i=0; i < kta->formal_param.size(); ++i)
   {
@@ -1286,24 +1368,22 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
 #if 1 // handle return value
   if (kta->has_retval)
   {
-    const unsigned int i = kta->formal_param.size();
     SgPointerType* const ptrtype = isSgPointerType(kta->retval.type);
     if (ptrtype ==0) KaapiAbort("**** Error: bad internal assertion");
 
     SgType* type = ptrtype->get_base_type();
-    while (isSgTypedefType(type))
-      type = isSgTypedefType(type)->get_base_type();
 
+/* test non necessaire: structure retval tjrs correct si has_retval ? */
     if (kta->retval.attr->type == KAAPI_ARRAY_NDIM_TYPE)
     {
       if (kta->retval.attr->dim == 0) /* in fact single element */
       {
-	fout << "    case " << i << ": return kaapi_memory_view_make1d( 1" 
-	     << ", sizeof(" << type->unparseToString() << "));\n";
+        fout << "    case " << case_retval << ": return kaapi_memory_view_make1d( 1" 
+             << ", sizeof(" << type->unparseToString() << "));\n";
       }
       else
       {
-	KaapiAbort("**** Error: bad internal assertion");	
+        KaapiAbort("**** Error: bad internal assertion");	
       }
     }
     else
@@ -1312,6 +1392,13 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
     }
   }
 #endif // handle return value
+#if 1 // handle this value
+  if (kta->has_this)
+  {
+	fout << "    case " << case_this << ": return kaapi_memory_view_make1d( 1" 
+	     << ", sizeof(" << isSgNamedType(kta->thisval.type)->get_qualified_name().str() << "));\n";
+  }
+#endif // handle this value
 
   fout << "  }\n"
        << "}\n"
@@ -1320,7 +1407,7 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
 
   /* format::get_view_param */
   fout << "void " << kta->name_format << "_set_view_param(const struct kaapi_format_t* fmt, unsigned int i, void* sp, const kaapi_memory_view_t* view)\n"
-       << "{\n  " << kta->name_paramclass << "* arg = (" << kta->name_paramclass << "*)sp;\n"
+       << "{\n  " << name_paramclass << "* arg = (" << name_paramclass << "*)sp;\n"
        << "  switch (i) {\n";
   for (unsigned int i=0; i < kta->formal_param.size(); ++i)
   {
@@ -1342,7 +1429,7 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
 
   /* format::reducor */
   fout << "void " << kta->name_format << "_reducor(const struct kaapi_format_t* fmt, unsigned int i, void* sp, const void* v)\n"
-       << "{\n  " << kta->name_paramclass << "* arg = (" << kta->name_paramclass << "*)sp;\n"
+       << "{\n  " << name_paramclass << "* arg = (" << name_paramclass << "*)sp;\n"
        << "  switch (i) {\n";
   for (unsigned int i=0; i < kta->formal_param.size(); ++i)
   {
@@ -1428,7 +1515,7 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
   /* format::redinit */
   //isIntegerType
   fout << "void " << kta->name_format << "_redinit(const struct kaapi_format_t* fmt, unsigned int i, const void* sp, void* v)\n"
-       << "{\n  " << kta->name_paramclass << "* arg = (" << kta->name_paramclass << "*)sp;\n"
+       << "{\n  " << name_paramclass << "* arg = (" << name_paramclass << "*)sp;\n"
        << "  switch (i) {\n";
   for (unsigned int i=0; i < kta->formal_param.size(); ++i)
   {
@@ -1528,10 +1615,10 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
        << "  " << kta->name_format << " = kaapi_format_allocate();\n"
        << "  kaapi_format_taskregister_func(\n"
        << "    " << kta->name_format << ",\n" /* format object */
-       << "    " << kta->name_wrapper << ",\n" /* body */
+       << "    " << kta->wrapper_decl->get_qualified_name().str() << ",\n" /* body */
        << "    " << 0 << ",\n" /* bodywh */
        << "    \"" << kta->name_format << "\",\n" /* name */
-       << "    sizeof(" << kta->name_paramclass << "),\n" /* sizeof the arg struct */
+       << "    sizeof(" << name_paramclass << "),\n" /* sizeof the arg struct */
        << "    " << kta->name_format << "_get_count_params,\n" /* get_count_params */
        << "    " << kta->name_format << "_get_mode_param,\n" /* get_mode_param */
        << "    " << kta->name_format << "_get_off_param,\n" /* get_off_param */
@@ -3676,10 +3763,6 @@ void buildFunCall2TaskSpawn( OneCall* oc )
   if (newkaapi_threadvar ==0)
   {
     buildInsertDeclarationKaapiThread( oc->scope );
-/*    
-    SgVariableDeclaration* const var_decl = buildThreadVariableDecl(oc->scope);
-    buildVariableAssignment(oc->statement, var_decl, oc->scope);
-*/
   }
 
   /* */
@@ -3713,6 +3796,44 @@ void buildFunCall2TaskSpawn( OneCall* oc )
   SgExpressionPtrList::iterator iebeg;
   int i = 0;
   
+  /* Generate initialization to the this field in case of method call
+  */
+  if (oc->kta->has_this) /* means ->  get_function is 'a.f' or 'a->f' to the class object 'a' */
+  {
+    SgExpression* f = oc->fc->get_function();
+    SgExpression* object = 0;
+    if (isSgArrowExp(f))
+    {
+      object= isSgArrowExp(f)->get_lhs_operand();
+    }
+    else if (isSgDotExp(f))
+    {
+      object= SageBuilder::buildAddressOfOp( isSgDotExp(f)->get_lhs_operand() );
+    } 
+    else 
+    {
+      KaapiAbort( "*** Internal compiler error: mal formed AST" );
+    }
+    
+    std::ostringstream fieldname;
+    fieldname << arg_name.str() << "->thisfield.data";
+    assign_statement = SageBuilder::buildExprStatement(
+      SageBuilder::buildAssignOp(
+        /* dummy-> */
+        SageBuilder::buildOpaqueVarRefExp (fieldname.str(),oc->scope),
+        /* expr */
+        SageBuilder::buildCastExp(
+          object,
+          SageBuilder::buildPointerType(
+            SageBuilder::buildVoidType()
+          )
+        )
+      )
+    );
+    SageInterface::insertStatement(last_statement, assign_statement, false);
+    last_statement = assign_statement;
+  }
+
   /* Generate initialization to each of the formal parameter except those that
      where defined as end of interval, which are initialized after.
   */
@@ -3756,7 +3877,8 @@ void buildFunCall2TaskSpawn( OneCall* oc )
     SageInterface::insertStatement(last_statement, assign_statement, false);
     last_statement = assign_statement;
   }
-
+  
+  
 #if 0 // handle return value
   if (oc->kta->has_retval)
   {
@@ -3811,9 +3933,9 @@ void buildFunCall2TaskSpawn( OneCall* oc )
       // build NULL expression
       std::ostringstream zero("0");
       SgExpression* const zero_expr =
-	SageBuilder::buildOpaqueVarRefExp(zero.str(), oc->scope);
+        SageBuilder::buildOpaqueVarRefExp(zero.str(), oc->scope);
       lhs_ref = SageBuilder::buildCastExp
-	(zero_expr, SageBuilder::buildPointerType(SageBuilder::buildVoidType()));
+        (zero_expr, SageBuilder::buildPointerType(SageBuilder::buildVoidType()));
     }
 
     SgStatement* assign_stmt;
@@ -5415,6 +5537,13 @@ redo:
   
   if ((name == "storage") || (name == "ld") || (name == "lda"))
   {
+    if (name == "lda")
+    {
+      std::cerr << "****[kaapi_c2c] warning. Deprecated use of 'lda'"
+                << "     In filename '" << fileInfo->get_filename() 
+                << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+    }
     skip_ws();
     c = readchar();
     if (c != '=') 
@@ -5446,7 +5575,7 @@ redo:
       }
     }
     else 
-    { /* name == lda */
+    { /* name == ld */
       if (kpa->lda != 0) 
       {
         std::cerr << "****[kaapi_c2c] Error. LDA attribut already defined for same identifier."
