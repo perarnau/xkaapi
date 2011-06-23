@@ -706,6 +706,7 @@ void Parser::DoKaapiTaskDeclaration
 
   /* Add the class declaration for the parameters */
   kta->name_paramclass = std::string("__kaapi_args_") + 
+    functionDeclaration->get_name().str() + 
     functionDeclaration->get_mangled_name().str();
 
   kta->paramclass = 
@@ -1165,7 +1166,12 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
   
   SgUnparse_Info* sg_info = new SgUnparse_Info;
   sg_info->unset_forceQualifiedNames();
-  std::string name_paramclass = kta->paramclass->get_mangled_name().str();
+
+  std::string name_paramclass;
+  if (SageInterface::is_C_language())
+    name_paramclass = kta->name_paramclass;
+  else if (SageInterface::is_Cxx_language())
+    name_paramclass = kta->paramclass->get_qualified_name();
   
 /* Not used: because generated into the translation unit
   fout << kta->paramclass->unparseToString(sg_info) << std::endl;
@@ -1606,7 +1612,11 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
        << "{ return; }\n"
        << std::endl;
 
-  const std::string& wrapper_decl_name = kta->wrapper_decl->get_name();
+  std::string wrapper_decl_name;
+  if (SageInterface::is_C_language())
+    wrapper_decl_name = kta->wrapper_decl->get_name();
+  else if (SageInterface::is_Cxx_language())
+    wrapper_decl_name = kta->wrapper_decl->get_qualified_name();
        
   /* Generate constructor function that register the format */
   fout << "/* constructor method */\n" 
