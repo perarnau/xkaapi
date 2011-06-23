@@ -66,13 +66,13 @@ static void fini_bfield(bfield_t& f)
   free(f.p);
 }
 
-// #pragma kaapi task \
-//   value(wx, dx) \
-//   value(wy, dy) \
-//   value(wi) \
-//   value(dw, wlen) \
-//   value(bx, by) \
-//   write(p)
+#pragma kaapi task \
+  value(wx, dx) \
+  value(wy, dy) \
+  value(wi) \
+  value(dw, wlen) \
+  value(bx, by) \
+  write(p)
 static void integrate_over_wire
 (
  double wx, double dx,
@@ -156,6 +156,8 @@ static void compute_bfield(bfield_t& f, const wire_t& w)
       );
     }
   }
+
+#pragma kaapi barrier
 
   // update norm value
   unsigned int xy = f.dimx * f.dimy;
@@ -255,10 +257,7 @@ static void init_globals(void)
 #pragma kaapi parallel
   {
     for (unsigned int i = 0; i < CONFIG_WIRE_COUNT; ++i)
-    {
       compute_bfield(g_bfield, g_wires[i]);
-#pragma kaapi barrier
-    }
   }
   normalize_bfield(g_bfield);
 
