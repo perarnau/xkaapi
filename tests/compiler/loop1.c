@@ -40,29 +40,36 @@
 ** terms.
 ** 
 */
-#include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
+#include <sys/time.h>
 
-void for_each( double* array, size_t size, void (*op)(double*) )
+/**
+ */
+static void apply_cos( double* v )
 {
-  #pragma kaapi parallel loop
-  for (size_t i=5; i<size; ++i)
-    op(&array[i]);
-}
-
-void myrandom( double* r )
-{
-  *r = rand48();
+  *v += cos(*v);
 }
 
 /**
  */
 int main(int argc, char** argv)
 {
-  int size = atoi(argv[1]);
-  double* array = (double*)malloc( size * sizeof(double) );
+#define ITEM_COUNT 1000
+  static double array[1000];
+
+  /* initialize, apply, check */
+  for (int i = 0; i < ITEM_COUNT; ++i)
+    array[i] = 0.f;
   
-  for_each( array, size, myrandom );
-  
+#pragma kaapi parallel 
+{
+  #pragma kaapi loop
+  for (int iter =0; iter<ITEM_COUNT; ++iter)
+  {
+    apply_cos(&array[iter]);
+  }
+}
+
   return 0;
 }

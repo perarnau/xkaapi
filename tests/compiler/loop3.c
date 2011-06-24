@@ -40,29 +40,30 @@
 ** terms.
 ** 
 */
-#include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
+#include <sys/time.h>
 
-void for_each( double* array, size_t size, void (*op)(double*) )
-{
-  #pragma kaapi parallel loop
-  for (size_t i=5; i<size; ++i)
-    op(&array[i]);
-}
-
-void myrandom( double* r )
-{
-  *r = rand48();
-}
 
 /**
  */
 int main(int argc, char** argv)
 {
-  int size = atoi(argv[1]);
-  double* array = (double*)malloc( size * sizeof(double) );
+#define ITEM_COUNT 1000
+  static double array1[1000];
+  static double array2[1000];
+  double random_var = drand48();
+  int iter;
+  int cnt;
   
-  for_each( array, size, myrandom );
-  
+#pragma kaapi parallel 
+{
+  #pragma kaapi loop
+  for (iter =0; iter<ITEM_COUNT; iter += cnt)
+  {
+    array1[iter] += sqrt(array2[iter+1])+random_var;
+  }
+}
+
   return 0;
 }
