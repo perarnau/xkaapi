@@ -55,15 +55,21 @@
 #define COMPILER_CXX_E "g++ -E -P -C -std=gnu++98"
 
 
+// here dont use CXX/CC variables since they are standard
+// variable eventually overriden with kacc, which would
+// cause a recursive call... (ie. autotools...)
+
 static inline const std::string& get_cxx()
 {
-  static std::string compiler = (getenv("CXX") == 0 ? COMPILER_CXX : getenv("CXX"));
+  static std::string compiler =
+    (getenv("KACC_CXX") == 0 ? COMPILER_CXX : getenv("KACC_CXX"));
   return compiler;
 }
 
 static inline const std::string& get_cc()
 {
-  static std::string compiler = (getenv("CC") == 0 ? COMPILER_CC : getenv("CC"));
+  static std::string compiler =
+    (getenv("KACC_CC") == 0 ? COMPILER_CC : getenv("KACC_CC"));
   return compiler;
 }
 
@@ -127,6 +133,20 @@ static File_t Filename2Type( const std::string& filename)
 }
 
 
+static bool make_output_filename
+(const std::string& iname, std::string& oname)
+{
+  const size_t pos = iname.rfind('.');
+  if (pos == std::string::npos) return false;
+
+  oname = iname.substr(0, pos);
+  oname.append("__kacc");
+  oname.append(iname.substr(pos, iname.length()));
+
+  return true;
+}
+
+
 /** Parse options:
     -keep: keep kaapi intermediate files
     -c
@@ -170,6 +190,10 @@ int main( int argc, char** argv)
                 << ", Kaapi include dir: @prefix@/include, lib dir: @prefix@/lib"
                 << std::endl;
       verbose = true;
+      compiler_options.push_back( option );
+    }
+    else if (option.find("-V") == 0) {
+      // needed by autotools
       compiler_options.push_back( option );
     }
     else if (option.find("-c")  ==0) {
@@ -288,10 +312,12 @@ int main( int argc, char** argv)
     }
     
     /* file exist: ok */
-    std::string o_file_kacc = "kaapi-" + *ibeg;
-#if 0
-    std::string o_file_format = "format-" + o_file_kacc;
-#endif
+    std::string o_file_kacc;
+    if (make_output_filename(*ibeg, o_file_kacc) == false)
+    {
+      std::cerr << "*** error: invalid filename" << std::endl;
+      return -1;
+    }
 
     /* call the source 2 source Kaapi compiler */
     std::ostringstream cmdline2;
