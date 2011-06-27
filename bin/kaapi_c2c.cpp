@@ -2175,7 +2175,20 @@ public:
                       << std::endl;
 #endif // CONFIG_ENABLE_DEBUG
             /* store both the container (basic block) and the funccall expr */
+
+	    // some scope dont support prepending statements, ie.
+	    // for (...) fu(); when no accolades are added. we thus
+	    // move up until we found a sgBasicBlock
             SgScopeStatement* scope = SageInterface::getScope( fc );
+	    if (isSgBasicBlock(scope) == NULL)
+	    {
+	      SgNode* node = isSgNode(scope);
+	      while (node && isSgBasicBlock(node) == NULL)
+		node = node->get_parent();
+	      if (node == NULL) KaapiAbort("scope not found");
+	      scope = (SgScopeStatement*)isSgBasicBlock(node);
+	    }
+
             SgScopeStatement* loop = SageInterface::findEnclosingLoop( exprstatement );
 
             if (!kta->has_retval || isValidTaskWithRetValCallExpression(fc, exprstatement ))
@@ -3760,7 +3773,6 @@ void buildVariableAssignment (
 void buildFunCall2TaskSpawn( OneCall* oc )
 {
   static int cnt = 0;
-  
   std::ostringstream arg_name;
   arg_name << "__kaapi_arg_" << cnt++;
   SgClassType* classtype =new SgClassType(oc->kta->paramclass->get_firstNondefiningDeclaration());
@@ -3797,7 +3809,7 @@ void buildFunCall2TaskSpawn( OneCall* oc )
       ),
       oc->scope
     );
-  
+
   SageInterface::insertStatement(oc->statement, variableDeclaration, false);
   SageInterface::removeStatement(oc->statement);
   SgStatement* last_statement = variableDeclaration;
@@ -3888,8 +3900,7 @@ void buildFunCall2TaskSpawn( OneCall* oc )
     SageInterface::insertStatement(last_statement, assign_statement, false);
     last_statement = assign_statement;
   }
-  
-  
+
 #if 0 // handle return value
   if (oc->kta->has_retval)
   {
