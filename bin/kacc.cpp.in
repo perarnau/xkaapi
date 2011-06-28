@@ -380,10 +380,12 @@ int main( int argc, char** argv)
     if (verbose)
       std::cout << "Commande2: " << cmdline2.str() << std::endl;
     err = system(cmdline2.str().c_str());
+
     if (err != 0)
     {
-      std::cerr << "*** error: status of '" << cmdline2.str() << "': " << err << std::endl;
-      return err;
+      std::cerr << "*** WARNING: status of '" <<
+	cmdline2.str() << "': "	<< err << std::endl;
+      o_file_kacc = *ibeg;
     }
 
     file_tocompile_kaapi.push_back( o_file_kacc );
