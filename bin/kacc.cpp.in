@@ -102,6 +102,17 @@ static std::string List2String( const ListOptions& lo )
   return retval;
 }
 
+static void FilterKACCNames( ListOptions& lo )
+{
+#define CONFIG_KACC_WORD "__kacc"
+
+  ListOptions::iterator pos = lo.begin();
+  ListOptions::iterator end = lo.end();
+  for (; pos != end; ++pos)
+    if (pos->find(CONFIG_KACC_WORD) == std::string::npos)
+      pos->clear();
+}
+
 /** Return type of file using the suffix .xx
 */
 enum File_t {
@@ -157,7 +168,7 @@ static bool make_output_filename
   if (pos == std::string::npos) return false;
 
   oname = iname.substr(0, pos);
-  oname.append("__kacc");
+  oname.append(CONFIG_KACC_WORD);
   oname.append(iname.substr(pos, iname.length()));
 
   return true;
@@ -429,6 +440,10 @@ int main( int argc, char** argv)
   {
     /* erase o_file_preprocessor */
     std::ostringstream cmdline;
+
+    // some non kacc files may lie here
+    FilterKACCNames(file_tocompile_kaapi);
+
     cmdline << "\\rm " << List2String(file_tocompile_kaapi);
     if (verbose)
       std::cout << "Commande RM: " << cmdline.str() << std::endl;
