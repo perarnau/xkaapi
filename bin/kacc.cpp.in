@@ -102,15 +102,22 @@ static std::string List2String( const ListOptions& lo )
   return retval;
 }
 
-static void FilterKACCNames( ListOptions& lo )
+static bool FilterKACCNames( ListOptions& lo )
 {
 #define CONFIG_KACC_WORD "__kacc"
+
+  bool is_empty = true;
 
   ListOptions::iterator pos = lo.begin();
   ListOptions::iterator end = lo.end();
   for (; pos != end; ++pos)
+  {
     if (pos->find(CONFIG_KACC_WORD) == std::string::npos)
       pos->clear();
+    else is_empty = false;
+  }
+
+  return is_empty;
 }
 
 /** Return type of file using the suffix .xx
@@ -442,14 +449,15 @@ int main( int argc, char** argv)
     std::ostringstream cmdline;
 
     // some non kacc files may lie here
-    FilterKACCNames(file_tocompile_kaapi);
-
-    cmdline << "\\rm " << List2String(file_tocompile_kaapi);
-    if (verbose)
-      std::cout << "Commande RM: " << cmdline.str() << std::endl;
-    err = system(cmdline.str().c_str());
-    if (err != 0)
-      std::cerr << "Status of '" << cmdline.str() << "': " << err << std::endl;
+    if (FilterKACCNames(file_tocompile_kaapi) == false) // not empty
+    {
+      cmdline << "\\rm " << List2String(file_tocompile_kaapi);
+      if (verbose)
+	std::cout << "Commande RM: " << cmdline.str() << std::endl;
+      err = system(cmdline.str().c_str());
+      if (err != 0)
+	std::cerr << "Status of '" << cmdline.str() << "': " << err << std::endl;
+    }
   }
 
   return 0;
