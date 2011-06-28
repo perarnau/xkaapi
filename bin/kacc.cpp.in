@@ -55,28 +55,69 @@
 #define COMPILER_CXX_E "g++ -E -P -C -std=gnu++98"
 
 
+// here dont use CXX/CC variables since they are standard
+// variable eventually overriden with kacc, which would
+// cause a recursive call... (ie. autotools...)
+
 static inline const std::string& get_cxx()
 {
-  static std::string compiler = (getenv("CXX") == 0 ? COMPILER_CXX : getenv("CXX"));
+  static std::string compiler =
+    (getenv("KACC_CXX") == 0 ? COMPILER_CXX : getenv("KACC_CXX"));
   return compiler;
 }
 
 static inline const std::string& get_cc()
 {
-  static std::string compiler = (getenv("CC") == 0 ? COMPILER_CC : getenv("CC"));
+  static std::string compiler =
+    (getenv("KACC_CC") == 0 ? COMPILER_CC : getenv("KACC_CC"));
   return compiler;
 }
 
 typedef std::list<std::string> ListOptions;
 
 /**/
+static std::string escape(const std::string& s)
+{
+  // todo: optimize...
+
+  std::string news;
+
+  std::string::const_iterator pos = s.begin();
+  std::string::const_iterator end = s.end();
+  for (; pos != end; ++pos)
+  {
+    if (*pos == '"') news.push_back('\\');
+    news.push_back(*pos);
+  }
+
+  return news;
+}
+
 static std::string List2String( const ListOptions& lo )
 {
   std::string retval;
   ListOptions::const_iterator ibeg;
   for (ibeg = lo.begin(); ibeg != lo.end(); ++ibeg)
-    retval = retval + " " + *ibeg;
+    retval = retval + " " + escape(*ibeg);
   return retval;
+}
+
+static bool FilterKACCNames( ListOptions& lo )
+{
+#define CONFIG_KACC_WORD "__kacc"
+
+  bool is_empty = true;
+
+  ListOptions::iterator pos = lo.begin();
+  ListOptions::iterator end = lo.end();
+  for (; pos != end; ++pos)
+  {
+    if (pos->find(CONFIG_KACC_WORD) == std::string::npos)
+      pos->clear();
+    else is_empty = false;
+  }
+
+  return is_empty;
 }
 
 /** Return type of file using the suffix .xx
@@ -127,6 +168,20 @@ static File_t Filename2Type( const std::string& filename)
 }
 
 
+static bool make_output_filename
+(const std::string& iname, std::string& oname)
+{
+  const size_t pos = iname.rfind('.');
+  if (pos == std::string::npos) return false;
+
+  oname = iname.substr(0, pos);
+  oname.append(CONFIG_KACC_WORD);
+  oname.append(iname.substr(pos, iname.length()));
+
+  return true;
+}
+
+
 /** Parse options:
     -keep: keep kaapi intermediate files
     -c
@@ -152,6 +207,7 @@ int main( int argc, char** argv)
   bool verbose = false;  
   bool keep = false;
   bool nolink = false;
+  bool oseen = false;
   int  err;
   ListOptions preprocess_options;
   ListOptions include_options;
@@ -159,7 +215,7 @@ int main( int argc, char** argv)
   ListOptions file_tocompile;
   ListOptions file_tocompile_kaapi;
   std::string outfile;
-  
+
   for (int i=1; i<argc; ++i)
   {
     std::string option= argv[i];
@@ -170,6 +226,10 @@ int main( int argc, char** argv)
                 << ", Kaapi include dir: @prefix@/include, lib dir: @prefix@/lib"
                 << std::endl;
       verbose = true;
+      compiler_options.push_back( option );
+    }
+    else if (option.find("-V") == 0) {
+      // needed by autotools
       compiler_options.push_back( option );
     }
     else if (option.find("-c")  ==0) {
@@ -201,7 +261,8 @@ int main( int argc, char** argv)
     }  else if (option.find("-M")  ==0) {
       preprocess_options.push_back( option ); compiler_options.push_back( option );
     } else if (option.find("-D")  ==0) {
-      preprocess_options.push_back( option ); compiler_options.push_back( option );
+      preprocess_options.push_back( option );
+      compiler_options.push_back( option );
     } else if (option.find("-U")  ==0) {
       preprocess_options.push_back( option ); compiler_options.push_back( option );
     } else if (option.find("-std")==0) {
@@ -222,10 +283,17 @@ int main( int argc, char** argv)
       compiler_options.push_back( option );
     else if (option.find("-m")==0) 
       compiler_options.push_back( option );
-    else if (option.find("-m")==0) 
-      compiler_options.push_back( option );
     else if (option.find("-I")==0) {
-      preprocess_options.push_back(option); compiler_options.push_back( option );
+
+      // handle the -I <path> case
+      if (option.length() == 2)
+      {
+	if ((i + 1) == argc) continue ;
+	option.append(std::string(argv[++i]));
+      }
+
+      preprocess_options.push_back(option);
+      compiler_options.push_back( option );
       option = "-edg:" + option.substr(1);
       include_options.push_back(option);
     } else if (option.find("-L")==0)
@@ -241,6 +309,7 @@ int main( int argc, char** argv)
       outfile = argv[i];
       option = option + " " + argv[i];
       compiler_options.push_back( option );
+      oseen = true;
     } else if (option.find("-keep")==0) {
       keep = true;
       std::cout << "****[" << argv[0] << "]: Keep intermediate file" << std::endl;
@@ -265,6 +334,29 @@ int main( int argc, char** argv)
       }
     }
   }
+
+  if (nolink && (oseen == false))
+  {
+    // need to generate the corresponding -o
+    // otherwise xxx__kacc.o is generated
+
+    if (file_tocompile.size() != 1)
+    {
+      std::cerr << "****[kacc]: -c with more than one file not supported";
+      return -1;
+    }
+
+    const std::string& filename = file_tocompile.front();
+    const size_t pos = filename.rfind(".");
+    if (pos == std::string::npos)
+    {
+      std::cerr << "****[kacc]: -c extension not found in filename";
+      return -1;
+    }
+
+    outfile = filename.substr(0, pos) + std::string(".o");
+    compiler_options.push_back(std::string("-o ") + outfile);
+  }
   
 //NOT REQUIRED for preprocessing preprocess_options.push_back( std::string("-I@prefix@/include") );
   compiler_options.push_back( std::string("-I@prefix@/include") );
@@ -288,27 +380,31 @@ int main( int argc, char** argv)
     }
     
     /* file exist: ok */
-    std::string o_file_kacc = "kaapi-" + *ibeg;
-#if 0
-    std::string o_file_format = "format-" + o_file_kacc;
-#endif
+    std::string o_file_kacc;
+    if (make_output_filename(*ibeg, o_file_kacc) == false)
+    {
+      std::cerr << "*** error: invalid filename" << std::endl;
+      return -1;
+    }
 
     /* call the source 2 source Kaapi compiler */
     std::ostringstream cmdline2;
     cmdline2 << "@prefix@/bin/kaapi_c2c --edg:no_warnings " 
              << List2String( include_options ) << " "
+             << List2String( preprocess_options ) << " "
              << *ibeg 
              << " -rose:o " << o_file_kacc;
 
     if (verbose)
       std::cout << "Commande2: " << cmdline2.str() << std::endl;
     err = system(cmdline2.str().c_str());
+
     if (err != 0)
     {
-      std::cerr << "*** error: status of '" << cmdline2.str() << "': " << err << std::endl;
-      return err;
+      std::cerr << "*** WARNING: status of '" <<
+	cmdline2.str() << "': "	<< err << std::endl;
+      o_file_kacc = *ibeg;
     }
-
 
     file_tocompile_kaapi.push_back( o_file_kacc );
   }
@@ -351,12 +447,17 @@ int main( int argc, char** argv)
   {
     /* erase o_file_preprocessor */
     std::ostringstream cmdline;
-    cmdline << "\\rm " << List2String(file_tocompile_kaapi);
-    if (verbose)
-      std::cout << "Commande RM: " << cmdline.str() << std::endl;
-    err = system(cmdline.str().c_str());
-    if (err != 0)
-      std::cerr << "Status of '" << cmdline.str() << "': " << err << std::endl;
+
+    // some non kacc files may lie here
+    if (FilterKACCNames(file_tocompile_kaapi) == false) // not empty
+    {
+      cmdline << "\\rm " << List2String(file_tocompile_kaapi);
+      if (verbose)
+	std::cout << "Commande RM: " << cmdline.str() << std::endl;
+      err = system(cmdline.str().c_str());
+      if (err != 0)
+	std::cerr << "Status of '" << cmdline.str() << "': " << err << std::endl;
+    }
   }
 
   return 0;
