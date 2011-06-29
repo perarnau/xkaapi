@@ -4511,6 +4511,508 @@ static void buildFreeVariable(SgScopeStatement* scope, std::set<SgVariableSymbol
 }
 
 
+// loop canonicalizer
+
+class forLoopCanonicalizer
+{
+private:
+  SgForStatement* for_stmt_;
+  SgLabelStatement* label_stmt_;
+
+  SgInitializedName* findIteratorName();
+  SgInitializedName* findIteratorName(bool use_cond);
+
+  static bool isVarModified(SgNode*, SgInitializedName*);
+  static bool isIncreasingExpression(SgExpression*);
+
+public:
+  forLoopCanonicalizer(SgForStatement* for_stmt)
+    : for_stmt_(for_stmt) {}
+
+  bool doStepLabelTransform();
+  bool doMultipleStepTransform();
+  bool doStrictIntegerTransform();
+  bool doNormalizeTestTransform();
+
+  static bool canonicalize(SgForStatement*);
+};
+
+bool forLoopCanonicalizer::doStepLabelTransform()
+{
+  // insert a step statement at the end of the body
+  // replace all the continue by goto statements
+
+  SgScopeStatement* const scope_stmt =
+    SageInterface::getEnclosingProcedure(for_stmt_);
+
+  SgStatement* const old_body = SageInterface::getLoopBody(for_stmt_);
+  SgBasicBlock* const new_body = SageBuilder::buildBasicBlock();
+
+  SgName label_name = "kaapi_continue_label__";
+  label_name << ++SageInterface::gensym_counter;
+
+  label_stmt_ = SageBuilder::buildLabelStatement
+    (label_name, SageBuilder::buildBasicBlock(), scope_stmt);
+
+  SageInterface::changeContinuesToGotos(old_body, label_stmt_);
+  SageInterface::appendStatement(old_body, new_body);
+  SageInterface::appendStatement(label_stmt_, new_body);
+
+  SageInterface::setLoopBody(for_stmt_, new_body);
+
+  return true;
+}
+
+static inline bool isLessBinaryOp(SgExpression* expr)
+{
+  SgBinaryOp* const op = isSgBinaryOp(expr);
+  if (op == NULL) return false;
+  return isSgLessOrEqualOp(op) || isSgLessThanOp(op);
+}
+
+static inline bool isGreaterBinaryOp(SgExpression* expr)
+{
+  SgBinaryOp* const op = isSgBinaryOp(expr);
+  if (op == NULL) return false;
+  return isSgGreaterOrEqualOp(op) || isSgGreaterThanOp(op);
+}
+
+bool forLoopCanonicalizer::doStrictIntegerTransform()
+{
+  // assume doMultipleStepTransform
+  // assume test expression lhs is the iterator
+  // assume test expression rhs is the high bound
+
+  // turn a pointer type iterator into a strict integer
+  // for (double* p = array; p != end; ++p)
+  //   body();
+  // becomes: 
+  // __j = end - p;
+  // for (__i = 0; __i < __j; ++__i)
+  // {
+  //   body();
+  // next: ++p;
+  // }
+
+#define CONFIG_LOCAL_DEBUG 1
+
+  SgInitializedName* const iter_name = findIteratorName(true);
+  if (iter_name == NULL) return NULL;
+
+  // is step an increasing expression
+  SgExpression* const incr_expr = for_stmt_->get_increment();
+  if (incr_expr == NULL) return false;
+  const bool is_increasing = isIncreasingExpression(incr_expr);
+
+  // for (; i < j; ++i) -> count = j - i;
+  // for (; i > j; --i) -> count = i - j;
+  // in both case:
+  // for (__i = 0; __i < count; ++__i)
+  // __kaapi_continue_label: ++i
+
+  // interprete the test expression. find hival, the
+  // high value
+  SgExpression* const test_expr = for_stmt_->get_test_expr();
+  if (test_expr == NULL) return false;
+  SgBinaryOp* const binary_op = isSgBinaryOp(test_expr);
+  if (binary_op == NULL) return false;
+
+  SgVarRefExp* hi_expr = NULL;
+  SgVarRefExp* lo_expr = NULL;
+
+  if (isLessBinaryOp(test_expr))
+  {
+    if (is_increasing == false)
+    {
+      // assume invalid for now
+#if CONFIG_LOCAL_DEBUG
+      printf("(i < j) test expression, but decreasing step\n");
+#endif
+      return false;
+    }
+
+    hi_expr = isSgVarRefExp(binary_op->get_rhs_operand());
+    lo_expr = isSgVarRefExp(binary_op->get_lhs_operand());
+  }
+  else if (isGreaterBinaryOp(test_expr))
+  {
+    if (is_increasing == true)
+    {
+      // assume invalid for now
+#if CONFIG_LOCAL_DEBUG
+      printf("(i > j) test expression, but increasing step\n");
+#endif
+      return false;
+    }
+
+    hi_expr = isSgVarRefExp(binary_op->get_lhs_operand());
+    lo_expr = isSgVarRefExp(binary_op->get_rhs_operand());
+  }
+  else
+  {
+#if CONFIG_LOCAL_DEBUG
+    printf("invalid test expression\n");
+#endif
+    return false;
+  }
+
+  if ((hi_expr == NULL) || (lo_expr == NULL))
+  {
+#if CONFIG_LOCAL_DEBUG
+    printf("invalid operand\n");
+#endif
+    return false;
+  }
+
+  // unsigned long diff = hi_expr - lo_expr;
+
+  // scope
+  SgScopeStatement* const diff_scope =
+    SageInterface::getScope(for_stmt_->get_parent());
+  if (diff_scope == NULL)
+  {
+#if CONFIG_LOCAL_DEBUG
+    printf("invalid top scope\n");
+#endif
+    return false;
+  }
+
+  // declaration
+  SgName diff_name = "__kaapi_diff_";
+  diff_name << ++SageInterface::gensym_counter;
+
+  SgType* const diff_type = SageBuilder::buildUnsignedLongType();
+  SgVariableDeclaration* const diff_decl =
+    SageBuilder::buildVariableDeclaration(diff_name, diff_type, 0, diff_scope);
+  SgVarRefExp* const diff_vref_expr =
+    SageBuilder::buildOpaqueVarRefExp(diff_name, diff_scope);
+
+  // substraction
+  SgExpression* const diff_op =
+    SageBuilder::buildSubtractOp(hi_expr, lo_expr);
+
+  // statements
+  SageInterface::prependStatement(diff_decl, diff_scope);
+  SgExprStatement* const assign_stmt =
+    SageBuilder::buildAssignStatement(diff_vref_expr, diff_op);
+  SageInterface::insertStatement(for_stmt_, assign_stmt);
+
+#if 0 // not implemented
+
+#define CONFIG_LOCAL_DEBUG
+
+  SgStatementPtrList& init_ptrlist = for_stmt_->get_init_stmt();
+  if (init_ptrlist.size() != 1) return false;
+
+  SgStatement* const init_stmt = init_ptrlist.front();
+  SgExpression* pos_expr = NULL;
+  SgExpression* var_expr = NULL;
+  SgExpression* lb_expr = NULL;
+  SgInitializedName* pos_name = NULL;
+
+  // C99 style inloop decl
+  if (isSgVariableDeclaration(init_stmt))
+  {
+  }
+  else if (isAssignmentStatement(init_stmt))
+  {
+  }
+  else
+  {
+    return false;
+  }
+
+  // already a strict integer
+  if (SageInterface::isStrictIntegerType(pos_name->get_type()) == true)
+  {
+#if CONFIG_LOCAL_DEBUG
+    printf("already a strict integer\n");
+#endif
+    return true;
+  }
+
+  if (SageInterface::isPointerType(pos_name->get_type()) == false)
+  {
+#if CONFIG_LOCAL_DEBUG
+    printf("neither strict integer nor a pointer\n");
+#endif
+    return false;
+  }
+
+  SgType* const typeptr = pos_name->get_typeptr();
+
+  // replace all continue statements by a goto
+
+  // create a temporary variable to old end - pos
+
+#endif // not implemented
+
+  return true;
+}
+
+bool forLoopCanonicalizer::isVarModified
+(SgNode* node, SgInitializedName* name)
+{
+  // return true if the var identified by
+  // name is modified by the subtree under node
+
+  SgExpression* operand_expr;
+
+  if (isSgBinaryOp(node))
+    operand_expr = isSgBinaryOp(node)->get_lhs_operand();
+  else if (isSgUnaryOp(node))
+    operand_expr = isSgUnaryOp(node)->get_operand();
+  else
+    return false;
+
+  SgVarRefExp* const vref_expr = isSgVarRefExp(operand_expr);
+  if (vref_expr == NULL) return false;
+  if (vref_expr->get_symbol() == NULL) return false;
+  if (vref_expr->get_symbol()->get_declaration() == NULL) return false;
+
+  const SgName& var_name =
+    vref_expr->get_symbol()->get_declaration()->get_name();
+
+  // printf("isVarModified: %s\n", var_name.str());
+
+  return var_name == name->get_name();
+}
+
+bool forLoopCanonicalizer::isIncreasingExpression(SgExpression* expr)
+{
+  // return true if the expression is an increasing one
+
+  // assume expression is a canonical operation
+
+  // only support the following forms:
+  // pre/post increment
+  // name BinopAssign rhs
+  // name Equal rhs
+
+  bool is_increasing = true;
+
+  if (isSgAssignOp(expr))
+  {
+    expr = isSgAssignOp(expr)->get_rhs_operand();
+    if (isSgAddOp(expr)) is_increasing = true;
+    else if (isSgMinusOp(expr)) is_increasing = false;
+  }
+  else if (isSgBinaryOp(expr))
+  {
+    SgBinaryOp* const binop = isSgBinaryOp(expr);
+    if (binop->variantT() == V_SgPlusAssignOp)
+      is_increasing = true;
+    else if (binop->variantT() == V_SgMinusAssignOp)
+      is_increasing = false;
+  }
+  else if (isSgUnaryOp(expr))
+  {
+    SgUnaryOp* const unop = isSgUnaryOp(expr);
+    if (unop->variantT() == V_SgPlusPlusOp)
+      is_increasing = true;
+    else if (unop->variantT() == V_SgMinusMinusOp)
+      is_increasing = false;
+  }
+
+  return is_increasing;
+}
+
+SgInitializedName* forLoopCanonicalizer::findIteratorName()
+{
+  // find ithe iterator name using for loop initializer
+
+  SgInitializedName* iter_name;
+  SgStatementPtrList& ptrlist = for_stmt_->get_init_stmt();
+  if (ptrlist.size() != 1) return false;
+  SgStatement* const init_stmt = ptrlist.front();
+  if (isSgExprStatement(init_stmt))
+  {
+    SgAssignOp* const assign_op =
+      isSgAssignOp(isSgExprStatement(init_stmt)->get_expression());
+    if (assign_op == NULL)
+    {
+#if CONFIG_LOCAL_DEBUG
+      printf("not an AssignOp\n");
+#endif
+      return NULL;
+    }
+
+    SgVarRefExp* const vref_expr =
+      isSgVarRefExp(assign_op->get_lhs_operand());
+    if (vref_expr == NULL)
+    {
+#if CONFIG_LOCAL_DEBUG
+      printf("not an VarRefExp\n");
+#endif
+      return NULL;
+    }
+
+    iter_name = vref_expr->get_symbol()->get_declaration();
+  }
+  else if (isSgVariableDeclaration(init_stmt))
+  {
+    SgVariableDeclaration* const init_decl =
+      isSgVariableDeclaration(init_stmt);
+    iter_name = init_decl->get_variables().front();
+    if (iter_name == NULL) return NULL;
+  }
+  else
+  {
+#if CONFIG_LOCAL_DEBUG
+    printf("unsupported loop initializer format %s\n",
+	   init_stmt->class_name().c_str());
+#endif
+    return NULL;
+  }
+
+  return iter_name;
+}
+
+SgInitializedName* forLoopCanonicalizer::findIteratorName(bool)
+{
+  // find ithe iterator name using for loop initializer
+
+  SgExpression* const test_expr = for_stmt_->get_test_expr();
+  if (test_expr == NULL) return NULL;
+
+  // only support binary operations, as the canonical form does
+  SgBinaryOp* const binary_op = isSgBinaryOp(test_expr);
+  if (binary_op == NULL)
+  {
+#if CONFIG_LOCAL_DEBUG
+    printf("not a BinaryOp\n");
+#endif
+    return NULL;
+  }
+
+  SgVarRefExp* const vref_expr = isSgVarRefExp(binary_op->get_lhs_operand());
+  if (vref_expr == NULL)
+  {
+#if CONFIG_LOCAL_DEBUG
+    printf("not an VarRefExp\n");
+#endif
+    return NULL;
+  }
+
+  return vref_expr->get_symbol()->get_declaration();
+}
+
+bool forLoopCanonicalizer::doMultipleStepTransform()
+{
+#define CONFIG_LOCAL_DEBUG 1
+
+  // if the increment part is made of multiple statements,
+  // detect the one we should keep in the canonical form
+  // and move the other after the end of body label
+
+  // find the iterator name
+  SgInitializedName* const iter_name = findIteratorName(true);
+  if (iter_name == false) return false;
+
+  SgExpression* const incr_expr = for_stmt_->get_increment();
+  if (incr_expr == NULL) return true;
+
+  SgCommaOpExp* comma_expr = isSgCommaOpExp(incr_expr);
+  if (comma_expr == NULL) return true;
+
+  // foreach comma tree node, check if the lhs operand
+  // contains a modifying operation on iter_name. there
+  // must be only one such occurence. move every other
+  // expression to the end of the body.
+  SgNode* node;
+  SgNode* iter_node = NULL;
+  bool is_done = false;
+  while (1)
+  {
+    node = comma_expr->get_rhs_operand();
+
+  skip_rhs_operand:
+
+    // process the node here. find iterator in rhs lhs operand
+    if (isVarModified(node, iter_name) == true)
+    {
+      // modifying twice the iterator is considered an error
+      if (iter_node != NULL)
+      {
+#if CONFIG_LOCAL_DEBUG
+	printf("iterator modified twice\n");
+#endif
+	return false;
+      }
+
+#if CONFIG_LOCAL_DEBUG
+      printf("found_node: %s\n", node->class_name().c_str());
+#endif
+
+      iter_node = node;
+    }
+    else
+    {
+#if CONFIG_LOCAL_DEBUG
+      printf("moving to the endOfBody\n");
+#endif
+
+      SgStatement* const new_stmt =
+	SageBuilder::buildExprStatement(isSgExpression(node));
+      SgScopeStatement* const scope_stmt =
+	isSgScopeStatement(SageInterface::getLoopBody(for_stmt_));
+      SageInterface::appendStatement(new_stmt, scope_stmt);
+    }
+
+    if (is_done == true) break ;
+
+    // last node reached, lhs is a leaf
+    if (isSgCommaOpExp(comma_expr->get_lhs_operand()) == NULL)
+    {
+      is_done = true;
+      node = comma_expr->get_lhs_operand();
+      goto skip_rhs_operand;
+    }
+
+    // next tree node
+    comma_expr = isSgCommaOpExp(comma_expr->get_lhs_operand());
+  }
+
+  if (iter_node == NULL)
+  {
+#if CONFIG_LOCAL_DEBUG
+    printf("%s iterator variable not found in increment\n",
+	   iter_name->get_qualified_name().str());
+#endif // CONFIG_LOCAL_DEBUG
+    return false;
+  }
+
+  // move all but matched one to the end of body
+  // TODO: delete old increment?
+  iter_node->set_parent(incr_expr->get_parent());
+  for_stmt_->set_increment(isSgExpression(iter_node));
+  
+  return true;
+
+#undef CONFIG_LOCAL_DEBUG
+}
+
+bool forLoopCanonicalizer::doNormalizeTestTransform()
+{
+  // assume StrictIntegerTransform
+  // transform test condition to canonical one
+
+  return true;
+}
+
+bool forLoopCanonicalizer::canonicalize(SgForStatement* for_stmt)
+{
+  forLoopCanonicalizer canon(for_stmt);
+
+  // order matters. refer to method comments.
+  if (canon.doStepLabelTransform() == false) return false;
+  if (canon.doMultipleStepTransform() == false) return false;
+  if (canon.doStrictIntegerTransform() == false) return false;
+
+  return true;
+}
+
+
 /** Transform a loop with independent iteration in an adaptive form
     The loop must have a cannonical form:
        for ( i = begin; i<end; ++i)
@@ -4564,6 +5066,12 @@ SgStatement* buildConvertLoop2Adaptative(
   SgForStatement* forloop = isSgForStatement( loop );
   SgScopeStatement* scope = SageInterface::getScope( forloop->get_parent() );
 
+  if (forLoopCanonicalizer::canonicalize(forloop) == false)
+  {
+    std::cerr << "****[kaapi_c2c] canonicalize loop failed" << std::endl;
+    return 0;
+  }
+
 #if 0 /* normalization will rename iteration variable and change test to have <= or >= 
          not required
       */
@@ -4588,7 +5096,7 @@ SgStatement* buildConvertLoop2Adaptative(
   SgStatement*  loopbody;
   bool hasIncrementalIterationSpace;
   bool isInclusiveUpperBound;
-  
+
   bool retval = SageInterface::isCanonicalForLoop(
         forloop, 
         &ivar,
@@ -5084,7 +5592,7 @@ SgStatement* buildConvertLoop2Adaptative(
   wc_term->set_endOfConstruct(SOURCE_POSITION);
   SageInterface::appendStatement( wc_term, bb );
 }
-#endif 0 //////////////////////////////////////////
+#endif //////////////////////////////////////////
 
 
   /* 
