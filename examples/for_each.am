@@ -10,13 +10,13 @@ if KAAPI_API_KAAPIXX
 FOREACH_PRGS+=\
 	for_each_rec_kaapi++  for_each_0_kaapi++ for_each_1_kaapi++ \
 	for_each_2_kaapi++
+if KAAPI_CXX_HAS_LAMBDA
+FOREACH_PRGS+=for_each_0_kaapi++_lambda
+endif
 endif
 if KAAPI_API_KASTL
 FOREACH_PRGS+=\
 	for_each_kastl
-endif
-if KAAPI_CXX_HAS_LAMBDA
-FOREACH_PRGS+=for_each_0_kaapi++_lambda
 endif
 if KAAPI_API_KASTL
 FOREACH_PRGS+=\

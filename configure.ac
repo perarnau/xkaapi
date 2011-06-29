@@ -747,7 +747,7 @@ AC_SUBST(KACC_BUILD_LIBS)
 AM_CONDITIONAL([KAAPI_TARGET_KACC],[test x"$KAAPI_USE_KACC" = x"yes"])
 
 
-
+AM_CONDITIONAL([KAAPI_HAVE_CBLAS],[test x"$CBLAS_LDFLAGS" != x])
 
 dnl -----------------------------------------------------------------------
 dnl Dependencies between libs

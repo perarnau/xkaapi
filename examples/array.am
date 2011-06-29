@@ -5,7 +5,10 @@
 ##  Copyright 2010 INRIA. All rights reserved.
 ##
 
-ARRAY_PRGS=array1_kaapi++ array2_kaapi++ array3_kaapi++ range1_kaapi++ range3_kaapi++ range4_kaapi++ range5_kaapi++
+ARRAY_PRGS=
+if KAAPI_API_KAAPIXX
+ARRAY_PRGS+=array1_kaapi++ array2_kaapi++ array3_kaapi++ range1_kaapi++ range3_kaapi++ range4_kaapi++ range5_kaapi++
+endif
 check_PROGRAMS+=$(ARRAY_PRGS)
 all-array: $(ARRAY_PRGS)
 
