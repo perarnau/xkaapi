@@ -2995,10 +2995,10 @@ public:
 int main(int argc, char **argv) 
 {
   try {
+    // SgProject::set_verbose(10);
     SgProject *project = frontend(argc, argv);
-      
+
     KaapiPragma pragmaKaapi;
-    
     
     /* Insert builting operator */
     kaapi_user_definedoperator.insert( 

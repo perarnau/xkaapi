@@ -205,7 +205,8 @@ static bool make_output_filename
 int main( int argc, char** argv)
 {
   bool verbose = false;  
-  bool keep = false;
+  // needed for Makefile deps computation
+  bool keep = true;
   bool nolink = false;
   bool oseen = false;
   int  err;
@@ -249,7 +250,9 @@ int main( int argc, char** argv)
       }
       ++i;
       option = option + " " + argv[i];
-      preprocess_options.push_back( option ); compiler_options.push_back( option );
+      // not supported by the SgProject interface
+      // preprocess_options.push_back( option );
+      compiler_options.push_back( option );
     } else if (option.find("-MF")  ==0) {
       if (i+1 == argc) {
         std::cerr << argv[0] << ": error no filename, option '-MF filename'" << std::endl;
