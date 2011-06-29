@@ -1203,6 +1203,25 @@ static inline void KaapiGenerateMode
   }
 }
 
+
+void DoKaapiGenerateInitializer(std::ostream& fout)
+{
+  fout << " static kaapi_atomic_t kaapi_kacc_isinit = {0};\n"
+       << "__attribute__ ((constructor)) static void kaapi_abi_constructor(void)\n"
+       << "{ \n"
+       << "  if (KAAPI_ATOMIC_INCR(&kaapi_kacc_isinit) ==1) \n"
+       << "    kaapi_init(0,0);\n"
+       << "}\n"
+       << std::endl;
+
+  fout << "__attribute__ ((destructor)) static void kaapi_abi_destructor(void)\n"
+       << "{\n"
+       << "  if (KAAPI_ATOMIC_DECR(&kaapi_kacc_isinit) ==0) \n"
+       << "    kaapi_finalize();\n"
+       << "}\n"
+       << std::endl;
+}
+
 void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
 {
 #if CONFIG_ENABLE_DEBUG
@@ -3520,7 +3539,9 @@ int main(int argc, char **argv)
 //      fout << "#include \"kaapi.h\"" << std::endl;
       fout << "/* Format part for the predefined task */\n"
            << "/***** Date: " << ctime(&t) << "*****/\n" << std::endl;
-        
+
+      DoKaapiGenerateInitializer(fout);
+      
       std::list<KaapiTaskAttribute*>::iterator begin_task;
       for (begin_task = all_tasks.begin(); begin_task != all_tasks.end(); ++begin_task)
       {
