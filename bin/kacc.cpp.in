@@ -181,6 +181,22 @@ static bool make_output_filename
   return true;
 }
 
+static bool revert_output_filename
+(const std::string& iname, std::string& oname)
+{
+  // from kacc like iname, build the original one
+
+  static const size_t word_len = sizeof(CONFIG_KACC_WORD) - 1;
+
+  const size_t pos = iname.rfind(CONFIG_KACC_WORD);
+  if (pos == std::string::npos) return false;
+
+  oname = iname.substr(0, pos);
+  oname += iname.substr(pos + word_len);
+
+  return true;
+}
+
 
 /** Parse options:
     -keep: keep kaapi intermediate files
@@ -205,7 +221,8 @@ static bool make_output_filename
 int main( int argc, char** argv)
 {
   bool verbose = false;  
-  bool keep = false;
+  // needed for Makefile deps computation
+  bool keep = true;
   bool nolink = false;
   bool oseen = false;
   int  err;
@@ -249,7 +266,9 @@ int main( int argc, char** argv)
       }
       ++i;
       option = option + " " + argv[i];
-      preprocess_options.push_back( option ); compiler_options.push_back( option );
+      // not supported by the SgProject interface
+      // preprocess_options.push_back( option );
+      compiler_options.push_back( option );
     } else if (option.find("-MF")  ==0) {
       if (i+1 == argc) {
         std::cerr << argv[0] << ": error no filename, option '-MF filename'" << std::endl;
@@ -409,9 +428,7 @@ int main( int argc, char** argv)
     file_tocompile_kaapi.push_back( o_file_kacc );
   }
 
-  /* call the true compiler 
-     TODO: call gcc or g++ depending of the input file type
-  */
+  /* call the true compiler  */
   for (ibeg = file_tocompile_kaapi.begin(); ibeg != file_tocompile_kaapi.end(); ++ibeg)
   {
     const std::string& filename = *ibeg;
@@ -430,17 +447,41 @@ int main( int argc, char** argv)
       return err;
     }
     
-    cmdline3 << " " << filename 
-             << List2String( compiler_options );
-
+    cmdline3 << " " << filename << List2String( compiler_options );
     if (verbose)
       std::cout << "Commande3: " << cmdline3.str() << std::endl;
     err = system(cmdline3.str().c_str());
     if (err != 0)
     {
+      // on failure, try to call the original compiler
+      // since the source to source compiler may have
+      // produce invalid code.
+
+      std::string orig_name;
+      if (revert_output_filename(filename, orig_name) == true)
+      {
+	std::ostringstream new_cmdline;
+	File_t type = Filename2Type(orig_name);
+	if (type == File_CXX) new_cmdline << get_cxx();
+	else if (type == File_C) new_cmdline << get_cc();
+	else return err;
+
+	new_cmdline << " " << orig_name << List2String(compiler_options);
+
+	std::cerr << "*** WARNING: error while compiling generated file.";
+	std::cerr << "Trying to recompile original source." << std::endl;
+	if (verbose) std::cerr << new_cmdline.str() << std::endl;
+
+	std::cout << new_cmdline.str() << std::endl;
+
+	err = system(new_cmdline.str().c_str());
+	if (err == 0) goto skip_failure;
+      }
+
       std::cerr << "*** error: status of '" << cmdline3.str() << "': " << err << std::endl;
       return err;
     }
+  skip_failure: ;
   }
   
   if (!keep && !file_tocompile_kaapi.empty())

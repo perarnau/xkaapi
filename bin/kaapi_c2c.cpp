@@ -2449,27 +2449,6 @@ public:
 
     if (is_nested_call(node) || is_returned_call(node))
     {
-      // nested call code transformation:
-      // <<<
-      // bar(fu(42), fu(24));
-      // >>>
-      // type __tmp_xxx;
-      // type __tmp_yyy;
-      // __tmp_xxx = fu(42);
-      // kaapi_sched_sync();
-      // __tmp_yyy = fu(24);
-      // kaapi_sched_sync();
-      // bar(__tmp_xxx, __tmp_yyy);
-      //
-      // returned call code transformation:
-      // <<<
-      // return fu(42) + 5;
-      // >>>
-      // type __tmp_xxx;
-      // __tmp_xxx = fu(42);
-      // kaapi_sched_sync();
-      // return __tmp_xxx + 5;
-
       // create a tmp variable
       std::string tmp_name =
 	SageInterface::generateUniqueName(node, true);
@@ -3092,10 +3071,10 @@ public:
 int main(int argc, char **argv) 
 {
   try {
+    // SgProject::set_verbose(10);
     SgProject *project = frontend(argc, argv);
-      
+
     KaapiPragma pragmaKaapi;
-    
     
     /* Insert builtin reduction operator */
     kaapi_user_definedoperator.insert( 
