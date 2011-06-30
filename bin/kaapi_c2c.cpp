@@ -4523,14 +4523,16 @@ private:
   SgInitializedName* findIteratorName(bool use_cond);
 
   static bool isVarModified(SgNode*, SgInitializedName*);
+  static bool isIncreasingExpression(SgExpression*, SgInitializedName*);
 
 public:
   forLoopCanonicalizer(SgForStatement* for_stmt)
     : for_stmt_(for_stmt) {}
 
   bool doStepLabelTransform();
-  bool doStrictIntegerTransform();
   bool doMultipleStepTransform();
+  bool doStrictIntegerTransform();
+  bool doNormalizeTestTransform();
 
   static bool canonicalize(SgForStatement*);
 };
@@ -4561,22 +4563,143 @@ bool forLoopCanonicalizer::doStepLabelTransform()
   return true;
 }
 
+static inline bool isLessBinaryOp(SgExpression* expr)
+{
+  SgBinaryOp* const op = isSgBinaryOp(expr);
+  if (op == NULL) return false;
+  return isSgLessOrEqualOp(op) || isSgLessThanOp(op);
+}
+
+static inline bool isGreaterBinaryOp(SgExpression* expr)
+{
+  SgBinaryOp* const op = isSgBinaryOp(expr);
+  if (op == NULL) return false;
+  return isSgGreaterOrEqualOp(op) || isSgGreaterThanOp(op);
+}
+
 bool forLoopCanonicalizer::doStrictIntegerTransform()
 {
-#if 0 // not implemented
-
-#define CONFIG_LOCAL_DEBUG
+  // assume doMultipleStepTransform
+  // assume test expression lhs is the iterator
+  // assume test expression rhs is the high bound
 
   // turn a pointer type iterator into a strict integer
   // for (double* p = array; p != end; ++p)
   //   body();
   // becomes: 
-  // __j = end - array;
+  // __j = end - p;
   // for (__i = 0; __i < __j; ++__i)
   // {
   //   body();
   // next: ++p;
   // }
+
+#define CONFIG_LOCAL_DEBUG 1
+
+  SgInitializedName* const iter_name = findIteratorName(true);
+  if (iter_name == NULL) return NULL;
+
+  // is step an increasing expression
+  SgExpression* const incr_expr = for_stmt_->get_increment();
+  if (incr_expr == NULL) return false;
+  const bool is_increasing = isIncreasingExpression(incr_expr, iter_name);
+
+  // for (; i < j; ++i) -> count = j - i;
+  // for (; i > j; --i) -> count = i - j;
+  // in both case:
+  // for (__i = 0; __i < count; ++__i)
+  // __kaapi_continue_label: ++i
+
+  // interprete the test expression. find hival, the
+  // high value
+  SgExpression* const test_expr = for_stmt_->get_test_expr();
+  if (test_expr == NULL) return false;
+  SgBinaryOp* const binary_op = isSgBinaryOp(test_expr);
+  if (binary_op == NULL) return false;
+
+  SgVarRefExp* hi_expr = NULL;
+  SgVarRefExp* lo_expr = NULL;
+
+  if (isLessBinaryOp(test_expr))
+  {
+    if (is_increasing == false)
+    {
+      // assume invalid for now
+#if CONFIG_LOCAL_DEBUG
+      printf("(i < j) test expression, but decreasing step\n");
+#endif
+      return false;
+    }
+
+    hi_expr = isSgVarRefExp(binary_op->get_rhs_operand());
+    lo_expr = isSgVarRefExp(binary_op->get_lhs_operand());
+  }
+  else if (isGreaterBinaryOp(test_expr))
+  {
+    if (is_increasing == true)
+    {
+      // assume invalid for now
+#if CONFIG_LOCAL_DEBUG
+      printf("(i > j) test expression, but increasing step\n");
+#endif
+      return false;
+    }
+
+    hi_expr = isSgVarRefExp(binary_op->get_lhs_operand());
+    lo_expr = isSgVarRefExp(binary_op->get_rhs_operand());
+  }
+  else
+  {
+#if CONFIG_LOCAL_DEBUG
+    printf("invalid test expression\n");
+#endif
+    return false;
+  }
+
+  if ((hi_expr == NULL) || (lo_expr == NULL))
+  {
+#if CONFIG_LOCAL_DEBUG
+    printf("invalid operand\n");
+#endif
+    return false;
+  }
+
+  // unsigned long diff = hi_expr - lo_expr;
+
+  // scope
+  SgScopeStatement* const diff_scope =
+    SageInterface::getScope(for_stmt_->get_parent());
+  if (diff_scope == NULL)
+  {
+#if CONFIG_LOCAL_DEBUG
+    printf("invalid top scope\n");
+#endif
+    return false;
+  }
+
+  // declaration
+  SgName diff_name = "__kaapi_diff_";
+  diff_name << ++SageInterface::gensym_counter;
+
+  SgType* const diff_type = SageBuilder::buildUnsignedLongType();
+  SgVariableDeclaration* const diff_decl =
+    SageBuilder::buildVariableDeclaration(diff_name, diff_type, 0, diff_scope);
+  SgVarRefExp* const diff_vref_expr =
+    SageBuilder::buildOpaqueVarRefExp(diff_name, diff_scope);
+
+  // substraction
+  SgExpression* const diff_op =
+    SageBuilder::buildSubtractOp(hi_expr, lo_expr);
+
+  // statements
+  SageInterface::prependStatement(diff_decl, diff_scope);
+  SgExprStatement* const assign_stmt =
+    SageBuilder::buildAssignStatement(diff_vref_expr, diff_op);
+  SageInterface::insertStatement(for_stmt_, assign_stmt);
+
+#if 0 // not implemented
+
+#define CONFIG_LOCAL_DEBUG
 
   SgStatementPtrList& init_ptrlist = for_stmt_->get_init_stmt();
   if (init_ptrlist.size() != 1) return false;
@@ -4631,7 +4754,7 @@ bool forLoopCanonicalizer::isVarModified
 (SgNode* node, SgInitializedName* name)
 {
   // return true if the var identified by
-  // name modified by the subtree under node
+  // name is modified by the subtree under node
 
   SgExpression* operand_expr;
 
@@ -4653,6 +4776,17 @@ bool forLoopCanonicalizer::isVarModified
   // printf("isVarModified: %s\n", var_name.str());
 
   return var_name == name->get_name();
+}
+
+bool forLoopCanonicalizer::isIncreasingExpression
+(SgExpression* expr, SgInitializedName* name)
+{
+  // return true if the var identified by
+  // name is modified by an increasing expression
+
+  bool is_increasing = true;
+
+  return is_increasing;
 }
 
 SgInitializedName* forLoopCanonicalizer::findIteratorName()
@@ -4830,13 +4964,22 @@ bool forLoopCanonicalizer::doMultipleStepTransform()
 #undef CONFIG_LOCAL_DEBUG
 }
 
+bool forLoopCanonicalizer::doNormalizeTestTransform()
+{
+  // assume StrictIntegerTransform
+  // transform test condition to canonical one
+
+  return true;
+}
+
 bool forLoopCanonicalizer::canonicalize(SgForStatement* for_stmt)
 {
   forLoopCanonicalizer canon(for_stmt);
 
+  // order matters. refer to method comments.
   if (canon.doStepLabelTransform() == false) return false;
-  if (canon.doStrictIntegerTransform() == false) return false;
   if (canon.doMultipleStepTransform() == false) return false;
+  if (canon.doStrictIntegerTransform() == false) return false;
 
   return true;
 }
