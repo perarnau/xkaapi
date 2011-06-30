@@ -5,7 +5,10 @@
 ##  Copyright 2010 INRIA. All rights reserved.
 ##
 
-LINEARWORK_PRGS=horner_kaapi horner_kaapi++ variance_kaapi++
+LINEARWORK_PRGS=horner_kaapi
+if KAAPI_API_KAAPIXX
+LINEARWORK_PRGS+=horner_kaapi++ variance_kaapi++
+endif
 check_PROGRAMS+=$(LINEARWORK_PRGS)
 all-lw: $(LINEARWORK_PRGS)
 

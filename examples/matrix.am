@@ -5,12 +5,15 @@
 ##  Copyright 2010 INRIA. All rights reserved.
 ##
 
-MATPROG_PRGS=matprod_rec_kaapi++ matprod_bloc_kaapi++ matprod_rowcol_kaapi++\
+MATPROG_PRGS=
+if KAAPI_API_KAAPIXX
+MATPROG_PRGS+=matprod_rec_kaapi++ matprod_bloc_kaapi++ matprod_rowcol_kaapi++\
   matprod_iter_part_kaapi++ \
   matlu_nopiv_kaapi++\
   matcholesky_kaapi++\
   matcholesky_bloc_kaapi++\
   matprod_bloc_mapping_kaapi++
+endif
   
 check_PROGRAMS+=$(MATPROG_PRGS)
 all-matrix: $(MATPROG_PRGS)
