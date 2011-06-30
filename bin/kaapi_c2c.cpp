@@ -4518,7 +4518,6 @@ class forLoopCanonicalizer
 private:
   SgForStatement* for_stmt_;
   SgLabelStatement* label_stmt_;
-  SgInitializedName* iter_name_;
 
 public:
   forLoopCanonicalizer(SgForStatement* for_stmt)
@@ -4630,21 +4629,26 @@ bool forLoopCanonicalizer::isVarModified
   // return true if the var identified by
   // name modified by the subtree under node
 
-#if 0
-  // SgCommaOpExp* leaf_exp = comma_exp;
-  // while (isSgCommaOpExp(leaf_exp->get_lhs_operand()))
-  //   leaf_exp = isSgCommaOpExp(leaf_exp->get_lhs_operand());
-  // if (SgAssignOp* assign_op = isSgAssignOp(leaf_exp->get_lhs_operand()))
-  // {
-  //   SgVarRefExp* var = isSgVarRefExp(assign_op->get_lhs_operand());
-  //   if (var)
-  //   {
-  //     ivarname = var->get_symbol()->get_declaration();
-  //   }
-  // }
-#endif
+  SgExpression* operand_expr;
 
-  return false;
+  if (isSgBinaryOp(node))
+    operand_expr = isSgBinaryOp(node)->get_lhs_operand();
+  else if (isSgUnaryOp(node))
+    operand_expr = isSgUnaryOp(node)->get_operand();
+  else
+    return false;
+
+  SgVarRefExp* const vref_expr = isSgVarRefExp(operand_expr);
+  if (vref_expr == NULL) return false;
+  if (vref_expr->get_symbol() == NULL) return false;
+  if (vref_expr->get_symbol()->get_declaration() == NULL) return false;
+
+  const SgName& var_name =
+    vref_expr->get_symbol()->get_declaration()->get_name();
+
+  // printf("isVarModified: %s\n", var_name.str());
+
+  return var_name == name->get_name();
 }
 
 bool forLoopCanonicalizer::doMultipleStepTransform()
@@ -4660,14 +4664,32 @@ bool forLoopCanonicalizer::doMultipleStepTransform()
   SgStatementPtrList& ptrlist = for_stmt_->get_init_stmt();
   if (ptrlist.size() != 1) return false;
   SgStatement* const init_stmt = ptrlist.front();
-  if (isSgAssignOp(init_stmt))
+  if (isSgExprStatement(init_stmt))
   {
-    printf("INIT_ASSIGN_STATMENT\n");
+    SgAssignOp* const assign_op =
+      isSgAssignOp(isSgExprStatement(init_stmt)->get_expression());
+    if (assign_op == NULL)
+    {
+#if CONFIG_LOCAL_DEBUG
+      printf("not an AssignOp\n");
+#endif
+      return false;
+    }
+
+    SgVarRefExp* const vref_expr =
+      isSgVarRefExp(assign_op->get_lhs_operand());
+    if (vref_expr == NULL)
+    {
+#if CONFIG_LOCAL_DEBUG
+      printf("not an VarRefExp\n");
+#endif
+      return false;
+    }
+
+    iter_name = vref_expr->get_symbol()->get_declaration();
   }
   else if (isSgVariableDeclaration(init_stmt))
   {
-    printf("INIT_VARIABLE_DECLARATION\n");
-
     SgVariableDeclaration* const init_decl =
       isSgVariableDeclaration(init_stmt);
     iter_name = init_decl->get_variables().front();
@@ -4676,7 +4698,8 @@ bool forLoopCanonicalizer::doMultipleStepTransform()
   else
   {
 #if CONFIG_LOCAL_DEBUG
-    printf("unsupported loop initializer format\n");
+    printf("unsupported loop initializer format %s\n",
+	   init_stmt->class_name().c_str());
 #endif
     return false;
   }
@@ -4701,9 +4724,7 @@ bool forLoopCanonicalizer::doMultipleStepTransform()
   skip_rhs_operand:
 
     // process the node here. find iterator in rhs lhs operand
-    printf("NODE: %s\n", node->class_name().c_str());
-
-    if (isVarModified(node, iter_name_) == true)
+    if (isVarModified(node, iter_name) == true)
     {
       // modifying twice the iterator is considered an error
       if (iter_node != NULL)
@@ -4713,6 +4734,10 @@ bool forLoopCanonicalizer::doMultipleStepTransform()
 #endif
 	return false;
       }
+
+#if CONFIG_LOCAL_DEBUG
+      printf("found_node: %s\n", node->class_name().c_str());
+#endif
 
       iter_node = node;
     }
@@ -4746,7 +4771,8 @@ bool forLoopCanonicalizer::doMultipleStepTransform()
   if (iter_node == NULL)
   {
 #if CONFIG_LOCAL_DEBUG
-    printf("iterator not found in increment\n");
+    printf("%s iterator variable not found in increment\n",
+	   iter_name->get_qualified_name().str());
 #endif // CONFIG_LOCAL_DEBUG
     return false;
   }
