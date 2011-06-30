@@ -4523,7 +4523,7 @@ private:
   SgInitializedName* findIteratorName(bool use_cond);
 
   static bool isVarModified(SgNode*, SgInitializedName*);
-  static bool isIncreasingExpression(SgExpression*, SgInitializedName*);
+  static bool isIncreasingExpression(SgExpression*);
 
 public:
   forLoopCanonicalizer(SgForStatement* for_stmt)
@@ -4602,7 +4602,7 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
   // is step an increasing expression
   SgExpression* const incr_expr = for_stmt_->get_increment();
   if (incr_expr == NULL) return false;
-  const bool is_increasing = isIncreasingExpression(incr_expr, iter_name);
+  const bool is_increasing = isIncreasingExpression(incr_expr);
 
   // for (; i < j; ++i) -> count = j - i;
   // for (; i > j; --i) -> count = i - j;
@@ -4778,13 +4778,41 @@ bool forLoopCanonicalizer::isVarModified
   return var_name == name->get_name();
 }
 
-bool forLoopCanonicalizer::isIncreasingExpression
-(SgExpression* expr, SgInitializedName* name)
+bool forLoopCanonicalizer::isIncreasingExpression(SgExpression* expr)
 {
-  // return true if the var identified by
-  // name is modified by an increasing expression
+  // return true if the expression is an increasing one
+
+  // assume expression is a canonical operation
+
+  // only support the following forms:
+  // pre/post increment
+  // name BinopAssign rhs
+  // name Equal rhs
 
   bool is_increasing = true;
+
+  if (isSgAssignOp(expr))
+  {
+    expr = isSgAssignOp(expr)->get_rhs_operand();
+    if (isSgAddOp(expr)) is_increasing = true;
+    else if (isSgMinusOp(expr)) is_increasing = false;
+  }
+  else if (isSgBinaryOp(expr))
+  {
+    SgBinaryOp* const binop = isSgBinaryOp(expr);
+    if (binop->variantT() == V_SgPlusAssignOp)
+      is_increasing = true;
+    else if (binop->variantT() == V_SgMinusAssignOp)
+      is_increasing = false;
+  }
+  else if (isSgUnaryOp(expr))
+  {
+    SgUnaryOp* const unop = isSgUnaryOp(expr);
+    if (unop->variantT() == V_SgPlusPlusOp)
+      is_increasing = true;
+    else if (unop->variantT() == V_SgMinusMinusOp)
+      is_increasing = false;
+  }
 
   return is_increasing;
 }
