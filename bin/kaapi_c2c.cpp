@@ -4519,6 +4519,11 @@ private:
   SgForStatement* for_stmt_;
   SgLabelStatement* label_stmt_;
 
+  SgInitializedName* findIteratorName();
+  SgInitializedName* findIteratorName(bool use_cond);
+
+  static bool isVarModified(SgNode*, SgInitializedName*);
+
 public:
   forLoopCanonicalizer(SgForStatement* for_stmt)
     : for_stmt_(for_stmt) {}
@@ -4528,7 +4533,6 @@ public:
   bool doMultipleStepTransform();
 
   static bool canonicalize(SgForStatement*);
-  static bool isVarModified(SgNode*, SgInitializedName*);
 };
 
 bool forLoopCanonicalizer::doStepLabelTransform()
@@ -4651,15 +4655,10 @@ bool forLoopCanonicalizer::isVarModified
   return var_name == name->get_name();
 }
 
-bool forLoopCanonicalizer::doMultipleStepTransform()
+SgInitializedName* forLoopCanonicalizer::findIteratorName()
 {
-#define CONFIG_LOCAL_DEBUG 1
+  // find ithe iterator name using for loop initializer
 
-  // if the increment part is made of multiple statements,
-  // detect the one we should keep in the canonical form
-  // and move the other after the end of body label
-
-  // find ithe iterator name
   SgInitializedName* iter_name;
   SgStatementPtrList& ptrlist = for_stmt_->get_init_stmt();
   if (ptrlist.size() != 1) return false;
@@ -4673,7 +4672,7 @@ bool forLoopCanonicalizer::doMultipleStepTransform()
 #if CONFIG_LOCAL_DEBUG
       printf("not an AssignOp\n");
 #endif
-      return false;
+      return NULL;
     }
 
     SgVarRefExp* const vref_expr =
@@ -4683,7 +4682,7 @@ bool forLoopCanonicalizer::doMultipleStepTransform()
 #if CONFIG_LOCAL_DEBUG
       printf("not an VarRefExp\n");
 #endif
-      return false;
+      return NULL;
     }
 
     iter_name = vref_expr->get_symbol()->get_declaration();
@@ -4693,7 +4692,7 @@ bool forLoopCanonicalizer::doMultipleStepTransform()
     SgVariableDeclaration* const init_decl =
       isSgVariableDeclaration(init_stmt);
     iter_name = init_decl->get_variables().front();
-    if (iter_name == NULL) return false;
+    if (iter_name == NULL) return NULL;
   }
   else
   {
@@ -4701,8 +4700,52 @@ bool forLoopCanonicalizer::doMultipleStepTransform()
     printf("unsupported loop initializer format %s\n",
 	   init_stmt->class_name().c_str());
 #endif
-    return false;
+    return NULL;
   }
+
+  return iter_name;
+}
+
+SgInitializedName* forLoopCanonicalizer::findIteratorName(bool)
+{
+  // find ithe iterator name using for loop initializer
+
+  SgExpression* const test_expr = for_stmt_->get_test_expr();
+  if (test_expr == NULL) return NULL;
+
+  // only support binary operations, as the canonical form does
+  SgBinaryOp* const binary_op = isSgBinaryOp(test_expr);
+  if (binary_op == NULL)
+  {
+#if CONFIG_LOCAL_DEBUG
+    printf("not a BinaryOp\n");
+#endif
+    return NULL;
+  }
+
+  SgVarRefExp* const vref_expr = isSgVarRefExp(binary_op->get_lhs_operand());
+  if (vref_expr == NULL)
+  {
+#if CONFIG_LOCAL_DEBUG
+    printf("not an VarRefExp\n");
+#endif
+    return NULL;
+  }
+
+  return vref_expr->get_symbol()->get_declaration();
+}
+
+bool forLoopCanonicalizer::doMultipleStepTransform()
+{
+#define CONFIG_LOCAL_DEBUG 1
+
+  // if the increment part is made of multiple statements,
+  // detect the one we should keep in the canonical form
+  // and move the other after the end of body label
+
+  // find the iterator name
+  SgInitializedName* const iter_name = findIteratorName(true);
+  if (iter_name == false) return false;
 
   SgExpression* const incr_expr = for_stmt_->get_increment();
   if (incr_expr == NULL) return true;
