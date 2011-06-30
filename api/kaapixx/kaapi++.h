@@ -51,6 +51,7 @@
 #include <typeinfo>
 #include <iterator>
 #include <stdexcept>
+#include <cstddef>
 
 /** Version number for the API
     - v1: new API for DFG with pointer interface.
