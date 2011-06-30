@@ -4511,6 +4511,268 @@ static void buildFreeVariable(SgScopeStatement* scope, std::set<SgVariableSymbol
 }
 
 
+// loop canonicalizer
+
+class forLoopCanonicalizer
+{
+private:
+  SgForStatement* for_stmt_;
+  SgLabelStatement* label_stmt_;
+  SgInitializedName* iter_name_;
+
+public:
+  forLoopCanonicalizer(SgForStatement* for_stmt)
+    : for_stmt_(for_stmt) {}
+
+  bool doStepLabelTransform();
+  bool doStrictIntegerTransform();
+  bool doMultipleStepTransform();
+
+  static bool canonicalize(SgForStatement*);
+  static bool isVarModified(SgNode*, SgInitializedName*);
+};
+
+bool forLoopCanonicalizer::doStepLabelTransform()
+{
+  // insert a step statement at the end of the body
+  // replace all the continue by goto statements
+
+  SgScopeStatement* const scope_stmt =
+    SageInterface::getEnclosingProcedure(for_stmt_);
+
+  SgStatement* const old_body = SageInterface::getLoopBody(for_stmt_);
+  SgBasicBlock* const new_body = SageBuilder::buildBasicBlock();
+
+  SgName label_name = "kaapi_continue_label__";
+  label_name << ++SageInterface::gensym_counter;
+
+  label_stmt_ = SageBuilder::buildLabelStatement
+    (label_name, SageBuilder::buildBasicBlock(), scope_stmt);
+
+  SageInterface::changeContinuesToGotos(old_body, label_stmt_);
+  SageInterface::appendStatement(old_body, new_body);
+  SageInterface::appendStatement(label_stmt_, new_body);
+
+  SageInterface::setLoopBody(for_stmt_, new_body);
+
+  return true;
+}
+
+bool forLoopCanonicalizer::doStrictIntegerTransform()
+{
+#if 0 // not implemented
+
+#define CONFIG_LOCAL_DEBUG
+
+  // turn a pointer type iterator into a strict integer
+  // for (double* p = array; p != end; ++p)
+  //   body();
+  // becomes: 
+  // __j = end - array;
+  // for (__i = 0; __i < __j; ++__i)
+  // {
+  //   body();
+  // next: ++p;
+  // }
+
+  SgStatementPtrList& init_ptrlist = for_stmt_->get_init_stmt();
+  if (init_ptrlist.size() != 1) return false;
+
+  SgStatement* const init_stmt = init_ptrlist.front();
+  SgExpression* pos_expr = NULL;
+  SgExpression* var_expr = NULL;
+  SgExpression* lb_expr = NULL;
+  SgInitializedName* pos_name = NULL;
+
+  // C99 style inloop decl
+  if (isSgVariableDeclaration(init_stmt))
+  {
+  }
+  else if (isAssignmentStatement(init_stmt))
+  {
+  }
+  else
+  {
+    return false;
+  }
+
+  // already a strict integer
+  if (SageInterface::isStrictIntegerType(pos_name->get_type()) == true)
+  {
+#if CONFIG_LOCAL_DEBUG
+    printf("already a strict integer\n");
+#endif
+    return true;
+  }
+
+  if (SageInterface::isPointerType(pos_name->get_type()) == false)
+  {
+#if CONFIG_LOCAL_DEBUG
+    printf("neither strict integer nor a pointer\n");
+#endif
+    return false;
+  }
+
+  SgType* const typeptr = pos_name->get_typeptr();
+
+  // replace all continue statements by a goto
+
+  // create a temporary variable to old end - pos
+
+#endif // not implemented
+
+  return true;
+}
+
+bool forLoopCanonicalizer::isVarModified
+(SgNode* node, SgInitializedName* name)
+{
+  // return true if the var identified by
+  // name modified by the subtree under node
+
+#if 0
+  // SgCommaOpExp* leaf_exp = comma_exp;
+  // while (isSgCommaOpExp(leaf_exp->get_lhs_operand()))
+  //   leaf_exp = isSgCommaOpExp(leaf_exp->get_lhs_operand());
+  // if (SgAssignOp* assign_op = isSgAssignOp(leaf_exp->get_lhs_operand()))
+  // {
+  //   SgVarRefExp* var = isSgVarRefExp(assign_op->get_lhs_operand());
+  //   if (var)
+  //   {
+  //     ivarname = var->get_symbol()->get_declaration();
+  //   }
+  // }
+#endif
+
+  return false;
+}
+
+bool forLoopCanonicalizer::doMultipleStepTransform()
+{
+#define CONFIG_LOCAL_DEBUG 1
+
+  // if the increment part is made of multiple statements,
+  // detect the one we should keep in the canonical form
+  // and move the other after the end of body label
+
+  // find ithe iterator name
+  SgInitializedName* iter_name;
+  SgStatementPtrList& ptrlist = for_stmt_->get_init_stmt();
+  if (ptrlist.size() != 1) return false;
+  SgStatement* const init_stmt = ptrlist.front();
+  if (isSgAssignOp(init_stmt))
+  {
+    printf("INIT_ASSIGN_STATMENT\n");
+  }
+  else if (isSgVariableDeclaration(init_stmt))
+  {
+    printf("INIT_VARIABLE_DECLARATION\n");
+
+    SgVariableDeclaration* const init_decl =
+      isSgVariableDeclaration(init_stmt);
+    iter_name = init_decl->get_variables().front();
+    if (iter_name == NULL) return false;
+  }
+  else
+  {
+#if CONFIG_LOCAL_DEBUG
+    printf("unsupported loop initializer format\n");
+#endif
+    return false;
+  }
+
+  SgExpression* const incr_expr = for_stmt_->get_increment();
+  if (incr_expr == NULL) return true;
+
+  SgCommaOpExp* comma_expr = isSgCommaOpExp(incr_expr);
+  if (comma_expr == NULL) return true;
+
+  // foreach comma tree node, check if the lhs operand
+  // contains a modifying operation on iter_name. there
+  // must be only one such occurence. move every other
+  // expression to the end of the body.
+  SgNode* node;
+  SgNode* iter_node = NULL;
+  bool is_done = false;
+  while (1)
+  {
+    node = comma_expr->get_rhs_operand();
+
+  skip_rhs_operand:
+
+    // process the node here. find iterator in rhs lhs operand
+    printf("NODE: %s\n", node->class_name().c_str());
+
+    if (isVarModified(node, iter_name_) == true)
+    {
+      // modifying twice the iterator is considered an error
+      if (iter_node != NULL)
+      {
+#if CONFIG_LOCAL_DEBUG
+	printf("iterator modified twice\n");
+#endif
+	return false;
+      }
+
+      iter_node = node;
+    }
+    else
+    {
+#if CONFIG_LOCAL_DEBUG
+      printf("moving to the endOfBody\n");
+#endif
+
+      SgStatement* const new_stmt =
+	SageBuilder::buildExprStatement(isSgExpression(node));
+      SgScopeStatement* const scope_stmt =
+	isSgScopeStatement(SageInterface::getLoopBody(for_stmt_));
+      SageInterface::appendStatement(new_stmt, scope_stmt);
+    }
+
+    if (is_done == true) break ;
+
+    // last node reached, lhs is a leaf
+    if (isSgCommaOpExp(comma_expr->get_lhs_operand()) == NULL)
+    {
+      is_done = true;
+      node = comma_expr->get_lhs_operand();
+      goto skip_rhs_operand;
+    }
+
+    // next tree node
+    comma_expr = isSgCommaOpExp(comma_expr->get_lhs_operand());
+  }
+
+  if (iter_node == NULL)
+  {
+#if CONFIG_LOCAL_DEBUG
+    printf("iterator not found in increment\n");
+#endif // CONFIG_LOCAL_DEBUG
+    return false;
+  }
+
+  // move all but matched one to the end of body
+  // TODO: delete old increment?
+  iter_node->set_parent(incr_expr->get_parent());
+  for_stmt_->set_increment(isSgExpression(iter_node));
+  
+  return true;
+
+#undef CONFIG_LOCAL_DEBUG
+}
+
+bool forLoopCanonicalizer::canonicalize(SgForStatement* for_stmt)
+{
+  forLoopCanonicalizer canon(for_stmt);
+
+  if (canon.doStepLabelTransform() == false) return false;
+  if (canon.doStrictIntegerTransform() == false) return false;
+  if (canon.doMultipleStepTransform() == false) return false;
+
+  return true;
+}
+
+
 /** Transform a loop with independent iteration in an adaptive form
     The loop must have a cannonical form:
        for ( i = begin; i<end; ++i)
@@ -4564,6 +4826,12 @@ SgStatement* buildConvertLoop2Adaptative(
   SgForStatement* forloop = isSgForStatement( loop );
   SgScopeStatement* scope = SageInterface::getScope( forloop->get_parent() );
 
+  if (forLoopCanonicalizer::canonicalize(forloop) == false)
+  {
+    std::cerr << "****[kaapi_c2c] canonicalize loop failed" << std::endl;
+    return 0;
+  }
+
 #if 0 /* normalization will rename iteration variable and change test to have <= or >= 
          not required
       */
@@ -4588,7 +4856,7 @@ SgStatement* buildConvertLoop2Adaptative(
   SgStatement*  loopbody;
   bool hasIncrementalIterationSpace;
   bool isInclusiveUpperBound;
-  
+
   bool retval = SageInterface::isCanonicalForLoop(
         forloop, 
         &ivar,
@@ -5084,7 +5352,7 @@ SgStatement* buildConvertLoop2Adaptative(
   wc_term->set_endOfConstruct(SOURCE_POSITION);
   SageInterface::appendStatement( wc_term, bb );
 }
-#endif 0 //////////////////////////////////////////
+#endif //////////////////////////////////////////
 
 
   /* 
