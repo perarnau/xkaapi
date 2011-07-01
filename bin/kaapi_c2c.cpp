@@ -4566,20 +4566,39 @@ bool forLoopCanonicalizer::doStepLabelTransform()
   return true;
 }
 
-static inline bool isLessBinaryOp(SgExpression* expr)
+static inline bool isLessBinaryOp
+(SgExpression* expr, bool& is_inclusive)
 {
   SgBinaryOp* const op = isSgBinaryOp(expr);
   if (op == NULL) return false;
-  return isSgLessOrEqualOp(op) || isSgLessThanOp(op);
+
+  if (isSgLessOrEqualOp(op))
+  {
+    is_inclusive = true;
+    return true;
+  }
+
+  is_inclusive = false;
+  return isSgLessThanOp(op);
 }
 
-static inline bool isGreaterBinaryOp(SgExpression* expr)
+static inline bool isGreaterBinaryOp
+(SgExpression* expr, bool& is_inclusive)
 {
   SgBinaryOp* const op = isSgBinaryOp(expr);
   if (op == NULL) return false;
-  return isSgGreaterOrEqualOp(op) || isSgGreaterThanOp(op);
+
+  if (isSgGreaterOrEqualOp(op))
+  {
+    is_inclusive = true;
+    return true;
+  }
+
+  is_inclusive = false;
+  return isSgGreaterThanOp(op);
 }
 
+__attribute__((unused))
 static inline SgExpression* isSgValueOrVarRefExp(SgExpression* exp)
 {
   if ((isSgVarRefExp(exp) == NULL) && (isSgValueExp(exp) == NULL))
@@ -4632,10 +4651,12 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
   SgBinaryOp* const binary_op = isSgBinaryOp(test_expr);
   if (binary_op == NULL) return false;
 
+  bool is_inclusive;
+
   SgExpression* hi_expr = NULL;
   SgExpression* lo_expr = NULL;
 
-  if (isLessBinaryOp(test_expr))
+  if (isLessBinaryOp(test_expr, is_inclusive))
   {
     if (is_increasing == false)
     {
@@ -4646,10 +4667,10 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
       return false;
     }
 
-    hi_expr = isSgValueOrVarRefExp(binary_op->get_rhs_operand());
-    lo_expr = isSgValueOrVarRefExp(binary_op->get_lhs_operand());
+    hi_expr = binary_op->get_rhs_operand();
+    lo_expr = binary_op->get_lhs_operand();
   }
-  else if (isGreaterBinaryOp(test_expr))
+  else if (isGreaterBinaryOp(test_expr, is_inclusive))
   {
     if (is_increasing == true)
     {
@@ -4660,8 +4681,8 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
       return false;
     }
 
-    hi_expr = isSgValueOrVarRefExp(binary_op->get_lhs_operand());
-    lo_expr = isSgValueOrVarRefExp(binary_op->get_rhs_operand());
+    hi_expr = binary_op->get_lhs_operand();
+    lo_expr = binary_op->get_rhs_operand();
   }
   else
   {
@@ -4722,8 +4743,12 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
     SageBuilder::buildOpaqueVarRefExp(diff_name, diff_scope);
 
   // substraction
-  SgExpression* const diff_op =
-    SageBuilder::buildSubtractOp(hi_expr, lo_expr);
+  SgExpression* diff_op = SageBuilder::buildSubtractOp(hi_expr, lo_expr);
+  if (is_inclusive)
+  {
+    diff_op = SageBuilder::buildAddOp
+      (diff_op, SageBuilder::buildLongIntVal(1));
+  }
 
   // insert declaration statement
   SageInterface::prependStatement(diff_decl, diff_scope);
