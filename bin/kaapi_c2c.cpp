@@ -5073,6 +5073,8 @@ SgStatement* buildConvertLoop2Adaptative(
     return 0;
   }
 
+  return 0;
+
 #if 0 /* normalization will rename iteration variable and change test to have <= or >= 
          not required
       */
