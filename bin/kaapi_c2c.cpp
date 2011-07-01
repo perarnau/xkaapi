@@ -4541,6 +4541,8 @@ private:
   SgInitializedName* iter_name_;
 
   // normalizeCxxOperators
+
+  // test clause
   enum
   {
     LESS_STRICT = 0,
@@ -4551,15 +4553,28 @@ private:
   unsigned int test_op_;
   SgExpression* test_lhs_;
   SgExpression* test_rhs_;
+
+  // step clause
+  enum
+  {
+    PLUS_PLUS = 0,
+    MINUS_MINUS,
+    PLUS_ASSIGN,
+    MINUS_ASSIGN,
+    ASSIGN_ADD,
+    ASSIGN_SUB
+  };
   SgExpression* stride_;
   bool is_forward_;
 
   static bool isVarModified(SgNode*, SgInitializedName*);
-  static bool isIncreasingExpression(SgExpression*);
+  static bool isIncreasingExpression(unsigned int);
   static bool getNormalizedCxxOperator
   (SgExpression*, unsigned int&, SgExpression*&, SgExpression*&);
   static bool getCxxTestOperatorLhs
   (SgExpression*, SgInitializedName*&);
+  static bool getNormalizedStep
+  (SgExpression*, unsigned int&, SgExpression*&);
 
   forLoopCanonicalizer(SgForStatement* for_stmt)
     : for_stmt_(for_stmt) {}
@@ -4808,43 +4823,129 @@ bool forLoopCanonicalizer::getCxxTestOperatorLhs
   return true;
 }
 
-bool forLoopCanonicalizer::isIncreasingExpression(SgExpression* expr)
+bool forLoopCanonicalizer::getNormalizedStep
+(SgExpression* expr, unsigned int& op, SgExpression*& rhs)
 {
-  // return true if the expression is an increasing one
-
   // assume expression is a canonical operation
 
   // only support the following forms:
-  // pre/post increment
-  // name BinopAssign rhs
-  // name Equal rhs
+  // ++fu and fu++
+  // fu += bar
+  // fu = fu + bar
 
-  bool is_increasing = true;
+#define CONFIG_LOCAL_DEBUG
+
+  if (SageInterface::is_Cxx_language() == true)
+  {
+    SgFunctionCallExp* const call_expr = isSgFunctionCallExp(expr);
+    if (call_expr != NULL)
+    {
+      SgName name = call_expr->getAssociatedFunctionDeclaration()->get_name();
+
+    if (name == "operator--")
+    {
+      rhs = NULL;
+      op = MINUS_MINUS;
+      return true;
+    }
+    else if (name == "operator++")
+    {
+      rhs = NULL;
+      op = PLUS_PLUS;
+      return true;
+    }
+    else if (name == "operator+=")
+    {
+      printf("TODO\n");
+      return true;
+    }
+    else if (name == "operator-=")
+    {
+      printf("TODO\n");
+      return true;
+    }
+    else if (name == "operator=")
+    {
+      printf("TODO\n");
+      return true;
+    }
+
+    // error reached
+#ifdef CONFIG_LOCAL_DEBUG
+    printf("invalid cxx operator: %s\n", name.str());
+#endif
+    return false;
+
+    } // cxx call case
+  } // cxx case
+
+  // non cxx operator case
 
   if (isSgAssignOp(expr))
   {
     expr = isSgAssignOp(expr)->get_rhs_operand();
-    if (isSgAddOp(expr)) is_increasing = true;
-    else if (isSgMinusOp(expr)) is_increasing = false;
+
+    if (isSgAddOp(expr) != NULL)
+    {
+      rhs = isSgAddOp(expr)->get_rhs_operand();
+      op = ASSIGN_ADD;
+      return true;
+    }
+    else if (isSgSubtractOp(expr) != NULL)
+    {
+      rhs = isSgSubtractOp(expr)->get_rhs_operand();
+      op = ASSIGN_SUB;
+      return true;
+    }
   }
   else if (isSgBinaryOp(expr))
   {
     SgBinaryOp* const binop = isSgBinaryOp(expr);
+    rhs = binop->get_rhs_operand();
     if (binop->variantT() == V_SgPlusAssignOp)
-      is_increasing = true;
+    {
+      op = PLUS_ASSIGN;
+      return true;
+    }
     else if (binop->variantT() == V_SgMinusAssignOp)
-      is_increasing = false;
+    {
+      op = MINUS_ASSIGN;
+      return true;
+    }
   }
   else if (isSgUnaryOp(expr))
   {
     SgUnaryOp* const unop = isSgUnaryOp(expr);
+    rhs = NULL;
     if (unop->variantT() == V_SgPlusPlusOp)
-      is_increasing = true;
+    {
+      op = PLUS_PLUS;
+      return true;
+    }
     else if (unop->variantT() == V_SgMinusMinusOp)
-      is_increasing = false;
+    {
+      op = MINUS_MINUS;
+      return true;
+    }
   }
 
-  return is_increasing;
+  // error reached
+#ifdef CONFIG_LOCAL_DEBUG
+  printf("invalid assignment: %s\n", expr->class_name().c_str());
+#endif
+  return false;
+
+#undef CONFIG_LOCAL_DEBUG
+}
+
+bool forLoopCanonicalizer::isIncreasingExpression(unsigned int op)
+{
+  // return true if the expression is an increasing one
+
+  if (op == PLUS_PLUS) return true;
+  else if (op == PLUS_ASSIGN) return true;
+  else if (op == ASSIGN_ADD) return true;
+  return false;
 }
 
 bool forLoopCanonicalizer::normalizeCxxOperators()
@@ -4917,19 +5018,30 @@ bool forLoopCanonicalizer::normalizeCxxOperators()
     return false;
   }
 
-  // is this a forward iteration
-  is_forward_ = isIncreasingExpression(incr_expr);
-
-  // get the stride expression
-  stride_ = SageBuilder::buildLongIntVal(1);
-  if (isSgBinaryOp(incr_expr))
-    stride_ = isSgBinaryOp(incr_expr)->get_rhs_operand();
-  else if (isSgUnaryOp(incr_expr) == NULL)
+  unsigned int step_op;
+  SgExpression* rhs;
+  if (getNormalizedStep(incr_expr, step_op, rhs) == false)
   {
 #ifdef CONFIG_LOCAL_DEBUG
-    printf("invalid step: %s\n", incr_expr->class_name().c_str());
+    printf("cannot normalize step\n");
 #endif
     return false;
+  }
+
+  // is this a forward iteration
+  is_forward_ = isIncreasingExpression(step_op);
+
+  // get the stride expression
+  if ((step_op != PLUS_PLUS) && (step_op != MINUS_MINUS))
+  {
+    // fu += stride;
+    // fu = fu + stride;
+    stride_ = rhs;
+  }
+  else
+  {
+    // ++fu;
+    stride_ = SageBuilder::buildLongIntVal(1);
   }
 
   return true;
