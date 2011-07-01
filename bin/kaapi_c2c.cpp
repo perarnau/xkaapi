@@ -4676,7 +4676,17 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
     return false;
   }
 
-  // unsigned long diff = hi_expr - lo_expr;
+  //
+  // move the loop init statement just before the loop
+  SgStatementPtrList& init_ptrlist = for_stmt_->get_init_stmt();
+  if (init_ptrlist.size() != 1) return false;
+  SgStatement* const init_stmt = init_ptrlist.front();
+  SageInterface::insertStatement(for_stmt_, init_stmt);
+  init_ptrlist.pop_back();
+
+  //
+  // generate the variable holding the difference
+  // unsigned long diff = hi_expr - lo_expr
 
   // scope
   SgScopeStatement* const diff_scope =
@@ -4703,61 +4713,29 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
   SgExpression* const diff_op =
     SageBuilder::buildSubtractOp(hi_expr, lo_expr);
 
-  // statements
+  // insert declaration statement
   SageInterface::prependStatement(diff_decl, diff_scope);
+
+  // insert for init statement
   SgExprStatement* const assign_stmt =
     SageBuilder::buildAssignStatement(diff_vref_expr, diff_op);
-  SageInterface::insertStatement(for_stmt_, assign_stmt);
+  for_stmt_->append_init_stmt(assign_stmt);
 
-#if 0 // not implemented
+  // insert diff > 0 expression. set as test expression.
+  SgExpression* const greater_expr = SageBuilder::buildGreaterThanOp
+    (diff_vref_expr, SageBuilder::buildUnsignedLongVal(0));
+  for_stmt_->set_test_expr(greater_expr);
 
-#define CONFIG_LOCAL_DEBUG
+  // move increment to end of body
+  SgStatement* const incr_stmt =
+    SageBuilder::buildExprStatement(incr_expr);
+  SgScopeStatement* const scope_stmt =
+    isSgScopeStatement(SageInterface::getLoopBody(for_stmt_));
+  SageInterface::appendStatement(incr_stmt, scope_stmt);
 
-  SgStatementPtrList& init_ptrlist = for_stmt_->get_init_stmt();
-  if (init_ptrlist.size() != 1) return false;
-
-  SgStatement* const init_stmt = init_ptrlist.front();
-  SgExpression* pos_expr = NULL;
-  SgExpression* var_expr = NULL;
-  SgExpression* lb_expr = NULL;
-  SgInitializedName* pos_name = NULL;
-
-  // C99 style inloop decl
-  if (isSgVariableDeclaration(init_stmt))
-  {
-  }
-  else if (isAssignmentStatement(init_stmt))
-  {
-  }
-  else
-  {
-    return false;
-  }
-
-  // already a strict integer
-  if (SageInterface::isStrictIntegerType(pos_name->get_type()) == true)
-  {
-#if CONFIG_LOCAL_DEBUG
-    printf("already a strict integer\n");
-#endif
-    return true;
-  }
-
-  if (SageInterface::isPointerType(pos_name->get_type()) == false)
-  {
-#if CONFIG_LOCAL_DEBUG
-    printf("neither strict integer nor a pointer\n");
-#endif
-    return false;
-  }
-
-  SgType* const typeptr = pos_name->get_typeptr();
-
-  // replace all continue statements by a goto
-
-  // create a temporary variable to old end - pos
-
-#endif // not implemented
+  // insert --diff as increment expression
+  for_stmt_->set_increment
+    (SageBuilder::buildMinusMinusOp(diff_vref_expr, SgUnaryOp::prefix));
 
   return true;
 }
