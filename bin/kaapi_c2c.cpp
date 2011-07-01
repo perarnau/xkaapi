@@ -4548,7 +4548,8 @@ private:
     LESS_STRICT = 0,
     LESS_EQ,
     GREATER_STRICT,
-    GREATER_EQ
+    GREATER_EQ,
+    NOT_EQ
   };
   unsigned int test_op_;
   SgExpression* test_lhs_;
@@ -4569,12 +4570,15 @@ private:
 
   static bool isVarModified(SgNode*, SgInitializedName*);
   static bool isIncreasingExpression(unsigned int);
+  static bool isInclusiveOperator(unsigned int);
   static bool getNormalizedCxxOperator
   (SgExpression*, unsigned int&, SgExpression*&, SgExpression*&);
   static bool getCxxTestOperatorLhs
   (SgExpression*, SgInitializedName*&);
   static bool getNormalizedStep
   (SgExpression*, unsigned int&, SgExpression*&);
+  static bool getNormalizedStep
+  (SgExpression*, unsigned int&, SgExpression*&, SgExpression*&);
 
   forLoopCanonicalizer(SgForStatement* for_stmt)
     : for_stmt_(for_stmt) {}
@@ -4614,6 +4618,14 @@ bool forLoopCanonicalizer::doStepLabelTransform()
 
   SageInterface::setLoopBody(for_stmt_, new_body);
 
+  return true;
+}
+
+bool forLoopCanonicalizer::isInclusiveOperator(unsigned int op)
+{
+  if (op == NOT_EQ) return false;
+  else if (op == LESS_STRICT) return false;
+  else if (op == GREATER_STRICT) return false;
   return true;
 }
 
@@ -4672,6 +4684,19 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
     hi_expr = test_lhs_;
     lo_expr = test_rhs_;
   }
+  else if (test_op_ == NOT_EQ)
+  {
+    if (is_forward_ == true)
+    {
+      hi_expr = test_rhs_;
+      lo_expr = test_lhs_;
+    }
+    else
+    {
+      hi_expr = test_lhs_;
+      lo_expr = test_rhs_;
+    }
+  }
   else
   {
 #ifdef CONFIG_LOCAL_DEBUG
@@ -4717,9 +4742,9 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
   SgVarRefExp* const diff_vref_expr =
     SageBuilder::buildOpaqueVarRefExp(diff_name, diff_scope);
 
-  // substraction. handle inclsuive operators.
+  // substraction. add 1 to inclsuive (non strict) operators.
   SgExpression* diff_op = SageBuilder::buildSubtractOp(hi_expr, lo_expr);
-  if (!((test_op_ == LESS_STRICT) || (test_op_ == GREATER_STRICT)))
+  if (isInclusiveOperator(test_op_))
   {
     diff_op = SageBuilder::buildAddOp
       (diff_op, SageBuilder::buildLongIntVal(1));
@@ -4773,6 +4798,7 @@ bool forLoopCanonicalizer::getNormalizedCxxOperator
   else if (name == "operator<=") op = LESS_EQ;
   else if (name == "operator>") op = GREATER_STRICT;
   else if (name == "operator>=") op = GREATER_EQ;
+  else if (name == "operator!=") op = NOT_EQ;
   else
   {
 #ifdef CONFIG_LOCAL_DEBUG
@@ -4824,7 +4850,7 @@ bool forLoopCanonicalizer::getCxxTestOperatorLhs
 }
 
 bool forLoopCanonicalizer::getNormalizedStep
-(SgExpression* expr, unsigned int& op, SgExpression*& rhs)
+(SgExpression* expr, unsigned int& op, SgExpression*& lhs, SgExpression*& rhs)
 {
   // assume expression is a canonical operation
 
@@ -4837,44 +4863,59 @@ bool forLoopCanonicalizer::getNormalizedStep
 
   if (SageInterface::is_Cxx_language() == true)
   {
+    printf("NAME: %p\n", isSgFunctionRefExp(expr));
+
+
     SgFunctionCallExp* const call_expr = isSgFunctionCallExp(expr);
     if (call_expr != NULL)
     {
       SgName name = call_expr->getAssociatedFunctionDeclaration()->get_name();
 
-    if (name == "operator--")
-    {
-      rhs = NULL;
-      op = MINUS_MINUS;
-      return true;
-    }
-    else if (name == "operator++")
-    {
-      rhs = NULL;
-      op = PLUS_PLUS;
-      return true;
-    }
-    else if (name == "operator+=")
-    {
-      printf("TODO\n");
-      return true;
-    }
-    else if (name == "operator-=")
-    {
-      printf("TODO\n");
-      return true;
-    }
-    else if (name == "operator=")
-    {
-      printf("TODO\n");
-      return true;
-    }
+      SgExpressionPtrList const expr_list =
+	call_expr->get_args()->get_expressions();
 
-    // error reached
+      printf("exprsize == %u\n", expr_list.size());
+
+      if (expr_list.size() == 0) return false;
+
+      lhs = expr_list[0];
+
+      if (name == "operator--")
+      {
+	rhs = NULL;
+	op = MINUS_MINUS;
+	return true;
+      }
+      else if (name == "operator++")
+      {
+	printf("FOUND operatoro++\n");
+	rhs = NULL;
+	op = PLUS_PLUS;
+	return true;
+      }
+      else if (name == "operator+=")
+      {
+	printf("TODO\n");
+	rhs = expr_list[1];
+	return true;
+      }
+      else if (name == "operator-=")
+      {
+	printf("TODO\n");
+	rhs = expr_list[1];
+	return true;
+      }
+      else if (name == "operator=")
+      {
+	printf("TODO\n");
+	return true;
+      }
+
+      // error reached
 #ifdef CONFIG_LOCAL_DEBUG
-    printf("invalid cxx operator: %s\n", name.str());
+      printf("invalid cxx operator: %s\n", name.str());
 #endif
-    return false;
+      return false;
 
     } // cxx call case
   } // cxx case
@@ -4887,12 +4928,14 @@ bool forLoopCanonicalizer::getNormalizedStep
 
     if (isSgAddOp(expr) != NULL)
     {
+      lhs = isSgAddOp(expr)->get_lhs_operand();
       rhs = isSgAddOp(expr)->get_rhs_operand();
       op = ASSIGN_ADD;
       return true;
     }
     else if (isSgSubtractOp(expr) != NULL)
     {
+      lhs = isSgSubtractOp(expr)->get_lhs_operand();
       rhs = isSgSubtractOp(expr)->get_rhs_operand();
       op = ASSIGN_SUB;
       return true;
@@ -4901,6 +4944,7 @@ bool forLoopCanonicalizer::getNormalizedStep
   else if (isSgBinaryOp(expr))
   {
     SgBinaryOp* const binop = isSgBinaryOp(expr);
+    lhs = binop->get_lhs_operand();
     rhs = binop->get_rhs_operand();
     if (binop->variantT() == V_SgPlusAssignOp)
     {
@@ -4916,6 +4960,7 @@ bool forLoopCanonicalizer::getNormalizedStep
   else if (isSgUnaryOp(expr))
   {
     SgUnaryOp* const unop = isSgUnaryOp(expr);
+    lhs = unop->get_operand();
     rhs = NULL;
     if (unop->variantT() == V_SgPlusPlusOp)
     {
@@ -4936,6 +4981,13 @@ bool forLoopCanonicalizer::getNormalizedStep
   return false;
 
 #undef CONFIG_LOCAL_DEBUG
+}
+
+bool forLoopCanonicalizer::getNormalizedStep
+(SgExpression* expr, unsigned int& op, SgExpression*& rhs)
+{
+  SgExpression* unused_lhs;
+  return getNormalizedStep(expr, op, unused_lhs, rhs);
 }
 
 bool forLoopCanonicalizer::isIncreasingExpression(unsigned int op)
@@ -4984,6 +5036,7 @@ bool forLoopCanonicalizer::normalizeCxxOperators()
     else if (isSgLessOrEqualOp(binary_op)) test_op_ = LESS_EQ;
     else if (isSgGreaterThanOp(binary_op)) test_op_ = GREATER_STRICT;
     else if (isSgGreaterOrEqualOp(binary_op)) test_op_ = GREATER_EQ;
+    else if (isSgNotEqualOp(binary_op)) test_op_ = NOT_EQ;
     else
     {
 #ifdef CONFIG_LOCAL_DEBUG
@@ -5055,16 +5108,16 @@ bool forLoopCanonicalizer::isVarModified
   // return true if the var identified by
   // name is modified by the subtree under node
 
-  SgExpression* operand_expr;
+  unsigned int op;
+  SgExpression* lhs;
+  SgExpression* rhs;
 
-  if (isSgBinaryOp(node))
-    operand_expr = isSgBinaryOp(node)->get_lhs_operand();
-  else if (isSgUnaryOp(node))
-    operand_expr = isSgUnaryOp(node)->get_operand();
-  else
+  // assume isSgExpression(node)
+
+  if (getNormalizedStep(isSgExpression(node), op, lhs, rhs) == false)
     return false;
 
-  SgVarRefExp* const vref_expr = isSgVarRefExp(operand_expr);
+  SgVarRefExp* const vref_expr = isSgVarRefExp(lhs);
   if (vref_expr == NULL) return false;
   if (vref_expr->get_symbol() == NULL) return false;
   if (vref_expr->get_symbol()->get_declaration() == NULL) return false;
