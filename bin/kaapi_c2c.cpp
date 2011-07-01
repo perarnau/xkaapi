@@ -4679,10 +4679,13 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
   //
   // move the loop init statement just before the loop
   SgStatementPtrList& init_ptrlist = for_stmt_->get_init_stmt();
-  if (init_ptrlist.size() != 1) return false;
-  SgStatement* const init_stmt = init_ptrlist.front();
-  SageInterface::insertStatement(for_stmt_, init_stmt);
-  init_ptrlist.pop_back();
+  if (init_ptrlist.size() >= 2) return false;
+  if (init_ptrlist.size() == 1)
+  {
+    SgStatement* const init_stmt = init_ptrlist.front();
+    SageInterface::insertStatement(for_stmt_, init_stmt);
+    init_ptrlist.pop_back();
+  }
 
   //
   // generate the variable holding the difference
