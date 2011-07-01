@@ -4611,6 +4611,11 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
   if (incr_expr == NULL) return false;
   const bool is_increasing = isIncreasingExpression(incr_expr);
 
+  // get the stride expression
+  SgExpression* stride_expr = SageBuilder::buildLongIntVal(1);
+  if (isSgBinaryOp(incr_expr))
+    stride_expr = isSgBinaryOp(incr_expr)->get_rhs_operand();
+
   // for (; i < j; ++i) -> count = j - i;
   // for (; i > j; --i) -> count = i - j;
   // in both case:
@@ -4689,7 +4694,8 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
 
   //
   // generate the variable holding the difference
-  // unsigned long diff = hi_expr - lo_expr
+  // long diff = hi_expr - lo_expr;
+  // signed long type is used to avoid underflow
 
   // scope
   SgScopeStatement* const diff_scope =
@@ -4706,7 +4712,7 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
   SgName diff_name = "__kaapi_diff_";
   diff_name << ++SageInterface::gensym_counter;
 
-  SgType* const diff_type = SageBuilder::buildUnsignedLongType();
+  SgType* const diff_type = SageBuilder::buildLongType();
   SgVariableDeclaration* const diff_decl =
     SageBuilder::buildVariableDeclaration(diff_name, diff_type, 0, diff_scope);
   SgVarRefExp* const diff_vref_expr =
@@ -4726,7 +4732,7 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
 
   // insert diff > 0 expression. set as test expression.
   SgExpression* const greater_expr = SageBuilder::buildGreaterThanOp
-    (diff_vref_expr, SageBuilder::buildUnsignedLongVal(0));
+    (diff_vref_expr, SageBuilder::buildLongIntVal(0));
   for_stmt_->set_test_expr(greater_expr);
 
   // move increment to end of body
@@ -4736,11 +4742,13 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
     isSgScopeStatement(SageInterface::getLoopBody(for_stmt_));
   SageInterface::appendStatement(incr_stmt, scope_stmt);
 
-  // insert --diff as increment expression
+  // insert diff -= stride as increment expression
   for_stmt_->set_increment
-    (SageBuilder::buildMinusMinusOp(diff_vref_expr, SgUnaryOp::prefix));
+    (SageBuilder::buildMinusAssignOp(diff_vref_expr, stride_expr));
 
   return true;
+
+#undef CONFIG_LOCAL_DEBUG
 }
 
 bool forLoopCanonicalizer::isVarModified
@@ -4892,7 +4900,7 @@ SgInitializedName* forLoopCanonicalizer::findIteratorName(bool)
 
 bool forLoopCanonicalizer::doMultipleStepTransform()
 {
-#define CONFIG_LOCAL_DEBUG 1
+#define CONFIG_LOCAL_DEBUG 0
 
   // if the increment part is made of multiple statements,
   // detect the one we should keep in the canonical form
