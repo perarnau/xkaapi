@@ -4577,6 +4577,13 @@ static inline bool isGreaterBinaryOp(SgExpression* expr)
   return isSgGreaterOrEqualOp(op) || isSgGreaterThanOp(op);
 }
 
+static inline SgExpression* isSgValueOrVarRefExp(SgExpression* exp)
+{
+  if ((isSgVarRefExp(exp) == NULL) && (isSgValueExp(exp) == NULL))
+    return NULL;
+  return exp;
+}
+
 bool forLoopCanonicalizer::doStrictIntegerTransform()
 {
   // assume doMultipleStepTransform
@@ -4617,8 +4624,8 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
   SgBinaryOp* const binary_op = isSgBinaryOp(test_expr);
   if (binary_op == NULL) return false;
 
-  SgVarRefExp* hi_expr = NULL;
-  SgVarRefExp* lo_expr = NULL;
+  SgExpression* hi_expr = NULL;
+  SgExpression* lo_expr = NULL;
 
   if (isLessBinaryOp(test_expr))
   {
@@ -4631,8 +4638,8 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
       return false;
     }
 
-    hi_expr = isSgVarRefExp(binary_op->get_rhs_operand());
-    lo_expr = isSgVarRefExp(binary_op->get_lhs_operand());
+    hi_expr = isSgValueOrVarRefExp(binary_op->get_rhs_operand());
+    lo_expr = isSgValueOrVarRefExp(binary_op->get_lhs_operand());
   }
   else if (isGreaterBinaryOp(test_expr))
   {
@@ -4645,8 +4652,8 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
       return false;
     }
 
-    hi_expr = isSgVarRefExp(binary_op->get_lhs_operand());
-    lo_expr = isSgVarRefExp(binary_op->get_rhs_operand());
+    hi_expr = isSgValueOrVarRefExp(binary_op->get_lhs_operand());
+    lo_expr = isSgValueOrVarRefExp(binary_op->get_rhs_operand());
   }
   else
   {
@@ -4659,6 +4666,11 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
   if ((hi_expr == NULL) || (lo_expr == NULL))
   {
 #if CONFIG_LOCAL_DEBUG
+    SgNode const* lhs_node = isSgNode(binary_op->get_lhs_operand());
+    SgNode const* rhs_node = isSgNode(binary_op->get_rhs_operand());
+    printf("lhs: %s, rhs: %s\n",
+	   lhs_node->class_name().c_str(),
+	   rhs_node->class_name().c_str());
     printf("invalid operand\n");
 #endif
     return false;
