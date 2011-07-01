@@ -2235,6 +2235,7 @@ public:
     if (fc)
     {
       SgStatement* exprstatement = SageInterface::getEnclosingStatement( fc );
+      if (exprstatement == NULL) return ;
 
 #if CONFIG_ENABLE_DEBUG
       Sg_File_Info* fileInfo = node->get_file_info();
@@ -2421,6 +2422,8 @@ public:
 
     SgStatement* const call_stmt =
       SageInterface::getEnclosingStatement(call_expr);
+    if (call_stmt == NULL) return ;
+
     if (call_stmt->getAttribute("kaapinotask") != 0) return ;
     if (call_stmt->getAttribute("kaapiwrappercall") != 0) return ;
 
