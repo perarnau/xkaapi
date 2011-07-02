@@ -203,15 +203,16 @@ int kaapi_mt_init(void)
   kaapi_perf_global_init();
   /* kaapi_perf_thread_init(); */
 #endif
-
+    
   /* set the kprocessor AFTER topology !!! */
   kaapi_assert_m( 0 == kaapi_setconcurrency(), "kaapi_setconcurrency" );
-  
+
   /* destroy the procinfo list, thread args no longer valid */
   kaapi_procinfo_list_free(kaapi_default_param.kproc_list);
   free(kaapi_default_param.kproc_list);
   kaapi_default_param.kproc_list = 0;
-  
+
+
 /*** TODO BEG: this code should but outside machine specific init*/
   /* push dummy task in exec mode */
   thread = kaapi_self_thread_context();
@@ -301,6 +302,11 @@ int kaapi_mt_finalize(void)
   if (iscalled !=0) return EALREADY;
   iscalled = 1;
 
+  /* if thread suspended, then resume them
+  */
+  if (kaapi_suspendflag)
+    kaapi_mt_resume_threads();
+  
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
   kaapi_perf_thread_stop(kaapi_all_kprocessors[0]);

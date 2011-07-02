@@ -73,6 +73,8 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
 #if defined(KAAPI_USE_NETWORK)
     kaapi_network_poll();
 #endif
+    if (kaapi_suspendflag)
+      kaapi_mt_suspend_self(kproc);
     
     /* terminaison ? */
     if (kaapi_isterminated())

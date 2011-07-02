@@ -448,10 +448,11 @@ static inline void kaapi_mem_barrier()
    In case of normal terminaison, all internal objects are (I hope so !) deleted.
    The abort function is used in order to try to flush most of the internal buffer.
    kaapi_init should be called before any other kaapi function.
+   \param flag [IN] if !=0 then start execution in parallel, else only the main thread is started
    \retval 0 in case of sucsess
    \retval EALREADY if already called
 */
-extern int kaapi_init(int* argc, char*** argv);
+extern int kaapi_init(int flag, int* argc, char*** argv);
 
 /* Kaapi finalization. 
    After call to this functions all other kaapi function calls may not success.
@@ -466,8 +467,10 @@ extern int kaapi_finalize(void);
 extern void kaapi_begin_parallel(void);
 
 /** Declare the end of a parallel region
+    \param flag == 0 then an implicit sync is inserted before existing the region.
+    \param flag == 1 then implicit sync is not inserted.
 */
-extern void kaapi_end_parallel(void);
+extern void kaapi_end_parallel(int flag);
 
 /* Get the current processor kid. 
    \retval the current processor id

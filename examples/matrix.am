@@ -16,7 +16,10 @@ MATPROG_PRGS+=matprod_bloc_kaapi++ matprod_rowcol_kaapi++\
   matcholesky_bloc_kaapi++\
   matprod_bloc_mapping_kaapi++
 else
-MATPROG_PRGS+=no-cblas
+##TG: bug on my mac: try to generate no-cblas.c:
+#make[3]: *** No rule to make target `no-cblas.c', needed by `install-data-hook-examples'.  Stop.
+#
+##MATPROG_PRGS+=no-cblas
 endif
 endif
   

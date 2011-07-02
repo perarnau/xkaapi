@@ -56,6 +56,10 @@
 #include <errno.h>
 
 
+/* == 0 if lib is not initialized
+*/
+static kaapi_atomic_t kaapi_count_init = {0};
+
 /*
 */
 kaapi_rtparam_t kaapi_default_param = {
@@ -260,11 +264,10 @@ void kaapi_init_basicformat(void)
 
 /**
 */
-int kaapi_init(int* argc, char*** argv)
+int kaapi_init(int flag, int* argc, char*** argv)
 {
-  static int iscalled = 0;
-  if (iscalled !=0) return EALREADY;
-  iscalled = 1;
+  if (KAAPI_ATOMIC_INCR(&kaapi_count_init) !=1) 
+    return EALREADY;
 
   kaapi_init_basicformat();
   
@@ -277,6 +280,9 @@ int kaapi_init(int* argc, char*** argv)
 
   kaapi_memory_init();
   int err = kaapi_mt_init();
+
+  if (flag)
+    kaapi_begin_parallel();
   return err;
 }
 
@@ -285,6 +291,10 @@ int kaapi_init(int* argc, char*** argv)
 */
 int kaapi_finalize(void)
 {
+  kaapi_sched_sync();
+  if (KAAPI_ATOMIC_DECR(&kaapi_count_init) !=0) 
+    return EAGAIN;
+
   kaapi_memory_destroy();
 
   kaapi_mt_finalize();
@@ -297,28 +307,34 @@ int kaapi_finalize(void)
 }
 
 
+/* Counter of enclosed parallel/begin calls.
+*/
+static kaapi_atomic_t kaapi_parallel_stack = {0};
+
 /** begin parallel & and parallel
     - it should not have any concurrency on the first increment
     because only the main thread is running before parallel computation
     - after that serveral threads may declare parallel region that
     will implies concurrency
 */
-static kaapi_atomic_t stack_parallel = {0};
 void kaapi_begin_parallel(void)
 {
-  if (KAAPI_ATOMIC_INCR(&stack_parallel) == 1)
-    kaapi_init(0,0);
+  if (KAAPI_ATOMIC_INCR(&kaapi_parallel_stack) == 1)
+  {
+    kaapi_mt_resume_threads();
+  }
 }
 
 
 /**
 */
-void kaapi_end_parallel(void)
+void kaapi_end_parallel(int flag)
 {
-  if (KAAPI_ATOMIC_DECR(&stack_parallel) == 0)
+  if (!flag) kaapi_sched_sync();
+  if (KAAPI_ATOMIC_DECR(&kaapi_parallel_stack) == 0)
   {
-    kaapi_sched_sync();
-    kaapi_finalize();
+    kaapi_mt_suspend_threads();
   }
 }
+
 

@@ -650,11 +650,13 @@ typedef struct kaapi_processor_t {
   kaapi_selectvictim_fnc_t fnc_select;                    /* function to select a victim */
   void*                    fnc_selecarg[4];               /* arguments for select victim function, 0 at initialization */
 
+  pthread_mutex_t          suspend_lock;                  /* lock used to suspend / resume the threads */
+  
   void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */
   
   /* hierachical information of other kprocessor */
   int                      cpuid;                         /* os index of the bounded physical cpu */
-  int                      numa_nodeid;                     /* os index of the bounded physical memory ressource. See  kaapi_memory_id_t */
+  int                      numa_nodeid;                   /* os index of the bounded physical memory ressource. See  kaapi_memory_id_t */
   kaapi_cpuhierarchy_t     hlevel;                        /* hierarchy */
 
   /* performance register */
