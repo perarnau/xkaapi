@@ -4810,10 +4810,20 @@ bool forLoopCanonicalizer::getNormalizedCxxOperator
   SgExpressionPtrList const expr_list =
     call_expr->get_args()->get_expressions();
 
-  if (expr_list.size() != 2) return false;
-
-  lhs = expr_list[0];
-  rhs = expr_list[1];
+  SgDotExp* const dot_expr = isSgDotExp(call_expr->get_function());
+  if (dot_expr != NULL)
+  {
+    // object instance the lhs
+    lhs = dot_expr->get_lhs_operand();
+    if (expr_list.size() != 1) return false;
+    rhs = expr_list[0];
+  }
+  else // not a method
+  {
+    if (expr_list.size() != 2) return false;
+    lhs = expr_list[0];
+    rhs = expr_list[1];
+  }
 
   return true;
 
@@ -4863,22 +4873,33 @@ bool forLoopCanonicalizer::getNormalizedStep
 
   if (SageInterface::is_Cxx_language() == true)
   {
-    printf("NAME: %p\n", isSgFunctionRefExp(expr));
-
-
     SgFunctionCallExp* const call_expr = isSgFunctionCallExp(expr);
     if (call_expr != NULL)
     {
-      SgName name = call_expr->getAssociatedFunctionDeclaration()->get_name();
+      // arg offset, for this pointer
+      unsigned int has_this = 0;
 
+      SgDotExp* const dot_expr = isSgDotExp(call_expr->get_function());
+      if (dot_expr != NULL)
+      {
+	// object instance the lhs
+	lhs = dot_expr->get_lhs_operand();
+	has_this = 1;
+      }
+
+      // get from argument list
       SgExpressionPtrList const expr_list =
 	call_expr->get_args()->get_expressions();
+      if (has_this == 0)
+      {
+	// must be at least one arg
+	if (expr_list.size() == 0) return false;
+	lhs = expr_list[0];
+      }
 
-      printf("exprsize == %u\n", expr_list.size());
+      if (lhs == NULL) return false;
 
-      if (expr_list.size() == 0) return false;
-
-      lhs = expr_list[0];
+      SgName name = call_expr->getAssociatedFunctionDeclaration()->get_name();
 
       if (name == "operator--")
       {
@@ -4888,21 +4909,20 @@ bool forLoopCanonicalizer::getNormalizedStep
       }
       else if (name == "operator++")
       {
-	printf("FOUND operatoro++\n");
 	rhs = NULL;
 	op = PLUS_PLUS;
 	return true;
       }
       else if (name == "operator+=")
       {
-	printf("TODO\n");
-	rhs = expr_list[1];
+	rhs = expr_list[1 - has_this];
+	op = PLUS_ASSIGN;
 	return true;
       }
       else if (name == "operator-=")
       {
-	printf("TODO\n");
-	rhs = expr_list[1];
+	op = MINUS_ASSIGN;
+	rhs = expr_list[1 - has_this];
 	return true;
       }
       else if (name == "operator=")
@@ -5171,18 +5191,10 @@ bool forLoopCanonicalizer::doMultipleStepTransform()
 	return false;
       }
 
-#ifdef CONFIG_LOCAL_DEBUG
-      printf("found_node: %s\n", node->class_name().c_str());
-#endif
-
       iter_node = node;
     }
     else
     {
-#ifdef CONFIG_LOCAL_DEBUG
-      printf("moving to the endOfBody\n");
-#endif
-
       SgStatement* const new_stmt =
 	SageBuilder::buildExprStatement(isSgExpression(node));
       SgScopeStatement* const scope_stmt =
@@ -5278,50 +5290,17 @@ bool forLoopCanonicalizer::findIteratorName(void)
 
 bool forLoopCanonicalizer::canonicalize(SgForStatement* for_stmt)
 {
-#define CONFIG_LOCAL_DEBUG
-
   forLoopCanonicalizer canon(for_stmt);
 
   // order matters. refer to method comments.
   if (canon.findIteratorName() == false) return false;
-
-#ifdef CONFIG_LOCAL_DEBUG
-  printf("findIteratorName() ok\n");
-#endif
-
   if (canon.doStepLabelTransform() == false) return false;
-
-#ifdef CONFIG_LOCAL_DEBUG
-  printf("doStepLabelTransform() ok\n");
-#endif
-
   if (canon.doMultipleStepTransform() == false) return false;
-
-#ifdef CONFIG_LOCAL_DEBUG
-  printf("doMultipleStepTransform() ok\n");
-#endif
-
   if (canon.normalizeCxxOperators() == false) return false;
-
-#ifdef CONFIG_LOCAL_DEBUG
-  printf("normalizeCxxOperators() ok\n");
-#endif
-
   if (canon.normalizeTest() == false) return false;
-
-#ifdef CONFIG_LOCAL_DEBUG
-  printf("normalizeTest() ok\n");
-#endif
-
   if (canon.doStrictIntegerTransform() == false) return false;
 
-#ifdef CONFIG_LOCAL_DEBUG
-  printf("doStrictIntegerTransform() ok\n");
-#endif
-
   return true;
-
-#undef CONFIG_LOCAL_DEBUG
 }
 
 
