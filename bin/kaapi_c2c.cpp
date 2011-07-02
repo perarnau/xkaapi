@@ -4893,13 +4893,21 @@ bool forLoopCanonicalizer::getNormalizedStep
       if (has_this == 0)
       {
 	// must be at least one arg
-	if (expr_list.size() == 0) return false;
+	if (expr_list.size() == 0)
+	{
+#ifdef CONFIG_LOCAL_DEBUG
+	  printf("invalid list size: %u\n", expr_list.size());
+#endif
+	  return false;
+	}
+
 	lhs = expr_list[0];
       }
 
       if (lhs == NULL) return false;
 
-      SgName name = call_expr->getAssociatedFunctionDeclaration()->get_name();
+      SgName name =
+	call_expr->getAssociatedFunctionDeclaration()->get_name();
 
       if (name == "operator--")
       {
@@ -4915,19 +4923,30 @@ bool forLoopCanonicalizer::getNormalizedStep
       }
       else if (name == "operator+=")
       {
+	if (expr_list.size() < (2 - has_this))
+	{
+#ifdef CONFIG_LOCAL_DEBUG
+	  printf("invalid list size: %u\n", expr_list.size());
+#endif
+	  return false;
+	}
+
 	rhs = expr_list[1 - has_this];
 	op = PLUS_ASSIGN;
 	return true;
       }
       else if (name == "operator-=")
       {
+	if (expr_list.size() < (2 - has_this))
+	{
+#ifdef CONFIG_LOCAL_DEBUG
+	  printf("invalid list size: %u\n", expr_list.size());
+#endif
+	  return false;
+	}
+
 	op = MINUS_ASSIGN;
 	rhs = expr_list[1 - has_this];
-	return true;
-      }
-      else if (name == "operator=")
-      {
-	printf("TODO\n");
 	return true;
       }
 
@@ -4944,6 +4963,8 @@ bool forLoopCanonicalizer::getNormalizedStep
 
   if (isSgAssignOp(expr))
   {
+    SgExpression* const saved_expr = expr;
+
     expr = isSgAssignOp(expr)->get_rhs_operand();
 
     if (isSgAddOp(expr) != NULL)
@@ -4960,6 +4981,46 @@ bool forLoopCanonicalizer::getNormalizedStep
       op = ASSIGN_SUB;
       return true;
     }
+    else if (isSgAssignInitializer(expr) != NULL)
+    {
+      // the only accepted forms are
+      // fu = fu.op(bar)
+      // fu = op(fu, bar)
+
+      lhs = isSgAssignOp(saved_expr)->get_lhs_operand();
+
+      // return the rhs
+      expr = isSgAssignInitializer(expr)->get_operand();
+      if (expr == NULL) return false;
+
+      SgFunctionCallExp* const call_expr = isSgFunctionCallExp(expr);
+      if (call_expr == NULL) return false;
+      SgName name =
+	call_expr->getAssociatedFunctionDeclaration()->get_name();
+      if (name == "operator-") op = ASSIGN_SUB;
+      else if (name == "operator+") op = ASSIGN_ADD;
+      else return false;
+
+      SgExpressionPtrList const expr_list =
+	call_expr->get_args()->get_expressions();
+
+      SgDotExp* const dot_expr = isSgDotExp(call_expr->get_function());
+      if (dot_expr != NULL) // fu = fu.op(bar);
+      {
+	if (SageInterface::is_Cxx_language() == false) return false;
+	if (expr_list.size() != 1) return false;
+	rhs = expr_list[0];
+	return true;
+      }
+      else // fu = op(fu, bar);
+      {
+	if (expr_list.size() != 2) return false;
+	rhs = expr_list[1];
+	return true;
+      }
+
+      return false;
+    } // isSgInitializer
   }
   else if (isSgBinaryOp(expr))
   {
