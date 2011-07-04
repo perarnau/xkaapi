@@ -71,11 +71,18 @@ KAAPI_REGISTER_TASKFORMAT( sum_format,
     0
 )
 
+void sum_body_wrapper( void* taskarg, kaapi_thread_t* thread )
+{
+  sum_body( taskarg, thread );
+}
+
 void sum_body( void* taskarg, kaapi_thread_t* thread )
 {
   sum_arg_t* arg0 = (sum_arg_t*)taskarg;
   *kaapi_data(int, &arg0->result) = *kaapi_data(int, &arg0->subresult1) + *kaapi_data(int, &arg0->subresult2);
 }
+
+
 
 typedef struct fibo_arg_t {
   int  n;
@@ -95,6 +102,11 @@ KAAPI_REGISTER_TASKFORMAT( fibo_format,
     0
 )
 
+void fibo_body_wrapper( void* taskarg, kaapi_thread_t* thread )
+{
+  fibo_body( taskarg, thread );
+}
+
 void fibo_body( void* taskarg, kaapi_thread_t* thread )
 {
   fibo_arg_t* arg0 = (fibo_arg_t*)taskarg;
@@ -111,21 +123,21 @@ void fibo_body( void* taskarg, kaapi_thread_t* thread )
     kaapi_task_t* task2;
 
     task1 = kaapi_thread_toptask(thread);
-    kaapi_task_initdfg( task1, fibo_body, kaapi_thread_pushdata(thread, sizeof(fibo_arg_t)) );
+    kaapi_task_initdfg( task1, fibo_body_wrapper, kaapi_thread_pushdata(thread, sizeof(fibo_arg_t)) );
     argf1 = kaapi_task_getargst( task1, fibo_arg_t );
     argf1->n = arg0->n - 1;
     kaapi_thread_allocateshareddata( &argf1->result, thread, sizeof(int) );
     kaapi_thread_pushtask(thread);
 
     task2 = kaapi_thread_toptask(thread);
-    kaapi_task_initdfg( task2, fibo_body, kaapi_thread_pushdata(thread, sizeof(fibo_arg_t)) );
+    kaapi_task_initdfg( task2, fibo_body_wrapper, kaapi_thread_pushdata(thread, sizeof(fibo_arg_t)) );
     argf2 = kaapi_task_getargst( task2, fibo_arg_t);
     argf2->n      = arg0->n - 2;
     kaapi_thread_allocateshareddata( &argf2->result, thread, sizeof(int) );
     kaapi_thread_pushtask(thread);
 
     task_sum = kaapi_thread_toptask(thread);
-    kaapi_task_initdfg( task_sum, sum_body, kaapi_thread_pushdata(thread, sizeof(sum_arg_t)) );
+    kaapi_task_initdfg( task_sum, sum_body_wrapper, kaapi_thread_pushdata(thread, sizeof(sum_arg_t)) );
     args = kaapi_task_getargst( task_sum, sum_arg_t);
     args->result.data     = arg0->result.data;
     args->subresult1.data = argf1->result.data;
@@ -183,7 +195,7 @@ int main(int argc, char** argv)
   else 
     niter = 1;
 
-  kaapi_init(&argc, &argv);
+  kaapi_init(1, &argc, &argv);
   thread = kaapi_self_thread();
   kaapi_thread_save_frame(thread, &frame);
   
@@ -216,7 +228,7 @@ int main(int argc, char** argv)
   kaapi_sched_sync( );
   
   printf("After sync: Fibo(%i)=%li\n", n, value_result);
-  printf("Time Fibo(%i): %f\n", n, t1-t0);
+  printf("Time Fibo(%i): %f\n", n, (t1-t0)/niter);
 
   kaapi_finalize();
   

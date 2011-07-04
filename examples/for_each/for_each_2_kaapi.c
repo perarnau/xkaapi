@@ -114,7 +114,7 @@ redo_steal:
   /* perform the actual steal. if the range
    changed size in between, redo the steal
    */
-  if (kaapi_workqueue_steal(&vw->cr, &i, &j, nreq * unit_size))
+  if (!kaapi_workqueue_steal(&vw->cr, &i, &j, nreq * unit_size))
     goto redo_steal;
   
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
@@ -229,7 +229,7 @@ int main(int ac, char** av)
   static double array[ITEM_COUNT];
   
   /* initialize the runtime */
-  kaapi_init(&ac, &av);
+  kaapi_init(1, &ac, &av);
   
   for (iter = 0; iter < 100; ++iter)
   {

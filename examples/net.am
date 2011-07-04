@@ -5,8 +5,11 @@
 ##  Copyright 2010 INRIA. All rights reserved.
 ##
 
+NET_PRGS=
 if KAAPI_TARGET_KANET
-NET_PRGS=ping_xx ping_mt_xx rdma1
+if KAAPI_API_KAAPIXX
+NET_PRGS+=ping_xx ping_mt_xx rdma1
+endif
 endif
 
 check_PROGRAMS+=$(NET_PRGS)

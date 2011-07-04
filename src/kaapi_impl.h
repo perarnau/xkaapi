@@ -170,6 +170,16 @@ extern struct kaapi_format_t* kaapi_all_format_bybody[256];
 */
 extern struct kaapi_format_t* kaapi_all_format_byfmtid[256];
 
+/* ========================================================================= */
+/** Flag to move all threads into suspend state
+*/
+extern volatile int kaapi_suspendflag;
+
+/* ========================================================================= */
+/** Counter of thread into the suspended state
+*/
+extern kaapi_atomic_t kaapi_suspendedthreads;
+
 
 /* ================== Library initialization/terminaison ======================= */
 /** Initialize the machine level runtime.
@@ -181,6 +191,24 @@ extern int kaapi_mt_init(void);
     Return 0 in case of success. Else an error code.
 */
 extern int kaapi_mt_finalize(void);
+
+/** Suspend all threads except the main threads.
+    Should be called by the main thread !
+*/
+extern void kaapi_mt_suspend_threads(void);
+
+/** Call by the threads to be put into suspended state
+*/
+extern void kaapi_mt_suspend_self( struct kaapi_processor_t* kproc );
+
+/** Resume all threads except the main threads.
+*/
+extern void kaapi_mt_resume_threads(void);
+
+/** initialize suspend/resume sub-functionnalities 
+*/
+extern void kaapi_mt_suspendresume_init(void);
+
 
 /** Initialize hw topo.
     Based on hwloc library.

@@ -6,7 +6,6 @@
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -44,36 +43,58 @@
 */
 #include "kaapi_impl.h"
 
-/**
+/*
 */
-int kaapi_setcontext( kaapi_processor_t* kproc, kaapi_thread_context_t* thread )
+volatile int kaapi_suspendflag;
+
+/*
+*/
+kaapi_atomic_t kaapi_suspendedthreads;
+
+
+/*
+*/
+static pthread_cond_t   wakeupcond_threads;
+static pthread_mutex_t  wakeupmutex_threads;
+
+void kaapi_mt_suspendresume_init(void)
 {
-  if (thread !=0)
-    thread->proc    = kproc;
-  kproc->thread     = thread;
-
-#if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
-  kaapi_current_thread_key = (kaapi_thread_t**)thread;
-#endif
-  return 0;
-
-#if 0  /* TODO: next version when also saving the stack context */
-  proc->flags        = ctxt->flags;
-  proc->dataspecific = ctxt->dataspecific;
-
-  if (ctxt->flags & KAAPI_CONTEXT_SAVE_KSTACK)
-  {
-    proc->kstack     = ctxt->kstack;
-  }
-
-  if (ctxt->flags & KAAPI_CONTEXT_SAVE_CSTACK)
-  {
-#if defined(KAAPI_USE_UCONTEXT)
-    setcontext( &proc->_ctxt );
-#elif defined(KAAPI_USE_SETJMP)
-    _longjmp( proc->_ctxt,  (int)(long)ctxt);
-#endif
-  }
-  return 0;
-#endif  /* TODO: next version when also saving the stack context */
+  kaapi_assert_debug( 0 == pthread_cond_init(&wakeupcond_threads, 0) );
+  kaapi_assert_debug( 0 == pthread_mutex_init(&wakeupmutex_threads, 0) );
 }
+
+
+void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
+{
+  pthread_mutex_lock(&wakeupmutex_threads);
+  KAAPI_ATOMIC_INCR( &kaapi_suspendedthreads );
+  pthread_cond_wait(&wakeupcond_threads, &wakeupmutex_threads);
+  pthread_mutex_unlock(&wakeupmutex_threads);
+}
+
+
+/* should always be called by the main thread only
+*/
+void kaapi_mt_suspend_threads(void)
+{
+  kaapi_writemem_barrier();
+  kaapi_suspendflag = 1;
+  while (KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) != (kaapi_count_kprocessors-1))
+  {
+    kaapi_slowdown_cpu();
+  }
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );
+}
+
+/*
+*/
+void kaapi_mt_resume_threads(void)
+{
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );
+  pthread_mutex_lock(&wakeupmutex_threads);
+  kaapi_suspendflag = 0;
+  KAAPI_ATOMIC_WRITE(&kaapi_suspendedthreads, 0);
+  pthread_cond_broadcast(&wakeupcond_threads);
+  pthread_mutex_unlock(&wakeupmutex_threads);  
+}
+

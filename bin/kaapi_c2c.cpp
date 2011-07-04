@@ -49,6 +49,7 @@
 #include "DefUseAnalysis_perFunction.h"
 #include <string>
 #include <iostream>
+#include <algorithm>
 #include <map>
 #include <list>
 #include <set>
@@ -57,6 +58,7 @@
 #include <ctype.h>
 #include <time.h>
 #include <stdexcept>
+
 /* TODO LIST
   OK : fait et un peu tester
   NOK: not OK
@@ -203,6 +205,13 @@ SgStatement* buildConvertLoop2Adaptative(
   SgFunctionDeclaration*& thiefentrypoint,
   SgFunctionDeclaration*& splitter,
   SgClassDeclaration*&    contexttype
+);
+
+/* return the structure containing variable in listvar 
+*/
+static SgClassDeclaration* buildOutlineArgStruct(
+  const std::set<SgVariableSymbol*>& listvar,
+  SgGlobal*                          scope
 );
 
 /* return a function from the loop statement
@@ -1210,7 +1219,7 @@ void DoKaapiGenerateInitializer(std::ostream& fout)
        << "__attribute__ ((constructor)) static void kaapi_abi_constructor(void)\n"
        << "{ \n"
        << "  if (KAAPI_ATOMIC_INCR(&kaapi_kacc_isinit) ==1) \n"
-       << "    kaapi_init(0,0);\n"
+       << "    kaapi_init(0, 0,0);\n" // first 0 == do not start threads
        << "}\n"
        << std::endl;
 
@@ -1980,6 +1989,7 @@ void Parser::DoKaapiPragmaParallelRegion( SgPragmaDeclaration* sgp )
 {
   std::string name;
   const char* save_rpos;
+  int flagnowait =0;
   
   SgBasicBlock* bbnode = isSgBasicBlock(sgp->get_parent());
   if (bbnode ==0)
@@ -2007,7 +2017,12 @@ void Parser::DoKaapiPragmaParallelRegion( SgPragmaDeclaration* sgp )
   else {
     rpos = save_rpos;
   }
-  
+  skip_ws();
+  save_rpos = rpos;
+  ParseIdentifier( name );
+  if (name == "nowait")
+    flagnowait = 1;
+
   SgNode* nextnode = 
           sgp->get_parent()-> get_traversalSuccessorByIndex( 
               sgp->get_parent()->get_childIndex( sgp ) + 1);
@@ -2037,7 +2052,7 @@ void Parser::DoKaapiPragmaParallelRegion( SgPragmaDeclaration* sgp )
     callfinishStmt = SageBuilder::buildFunctionCallStmt
     (    "kaapi_end_parallel", 
          SageBuilder::buildVoidType(), 
-         SageBuilder::buildExprListExp(),
+         SageBuilder::buildExprListExp( SageBuilder::buildIntVal(flagnowait) ),
          bbnode
     );
 
@@ -2087,6 +2102,7 @@ void Parser::DoKaapiPragmaInit( SgPragmaDeclaration* sgp, bool flag )
     (    "kaapi_init", 
          SageBuilder::buildVoidType(), 
          SageBuilder::buildExprListExp(
+           SageBuilder::buildIntVal (0),
            SageBuilder::buildIntVal (0),
            SageBuilder::buildIntVal (0)
          ),
@@ -3177,6 +3193,7 @@ int main(int argc, char **argv)
             SageBuilder::buildPointerType(SageBuilder::buildVoidType()), 
             SageBuilder::buildFunctionParameterList( 
               SageBuilder::buildFunctionParameterTypeList( 
+                SageBuilder::buildIntType(),
                 SageBuilder::buildPointerType (SageBuilder::buildIntType()),
                 SageBuilder::buildPointerType (SageBuilder::buildPointerType(
                           SageBuilder::buildPointerType(SageBuilder::buildCharType()))
@@ -3199,8 +3216,8 @@ int main(int argc, char **argv)
         SgFunctionDeclaration *decl_kaapi_beginparallel 
           = SageBuilder::buildNondefiningFunctionDeclaration(
                   name_beginparallel, 
-                  SageBuilder::buildVoidType(), SageBuilder::
-                  buildFunctionParameterList(),
+                  SageBuilder::buildVoidType(), 
+                  SageBuilder::buildFunctionParameterList(),
                   gscope
         );
         ((decl_kaapi_beginparallel->get_declarationModifier()).get_storageModifier()).setExtern();
@@ -3210,8 +3227,12 @@ int main(int argc, char **argv)
         SgFunctionDeclaration *decl_kaapi_endparallel 
           = SageBuilder::buildNondefiningFunctionDeclaration(
                   name_endparallel, 
-                  SageBuilder::buildVoidType(), SageBuilder::
-                  buildFunctionParameterList(),
+                  SageBuilder::buildVoidType(), 
+                  SageBuilder::buildFunctionParameterList(
+                    SageBuilder::buildFunctionParameterTypeList(
+                      SageBuilder::buildIntType()
+                    )
+                  ),
                   gscope
         );
         ((decl_kaapi_endparallel->get_declarationModifier()).get_storageModifier()).setExtern();
@@ -5365,6 +5386,17 @@ bool forLoopCanonicalizer::canonicalize(SgForStatement* for_stmt)
 }
 
 
+/* helper class to find two symbol with same name */
+class compare_symbol_name {
+public:
+  compare_symbol_name( const std::string& name )
+   : _name(name)
+  {}
+  bool operator()( const SgVariableSymbol* s )
+  { return s->get_name() == _name; }
+  const std::string& _name;
+};
+
 /** Transform a loop with independent iteration in an adaptive form
     The loop must have a cannonical form:
        for ( i = begin; i<end; ++i)
@@ -5476,25 +5508,31 @@ SgStatement* buildConvertLoop2Adaptative(
   
   SgGlobal* bigscope = SageInterface::getGlobalScope(loop);
 
-  static int cnt_sa = 0;
-  std::ostringstream context_name;
-  context_name << "__kaapi_splitter_arg_" << cnt_sa++;
-  contexttype =  buildClassDeclarationAndDefinition( 
-      context_name.str(),
-      bigscope
-  );
-
-
   /* build the free variable list of the forloop
   */
   std::set<SgVariableSymbol*> listvar;
+  std::set<SgVariableSymbol*>::iterator ivar_beg;
+  std::set<SgVariableSymbol*>::iterator ivar_end;
+
   buildFreeVariable(forloop, listvar);
+  
+  /* suppress any ivar or __kaapi_thread instance 
+  */
+  ivar_beg = std::find_if( listvar.begin(), listvar.end(), compare_symbol_name(ivar->get_name()) );
+  if (ivar_beg != listvar.end()) listvar.erase( ivar_beg );
+
+  ivar_beg = std::find_if( listvar.begin(), listvar.end(), compare_symbol_name("__kaapi_thread") );
+  if (ivar_beg != listvar.end()) listvar.erase( ivar_beg );
 
   /* Build the structure for the argument of most of the other function:
      The data structure contains
      - the workqueue to store range
      - all free parameters required to call the entrypoint for loop execution
      The structure store pointer to the actual parameters.
+  */
+  SgClassDeclaration* contexttype = buildOutlineArgStruct( listvar, bigscope );
+  
+  /* prepend workqueue at the begining of the structure
   */
   SgVariableDeclaration* memberDeclaration =
     SageBuilder::buildVariableDeclaration (
@@ -5504,31 +5542,9 @@ SgStatement* buildConvertLoop2Adaptative(
       contexttype->get_definition()
   );
   memberDeclaration->set_endOfConstruct(SOURCE_POSITION);
-  contexttype->get_definition()->append_member(memberDeclaration);
+  contexttype->get_definition()->prepend_member(memberDeclaration);
   
-  std::set<SgVariableSymbol*>::iterator ivar_beg = listvar.begin();
-  std::set<SgVariableSymbol*>::iterator ivar_end = listvar.end();
-  while (ivar_beg != ivar_end)
-  {
-    if ((*ivar_beg)->get_name() == ivar->get_name())
-    { /* to nothing */ }
-    else if ((*ivar_beg)->get_name() == "__kaapi_thread")
-    { /* to nothing */ }
-    else {
-      /* add p_<name> */
-      memberDeclaration =
-        SageBuilder::buildVariableDeclaration (
-          "p_" + (*ivar_beg)->get_name(),
-          SageBuilder::buildPointerType((*ivar_beg)->get_type()),
-          0, 
-          contexttype->get_definition()
-      );
-      memberDeclaration->set_endOfConstruct(SOURCE_POSITION);
-      contexttype->get_definition()->append_member(memberDeclaration);
-    }
-    ++ivar_beg;
-  }
-  contexttype->set_endOfConstruct(SOURCE_POSITION);
+
 
   /* append the type for the splitter juste before the enclosing function definition
   */
@@ -5963,6 +5979,47 @@ SgStatement* buildConvertLoop2Adaptative(
   return newbbcall;
 }
 
+/** Generate the structure environnement to outline statement
+*/
+static SgClassDeclaration* buildOutlineArgStruct(
+  const std::set<SgVariableSymbol*>& listvar,
+  SgGlobal*                          scope
+)
+{
+  static int cnt_sa = 0;
+  std::ostringstream context_name;
+  context_name << "__kaapi_task_arg_" << cnt_sa++;
+  SgClassDeclaration* contexttype =  buildClassDeclarationAndDefinition( 
+      context_name.str(),
+      scope
+  );
+
+  /* Build the structure for the argument of most of the other function:
+     The data structure contains
+     - all free parameters required to call the entrypoint for loop execution
+     The structure store pointer to the actual parameters.
+  */
+  std::set<SgVariableSymbol*>::iterator ivar_beg = listvar.begin();
+  std::set<SgVariableSymbol*>::iterator ivar_end = listvar.end();
+  while (ivar_beg != ivar_end)
+  {
+    /* add p_<name> */
+    SgVariableDeclaration* memberDeclaration =
+      SageBuilder::buildVariableDeclaration (
+        "p_" + (*ivar_beg)->get_name(),
+        SageBuilder::buildPointerType((*ivar_beg)->get_type()),
+        0, 
+        contexttype->get_definition()
+    );
+    memberDeclaration->set_endOfConstruct(SOURCE_POSITION);
+    contexttype->get_definition()->append_member(memberDeclaration);
+
+    ++ivar_beg;
+  }
+  contexttype->set_endOfConstruct(SOURCE_POSITION);
+
+  return contexttype;
+}
 
 /** Generate the function declaration for the loop entrypoint to execute
     loop iteration over a range.

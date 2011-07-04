@@ -931,7 +931,7 @@ static void initialize_stuff(int* ac, char*** av)
   srand(getpid() * time(0));
 
 #if CONFIG_PARALLEL
-  kaapi_init(ac, av);
+  kaapi_init(1, ac, av);
 #endif
 }
 
