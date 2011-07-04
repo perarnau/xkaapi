@@ -5678,22 +5678,31 @@ SgStatement* buildConvertLoop2Adaptative(
     );
 
   /* size wq */
+
+  SgExpression* low_expr = begin_iter;
+  SgExpression* hi_expr = end_iter;
+  if (hasIncrementalIterationSpace == false)
+  {
+    low_expr = end_iter;
+    hi_expr = begin_iter;
+  }
+
   SgExpression* expr_size = 0;
   if (isInclusiveUpperBound)
   {
     expr_size = SageBuilder::buildSubtractOp(
       SageBuilder::buildAddOp(
-        end_iter,
+        hi_expr,
         SageBuilder::buildLongIntVal(1)
       ),
-      begin_iter
+      low_expr
     );
   }
   else 
   {
     expr_size = SageBuilder::buildSubtractOp(
-      end_iter,
-      begin_iter
+      hi_expr,
+      low_expr
     );
   }
 
@@ -6148,13 +6157,29 @@ static void buildLoopEntrypointBody(
   
   /* the queue is already initilized by the callee */
 
-  /* */
+  /* generate
+     kaapi_workqueue_index_t __kaapi_range_beg =
+     kaapi_workqueue_range_begin( &__kaapi_context->__kaapi_work );
+   */
+  SgAssignInitializer* const lbeg_initializer =
+    SageBuilder::buildAssignInitializer
+    (
+     SageBuilder::buildFunctionCallExp
+     (    
+      "kaapi_workqueue_range_begin",
+      kaapi_workqueue_index_ROSE_type,
+      SageBuilder::buildExprListExp(work),
+      body
+     ),
+     0
+   );
   SgVariableDeclaration* local_beg = SageBuilder::buildVariableDeclaration (
       "__kaapi_range_beg",
       kaapi_workqueue_index_ROSE_type,
-      0, 
+      lbeg_initializer, 
       body
   );
+
   local_beg->set_endOfConstruct(SOURCE_POSITION);
   SageInterface::appendStatement( local_beg, body );
 
