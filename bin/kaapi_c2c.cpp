@@ -4764,22 +4764,19 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
     SageBuilder::buildOpaqueVarRefExp(count_name, count_scope);
 
   // substraction. add 1 to inclsuive (non strict) operators.
-  SgLongIntVal* const one_val = SageBuilder::buildLongIntVal(1);
   SgExpression* count_op = SageBuilder::buildSubtractOp(hi_expr, lo_expr);
   if (isInclusiveOperator(test_op_))
   {
-    count_op = SageBuilder::buildAddOp(count_op, one_val);
+    count_op = SageBuilder::buildAddOp
+      (count_op, SageBuilder::buildLongIntVal(1));
   }
-
-  // divide by increment.
-  SgExpression* const div_op = SageBuilder::buildDivideOp(count_op, stride_);
 
   // insert declaration statement
   SageInterface::prependStatement(count_decl, count_scope);
 
   // insert for init statement
   SgExprStatement* const assign_stmt =
-    SageBuilder::buildAssignStatement(count_vref_expr, div_op);
+    SageBuilder::buildAssignStatement(count_vref_expr, count_op);
   for_stmt_->append_init_stmt(assign_stmt);
 
   // insert count != 0 expression. delete previous test expression
@@ -4791,7 +4788,7 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
     delete test_stmt;
   }
 
-  SgExpression* const greater_expr = SageBuilder::buildNotEqualOp
+  SgExpression* const greater_expr = SageBuilder::buildGreaterThanOp
     (count_vref_expr, SageBuilder::buildLongIntVal(0));
   for_stmt_->set_test_expr(greater_expr);
 
@@ -4802,9 +4799,9 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
     isSgScopeStatement(SageInterface::getLoopBody(for_stmt_));
   SageInterface::appendStatement(incr_stmt, scope_stmt);
 
-  // insert count -= 1 as increment expression
+  // insert count -= stride as increment expression
   for_stmt_->set_increment
-    (SageBuilder::buildMinusAssignOp(count_vref_expr, one_val));
+    (SageBuilder::buildMinusAssignOp(count_vref_expr, stride_));
 
   return true;
 
