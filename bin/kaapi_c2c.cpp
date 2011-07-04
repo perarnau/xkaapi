@@ -1215,17 +1215,14 @@ static inline void KaapiGenerateMode
 
 void DoKaapiGenerateInitializer(std::ostream& fout)
 {
-  fout << " static kaapi_atomic_t kaapi_kacc_isinit = {0};\n"
-       << "__attribute__ ((constructor)) static void kaapi_abi_constructor(void)\n"
+  fout << "__attribute__ ((constructor)) static void kaapi_abi_constructor(void)\n"
        << "{ \n"
-       << "  if (KAAPI_ATOMIC_INCR(&kaapi_kacc_isinit) ==1) \n"
        << "    kaapi_init(0, 0,0);\n" // first 0 == do not start threads
        << "}\n"
        << std::endl;
 
   fout << "__attribute__ ((destructor)) static void kaapi_abi_destructor(void)\n"
        << "{\n"
-       << "  if (KAAPI_ATOMIC_DECR(&kaapi_kacc_isinit) ==0) \n"
        << "    kaapi_finalize();\n"
        << "}\n"
        << std::endl;
