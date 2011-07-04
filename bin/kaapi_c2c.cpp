@@ -3430,6 +3430,21 @@ int main(int argc, char **argv)
           ((decl->get_declarationModifier()).get_storageModifier()).setExtern();
         }
 
+        {/* declare kaapi_reply_push_adaptive_task function */
+          static SgName name("kaapi_reply_push_adaptive_task");
+          SgFunctionDeclaration *decl = SageBuilder::buildNondefiningFunctionDeclaration(
+              name, 
+              SageBuilder::buildVoidType(),
+              SageBuilder::buildFunctionParameterList( 
+                  SageBuilder::buildFunctionParameterTypeList( 
+                    SageBuilder::buildPointerType(kaapi_stealcontext_ROSE_type),
+                    SageBuilder::buildPointerType(kaapi_request_ROSE_type)
+                  )
+              ),
+              gscope);
+          ((decl->get_declarationModifier()).get_storageModifier()).setStatic();
+        }
+
         /* Process all #pragma */
         Rose_STL_Container<SgNode*> pragmaDeclarationList = NodeQuery::querySubTree (project,V_SgPragmaDeclaration);
         Rose_STL_Container<SgNode*>::iterator i;
@@ -5464,8 +5479,6 @@ SgStatement* buildConvertLoop2Adaptative(
     return 0;
   }
 
-  return 0;
-
 #if 0 /* normalization will rename iteration variable and change test to have <= or >= 
          not required
       */
@@ -6638,6 +6651,24 @@ static SgFunctionDeclaration* buildSplitter(
     }
     ++ivar_beg;
   }
+
+  // commit the reply response
+  // kaapi_reply_push_adaptive_task(sc, req);
+  SgExprStatement* const call_stmt =
+  SageBuilder::buildFunctionCallStmt
+  (
+   "kaapi_reply_push_adaptive_task",
+   SageBuilder::buildVoidType(),
+   SageBuilder::buildExprListExp
+   (
+    SageBuilder::buildVarRefExp
+    (func->get_definition()->lookup_variable_symbol("__kaapi_sc")),
+    SageBuilder::buildVarRefExp
+    (func->get_definition()->lookup_variable_symbol("__kaapi_req"))
+   ),
+   scope
+  );
+  SageInterface::appendStatement(call_stmt, loop_body);
 
   /* create and insert the for loop */
   SgForStatement* replyfor = SageBuilder::buildForStatement(
