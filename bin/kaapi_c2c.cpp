@@ -5465,8 +5465,6 @@ SgStatement* buildConvertLoop2Adaptative(
     return 0;
   }
 
-  return 0;
-
 #if 0 /* normalization will rename iteration variable and change test to have <= or >= 
          not required
       */
@@ -6557,6 +6555,7 @@ static SgFunctionDeclaration* buildSplitter(
       "__kaapi_thief_context",
       SageBuilder::buildPointerType(contexttype->get_type()),
       SageBuilder::buildAssignInitializer(
+        SageBuilder::buildCastExp(
         SageBuilder::buildFunctionCallExp(    
           "kaapi_reply_init_adaptive_task",
           SageBuilder::buildPointerType(contexttype->get_type()),
@@ -6570,7 +6569,8 @@ static SgFunctionDeclaration* buildSplitter(
             SageBuilder::buildIntVal(0)
           ),
           scope
-        )
+        ),
+	SageBuilder::buildPointerType(contexttype->get_type()))
       ),
       loop_body
   );
