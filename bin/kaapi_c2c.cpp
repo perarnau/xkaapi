@@ -4739,7 +4739,7 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
 
   //
   // generate the variable holding the difference
-  // long diff = hi_expr - lo_expr;
+  // long diff = (hi_expr - lo_expr) / incr;
   // signed long type is used to avoid underflow
 
   // scope
@@ -4764,19 +4764,22 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
     SageBuilder::buildOpaqueVarRefExp(diff_name, diff_scope);
 
   // substraction. add 1 to inclsuive (non strict) operators.
+  SgLongIntVal* const one_val = SageBuilder::buildLongIntVal(1);
   SgExpression* diff_op = SageBuilder::buildSubtractOp(hi_expr, lo_expr);
   if (isInclusiveOperator(test_op_))
   {
-    diff_op = SageBuilder::buildAddOp
-      (diff_op, SageBuilder::buildLongIntVal(1));
+    diff_op = SageBuilder::buildAddOp(diff_op, one_val);
   }
+
+  // divide by increment.
+  SgExpression* const div_op = SageBuilder::buildDivideOp(diff_op, stride_);
 
   // insert declaration statement
   SageInterface::prependStatement(diff_decl, diff_scope);
 
   // insert for init statement
   SgExprStatement* const assign_stmt =
-    SageBuilder::buildAssignStatement(diff_vref_expr, diff_op);
+    SageBuilder::buildAssignStatement(diff_vref_expr, div_op);
   for_stmt_->append_init_stmt(assign_stmt);
 
   // insert diff > 0 expression. set as test expression.
@@ -4789,7 +4792,7 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
     delete test_stmt;
   }
 
-  SgExpression* const greater_expr = SageBuilder::buildGreaterThanOp
+  SgExpression* const greater_expr = SageBuilder::buildNotEqualOp
     (diff_vref_expr, SageBuilder::buildLongIntVal(0));
   for_stmt_->set_test_expr(greater_expr);
 
@@ -4800,9 +4803,9 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
     isSgScopeStatement(SageInterface::getLoopBody(for_stmt_));
   SageInterface::appendStatement(incr_stmt, scope_stmt);
 
-  // insert diff -= stride as increment expression
+  // insert diff -= 1 as increment expression
   for_stmt_->set_increment
-    (SageBuilder::buildMinusAssignOp(diff_vref_expr, stride_));
+    (SageBuilder::buildMinusAssignOp(diff_vref_expr, one_val));
 
   return true;
 
@@ -5464,6 +5467,8 @@ SgStatement* buildConvertLoop2Adaptative(
     std::cerr << "****[kaapi_c2c] canonicalize loop failed" << std::endl;
     return 0;
   }
+
+  return 0;
 
 #if 0 /* normalization will rename iteration variable and change test to have <= or >= 
          not required
