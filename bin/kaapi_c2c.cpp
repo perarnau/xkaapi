@@ -5603,7 +5603,7 @@ SgStatement* buildConvertLoop2Adaptative(
   SageInterface::prependStatement(
     SageBuilder::buildNondefiningFunctionDeclaration
     ( entrypoint, forloop->get_scope() ),
-    SageInterface::getGlobalScope(isSgNode(forloop))
+    bigscope
   );
 
   /* Generate the calle new basic block
