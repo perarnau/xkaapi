@@ -5600,9 +5600,10 @@ SgStatement* buildConvertLoop2Adaptative(
   );
 
   /* fwd declaration of the entry point */
-  SageInterface::appendStatement(
-    SageBuilder::buildNondefiningFunctionDeclaration( entrypoint, forloop->get_scope() ),
-    newbbcall
+  SageInterface::prependStatement(
+    SageBuilder::buildNondefiningFunctionDeclaration
+    ( entrypoint, forloop->get_scope() ),
+    SageInterface::getGlobalScope(isSgNode(forloop))
   );
 
   /* Generate the calle new basic block
