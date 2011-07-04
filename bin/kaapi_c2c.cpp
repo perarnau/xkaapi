@@ -4780,6 +4780,15 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
   for_stmt_->append_init_stmt(assign_stmt);
 
   // insert diff > 0 expression. set as test expression.
+
+  // delete before clobbering
+  SgStatement* const test_stmt = for_stmt_->get_test();
+  if (test_stmt != NULL)
+  {
+    for_stmt_->set_test(NULL);
+    delete test_stmt;
+  }
+
   SgExpression* const greater_expr = SageBuilder::buildGreaterThanOp
     (diff_vref_expr, SageBuilder::buildLongIntVal(0));
   for_stmt_->set_test_expr(greater_expr);
