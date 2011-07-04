@@ -230,7 +230,9 @@ static void buildLoopEntrypointBody(
   SgExpression*                global_begin_iter,
   SgExpression*                global_step,
   SgStatement*                 loopbody,
-  SgGlobal*                    scope
+  SgGlobal*                    scope,
+  bool			       hasIncrementalIterationSpace,
+  bool			       isInclusiveUpperBound
 );
 
 static SgFunctionDeclaration* buildSplitter(
@@ -4774,28 +4776,29 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
 
   SgType* const count_type = SageBuilder::buildLongType();
   SgVariableDeclaration* const count_decl =
-    SageBuilder::buildVariableDeclaration(count_name, count_type, 0, count_scope);
+    SageBuilder::buildVariableDeclaration
+    (count_name, count_type, 0, count_scope);
   SgVarRefExp* const count_vref_expr =
     SageBuilder::buildOpaqueVarRefExp(count_name, count_scope);
 
   // substraction. add 1 to inclsuive (non strict) operators.
-  SgExpression* count_op = SageBuilder::buildSubtractOp(hi_expr, lo_expr);
+  SgExpression* diff_op = SageBuilder::buildSubtractOp(hi_expr, lo_expr);
   if (isInclusiveOperator(test_op_))
   {
-    count_op = SageBuilder::buildAddOp
-      (count_op, SageBuilder::buildLongIntVal(1));
+    diff_op = SageBuilder::buildAddOp
+      (diff_op, SageBuilder::buildLongIntVal(1));
   }
 
   // insert declaration statement
   SageInterface::prependStatement(count_decl, count_scope);
 
   // insert for init statement
-  SgExprStatement* const assign_stmt =
-    SageBuilder::buildAssignStatement(count_vref_expr, count_op);
+  SgExprStatement* const assign_stmt = SageBuilder::buildAssignStatement
+    (count_vref_expr, SageBuilder::buildLongIntVal(0));
   for_stmt_->append_init_stmt(assign_stmt);
 
-  // insert count != 0 expression. delete previous test expression
-  // before clobbering and set as the new one.
+  // insert count < limit expression. delete previous test
+  // expression before clobbering and set as the new one.
   SgStatement* const test_stmt = for_stmt_->get_test();
   if (test_stmt != NULL)
   {
@@ -4803,9 +4806,9 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
     delete test_stmt;
   }
 
-  SgExpression* const greater_expr = SageBuilder::buildGreaterThanOp
-    (count_vref_expr, SageBuilder::buildLongIntVal(0));
-  for_stmt_->set_test_expr(greater_expr);
+  SgExpression* const less_expr =
+    SageBuilder::buildLessThanOp(count_vref_expr, diff_op);
+  for_stmt_->set_test_expr(less_expr);
 
   // move increment to end of body
   SgStatement* const incr_stmt =
@@ -4816,7 +4819,7 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
 
   // insert count -= stride as increment expression
   for_stmt_->set_increment
-    (SageBuilder::buildMinusAssignOp(count_vref_expr, stride_));
+    (SageBuilder::buildPlusAssignOp(count_vref_expr, stride_));
 
   return true;
 
@@ -5610,7 +5613,9 @@ SgStatement* buildConvertLoop2Adaptative(
     begin_iter,
     step,
     loopbody, 
-    bigscope 
+    bigscope,
+    hasIncrementalIterationSpace,
+    isInclusiveUpperBound
   );
 
   /* fwd declaration of the entry point */
@@ -6109,7 +6114,9 @@ static void buildLoopEntrypointBody(
   SgExpression*                global_begin_iter,
   SgExpression*                global_step,
   SgStatement*                 loopbody,
-  SgGlobal*                    scope
+  SgGlobal*                    scope,
+  bool			       hasIncrementalIterationSpace,
+  bool			       isInclusiveUpperBound
 )
 {
   SgBasicBlock* body = func->get_definition()->get_body();
@@ -6545,10 +6552,10 @@ static SgFunctionDeclaration* buildSplitter(
   );
 
   SgIfStmt* if_stmt_steal = SageBuilder::buildIfStmt(
-    SageBuilder::buildNotOp(
+    SageBuilder::buildNotEqualOp(
       SageBuilder::buildFunctionCallExp(
         "kaapi_workqueue_steal",
-        SageBuilder::buildPointerType(SageBuilder::buildIntType()),
+        SageBuilder::buildIntType(),
         SageBuilder::buildExprListExp(
           work,
           SageBuilder::buildAddressOfOp(SageBuilder::buildVarRefExp(rbeg)),
@@ -6559,7 +6566,8 @@ static SgFunctionDeclaration* buildSplitter(
           )
         ),
         body
-      )
+      ),
+      SageBuilder::buildIntVal(0)
     ),
     SageBuilder::buildGotoStatement(thelabel), 
     0
@@ -6574,7 +6582,7 @@ static SgFunctionDeclaration* buildSplitter(
   );
 
   SgStatement *test = SageBuilder::buildExprStatement( 
-    SageBuilder::buildVarRefExp(func->get_definition()->lookup_variable_symbol("__kaapi_req"))
+    SageBuilder::buildVarRefExp(func->get_definition()->lookup_variable_symbol("__kaapi_nreq"))
   );
 
   SgExpression *increment =  SageBuilder::buildExprListExp(
@@ -6680,9 +6688,9 @@ static SgFunctionDeclaration* buildSplitter(
   replyfor->set_endOfConstruct(SOURCE_POSITION);
   SageInterface::appendStatement( replyfor, body );
 
-  SageBuilder::buildReturnStmt(
-    SageBuilder::buildVarRefExp(nrep)
-  );
+  SageInterface::appendStatement
+    (SageBuilder::buildReturnStmt(SageBuilder::buildVarRefExp(nrep)), body);
+
   return func;
 }
 
