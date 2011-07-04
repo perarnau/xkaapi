@@ -920,24 +920,28 @@ The only guarantees are:
 %%%%
 \subsection{Access mode of tasks} \label{sec:accessmode}
  Two tasks sharing data have the same effective parameter, \textit{i.e.} a region into the shared memory. A task should declare how it accesses regions in the shared memory.   
-Several access modes have been defined since the first vesion Athapascan~\cite{Athapascan98}: \textbf{read}, \textbf{write}, \textbf{readwrite} or \textbf{exclusive} and \textbf{cumulative write} (also called \textbf{reduction}). Each of these access mode limits the kind of operation a task can perform on a memory region. For instance, a task that declares an access mode read to one of its effective parameters cannot write value. These access modes have either a direct correspondance in StarSs\footnote{Called direction as in CORBA} or PLASMA; or are similar (reduction in StarSs).
+Several access modes\footnote{These access modes have either a direct correspondance in SMPSs/StarSs, called direction as in CORBA, as well as in PLASMA.}
+ have been defined since the first vesion Athapascan~\cite{Athapascan98}: \textbf{read}, \textbf{write}, \textbf{readwrite} or \textbf{exclusive} and \textbf{cumulative write} (also called \textbf{reduction}). Each of these access mode limits the kind of operation a task can perform on a memory region. For instance, a task that declares an access mode read to one of its effective parameters cannot write value. 
 
 %For instance, the StarSs\textbf{input} direction specification corresponds to the \textbf{read} access mode in \kaapi;  \textbf{output} direction corresponds to \textbf{write}; and \textbf{inout} corresponds to \textbf{readwrite}.  
 
 A task formal parameter not annotated by an access mode is considered as a compilation error.
 The access mode is defined for a memory region, \textit{i.e.} a set of addresses in the virtual address space of the processus.
 
-In example~\ref{fig:accummainkaapi}, both \texttt{accumulate} and \texttt{printresult} defined a memory region pointed by the formal parameter \texttt{result}: the region is defined by 1 integer.
-The region of the read parameter in task \texttt{accumulate} is an 1-D array of size specify in the \texttt{\#pragma kaapi task} clause. Any arithmetic expression (with cast) is possible to defined size of array. The value reference should correspond to the name of the formal parameter. 
+The access modes of formal parameters are declared with:
+\begin{verbatim}
+#pragma kaapi task <mode> ( <list_declaration>)
+\end{verbatim}
+Where \texttt{<mode>} is given in table~\ref{table:accessmode}.
 
 The table~\ref{table:accessmode} resumes the different access modes:
 \begin{table}[h]
 \begin{center}
 \small \footnotesize
 \begin{tabular}{c|c|c}
-Access mode      & ~Kaapi clause~ & ~StarSs clause~  \\
+Access mode      & ~\texttt{<mode>} in Kaapi clause~ & ~StarSs clause~  \\
 \whline
-passing by value & \texttt{value(x)} & no such access \\ \hline
+pass-by-value & \texttt{value(x)} & no such access \\ \hline
 read access & \texttt{read(x)} or \texttt{r(x)} & \texttt{input(x)} \\ \hline
 write access & \texttt{write(x)} or \texttt{w(x)} & \texttt{output(x)} \\ \hline
 exclusive access & \texttt{readwrite(x)} or \texttt{rw(x)} & \texttt{inout(x)} \\ \hline
@@ -948,6 +952,82 @@ cumulative write & \texttt{reduction(op:x)} or \texttt{cw(op:x)} & \texttt{reduc
 \label{table:accessmode}
 \end{table}
 
+\subsubsection{Memory region}
+The \texttt{<list declaration>} defines a list of memory region touched by the task. 
+The memory region is described by\
+\begin{itemize} 
+\item A memory address given by a variable.
+\item A shape that describe a multidimensional array.
+\end{itemize} 
+In listing of figure~\ref{fig:exmemregion1}, line 1 declares 3 memory region:
+\begin{enumerate}
+\item \texttt{n}: this is the memory region that begins at address of the variable \texttt{n} with a size of \texttt{sizeof(int)} byte long.
+\item \texttt{array[n]}: this a 1-dimensional array that starts at address \texttt{array} and finishes at address \texttt{array+n}.
+\item \texttt{result}: its memory region corresponds the the storage of the variable of type \texttt{int} pointed by the value of \texttt{result}.
+\end{enumerate}
+%In example~\ref{fig:accummainkaapi}, both \texttt{accumulate} and \texttt{printresult} defined a memory region pointed by the formal parameter \texttt{result}: the region is defined by 1 integer.
+%The region of the read parameter in task \texttt{accumulate} is an 1-D array of size specify in the \texttt{\#pragma kaapi task} clause. Any arithmetic expression (with cast) is possible to defined size of array. The value reference should correspond to the name of the formal parameter. 
+\begin{figure}[ht]
+\begin{center}
+\begin{minipage}[t]{0.99\linewidth}
+\begin{footnotesize}
+\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+#pragma kaapi task value(n) read(array[n]) write(result) 
+void accumulate (int n, int* array, int *result);
+
+#pragma kaapi task value(N,lda,ldb,ldc)  \
+                   write(B{ld=lda, storage=C, [N][N]}) \
+                   read(B{ld=ldb, [N][N]}, C{ld=ldc, [N][N]} ) 
+void matmul(int N, double* A, int lda, \
+                   const double* B, int ldb, 
+                   const double* C, int ldc);
+\end{lstlisting}
+\end{footnotesize}
+\end{minipage}
+\end{center}
+\vspace*{-2ex}
+\caption{Example of memory region declaration}
+\label{fig:exmemregion1}
+\end{figure}
+
+At lines 4-6 of the same listing, multidimensional shapes memory region are defined for formal parameters \texttt{A}, \texttt{B} and \texttt{C}. \kaapi considers by default two kinds of storage for matrices. These are illustrated in~\ref{fig:matrix}: in (a) the C storage (also called row major) and in (b) the fortran storage (called column major).
+The function task \texttt{matmul} of listing~\ref{fig:exmemregion1} is supposed to do matrix multiplication of two matrices of dimension \texttt{NxN}. The 2 input matrices \texttt{B} and \texttt{C}, as well as the output matrix \texttt{A}, are defined to have dimension \texttt{[N][N]}. Where \texttt{N} is a pass-by-value parameter. The dimension could be any C or C++ arithmetic expressions (for instance \texttt{[2][3+N]}), see grammar in appendix~\ref{ref:dimensiongrammar}.
+
+The interface follows the design decision used in the BLAS or LAPACK libraries: the matrix is assumed to be allocated into a contiguous array and the user should specify the \textit{leading dimension} or \textit{ld} , which is the size necessary to pass from one row to the next row with the C storage (from one column to the next column with Fortran convention).
+
+\begin{figure}[ht]
+\begin{center}
+\begin{minipage}[t]{0.45\linewidth}
+\begin{center}
+\vspace{-0.05cm}
+\hspace*{0.6ex}
+\includegraphics[width=1\linewidth,height=5.8cm]{matrix_C.pdf} 
+%\vspace{-0.5cm}
+%\noindent{\scriptsize (b) Data flow graph if \textit{cmstep} condition is true.}
+\end{center}  
+\end{minipage}
+\begin{minipage}[t]{0.45\linewidth}
+\begin{center}
+\vspace{-0.05cm}
+\hspace*{0.6ex}
+\includegraphics[width=1\linewidth,height=5.8cm]{matrix_F.pdf} 
+%\vspace{-0.5cm}
+%\noindent{\scriptsize (b) Data flow graph if \textit{cmstep} condition is true.}
+\end{center}  
+\end{minipage}
+\end{center}  
+\vspace*{-2ex}
+\caption{Two standard storage classes for matrices}
+\label{fig:matrix}
+\end{figure}
+
+If the leading dimension is not equal to the column dimension (for C storage convention, or row dimension for Fortran convention), it must be specified for 2-dimensional array using the attribute \texttt{ld=<identifier>}. The identifier must be the identifier of a formal parameter.
+
+The storage class (C or Fortran) may be specified in the storage attribute (\texttt{storage=C} in listing of figure~\ref{fig:exmemregion1} at line 5, or \texttt{storage=Fortran}). The default value is the \texttt{C}.
+
 \subsubsection{Passing rule by value}
 Any function parameter passed by value must have a value access mode.
 In this case, the effective parameter is copied at task's creation time and any modification remains local to the function.
@@ -955,17 +1035,17 @@ In this case, the effective parameter is copied at task's creation time and any 
 Any C or C++ type may by defined to be passed by value.
 The syntax is the following:
 \begin{verbatim}
-#pragma kaapi task value( list_declaration )
+#pragma kaapi task value( <list declaration> )
 \end{verbatim}
-\verb+list_declaration+ is a rule in the grammar given in the appendix~\ref{sec:grammar}.
+\texttt{<list declaration>} is a rule in the grammar given in the appendix~\ref{sec:grammar}.
 
 \subsubsection{Passing rule by reference}
 Any memory region description in \kaapi must be defined by a C/C++ pointer type formal parameter. At runtime, the pointer, the declaration of the memory region and the access mode (read, write, ...) made by the task allow to detect dependencies.
 
 The syntax of the clause is:
 \begin{verbatim}
-#pragma kaapi task mode ( list_declaration )
-#pragma kaapi task mode_cw ( operator: list_declaration )
+#pragma kaapi task mode ( <list declaration> )
+#pragma kaapi task mode_cw ( operator: <list declaration> )
 \end{verbatim}
 The access mode name \texttt{mode} of the clause is given by table~\ref{table:accessmode}.
 The previous example accumulate defines 3 arguments. 2 of them are passed by reference: \texttt{array} is an array of size \texttt{n} (known at runtime); \texttt{result} is pointer to one integer.
@@ -1809,7 +1889,7 @@ with an implementation limit to 2D data structures (see next section about the g
 The grammar may be extended in the future in order to take into account more complex shape declaration.
 
 
-\subsubsection{Dimension definition}
+\subsubsection{Dimension definition}\label{ref:dimensiongrammar}
 The dimension in range specification is described by the following grammar. Expression rules in the grammar is a subset of the C expression rules.
 \begin{verbatim}
       dimension :=
