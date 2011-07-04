@@ -4739,13 +4739,13 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
 
   //
   // generate the variable holding the difference
-  // long diff = (hi_expr - lo_expr) / incr;
+  // unsigned long count = (hi_expr - lo_expr) / incr;
   // signed long type is used to avoid underflow
 
   // scope
-  SgScopeStatement* const diff_scope =
+  SgScopeStatement* const count_scope =
     SageInterface::getScope(for_stmt_->get_parent());
-  if (diff_scope == NULL)
+  if (count_scope == NULL)
   {
 #ifdef CONFIG_LOCAL_DEBUG
     printf("invalid top scope\n");
@@ -4754,37 +4754,36 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
   }
 
   // declaration
-  SgName diff_name = "__kaapi_diff_";
-  diff_name << ++SageInterface::gensym_counter;
+  SgName count_name = "__kaapi_count_";
+  count_name << ++SageInterface::gensym_counter;
 
-  SgType* const diff_type = SageBuilder::buildLongType();
-  SgVariableDeclaration* const diff_decl =
-    SageBuilder::buildVariableDeclaration(diff_name, diff_type, 0, diff_scope);
-  SgVarRefExp* const diff_vref_expr =
-    SageBuilder::buildOpaqueVarRefExp(diff_name, diff_scope);
+  SgType* const count_type = SageBuilder::buildLongType();
+  SgVariableDeclaration* const count_decl =
+    SageBuilder::buildVariableDeclaration(count_name, count_type, 0, count_scope);
+  SgVarRefExp* const count_vref_expr =
+    SageBuilder::buildOpaqueVarRefExp(count_name, count_scope);
 
   // substraction. add 1 to inclsuive (non strict) operators.
   SgLongIntVal* const one_val = SageBuilder::buildLongIntVal(1);
-  SgExpression* diff_op = SageBuilder::buildSubtractOp(hi_expr, lo_expr);
+  SgExpression* count_op = SageBuilder::buildSubtractOp(hi_expr, lo_expr);
   if (isInclusiveOperator(test_op_))
   {
-    diff_op = SageBuilder::buildAddOp(diff_op, one_val);
+    count_op = SageBuilder::buildAddOp(count_op, one_val);
   }
 
   // divide by increment.
-  SgExpression* const div_op = SageBuilder::buildDivideOp(diff_op, stride_);
+  SgExpression* const div_op = SageBuilder::buildDivideOp(count_op, stride_);
 
   // insert declaration statement
-  SageInterface::prependStatement(diff_decl, diff_scope);
+  SageInterface::prependStatement(count_decl, count_scope);
 
   // insert for init statement
   SgExprStatement* const assign_stmt =
-    SageBuilder::buildAssignStatement(diff_vref_expr, div_op);
+    SageBuilder::buildAssignStatement(count_vref_expr, div_op);
   for_stmt_->append_init_stmt(assign_stmt);
 
-  // insert diff > 0 expression. set as test expression.
-
-  // delete before clobbering
+  // insert count != 0 expression. delete previous test expression
+  // before clobbering and set as the new one.
   SgStatement* const test_stmt = for_stmt_->get_test();
   if (test_stmt != NULL)
   {
@@ -4793,7 +4792,7 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
   }
 
   SgExpression* const greater_expr = SageBuilder::buildNotEqualOp
-    (diff_vref_expr, SageBuilder::buildLongIntVal(0));
+    (count_vref_expr, SageBuilder::buildLongIntVal(0));
   for_stmt_->set_test_expr(greater_expr);
 
   // move increment to end of body
@@ -4803,9 +4802,9 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
     isSgScopeStatement(SageInterface::getLoopBody(for_stmt_));
   SageInterface::appendStatement(incr_stmt, scope_stmt);
 
-  // insert diff -= 1 as increment expression
+  // insert count -= 1 as increment expression
   for_stmt_->set_increment
-    (SageBuilder::buildMinusAssignOp(diff_vref_expr, one_val));
+    (SageBuilder::buildMinusAssignOp(count_vref_expr, one_val));
 
   return true;
 
