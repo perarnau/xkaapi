@@ -5831,7 +5831,7 @@ SgStatement* buildConvertLoop2Adaptative(
             SageBuilder::buildVarRefExp(local_beg)
           ),
           SageBuilder::buildMultiplyOp(
-            SageBuilder::buildIntVal(4),
+            SageBuilder::buildIntVal(42),
             SageBuilder::buildFunctionCallExp(    
               "kaapi_getconcurrency",
               SageBuilder::buildIntType(), 
@@ -6218,6 +6218,10 @@ static void buildLoopEntrypointBody(
       "__kaapi_popsize",
       SageBuilder::buildLongType(),
       SageBuilder::buildAssignInitializer(
+
+        SageBuilder::buildAddOp(
+        SageBuilder::buildLongIntVal(1),
+
         SageBuilder::buildDivideOp(
           SageBuilder::buildFunctionCallExp(    
             "kaapi_workqueue_size",
@@ -6234,6 +6238,7 @@ static void buildLoopEntrypointBody(
               body
             )
           )
+         )
         )
       ),
       body
