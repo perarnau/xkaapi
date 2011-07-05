@@ -145,6 +145,7 @@ static SgType* kaapi_stealcontext_ROSE_type;
 static SgType* kaapi_request_ROSE_type;
 static SgType* kaapi_taskadaptive_result_ROSE_type;
 static SgType* kaapi_task_body_ROSE_type;
+static SgType* kaapi_splitter_context_ROSE_type;
 
 static std::string ConvertCType2KaapiFormat(SgType* type);
 
@@ -3155,6 +3156,7 @@ int main(int argc, char **argv)
         kaapi_stealcontext_ROSE_type = SageBuilder::buildOpaqueType ("kaapi_stealcontext_t", gscope);
         kaapi_request_ROSE_type = SageBuilder::buildOpaqueType ("kaapi_request_t", gscope);
         kaapi_taskadaptive_result_ROSE_type = SageBuilder::buildOpaqueType ("kaapi_taskadaptive_result_t", gscope);
+        kaapi_splitter_context_ROSE_type = SageBuilder::buildOpaqueType ("kaapi_splitter_context_t", gscope);
         kaapi_task_body_ROSE_type = SageBuilder::buildFunctionType(
             SageBuilder::buildVoidType(), 
             SageBuilder::buildFunctionParameterTypeList( 
@@ -3431,6 +3433,39 @@ int main(int argc, char **argv)
               ),
               gscope);
           ((decl->get_declarationModifier()).get_storageModifier()).setStatic();
+        }
+
+        {/* declare kaapi_splitter_default function */
+          static SgName name("kaapi_splitter_default");
+          SgFunctionDeclaration *decl = SageBuilder::buildNondefiningFunctionDeclaration(
+              name, 
+              SageBuilder::buildIntType(),
+              SageBuilder::buildFunctionParameterList( 
+                  SageBuilder::buildFunctionParameterTypeList( 
+                    SageBuilder::buildPointerType(kaapi_stealcontext_ROSE_type),
+                    SageBuilder::buildIntType(),
+                    SageBuilder::buildPointerType(kaapi_request_ROSE_type),
+                    SageBuilder::buildPointerType(SageBuilder::buildVoidType())
+                  )
+              ),
+              gscope);
+          ((decl->get_declarationModifier()).get_storageModifier()).setExtern();
+        }
+
+        {/* declare kaapi_thread_pushdata_aligned function */
+          static SgName name("kaapi_thread_pushdata_align");
+          SgFunctionDeclaration *decl = SageBuilder::buildNondefiningFunctionDeclaration(
+              name, 
+              SageBuilder::buildPointerType(SageBuilder::buildVoidType()),
+              SageBuilder::buildFunctionParameterList( 
+                  SageBuilder::buildFunctionParameterTypeList( 
+                    SageBuilder::buildPointerType(kaapi_thread_ROSE_type),
+                    SageBuilder::buildUnsignedIntType(),
+                    SageBuilder::buildUnsignedLongType()
+		)
+              ),
+              gscope);
+          ((decl->get_declarationModifier()).get_storageModifier()).setExtern();
         }
 
         /* Process all #pragma */
@@ -5807,14 +5842,62 @@ SgStatement* buildConvertLoop2Adaptative(
               newbbcall 
     );
   }
-  
+
+  // allocate offsetof(type, data) + sizeof(context_type) on the thread stack
+  std::ostringstream offsetof_stream;
+  offsetof_stream << "offsetof(kaapi_splitter_context_t, data)";
+
+  SgExpression* size_expr = SageBuilder::buildAddOp
+  (
+   SageBuilder::buildOpaqueVarRefExp(offsetof_stream.str(), newbbcall),
+   SageBuilder::buildSizeOfOp(contexttype->get_type())
+  );
+
+  SgVariableDeclaration* splitter_context = SageBuilder::buildVariableDeclaration
+  (
+   "__splitter_context",
+   SageBuilder::buildPointerType(kaapi_splitter_context_ROSE_type),
+   SageBuilder::buildAssignInitializer
+   (
+    SageBuilder::buildCastExp
+    (
+     SageBuilder::buildFunctionCallExp
+     (
+      "kaapi_thread_pushdata_align",
+      SageBuilder::buildPointerType(SageBuilder::buildVoidType()),
+      SageBuilder::buildExprListExp
+      (
+       SageBuilder::buildVarRefExp("__kaapi_thread", newbbcall),
+       size_expr,
+       SageBuilder::buildUnsignedLongVal(8)
+      ),
+      newbbcall
+     ),
+     SageBuilder::buildPointerType(kaapi_splitter_context_ROSE_type)
+    ),
+    SageBuilder::buildPointerType(kaapi_splitter_context_ROSE_type)
+   ),
+   newbbcall
+  );
+  SageInterface::appendStatement(splitter_context, newbbcall);
+
+  printf("!!!!! TODO\n");
+
+  // __kaapi_context = __splitter_context->data;
   SgVariableDeclaration* local_context = SageBuilder::buildVariableDeclaration (
       "__kaapi_context",
-      contexttype->get_type(),
-      0,
+      SageBuilder::buildPointerType(contexttype->get_type()),
+      SageBuilder::buildAssignInitializer(
+        SageBuilder::buildCastExp(
+	  SageBuilder::buildOpaqueVarRefExp("__splitter_context->data", body),
+          SageBuilder::buildPointerType(contexttype->get_type())
+	  )
+      ),
       newbbcall
   );
   SageInterface::appendStatement( local_context, newbbcall );
+
+  // TODO: affect splitter_context members
 
   /* Generate assignment of the of free variable to the context field */
   ivar_beg = listvar.begin();
@@ -5832,7 +5915,7 @@ SgStatement* buildConvertLoop2Adaptative(
     else {
       SgExprStatement* exrpassign = SageBuilder::buildExprStatement(
         SageBuilder::buildAssignOp(
-          SageBuilder::buildDotExp( 
+          SageBuilder::buildArrowExp( 
             SageBuilder::buildVarRefExp(local_context),
             SageBuilder::buildOpaqueVarRefExp("p_" + (*ivar_beg)->get_name(), contexttype->get_scope())
           ),
@@ -6239,7 +6322,7 @@ static SgFunctionDeclaration* buildLoopEntrypoint(
   /* Generate the parameter list */
   parlist = SageBuilder::buildFunctionParameterList();
   
-  /* append 2 declaration : context & thread */
+  /* append 2 declarations : context & thread */
   SageInterface::appendArg (parlist, 
     SageBuilder::buildInitializedName(
       "__kaapi_vcontext", 
@@ -6285,14 +6368,28 @@ static void buildLoopEntrypointBody(
       func->get_definition()->lookup_variable_symbol("__kaapi_thread");
 
   /* cast the void* vcontext to the true type */
+  SgVariableDeclaration* splitter_context = SageBuilder::buildVariableDeclaration (
+      "__splitter_context",
+      SageBuilder::buildPointerType(kaapi_splitter_context_ROSE_type),
+      SageBuilder::buildAssignInitializer(
+        SageBuilder::buildCastExp(
+          SageBuilder::buildVarRefExp(func->get_definition()->lookup_variable_symbol("__kaapi_vcontext")), 
+          SageBuilder::buildPointerType(kaapi_splitter_context_ROSE_type)
+        )
+      ),
+      body
+  );
+
+  SageInterface::appendStatement( splitter_context, body );
+  
   SgVariableDeclaration* context = SageBuilder::buildVariableDeclaration (
       "__kaapi_context",
       SageBuilder::buildPointerType(contexttype->get_type()),
       SageBuilder::buildAssignInitializer(
         SageBuilder::buildCastExp(
-          SageBuilder::buildVarRefExp(func->get_definition()->lookup_variable_symbol("__kaapi_vcontext")), 
+	  SageBuilder::buildOpaqueVarRefExp("__splitter_context->data", body),
           SageBuilder::buildPointerType(contexttype->get_type())
-        )
+	  )
       ),
       body
   );
