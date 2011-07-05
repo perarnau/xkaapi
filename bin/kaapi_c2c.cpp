@@ -6324,27 +6324,10 @@ static void buildLoopEntrypointBody(
   SageInterface::appendStatement( wc, body );
   
   /* the queue is already initilized by the callee */
-
-  /* generate
-     kaapi_workqueue_index_t __kaapi_range_beg =
-     kaapi_workqueue_range_begin( &__kaapi_context->__kaapi_work );
-   */
-  SgAssignInitializer* const lbeg_initializer =
-    SageBuilder::buildAssignInitializer
-    (
-     SageBuilder::buildFunctionCallExp
-     (    
-      "kaapi_workqueue_range_begin",
-      kaapi_workqueue_index_ROSE_type,
-      SageBuilder::buildExprListExp(work),
-      body
-     ),
-     0
-   );
   SgVariableDeclaration* local_beg = SageBuilder::buildVariableDeclaration (
       "__kaapi_range_beg",
       kaapi_workqueue_index_ROSE_type,
-      lbeg_initializer, 
+      0, 
       body
   );
 
