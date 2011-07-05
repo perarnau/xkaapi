@@ -6403,21 +6403,49 @@ static void buildLoopEntrypointBody(
     else if ((*ivar_beg)->get_name() == "__kaapi_thread")
     { /* to nothing */ }
     else {
-      SgVariableDeclaration* alocalvar = SageBuilder::buildVariableDeclaration (
+      SgVariableDeclaration* alocalvar;
+
+      // dont assign if affine, since its done at each pop
+      typedef forLoopCanonicalizer::AffineVariable AffineVariable;
+      std::list<AffineVariable>::iterator pos = affine_vars.begin();
+      std::list<AffineVariable>::iterator end = affine_vars.end();
+      for (; pos != end; ++pos)
+      {
+	if (pos->name_->get_name() == (*ivar_beg)->get_name())
+	  break ;
+      }
+
+      // not found, declare and assign
+      if (pos == end)
+      {
+	alocalvar = SageBuilder::buildVariableDeclaration (
           (*ivar_beg)->get_name(),
           (*ivar_beg)->get_type(),
           SageBuilder::buildAssignInitializer(
             SageBuilder::buildPointerDerefExp(
               SageBuilder::buildArrowExp( 
                 SageBuilder::buildVarRefExp(context),
-                SageBuilder::buildOpaqueVarRefExp("p_" + (*ivar_beg)->get_name(), contexttype->get_scope())
+                SageBuilder::buildOpaqueVarRefExp
+		("p_" + (*ivar_beg)->get_name(), contexttype->get_scope())
               )
             )
           ),
           body
-      );
+	 );
+      }
+      else // found, just declare
+      {
+	alocalvar = SageBuilder::buildVariableDeclaration (
+          (*ivar_beg)->get_name(),
+          (*ivar_beg)->get_type(),
+	  0,
+	  body
+        );
+      }
+
       SageInterface::appendStatement( alocalvar, body );
     }
+
     ++ivar_beg;
   }
 
