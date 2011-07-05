@@ -6298,15 +6298,6 @@ static void buildLoopEntrypointBody(
   );
   SageInterface::appendStatement( context, body );
 
-  /* declare the induction variable inside ! */
-  SgVariableDeclaration* local_ivar = SageBuilder::buildVariableDeclaration (
-      ivar->get_name(),
-      ivar->get_type(),
-      0,
-      body
-  );
-  SageInterface::appendStatement( local_ivar, body );
-
   /* 
    * Generate the body of the entry point 
    */
