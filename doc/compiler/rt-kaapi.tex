@@ -617,7 +617,7 @@ Task creation is a non blocking call, thus at line 13 a synchronization point is
 
 
 
-\subsubsection{Optimization}
+\subsubsection{Optimization}\label{sec:optimalloca}
 The previous code of figure~\ref{ex:fibonacci} has a main drawback: it requires a synchronization at each step of the recursion. Even if, in the general case of execution, this synchronization does not wait because tasks are generally executed sequentially, it adds some extra overhead. 
 
 In this section, we present how to suppress it by creating a task that will represent the \textit{continuation} of the computation.
@@ -989,14 +989,12 @@ void matmul(int N, double* A, int lda, \
 \end{minipage}
 \end{center}
 \vspace*{-2ex}
-\caption{Example of memory region declaration}
+\caption{Example of memory region declarations}
 \label{fig:exmemregion1}
 \end{figure}
 
 At lines 4-6 of the same listing, multidimensional shapes memory region are defined for formal parameters \texttt{A}, \texttt{B} and \texttt{C}. \kaapi considers by default two kinds of storage for matrices. These are illustrated in~\ref{fig:matrix}: in (a) the C storage (also called row major) and in (b) the fortran storage (called column major).
 The function task \texttt{matmul} of listing~\ref{fig:exmemregion1} is supposed to do matrix multiplication of two matrices of dimension \texttt{NxN}. The 2 input matrices \texttt{B} and \texttt{C}, as well as the output matrix \texttt{A}, are defined to have dimension \texttt{[N][N]}. Where \texttt{N} is a pass-by-value parameter. The dimension could be any C or C++ arithmetic expressions (for instance \texttt{[2][3+N]}), see grammar in appendix~\ref{ref:dimensiongrammar}.
-
-The interface follows the design decision used in the BLAS or LAPACK libraries: the matrix is assumed to be allocated into a contiguous array and the user should specify the \textit{leading dimension} or \textit{ld} , which is the size necessary to pass from one row to the next row with the C storage (from one column to the next column with Fortran convention).
 
 \begin{figure}[ht]
 \begin{center}
@@ -1024,11 +1022,74 @@ The interface follows the design decision used in the BLAS or LAPACK libraries: 
 \label{fig:matrix}
 \end{figure}
 
+
+\paragraph{1-D array.}~\\
+ They are two classical ways to specify a one dimensional array. The first one gives a base address and a size:
+\begin{verbatim}
+#pragma kaapi task value(n) read(array[n]) write(result)
+void accumulate( int n, int* array, int* result );
+\end{verbatim}
+The dimension of array must follow the subset of the C grammar for expression (called \textit{additive expression} in C grammar, see appendix~\ref{sec:grammar}). 
+At runtime, the base address is the value of a pointer type formal parameter.
+
+The second form is to specify an interval between two addresses (as used in most of STL algorithms). The syntax for interval is \texttt{[a:b]}, where \texttt{a} and \texttt{b} are identifiers of formal parameters.
+\begin{verbatim}
+#pragma kaapi task value(n) read( [begin:end] ) write(result)
+void accumulate( int* begin, int* end, int* result );
+\end{verbatim}
+In the STL, the right bound is not part of the interval and it is called the 'past the last' value of the iterator. The size of the interval is \texttt{b-a}. In C, \texttt{a} and \texttt{b} must be a pointer to any type; in C++ they can also be random access iterators.
+
+
+\paragraph{2-D array.}~\\
+2-D arrays appear de facto in linear algebra subroutines. 
+To split data structures to execute in parallel sub-computations, it is necessary to handle sub sets of 2-D arrays.
+
+\kaapi  follows the design of BLAS or LAPACK libraries: the matrix is assumed to be allocated into a contiguous array and the user should specify the \textit{leading dimension} (\textit{ld} in figure~\ref{fig:matrix}), which is the size necessary\footnote{The size is expressed with respect to the \textit{element type}.}  to pass from one row to the next row with the C storage (from one column to the next column with Fortran convention).
+
+For instance:
+\begin{verbatim}
+#pragma kaapi task mode( array[n][m] )
+#pragma kaapi task mode( array{ ld=identifier, [n][m] } )
+#pragma kaapi task mode( array{ storage=C, \
+                                ld=identifier, \
+                                [n][m] } )
+#pragma kaapi task mode( array{ storage=Fortran, \
+                                ld=identifier, \
+                                [n][m] } )
+\end{verbatim}
+The syntax of the clause for 2-D array is composed by the specification of three attributes:
+\begin{itemize}
+\item The \textit{leading dimension}. % (\texttt{ld} above) must be an identifier of a formal parameter. 
 If the leading dimension is not equal to the column dimension (for C storage convention, or row dimension for Fortran convention), it must be specified for 2-dimensional array using the attribute \texttt{ld=<identifier>}. The identifier must be the identifier of a formal parameter.
+\item The storage attribute: C or Fortran (or F) keywords are used to specify the storage of the matrix. \texttt{storage=C} for row major C storage. And \texttt{storage=Fortran} for Fortran column major.
+If not specified, the default value is the \texttt{C}.
+\item The dimension must follows the sub set of the C grammar for expression. 
+\end{itemize}
+There is no order to specify attributes.
+All this rules are defined in the grammar of the appendix~\ref{sec:grammar}.
 
-The storage class (C or Fortran) may be specified in the storage attribute (\texttt{storage=C} in listing of figure~\ref{fig:exmemregion1} at line 5, or \texttt{storage=Fortran}). The default value is the \texttt{C}.
+%\paragraph{Examples.}~\\
+%The following examples show different declaration matrix memory regions.
+%\begin{itemize}
+%\item A contiguous memory region that represent a C storage matrix \verb+A+ of dimension \verb+n+ rows by \verb+m+ columns:
+%\begin{verbatim}
+%A[n][m]
+%\end{verbatim}
+%Note that this definition is equivalent to the memory region:
+%\begin{verbatim}
+%A[n*m]
+%\end{verbatim}
+%\item A C storage matrix \verb+A+ of dimension \verb+n+ rows by \verb+m+ columns with leading dimension \verb+ldA+:
+%\begin{verbatim}
+%A{ld=ldA, [n][m]}
+%\end{verbatim}
+%\item A Fortran storage matrix \verb+A+ of dimension \verb+n+ rows by \verb+m+ columns with leading dimension \verb+ldA+:
+%\begin{verbatim}
+%A{ld=ldA, storage=F, [n][m]}
+%\end{verbatim}
+%\end{itemize}
 
-\subsubsection{Passing rule by value}
+\subsubsection{Pass-by-value rule}
 Any function parameter passed by value must have a value access mode.
 In this case, the effective parameter is copied at task's creation time and any modification remains local to the function.
 
@@ -1037,7 +1098,7 @@ The syntax is the following:
 \begin{verbatim}
 #pragma kaapi task value( <list declaration> )
 \end{verbatim}
-\texttt{<list declaration>} is a rule in the grammar given in the appendix~\ref{sec:grammar}.
+The rule \texttt{<list declaration>} is given in the appendix~\ref{sec:grammar} and corresponds to a list separated by '\verb+,+' of memory regions.
 
 \subsubsection{Passing rule by reference}
 Any memory region description in \kaapi must be defined by a C/C++ pointer type formal parameter. At runtime, the pointer, the declaration of the memory region and the access mode (read, write, ...) made by the task allow to detect dependencies.
@@ -1047,70 +1108,61 @@ The syntax of the clause is:
 #pragma kaapi task mode ( <list declaration> )
 #pragma kaapi task mode_cw ( operator: <list declaration> )
 \end{verbatim}
-The access mode name \texttt{mode} of the clause is given by table~\ref{table:accessmode}.
 The previous example accumulate defines 3 arguments. 2 of them are passed by reference: \texttt{array} is an array of size \texttt{n} (known at runtime); \texttt{result} is pointer to one integer.
 
-\paragraph{1-D array.} They are two classical ways to specify a one dimensional array. The first one is by given a base address and a size:
-\begin{verbatim}
-#pragma kaapi task value(n) read(array[n]) write(result)
-void accumulate( int n, int* array, int* result );
-\end{verbatim}
-The dimension of array must follows the subset of the C grammar for expression. Only reference to variable in the formal parameter list can be done.
+The access mode name \texttt{mode} of the clause is given by table~\ref{table:accessmode} page~\pageref{table:accessmode}:
+\begin{description}
+\item [write:] the task can write any of the location of the declared memory region. Any read instruction is guarantee to return the value produced by the task. A read instruction to a location no written by the task returns an undefined value.
+\item [read]: the task that reads a location in the memory region declared \texttt{read} accesses the value produced by the previous, in the lexicographic order of tasks in the program, task that has required a write or read-write or cumulative access. If no such task exists, then the value is the value given during initialization.
 
-The second is to specify a interval between two addresses (as used in the most of the STL algorithms). The syntax use the syntax for interval \texttt{[a:b]}, where \texttt{a} and \texttt{b} are identifiers of formal parameters.
-\begin{verbatim}
-#pragma kaapi task value(n) read( [begin:end] ) write(result)
-void accumulate( int* begin, int* end, int* result );
-\end{verbatim}
-In the STL, the right bound is not part of the interval and it is called the 'past the last' value of the iterator. The size of the interval is \texttt{b-a}. In C, \texttt{a} and \texttt{b} must be a pointer to any type; in C++ they can also be random access iterators.
-
-
-\paragraph{2-D array.} 2-D arrays appear de facto in linear algebra subroutines. To allow data structure spliting involved in parallel sub-computations, it is necessary to handle sub sets of 2-D arrays.
-
-\kaapi declaration follows idea of the BLAS storage for dense matrix. 
-The syntax of the clause for 2-D array is:
-\begin{verbatim}
-#pragma kaapi task mode( array[n][m] )
-#pragma kaapi task mode( array{ ld=identifier; [n][m] } )
-#pragma kaapi task mode( array{ storage=C; \
-                                ld=identifier ;  \
-                                [n][m] } )
-#pragma kaapi task mode( array{ storage=Fortran; \
-                                ld=identifier ; \
-                                [n][m] } )
-\end{verbatim}
-Where the \texttt{ld} must be a reference to a formal parameter name. The dimension must follows the sub set of the C grammar for expression. 
-C or Fortran keyword are used to specify the storage of the matrix (row major or column major).
-
-All this rules are defined in the grammar of the appendix~\ref{sec:grammar}.
-
+The task cannot write location of the memory region.
+\item [readwrite:] the task can read or write any location of the memory region. As for \texttt{read} access mode, a read instruction returns the value previously written by the task or the value produced by a previous task or at initialization.
+\item [reduction:] this is the purpose of the next section.
+\end{description}
 
 %%%%
 \subsubsection{Cumulative access mode}\label{sec:cw}
-In \kaapi, it is possible to reduce variable with only associative operator. The commutativity is not required.
-A task that required an accumulative semantic with respect to one of its formal parameters, must defined it with the \texttt{reduction} clause in the \texttt{\#pragma kaapi task}. Two tasks having a reduction access mode onto the same memory region are concurrent. 
-As depicted in figure~\ref{fig:exaccu},
+In \kaapi, it is possible to reduce variable with associative operator. The commutativity is not required.
+A task that require an accumulative semantic with respect to one of its formal parameters, must declare it with the \texttt{reduction} clause in the \texttt{\#pragma kaapi task}. 
+The reduction clause specifies the operator to use during concurrent reduction and a list of formal parameters the clause is applied on.
+
+Two tasks having a reduction access mode onto the same memory region are concurrent, for instance the two tasks created at line 12 and 13 in listing of figure~\ref{fig:exaccu}.
 \begin{figure}[ht]
-\hrule\vspace*{1ex}
 \begin{center}
-\begin{minipage}[t]{0.97\linewidth}
-%\scriptsize
-\begin{verbatim}
-#pragma kaapi task read(array[n]) reduction(+: result) value(n)
-void accumulate (int n, int* array, int *result) 
+\begin{minipage}[t]{0.99\linewidth}
+\begin{footnotesize}
+\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+#pragma kaapi task read([begin:end]) reduction(+: result)
+void accumulate (double* begin, double* end, int *result) 
 {
-   ...
-}
-\end{verbatim}
+  size_t size = (end-begin);
+  if (size < THRESHOLD)
+  {
+    while (begin != end)
+      *result += *begin++;
+  }
+  else {
+    size_t med = size/2;
+    accumulate( begin, begin+med, result);
+    accumulate( begin + med, end, result);
+  }
+\end{lstlisting}
+\end{footnotesize}
 \end{minipage}
 \end{center}
-\vspace*{-1ex}
-\hrule
+\vspace*{-3ex}
 \caption{Kaapi signature for accumulate with reduction}
 \label{fig:exaccu}
 \end{figure}
-The reduction clause specifies the operator to use during concurrent reduction and a list of formal parameters the clause is applied on.
-For all the scalar types of the C or C++ language, \kaapi predefines a list of known operators.
+The reduction operator defined in the \texttt{reduction} clause is used to merge result produced by a theft task.
+In listing~\ref{fig:exaccu}, if one thread performs all the tasks, then only the operator \texttt{+=} at line 8 is used.
+If one of the task created at line 12 or 13 is theft, then the thief thread performs the task and reduce results on a new variable. This new variable is initialized as described below.
+
+\paragraph{Predefined reduction operators.}~\\
+For all the scalar types of the C or C++ language, \kaapi predefines a list of known operators (table \ref{table:opcumul}).
 For each operator, the neutral element corresponds to the neutral element of the mathematical operator. The list is presented in table~\ref{table:opcumul} follows the same predefined reduction operators in OpenMP-3.0.
 \begin{table}[h]
 \begin{center}
@@ -1132,12 +1184,13 @@ For each operator, the neutral element corresponds to the neutral element of the
 \label{table:opcumul}
 \end{table}
 
-The user has the possibility to define its own reduction operator using \texttt{\#pragma kaapi declare reduction} clause:
+\paragraph{User defined reduction operator.}~\\
+The user has the ability to define its own reduction operator using \texttt{\#pragma kaapi declare reduction}:
 \begin{description}
 \item [\texttt{\#pragma kaapi declare reduction}]~\\
 \verb!(reduction-identifier : function-name)!\\
 \verb![ identity( function-name) ]!\\
-The \verb!function-name! must correspond to the name of C/C++ function which must satisfy one of the following signature:
+The \verb!function-name! must correspond to the name of C/C++ function that must satisfy one of the following signature:
 \vspace*{-2ex}\begin{verbatim}
   // For  C++
   void function( typename& result, const typename& value )
@@ -1148,7 +1201,7 @@ The \verb!function-name! must correspond to the name of C/C++ function which mus
 The parameter type are inherited from the declaration of the reduction variable in the \texttt{reduction} clause to describe access mode of formal parameter.
 
 
-In the same way, the identity function is used to initialize a value of a temporary variable to be the neutral of the reduction operator. The identity function signature must be one of the following:
+The identity function is used to initialize a value of a temporary variable to be the neutral of the reduction operator. The identity function signature must be one of the following:
 \begin{verbatim}
   // For  C++
   void function( typename& value )
@@ -1160,133 +1213,193 @@ In the same way, the identity function is used to initialize a value of a tempor
 \subsubsection{Dependencies between tasks}
 Once access modes are defined for the tasks, the runtime is able to detect dependencies between tasks that access to a same memory region.
 \begin{description}
-\item [Read after Write.] This is also called true dependency. It means that a task is reading a memory region produced by other tasks.
-\item [Write after Write.] This is a false dependency. Such dependency is removed using renaming: the two tasks can be executed concurrently if they work on distinct memory region, thus the runtime may allocate distinct memory region.
-\item [Write after Read.] This false dependency is also called anti-depedency. Those kinds of dependency are subject to removal in the similar way as write after write dependency.
+\item [Read after Write.] Also called true dependency. A task is reading a memory region produced by another task.
+\item [Write after Write.] False dependency. Such dependency is suppressed using variable renaming: the two tasks can be executed concurrently if they work on distinct memory region, thus the runtime may allocate distinct memory regions.
+\item [Write after Read.] This false dependency is an anti-dependency. Variable renaming permits to suppress them.
 \end{description}
 
 Note that the \kaapi runtime used a lazy approach to remove false dependencies: if it is necessary to execute concurrently two tasks with false dependencies, then the runtime renames the memory region. Else, the execution is sequential using the task creation order.
 
-In both case, the result of the execution remains the same whatever the execution order between tasks.
+In both cases, the result of the execution remains the same whatever the execution order between tasks.
 
 
 %%%%
 %%%
 \subsection{Directive for synchronization}\label{sec:synchro}
 
-Because task creations that occur at each function call to task function are non blocking instruction, it may be
-necessary to synchronize the control flow of the thread that creates tasks with the task executions themselves.
+Because task creations are non blocking instructions, it may be
+necessary to explicitly synchronize the control flow of the thread that creates tasks with the task executions.
 
 \subsubsection{\#pragma kaapi sync}
 
-The directive forces the synchronization of the current executing control flow with all previously created tasks in the same task's activation frame.
+This directive forces to wait for the completion of all previously created tasks in the same activation of a task body: tasks created by the parent task are not considered.
 
 For non recursive task creations, this directive waits until all previously created tasks in the control flow have been completed.
 
-For recursive task creations, the directive waits until all previously created tasks, in the current task activation frame, has been completed.
+For instance, the synchronization point at line 13 of the recursive computation of Fibonacci number in listing~\ref{ex:fibonacci} page~\pageref{ex:fibonacci} enforces completion of only the two tasks created at lines 11 and 12.
 
-\subsubsection{\#pragma kaapi sync(<list of views>)}
 
-This directive forces the synchronization of the current executing control flow until the execution of the last created tasks, in the same task activation frame, which writes the memory described by a the list of views.
+\subsubsection{\#pragma kaapi sync(<list\_declaration>)}
 
+This directive forces to wait for the completion of all the last created tasks, in the same task body activation, which writes the memory region  described by a the list of declarations.
+\begin{figure}[ht]
+\begin{center}
+\begin{minipage}{0.99\linewidth}
+\begin{footnotesize}
+\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+int main()
+{
+  int subresult1;
+  int subresult2;
+  compute1( &subresult1, ...);
+  compute2( &subresult2, ...);
+  
+#pragma kaapi sync(subresult1)
+  printf("Subresult is: %i\n", subresult1 );
+
+  return 0;
+}
+\end{lstlisting}
+\end{footnotesize}
+\end{minipage}
+\end{center}
+\caption{Section of variable to enforce synchronization.}\label{ex:fibonacci}
+\end{figure}
+
+This directive is a finer version of \texttt{\#pragma kaapi sync}.
 
 %%%%
 %%%
 \subsection{Recursive function call}\label{sec:recursive}
 
 \kaapi allows recursive task creations.
-This is illustrated in figure~\ref{fig:recexaccu}, where the accumulate code recursively split the computation until a grain (of 2 here) by creating sub-tasks after splitting the array in two parts. The first created task will accumulate the values \texttt{array[0],...array[n/2-1]} and the second task will accumulate the values \texttt{array[n/2],...,array[n-1]}.
-\begin{figure}[ht]
-\hrule\vspace*{1ex}
-\begin{center}
-\begin{minipage}[t]{0.9\linewidth}
-%\scriptsize
-\begin{verbatim}
-#pragma kaapi task read(n, array[n]) reduction(+: result) 
-void accumulate (int n, int* array, int *result) 
-{
-   if (n < 2) *result += array[0] + array[1];
-   else {
-     accumulate (n/2, array, result);
-     accumulate (n-n/2, array+n/2, result);
-   }
-}
-\end{verbatim}
-\end{minipage}
-\end{center}
-\hrule
-\caption{Recursive Kaapi accumulate code}
-\label{fig:recexaccu}
-\end{figure}
+This is illustrated in figure~\ref{fig:exaccu} (page~\pageref{fig:exaccu}).
+In the accumulate code of figure~\ref{fig:exaccu} recursively splits the computation until a grain of 2. Each created sub-tasks works on a disjoint parts of  the initial input array. 
 
-This example is simple: no temporary data are required at each level of recursion. This not the case with the academic recursive non optimal computation of the fibonacci number.
+This example is simple: no temporary data are required at each level of recursion. This not the case with the recursive computation of the Fibonacci number of figure~\ref{ex:fibonacci} page~\pageref{ex:fibonacci}.
+As discussed in section~\ref{sec:optimalloca}, the user should ensure enough scope of data allocated during the computation.
+%
+%
+%\begin{figure}[ht]
+%\begin{center}
+%\begin{minipage}{0.99\linewidth}
+%\begin{footnotesize}
+%\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
+%\lstset{commentstyle=\color{blue}}
+%\lstset{language=C}
+%\begin{lstlisting}[frame=tb]
+%\end{lstlisting}
+%\end{footnotesize}
+%\end{minipage}
+%\end{center}
+%\caption{fibonacci1.c example}
+%\label{ex:fibonacci}
+%\end{figure}
+
 
 \subsubsection{Control of the allocation scope of data}
-All data passed by reference to tasks must be valid until the task completion.
+All data passed by reference to tasks must be valid until the task completions.
 For instance, because task creation is a non blocking call the example of figure~\ref{ex:caplante} is incorrect: the automatic variable \texttt{r} will be suppressed before the execution of the task \texttt{g}.
 \begin{figure}[ht]
-\hrule\vspace*{1ex}
 \begin{center}
-\begin{minipage}[t]{0.9\linewidth}
-%\scriptsize
-\begin{verbatim}
-1  if (...)
-2  {
-3    int r; /* store sub result */
-4    g(&r, input_values); /* create task*/
-5  }
-\end{verbatim}
+\begin{minipage}{0.99\linewidth}
+\begin{footnotesize}
+\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+if (...)
+{
+  int r; /* store sub result */
+  g(&r, input_values); /* create task*/
+}
+\end{lstlisting}
+\end{footnotesize}
 \end{minipage}
 \end{center}
-\hrule
 \caption{Incorrect code}
 \label{ex:caplante}
 \end{figure}
 
+
 In that case, the user has two possibilities:
 \begin{itemize}
-\item Add a synchronization point between line 4 and 5. It enforces the execution waits for the completion of \texttt{g} (left solution in figure~\ref{ex:caplanteplus}).
-\item Allocate the data in the same scope as the tasks. In that case, the data is allocated with a scope wide enough to execution of task \texttt{g} (right solution in figure~\ref{ex:caplanteplus}).
+\item Add a synchronization point between line 4 and 5. It enforces the execution waits for the completion of \texttt{g} (the 2 left solutions in figure~\ref{ex:caplanteplus}).
+\item Allocate the data in the same scope as the tasks. In that case, the data is allocated with a scope wide enough to execute the task \texttt{g} (right solution in figure~\ref{ex:caplanteplus}).
 \end{itemize}
 
 \begin{figure}[ht]
-\hrule\vspace*{1ex}
 \begin{center}
-\begin{minipage}[t]{0.49\linewidth}
-%\scriptsize
-\begin{verbatim}
-1  if (...)
-2  {
-3    int r; 
-4    g(&r, input_values); 
-5    #pragma kaapi sync
-6  }
-\end{verbatim}
-\end{minipage}\vrule~~
-\begin{minipage}[t]{0.49\linewidth}
-\begin{verbatim}
-1  if (...)
-2  {
-3    #pragma kaapi data alloca(r)
-4    int r; 
-5    g(&r, input_values); 
-6  }
-\end{verbatim}
+\begin{minipage}[c]{0.30\linewidth}
+\scriptsize
+\begin{tiny}
+\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+if (...)
+{
+  int r; 
+  g(&r, input_values); 
+  #pragma kaapi sync
+}
+\end{lstlisting}
+\end{tiny}
 \end{minipage}
+%\vrule~~
+\begin{minipage}[c]{0.30\linewidth}
+\scriptsize
+\begin{tiny}
+%\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+if (...)
+{
+  #pragma kaapi parallel
+  {
+    int r; 
+    g(&r, input_values); 
+  }
+}
+\end{lstlisting}
+\end{tiny}
+\end{minipage}
+%\vrule~~
+\begin{minipage}[c]{0.35\linewidth}
+\scriptsize
+\begin{tiny}
+%\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+if (...)
+{
+#pragma kaapi data  alloca(r)  
+  int r; 
+  g(&r, input_values); 
+}
+\end{lstlisting}
+\end{tiny}
+\end{minipage}
+
 \end{center}
-\hrule
-\caption{Solution for incorrect code of figure~\ref{ex:caplante}}
+\vspace*{-2ex}
+\caption{Solutions for incorrect code of figure~\ref{ex:caplante}}
 \label{ex:caplanteplus}
 \end{figure}
 
 The syntax of the \texttt{\#pragma kaapi data alloca} is:
 \begin{description}
 \item [\texttt{\#pragma kaapi data alloca}] \verb!(<list of variables>)!\\
-The \verb!<list of variables>! describes a list of automatic variables that hope to be used in task's creations.
+The \verb!<list of variables>! describes a list of automatic variables to be used in task creations.
 \end{description}
 
-The \kaapi name of the directive was chosen with analogy of the \texttt{alloca} function of the C library stdlib.  With sequential C or C++ program, the developper may allocate data in the stack using the \texttt{alloca} function. In that case, the allocation scope is the same as the activation frame where the call to \texttt{alloca} occured.
-With \kaapi \texttt{\#pragma kaapi alloca}, the user can allocate data within the same scope as created tasks in the same activation frame.
+The \kaapi name of this directive is analog to the \texttt{alloca} function of the C library stdlib.  With sequential C or C++ program, the developper may allocate data in the stack using the \texttt{alloca} function. In that case, the allocation scope is the same as the activation frame where the call to \texttt{alloca} occured.
+With \texttt{\#pragma kaapi alloca}, the user can allocate data within the same scope of the created tasks.
 
 %%%%
 \subsubsection{Example with recursive task's creations}\label{sec:alloca}
@@ -1294,38 +1407,42 @@ With \kaapi \texttt{\#pragma kaapi alloca}, the user can allocate data within th
 %With sequential C or C++ program, the developer may allocate data in the stack using the \texttt{alloca} function. In that case, the scope of allocation is the same as the activation frame where the call to \texttt{alloca} occured.
 %With \kaapi, the user may also allocate data within the same scope as created tasks in an activation frame.
 
-To control the allocation scope of automatic variables allocated into the C stack of example in figure~\ref{fig:recaccumalloca}, the programmer has to use the directive \texttt{\#pragma data alloca}  at line 11.
+To control the allocation scope of automatic variables allocated into the C stack of example in figure~\ref{fig:recaccumalloca}, the programmer has to use the directive \texttt{\#pragma data alloca}  at line 11, else variables \texttt{subresult1} and \texttt{subresult2} are undefined after the end of scope '\texttt{\}}' at line 17.
 \begin{figure}[ht]
-\hrule\vspace*{1ex}
 \begin{center}
 \begin{minipage}[t]{0.9\linewidth}
 %\scriptsize
-\begin{verbatim}
-1  #pragma kaapi task read(result1, result2) write(result) 
-2  void sum (int* result, int * result1, int* result2) 
-3  {
-4    *result = *result1 + *result2;
-5  }
+\begin{footnotesize}
+\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+#pragma kaapi task read(result1, result2) write(result) 
+void sum (int* result, int * result1, int* result2) 
+{
+  *result = *result1 + *result2;
+}
 
-6  #pragma kaapi task read(n, array[n]) write(result) 
-7  void accumulate (int n, int* array, int *result) 
-8  {
-9     if (n < 2) *result += array[0] + array[1];
-10    else {
-11 #pragma kaapi data alloca(subresult1, subresult2);
-12      int subresult1;
-13      int subresult2;
-14      accumulate (n/2, array, &subresult1);
-15      accumulate (n-n/2, array+n/2, &subresult2);
-16      sum( result, &subresult1, &subresult2 );
-17    }
-18 }
-\end{verbatim}
+#pragma kaapi task read(n, array[n]) write(result) 
+void accumulate (int n, int* array, int *result) 
+{
+  if (n < 2) *result += array[0] + array[1];
+  else {
+#pragma kaapi data alloca(subresult1, subresult2);
+     int subresult1;
+     int subresult2;
+     accumulate (n/2, array, &subresult1);
+     accumulate (n-n/2, array+n/2, &subresult2);
+     sum( result, &subresult1, &subresult2 );
+   }
+}
+\end{lstlisting}
+\end{footnotesize}
 \end{minipage}
 \end{center}
-\hrule
+\vspace*{-2ex}
 \caption{Accumulate recursive code where the allocation of \texttt{subresult1} and \texttt{subresult2} is 
-specify to have the same scope of the spawned task using directive \texttt{\#pragma kaapi alloca}.}
+specify to have the same scope of the created task using directive \texttt{\#pragma kaapi alloca}.}
 \label{fig:recaccumalloca}
 \end{figure}
 
@@ -1410,7 +1527,7 @@ specify to have the same scope of the spawned task using directive \texttt{\#pra
 
 \subsubsection{With sync}
 
-\begin{small}
+\begin{footnotesize}
 \lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
 \lstset{commentstyle=\color{blue}}
 \lstset{language=C}
@@ -1449,10 +1566,10 @@ int main()
   return 0;
 }
 \end{lstlisting}
-\end{small}
+\end{footnotesize}
 
 \subsubsection{Without sync}
-\begin{small}
+\begin{footnotesize}
 \lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
 \lstset{commentstyle=\color{blue}}
 \lstset{language=C}
@@ -1497,11 +1614,11 @@ int main()
   return 0;
 }
 \end{lstlisting}
-\end{small}
+\end{footnotesize}
 
 \subsubsection{With reduction variable}
 
-\begin{small}
+\begin{footnotesize}
 \lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
 \lstset{commentstyle=\color{blue}}
 \lstset{language=C}
@@ -1537,13 +1654,13 @@ int main()
   return 0;
 }
 \end{lstlisting}
-\end{small}
+\end{footnotesize}
 
 
 \subsection{Cholesky factorization}
 This example shows one of the main difference between StartSs programming model is its ability to view sub matrix of matrix without necessity to reallocate the user's data structure.\\
 
-\begin{tiny}
+\begin{footnotesize}
 \lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
 %%\lstset{commentstyle=\textcolor{blue}}
 \lstset{language=C}
@@ -1552,39 +1669,56 @@ This example shows one of the main difference between StartSs programming model 
 #include <clapack.h> 
 
 
-#pragma kaapi task value(Order, Uplo, N, lda) readwrite(A{ld=lda; [N][N]})
-int clapack_dpotrf(const enum ATLAS_ORDER Order, const enum ATLAS_UPLO Uplo,
+#pragma kaapi task value(Order, Uplo, N, lda) \
+                   readwrite(A{ld=lda; [N][N]})
+int clapack_dpotrf(const enum ATLAS_ORDER Order, 
+                   const enum ATLAS_UPLO Uplo,
                    const int N, double *A, const int lda);
 
 
-#pragma kaapi task value(Order, Side, Uplo, TransA, Diag, M, N, alpha, lda, ldb) \
-                   read(A{ld=lda; [N][N]}) readwrite(B{ld=ldb; [N][N]})
-void cblas_dtrsm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                 const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
-                 const enum CBLAS_DIAG Diag, const int M, const int N,
-                 const double alpha, const double *A, const int lda,
+#pragma kaapi task value(Order,Side,Uplo,TransA,Diag,M,N,alpha,lda,ldb) \
+                   read(A{ld=lda; [N][N]}) \
+                   readwrite(B{ld=ldb; [N][N]})
+void cblas_dtrsm(const enum CBLAS_ORDER Order, 
+                 const enum CBLAS_SIDE Side,
+                 const enum CBLAS_UPLO Uplo, 
+                 const enum CBLAS_TRANSPOSE TransA,
+                 const enum CBLAS_DIAG Diag, 
+                 const int M, const int N,
+                 const double alpha, 
+                 const double *A, const int lda,
                  double *B, const int ldb);
 
-#pragma kaapi task value(Order, Uplo, Trans, N, K, alpha, lda, beta, ldc) \
+#pragma kaapi task value(Order,Uplo,Trans,N,K,alpha,lda,beta,ldc) \
                    read(A{ld=lda; [N][N]}) \
                    readwrite(C{ld=ldc; [N][N]})
-void cblas_dsyrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
-                 const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
-                 const double alpha, const double *A, const int lda,
-                 const double beta, double *C, const int ldc);
+void cblas_dsyrk(const enum CBLAS_ORDER Order, 
+                 const enum CBLAS_UPLO Uplo,
+                 const enum CBLAS_TRANSPOSE Trans, 
+                 const int N, const int K,
+                 const double alpha, 
+                 const double *A, const int lda,
+                 const double beta, 
+                 double *C, const int ldc);
 
-#pragma kaapi task value(Order, TransA, TransB, M, N, K, alpha, lda, ldb, beta, ldc) \
+#pragma kaapi task value(Order,TransA,TransB,M,N,K)\
+                   value(alpha,lda,ldb,beta,ldc) \
                    read(A{ld=lda; [M][K]}, B{ld=ldb; [K][N]}) \
                    readwrite(C{ld=ldc; [M][N]})
-void cblas_dgemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA,
-                 const enum CBLAS_TRANSPOSE TransB, const int M, const int N,
-                 const int K, const double alpha, const double *A,
-                 const int lda, const double *B, const int ldb,
-                 const double beta, double *C, const int ldc);
+void cblas_dgemm(const enum CBLAS_ORDER Order, 
+                 const enum CBLAS_TRANSPOSE TransA,
+                 const enum CBLAS_TRANSPOSE TransB, 
+                 const int M, const int N, const int K, 
+                 const double alpha, 
+                 const double *A, const int lda, 
+                 const double *B, const int ldb,
+                 const double beta, 
+                 double *C, const int ldc);
 
 
 // Block Cholesky factorization A <- L * L\^t
-// Lower triangular matrix, with the diagonal, stores the Cholesky factor.
+// Lower triangular matrix, with the diagonal, 
+// Stores the Cholesky factor.
 void Cholesky( double* A, int N, size_t blocsize )
 {
   for (size_t k=0; k < N; k += blocsize)
@@ -1597,7 +1731,7 @@ void Cholesky( double* A, int N, size_t blocsize )
     {
       cblas_dtrsm
       (
-        CblasRowMajor, CblasLeft, CblasLower, CblasNoTrans, CblasUnit,
+        CblasRowMajor,CblasLeft,CblasLower,CblasNoTrans,CblasUnit,
         blocsize, blocsize, 1., &A[k*N+k], N, &A[m*N+k], N
       );
     }
@@ -1662,14 +1796,14 @@ void main( int argc, char** argv )
   return 0;
 }
 \end{lstlisting}
-\end{tiny}
+\end{footnotesize}
 
 %%%\subsection{Merge Sort}
 
 %%%\subsection{NQueens}
 
 \subsection{2D Histogram}
-\begin{tiny}
+\begin{footnotesize}
 \lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
 %\lstset{commentstyle=\color{blue}}
 \lstset{language=C}
@@ -1791,18 +1925,18 @@ int main(int ac, char** av)
   return err;
 }
 \end{lstlisting}
-\end{tiny}
+\end{footnotesize}
 
-\subsection{SMPSs examples}
-
-SMPSs is the implementation of the StartSs programming model for multicore architectures.
-SMPSs is developed by the Barcelona Supercomputing Center (\url{http://www.bsc.es}) and is freely available for download.
-
-All examples from SMPSs are accepted by the KaCC compiler.
-The user may have a look at \url{http://www.bsc.es/plantillaG.php?cat_id=385} to download SMPSs software that contains examples.
-
-\kaapi programming model defines a set of directives which are a superset of the StartSs directives. The appendix~\ref{app:smpss} further details the differences between \kaapi and StartSs/SMPSs.
-
+%\subsection{SMPSs examples}
+%
+%SMPSs is the implementation of the StartSs programming model for multicore architectures.
+%SMPSs is developed by the Barcelona Supercomputing Center (\url{http://www.bsc.es}) and is freely available for download.
+%
+%All examples from SMPSs are accepted by the KaCC compiler.
+%The user may have a look at \url{http://www.bsc.es/plantillaG.php?cat_id=385} to download SMPSs software that contains examples.
+%
+%\kaapi programming model defines a set of directives which are a superset of the StartSs directives. The appendix~\ref{app:smpss} further details the differences between \kaapi and StartSs/SMPSs.
+%
 %%%
 %%%
 \appendix 
@@ -2021,9 +2155,9 @@ The identifier corresponds to system identifier for the core.
 \newpage
 \section{ SMPSs task model compatibility}\label{app:smpss}
 
-A parallel  SMPSs program running on a multicore is composed of several threads sharing the process address space. The threads execute tasks which may shared values in the address space, that we call thread shared memory.
+A parallel  SMPSs program running on a multicore is composed of several threads sharing the same address space. The threads execute tasks which may shared values in the address space, that we call thread shared memory.
 A task is a function call: a function and the list of its effective parameters. 
-In  SMPSs~\cite{smpss-manual} the definition of a task is based on the annotation of the C function definition. Figure~\ref{fig:accumulatesmpss} illustrates the methodology: the original sequential code \verb+accumulate+ is annotated to be a task if compiled with  SMPSs (\verb+#pragma css task+). Each formal parameter is described by the access the task performs: \verb+input+ means that the task requires it to be ready before execution; \verb+output+ means that the task will produce it. And \verb+inout+ for the both. A depicted  in the code, a formal parameter may be defined with a size in order to identify the memory region accessed by the task.
+In  SMPSs~\cite{smpss-manual} the definition of task is based on the annotation of the C function as in \kaapi. Figure~\ref{fig:accumulatesmpss} illustrates the methodology. The original sequential code \verb+accumulate+ is annotated to be a task using SMPSs annotation (\verb+#pragma css task+). Each formal parameter is described by the access the task performs: \verb+input+ means that the task requires it to be ready before execution; \verb+output+ means that the task will produce it. And \verb+inout+ for the both. A depicted  in the code, a formal parameter may be defined with a size in order to identify the memory region accessed by the task.
 \begin{figure}[ht]
 \begin{center}
 \hrule\vspace*{1ex}
@@ -2047,14 +2181,17 @@ void accumulate (int n, int* array, int *result)
 \label{fig:accumulatesmpss}
 \end{figure}
 
-All tasks are created asynchronously: the callee returns immediately after the task creation, before its execution. SMPSs only guarantees that true data flow dependencies (read after write) are verified: SMPSs ensures that a task consuming a value produced by an other task will be executed in order. Two tasks without direct or indirect data flow dependencies can be executed out of order. To ensure serialization, SMPSs defines two kinds of barrier: a global barrier that waits until all previously created tasks have been executed; a local barrier that waits until a list of values has been produced.
+All tasks are asynchronously as in \kaapi.
 
 The SMPSs programming model must be initialized before (\texttt{\#pragma css init} / \texttt{\#pragama css finish}), and allows reduction with locking mechanisms~\cite{smpss-manual}.
 
 
 \subsection{Compatibility}
 
-The \kaapi compiler is allowed to parse and execute correctly all the SMPSs directives without any change in the source code. Moreover, due to its extended syntax to define memory region, \kaapi can be used where SMPSs requires source code modification (for instance in all  inplace SMPSs factorization algorithms -LU, Cholesky, QR, ...-).
+The \kaapi compiler parses and executes correctly all the SMPSs directives without any change in the source code. 
+
+\subsection{Incompatibility}
+Moreover, due to its ability to define memory region of submatrices, \kaapi can be used where SMPSs requires source code modification (for instance in all  inplace SMPSs factorization algorithms -LU, Cholesky, QR, ...-) where data (submatrix) must be reallocated into contiguous memory region.
 
 The semantic of reduction variable in \kaapi allows to avoid locking mechanism at the expense of a memory copy.
 
