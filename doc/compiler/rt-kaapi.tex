@@ -86,11 +86,11 @@ Vincent Danjean%\thanks{Footnote for second author}%
 %%
 \RRresume{
 }
-\RRabstract{During the past years, dynamically scheduled data flow graph for tiled algorithms in linear algebra appears as a promising way to reach the portability of performance onto several multicore architectures.
-The idea was to describe these algorithms into an abstract data flow graph representation that only encodes tasks and their dependencies independently of the scheduling algorithm, which folds up tasks onto the cores of the target architecture. 
-Reported experimental timings show good performances for linear algebra algorithms where tasks are generated only from nested loops. Nevertheless, all recently proposed frameworks do not consider program where tasks with data flow dependencies are generated recursively. 
+\RRabstract{During the past years, dynamically scheduled data flow graphs for tiled algorithms in linear algebra have appeared as a promising way to reach the portability of performance onto several multicore architectures.
+The idea was to describe those algorithms as an abstract data flow graph representation that only encodes tasks and their dependencies independently of the scheduling algorithm, which folds up tasks onto the cores of the target architecture. 
+Reported experimental timings show good performances for linear algebra algorithms where tasks are generated only from nested loops. Nevertheless, all recently proposed frameworks do not consider programs where tasks with data flow dependencies are generated recursively. 
 
-In this report, we present the \kaapi's programming model. A parallel \kaapi program is a C or C++ sequential program with code annotation using \texttt{\#pragma} compiler directives. A specific source to source compiler translates \kaapi directives to runtime calls.
+In this report, we present \kaapi's programming model. A parallel \kaapi program is a C or C++ sequential program with code annotation using \texttt{\#pragma} compiler directives. A specific source to source compiler translates \kaapi directives to runtime calls.
 }
 
 %%
@@ -134,22 +134,22 @@ In this report, we present the \kaapi's programming model. A parallel \kaapi pro
 \newpage
 \section{Context}
 
-Several research projects~\cite{Gunnels:2001:FFL,plasma-analysis,PerezBL08} have investigated the use of data flow graphs as an intermediate representation of the computation of LAPACK's algebra algorithms~\cite{plasma-lapack}: the main reason was that the portability of performance in LAPACK is of the responsibility of a set of basic linear algebra subprograms (BLAS), which exhibit only low level parallelism that is not enough on multicores.
+Several research projects~\cite{Gunnels:2001:FFL,plasma-analysis,PerezBL08} have investigated the use of data flow graphs as an intermediate representation of the computation of LAPACK's algebra algorithms~\cite{plasma-lapack}: the main reason was that the portability of performance in LAPACK is of the responsibility of a set of basic linear algebra subprograms (BLAS), which exhibit only a low level parallelism that is not enough on multicores.
 
-Without taking care of considerations about  tile algorithms to reach performances, three majors points have been identified as important to perform efficiently tile algorithms~\cite{Gunnels:2001:FFL,plasma-analysis,plasma-lapack}: 1/ fine granularity to reach high level of parallelism; 2/ asynchronous execution to prevent barrier of synchronization; and 3/ a dynamic data driven scheduler to ensure execution of task as soon as all their input data are produced.
+Without taking care of considerations about tile algorithms to reach performances, three majors points have been identified as important to perform efficient tile algorithms~\cite{Gunnels:2001:FFL,plasma-analysis,plasma-lapack}: 1/ fine granularity to reach high level of parallelism; 2/ asynchronous execution to prevent barrier of synchronization; and 3/ a dynamic data driven scheduler to ensure execution of task as soon as all their input data are produced.
 
 Point 1/ was already mentioned since the first papers about Cilk~\cite{Cilk5:1998} and formalized in the Cilk performance model~\cite{CilkSched98} where the parallel time is lower bounded by the critical path: a program that cannot exploit fine grain parallelism is difficult to schedule with guaranted linear speed up, even for a reasonable number of processors.
 Points 2/  and 3/ are at the basis of the execution of data flow machines~\cite{dataflow} or languages~\cite{Jade:1998, Athapascan98} that try to schedule instructions as soon as input operands are produced.
 
 
-Nevertheless, most of the recently proposed frameworks that share the data flow graph as a central representation to schedule dynamically tasks according to their dependencies, are not able to perform programs with recursive tasks creations.  
+Nevertheless, most of the recently proposed frameworks that share the data flow graph as a central representation to dynamically schedule tasks according to their dependencies, are not able to run programs with recursive tasks creations.  
 
-This report presents \kaapi a runtime library and a source to source compiler to program NUMA multicore machine.
-\kaapi is based on a macro data flow graph: the sequential code is annotated to identify functions to be transformed into tasks. Each function that is candidate to become a task must be annotated in order to specify the access mode (read, write, reduction, exclusive) made through its parameter to the memory. The compiler will insert task creation and the runtime will detect the dependencies and schedule the tasks onto the cores.
+This report presents \kaapi, a runtime library and a source to source compiler to program NUMA multicore machines.
+\kaapi is based on a macro data flow graph: the sequential code is annotated to identify functions to be transformed into tasks. Each function that is candidate to become a task must be annotated in order to specify the access mode (read, write, reduction, exclusive) made through its parameter to the memory. The compiler will insert task creations and the runtime will detect the dependencies and schedule the tasks onto the cores.
 
-\kaapi programming model comes from Athapascan~\cite{Athapascan98} which, itself, was inspired by Jade~\cite{Jade:1998} and Cilk~\cite{Cilk5:1998}. Because \kaapi programming model and  StarSs~\cite{Badia:2009} was very closed, we also accept the execution of  StarSs program. Descriptions of \kaapi may be found in following publications~\cite{Kaapi_2007,Traore_2008-deque_free, CCK_MCO08,KAAPI_TIC_2009}.
+The \kaapi programming model comes from Athapascan~\cite{Athapascan98} which, itself, was inspired by Jade~\cite{Jade:1998} and Cilk~\cite{Cilk5:1998}. Because the \kaapi programming model and  StarSs~\cite{Badia:2009} are very closed, we also accept the execution of StarSs program. Descriptions of \kaapi may be found in following publications~\cite{Kaapi_2007,Traore_2008-deque_free, CCK_MCO08,KAAPI_TIC_2009}.
 
-This technical report is organized as following. Section~\ref{sec:helloworld} presents 
+This technical report is organized as follows. FIXME Section~\ref{sec:helloworld} presents 
 though simple examples how to program with \kaapi in C or C++.
 
 %%%
@@ -158,15 +158,15 @@ though simple examples how to program with \kaapi in C or C++.
 \section{Software installation}\label{sec:userinstall}
 
 \kaapi is both a programming model and a runtime for high performance parallelism targeting multicore and distributed architectures. 
-It relies on work stealing paradigm.
+It relies on the work stealing paradigm.
 \kaapi was developed in the MOAIS INRIA project by Thierry Gautier, Fabien Le Mentec, Vincent Danjean and Christophe Laferrière in the early stage of the library.
 
-In this report, only the programming model based on code annotation with \texttt{pragma} compiler directive is presented.
-The runtime library comes also with a full set of complementary programming interfaces: a C, C++ and STL like interface. The C++ and STL interfaces, at higher level than the C interface,  may be directly used for developing parallel programs or libraries.
+In this report, only the programming model based on code annotations with \texttt{pragma} compiler directives is presented.
+The runtime library comes also with a full set of complementary programming interfaces: C, C++ and STL-like interfaces. The C++ and STL interfaces, at a higher level than the C interface, may be directly used for developing parallel programs or libraries.
 
 \subsubsection*{Supported Platforms}
 \kaapi targets essentially SMP and NUMA platforms. The runtime should run
-on every system providing:
+on any system providing:
 \begin{itemize}
 \item a GNU toolchain (4.3),
 \item the pthread library,
@@ -177,7 +177,7 @@ GNU-Linux/x86\_64 and MacOSX/Intel processor.
 There is no version for Windows yet.
 
 \subsubsection*{\kaapi Contacts}
-If you whish to contact the XKaapi team web site at:
+If you wish to contact the XKaapi team, please visite the web site at:
 \begin{center}
 \url{http://kaapi.gforge.inria.fr}
 \end{center}
@@ -190,39 +190,39 @@ To install \kaapi programming model and compiler you need to:
 \item install the \kaapi libraries and runtime
 \item install the compiler
 \end{itemize}
-The \kaapi libraries and runtime are available at \url{http://kaapi.gforge.inria.fr} (tarball) or as a debian package. \kaapi libraries and runtimes are distributed with a CeCILL-C license\footnote{\url{http://www.cecill.info/index.en.html} for english version}:
+The \kaapi libraries and runtime are available at \url{http://kaapi.gforge.inria.fr} (tarball) or as a Debian package. \kaapi libraries and runtime are distributed under a CeCILL-C license\footnote{\url{http://www.cecill.info/index.en.html} for english version}:
 \begin{center}
 \begin{minipage}{0.9\linewidth}
 \it
-CeCILL-C is well suited to libraries and more generally software components. Anyone distributing an application which includes components under the CeCILL-C license must mention this fact and make any changes to the source code of these components available to the community under CECILL-C while being free to choose the licence of its application.\end{minipage}
+CeCILL-C is well suited to libraries and more generally software components. Anyone distributing an application which includes components under the CeCILL-C license must mention this fact and make any changes to the source code of those components available to the community under CECILL-C while being free to choose the licence of its application.\end{minipage}
 \end{center}
 
-Moreover, the \kaapi compiler is based on the ROSE\footnote{\url{http://www.rosecompiler.org}} framework to develop source-to-source translators. In this framework, C and C++ frontend is based on the EDG frontend. 
-ROSE is available with a BSD license, but the binary code for EDG must be downloaded separately. 
+Moreover, the \kaapi compiler is based on the ROSE\footnote{\url{http://www.rosecompiler.org}} framework to develop source-to-source translators. In this framework, the C and C++ frontends are based on the EDG frontend. 
+ROSE is available under a BSD license, but the binary code for EDG must be downloaded separately. 
 
 \subsubsection{ROSE and EDG frontend installation}
-ROSE framework (\url{http://www.rosecompiler.org/}) must be installed. Please have a look at the installation guide on the ROSE web site.
+The ROSE framework (\url{http://www.rosecompiler.org/}) must be installed. Please have a look at the installation guide on the ROSE web site.
 
 In order to install ROSE, you need to have (valid for ROSE 0.9.5a):
 \begin{itemize}
-\item \texttt{wget}: to download binary version of the EDG frontend
-\item \texttt{gcc, g++}: a least version 4.0.0
+\item \texttt{wget}: to download the binary version of the EDG frontend
+\item \texttt{gcc, g++}: at least version 4.0.0
 \item \texttt{boost}: version 1.36.0 to 1.45.0
 \item and a lot of different utilities (GNU autotools, ...)
 \end{itemize}
-Precise definition of the procedure to install rose and EDG frontend is described in the ROSE documents.
+Detailed procedures to install ROSE and EDG frontend are described in ROSE documents.
 
-Once ROSE installed, you are able to use it to generate \verb+kacc+ the \kaapi compiler.
+Once ROSE is installed, you will be able to generate \verb+kacc+, the \kaapi compiler.
 
 \subsubsection{\kaapi library installation}
 There are 2 ways to install \kaapi:
 \begin{itemize}
-\item using the debian packages,
+\item using the Debian packages,
 \item installing from source.
 \end{itemize}
 
 %% sub
-\subsubsection*{Using the debian packages}
+\subsubsection*{Using the Debian packages}
 Below is a list of the Debian packages provided for using and programming with \kaapi. \\
 \textit{
 TODO: décrire ici le package nécessaire pour le compilateur. A priori uniquement la lib C + éventuellement une lib C++ pour des classes tableaux et/ou autre data structure qui serait déjà 'pré-définie' pour être passer correctement en paramètre de tâche. Je pense ici à la lib des array/range2D qui permet facilement de faire de la découpe récursive de données.
@@ -234,7 +234,7 @@ There are 2 ways to retrieve the sources:
 \begin{itemize}
 \item download a release snapshot at the following url:\newline
 \url{https://gforge.inria.fr/frs/?group_id=94}.
-\item clone the project git repository:\newline
+\item clone the git repository of the project:\newline
 \verb+> git clone git://git.ligforge.imag.fr/git/kaapi/xkaapi.git xkaapi+
 \end{itemize}
 \textit{
@@ -268,7 +268,7 @@ Enable performance counters support.
 Enable the PAPI library for low level performance counting.
 More information on PAPI can be found at http://icl.cs.utk.edu/papi/.
 \item \verb+--enable-kacc+\newline \textbf{required} to compile the \verb+kacc+ compiler.
-Depending of your installation of ROSE and Boost library, you may specified their installation paths using:\\
+Depending on your installation of ROSE and the Boost library, you may specify their installation paths using:\\
 \hspace*{4ex}\verb+--with-rose=<rose installation>+ \\
 or\\
 \hspace*{4ex} \verb+--with-boost=<boost installation>+
@@ -282,7 +282,7 @@ Example:
 \end{verbatim}
 If there are errors during the configuration process, you have to solve
 them before going further. If dependencies are missing on your
-system, in which case the log will give you the names of the software to install.
+system, logs will give you the names of the software to install.
 
 \paragraph{Compilation and installation.}
 On success, the configuration process generates a Makefile. The 2 following
@@ -293,7 +293,7 @@ $> make install
 \end{verbatim}
 
 \paragraph{Checking the installation.}
-The following checks the runtime is correctly installed on your system:
+The following checks that the runtime is correctly installed on your system:
 \begin{verbatim}
 $> make check
 \end{verbatim}
@@ -317,7 +317,7 @@ directory structure:
 
 The KaCC compiler is located in \texttt{<prefix>/bin}, it should be in your \texttt{\$PATH} variable to avoid full path naming.
 All programs compiled with KaCC are linked against libraries located in  \texttt{<prefix>/lib}. 
-Executables linked with KaCC does not require to add this directory in your \verb+LD_LIBRARY_PATH+ (under linux) or \verb+DYLD_LIBRARY_PATH+ (under Mac OS X).
+Executables linked with KaCC do not require to add this directory in your \verb+LD_LIBRARY_PATH+ (under linux) or \verb+DYLD_LIBRARY_PATH+ (under Mac OS X).
 
 The \texttt{<prefix>/share} directory contains some documentation and examples.
 
@@ -325,7 +325,7 @@ The \texttt{<prefix>/share} directory contains some documentation and examples.
 
 The source distribution of \kaapi contains the repository \verb+examples+. Each subdirectory is dedicated to a problem (fibonacci, matrix product, ...). 
 The examples that come with the compiler are located in \verb+examples/compiler+.
-Presentation of examples using directly the \kaapi library (with C, C++ or STL) interface is out of the scope of this report.
+A presentation of examples using directly the \kaapi library (with C, C++ or STL) interface is out of the scope of this report.
 
 In the remaining, we only present the \kaapi programming model and we show examples using the \verb+kacc+ compiler only. The process of describing a parallel program with \kaapi is:
 \begin{itemize}
@@ -347,10 +347,10 @@ First it is necessary to start a parallel region where tasks may be executed con
 Outside a parallel region tasks are executed only by the current thread. 
 This is indicated by \texttt{\#pragma kaapi parallel} at line 11. 
 The parallel region begins at the next basic block (between \verb+{+ and \verb+}+) and it ends at the end of the basic block. 
-Without brackets it only concern the following statement.
+Without brackets it only concerns the following statement.
 %It could also be defined before any instruction and it will end after the instruction.
 
-The \texttt{\#pragma kaapi parallel} defines a region where concurrent executions may occur. The number of threads used to execute tasks inside a parallel region may varies during the execution. 
+The \texttt{\#pragma kaapi parallel} defines a region where concurrent executions may occur. The number of threads used to execute tasks inside a parallel region may vary during the execution. 
 All tasks created inside a parallel region are guaranteed to be completed at the end of the parallel region.
 
 \begin{figure}[ht]
@@ -395,7 +395,7 @@ Then, run it with:
 Hello World!
 \end{verbatim}
 
-This simple example only creates one task without real concurrency\footnote{In fact, there is concurrency between the task execution and the code executed between the end of the function call at line 12 and before the instruction at line 13: it is possible that the task is theft and executed by an other thread than the main thread. Nevertheless, at the end of the parallel region, the task is completed.}.
+This simple example only creates one task without real concurrency\footnote{In fact, there is concurrency between the task execution and the code executed between the end of the function call at line 12 and before the instruction at line 13: it is possible that the task is theft and executed by another thread than the main thread. Nevertheless, at the end of the parallel region, the task is completed.}.
 
 \subsubsection{Two Hello World}
 
@@ -439,20 +439,20 @@ First call: Hello World!
 Second call: Hello World!
 \end{verbatim}
 
-Moreover, some execution may produce following output:
+Moreover, some execution may produce the following output:
 \begin{verbatim}
 > ./hello_world2
 Second call: Hello World!
 First call: Hello World!
 \end{verbatim}
 
-In \kaapi the task creation is a non blocking operation: the thread that creates tasks never waits for the completion of the tasks if it is not specified by the user.  All tasks created into a parallel region are guaranteed to be completed at the end of the parallel region: the end of a parallel region has an implicit synchronization point that forces execution of tasks.  But inside a parallel region, tasks may be executed in \textbf{any order} that respects the data flow dependencies between tasks. In the example, tasks have been declared as taking their parameter by value so they are independent.
+In \kaapi the task creation is a non-blocking operation: the thread that creates tasks never waits for the completion of the tasks if it is not specified by the user.  All tasks created into a parallel region are guaranteed to be completed at the end of the parallel region: the end of a parallel region has an implicit synchronization point that forces execution of tasks.  But inside a parallel region, tasks may be executed in \textbf{any order} that respects the data flow dependencies between tasks. In the example, tasks have been declared as taking their parameter by value so they are independent.
 
-The three ways \kaapi offers to enforce an execution order is:
+The three ways \kaapi offers to enforce an execution order are:
 \begin{itemize}
-\item Tasks have declared special access modes to their parameters (read, write, exclusive), which introduce read-after-write data flow dependencies between tasks: this are the only dependencies that \kaapi respect at runtime. This is the subject of the next section.
+\item Tasks have declared special access modes to their parameters (read, write, exclusive), which introduce read-after-write data flow dependencies between tasks: they are the only dependencies that \kaapi respect at runtime. This is the subject of the next section.
 
-\item If tasks are independent, then the user mays introduce a synchronization point using the \texttt{\#pragma kaapi sync} directive to force all tasks created in the same function body before the synchronization point to be completed at the end of the synchronization point. In the previous example, this directive must be placed between line 13 and line 14:
+\item If tasks are independent, then the user may introduce a synchronization point using the \texttt{\#pragma kaapi sync} directive to force all tasks created in the same function body before the synchronization point to be completed at the end of the synchronization point. In the previous example, this directive must be placed between line 13 and line 14:
 \begin{footnotesize}
 \lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
 \lstset{commentstyle=\color{blue}}
@@ -467,8 +467,8 @@ The three ways \kaapi offers to enforce an execution order is:
 \end{lstlisting}
 \end{footnotesize}
 
-\item The user mays also defined a sequence of parallel region in order to take benefit of the implicit synchronization at the end of each parallel region.
-The code of figure~\ref{ex:helloworld2} would become:
+\item The user may also define a sequence of parallel regions in order to take benefit of the implicit synchronization at the end of each parallel region.
+The code of figure~\ref{ex:helloworld2} then becomes:
 \begin{footnotesize}
 \lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
 \lstset{commentstyle=\color{blue}}
@@ -530,10 +530,10 @@ int main(int argc, char** argv)
 \end{figure}
 
 
-The first task takes 3 parameters: the first one is the size of the buffer parameter, the second parameter. A third parameter points to the message to copy into the buffer. The respective access modes for these parameters, defined at line 3, are:
+The first task takes 3 parameters: the first one is the size of the buffer which is given as the second parameter. A third parameter points to the message to copy into the buffer. The respective access modes for these parameters, defined at line 3, are:
 \begin{itemize}
 \item \textbf{by value access mode}, for the parameter \texttt{size} defined by \texttt{'value(size)'}. 
-This access mode is like the pass-by-value rule of C/C++ function call: The callee copies the effective parameter\footnote{The expression passed in the function call.} to the formal parameter\footnote{The name of the variable in the function definition}. The callee receives a copy of the value that can be modified. Modifications are not viewed by the caller.
+This access mode is like the pass-by-value rule of a C/C++ function call: The callee copies the effective parameter\footnote{The expression passed in the function call.} to the formal parameter\footnote{The name of the variable in the function definition}. The callee receives a copy of the value that can be modified. Modifications are not viewed by the caller.
 \item \textbf{write access mode} of \texttt{buffer} defined by \texttt{'write(buffer[size])'}. 
 In this example, the function writes characters into a buffer. 
 The clause specifies the size of the buffer (\texttt{buffer[size]}) written by the task.
@@ -541,7 +541,7 @@ Modifications of the buffer during task execution are reported to the callee.
 With this access mode, the input value of the parameter \texttt{buffer} is unspecified.
 
 \item \textbf{read access mode} for the variable \texttt{msg} defined by \texttt{'read(msg)'}.
-This parameter is the C string reads by the task and copied into the parameter \texttt{buffer}.
+This parameter is the C string read by the task and copied into the parameter \texttt{buffer}.
 The size of the string follows the C convention  of null terminated string.
 \end{itemize}
 
@@ -604,15 +604,15 @@ int main()
 \end{figure}
 
 The main function creates two tasks: the first one to do the computation at line 29 and the second one to print the result (line 30).
-Due to access modes, this two tasks have a true dependency. Like the other examples, these tasks are created and executed inside a parallel region defined in the main function, at line 
+Due to access modes, this two tasks have a true dependency. Like the other examples, these tasks are created and executed inside a parallel region defined in the main function, at line FIXME
 
 The \verb+fibonacci+ task (lines 3-16) recursively creates two tasks until the input parameter \texttt{n} is smaller than \texttt{2}.
 %%In \kaapi, tasks must be created into a parallel region: in \kaapi \textbf{each body of a task is an implicit parallel region}.
 
 Task creation is a non blocking call, thus at line 13 a synchronization point is added (\texttt{\#pragma kaapi sync}):
 \begin{itemize}
-\item the directive enforces that all previously created tasks in the same function body\footnote{More formally, in the same activation frame of the function body execution.} be completed before to proceed the next instruction at line 14 to sum the sub results.
-\item the directive does \textbf{not} wait completion of tasks created on the outter function calls.
+\item the directive enforces that all previously created tasks in the same function body\footnote{More formally, in the same activation frame of the function body execution.} be completed before to proceed with the next instruction at line 14 to sum the sub results.
+\item the directive does \textbf{not} wait for the completion of tasks created on the outter function calls.
 \end{itemize}
 
 
@@ -622,7 +622,7 @@ The previous code of figure~\ref{ex:fibonacci} has a main drawback: it requires 
 
 In this section, we present how to suppress it by creating a task that will represent the \textit{continuation} of the computation.
 The code is presented in the figure~\ref{ex:fibonacci2}.
-In place of adding a synchronization point, we create, at line 18, a task \texttt{sum}, with true data flow dependencies with the previous tasks (on variables \texttt{r1} and \texttt{r2}). This \texttt{sum} task do the summation (task sum definition at line 1) of the two sub-results computed by the recursive tasks created at line 16 and 17.
+Instead of adding a synchronization point, we create, at line 18, a task \texttt{sum}, with true data flow dependencies with the previous tasks (on variables \texttt{r1} and \texttt{r2}). This \texttt{sum} task does the summation (task sum definition at line 1) of the two sub-results computed by the recursive tasks created at line 16 and 17.
 
 \begin{figure}[ht]
 \begin{center}
@@ -661,7 +661,7 @@ void fibonacci(long* result, const long n)
 
 The advantage of the continuation passing style is to replace an explicit coarse grain synchronization (\texttt{\#pragma kaapi sync} with an implicit data flow synchronization by creating the task \texttt{sum}.
 
-Because the tasks created at lines 16, 17 and 18 are non blocking call, the user must takes care of the scope of the variables  passed to the tasks. In the previous example, because \texttt{r1} and \texttt{r2} are allocated into the C stack of the function \texttt{fibonacci}, the user must specify at line 14 the directive  \texttt{\#pragma kaapi data alloca} to annotate explicitly these data: Then the compiler will allocate them such that their scope is enough for the execution of the task.
+Because the tasks created at lines 16, 17 and 18 are non blocking calls, the user must take care of the scope of the variables passed to the tasks. In the previous example, because \texttt{r1} and \texttt{r2} are allocated into the C stack of the function \texttt{fibonacci}, the user must specify at line 14 the directive  \texttt{\#pragma kaapi data alloca} to annotate explicitly those data: Then the compiler will allocate them so that their scope is enough for the execution of the task.
 
 
 %\subsubsection{Terminal recursion suppression}
