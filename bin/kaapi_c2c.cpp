@@ -221,20 +221,6 @@ static SgFunctionDeclaration* buildLoopEntrypoint(
   SgGlobal*                    scope
 );
 
-static void buildLoopEntrypointBody( 
-  SgFunctionDeclaration*       func,
-  SgFunctionDeclaration*       splitter,
-  std::set<SgVariableSymbol*>& listvar,
-  SgClassDeclaration*          contexttype,
-  SgInitializedName*           ivar,
-  SgExpression*                global_begin_iter,
-  SgExpression*                global_step,
-  SgStatement*                 loopbody,
-  SgGlobal*                    scope,
-  bool			       hasIncrementalIterationSpace,
-  bool			       isInclusiveUpperBound
-);
-
 static SgFunctionDeclaration* buildSplitter(
   std::set<SgVariableSymbol*>& listvar,
   SgInitializedName*           ivar,
@@ -4564,6 +4550,9 @@ static void buildFreeVariable(SgScopeStatement* scope, std::set<SgVariableSymbol
 
 
 // loop canonicalizer
+// TODO: __kaapi_count must be unitary so that the workqueue
+// content is one based
+// TODO: buildLoopEntrypointBody()
 
 class forLoopCanonicalizer
 {
@@ -4580,6 +4569,8 @@ public:
     (SgInitializedName* name, unsigned int op, SgExpression* incr)
       : name_(name), op_(op), incr_(incr) {}
   };
+
+  typedef std::list<AffineVariable> AffineVariableList;
 
 private:
 
@@ -4653,7 +4644,24 @@ private:
 public:
   static bool canonicalize(SgForStatement*);
   static bool canonicalize(SgForStatement*, std::list<AffineVariable>&);
+
+  static bool isDecreasingOp(unsigned int);
 };
+
+
+bool forLoopCanonicalizer::isDecreasingOp(unsigned int op)
+{
+  switch (op)
+  {
+  case PLUS_PLUS:
+  case PLUS_ASSIGN:
+  case ASSIGN_ADD:
+    return false;
+    break ;
+  default: break;
+  }
+  return true;
+}
 
 bool forLoopCanonicalizer::doStepLabelTransform()
 {
@@ -5540,6 +5548,25 @@ public:
   const std::string& _name;
 };
 
+// forward decl
+
+static void buildLoopEntrypointBody
+( 
+  SgFunctionDeclaration*       func,
+  SgFunctionDeclaration*       splitter,
+  std::set<SgVariableSymbol*>& listvar,
+  SgClassDeclaration*          contexttype,
+  SgInitializedName*           ivar,
+  SgExpression*                global_begin_iter,
+  SgExpression*                global_step,
+  SgStatement*                 loopbody,
+  SgGlobal*                    scope,
+  bool			       hasIncrementalIterationSpace,
+  bool			       isInclusiveUpperBound,
+  forLoopCanonicalizer::AffineVariableList&
+);
+
+
 /** Transform a loop with independent iteration in an adaptive form
     The loop must have a cannonical form:
        for ( i = begin; i<end; ++i)
@@ -5594,7 +5621,6 @@ SgStatement* buildConvertLoop2Adaptative(
   SgScopeStatement* scope = SageInterface::getScope( forloop->get_parent() );
 
   std::list<forLoopCanonicalizer::AffineVariable> affine_vars;
-
   if (forLoopCanonicalizer::canonicalize(forloop, affine_vars) == false)
   {
     std::cerr << "****[kaapi_c2c] canonicalize loop failed" << std::endl;
@@ -5734,7 +5760,8 @@ SgStatement* buildConvertLoop2Adaptative(
     loopbody, 
     bigscope,
     hasIncrementalIterationSpace,
-    isInclusiveUpperBound
+    isInclusiveUpperBound,
+    affine_vars
   );
 
   /* fwd declaration of the entry point */
@@ -6235,7 +6262,8 @@ static void buildLoopEntrypointBody(
   SgStatement*                 loopbody,
   SgGlobal*                    scope,
   bool			       hasIncrementalIterationSpace,
-  bool			       isInclusiveUpperBound
+  bool			       isInclusiveUpperBound,
+  forLoopCanonicalizer::AffineVariableList& affine_vars
 )
 {
   SgBasicBlock* body = func->get_definition()->get_body();
@@ -6419,20 +6447,6 @@ static void buildLoopEntrypointBody(
   );
   wc_init->set_endOfConstruct(SOURCE_POSITION);
   SageInterface::appendStatement( wc_init, body );
-  
-  SgStatement* init_ivar_local =
-    SageBuilder::buildAssignStatement(
-      SageBuilder::buildVarRefExp(local_ivar),
-      SageBuilder::buildAddOp(
-        global_begin_iter,
-        SageBuilder::buildMultiplyOp(
-          SageBuilder::buildVarRefExp(local_beg),
-          global_step
-        )
-      )
-    );
-  init_ivar_local->set_endOfConstruct(SOURCE_POSITION);
-  SageInterface::appendStatement( init_ivar_local, body );
 
   SgWhileStmt* while_popsizeloop = 
     SageBuilder::buildWhileStmt(
@@ -6454,21 +6468,69 @@ static void buildLoopEntrypointBody(
   );
   while_popsizeloop->set_endOfConstruct(SOURCE_POSITION);
 
-  /* iter_end = affine function of range_end */
-  SgStatement* init_ivar_local_end =
-    SageBuilder::buildAssignStatement(
-      SageBuilder::buildVarRefExp(local_ivar_end),
-      SageBuilder::buildAddOp(
-        global_begin_iter,
-        SageBuilder::buildMultiplyOp(
-          SageBuilder::buildVarRefExp(local_end),
-          global_step
-        )
-      )
-    );
-  init_ivar_local_end->set_endOfConstruct(SOURCE_POSITION);
-  SageInterface::appendStatement( init_ivar_local_end, isSgBasicBlock(while_popsizeloop->get_body( )) );
-  
+  { // affine variable affectation
+
+    typedef forLoopCanonicalizer::AffineVariable AffineVariable;
+
+    SgBasicBlock* const while_block =
+      isSgBasicBlock(while_popsizeloop->get_body());
+
+    SgVarRefExp* const beg_expr = SageBuilder::buildVarRefExp(local_beg);
+
+    std::list<AffineVariable>::iterator pos = affine_vars.begin();
+    std::list<AffineVariable>::iterator end = affine_vars.end();
+    for (; pos != end; ++pos)
+    {
+      SgVariableSymbol* const var_sym =
+	body->lookup_variable_symbol(pos->name_->get_name());
+
+      // TO_REMOVE cannot occur
+      if (var_sym == NULL)
+      {
+	printf("var_sym(%s) == NULL\n", pos->name_->get_name().str());
+	continue ;
+      }
+      // TO_REMOVE cannot occur
+
+      // create the var affectation statement:
+      // var = __c->var + __i * incr;
+
+      SgPointerDerefExp* const base_expr =
+	SageBuilder::buildPointerDerefExp
+	(
+	 SageBuilder::buildArrowExp
+	 ( 
+	  SageBuilder::buildVarRefExp(context),
+	  SageBuilder::buildOpaqueVarRefExp
+	  ("p_" + var_sym->get_name(), contexttype->get_scope())
+	 )
+	);
+
+      SgExpression* incr_expr = pos->incr_;
+
+      // plus_plus or minus_minus have no expression
+      if (incr_expr == NULL)
+	incr_expr = SageBuilder::buildLongIntVal(1);
+
+      SgExpression* const scaled_expr =
+	SageBuilder::buildMultiplyOp(beg_expr, incr_expr);
+
+      SgExpression* add_expr;
+      // decreasing op
+      if (forLoopCanonicalizer::isDecreasingOp(pos->op_))
+	add_expr = SageBuilder::buildSubtractOp(base_expr, scaled_expr);
+      else
+	add_expr = SageBuilder::buildAddOp(base_expr, scaled_expr);
+
+      SgStatement* const assign_stmt = SageBuilder::buildAssignStatement
+	(SageBuilder::buildVarRefExp(var_sym), add_expr);
+      assign_stmt->set_endOfConstruct(SOURCE_POSITION);
+      SageInterface::prependStatement(assign_stmt, while_block);
+
+    } // foreach affine variable
+
+  } // affine variable affectation
+
   /* */
   SgStatement* new_forloop = 
     SageBuilder::buildForStatement(
@@ -6487,15 +6549,6 @@ static void buildLoopEntrypointBody(
     );
   new_forloop->set_endOfConstruct(SOURCE_POSITION);
   SageInterface::appendStatement( new_forloop, isSgBasicBlock(while_popsizeloop->get_body( ))  );
-
-  /* iter = iter_end at the end of the local loop */
-  SgStatement* swap_ivars_local =
-    SageBuilder::buildAssignStatement(
-      SageBuilder::buildVarRefExp(local_ivar),
-      SageBuilder::buildVarRefExp(local_ivar_end)
-    );
-  swap_ivars_local->set_endOfConstruct(SOURCE_POSITION);
-  SageInterface::appendStatement( swap_ivars_local, isSgBasicBlock(while_popsizeloop->get_body( )) );
 
   SageInterface::appendStatement( while_popsizeloop, body  );
   
