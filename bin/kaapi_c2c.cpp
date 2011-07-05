@@ -4550,9 +4550,6 @@ static void buildFreeVariable(SgScopeStatement* scope, std::set<SgVariableSymbol
 
 
 // loop canonicalizer
-// TODO: __kaapi_count must be unitary so that the workqueue
-// content is one based
-// TODO: buildLoopEntrypointBody()
 
 class forLoopCanonicalizer
 {
@@ -4786,8 +4783,8 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
 
   //
   // generate the variable holding the difference
-  // unsigned long count = (hi_expr - lo_expr) / incr;
-  // signed long type is used to avoid underflow
+  // unsigned long count = ((hi - lo) % incr ? 1 : 0) + (hi - lo) / incr;
+  // use signed long type as in kaapi workqueue
 
   // scope
   SgScopeStatement* const count_scope =
@@ -4804,13 +4801,6 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
   SgName count_name = "__kaapi_count_";
   count_name << ++SageInterface::gensym_counter;
 
-  SgType* const count_type = SageBuilder::buildLongType();
-  SgVariableDeclaration* const count_decl =
-    SageBuilder::buildVariableDeclaration
-    (count_name, count_type, 0, count_scope);
-  SgVarRefExp* const count_vref_expr =
-    SageBuilder::buildOpaqueVarRefExp(count_name, count_scope);
-
   // substraction. add 1 to inclsuive (non strict) operators.
   SgExpression* diff_op = SageBuilder::buildSubtractOp(hi_expr, lo_expr);
   if (isInclusiveOperator(test_op_))
@@ -4819,7 +4809,31 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
       (diff_op, SageBuilder::buildLongIntVal(1));
   }
 
-  // insert declaration statement
+  // modulus and ternary expressions
+  diff_op->set_need_paren(true);
+  SgExpression* const noteq_expr = SageBuilder::buildNotEqualOp
+  (
+   SageBuilder::buildModOp(diff_op, stride_),
+   SageBuilder::buildLongIntVal(0)
+  );
+
+  SgConditionalExp* const tern_expr = SageBuilder::buildConditionalExp
+  (
+   noteq_expr,
+   SageBuilder::buildLongIntVal(1),
+   SageBuilder::buildLongIntVal(0)
+  );
+
+  SgExpression* const add_op = SageBuilder::buildAddOp
+    (SageBuilder::buildDivideOp(diff_op, stride_), tern_expr);
+
+  // insert count declaration
+  SgType* const count_type = SageBuilder::buildLongType();
+  SgVariableDeclaration* const count_decl =
+    SageBuilder::buildVariableDeclaration
+    (count_name, count_type, 0, count_scope);
+  SgVarRefExp* const count_vref_expr =
+    SageBuilder::buildOpaqueVarRefExp(count_name, count_scope);
   SageInterface::prependStatement(count_decl, count_scope);
 
   // insert for init statement
@@ -4837,7 +4851,7 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
   }
 
   SgExpression* const less_expr =
-    SageBuilder::buildLessThanOp(count_vref_expr, diff_op);
+    SageBuilder::buildLessThanOp(count_vref_expr, add_op);
   for_stmt_->set_test_expr(less_expr);
 
   // move increment to end of body
@@ -4847,9 +4861,8 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
     isSgScopeStatement(SageInterface::getLoopBody(for_stmt_));
   SageInterface::appendStatement(incr_stmt, scope_stmt);
 
-  // insert count -= stride as increment expression
-  for_stmt_->set_increment
-    (SageBuilder::buildPlusAssignOp(count_vref_expr, stride_));
+  // insert ++count as increment expression
+  for_stmt_->set_increment(SageBuilder::buildPlusPlusOp(count_vref_expr));
 
   return true;
 
@@ -5871,15 +5884,9 @@ SgStatement* buildConvertLoop2Adaptative(
     );
   }
 
-  /* initialize the workqueue with initial range [O, (end_iter - begin_iter)/step] */
-  SgExprListExp* argcallinit = SageBuilder::buildExprListExp(
-    workcallee,
-    SageBuilder::buildIntVal(0),
-    SageBuilder::buildDivideOp(
-      expr_size,
-      step
-    )
-  );
+  /* initialize the workqueue with initial range [0, expr_size] */
+  SgExprListExp* argcallinit = SageBuilder::buildExprListExp
+    (workcallee, SageBuilder::buildIntVal(0), expr_size);
 
   SgExprStatement* callinit_stmt = SageBuilder::buildFunctionCallStmt(    
       "kaapi_workqueue_init",
