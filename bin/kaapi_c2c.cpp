@@ -5696,7 +5696,13 @@ SgStatement* buildConvertLoop2Adaptative(
   std::set<SgVariableSymbol*>::iterator ivar_beg;
   std::set<SgVariableSymbol*>::iterator ivar_end;
 
-  buildFreeVariable(forloop, listvar);
+  if (isSgScopeStatement(loopbody) == NULL)
+  {
+    std::cerr << "cannot find for loop body scope" << std::endl;
+    return 0;
+  }
+
+  buildFreeVariable(isSgScopeStatement(loopbody), listvar);
   
   /* suppress any ivar or __kaapi_thread instance 
   */
