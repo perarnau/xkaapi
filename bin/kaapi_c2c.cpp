@@ -6536,14 +6536,13 @@ static void buildLoopEntrypointBody(
     SageBuilder::buildForStatement(
       0,
       SageBuilder::buildExprStatement(
-        SageBuilder::buildLessThanOp(
-          SageBuilder::buildVarRefExp(local_ivar),
-          SageBuilder::buildVarRefExp(local_ivar_end)
+        SageBuilder::buildNotEqualOp(
+          SageBuilder::buildVarRefExp(local_beg),
+          SageBuilder::buildVarRefExp(local_end)
         )
       ), 
-      SageBuilder::buildPlusAssignOp(
-        SageBuilder::buildVarRefExp(local_ivar),
-        global_step
+      SageBuilder::buildPlusPlusOp(
+        SageBuilder::buildVarRefExp(local_beg)
       ),
       loopbody
     );
