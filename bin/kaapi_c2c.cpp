@@ -4567,6 +4567,20 @@ static void buildFreeVariable(SgScopeStatement* scope, std::set<SgVariableSymbol
 
 class forLoopCanonicalizer
 {
+public:
+  class AffineVariable
+  {
+  public:
+    // refer to step clause enum
+    SgInitializedName* name_;
+    unsigned int op_;
+    SgExpression* incr_;
+
+    AffineVariable
+    (SgInitializedName* name, unsigned int op, SgExpression* incr)
+      : name_(name), op_(op), incr_(incr) {}
+  };
+
 private:
 
   // original loop statement
@@ -4577,6 +4591,9 @@ private:
 
   // findIteratorName
   SgInitializedName* iter_name_;
+
+  // findAffineVariables
+  std::list<AffineVariable>& affine_vars_;
 
   // normalizeCxxOperators
 
@@ -4607,6 +4624,8 @@ private:
   bool is_forward_;
 
   static bool isVarModified(SgNode*, SgInitializedName*);
+  static bool getModifiedVariable
+  (SgNode*, SgInitializedName*&, unsigned int&, SgExpression*&);
   static bool isIncreasingExpression(unsigned int);
   static bool isInclusiveOperator(unsigned int);
   static bool getNormalizedCxxOperator
@@ -4618,11 +4637,13 @@ private:
   static bool getNormalizedStep
   (SgExpression*, unsigned int&, SgExpression*&, SgExpression*&);
 
-  forLoopCanonicalizer(SgForStatement* for_stmt)
-    : for_stmt_(for_stmt) {}
+  forLoopCanonicalizer
+  (SgForStatement* for_stmt, std::list<AffineVariable>& affine_vars)
+    : for_stmt_(for_stmt), affine_vars_(affine_vars) {}
 
   // applied transforms and passes
   bool findIteratorName();
+  bool findAffineVariables();
   bool doStepLabelTransform();
   bool doMultipleStepTransform();
   bool normalizeCxxOperators();
@@ -4631,6 +4652,7 @@ private:
 
 public:
   static bool canonicalize(SgForStatement*);
+  static bool canonicalize(SgForStatement*, std::list<AffineVariable>&);
 };
 
 bool forLoopCanonicalizer::doStepLabelTransform()
@@ -5231,7 +5253,7 @@ bool forLoopCanonicalizer::normalizeCxxOperators()
 }
 
 bool forLoopCanonicalizer::isVarModified
-(SgNode* node, SgInitializedName* name)
+(SgNode* node, SgInitializedName* looked_name)
 {
   // return true if the var identified by
   // name is modified by the subtree under node
@@ -5248,14 +5270,33 @@ bool forLoopCanonicalizer::isVarModified
   SgVarRefExp* const vref_expr = isSgVarRefExp(lhs);
   if (vref_expr == NULL) return false;
   if (vref_expr->get_symbol() == NULL) return false;
-  if (vref_expr->get_symbol()->get_declaration() == NULL) return false;
 
-  const SgName& var_name =
-    vref_expr->get_symbol()->get_declaration()->get_name();
+  SgInitializedName* const her_name =
+    vref_expr->get_symbol()->get_declaration();
+  if (her_name == NULL) return false;
+  return her_name->get_name() == looked_name->get_name();
+}
 
-  // printf("isVarModified: %s\n", var_name.str());
+bool forLoopCanonicalizer::getModifiedVariable
+(SgNode* node, SgInitializedName*& name, unsigned int& op, SgExpression*& expr)
+{
+  // expr the modifying expression
+  // TODO: redundant with isVarModified
 
-  return var_name == name->get_name();
+  SgExpression* lhs;
+
+  // assume isSgExpression(node)
+
+  if (getNormalizedStep(isSgExpression(node), op, lhs, expr) == false)
+    return false;
+
+  SgVarRefExp* const vref_expr = isSgVarRefExp(lhs);
+  if (vref_expr == NULL) return false;
+  if (vref_expr->get_symbol() == NULL) return false;
+
+  name = vref_expr->get_symbol()->get_declaration();
+  if (name == NULL) return false;
+  return true;
 }
 
 bool forLoopCanonicalizer::doMultipleStepTransform()
@@ -5288,7 +5329,8 @@ bool forLoopCanonicalizer::doMultipleStepTransform()
   skip_rhs_operand:
 
     // process the node here. find iterator in rhs lhs operand
-    if (isVarModified(node, iter_name_) == true)
+    const bool is_modified = isVarModified(node, iter_name_);
+    if (is_modified == true)
     {
       // modifying twice the iterator is considered an error
       if (iter_node != NULL)
@@ -5396,11 +5438,80 @@ bool forLoopCanonicalizer::findIteratorName(void)
 #undef CONFIG_LOCAL_DEBUG
 }
 
-bool forLoopCanonicalizer::canonicalize(SgForStatement* for_stmt)
+bool forLoopCanonicalizer::findAffineVariables(void)
 {
-  forLoopCanonicalizer canon(for_stmt);
+  // keep track of affine variables. An affine
+  // variable is a named expression present in
+  // the increment clause of the loop.
+
+  // no prior pass assumed, but this code
+  // is redundant with the subtree iteration
+  // of doMultipleStepTransform
+
+#define CONFIG_LOCAL_DEBUG
+
+  // variable name, op, modifying expression
+  SgInitializedName* name;
+  unsigned int op;
+  SgExpression* expr;
+
+  // process increment expression first since the
+  // affine constraint is put on the increment clause
+
+  SgExpression* const incr_expr = for_stmt_->get_increment();
+  if (incr_expr == NULL) return true;
+
+  SgCommaOpExp* comma_expr = isSgCommaOpExp(incr_expr);
+  if (comma_expr == NULL)
+  {
+    if (getModifiedVariable(isSgNode(incr_expr), name, op, expr))
+      affine_vars_.push_back(AffineVariable(name, op, expr));
+    return true;
+  }
+
+  // foreach comma tree node, check if the lhs operand
+  // contains a modifying operation on iter_name. there
+  // must be only one such occurence. move every other
+  // expression to the end of the body.
+  SgNode* node;
+  SgNode* iter_node = NULL;
+  bool is_done = false;
+  while (1)
+  {
+    node = comma_expr->get_rhs_operand();
+
+  skip_rhs_operand:
+
+    // process the node here. track modified variables.
+    if (getModifiedVariable(node, name, op, expr))
+      affine_vars_.push_back(AffineVariable(name, op, expr));
+
+    if (is_done == true) break ;
+
+    // last node reached, lhs is a leaf
+    if (isSgCommaOpExp(comma_expr->get_lhs_operand()) == NULL)
+    {
+      is_done = true;
+      node = comma_expr->get_lhs_operand();
+      goto skip_rhs_operand;
+    }
+
+    // next tree node
+    comma_expr = isSgCommaOpExp(comma_expr->get_lhs_operand());
+  }
+
+  return true;
+
+#undef CONFIG_LOCAL_DEBUG
+}
+
+bool forLoopCanonicalizer::canonicalize
+(SgForStatement* for_stmt, std::list<AffineVariable>& affine_vars)
+{
+  forLoopCanonicalizer canon(for_stmt, affine_vars);
 
   // order matters. refer to method comments.
+  if (canon.findAffineVariables() == false) return false;
   if (canon.findIteratorName() == false) return false;
   if (canon.doStepLabelTransform() == false) return false;
   if (canon.doMultipleStepTransform() == false) return false;
@@ -5409,6 +5520,12 @@ bool forLoopCanonicalizer::canonicalize(SgForStatement* for_stmt)
   if (canon.doStrictIntegerTransform() == false) return false;
 
   return true;
+}
+
+bool forLoopCanonicalizer::canonicalize(SgForStatement* for_stmt)
+{
+  std::list<AffineVariable> unused_vars;
+  return canonicalize(for_stmt, unused_vars);
 }
 
 
@@ -5476,7 +5593,9 @@ SgStatement* buildConvertLoop2Adaptative(
   SgForStatement* forloop = isSgForStatement( loop );
   SgScopeStatement* scope = SageInterface::getScope( forloop->get_parent() );
 
-  if (forLoopCanonicalizer::canonicalize(forloop) == false)
+  std::list<forLoopCanonicalizer::AffineVariable> affine_vars;
+
+  if (forLoopCanonicalizer::canonicalize(forloop, affine_vars) == false)
   {
     std::cerr << "****[kaapi_c2c] canonicalize loop failed" << std::endl;
     return 0;
