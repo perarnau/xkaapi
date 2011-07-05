@@ -149,8 +149,8 @@ This report presents \kaapi, a runtime library and a source to source compiler t
 
 The \kaapi programming model comes from Athapascan~\cite{Athapascan98} which, itself, was inspired by Jade~\cite{Jade:1998} and Cilk~\cite{Cilk5:1998}. Because the \kaapi programming model and  StarSs~\cite{Badia:2009} are very closed, we also accept the execution of StarSs program. Descriptions of \kaapi may be found in following publications~\cite{Kaapi_2007,Traore_2008-deque_free, CCK_MCO08,KAAPI_TIC_2009}.
 
-This technical report is organized as follows. FIXME Section~\ref{sec:helloworld} presents 
-though simple examples how to program with \kaapi in C or C++.
+This technical report is organized as follows. Next section describes how to install \kaapi. Section~\ref{sec:helloworld} presents 
+though simple examples how to program with \kaapi in C or C++. Section~\ref{sec:progmodel} describes the programming model and all the \texttt{\#pragma} annotations and the semantics of \kaapi program. Several complete examples are given in section~\ref{sec:exp}.
 
 %%%
 %%%
@@ -173,7 +173,7 @@ on any system providing:
 \item Unix based environment.
 \end{itemize}
 It has been extensively tested on the following operating systems:
-GNU-Linux/x86\_64 and MacOSX/Intel processor.
+GNU-Linux with x86\_64 architecture and MacOSX/Intel processor.
 There is no version for Windows yet.
 
 \subsubsection*{\kaapi Contacts}
@@ -604,7 +604,8 @@ int main()
 \end{figure}
 
 The main function creates two tasks: the first one to do the computation at line 29 and the second one to print the result (line 30).
-Due to access modes, this two tasks have a true dependency. Like the other examples, these tasks are created and executed inside a parallel region defined in the main function, at line FIXME
+Due to access modes, this two tasks have a true dependency. 
+%Like the other examples, these tasks are created and executed inside a parallel region defined in the main function, at line FIXME
 
 The \verb+fibonacci+ task (lines 3-16) recursively creates two tasks until the input parameter \texttt{n} is smaller than \texttt{2}.
 %%In \kaapi, tasks must be created into a parallel region: in \kaapi \textbf{each body of a task is an implicit parallel region}.
@@ -696,7 +697,7 @@ Because the tasks created at lines 16, 17 and 18 are non blocking calls, the use
 %The scope of the directive \texttt{\#pragma kaapi notask} is the call of the  next statement only.
 %
 
-\newpage\section{\kaapi programming model}
+\newpage\section{\kaapi programming model}~\label{sec:progmodel}
 
 The task model used in this work comes from the Athapascan~\cite{Athapascan98} task model and semantics. As for Cilk, Intel TBB, OpenMP-3.0 or SMPSs the semantic remains sequential. It ensures that the value returned by the read statements is the last written value according to the lexicographic order defined by the program: statements are lexicographically ordered by ';'. 
 The execution of a \kaapi program generates a sequence of tasks that access to data into a shared memory. From this sequence, the runtime is able to extract independent tasks in order to dispatch them to idle cores.
