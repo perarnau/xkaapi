@@ -3452,7 +3452,7 @@ int main(int argc, char **argv)
           ((decl->get_declarationModifier()).get_storageModifier()).setExtern();
         }
 
-        {/* declare kaapi_thread_pushdata_aligned function */
+        {/* declare kaapi_thread_pushdata_align function */
           static SgName name("kaapi_thread_pushdata_align");
           SgFunctionDeclaration *decl = SageBuilder::buildNondefiningFunctionDeclaration(
               name, 
@@ -5853,6 +5853,20 @@ SgStatement* buildConvertLoop2Adaptative(
    SageBuilder::buildSizeOfOp(contexttype->get_type())
   );
 
+  SgFunctionCallExp* call_expr = SageBuilder::buildFunctionCallExp
+    (
+     "kaapi_thread_pushdata_align",
+     SageBuilder::buildPointerType(SageBuilder::buildVoidType()),
+     SageBuilder::buildExprListExp
+     (
+      SageBuilder::buildVarRefExp("__kaapi_thread", newbbcall),
+      SageBuilder::buildCastExp
+      (size_expr, SageBuilder::buildUnsignedIntType()),
+      SageBuilder::buildUnsignedLongVal(8)
+     ),
+     bigscope
+    );
+
   SgVariableDeclaration* splitter_context = SageBuilder::buildVariableDeclaration
   (
    "__splitter_context",
@@ -5861,18 +5875,7 @@ SgStatement* buildConvertLoop2Adaptative(
    (
     SageBuilder::buildCastExp
     (
-     SageBuilder::buildFunctionCallExp
-     (
-      "kaapi_thread_pushdata_align",
-      SageBuilder::buildPointerType(SageBuilder::buildVoidType()),
-      SageBuilder::buildExprListExp
-      (
-       SageBuilder::buildVarRefExp("__kaapi_thread", newbbcall),
-       size_expr,
-       SageBuilder::buildUnsignedLongVal(8)
-      ),
-      newbbcall
-     ),
+     call_expr,
      SageBuilder::buildPointerType(kaapi_splitter_context_ROSE_type)
     ),
     SageBuilder::buildPointerType(kaapi_splitter_context_ROSE_type)
@@ -5880,8 +5883,6 @@ SgStatement* buildConvertLoop2Adaptative(
    newbbcall
   );
   SageInterface::appendStatement(splitter_context, newbbcall);
-
-  printf("!!!!! TODO\n");
 
   // __kaapi_context = __splitter_context->data;
   SgVariableDeclaration* local_context = SageBuilder::buildVariableDeclaration (
@@ -5938,7 +5939,7 @@ SgStatement* buildConvertLoop2Adaptative(
    */
   SgExpression* workcallee = 
     SageBuilder::buildAddressOfOp(
-      SageBuilder::buildDotExp( 
+      SageBuilder::buildArrowExp( 
         SageBuilder::buildVarRefExp(local_context),
         SageBuilder::buildOpaqueVarRefExp("__kaapi_work", contexttype->get_scope())
       )
@@ -6006,7 +6007,7 @@ SgStatement* buildConvertLoop2Adaptative(
    */
   SgExpression* work = 
     SageBuilder::buildAddressOfOp(
-      SageBuilder::buildDotExp( 
+      SageBuilder::buildArrowExp( 
         SageBuilder::buildVarRefExp(local_context),
         SageBuilder::buildOpaqueVarRefExp("__kaapi_work", contexttype->get_scope())
       )
