@@ -18,8 +18,8 @@ int main(int ac, char** av)
 	ipos[i] = 42;
   }
 
-  // for (ipos = iv.begin(); ipos != iv.end(); ++ipos)
-  //   printf("%u\n", *ipos);
+  for (ipos = iv.begin(); ipos != iv.end(); ++ipos)
+    printf("%u\n", *ipos);
 
   return 0;
 }

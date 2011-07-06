@@ -197,7 +197,11 @@ on any system providing:
 \item Unix based environment.
 \end{itemize}
 It has been extensively tested on the following operating systems:
-GNU-Linux with x86\_64 architecture and MacOSX/Intel processor.
+\begin{itemize}
+\item GNU-Linux with x86\_64 architectures,
+\item MacOSX/Intel processor.
+\end{itemize}
+
 There is no version for Windows yet.
 
 \subsubsection*{\kaapi Contacts}
@@ -209,7 +213,7 @@ If you wish to contact the XKaapi team, please visite the web site at:
 
 \subsection{Installation}
 
-To install \kaapi programming model and compiler you need to:
+To install \kaapi programming environment, you need to:
 \begin{itemize}
 \item install the \kaapi libraries and runtime
 \item install the compiler
@@ -275,8 +279,8 @@ $> ./bootstrap
 \end{verbatim}
 The \textit{configure} file should be present. It is used to create the
 \textit{Makefile} accordingly to your system configuration. Command line
-options can be used to modify the default behavior. You can have a complete
-list of the available options by running:
+options can be used to modify the default behavior. A list of the
+configuration options is available by running:
 \begin{verbatim}
 $> ./configure --help
 \end{verbatim}
@@ -353,9 +357,9 @@ A presentation of examples using directly the \kaapi library (with C, C++ or STL
 
 In the remaining, we only present the \kaapi programming model and we show examples using the \verb+kacc+ compiler only. The process of describing a parallel program with \kaapi is:
 \begin{itemize}
-\item \kaapi is task based parallel programming model: the user should indicate where task are.
+\item \kaapi has a task based parallel programming model: the user must indicate where tasks are.
 \item A task is a function call without side effect: the user must annotate the code to specify what function is a task. 
-\item The compiler will insert task creation code for each appropriate function call.
+\item The compiler inserts task creation code for each appropriate function call.
 \item Dependencies between tasks are automatically computed by the runtime through data flow analysis between function calls: when a function is annotated as a task, the user must specify the access mode to the memory for each formal parameter. 
 \end{itemize}
 All the annotations are specified by pragma directives with the form:
@@ -364,7 +368,7 @@ All the annotations are specified by pragma directives with the form:
 \end{center}
 
 \subsection{Hello World}
-The example of figure~\ref{ex:helloworld} presents the creation of one task that display "Hello world". The
+The example of figure~\ref{ex:helloworld} presents the creation of one task that prints "Hello world". The
 \kaapi \verb+kacc+ compiler is based on pragma annotations to describe the parallelism, as for OpenMP.
 
 First it is necessary to start a parallel region where tasks may be executed concurrently.
@@ -402,7 +406,7 @@ int main(int argc, char** argv)
 \end{center}
 \caption{hello\_world1.c example}\label{ex:helloworld}
 \end{figure}
-The task in the figure takes one parameter (a C string) and displays it to the screen. The parameter is passed by value: this is specified by the clause \texttt{value(msg)} that tells the compiler the effective parameter is considered as being passed by value. We will see in the following sections what it means.
+The task in the figure takes one parameter (a C string) and displays it to the screen. The clause \texttt{value(msg)} tells the compiler the effective parameter is considered as being passed by value. We will see in the following sections what it means.
 
 
 \subsubsection{Compilation}
@@ -420,7 +424,7 @@ This simple example only creates one task without real concurrency\footnote{In f
 
 \subsubsection{Two Hello World}
 
-The next example in figure~\ref{ex:helloworld2} creates 2 independent tasks that display two messages.
+The next example in figure~\ref{ex:helloworld2} creates 2 independent tasks that print 2 messages.
 \begin{figure}[h]
 \begin{center}
 \begin{minipage}{0.99\linewidth}
@@ -450,14 +454,14 @@ int main(int argc, char** argv)
 \caption{hello\_world2.c example}\label{ex:helloworld2}
 \end{figure}
 
-After compilation and execution we hope to have such output:
+Executing the program should produce one of the following output:
 \begin{verbatim}
 > ./hello_world2
 First call: Hello World!
 Second call: Hello World!
 \end{verbatim}
 
-Moreover, some execution may produce the following output:
+Or:
 \begin{verbatim}
 > ./hello_world2
 Second call: Hello World!
@@ -466,7 +470,7 @@ First call: Hello World!
 
 In \kaapi the task creation is a non-blocking operation: the thread that creates tasks never waits for the completion of the tasks if it is not specified by the user.  All tasks created into a parallel region are guaranteed to be completed at the end of the parallel region: the end of a parallel region has an implicit synchronization point that forces execution of tasks.  But inside a parallel region, tasks may be executed in \textbf{any order} that respects the data flow dependencies between tasks. In the example, tasks have been declared as taking their parameter by value so they are independent.
 
-The three ways \kaapi offers to enforce an execution order are:
+There are 3 ways for \kaapi to enforce an execution order:
 \begin{itemize}
 \item Tasks have declared special access modes to their parameters (read, write, exclusive), which introduce read-after-write data flow dependencies between tasks: they are the only dependencies that \kaapi respect at runtime. This is the subject of the next section.
 
@@ -554,11 +558,11 @@ This parameter is the C string read by the task and copied into the parameter \t
 The size of the string follows the C convention  of null terminated string.
 \end{itemize}
 
-The second task declares (line 9) that it reads its single parameter.
+The second task declares (line 9) it reads its single parameter.
 
 The same effective parameter \texttt{buffer}, declared at line 17, is passed between the two tasks at line 20 and 21. Because of the previous declaration of \texttt{write} access in the first task and \texttt{read} access in the second task, it induces a \textbf{true} data flow dependency between the tasks.
 
-In \kaapi, any parameter that has to be shared between tasks must be a pointer to a data structure. In the previous example, it is a C-string, \textit{i.e.} a pointer to a null terminated array of characters.
+In \kaapi, any parameter that has to be shared between tasks must be a pointer. In the previous example, it is a C-string, \textit{i.e.} a pointer to a null terminated array of characters.
 
 
 \subsection{Recursive computation: Fibonacci}
@@ -613,13 +617,13 @@ The main function creates two tasks: the first one to do the computation at line
 Due to access modes, this two tasks have a true dependency. 
 %Like the other examples, these tasks are created and executed inside a parallel region defined in the main function, at line FIXME
 
-The \verb+fibonacci+ task (lines 3-16) recursively creates two tasks until the input parameter \texttt{n} is smaller than \texttt{2}.
+The \verb+fibonacci+ task (lines 3-16) recursively creates two tasks until the input parameter \texttt{n} gets smaller than \texttt{2}.
 %%In \kaapi, tasks must be created into a parallel region: in \kaapi \textbf{each body of a task is an implicit parallel region}.
 
 Task creation is a non blocking call, thus at line 13 a synchronization point is added (\texttt{\#pragma kaapi sync}):
 \begin{itemize}
-\item the directive enforces that all previously created tasks in the same function body\footnote{More formally, in the same activation frame of the function body execution.} be completed before to proceed with the next instruction at line 14 to sum the sub results.
-\item the directive does \textbf{not} wait for the completion of tasks created on the outter function calls.
+\item the directive enforces that all previously created tasks in the same function body\footnote{More formally, in the same activation frame of the function body execution.} are completed before proceeding with the next instruction, at line 14, to sum the sub results.
+\item the directive does \textbf{not} wait for the completion of tasks created in the outter function calls.
 \end{itemize}
 
 
@@ -663,9 +667,9 @@ void fibonacci(long* result, const long n)
 \caption{fibonacci2.c example.}\label{ex:fibonacci2}
 \end{figure}
 
-The advantage of the continuation passing style is to replace an explicit coarse grain synchronization (\texttt{\#pragma kaapi sync} with an implicit data flow synchronization by creating the task \texttt{sum}.
+The advantage of the continuation passing style is to replace an explicit coarse grain synchronization (\texttt{\#pragma kaapi sync}) by an implicit data flow synchronization. It is done by creating the task \texttt{sum}.
 
-Because the tasks created at lines 16, 17 and 18 are non blocking calls, the user must take care of the scope of the variables passed to the tasks. In the previous example, because \texttt{r1} and \texttt{r2} are allocated into the C stack of the function \texttt{fibonacci}, the user must specify at line 14 the directive  \texttt{\#pragma kaapi data alloca} to annotate explicitly those data: Then the compiler will allocate them so that their scope is enough for the execution of the task.
+Because the tasks created at lines 16, 17 and 18 are non blocking calls, the user must take care of the scope of the variables passed to the tasks. In the previous example, because \texttt{r1} and \texttt{r2} are allocated into the C stack of the function \texttt{fibonacci}, the user must specify at line 14 the directive \texttt{\#pragma kaapi data alloca} to annotate explicitly those data. It tells the compiler to allocate them so that their scope is enough for the execution of the task.
 
 
 %\subsubsection{Terminal recursion suppression}
@@ -703,9 +707,9 @@ Because the tasks created at lines 16, 17 and 18 are non blocking calls, the use
 \newpage\section{\kaapi programming model}~\label{sec:progmodel}
 
 The task model used in this work comes from the Athapascan~\cite{Athapascan98} task model and semantics. As for Cilk, Intel TBB, OpenMP-3.0 or SMPSs the semantic remains sequential. It ensures that the value returned by the read statements is the last written value according to the lexicographic order defined by the program: statements are lexicographically ordered by ';'. 
-The execution of a \kaapi program generates a sequence of tasks that access to data into a shared memory. From this sequence, the runtime is able to extract independent tasks in order to dispatch them to idle cores.
+The execution of a \kaapi program generates a sequence of tasks that access to data into a shared memory. From this sequence, the runtime is able to extract independent tasks in order to dispatch them amongst the idle cores.
 
-In the following sections, we outline the \kaapi programming model, then we specify different \kaapi constructions and their semantic.
+In the following sections, we outline the \kaapi programming model; Then we specify different \kaapi constructions and their semantic.
 
 \subsection{Task execution model}
 
@@ -716,31 +720,31 @@ A task is a function call: a function that should return no value except through
 The parallelism in \kaapi is explicit (task annotation), while the detection of synchronizations is implicit: the dependencies between tasks and the memory transfers are automatically managed by the runtime.\\
 
 
-A task implements a sequential computation whose granularity is fixed by the user; it is created in program statements that correspond to calls to functions annotatedas tasks thanks to the \texttt{\#pragma kaapi task} directive.
+A task implements a sequential computation whose granularity is fixed by the user; it is created in program statements that correspond to calls to functions annotated as tasks thanks to the \texttt{\#pragma kaapi task} directive.
 Tasks share data if they have access to the same memory region. A memory region is defined as a set of addresses in the process virtual address space. This set has a shape of a multi-dimensional array.
 
-The user is responsible to indicate the mode each task uses to access to the memory: the main access modes are \textit{read}, \textit{write}, \textit{reduction} or \textit{exclusive}.\\
+The user is responsible for indicating the task memory access modes: the main access modes are \textit{read}, \textit{write}, \textit{reduction} or \textit{exclusive}.\\
 
 One of the main characteristic of the \kaapi programming model is the preservation of the sequential semantics of the program: the result of the parallel execution remains the same as the sequential execution of the program compiled without \kaapi.
 
 
 %%%
 \subsection{Task}
-\kaapi is called a macro data flow language: The user is  responsible to define granularity of the computation (task) as well as data shared between tasks. The runtime automatically schedules tasks in any order that respects the true data flow dependencies, \textit{i.e.} the data flow dependencies. All other dependencies are subject to be removed by renaming data.
+\kaapi is called a macro data flow language: the user is  responsible to define granularity of the computation (task) as well as data shared between tasks. The runtime automatically schedules tasks in any order that respects the true data flow dependencies, \textit{i.e.} the data flow dependencies. All other dependencies are subject to be removed by renaming data.
 
-This section presents how to annotate a function declaration in such a way that ANY calls to this function are translated to creation of tasks. This is called \textit{function task} annotation.
+This section presents how to annotate a function declaration in such a way that ANY call to this function are translated to creation of tasks. This is called \textit{function task} annotation.
 The next section~\ref{sec:contextualtask} presents annotation of a statement or a block of statements in order to automatically convert it to task creation. This is called \textit{anonymous task} annotation of block.
 
 \subsubsection{Function Task}
 
-In order to replace all calls to functions by task creations, the user must:
+In order to replace all function calls by task creations, the user must:
 \begin{itemize}
-\item Annotate the \textit{declaration} of the selected function. The declaration is the statement that declares the signature of the function (return type, name of the function, list of the type parameters). A declaration can be followed by the \textit{definition} of the function, \textit{i.e.} by the instructions that form the body of the function. 
+\item Annotate the \textit{declaration} of the selected function. The declaration is the statement that declares the signature of the function (return type, name of the function, list of the type parameters). A declaration can be followed by the \textit{definition} of the function, \textit{i.e.} by the instructions that form the function body. 
 This is called a \textit{defining declaration}.
-\item In case of library of functions where function declarations cannot be change, the users must re-declare the functions with the \kaapi corresponding annotations.
+\item In case of library of functions where function declarations cannot be changed, the users must re-declare the functions with the \kaapi corresponding annotations.
 \end{itemize}
 
-Once defined, any calls to annotated function are compiled by task creations. The runtime runs each ready task by performing the instructions of the function body. 
+Once defined, all the annotated function calls are replaced by task creations. The runtime runs each ready task by performing the instructions of the function body. 
 
 \paragraph{Function task declaration.}~\\
 The code of figure~\ref{fig:accummainkaapi} illustrates the annotation of two functions selected to be \textit{function task}:
@@ -776,7 +780,7 @@ The section~\ref{sec:accessmode} presents all the different ways to declare acce
 
 
 \paragraph{Function task definition.}~\\
-As for functions, a function task declaration represents the signature of a function. The body of the task is the function body of the annotated function. This is the instructions performed at runtime to execute the task.
+As for functions, a function task declaration represents the signature of a function. The task body is the body of the annotated function. This is the instructions performed at runtime to execute the task.
 
 \begin{figure}[ht]
 \begin{center}
@@ -821,7 +825,7 @@ void accumulate (int n, int* array, int *result)
 After the declaration of a function task, The \kaapi compiler replaces each call to the function by a task creation.
 Recursive task creations are allowed.
 
-A major difference with the sequential call to function is that the \kaapi task creation is a non blocking operation: the callee does not wait for the task completion. 
+A major difference with the sequential call to function is that the \kaapi task creation is a non blocking operation: the caller does not wait for the task completion. 
 This implies that a variable writes by a task can be read:
 \begin{itemize}
 \item By passing the variable to a task that declares to read it (see section~\ref{sec:accessmode}).
@@ -839,10 +843,10 @@ This implies that a variable writes by a task can be read:
 
 A parallel region is annotated by the directive \texttt{\#pragma kaapi parallel} (see line 6 of figure~\ref{fig:accumparallelregion}). The directive must precede:
 \begin{itemize}
-\item A statement.
-\item A basic block of statements defined between brackets ('\texttt{\{}' and '\texttt{\}}').
+\item A statement,
+\item A basic block of statements defined between braces ('\texttt{\{}' and '\texttt{\}}').
 \end{itemize}
-All tasks created inside a parallel region may be executed with concurrency:
+Every tasks created inside a parallel region may be executed concurrently:
 a parallel region is a dynamic scope where several threads cooperate to execute created tasks.
 
 \begin{figure}[ht]
@@ -884,8 +888,11 @@ The scope of a parallel region is the next instruction or the next basic block (
 %#pragma kaapi parallel 
 %\end{verbatim}
 
-The runtime select the number of threads using 1/ \kaapi environment variables \texttt{KAAPI\_CPUCOUNT} and \texttt{KAAPI\_CPUSET}, that define, respectively, the number of cores and the specific cores to used; 2/ else  \kaapi creates one thread per physical core of the machine.
-See appendix~\ref{sec:compilo} for a detailed description of these environment variables.
+The runtime selects the number of threads using
+\begin{enumerate}
+\item \kaapi environment variables \texttt{KAAPI\_CPUCOUNT} and \texttt{KAAPI\_CPUSET}, that define, respectively, the number of cores and the specific cores to used;\item Otherwise  \kaapi creates one thread per physical core of the machine.
+\end{enumerate}
+See appendix~\ref{sec:compilo} for a detailed description of the environment variables used by \kaapi.
 
 %Any instruction that goes out of the parallel region (\texttt{return} instruction or \texttt{goto} instruction) 
 
@@ -918,11 +925,11 @@ Several access modes\footnote{These access modes have either a direct correspond
 %For instance, the StarSs\textbf{input} direction specification corresponds to the \textbf{read} access mode in \kaapi;  \textbf{output} direction corresponds to \textbf{write}; and \textbf{inout} corresponds to \textbf{readwrite}.  
 
 A task formal parameter not annotated by an access mode is considered as a compilation error.
-The access mode is defined for a memory region, \textit{i.e.} a set of addresses in the virtual address space of the processus.
+The access mode is defined for a memory region, \textit{i.e.} a set of addresses in the virtual address space of the process.
 
 The access modes of formal parameters are declared with:
 \begin{verbatim}
-#pragma kaapi task <mode> ( <list_declaration>)
+#pragma kaapi task <mode> ( <list_declaration> )
 \end{verbatim}
 Where \texttt{<mode>} is given in table~\ref{table:accessmode}.
 
@@ -946,16 +953,16 @@ cumulative write & \texttt{reduction(op:x)} or \texttt{cw(op:x)} & \texttt{reduc
 
 \subsubsection{Memory region}
 The \texttt{<list declaration>} defines a list of memory region touched by the task. 
-The memory region is described by\
+A memory region is described by:\
 \begin{itemize} 
-\item A memory address given by a variable.
-\item A shape that describe a multidimensional array.
+\item A memory address given by a variable,
+\item A shape that describes a multidimensional array.
 \end{itemize} 
-In listing of figure~\ref{fig:exmemregion1}, line 1 declares 3 memory region:
+In listing of figure~\ref{fig:exmemregion1}, line 1 declares 3 memory regions:
 \begin{enumerate}
-\item \texttt{n}: this is the memory region that begins at address of the variable \texttt{n} with a size of \texttt{sizeof(int)} byte long.
-\item \texttt{array[n]}: this a 1-dimensional array that starts at address \texttt{array} and finishes at address \texttt{array+n}.
-\item \texttt{result}: its memory region corresponds the the storage of the variable of type \texttt{int} pointed by the value of \texttt{result}.
+\item \texttt{n}: this is the memory region starting at address of the variable \texttt{n} whose size is \texttt{sizeof(int)} bytes.
+\item \texttt{array[n]}: this a 1-dimensional array starting at address \texttt{array} and ending at address \texttt{array+n} (exclusive).
+\item \texttt{result}: its memory region corresponds to the the storage of the variable of type \texttt{int} pointed by the value of \texttt{result}.
 \end{enumerate}
 %In example~\ref{fig:accummainkaapi}, both \texttt{accumulate} and \texttt{printresult} defined a memory region pointed by the formal parameter \texttt{result}: the region is defined by 1 integer.
 %The region of the read parameter in task \texttt{accumulate} is an 1-D array of size specify in the \texttt{\#pragma kaapi task} clause. Any arithmetic expression (with cast) is possible to defined size of array. The value reference should correspond to the name of the formal parameter. 
@@ -982,7 +989,7 @@ void matmul(int N, double* A, int lda, \
 \label{fig:exmemregion1}
 \end{figure}
 
-At lines 4-6 of the same listing, multidimensional shapes memory region are defined for formal parameters \texttt{A}, \texttt{B} and \texttt{C}. \kaapi considers by default two kinds of storage for matrices. These are illustrated in~\ref{fig:matrix}: in (a) the C storage (also called row major) and in (b) the fortran storage (called column major).
+At lines 4-6 of the same listing, multidimensional shapes memory regions are defined for formal parameters \texttt{A}, \texttt{B} and \texttt{C}. By default, \kaapi assumes two kinds of storage for matrices. They are illustrated in~\ref{fig:matrix}: in (a) the C storage (also called row major) and in (b) the fortran storage (called column major).
 The function task \texttt{matmul} of listing~\ref{fig:exmemregion1} is supposed to do matrix multiplication of two matrices of dimension \texttt{NxN}. The 2 input matrices \texttt{B} and \texttt{C}, as well as the output matrix \texttt{A}, are defined to have dimension \texttt{[N][N]}. Where \texttt{N} is a pass-by-value parameter. The dimension could be any C or C++ arithmetic expressions (for instance \texttt{[2][3+N]}), see grammar in appendix~\ref{ref:dimensiongrammar}.
 
 \begin{figure}[ht]
@@ -1021,7 +1028,7 @@ void accumulate( int n, int* array, int* result );
 The dimension of array must follow the subset of the C grammar for expression (called \textit{additive expression} in C grammar, see appendix~\ref{sec:grammar}). 
 At runtime, the base address is the value of a pointer type formal parameter.
 
-The second form is to specify an interval between two addresses (as used in most of STL algorithms). The syntax for interval is \texttt{[a:b]}, where \texttt{a} and \texttt{b} are identifiers of formal parameters.
+The second form is to specify an interval between two addresses (as used in most of STL algorithms). The syntax for interval is \texttt{[a:b]}, where \texttt{a} and \texttt{b} are formal parameters identifiers.
 \begin{verbatim}
 #pragma kaapi task value(n) read( [begin:end] ) write(result)
 void accumulate( int* begin, int* end, int* result );
@@ -1033,7 +1040,7 @@ In the STL, the right bound is not part of the interval and it is called the 'pa
 2-D arrays appear de facto in linear algebra subroutines. 
 To split data structures to execute in parallel sub-computations, it is necessary to handle sub sets of 2-D arrays.
 
-\kaapi  follows the design of BLAS or LAPACK libraries: the matrix is assumed to be allocated into a contiguous array and the user should specify the \textit{leading dimension} (\textit{ld} in figure~\ref{fig:matrix}), which is the size necessary\footnote{The size is expressed with respect to the \textit{element type}.}  to pass from one row to the next row with the C storage (from one column to the next column with Fortran convention).
+\kaapi  follows the design of BLAS or LAPACK libraries: the matrix is assumed to be allocated into a contiguous array and the user must specify the \textit{leading dimension} (\textit{ld} in figure~\ref{fig:matrix}), which is the size necessary\footnote{The size is expressed with respect to the \textit{element type}.}  to pass from one row to the next row with the C storage (from one column to the next column with Fortran convention).
 
 For instance:
 \begin{verbatim}
