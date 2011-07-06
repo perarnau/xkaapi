@@ -145,6 +145,7 @@ static SgType* kaapi_stealcontext_ROSE_type;
 static SgType* kaapi_request_ROSE_type;
 static SgType* kaapi_taskadaptive_result_ROSE_type;
 static SgType* kaapi_task_body_ROSE_type;
+static SgType* kaapi_splitter_context_ROSE_type;
 
 static std::string ConvertCType2KaapiFormat(SgType* type);
 
@@ -218,26 +219,6 @@ static SgClassDeclaration* buildOutlineArgStruct(
 */
 static SgFunctionDeclaration* buildLoopEntrypoint( 
   SgClassDeclaration*          contexttype,
-  SgGlobal*                    scope
-);
-
-static void buildLoopEntrypointBody( 
-  SgFunctionDeclaration*       func,
-  SgFunctionDeclaration*       splitter,
-  std::set<SgVariableSymbol*>& listvar,
-  SgClassDeclaration*          contexttype,
-  SgInitializedName*           ivar,
-  SgExpression*                global_begin_iter,
-  SgExpression*                global_step,
-  SgStatement*                 loopbody,
-  SgGlobal*                    scope
-);
-
-static SgFunctionDeclaration* buildSplitter(
-  std::set<SgVariableSymbol*>& listvar,
-  SgInitializedName*           ivar,
-  SgClassDeclaration*          contexttype,
-  SgFunctionDeclaration*       entrypoint,
   SgGlobal*                    scope
 );
 
@@ -3164,6 +3145,7 @@ int main(int argc, char **argv)
         kaapi_stealcontext_ROSE_type = SageBuilder::buildOpaqueType ("kaapi_stealcontext_t", gscope);
         kaapi_request_ROSE_type = SageBuilder::buildOpaqueType ("kaapi_request_t", gscope);
         kaapi_taskadaptive_result_ROSE_type = SageBuilder::buildOpaqueType ("kaapi_taskadaptive_result_t", gscope);
+        kaapi_splitter_context_ROSE_type = SageBuilder::buildOpaqueType ("kaapi_splitter_context_t", gscope);
         kaapi_task_body_ROSE_type = SageBuilder::buildFunctionType(
             SageBuilder::buildVoidType(), 
             SageBuilder::buildFunctionParameterTypeList( 
@@ -3422,6 +3404,54 @@ int main(int argc, char **argv)
                     SageBuilder::buildIntType(), /* size */
                     SageBuilder::buildPointerType(kaapi_taskadaptive_result_ROSE_type)
                   )
+              ),
+              gscope);
+          ((decl->get_declarationModifier()).get_storageModifier()).setExtern();
+        }
+
+        {/* declare kaapi_reply_push_adaptive_task function */
+          static SgName name("kaapi_reply_push_adaptive_task");
+          SgFunctionDeclaration *decl = SageBuilder::buildNondefiningFunctionDeclaration(
+              name, 
+              SageBuilder::buildVoidType(),
+              SageBuilder::buildFunctionParameterList( 
+                  SageBuilder::buildFunctionParameterTypeList( 
+                    SageBuilder::buildPointerType(kaapi_stealcontext_ROSE_type),
+                    SageBuilder::buildPointerType(kaapi_request_ROSE_type)
+                  )
+              ),
+              gscope);
+          ((decl->get_declarationModifier()).get_storageModifier()).setStatic();
+        }
+
+        {/* declare kaapi_splitter_default function */
+          static SgName name("kaapi_splitter_default");
+          SgFunctionDeclaration *decl = SageBuilder::buildNondefiningFunctionDeclaration(
+              name, 
+              SageBuilder::buildIntType(),
+              SageBuilder::buildFunctionParameterList( 
+                  SageBuilder::buildFunctionParameterTypeList( 
+                    SageBuilder::buildPointerType(kaapi_stealcontext_ROSE_type),
+                    SageBuilder::buildIntType(),
+                    SageBuilder::buildPointerType(kaapi_request_ROSE_type),
+                    SageBuilder::buildPointerType(SageBuilder::buildVoidType())
+                  )
+              ),
+              gscope);
+          ((decl->get_declarationModifier()).get_storageModifier()).setExtern();
+        }
+
+        {/* declare kaapi_thread_pushdata_align function */
+          static SgName name("kaapi_thread_pushdata_align");
+          SgFunctionDeclaration *decl = SageBuilder::buildNondefiningFunctionDeclaration(
+              name, 
+              SageBuilder::buildPointerType(SageBuilder::buildVoidType()),
+              SageBuilder::buildFunctionParameterList( 
+                  SageBuilder::buildFunctionParameterTypeList( 
+                    SageBuilder::buildPointerType(kaapi_thread_ROSE_type),
+                    SageBuilder::buildUnsignedIntType(),
+                    SageBuilder::buildUnsignedLongType()
+		)
               ),
               gscope);
           ((decl->get_declarationModifier()).get_storageModifier()).setExtern();
@@ -4547,6 +4577,22 @@ static void buildFreeVariable(SgScopeStatement* scope, std::set<SgVariableSymbol
 
 class forLoopCanonicalizer
 {
+public:
+  class AffineVariable
+  {
+  public:
+    // refer to step clause enum
+    SgInitializedName* name_;
+    unsigned int op_;
+    SgExpression* incr_;
+
+    AffineVariable
+    (SgInitializedName* name, unsigned int op, SgExpression* incr)
+      : name_(name), op_(op), incr_(incr) {}
+  };
+
+  typedef std::list<AffineVariable> AffineVariableList;
+
 private:
 
   // original loop statement
@@ -4557,6 +4603,9 @@ private:
 
   // findIteratorName
   SgInitializedName* iter_name_;
+
+  // findAffineVariables
+  std::list<AffineVariable>& affine_vars_;
 
   // normalizeCxxOperators
 
@@ -4587,6 +4636,8 @@ private:
   bool is_forward_;
 
   static bool isVarModified(SgNode*, SgInitializedName*);
+  static bool getModifiedVariable
+  (SgNode*, SgInitializedName*&, unsigned int&, SgExpression*&);
   static bool isIncreasingExpression(unsigned int);
   static bool isInclusiveOperator(unsigned int);
   static bool getNormalizedCxxOperator
@@ -4598,11 +4649,13 @@ private:
   static bool getNormalizedStep
   (SgExpression*, unsigned int&, SgExpression*&, SgExpression*&);
 
-  forLoopCanonicalizer(SgForStatement* for_stmt)
-    : for_stmt_(for_stmt) {}
+  forLoopCanonicalizer
+  (SgForStatement* for_stmt, std::list<AffineVariable>& affine_vars)
+    : for_stmt_(for_stmt), affine_vars_(affine_vars) {}
 
   // applied transforms and passes
   bool findIteratorName();
+  bool findAffineVariables();
   bool doStepLabelTransform();
   bool doMultipleStepTransform();
   bool normalizeCxxOperators();
@@ -4611,7 +4664,25 @@ private:
 
 public:
   static bool canonicalize(SgForStatement*);
+  static bool canonicalize(SgForStatement*, std::list<AffineVariable>&);
+
+  static bool isDecreasingOp(unsigned int);
 };
+
+
+bool forLoopCanonicalizer::isDecreasingOp(unsigned int op)
+{
+  switch (op)
+  {
+  case PLUS_PLUS:
+  case PLUS_ASSIGN:
+  case ASSIGN_ADD:
+    return false;
+    break ;
+  default: break;
+  }
+  return true;
+}
 
 bool forLoopCanonicalizer::doStepLabelTransform()
 {
@@ -4736,13 +4807,13 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
 
   //
   // generate the variable holding the difference
-  // long diff = hi_expr - lo_expr;
-  // signed long type is used to avoid underflow
+  // unsigned long count = ((hi - lo) % incr ? 1 : 0) + (hi - lo) / incr;
+  // use signed long type as in kaapi workqueue
 
   // scope
-  SgScopeStatement* const diff_scope =
+  SgScopeStatement* const count_scope =
     SageInterface::getScope(for_stmt_->get_parent());
-  if (diff_scope == NULL)
+  if (count_scope == NULL)
   {
 #ifdef CONFIG_LOCAL_DEBUG
     printf("invalid top scope\n");
@@ -4751,14 +4822,8 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
   }
 
   // declaration
-  SgName diff_name = "__kaapi_diff_";
-  diff_name << ++SageInterface::gensym_counter;
-
-  SgType* const diff_type = SageBuilder::buildLongType();
-  SgVariableDeclaration* const diff_decl =
-    SageBuilder::buildVariableDeclaration(diff_name, diff_type, 0, diff_scope);
-  SgVarRefExp* const diff_vref_expr =
-    SageBuilder::buildOpaqueVarRefExp(diff_name, diff_scope);
+  SgName count_name = "__kaapi_count_";
+  count_name << ++SageInterface::gensym_counter;
 
   // substraction. add 1 to inclsuive (non strict) operators.
   SgExpression* diff_op = SageBuilder::buildSubtractOp(hi_expr, lo_expr);
@@ -4768,18 +4833,50 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
       (diff_op, SageBuilder::buildLongIntVal(1));
   }
 
-  // insert declaration statement
-  SageInterface::prependStatement(diff_decl, diff_scope);
+  // modulus and ternary expressions
+  diff_op->set_need_paren(true);
+  SgExpression* const noteq_expr = SageBuilder::buildNotEqualOp
+  (
+   SageBuilder::buildModOp(diff_op, stride_),
+   SageBuilder::buildLongIntVal(0)
+  );
+
+  SgConditionalExp* const tern_expr = SageBuilder::buildConditionalExp
+  (
+   noteq_expr,
+   SageBuilder::buildLongIntVal(1),
+   SageBuilder::buildLongIntVal(0)
+  );
+
+  SgExpression* const add_op = SageBuilder::buildAddOp
+    (SageBuilder::buildDivideOp(diff_op, stride_), tern_expr);
+
+  // insert count declaration
+  SgType* const count_type = SageBuilder::buildLongType();
+  SgVariableDeclaration* const count_decl =
+    SageBuilder::buildVariableDeclaration
+    (count_name, count_type, 0, count_scope);
+  SgVarRefExp* const count_vref_expr =
+    SageBuilder::buildOpaqueVarRefExp(count_name, count_scope);
+  SageInterface::prependStatement(count_decl, count_scope);
 
   // insert for init statement
-  SgExprStatement* const assign_stmt =
-    SageBuilder::buildAssignStatement(diff_vref_expr, diff_op);
+  SgExprStatement* const assign_stmt = SageBuilder::buildAssignStatement
+    (count_vref_expr, SageBuilder::buildLongIntVal(0));
   for_stmt_->append_init_stmt(assign_stmt);
 
-  // insert diff > 0 expression. set as test expression.
-  SgExpression* const greater_expr = SageBuilder::buildGreaterThanOp
-    (diff_vref_expr, SageBuilder::buildLongIntVal(0));
-  for_stmt_->set_test_expr(greater_expr);
+  // insert count < limit expression. delete previous test
+  // expression before clobbering and set as the new one.
+  SgStatement* const test_stmt = for_stmt_->get_test();
+  if (test_stmt != NULL)
+  {
+    for_stmt_->set_test(NULL);
+    delete test_stmt;
+  }
+
+  SgExpression* const less_expr =
+    SageBuilder::buildLessThanOp(count_vref_expr, add_op);
+  for_stmt_->set_test_expr(less_expr);
 
   // move increment to end of body
   SgStatement* const incr_stmt =
@@ -4788,9 +4885,8 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
     isSgScopeStatement(SageInterface::getLoopBody(for_stmt_));
   SageInterface::appendStatement(incr_stmt, scope_stmt);
 
-  // insert diff -= stride as increment expression
-  for_stmt_->set_increment
-    (SageBuilder::buildMinusAssignOp(diff_vref_expr, stride_));
+  // insert ++count as increment expression
+  for_stmt_->set_increment(SageBuilder::buildPlusPlusOp(count_vref_expr));
 
   return true;
 
@@ -4911,13 +5007,21 @@ bool forLoopCanonicalizer::getNormalizedStep
       if (has_this == 0)
       {
 	// must be at least one arg
-	if (expr_list.size() == 0) return false;
+	if (expr_list.size() == 0)
+	{
+#ifdef CONFIG_LOCAL_DEBUG
+	  printf("invalid list size: %u\n", expr_list.size());
+#endif
+	  return false;
+	}
+
 	lhs = expr_list[0];
       }
 
       if (lhs == NULL) return false;
 
-      SgName name = call_expr->getAssociatedFunctionDeclaration()->get_name();
+      SgName name =
+	call_expr->getAssociatedFunctionDeclaration()->get_name();
 
       if (name == "operator--")
       {
@@ -4933,19 +5037,30 @@ bool forLoopCanonicalizer::getNormalizedStep
       }
       else if (name == "operator+=")
       {
+	if (expr_list.size() < (2 - has_this))
+	{
+#ifdef CONFIG_LOCAL_DEBUG
+	  printf("invalid list size: %u\n", expr_list.size());
+#endif
+	  return false;
+	}
+
 	rhs = expr_list[1 - has_this];
 	op = PLUS_ASSIGN;
 	return true;
       }
       else if (name == "operator-=")
       {
+	if (expr_list.size() < (2 - has_this))
+	{
+#ifdef CONFIG_LOCAL_DEBUG
+	  printf("invalid list size: %u\n", expr_list.size());
+#endif
+	  return false;
+	}
+
 	op = MINUS_ASSIGN;
 	rhs = expr_list[1 - has_this];
-	return true;
-      }
-      else if (name == "operator=")
-      {
-	printf("TODO\n");
 	return true;
       }
 
@@ -4962,6 +5077,8 @@ bool forLoopCanonicalizer::getNormalizedStep
 
   if (isSgAssignOp(expr))
   {
+    SgExpression* const saved_expr = expr;
+
     expr = isSgAssignOp(expr)->get_rhs_operand();
 
     if (isSgAddOp(expr) != NULL)
@@ -4978,6 +5095,46 @@ bool forLoopCanonicalizer::getNormalizedStep
       op = ASSIGN_SUB;
       return true;
     }
+    else if (isSgAssignInitializer(expr) != NULL)
+    {
+      // the only accepted forms are
+      // fu = fu.op(bar)
+      // fu = op(fu, bar)
+
+      lhs = isSgAssignOp(saved_expr)->get_lhs_operand();
+
+      // return the rhs
+      expr = isSgAssignInitializer(expr)->get_operand();
+      if (expr == NULL) return false;
+
+      SgFunctionCallExp* const call_expr = isSgFunctionCallExp(expr);
+      if (call_expr == NULL) return false;
+      SgName name =
+	call_expr->getAssociatedFunctionDeclaration()->get_name();
+      if (name == "operator-") op = ASSIGN_SUB;
+      else if (name == "operator+") op = ASSIGN_ADD;
+      else return false;
+
+      SgExpressionPtrList const expr_list =
+	call_expr->get_args()->get_expressions();
+
+      SgDotExp* const dot_expr = isSgDotExp(call_expr->get_function());
+      if (dot_expr != NULL) // fu = fu.op(bar);
+      {
+	if (SageInterface::is_Cxx_language() == false) return false;
+	if (expr_list.size() != 1) return false;
+	rhs = expr_list[0];
+	return true;
+      }
+      else // fu = op(fu, bar);
+      {
+	if (expr_list.size() != 2) return false;
+	rhs = expr_list[1];
+	return true;
+      }
+
+      return false;
+    } // isSgInitializer
   }
   else if (isSgBinaryOp(expr))
   {
@@ -5141,7 +5298,7 @@ bool forLoopCanonicalizer::normalizeCxxOperators()
 }
 
 bool forLoopCanonicalizer::isVarModified
-(SgNode* node, SgInitializedName* name)
+(SgNode* node, SgInitializedName* looked_name)
 {
   // return true if the var identified by
   // name is modified by the subtree under node
@@ -5158,14 +5315,33 @@ bool forLoopCanonicalizer::isVarModified
   SgVarRefExp* const vref_expr = isSgVarRefExp(lhs);
   if (vref_expr == NULL) return false;
   if (vref_expr->get_symbol() == NULL) return false;
-  if (vref_expr->get_symbol()->get_declaration() == NULL) return false;
 
-  const SgName& var_name =
-    vref_expr->get_symbol()->get_declaration()->get_name();
+  SgInitializedName* const her_name =
+    vref_expr->get_symbol()->get_declaration();
+  if (her_name == NULL) return false;
+  return her_name->get_name() == looked_name->get_name();
+}
 
-  // printf("isVarModified: %s\n", var_name.str());
+bool forLoopCanonicalizer::getModifiedVariable
+(SgNode* node, SgInitializedName*& name, unsigned int& op, SgExpression*& expr)
+{
+  // expr the modifying expression
+  // TODO: redundant with isVarModified
 
-  return var_name == name->get_name();
+  SgExpression* lhs;
+
+  // assume isSgExpression(node)
+
+  if (getNormalizedStep(isSgExpression(node), op, lhs, expr) == false)
+    return false;
+
+  SgVarRefExp* const vref_expr = isSgVarRefExp(lhs);
+  if (vref_expr == NULL) return false;
+  if (vref_expr->get_symbol() == NULL) return false;
+
+  name = vref_expr->get_symbol()->get_declaration();
+  if (name == NULL) return false;
+  return true;
 }
 
 bool forLoopCanonicalizer::doMultipleStepTransform()
@@ -5198,7 +5374,8 @@ bool forLoopCanonicalizer::doMultipleStepTransform()
   skip_rhs_operand:
 
     // process the node here. find iterator in rhs lhs operand
-    if (isVarModified(node, iter_name_) == true)
+    const bool is_modified = isVarModified(node, iter_name_);
+    if (is_modified == true)
     {
       // modifying twice the iterator is considered an error
       if (iter_node != NULL)
@@ -5306,11 +5483,80 @@ bool forLoopCanonicalizer::findIteratorName(void)
 #undef CONFIG_LOCAL_DEBUG
 }
 
-bool forLoopCanonicalizer::canonicalize(SgForStatement* for_stmt)
+bool forLoopCanonicalizer::findAffineVariables(void)
 {
-  forLoopCanonicalizer canon(for_stmt);
+  // keep track of affine variables. An affine
+  // variable is a named expression present in
+  // the increment clause of the loop.
+
+  // no prior pass assumed, but this code
+  // is redundant with the subtree iteration
+  // of doMultipleStepTransform
+
+#define CONFIG_LOCAL_DEBUG
+
+  // variable name, op, modifying expression
+  SgInitializedName* name;
+  unsigned int op;
+  SgExpression* expr;
+
+  // process increment expression first since the
+  // affine constraint is put on the increment clause
+
+  SgExpression* const incr_expr = for_stmt_->get_increment();
+  if (incr_expr == NULL) return true;
+
+  SgCommaOpExp* comma_expr = isSgCommaOpExp(incr_expr);
+  if (comma_expr == NULL)
+  {
+    if (getModifiedVariable(isSgNode(incr_expr), name, op, expr))
+      affine_vars_.push_back(AffineVariable(name, op, expr));
+    return true;
+  }
+
+  // foreach comma tree node, check if the lhs operand
+  // contains a modifying operation on iter_name. there
+  // must be only one such occurence. move every other
+  // expression to the end of the body.
+  SgNode* node;
+  SgNode* iter_node = NULL;
+  bool is_done = false;
+  while (1)
+  {
+    node = comma_expr->get_rhs_operand();
+
+  skip_rhs_operand:
+
+    // process the node here. track modified variables.
+    if (getModifiedVariable(node, name, op, expr))
+      affine_vars_.push_back(AffineVariable(name, op, expr));
+
+    if (is_done == true) break ;
+
+    // last node reached, lhs is a leaf
+    if (isSgCommaOpExp(comma_expr->get_lhs_operand()) == NULL)
+    {
+      is_done = true;
+      node = comma_expr->get_lhs_operand();
+      goto skip_rhs_operand;
+    }
+
+    // next tree node
+    comma_expr = isSgCommaOpExp(comma_expr->get_lhs_operand());
+  }
+
+  return true;
+
+#undef CONFIG_LOCAL_DEBUG
+}
+
+bool forLoopCanonicalizer::canonicalize
+(SgForStatement* for_stmt, std::list<AffineVariable>& affine_vars)
+{
+  forLoopCanonicalizer canon(for_stmt, affine_vars);
 
   // order matters. refer to method comments.
+  if (canon.findAffineVariables() == false) return false;
   if (canon.findIteratorName() == false) return false;
   if (canon.doStepLabelTransform() == false) return false;
   if (canon.doMultipleStepTransform() == false) return false;
@@ -5319,6 +5565,12 @@ bool forLoopCanonicalizer::canonicalize(SgForStatement* for_stmt)
   if (canon.doStrictIntegerTransform() == false) return false;
 
   return true;
+}
+
+bool forLoopCanonicalizer::canonicalize(SgForStatement* for_stmt)
+{
+  std::list<AffineVariable> unused_vars;
+  return canonicalize(for_stmt, unused_vars);
 }
 
 
@@ -5332,6 +5584,25 @@ public:
   { return s->get_name() == _name; }
   const std::string& _name;
 };
+
+// forward decl
+
+static void buildLoopEntrypointBody
+( 
+  SgFunctionDeclaration*       func,
+  SgFunctionDeclaration*       splitter,
+  std::set<SgVariableSymbol*>& listvar,
+  SgClassDeclaration*          contexttype,
+  SgInitializedName*           ivar,
+  SgExpression*                global_begin_iter,
+  SgExpression*                global_step,
+  SgStatement*                 loopbody,
+  SgGlobal*                    scope,
+  bool			       hasIncrementalIterationSpace,
+  bool			       isInclusiveUpperBound,
+  forLoopCanonicalizer::AffineVariableList&
+);
+
 
 /** Transform a loop with independent iteration in an adaptive form
     The loop must have a cannonical form:
@@ -5386,13 +5657,12 @@ SgStatement* buildConvertLoop2Adaptative(
   SgForStatement* forloop = isSgForStatement( loop );
   SgScopeStatement* scope = SageInterface::getScope( forloop->get_parent() );
 
-  if (forLoopCanonicalizer::canonicalize(forloop) == false)
+  std::list<forLoopCanonicalizer::AffineVariable> affine_vars;
+  if (forLoopCanonicalizer::canonicalize(forloop, affine_vars) == false)
   {
     std::cerr << "****[kaapi_c2c] canonicalize loop failed" << std::endl;
     return 0;
   }
-
-  return 0;
 
 #if 0 /* normalization will rename iteration variable and change test to have <= or >= 
          not required
@@ -5450,7 +5720,13 @@ SgStatement* buildConvertLoop2Adaptative(
   std::set<SgVariableSymbol*>::iterator ivar_beg;
   std::set<SgVariableSymbol*>::iterator ivar_end;
 
-  buildFreeVariable(forloop, listvar);
+  if (isSgScopeStatement(loopbody) == NULL)
+  {
+    std::cerr << "cannot find for loop body scope" << std::endl;
+    return 0;
+  }
+
+  buildFreeVariable(isSgScopeStatement(loopbody), listvar);
   
   /* suppress any ivar or __kaapi_thread instance 
   */
@@ -5468,20 +5744,6 @@ SgStatement* buildConvertLoop2Adaptative(
   */
   SgClassDeclaration* contexttype = buildOutlineArgStruct( listvar, bigscope );
   
-  /* prepend workqueue at the begining of the structure
-  */
-  SgVariableDeclaration* memberDeclaration =
-    SageBuilder::buildVariableDeclaration (
-      "__kaapi_work",
-      kaapi_workqueue_ROSE_type,
-      0, 
-      contexttype->get_definition()
-  );
-  memberDeclaration->set_endOfConstruct(SOURCE_POSITION);
-  contexttype->get_definition()->prepend_member(memberDeclaration);
-  
-
-
   /* append the type for the splitter juste before the enclosing function definition
   */
   SageInterface::insertStatement (
@@ -5510,9 +5772,14 @@ SgStatement* buildConvertLoop2Adaptative(
   */
   SgBasicBlock* body = entrypoint->get_definition()->get_body();
 
-  /* generate the splitter function
-  */
-  splitter = buildSplitter(listvar, ivar, contexttype, entrypoint, bigscope );
+  // resolve the splitter
+  {
+    SgName splitter_name("kaapi_splitter_default");
+    SgFunctionSymbol* const func_sym =
+      bigscope->lookup_function_symbol(splitter_name);
+    // assume(func_sym);
+    splitter = func_sym->get_declaration();
+  }
 
   /* Complete the body of the entry pointer with splitter information
   */
@@ -5525,13 +5792,17 @@ SgStatement* buildConvertLoop2Adaptative(
     begin_iter,
     step,
     loopbody, 
-    bigscope 
+    bigscope,
+    hasIncrementalIterationSpace,
+    isInclusiveUpperBound,
+    affine_vars
   );
 
   /* fwd declaration of the entry point */
-  SageInterface::appendStatement(
-    SageBuilder::buildNondefiningFunctionDeclaration( entrypoint, forloop->get_scope() ),
-    newbbcall
+  SageInterface::prependStatement(
+    SageBuilder::buildNondefiningFunctionDeclaration
+    ( entrypoint, forloop->get_scope() ),
+    bigscope
   );
 
   /* Generate the calle new basic block
@@ -5551,14 +5822,131 @@ SgStatement* buildConvertLoop2Adaptative(
               newbbcall 
     );
   }
-  
+
+  // allocate offsetof(type, data) + sizeof(context_type) on the thread stack
+  std::ostringstream offsetof_stream;
+  offsetof_stream << "offsetof(kaapi_splitter_context_t, data)";
+
+  SgExpression* size_expr = SageBuilder::buildAddOp
+    (
+     SageBuilder::buildOpaqueVarRefExp(offsetof_stream.str(), newbbcall),
+     SageBuilder::buildSizeOfOp(contexttype->get_type())
+    );
+
+  SgFunctionCallExp* call_expr = SageBuilder::buildFunctionCallExp
+    (
+     "kaapi_thread_pushdata_align",
+     SageBuilder::buildPointerType(SageBuilder::buildVoidType()),
+     SageBuilder::buildExprListExp
+     (
+      SageBuilder::buildVarRefExp("__kaapi_thread", newbbcall),
+      SageBuilder::buildCastExp
+      (size_expr, SageBuilder::buildUnsignedIntType()),
+      SageBuilder::buildUnsignedLongVal(8)
+     ),
+     bigscope
+    );
+
+  SgVariableDeclaration* splitter_context = SageBuilder::buildVariableDeclaration
+  (
+   "__splitter_context",
+   SageBuilder::buildPointerType(kaapi_splitter_context_ROSE_type),
+   SageBuilder::buildAssignInitializer
+   (
+    SageBuilder::buildCastExp
+    (
+     call_expr,
+     SageBuilder::buildPointerType(kaapi_splitter_context_ROSE_type)
+    ),
+    SageBuilder::buildPointerType(kaapi_splitter_context_ROSE_type)
+   ),
+   newbbcall
+  );
+  SageInterface::appendStatement(splitter_context, newbbcall);
+
+  // __kaapi_context = __splitter_context->data;
   SgVariableDeclaration* local_context = SageBuilder::buildVariableDeclaration (
       "__kaapi_context",
-      contexttype->get_type(),
-      0,
+      SageBuilder::buildPointerType(contexttype->get_type()),
+      SageBuilder::buildAssignInitializer(
+        SageBuilder::buildCastExp(
+	  SageBuilder::buildOpaqueVarRefExp("__splitter_context->data", body),
+          SageBuilder::buildPointerType(contexttype->get_type())
+	  )
+      ),
       newbbcall
   );
   SageInterface::appendStatement( local_context, newbbcall );
+
+  // initialize __splitter_context fields
+
+  // kaapi_workqueue_init(&__splitter_context->wq, i, j);
+  {
+    SgExpression* low_expr = begin_iter;
+    SgExpression* hi_expr = end_iter;
+    if (hasIncrementalIterationSpace == false)
+    {
+      low_expr = end_iter;
+      hi_expr = begin_iter;
+    }
+
+    SgExpression* size_expr;
+    if (isInclusiveUpperBound)
+    {
+      size_expr = SageBuilder::buildSubtractOp
+	(
+	 SageBuilder::buildAddOp(hi_expr, SageBuilder::buildLongIntVal(1)),
+	 low_expr
+        );
+    }
+    else 
+    {
+      size_expr = SageBuilder::buildSubtractOp(hi_expr, low_expr);
+    }
+
+    SgExprListExp* arg_list = SageBuilder::buildExprListExp
+      (
+       SageBuilder::buildAddressOfOp
+       (SageBuilder::buildOpaqueVarRefExp("__splitter_context->wq", body)),
+       SageBuilder::buildIntVal(0),
+       size_expr
+      );
+
+    SgExprStatement* call_stmt = SageBuilder::buildFunctionCallStmt
+      (
+       "kaapi_workqueue_init",
+       SageBuilder::buildVoidType(), 
+       arg_list,
+       scope
+      );
+    call_stmt->set_endOfConstruct(SOURCE_POSITION);
+    SageInterface::appendStatement(call_stmt, newbbcall);
+  }
+
+  // __splitter_context->body = loopentry;
+  {
+    SgExprStatement* assign_stmt = SageBuilder::buildAssignStatement
+      (
+       SageBuilder::buildOpaqueVarRefExp
+       ("__splitter_context->body", body),
+       SageBuilder::buildAddressOfOp
+       (SageBuilder::buildFunctionRefExp(entrypoint))
+      );
+    assign_stmt->set_endOfConstruct(SOURCE_POSITION);
+    SageInterface::appendStatement(assign_stmt, newbbcall);
+  }
+
+  // __splitter_context->data_size = sizeof(type)
+  {
+    SgExprStatement* assign_stmt = SageBuilder::buildAssignStatement
+      (
+       SageBuilder::buildOpaqueVarRefExp
+       ("__splitter_context->data_size", body),
+       SageBuilder::buildSizeOfOp(contexttype->get_type())
+      );
+    assign_stmt->set_endOfConstruct(SOURCE_POSITION);
+    SageInterface::appendStatement(assign_stmt, newbbcall);
+  }
 
   /* Generate assignment of the of free variable to the context field */
   ivar_beg = listvar.begin();
@@ -5576,9 +5964,10 @@ SgStatement* buildConvertLoop2Adaptative(
     else {
       SgExprStatement* exrpassign = SageBuilder::buildExprStatement(
         SageBuilder::buildAssignOp(
-          SageBuilder::buildDotExp( 
+          SageBuilder::buildArrowExp( 
             SageBuilder::buildVarRefExp(local_context),
-            SageBuilder::buildOpaqueVarRefExp("p_" + (*ivar_beg)->get_name(), contexttype->get_scope())
+            SageBuilder::buildOpaqueVarRefExp
+	    ("p_" + (*ivar_beg)->get_name(), contexttype->get_scope())
           ),
           SageBuilder::buildAddressOfOp(
             SageBuilder::buildVarRefExp(
@@ -5594,67 +5983,22 @@ SgStatement* buildConvertLoop2Adaptative(
     ++ivar_beg;
   }
 
-  /* 
-   * Generate the body of the entry point 
-   */
-  SgExpression* workcallee = 
-    SageBuilder::buildAddressOfOp(
-      SageBuilder::buildDotExp( 
-        SageBuilder::buildVarRefExp(local_context),
-        SageBuilder::buildOpaqueVarRefExp("__kaapi_work", contexttype->get_scope())
-      )
-    );
-
-  /* size wq */
-  SgExpression* expr_size = 0;
-  if (isInclusiveUpperBound)
-  {
-    expr_size = SageBuilder::buildSubtractOp(
-      SageBuilder::buildAddOp(
-        end_iter,
-        SageBuilder::buildLongIntVal(1)
-      ),
-      begin_iter
-    );
-  }
-  else 
-  {
-    expr_size = SageBuilder::buildSubtractOp(
-      end_iter,
-      begin_iter
-    );
-  }
-
-  /* initialize the workqueue with initial range [O, (end_iter - begin_iter)/step] */
-  SgExprListExp* argcallinit = SageBuilder::buildExprListExp(
-    workcallee,
-    SageBuilder::buildIntVal(0),
-    SageBuilder::buildDivideOp(
-      expr_size,
-      step
-    )
-  );
-
-  SgExprStatement* callinit_stmt = SageBuilder::buildFunctionCallStmt(    
-      "kaapi_workqueue_init",
-      SageBuilder::buildVoidType(), 
-      argcallinit,
-      scope
-  );
-  callinit_stmt->set_endOfConstruct(SOURCE_POSITION);
-  SageInterface::appendStatement( callinit_stmt, newbbcall );
-
-  /* Generate the call to the entry point */
-  SgExprStatement* callStmt = SageBuilder::buildFunctionCallStmt(
+  // call the entrypoint
+  SgExprStatement* callStmt = SageBuilder::buildFunctionCallStmt
+    (
      SageBuilder::buildFunctionRefExp(entrypoint),
-     SageBuilder::buildExprListExp(
-        workcallee,
-        SageBuilder::buildVarRefExp(newkaapi_threadvar)
+     SageBuilder::buildExprListExp
+     (
+      SageBuilder::buildCastExp
+      (
+       SageBuilder::buildVarRefExp(splitter_context),
+       SageBuilder::buildPointerType(SageBuilder::buildVoidType())
+      ),
+      SageBuilder::buildVarRefExp(newkaapi_threadvar)
      )
-  );
+    );
   callStmt->set_endOfConstruct(SOURCE_POSITION);
   SageInterface::appendStatement( callStmt, newbbcall );
-
 
 #if 0 //////////////////////////////////////////
 {
@@ -5664,7 +6008,7 @@ SgStatement* buildConvertLoop2Adaptative(
    */
   SgExpression* work = 
     SageBuilder::buildAddressOfOp(
-      SageBuilder::buildDotExp( 
+      SageBuilder::buildArrowExp( 
         SageBuilder::buildVarRefExp(local_context),
         SageBuilder::buildOpaqueVarRefExp("__kaapi_work", contexttype->get_scope())
       )
@@ -5731,7 +6075,7 @@ SgStatement* buildConvertLoop2Adaptative(
             SageBuilder::buildVarRefExp(local_beg)
           ),
           SageBuilder::buildMultiplyOp(
-            SageBuilder::buildIntVal(4),
+            SageBuilder::buildIntVal(42),
             SageBuilder::buildFunctionCallExp(    
               "kaapi_getconcurrency",
               SageBuilder::buildIntType(), 
@@ -5798,7 +6142,7 @@ SgStatement* buildConvertLoop2Adaptative(
           ),
 #endif
           SageBuilder::buildAddressOfOp(SageBuilder::buildFunctionRefExp(splitter)),
-          SageBuilder::buildAddressOfOp( SageBuilder::buildVarRefExp(local_context) )
+          SageBuilder::buildAddressOfOp( SageBuilder::buildVarRefExp(splitter_context) )
         ),
         bb
       )
@@ -5980,7 +6324,7 @@ static SgFunctionDeclaration* buildLoopEntrypoint(
   /* Generate the parameter list */
   parlist = SageBuilder::buildFunctionParameterList();
   
-  /* append 2 declaration : context & thread */
+  /* append 2 declarations : context & thread */
   SageInterface::appendArg (parlist, 
     SageBuilder::buildInitializedName(
       "__kaapi_vcontext", 
@@ -6014,7 +6358,10 @@ static void buildLoopEntrypointBody(
   SgExpression*                global_begin_iter,
   SgExpression*                global_step,
   SgStatement*                 loopbody,
-  SgGlobal*                    scope
+  SgGlobal*                    scope,
+  bool			       hasIncrementalIterationSpace,
+  bool			       isInclusiveUpperBound,
+  forLoopCanonicalizer::AffineVariableList& affine_vars
 )
 {
   SgBasicBlock* body = func->get_definition()->get_body();
@@ -6023,27 +6370,32 @@ static void buildLoopEntrypointBody(
       func->get_definition()->lookup_variable_symbol("__kaapi_thread");
 
   /* cast the void* vcontext to the true type */
+  SgVariableDeclaration* splitter_context = SageBuilder::buildVariableDeclaration (
+      "__splitter_context",
+      SageBuilder::buildPointerType(kaapi_splitter_context_ROSE_type),
+      SageBuilder::buildAssignInitializer(
+        SageBuilder::buildCastExp(
+          SageBuilder::buildVarRefExp(func->get_definition()->lookup_variable_symbol("__kaapi_vcontext")), 
+          SageBuilder::buildPointerType(kaapi_splitter_context_ROSE_type)
+        )
+      ),
+      body
+  );
+
+  SageInterface::appendStatement( splitter_context, body );
+  
   SgVariableDeclaration* context = SageBuilder::buildVariableDeclaration (
       "__kaapi_context",
       SageBuilder::buildPointerType(contexttype->get_type()),
       SageBuilder::buildAssignInitializer(
         SageBuilder::buildCastExp(
-          SageBuilder::buildVarRefExp(func->get_definition()->lookup_variable_symbol("__kaapi_vcontext")), 
+	  SageBuilder::buildOpaqueVarRefExp("__splitter_context->data", body),
           SageBuilder::buildPointerType(contexttype->get_type())
-        )
+	  )
       ),
       body
   );
   SageInterface::appendStatement( context, body );
-
-  /* declare the induction variable inside ! */
-  SgVariableDeclaration* local_ivar = SageBuilder::buildVariableDeclaration (
-      ivar->get_name(),
-      ivar->get_type(),
-      0,
-      body
-  );
-  SageInterface::appendStatement( local_ivar, body );
 
   /* 
    * Generate the body of the entry point 
@@ -6051,8 +6403,8 @@ static void buildLoopEntrypointBody(
   SgExpression* work = 
     SageBuilder::buildAddressOfOp(
       SageBuilder::buildArrowExp( 
-        SageBuilder::buildVarRefExp(context),
-        SageBuilder::buildOpaqueVarRefExp("__kaapi_work", contexttype->get_scope())
+        SageBuilder::buildVarRefExp(splitter_context),
+        SageBuilder::buildOpaqueVarRefExp("wq", contexttype->get_scope())
       )
     );
 
@@ -6075,14 +6427,13 @@ static void buildLoopEntrypointBody(
   SageInterface::appendStatement( wc, body );
   
   /* the queue is already initilized by the callee */
-
-  /* */
   SgVariableDeclaration* local_beg = SageBuilder::buildVariableDeclaration (
       "__kaapi_range_beg",
       kaapi_workqueue_index_ROSE_type,
       0, 
       body
   );
+
   local_beg->set_endOfConstruct(SOURCE_POSITION);
   SageInterface::appendStatement( local_beg, body );
 
@@ -6100,6 +6451,10 @@ static void buildLoopEntrypointBody(
       "__kaapi_popsize",
       SageBuilder::buildLongType(),
       SageBuilder::buildAssignInitializer(
+
+        SageBuilder::buildAddOp(
+        SageBuilder::buildLongIntVal(1),
+
         SageBuilder::buildDivideOp(
           SageBuilder::buildFunctionCallExp(    
             "kaapi_workqueue_size",
@@ -6116,6 +6471,7 @@ static void buildLoopEntrypointBody(
               body
             )
           )
+         )
         )
       ),
       body
@@ -6133,21 +6489,49 @@ static void buildLoopEntrypointBody(
     else if ((*ivar_beg)->get_name() == "__kaapi_thread")
     { /* to nothing */ }
     else {
-      SgVariableDeclaration* alocalvar = SageBuilder::buildVariableDeclaration (
+      SgVariableDeclaration* alocalvar;
+
+      // dont assign if affine, since its done at each pop
+      typedef forLoopCanonicalizer::AffineVariable AffineVariable;
+      std::list<AffineVariable>::iterator pos = affine_vars.begin();
+      std::list<AffineVariable>::iterator end = affine_vars.end();
+      for (; pos != end; ++pos)
+      {
+	if (pos->name_->get_name() == (*ivar_beg)->get_name())
+	  break ;
+      }
+
+      // not found, declare and assign
+      if (pos == end)
+      {
+	alocalvar = SageBuilder::buildVariableDeclaration (
           (*ivar_beg)->get_name(),
           (*ivar_beg)->get_type(),
           SageBuilder::buildAssignInitializer(
             SageBuilder::buildPointerDerefExp(
               SageBuilder::buildArrowExp( 
                 SageBuilder::buildVarRefExp(context),
-                SageBuilder::buildOpaqueVarRefExp("p_" + (*ivar_beg)->get_name(), contexttype->get_scope())
+                SageBuilder::buildOpaqueVarRefExp
+		("p_" + (*ivar_beg)->get_name(), contexttype->get_scope())
               )
             )
           ),
           body
-      );
+	 );
+      }
+      else // found, just declare
+      {
+	alocalvar = SageBuilder::buildVariableDeclaration (
+          (*ivar_beg)->get_name(),
+          (*ivar_beg)->get_type(),
+	  0,
+	  body
+        );
+      }
+
       SageInterface::appendStatement( alocalvar, body );
     }
+
     ++ivar_beg;
   }
 
@@ -6169,7 +6553,7 @@ static void buildLoopEntrypointBody(
           ),
 #endif
           SageBuilder::buildAddressOfOp(SageBuilder::buildFunctionRefExp(splitter)),
-          SageBuilder::buildVarRefExp(context)
+          SageBuilder::buildVarRefExp(splitter_context)
         ),
         body
       )
@@ -6177,20 +6561,6 @@ static void buildLoopEntrypointBody(
   );
   wc_init->set_endOfConstruct(SOURCE_POSITION);
   SageInterface::appendStatement( wc_init, body );
-  
-  SgStatement* init_ivar_local =
-    SageBuilder::buildAssignStatement(
-      SageBuilder::buildVarRefExp(local_ivar),
-      SageBuilder::buildAddOp(
-        global_begin_iter,
-        SageBuilder::buildMultiplyOp(
-          SageBuilder::buildVarRefExp(local_beg),
-          global_step
-        )
-      )
-    );
-  init_ivar_local->set_endOfConstruct(SOURCE_POSITION);
-  SageInterface::appendStatement( init_ivar_local, body );
 
   SgWhileStmt* while_popsizeloop = 
     SageBuilder::buildWhileStmt(
@@ -6212,48 +6582,86 @@ static void buildLoopEntrypointBody(
   );
   while_popsizeloop->set_endOfConstruct(SOURCE_POSITION);
 
-  /* iter_end = affine function of range_end */
-  SgStatement* init_ivar_local_end =
-    SageBuilder::buildAssignStatement(
-      SageBuilder::buildVarRefExp(local_ivar_end),
-      SageBuilder::buildAddOp(
-        global_begin_iter,
-        SageBuilder::buildMultiplyOp(
-          SageBuilder::buildVarRefExp(local_end),
-          global_step
-        )
-      )
-    );
-  init_ivar_local_end->set_endOfConstruct(SOURCE_POSITION);
-  SageInterface::appendStatement( init_ivar_local_end, isSgBasicBlock(while_popsizeloop->get_body( )) );
-  
+  { // affine variable affectation
+
+    typedef forLoopCanonicalizer::AffineVariable AffineVariable;
+
+    SgBasicBlock* const while_block =
+      isSgBasicBlock(while_popsizeloop->get_body());
+
+    SgVarRefExp* const beg_expr = SageBuilder::buildVarRefExp(local_beg);
+
+    std::list<AffineVariable>::iterator pos = affine_vars.begin();
+    std::list<AffineVariable>::iterator end = affine_vars.end();
+    for (; pos != end; ++pos)
+    {
+      SgVariableSymbol* const var_sym =
+	body->lookup_variable_symbol(pos->name_->get_name());
+
+      // TO_REMOVE cannot occur
+      if (var_sym == NULL)
+      {
+	printf("var_sym(%s) == NULL\n", pos->name_->get_name().str());
+	continue ;
+      }
+      // TO_REMOVE cannot occur
+
+      // create the var affectation statement:
+      // var = __c->var + __i * incr;
+
+      SgPointerDerefExp* const base_expr =
+	SageBuilder::buildPointerDerefExp
+	(
+	 SageBuilder::buildArrowExp
+	 ( 
+	  SageBuilder::buildVarRefExp(context),
+	  SageBuilder::buildOpaqueVarRefExp
+	  ("p_" + var_sym->get_name(), contexttype->get_scope())
+	 )
+	);
+
+      SgExpression* incr_expr = pos->incr_;
+
+      // plus_plus or minus_minus have no expression
+      if (incr_expr == NULL)
+	incr_expr = SageBuilder::buildLongIntVal(1);
+
+      SgExpression* const scaled_expr =
+	SageBuilder::buildMultiplyOp(beg_expr, incr_expr);
+
+      SgExpression* add_expr;
+      // decreasing op
+      if (forLoopCanonicalizer::isDecreasingOp(pos->op_))
+	add_expr = SageBuilder::buildSubtractOp(base_expr, scaled_expr);
+      else
+	add_expr = SageBuilder::buildAddOp(base_expr, scaled_expr);
+
+      SgStatement* const assign_stmt = SageBuilder::buildAssignStatement
+	(SageBuilder::buildVarRefExp(var_sym), add_expr);
+      assign_stmt->set_endOfConstruct(SOURCE_POSITION);
+      SageInterface::prependStatement(assign_stmt, while_block);
+
+    } // foreach affine variable
+
+  } // affine variable affectation
+
   /* */
   SgStatement* new_forloop = 
     SageBuilder::buildForStatement(
       0,
       SageBuilder::buildExprStatement(
-        SageBuilder::buildLessThanOp(
-          SageBuilder::buildVarRefExp(local_ivar),
-          SageBuilder::buildVarRefExp(local_ivar_end)
+        SageBuilder::buildNotEqualOp(
+          SageBuilder::buildVarRefExp(local_beg),
+          SageBuilder::buildVarRefExp(local_end)
         )
       ), 
-      SageBuilder::buildPlusAssignOp(
-        SageBuilder::buildVarRefExp(local_ivar),
-        global_step
+      SageBuilder::buildPlusPlusOp(
+        SageBuilder::buildVarRefExp(local_beg)
       ),
       loopbody
     );
   new_forloop->set_endOfConstruct(SOURCE_POSITION);
   SageInterface::appendStatement( new_forloop, isSgBasicBlock(while_popsizeloop->get_body( ))  );
-
-  /* iter = iter_end at the end of the local loop */
-  SgStatement* swap_ivars_local =
-    SageBuilder::buildAssignStatement(
-      SageBuilder::buildVarRefExp(local_ivar),
-      SageBuilder::buildVarRefExp(local_ivar_end)
-    );
-  swap_ivars_local->set_endOfConstruct(SOURCE_POSITION);
-  SageInterface::appendStatement( swap_ivars_local, isSgBasicBlock(while_popsizeloop->get_body( )) );
 
   SageInterface::appendStatement( while_popsizeloop, body  );
   
@@ -6272,290 +6680,6 @@ static void buildLoopEntrypointBody(
 
   return;
 }
-
-
-/** Generate the function declaration for the splitter
-*/
-static SgFunctionDeclaration* buildSplitter(
-  std::set<SgVariableSymbol*>& listvar,
-  SgInitializedName*           ivar,
-  SgClassDeclaration*          contexttype,
-  SgFunctionDeclaration*       entrypoint,
-  SgGlobal*                    scope
-)
-{
-  static int cnt = 0;
-  std::ostringstream func_name;
-  func_name << "__kaapi_splitter_" << cnt++;
-
-  SgType *return_type = SageBuilder::buildIntType();
-  SgFunctionParameterList *parlist;
-
-  /* Generate the parameter list */
-  parlist = SageBuilder::buildFunctionParameterList();
-  
-  /* append 2 declaration : __kaapi_range_beg & __kaapi_range_end */
-  SageInterface::appendArg (parlist, 
-    SageBuilder::buildInitializedName ("__kaapi_sc", SageBuilder::buildPointerType(kaapi_stealcontext_ROSE_type))
-  );
-  SageInterface::appendArg (parlist, 
-    SageBuilder::buildInitializedName ("__kaapi_nreq", SageBuilder::buildIntType())
-  );
-  SageInterface::appendArg (parlist, 
-    SageBuilder::buildInitializedName ("__kaapi_req", SageBuilder::buildPointerType(kaapi_request_ROSE_type))
-  );
-  SageInterface::appendArg (parlist, 
-    SageBuilder::buildInitializedName ("__kaapi_vcontext", SageBuilder::buildPointerType(SageBuilder::buildVoidType()))
-  );
-
-  SgFunctionDeclaration* func = SageBuilder::buildDefiningFunctionDeclaration(
-      func_name.str(), 
-      return_type, 
-      parlist, 
-      scope
-  );
-  func->set_endOfConstruct(SOURCE_POSITION);
-  ((func->get_declarationModifier()).get_storageModifier()).setStatic();
-  SgBasicBlock* body = func->get_definition()->get_body();
-
-  /* fwd declaration of the entry point */
-  SageInterface::appendStatement(
-    SageBuilder::buildNondefiningFunctionDeclaration( entrypoint ),
-    body
-  );
-
-  SgVariableDeclaration* victimcontext = SageBuilder::buildVariableDeclaration (
-      "__kaapi_context",
-      SageBuilder::buildPointerType(contexttype->get_type()),
-      SageBuilder::buildAssignInitializer(
-        SageBuilder::buildCastExp(
-          SageBuilder::buildVarRefExp(func->get_definition()->lookup_variable_symbol("__kaapi_vcontext")), 
-          SageBuilder::buildPointerType(contexttype->get_type())
-        )
-      ),
-      body
-  );
-  SageInterface::appendStatement( victimcontext, body );
-
-  SgVariableDeclaration* nrep = SageBuilder::buildVariableDeclaration (
-      "__kaapi_nrep",
-      SageBuilder::buildIntType(),
-      0,
-      body
-  );
-  SageInterface::appendStatement( nrep, body );
-
-  /* declare range_size */
-  SgVariableDeclaration* rsize = SageBuilder::buildVariableDeclaration (
-      "__kaapi_range_size",
-      kaapi_workqueue_index_ROSE_type,
-      0,
-      body
-  );
-  SageInterface::appendStatement( rsize, body );
-
-  /* declare range_size */
-  SgVariableDeclaration* runit = SageBuilder::buildVariableDeclaration (
-      "__kaapi_unit_per_req",
-      kaapi_workqueue_index_ROSE_type,
-      0,
-      body
-  );
-  SageInterface::appendStatement( runit, body );
-  
-  /* declare range_beg and range_end */
-  SgVariableDeclaration* rbeg = SageBuilder::buildVariableDeclaration (
-      "__kaapi_range_beg",
-      kaapi_workqueue_index_ROSE_type,
-      0,
-      body
-  );
-  SageInterface::appendStatement( rbeg, body );
-  SgVariableDeclaration* rend = SageBuilder::buildVariableDeclaration (
-      "__kaapi_range_end",
-      kaapi_workqueue_index_ROSE_type,
-      0,
-      body
-  );
-  SageInterface::appendStatement( rend, body );
-
-  SgExpression* work = 
-    SageBuilder::buildAddressOfOp(
-      SageBuilder::buildArrowExp( 
-        SageBuilder::buildVarRefExp(victimcontext),
-        SageBuilder::buildOpaqueVarRefExp("__kaapi_work", contexttype->get_scope())
-      )
-    );
-
-  SgLabelStatement* thelabel = SageBuilder::buildLabelStatement(
-    "tuvasrecommencer", rend, body 
-  );
-  SageInterface::appendStatement( thelabel, body );
-
-  SageInterface::appendStatement(
-    SageBuilder::buildAssignStatement(
-      SageBuilder::buildVarRefExp(rsize), 
-      SageBuilder::buildFunctionCallExp(
-        "kaapi_workqueue_size",
-        SageBuilder::buildPointerType(SageBuilder::buildVoidType()),
-        SageBuilder::buildExprListExp(
-          work
-        ),
-        body
-      )
-    ),
-    body
-  );
-
-  /* to small size: return */
-  SgIfStmt* if_stmt = SageBuilder::buildIfStmt(
-    SageBuilder::buildLessThanOp(
-      SageBuilder::buildVarRefExp(rsize),
-      SageBuilder::buildIntVal(2)
-    ), 
-    SageBuilder::buildReturnStmt(SageBuilder::buildIntVal(0)), 
-    0
-  );
-  SageInterface::appendStatement(if_stmt, body);
-
-  /* size per request */
-  SageInterface::appendStatement(
-    SageBuilder::buildAssignStatement(
-      SageBuilder::buildVarRefExp(runit), 
-      SageBuilder::buildDivideOp(
-        SageBuilder::buildVarRefExp(rsize), 
-        SageBuilder::buildAddOp(
-          SageBuilder::buildOpaqueVarRefExp("__kaapi_nreq", body),
-          SageBuilder::buildLongIntVal(1)
-        )
-      )
-    ),
-    body
-  );
-
-  SgIfStmt* if_stmt_steal = SageBuilder::buildIfStmt(
-    SageBuilder::buildNotOp(
-      SageBuilder::buildFunctionCallExp(
-        "kaapi_workqueue_steal",
-        SageBuilder::buildPointerType(SageBuilder::buildIntType()),
-        SageBuilder::buildExprListExp(
-          work,
-          SageBuilder::buildAddressOfOp(SageBuilder::buildVarRefExp(rbeg)),
-          SageBuilder::buildAddressOfOp(SageBuilder::buildVarRefExp(rend)),
-          SageBuilder::buildMultiplyOp(
-            SageBuilder::buildVarRefExp(runit),
-            SageBuilder::buildOpaqueVarRefExp("__kaapi_nreq", body)
-          )
-        ),
-        body
-      )
-    ),
-    SageBuilder::buildGotoStatement(thelabel), 
-    0
-  );
-  SageInterface::appendStatement(if_stmt_steal, body);
-  
-  
-  /* for loop to reply to each thief */
-  SgStatement *initialize_stmt = SageBuilder::buildAssignStatement(
-    SageBuilder::buildVarRefExp(nrep), 
-    SageBuilder::buildIntVal(0)
-  );
-
-  SgStatement *test = SageBuilder::buildExprStatement( 
-    SageBuilder::buildVarRefExp(func->get_definition()->lookup_variable_symbol("__kaapi_req"))
-  );
-
-  SgExpression *increment =  SageBuilder::buildExprListExp(
-    SageBuilder::buildMinusMinusOp(
-      SageBuilder::buildVarRefExp(func->get_definition()->lookup_variable_symbol("__kaapi_nreq"))
-    ),
-    SageBuilder::buildPlusPlusOp(
-      SageBuilder::buildVarRefExp(func->get_definition()->lookup_variable_symbol("__kaapi_req"))
-    ),
-    SageBuilder::buildPlusPlusOp(
-      SageBuilder::buildVarRefExp(nrep)
-    )
-  );
-
-  SgBasicBlock* loop_body = SageBuilder::buildBasicBlock();
-
-  SgVariableDeclaration* thief_context = SageBuilder::buildVariableDeclaration (
-      "__kaapi_thief_context",
-      SageBuilder::buildPointerType(contexttype->get_type()),
-      SageBuilder::buildAssignInitializer(
-        SageBuilder::buildFunctionCallExp(    
-          "kaapi_reply_init_adaptive_task",
-          SageBuilder::buildPointerType(contexttype->get_type()),
-          SageBuilder::buildExprListExp(
-            SageBuilder::buildVarRefExp(func->get_definition()->lookup_variable_symbol("__kaapi_sc")), 
-            SageBuilder::buildVarRefExp(func->get_definition()->lookup_variable_symbol("__kaapi_req")), 
-            SageBuilder::buildFunctionRefExp(entrypoint),
-            SageBuilder::buildSizeOfOp(
-              contexttype->get_type()
-            ),
-            SageBuilder::buildIntVal(0)
-          ),
-          scope
-        )
-      ),
-      loop_body
-  );
-  thief_context->set_endOfConstruct(SOURCE_POSITION);
-  SageInterface::appendStatement( thief_context, loop_body );
-  
-  /* TODO add initialization of the workqueue */
-  
-  /* append all free parameter as parameter to the arg list, without:
-     * __kaapi_thread which will be recomputed.
-     * induction variable that will remains local.
-     Other parameter are considered to be passed as shared parameters.
-  */
-  std::set<SgVariableSymbol*>::iterator ivar_beg = listvar.begin();
-  std::set<SgVariableSymbol*>::iterator ivar_end = listvar.end();
-  while (ivar_beg != ivar_end)
-  {
-    if ((*ivar_beg)->get_name() == ivar->get_name())
-    {
-      /* preappend declaration in the body of the induction variable */
-    }
-    else if ((*ivar_beg)->get_name() == "__kaapi_thread")
-    {
-      /* append declaration in the body */
-    }
-    else {
-      SgStatement *initialize_stmt = SageBuilder::buildAssignStatement(
-        SageBuilder::buildArrowExp( 
-          SageBuilder::buildVarRefExp(thief_context),
-          SageBuilder::buildOpaqueVarRefExp("p_"+(*ivar_beg)->get_name(), contexttype->get_scope())
-        ),
-        SageBuilder::buildArrowExp( 
-          SageBuilder::buildVarRefExp(victimcontext),
-          SageBuilder::buildOpaqueVarRefExp("p_"+(*ivar_beg)->get_name(), contexttype->get_scope())
-        )
-      );
-      SageInterface::appendStatement( initialize_stmt, loop_body );
-    }
-    ++ivar_beg;
-  }
-
-  /* create and insert the for loop */
-  SgForStatement* replyfor = SageBuilder::buildForStatement(
-    initialize_stmt, 
-    test, 
-    increment, 
-    loop_body
-  );
-  replyfor->set_endOfConstruct(SOURCE_POSITION);
-  SageInterface::appendStatement( replyfor, body );
-
-  SageBuilder::buildReturnStmt(
-    SageBuilder::buildVarRefExp(nrep)
-  );
-  return func;
-}
-
-
 
 /***/
 static void RecGenerateGetDimensionExpression(
