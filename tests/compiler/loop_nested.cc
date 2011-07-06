@@ -4,8 +4,8 @@
 int main(int ac, char** av)
 {
   std::vector<unsigned int> iv;
-  // iv.resize(256 * 100);
-  iv.resize(8);
+  iv.resize(256 * 100);
+  //iv.resize(8);
 
   std::vector<unsigned int>::iterator ipos = iv.begin();
   std::vector<unsigned int>::iterator iend = iv.end();
@@ -18,8 +18,8 @@ int main(int ac, char** av)
 	ipos[i] = 42;
   }
 
-  for (ipos = iv.begin(); ipos != iv.end(); ++ipos)
-    printf("%u\n", *ipos);
+  // for (ipos = iv.begin(); ipos != iv.end(); ++ipos)
+  //   printf("%u\n", *ipos);
 
   return 0;
 }
