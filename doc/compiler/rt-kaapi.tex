@@ -1038,9 +1038,9 @@ In the STL, the right bound is not part of the interval and it is called the 'pa
 
 \paragraph{2-D array.}~\\
 2-D arrays appear de facto in linear algebra subroutines. 
-To split data structures to execute in parallel sub-computations, it is necessary to handle sub sets of 2-D arrays.
+To split data structures for parallel sub-computations, it is necessary to handle sub sets of 2-D arrays.
 
-\kaapi  follows the design of BLAS or LAPACK libraries: the matrix is assumed to be allocated into a contiguous array and the user must specify the \textit{leading dimension} (\textit{ld} in figure~\ref{fig:matrix}), which is the size necessary\footnote{The size is expressed with respect to the \textit{element type}.}  to pass from one row to the next row with the C storage (from one column to the next column with Fortran convention).
+\kaapi  follows the design of BLAS or LAPACK libraries: the matrix is assumed to be allocated into a contiguous array and the user must specify the \textit{leading dimension} (\textit{ld} in figure~\ref{fig:matrix}), which is the size necessary\footnote{The size is expressed with respect to the \textit{element type}.}  to pass from one row to the next one with the C storage (from one column to the next column with Fortran convention).
 
 For instance:
 \begin{verbatim}
@@ -1059,7 +1059,7 @@ The syntax of the clause for 2-D array is composed by the specification of three
 If the leading dimension is not equal to the column dimension (for C storage convention, or row dimension for Fortran convention), it must be specified for 2-dimensional array using the attribute \texttt{ld=<identifier>}. The identifier must be the identifier of a formal parameter.
 \item The storage attribute: C or Fortran (or F) keywords are used to specify the storage of the matrix. \texttt{storage=C} for row major C storage. And \texttt{storage=Fortran} for Fortran column major.
 If not specified, the default value is the \texttt{C}.
-\item The dimension must follows the sub set of the C grammar for expression. 
+\item The dimension must follow the sub set of the C grammar for expression. 
 \end{itemize}
 There is no order to specify attributes.
 All this rules are defined in the grammar of the appendix~\ref{sec:grammar}.
@@ -1118,9 +1118,9 @@ The task cannot write location of the memory region.
 
 %%%%
 \subsubsection{Cumulative access mode}\label{sec:cw}
-In \kaapi, it is possible to reduce variable with associative operator. The commutativity is not required.
-A task that require an accumulative semantic with respect to one of its formal parameters, must declare it with the \texttt{reduction} clause in the \texttt{\#pragma kaapi task}. 
-The reduction clause specifies the operator to use during concurrent reduction and a list of formal parameters the clause is applied on.
+In \kaapi, it is possible to reduce a variable with an associative operator. The commutativity is not required.
+A task that requires an accumulative semantic with respect to one of its formal parameters, must declare it with the \texttt{reduction} clause in the \texttt{\#pragma kaapi task}. 
+The reduction clause specifies the operator to use during concurrent reduction and a list of formal parameters the clause is applied to.
 
 Two tasks having a reduction access mode onto the same memory region are concurrent, for instance the two tasks created at line 12 and 13 in listing of figure~\ref{fig:exaccu}.
 \begin{figure}[ht]
@@ -1183,7 +1183,7 @@ The user has the ability to define its own reduction operator using \texttt{\#pr
 \item [\texttt{\#pragma kaapi declare reduction}]~\\
 \verb!(reduction-identifier : function-name)!\\
 \verb![ identity( function-name) ]!\\
-The \verb!function-name! must correspond to the name of C/C++ function that must satisfy one of the following signature:
+The \verb!function-name! must correspond to the name of C/C++ function. The function must comply with one of the following signature:
 \vspace*{-2ex}\begin{verbatim}
   // For  C++
   void function( typename& result, const typename& value )
@@ -1204,14 +1204,14 @@ The identity function is used to initialize a value of a temporary variable to b
 
 %%%%
 \subsubsection{Dependencies between tasks}
-Once access modes are defined for the tasks, the runtime is able to detect dependencies between tasks that access to a same memory region.
+Once task access modes are defined, the runtime is able to detect dependencies between tasks that access to a same memory region.
 \begin{description}
 \item [Read after Write.] Also called true dependency. A task is reading a memory region produced by another task.
 \item [Write after Write.] False dependency. Such dependency is suppressed using variable renaming: the two tasks can be executed concurrently if they work on distinct memory region, thus the runtime may allocate distinct memory regions.
-\item [Write after Read.] This false dependency is an anti-dependency. Variable renaming permits to suppress them.
+\item [Write after Read.] This false dependency is an anti-dependency. Variable renaming suppress them.
 \end{description}
 
-Note that the \kaapi runtime used a lazy approach to remove false dependencies: if it is necessary to execute concurrently two tasks with false dependencies, then the runtime renames the memory region. Else, the execution is sequential using the task creation order.
+Note that the \kaapi runtime used a lazy approach to remove false dependencies: if it is necessary to execute concurrently two tasks with false dependencies, then the runtime renames the memory region. Otherwise the execution is sequential, using the task creation order.
 
 In both cases, the result of the execution remains the same whatever the execution order between tasks.
 
@@ -1265,11 +1265,11 @@ This directive is a finer version of \texttt{\#pragma kaapi sync}.
 %%%
 \subsection{Recursive function call}\label{sec:recursive}
 
-\kaapi allows recursive task creations. Several examples have been presented in the section~\ref{sec:helloworld}.
+\kaapi allows for recursive task creation. Several examples have been presented in the section~\ref{sec:helloworld}.
 %This is illustrated in figure~\ref{fig:exaccu} (page~\pageref{fig:exaccu}).
-In the accumulate code of figure~\ref{fig:exaccu} (page~\pageref{fig:exaccu}) recursively splits the computation until a grain of 2. Each created sub-tasks works on a disjoint part of  the initial input array. 
+The accumulate code of figure~\ref{fig:exaccu} (page~\pageref{fig:exaccu}) recursively splits the computation until a grain of 2. Created sub-tasks work on disjoint part of the initial input array. 
 
-This example is simple: no temporary data are required at each level of recursion. This not the case with the recursive computation of the Fibonacci number of figure~\ref{ex:fibonacci} page~\pageref{ex:fibonacci}.
+This example is simple: no temporary data is required at each level of recursion. This is not the case with the recursive computation of the Fibonacci number in figure~\ref{ex:fibonacci} page~\pageref{ex:fibonacci}.
 As discussed in section~\ref{sec:optimalloca}, the user should ensure enough scope of data allocated during the computation.
 %
 %
@@ -1291,8 +1291,8 @@ As discussed in section~\ref{sec:optimalloca}, the user should ensure enough sco
 
 
 \subsubsection{Control of the allocation scope of data}
-All data passed by reference to tasks must be valid until the task completions.
-For instance, because task creation is a non blocking call the example of figure~\ref{ex:caplante} is incorrect: the automatic variable \texttt{r} will be suppressed before the execution of the task \texttt{g}.
+All data passed by reference to tasks must be valid until the task completion.
+For instance, because task creation is a non blocking call, the example of figure~\ref{ex:caplante} is incorrect: the automatic variable \texttt{r} will be suppressed before the execution of the task \texttt{g}.
 \begin{figure}[ht]
 \begin{center}
 \begin{minipage}{0.99\linewidth}
@@ -1629,7 +1629,7 @@ int main()
 
 
 \subsection{Cholesky factorization}
-This example shows one of the main difference between StartSs programming model is its ability to view sub matrix of matrix without necessity to reallocate the user's data structure.\\
+This example shows one of the main difference between the StarSS programming model is its inability to view sub matrix without reallocating the user's data structure.\\
 
 \begin{footnotesize}
 \begin{lstlisting}[frame=tb]
@@ -1972,13 +1972,17 @@ parameter in the \verb+#pragma kaapi task+ compiler directive.
 \end{verbatim}
 \subsubsection{Note on access mode}
 Most of the different access modes (\verb+mode_xx :=+ rules) have three formats: long, short and a format compatible with the  SMPSs programming model. 
-If the reduction operator for an \verb+reduction+ access mode is left unspecified, they the default operator is \verb'+' for all the scalar type (integral value and floating point value). 
-For other instance of type or class that does not have the \verb'+' operator defined, then this is an compiler error. The default identity operator is: for scalar value (integral value and floating value) to set the value '0' which is the neutral element with respect to the associative default \verb'+' operator. For other type or class which have a defined \verb'+' operator, then the neutral is assumed to be set by calling the default constructor.
+If the reduction operator for a \verb+reduction+ access mode is left unspecified, then the default operator is \verb'+' for all the scalar type (integral value and floating point value). 
+For other instance of type or class that does not have the \verb'+' operator defined, then this is an compiler error. The default identity operator is:
+\begin{itemize}
+\item for scalar value (integral value and floating value) to set the value '0' which is the neutral element with respect to the associative default \verb'+' operator,
+\item For other type or class which have a defined \verb'+' operator, then the neutral is assumed to be set by calling the default constructor.
+\end{itemize}
 
 \subsubsection{Note on range declaration}
 
-In the range declaration rule, the programmer has to opportunity to define the set of memory address that the task will access. 
-The set of memory address may have any shape. This set serves to detect dependencies between tasks. The implementation has currently 2 limits:
+In the range declaration rule, it is possible for the programmer to define the set of memory address that the task accesses. 
+The set of memory addresses may have any shape. This set is used by the runtime to detect dependencies between tasks. The implementation has currently 2 limits:
 \begin{enumerate}
 \item The grammar limits the shape to continuous D dimensional arrays, 
 with an implementation limit to 2D data structures (see next section about the grammar).
@@ -2029,7 +2033,7 @@ The dimension in range specification is described by the following grammar. Expr
 
 
 \subsection{Grammar for reduction operator}
-The compiler directive \verb+#pragma kaapi declares <reduction_declaration>+ follows the next grammar. This grammar may be extended to match the OpenMP directive to declare reduction operators using pseudo variable.
+The compiler directive \verb+#pragma kaapi declare <reduction_declaration>+ follows the next grammar. This grammar may be extended to match the OpenMP directive to declare reduction operators using pseudo variables.
 \begin{verbatim}
       reduction_declaration :=
           reduction_definition
@@ -2074,7 +2078,7 @@ The following grammar is involved in the directive
         | list_of_variables ',' identifier 
 \end{verbatim}
 This directive must be defined in a basic block before the definition of automatic variable.
-This is a compiler error to pass a non automatic name (\textit{e.g.} global variable) or to declare the pragma after the definition of the variable.
+It is a compiler error to pass a non automatic name (\textit{e.g.} global variable) or to declare the pragma after the variable definition.
 
 
 %%%
@@ -2086,7 +2090,7 @@ This is a compiler error to pass a non automatic name (\textit{e.g.} global vari
 
 The compilation process with KaCC of a file is the following:
 \begin{enumerate}
-\item Each \kaapi directive  that begins \texttt{\#pragma kaapi} is interpreted and the code is rewritten to call function of the \kaapi library. Invalid use of \kaapi directive and some warning are outputed.
+\item Each \kaapi directive  that begins \texttt{\#pragma kaapi} is interpreted and the code is rewritten to call functions of the \kaapi library. Invalid use of \kaapi directive and some warning are outputed.
 \item The backend compiler (C or C++) is called on the rewritten code to generate an object file.
 \item To create an executable, KaCC passes the \kaapi library to the linker.
 \end{enumerate}
@@ -2095,16 +2099,16 @@ The compilation process with KaCC of a file is the following:
 \subsection{KaCC options}
 The KaCC compiler recognizes all the options of Gcc compiler suite (gcc, g++) and add an extra option:
 \begin{description}
-\item [-\,-keep]: keep the intermediate files. For each file, 2 intermediate files are generated. The first one is prefixed by \texttt{kaapi-} and is the translation of the file with replacement of function call by task creation.
+\item [-\,-keep]: keep the intermediate files. For each source file, an intermediate file is generated. It contains the generated calls to \kaapi. Its name follows the convention: if the source name is \texttt{file.c}, the intermediate name is \texttt{file\_\_kacc.c}.
 \end{description}
 
 
 \subsection{Backend compiler selection}
-The backend compiler is the default C or C++ compiler defined during the installation step (see options with \texttt{configure --help}). It can be changed at configuration by setting the environment variables \texttt{CC} and \texttt{CXX}.
+The backend compiler is the default C or C++ compiler defined during the installation step (see options with \texttt{configure --help}). It can be changed at configuration by setting the environment variables \texttt{KACC\_CC} and \texttt{KACC\_CXX}.
 
 \subsection{Runtime environment variables}
 \begin{description}
-\item [KAAPI\_CPUSET]: if defined, and if the operating system support it, then the variable specifies the set of core to use in \kaapi program. If no defined, the operating system decides to schedule \kaapi threads onto the cores.
+\item [KAAPI\_CPUSET]: if defined, and if the operating system supports it, then the variable specifies the set of cores to use in \kaapi program. If not defined, the operating system decides to schedule \kaapi threads onto the cores.
 The syntax is a list of core identifiers or a range of core identifiers:
 \begin{verbatim}
 KAAPI_CPUSET=1,2,6,8,21
