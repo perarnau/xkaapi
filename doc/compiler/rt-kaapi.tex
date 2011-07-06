@@ -18,14 +18,15 @@
 %%    ftp://ftp-sop.inria.fr/apics/rr-inria
 
 \documentclass[a4paper]{article}
+\usepackage[dvipsnames]{color}
 \usepackage[latin1]{inputenc} % ou \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc} % ou \usepackage[OT1]{fontenc}
 \usepackage{RR,RRthemes}
+%\usepackage[dvipsname]{color}
 \usepackage{hyperref}
 \usepackage{listings}
 \usepackage{verbatim}
 \usepackage{graphicx}
-\usepackage{color}
 %%\usepackage[frenchb]{babel} % optionnel
 %%
 %% date de publication du rapport
@@ -53,7 +54,30 @@
 
 \newcommand{\kaapi}{\textsc{X-Kaapi}\xspace}
 
+%%% For all listing figures
+%\definecolor{MyDarkBlue}{rgb}{0.2265625, 0.37109375, 0.80078125}
+\definecolor{MyDarkBlue}{rgb}{0.254901960784314,	 0.411764705882353, 0.882352941176471}
 
+\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\lstset{stringstyle=\ttfamily}
+\lstset{ classoffset=1, 
+            morekeywords={kaapi,task,data,alloca, declare, reduction, identity, parallel,sync},
+            keywordstyle=\color{red}\bfseries
+           }
+\lstset{ classoffset=2, 
+            morekeywords={value,read,write,readwrite,reduction},
+%            keywordstyle=\color{red}\bfseries
+            keywordstyle=\color{MyDarkBlue}\bfseries
+           }
+\lstset{ classoffset=3, 
+            morekeywords={storage,ld},
+%            keywordstyle=\color{red}\bfseries
+            keywordstyle=\bfseries
+           }
+           
+\lstset{classoffset=0, showstringspaces=false}
 
 %%
 \RRauthor{% les auteurs
@@ -357,9 +381,6 @@ All tasks created inside a parallel region are guaranteed to be completed at the
 \begin{center}
 \begin{minipage}{0.99\linewidth}
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 #include <stdio.h>
 
@@ -404,9 +425,6 @@ The next example in figure~\ref{ex:helloworld2} creates 2 independent tasks that
 \begin{center}
 \begin{minipage}{0.99\linewidth}
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 #include <stdio.h>
 
@@ -454,9 +472,6 @@ The three ways \kaapi offers to enforce an execution order are:
 
 \item If tasks are independent, then the user may introduce a synchronization point using the \texttt{\#pragma kaapi sync} directive to force all tasks created in the same function body before the synchronization point to be completed at the end of the synchronization point. In the previous example, this directive must be placed between line 13 and line 14:
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb, firstnumber=11]
 #pragma kaapi parallel
   {
@@ -470,9 +485,6 @@ The three ways \kaapi offers to enforce an execution order are:
 \item The user may also define a sequence of parallel regions in order to take benefit of the implicit synchronization at the end of each parallel region.
 The code of figure~\ref{ex:helloworld2} then becomes:
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb,, firstnumber=11]
 #pragma kaapi parallel
     say_hello("First call: Hello World!");
@@ -492,9 +504,6 @@ The example of figure~\ref{ex:simpleWR} creates two tasks in a parallel region d
 \begin{center}
 \begin{minipage}{0.99\linewidth}
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 #include <stdio.h>
 
@@ -559,9 +568,6 @@ The figure~\ref{ex:fibonacci} presents a recursive computation of the $n$-th Fib
 \begin{center}
 \begin{minipage}{0.99\linewidth}
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 #include <stdio.h>
 
@@ -629,9 +635,6 @@ Instead of adding a synchronization point, we create, at line 18, a task \texttt
 \begin{center}
 \begin{minipage}{0.99\linewidth}
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 #pragma kaapi task write(result) read(r1,r2)
 void sum( long* result, const long* r1, const long* r2)
@@ -750,9 +753,6 @@ The code of figure~\ref{fig:accummainkaapi} illustrates the annotation of two fu
 \begin{center}
 \begin{minipage}[t]{0.9\linewidth}
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 #pragma kaapi task value(n) read(array[n]) write(result) 
 void accumulate (int n, int* array, int *result);
@@ -782,9 +782,6 @@ As for functions, a function task declaration represents the signature of a func
 \begin{center}
 \begin{minipage}[t]{0.9\linewidth}
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 #pragma kaapi task value(n) read(array[n]) write(result) 
 void accumulate (int n, int* array, int *result);
@@ -806,9 +803,6 @@ The figure~\ref{fig:exdecldef2} illustrates the case where the declaration and t
 \begin{center}
 \begin{minipage}[t]{0.9\linewidth}
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 #pragma kaapi task value(n) read(array[n]) write(result) 
 void accumulate (int n, int* array, int *result)
@@ -855,9 +849,6 @@ a parallel region is a dynamic scope where several threads cooperate to execute 
 \begin{center}
 \begin{minipage}[t]{0.9\linewidth}
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 int main(int argc, char** argv)
 {
@@ -972,9 +963,6 @@ In listing of figure~\ref{fig:exmemregion1}, line 1, declares 3 memory regions:
 \begin{center}
 \begin{minipage}[t]{0.99\linewidth}
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 #pragma kaapi task value(n) read(array[n]) write(result) 
 void accumulate (int n, int* array, int *result);
@@ -990,7 +978,7 @@ void matmul(int N, double* A, int lda, \
 \end{minipage}
 \end{center}
 \vspace*{-2ex}
-\caption{Example memory region declarations}
+\caption{Example of memory region declarations}
 \label{fig:exmemregion1}
 \end{figure}
 
@@ -1106,8 +1094,8 @@ Any memory region description in \kaapi must be defined by a C/C++ pointer type 
 
 The syntax of the clause is:
 \begin{verbatim}
-#pragma kaapi task mode ( <list declaration> )
-#pragma kaapi task mode_cw ( operator: <list declaration> )
+#pragma kaapi task <mode> ( <list declaration> )
+#pragma kaapi task <mode_cw> ( operator: <list declaration> )
 \end{verbatim}
 The previous example accumulate defines 3 arguments. 2 of them are passed by reference: \texttt{array} is an array of size \texttt{n} (known at runtime); \texttt{result} is pointer to one integer.
 
@@ -1132,9 +1120,6 @@ Two tasks having a reduction access mode to the same memory region are concurren
 \begin{center}
 \begin{minipage}[t]{0.99\linewidth}
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 #pragma kaapi task read([begin:end]) reduction(+: result)
 void accumulate (double* begin, double* end, int *result) 
@@ -1246,9 +1231,6 @@ This directive forces to wait for the completion of all the last created tasks, 
 \begin{center}
 \begin{minipage}{0.99\linewidth}
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 int main()
 {
@@ -1275,12 +1257,12 @@ This directive is a finer version of \texttt{\#pragma kaapi sync}.
 %%%
 \subsection{Recursive function call}\label{sec:recursive}
 
-\kaapi allows recursive task creations.
-This is illustrated in figure~\ref{fig:exaccu} (page~\pageref{fig:exaccu}).
-In the accumulate code of figure~\ref{fig:exaccu} FIXME recursively splits the computation until a grain of 2. Each created sub-tasks works on a disjoint parts of the initial input array. 
+\kaapi allows recursive task creations. Several examples have been presented in the section~\ref{sec:helloworld}.
+%This is illustrated in figure~\ref{fig:exaccu} (page~\pageref{fig:exaccu}).
+In the accumulate code of figure~\ref{fig:exaccu} (page~\pageref{fig:exaccu}) recursively splits the computation until a grain of 2. Each created sub-tasks works on a disjoint part of  the initial input array. 
 
-This example is simple: no temporary data are required at each level of recursion. This is not the case with the recursive computation of the Fibonacci number of figure~\ref{ex:fibonacci} page~\pageref{ex:fibonacci}.
-As discussed in section~\ref{sec:optimalloca}, the user must mind the scope of data allocated during the computation.
+This example is simple: no temporary data are required at each level of recursion. This not the case with the recursive computation of the Fibonacci number of figure~\ref{ex:fibonacci} page~\pageref{ex:fibonacci}.
+As discussed in section~\ref{sec:optimalloca}, the user should ensure enough scope of data allocated during the computation.
 %
 %
 %\begin{figure}[ht]
@@ -1307,9 +1289,6 @@ For instance, because a task creation is a non-blocking call, the example of fig
 \begin{center}
 \begin{minipage}{0.99\linewidth}
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 if (...)
 {
@@ -1333,12 +1312,9 @@ In that case, the user has two possibilities:
 
 \begin{figure}[ht]
 \begin{center}
-\begin{minipage}[c]{0.30\linewidth}
+\begin{minipage}[t]{0.30\linewidth}
 \scriptsize
 \begin{tiny}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 if (...)
 {
@@ -1350,12 +1326,9 @@ if (...)
 \end{tiny}
 \end{minipage}
 %\vrule~~
-\begin{minipage}[c]{0.30\linewidth}
+\begin{minipage}[t]{0.31\linewidth}
 \scriptsize
 \begin{tiny}
-%\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 if (...)
 {
@@ -1369,12 +1342,9 @@ if (...)
 \end{tiny}
 \end{minipage}
 %\vrule~~
-\begin{minipage}[c]{0.35\linewidth}
+\begin{minipage}[t]{0.35\linewidth}
 \scriptsize
 \begin{tiny}
-%\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 if (...)
 {
@@ -1402,49 +1372,50 @@ The \kaapi name of this directive is analog to the \texttt{alloca} function of t
 With \texttt{\#pragma kaapi alloca}, the user can allocate data within the same scope as the created tasks.
 
 %%%%
-\subsubsection{Example with recursive task creations}\label{sec:alloca}
+\subsubsection{Synchronisation and recursive tasks}\label{sec:alloca}
 
-%With sequential C or C++ program, the developer may allocate data in the stack using the \texttt{alloca} function. In that case, the scope of allocation is the same as the activation frame where the call to \texttt{alloca} occured.
-%With \kaapi, the user may also allocate data within the same scope as created tasks in an activation frame.
 
-To control the allocation scope of automatic variables allocated in the C stack of example in figure~\ref{fig:recaccumalloca}, the programmer has to use the directive \texttt{\#pragma data alloca} at line 11, otherwise variables \texttt{subresult1} and \texttt{subresult2} are undefined after the end of scope '\texttt{\}}' at line 17.
-\begin{figure}[ht]
-\begin{center}
-\begin{minipage}[t]{0.9\linewidth}
-%\scriptsize
-\begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
-\begin{lstlisting}[frame=tb]
-#pragma kaapi task read(result1, result2) write(result) 
-void sum (int* result, int * result1, int* result2) 
-{
-  *result = *result1 + *result2;
-}
-
-#pragma kaapi task read(n, array[n]) write(result) 
-void accumulate (int n, int* array, int *result) 
-{
-  if (n < 2) *result += array[0] + array[1];
-  else {
-#pragma kaapi data alloca(subresult1, subresult2);
-     int subresult1;
-     int subresult2;
-     accumulate (n/2, array, &subresult1);
-     accumulate (n-n/2, array+n/2, &subresult2);
-     sum( result, &subresult1, &subresult2 );
-   }
-}
-\end{lstlisting}
-\end{footnotesize}
-\end{minipage}
-\end{center}
-\vspace*{-2ex}
-\caption{Accumulate recursive code where the allocation of \texttt{subresult1} and \texttt{subresult2} is 
-specified to have the same scope as the created task using the directive \texttt{\#pragma kaapi alloca}.}
-\label{fig:recaccumalloca}
-\end{figure}
+%%%%%
+%\subsubsection{Example with recursive tasks}\label{sec:alloca}
+%
+%%With sequential C or C++ program, the developer may allocate data in the stack using the \texttt{alloca} function. In that case, the scope of allocation is the same as the activation frame where the call to \texttt{alloca} occured.
+%%With \kaapi, the user may also allocate data within the same scope as created tasks in an activation frame.
+%
+%To control the allocation scope of automatic variables allocated into the C stack of example in figure~\ref{fig:recaccumalloca}, the programmer has to use the directive \texttt{\#pragma data alloca}  at line 11, else variables \texttt{subresult1} and \texttt{subresult2} are undefined after the end of scope '\texttt{\}}' at line 17.
+%\begin{figure}[ht]
+%\begin{center}
+%\begin{minipage}[t]{0.9\linewidth}
+%%\scriptsize
+%\begin{footnotesize}
+%\begin{lstlisting}[frame=tb]
+%#pragma kaapi task read(result1, result2) write(result) 
+%void sum (int* result, int * result1, int* result2) 
+%{
+%  *result = *result1 + *result2;
+%}
+%
+%#pragma kaapi task read(n, array[n]) write(result) 
+%void accumulate (int n, int* array, int *result) 
+%{
+%  if (n < 2) *result += array[0] + array[1];
+%  else {
+%#pragma kaapi data alloca(subresult1, subresult2);
+%     int subresult1;
+%     int subresult2;
+%     accumulate (n/2, array, &subresult1);
+%     accumulate (n-n/2, array+n/2, &subresult2);
+%     sum( result, &subresult1, &subresult2 );
+%   }
+%}
+%\end{lstlisting}
+%\end{footnotesize}
+%\end{minipage}
+%\end{center}
+%\vspace*{-2ex}
+%\caption{Accumulate recursive code where the allocation of \texttt{subresult1} and \texttt{subresult2} is 
+%specify to have the same scope of the created task using directive \texttt{\#pragma kaapi alloca}.}
+%\label{fig:recaccumalloca}
+%\end{figure}
 
 
 
@@ -1520,7 +1491,8 @@ specified to have the same scope as the created task using the directive \texttt
 
 %%%
 %%%
-\newpage \section{Examples}\label{sec:exp}
+\pagebreak
+~\newpage\section{Examples}\label{sec:exp}
 
 
 \subsection{Fibonacci computation}
@@ -1528,9 +1500,6 @@ specified to have the same scope as the created task using the directive \texttt
 \subsubsection{With sync}
 
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 #include <stdio.h>
 
@@ -1570,9 +1539,6 @@ int main()
 
 \subsubsection{Without sync}
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 #include <stdio.h>
 
@@ -1619,9 +1585,6 @@ int main()
 \subsubsection{With reduction variable}
 
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 #include <stdio.h>
 
@@ -1661,9 +1624,6 @@ int main()
 This example shows that one of the main difference between StartSs programming model is its ability to view sub-matrix of matrix without requiring to reallocate the user data structure.\\
 
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-%%\lstset{commentstyle=\textcolor{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 #include <cblas.h> 
 #include <clapack.h> 
@@ -1804,9 +1764,6 @@ void main( int argc, char** argv )
 
 \subsection{2D Histogram}
 \begin{footnotesize}
-\lstset{numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt}
-%\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
 \begin{lstlisting}[frame=tb]
 #include <stdio.h>
 #include <stdlib.h>
@@ -1836,11 +1793,11 @@ static void reduce_hist(unsigned int* lhs, const unsigned int* rhs)
 
 #pragma kaapi task			\
   value(bdim, hdim, lda)		\
-  read(data{ld = lda; [bdim][bdim]})	\
+  read(block{ld = lda; [bdim][bdim]})	\
   reduction(hist_redop: hist[hdim])
 static void compute_block_hist
 (
- const unsigned int* data,
+ const unsigned int* block,
  unsigned int bdim, /* block dimension */
  unsigned int lda,
  unsigned int* hist,
@@ -1848,14 +1805,14 @@ static void compute_block_hist
 )
 {
   unsigned int x, y;
-  for (y = 0; y < bdim; ++y, data += lda)
-    for (x = 0; x < bdim; ++x, ++data)
-      ++hist[*data];
+  for (y = 0; y < bdim; ++y, block += lda)
+    for (x = 0; x < bdim; ++x, ++block)
+      ++hist[*block];
 }
 
 static void compute_hist
 (
- const unsigned int* data,
+ const unsigned int* block,
  unsigned int dim,
  unsigned int* hist
 )
@@ -1876,7 +1833,7 @@ static void compute_hist
     {
       /* compute start of block */
       const unsigned int* const p =
-      	data + i * block_size + j * CONFIG_BLOCK_DIM;
+      	block + i * block_size + j * CONFIG_BLOCK_DIM;
       compute_block_hist
 	(p, CONFIG_BLOCK_DIM, lda, hist, CONFIG_DATA_DIM);
     }
@@ -1888,12 +1845,12 @@ static void compute_hist
 static unsigned int* gen_data(unsigned int dim)
 {
   const unsigned int size = dim * dim;
-  unsigned int* const data = malloc(size * sizeof(unsigned int));
+  unsigned int* const block = malloc(size * sizeof(unsigned int));
 
   /* arrange so that each value appears dim times */
   unsigned int i;
-  for (i = 0; i < size; ++i) data[i] = i & (dim - 1);
-  return data;
+  for (i = 0; i < size; ++i) block[i] = i & (dim - 1);
+  return block;
 }
 
 static int check_hist(const unsigned int* hist)
@@ -1909,15 +1866,15 @@ static int check_hist(const unsigned int* hist)
 int main(int ac, char** av)
 {
   static unsigned int hist[CONFIG_DATA_DIM];
-  unsigned int* const data = gen_data(CONFIG_DATA_DIM);
+  unsigned int* const block = gen_data(CONFIG_DATA_DIM);
   int err;
 
-  if (data == NULL) return -1;
+  if (block == NULL) return -1;
 
 #pragma kaapi parallel
-  compute_hist(data, CONFIG_DATA_DIM, hist);
+  compute_hist(block, CONFIG_DATA_DIM, hist);
 
-  free(data);
+  free(block);
 
   err = check_hist(hist);
   if (err == -1) printf("invalid\n");
@@ -2017,7 +1974,7 @@ The set of memory address may have any shape. This set serves to detect dependen
 \begin{enumerate}
 \item The grammar limits the shape to continuous D dimensional arrays, 
 with an implementation limit to 2D data structures (see next section about the grammar).
-\item The detection of dependency between tasks uses a special memory address of the range declaration FIXME??? which is named the \textbf{referent}. This address is the address of the identifier in case of the D-dimensional format. And for 1D definition using the format \verb+[identifier .. identifier]+ this is the memory address given by the value of the first identifier (a pointer).
+\item The detection of dependency between tasks uses a special memory address of the range declaration which is named the \textbf{referent}. This address is the address of the identifier in case of the D-dimensional format. And for 1D definition using the format \verb+[identifier .. identifier]+ this is the memory address given by the value of the first identifier (a pointer).
 \end{enumerate}
 
 The grammar may be extended in the future in order to take into account more complex shape declarations.

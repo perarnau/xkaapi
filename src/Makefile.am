@@ -37,6 +37,7 @@ libkaapi_la_SOURCES=\
   misc/kaapi_get_self_kid.c\
   misc/kaapi_default_netapi.c\
   misc/kaapi_event_flush.c\
+  misc/kaapi_splitter.c\
   task/kaapi_fmt_accessors.c \
   task/kaapi_fmt_register.c \
   task/kaapi_fmt_taskregister.c \

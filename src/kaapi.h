@@ -783,6 +783,7 @@ typedef int (*kaapi_victim_reducer_t)
 typedef int (*kaapi_thief_reducer_t)
 (struct kaapi_taskadaptive_result_t*, void* arg_from_victim, void*);
 
+
 /** \ingroup ADAPT
     Adaptive stealing header. The header is the
     part visible by the remote write during the
@@ -2144,6 +2145,20 @@ static inline int kaapi_workqueue_steal(
   return 0; /* true */
 }  
 
+
+/** kaapi exported splitters
+ */
+
+typedef struct kaapi_splitter_context
+{
+  kaapi_workqueue_t wq;
+  kaapi_task_body_t body;
+  size_t data_size;
+  unsigned char data[1];
+} kaapi_splitter_context_t;
+
+int kaapi_splitter_default
+(struct kaapi_stealcontext_t*, int, struct kaapi_request_t*, void*);
 
 
 /* ========================================================================= */

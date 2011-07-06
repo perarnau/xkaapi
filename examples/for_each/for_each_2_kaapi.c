@@ -114,7 +114,7 @@ redo_steal:
   /* perform the actual steal. if the range
    changed size in between, redo the steal
    */
-  if (!kaapi_workqueue_steal(&vw->cr, &i, &j, nreq * unit_size))
+  if (kaapi_workqueue_steal(&vw->cr, &i, &j, nreq * unit_size))
     goto redo_steal;
   
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
