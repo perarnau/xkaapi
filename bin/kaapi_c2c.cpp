@@ -6145,7 +6145,7 @@ SgStatement* buildConvertLoop2Adaptative(
           ),
 #endif
           SageBuilder::buildAddressOfOp(SageBuilder::buildFunctionRefExp(splitter)),
-          SageBuilder::buildAddressOfOp( SageBuilder::buildVarRefExp(local_context) )
+          SageBuilder::buildAddressOfOp( SageBuilder::buildVarRefExp(splitter_context) )
         ),
         bb
       )
@@ -6556,7 +6556,7 @@ static void buildLoopEntrypointBody(
           ),
 #endif
           SageBuilder::buildAddressOfOp(SageBuilder::buildFunctionRefExp(splitter)),
-          SageBuilder::buildVarRefExp(context)
+          SageBuilder::buildVarRefExp(splitter_context)
         ),
         body
       )
