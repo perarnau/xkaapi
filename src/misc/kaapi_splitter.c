@@ -73,8 +73,6 @@ redo_steal:
 #define CONFIG_PAR_GRAIN 4
   range_size = kaapi_workqueue_size(&vw->wq);
 
-  printf("range_size == %lu\n", range_size);
-
   if (range_size <= CONFIG_PAR_GRAIN) return 0;
 
   /* how much per req */
@@ -84,8 +82,6 @@ redo_steal:
     nreq = (range_size / CONFIG_PAR_GRAIN) - 1;
     unit_size = CONFIG_PAR_GRAIN;
   }
-
-  printf("unit_size %u, %u\n", nreq, unit_size);
 
   /* perform the actual steal. if the range
      changed size in between, redo the steal
@@ -97,8 +93,6 @@ redo_steal:
 
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
-    printf("replying %u\n", unit_size);
-
     /* thief work: not adaptive result because no preemption is used here  */
     kaapi_splitter_context_t* const tw = kaapi_reply_init_adaptive_task
       ( sc, req, vw->body, total_size, 0 );
