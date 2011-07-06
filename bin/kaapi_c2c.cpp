@@ -5848,10 +5848,10 @@ SgStatement* buildConvertLoop2Adaptative(
   offsetof_stream << "offsetof(kaapi_splitter_context_t, data)";
 
   SgExpression* size_expr = SageBuilder::buildAddOp
-  (
-   SageBuilder::buildOpaqueVarRefExp(offsetof_stream.str(), newbbcall),
-   SageBuilder::buildSizeOfOp(contexttype->get_type())
-  );
+    (
+     SageBuilder::buildOpaqueVarRefExp(offsetof_stream.str(), newbbcall),
+     SageBuilder::buildSizeOfOp(contexttype->get_type())
+    );
 
   SgFunctionCallExp* call_expr = SageBuilder::buildFunctionCallExp
     (
@@ -5898,7 +5898,75 @@ SgStatement* buildConvertLoop2Adaptative(
   );
   SageInterface::appendStatement( local_context, newbbcall );
 
-  // TODO: affect splitter_context members
+  // initialize __splitter_context fields
+
+  // kaapi_workqueue_init(&__splitter_context->wq, i, j);
+  {
+    SgExpression* low_expr = begin_iter;
+    SgExpression* hi_expr = end_iter;
+    if (hasIncrementalIterationSpace == false)
+    {
+      low_expr = end_iter;
+      hi_expr = begin_iter;
+    }
+
+    SgExpression* size_expr;
+    if (isInclusiveUpperBound)
+    {
+      size_expr = SageBuilder::buildSubtractOp
+	(
+	 SageBuilder::buildAddOp(hi_expr, SageBuilder::buildLongIntVal(1)),
+	 low_expr
+        );
+    }
+    else 
+    {
+      size_expr = SageBuilder::buildSubtractOp(hi_expr, low_expr);
+    }
+
+    SgExprListExp* arg_list = SageBuilder::buildExprListExp
+      (
+       SageBuilder::buildAddressOfOp
+       (SageBuilder::buildOpaqueVarRefExp("__splitter_context->wq", body)),
+       SageBuilder::buildIntVal(0),
+       size_expr
+      );
+
+    SgExprStatement* call_stmt = SageBuilder::buildFunctionCallStmt
+      (
+       "kaapi_workqueue_init",
+       SageBuilder::buildVoidType(), 
+       arg_list,
+       scope
+      );
+    call_stmt->set_endOfConstruct(SOURCE_POSITION);
+    SageInterface::appendStatement(call_stmt, newbbcall);
+  }
+
+  // __splitter_context->body = loopentry;
+  {
+    SgExprStatement* assign_stmt = SageBuilder::buildAssignStatement
+      (
+       SageBuilder::buildOpaqueVarRefExp
+       ("__splitter_context->body", body),
+       SageBuilder::buildAddressOfOp
+       (SageBuilder::buildFunctionRefExp(entrypoint))
+      );
+    assign_stmt->set_endOfConstruct(SOURCE_POSITION);
+    SageInterface::appendStatement(assign_stmt, newbbcall);
+  }
+
+  // __splitter_context->data_size = sizeof(type)
+  {
+    SgExprStatement* assign_stmt = SageBuilder::buildAssignStatement
+      (
+       SageBuilder::buildOpaqueVarRefExp
+       ("__splitter_context->data_size", body),
+       SageBuilder::buildSizeOfOp(contexttype->get_type())
+      );
+    assign_stmt->set_endOfConstruct(SOURCE_POSITION);
+    SageInterface::appendStatement(assign_stmt, newbbcall);
+  }
 
   /* Generate assignment of the of free variable to the context field */
   ivar_beg = listvar.begin();
@@ -5918,7 +5986,8 @@ SgStatement* buildConvertLoop2Adaptative(
         SageBuilder::buildAssignOp(
           SageBuilder::buildArrowExp( 
             SageBuilder::buildVarRefExp(local_context),
-            SageBuilder::buildOpaqueVarRefExp("p_" + (*ivar_beg)->get_name(), contexttype->get_scope())
+            SageBuilder::buildOpaqueVarRefExp
+	    ("p_" + (*ivar_beg)->get_name(), contexttype->get_scope())
           ),
           SageBuilder::buildAddressOfOp(
             SageBuilder::buildVarRefExp(
@@ -5934,70 +6003,22 @@ SgStatement* buildConvertLoop2Adaptative(
     ++ivar_beg;
   }
 
-  /* 
-   * Generate the body of the entry point 
-   */
-  SgExpression* workcallee = 
-    SageBuilder::buildAddressOfOp(
-      SageBuilder::buildArrowExp( 
-        SageBuilder::buildVarRefExp(local_context),
-        SageBuilder::buildOpaqueVarRefExp("__kaapi_work", contexttype->get_scope())
-      )
-    );
-
-  /* size wq */
-
-  SgExpression* low_expr = begin_iter;
-  SgExpression* hi_expr = end_iter;
-  if (hasIncrementalIterationSpace == false)
-  {
-    low_expr = end_iter;
-    hi_expr = begin_iter;
-  }
-
-  SgExpression* expr_size = 0;
-  if (isInclusiveUpperBound)
-  {
-    expr_size = SageBuilder::buildSubtractOp(
-      SageBuilder::buildAddOp(
-        hi_expr,
-        SageBuilder::buildLongIntVal(1)
-      ),
-      low_expr
-    );
-  }
-  else 
-  {
-    expr_size = SageBuilder::buildSubtractOp(
-      hi_expr,
-      low_expr
-    );
-  }
-
-  /* initialize the workqueue with initial range [0, expr_size] */
-  SgExprListExp* argcallinit = SageBuilder::buildExprListExp
-    (workcallee, SageBuilder::buildIntVal(0), expr_size);
-
-  SgExprStatement* callinit_stmt = SageBuilder::buildFunctionCallStmt(    
-      "kaapi_workqueue_init",
-      SageBuilder::buildVoidType(), 
-      argcallinit,
-      scope
-  );
-  callinit_stmt->set_endOfConstruct(SOURCE_POSITION);
-  SageInterface::appendStatement( callinit_stmt, newbbcall );
-
-  /* Generate the call to the entry point */
-  SgExprStatement* callStmt = SageBuilder::buildFunctionCallStmt(
+  // call the entrypoint
+  SgExprStatement* callStmt = SageBuilder::buildFunctionCallStmt
+    (
      SageBuilder::buildFunctionRefExp(entrypoint),
-     SageBuilder::buildExprListExp(
-        workcallee,
-        SageBuilder::buildVarRefExp(newkaapi_threadvar)
+     SageBuilder::buildExprListExp
+     (
+      SageBuilder::buildCastExp
+      (
+       SageBuilder::buildVarRefExp(splitter_context),
+       SageBuilder::buildPointerType(SageBuilder::buildVoidType())
+      ),
+      SageBuilder::buildVarRefExp(newkaapi_threadvar)
      )
-  );
+    );
   callStmt->set_endOfConstruct(SOURCE_POSITION);
   SageInterface::appendStatement( callStmt, newbbcall );
-
 
 #if 0 //////////////////////////////////////////
 {
