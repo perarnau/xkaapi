@@ -44,57 +44,65 @@
 ** 
 */
 #include "kaapi_impl.h"
-
-#include <stdio.h>
+#include <stddef.h>
+#include <string.h>
+#include <sys/types.h>
 
 int kaapi_splitter_default
-(kaapi_stealcontext_t* ksc, int nreq,  kaapi_request_t* reqs, void* p)
+(kaapi_stealcontext_t* sc, int nreq,  kaapi_request_t* req, void* p)
 {
  /* default splitter */
 
-  printf("%s\n", __FUNCTION__);
+  /* victim context */
+  kaapi_splitter_context_t* const vw = (kaapi_splitter_context_t*)p;
+  
+  /* stolen range */
+  kaapi_workqueue_index_t i, j;
+  kaapi_workqueue_index_t range_size;
 
-  return 0;
-}
-
-#if 0 /* TODO */
-int kaapi_default_splitter
-(kaapi_stealcontext_t* ksc, int nreq, kaapi_request_t* kreq, void* vc)
-{
-  kaapi_workdesc_t* const vwd = (kaapi_workdesc_t*)vc;
   size_t total_size;
-  int nrep;
-  kaapi_workqueue_index_t i;
-  kaapi_workqueue_index_t j;
-  kaapi_workqueue_index_t wsize;
-  kaapi_workqueue_index_t usize;
+  
+  /* reply count */
+  int nrep = 0;
+  
+  /* size per request */
+  kaapi_workqueue_index_t unit_size;
 
- retry_steal:
-  wsize = kaapi_workqueue_size(&vwd->wq);
-  if (wsize < 2) return 0;
-  usize = wsize / (nreq + 1L);
-  if (kaapi_workqueue_steal(&vwd->wq, &i, &j, usize * nreq) != 0)
-    goto retry_steal;
+redo_steal:
+  /* do not steal if range size <= PAR_GRAIN */
+#define CONFIG_PAR_GRAIN 4
+  range_size = kaapi_workqueue_size(&vw->wq);
+  if (range_size <= CONFIG_PAR_GRAIN) return 0;
 
-  total_size = offsetof(data, kaapi_workdesc_t) + vwd->data_size;
-
-  for (nrep = 0; nreq; --nreq, ++kreq, ++nrep)
+  /* how much per req */
+  unit_size = range_size / (nreq + 1);
+  if (unit_size == 0)
   {
-    kaapi_workdesc_t* const twd = (kaapi_workdesc_t*)
-      kaapi_reply_init_adaptive_task(ksc, kreq, vwd->entry, total_size, 0);
-
-    if ((i + usize) > j) usize = j - i;
-
-    kaapi_workqueue_init(&twd->wq, i, i + j);
-    twd->entry = vwd->entry;
-    twd->data_size = vwd->data_size;
-    memcpy(twd->data, vwd->data, vwd->data_size);
-
-    kaapi_reply_push_adaptive_task(ksc, kreq);
-
-    i += usize;
+    nreq = (range_size / CONFIG_PAR_GRAIN) - 1;
+    unit_size = CONFIG_PAR_GRAIN;
   }
 
+  /* perform the actual steal. if the range
+     changed size in between, redo the steal
+   */
+  if (!kaapi_workqueue_steal(&vw->wq, &i, &j, nreq * unit_size))
+    goto redo_steal;
+
+  total_size = offsetof(kaapi_splitter_context_t, data) + vw->data_size;
+
+  for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
+  {
+    /* thief work: not adaptive result because no preemption is used here  */
+    kaapi_splitter_context_t* const tw = kaapi_reply_init_adaptive_task
+      ( sc, req, vw->body, total_size, 0 );
+
+    kaapi_workqueue_init(&tw->wq, j - unit_size, j);
+    tw->body = vw->body;
+    tw->data_size = vw->data_size;
+    memcpy(tw->data, vw->data, vw->data_size);
+
+    kaapi_reply_push_adaptive_task(sc, req);
+  }
+  
   return nrep;
 }
-#endif /* TODO */
