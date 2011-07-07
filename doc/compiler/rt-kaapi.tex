@@ -614,15 +614,15 @@ int main()
 \end{figure}
 
 The main function creates two tasks: the first one to do the computation at line 29 and the second one to print the result (line 30).
-Due to access modes, this two tasks have a true dependency. 
-%Like the other examples, these tasks are created and executed inside a parallel region defined in the main function, at line FIXME
+Due to access modes, those two tasks have a true dependency. 
+%Like the other examples, those tasks are created and executed inside a parallel region defined in the main function, at line FIXME
 
 The \verb+fibonacci+ task (lines 3-16) recursively creates two tasks until the input parameter \texttt{n} gets smaller than \texttt{2}.
 %%In \kaapi, tasks must be created into a parallel region: in \kaapi \textbf{each body of a task is an implicit parallel region}.
 
 Task creation is a non blocking call, thus at line 13 a synchronization point is added (\texttt{\#pragma kaapi sync}):
 \begin{itemize}
-\item the directive enforces that all previously created tasks in the same function body\footnote{More formally, in the same activation frame of the function body execution.} are completed before proceeding with the next instruction, at line 14, to sum the sub results.
+\item the directive enforces that all previously created tasks in the same function body\footnote{More formally, in the same activation frame as the function body execution.} be completed before proceeding with the next instruction at line 14 to sum the sub results.
 \item the directive does \textbf{not} wait for the completion of tasks created in the outter function calls.
 \end{itemize}
 
@@ -669,7 +669,7 @@ void fibonacci(long* result, const long n)
 
 The advantage of the continuation passing style is to replace an explicit coarse grain synchronization (\texttt{\#pragma kaapi sync}) by an implicit data flow synchronization. It is done by creating the task \texttt{sum}.
 
-Because the tasks created at lines 16, 17 and 18 are non blocking calls, the user must take care of the scope of the variables passed to the tasks. In the previous example, because \texttt{r1} and \texttt{r2} are allocated into the C stack of the function \texttt{fibonacci}, the user must specify at line 14 the directive \texttt{\#pragma kaapi data alloca} to annotate explicitly those data. It tells the compiler to allocate them so that their scope is enough for the execution of the task.
+Because the tasks created at lines 16, 17 and 18 are non blocking calls, the user must take care of the scope of the variables passed to the tasks. In the previous example, because \texttt{r1} and \texttt{r2} are allocated into the C stack of the function \texttt{fibonacci}, the user must specify at line 14 the directive  \texttt{\#pragma kaapi data alloca} to annotate explicitly those data: Then the compiler will allocate them so that their scope is sufficient for the execution of the task.
 
 
 %\subsubsection{Terminal recursion suppression}
@@ -706,48 +706,48 @@ Because the tasks created at lines 16, 17 and 18 are non blocking calls, the use
 
 \newpage\section{\kaapi programming model}~\label{sec:progmodel}
 
-The task model used in this work comes from the Athapascan~\cite{Athapascan98} task model and semantics. As for Cilk, Intel TBB, OpenMP-3.0 or SMPSs the semantic remains sequential. It ensures that the value returned by the read statements is the last written value according to the lexicographic order defined by the program: statements are lexicographically ordered by ';'. 
-The execution of a \kaapi program generates a sequence of tasks that access to data into a shared memory. From this sequence, the runtime is able to extract independent tasks in order to dispatch them amongst the idle cores.
+The task model used in this work comes from the Athapascan~\cite{Athapascan98} task model and semantics. As for Cilk, Intel TBB, OpenMP-3.0 or SMPSs, the semantic remains sequential. It ensures that the value returned by the read statements is the last written value according to the lexicographic order defined by the program: statements are lexicographically ordered by ';'. 
+The execution of a \kaapi program generates a sequence of tasks that access to data in a shared memory. From this sequence, the runtime is able to extract independent tasks in order to dispatch them to idle cores.
 
 In the following sections, we outline the \kaapi programming model; Then we specify different \kaapi constructions and their semantic.
 
 \subsection{Task execution model}
 
 A \kaapi~\cite{Kaapi_2007} program is composed of C or C++ code and some annotations specified by a programmer to indicate what function to use to create tasks and when they are called.
-A \kaapi program begins by executing the C/C++ main entry point of the process. Then, each time a call to an annotated task function is encountered, a task is created and the control flow proceeds its execution until it reaches a synchronization point.\\
+A \kaapi program begins by executing the C/C++ main entry point of the process. Then, everytime a call to an annotated task function is encountered, a task is created and the control flow proceeds its execution until it reaches a synchronization point.\\
  
-A task is a function call: a function that should return no value except through the shared memory and the list of its effective parameters. It is the responsibility of the programmer to annotate functions that calls become tasks by using the \texttt{\#pragma kaapi task} directive. 
+A task is a function call: a function that should return no value except through the shared memory and the list of its effective parameters. It is to the responsibility of the programmer to annotate functions which calls become tasks, by using the \texttt{\#pragma kaapi task} directive. 
 The parallelism in \kaapi is explicit (task annotation), while the detection of synchronizations is implicit: the dependencies between tasks and the memory transfers are automatically managed by the runtime.\\
 
 
 A task implements a sequential computation whose granularity is fixed by the user; it is created in program statements that correspond to calls to functions annotated as tasks thanks to the \texttt{\#pragma kaapi task} directive.
-Tasks share data if they have access to the same memory region. A memory region is defined as a set of addresses in the process virtual address space. This set has a shape of a multi-dimensional array.
+Tasks share data if they have access to the same memory region. A memory region is defined as a set of addresses in the process virtual address space. This set has the shape of a multi-dimensional array.
 
-The user is responsible for indicating the task memory access modes: the main access modes are \textit{read}, \textit{write}, \textit{reduction} or \textit{exclusive}.\\
+The user is responsible for indicating the mode each task uses to access to the memory: the main access modes are \textit{read}, \textit{write}, \textit{reduction} or \textit{exclusive}.\\
 
-One of the main characteristic of the \kaapi programming model is the preservation of the sequential semantics of the program: the result of the parallel execution remains the same as the sequential execution of the program compiled without \kaapi.
+One of the main characteristics of the \kaapi programming model is the preservation of the sequential semantic of the program: the result of the parallel execution remains the same as the sequential execution of the program compiled without \kaapi.
 
 
 %%%
 \subsection{Task}
-\kaapi is called a macro data flow language: the user is  responsible to define granularity of the computation (task) as well as data shared between tasks. The runtime automatically schedules tasks in any order that respects the true data flow dependencies, \textit{i.e.} the data flow dependencies. All other dependencies are subject to be removed by renaming data.
+\kaapi is called a macro data flow language: The user is responsible for defining the granularity of the computation (task) as well as data shared between tasks. The runtime automatically schedules tasks in any order that respects the true data flow dependencies, \textit{i.e.} the data flow dependencies. All other dependencies are subject to be removed by renaming variables. 
 
-This section presents how to annotate a function declaration in such a way that ANY call to this function are translated to creation of tasks. This is called \textit{function task} annotation.
-The next section~\ref{sec:contextualtask} presents annotation of a statement or a block of statements in order to automatically convert it to task creation. This is called \textit{anonymous task} annotation of block.
+This section presents how to annotate a function declaration in such a way that ALL calls to this function are translated to creations of tasks. This is called \textit{function task} annotation.
+The next section~\ref{sec:contextualtask} presents the annotation of a statement or of a block of statements in order to automatically convert it to a task creation. This is called \textit{anonymous task} annotation of block.
 
 \subsubsection{Function Task}
 
 In order to replace all function calls by task creations, the user must:
 \begin{itemize}
-\item Annotate the \textit{declaration} of the selected function. The declaration is the statement that declares the signature of the function (return type, name of the function, list of the type parameters). A declaration can be followed by the \textit{definition} of the function, \textit{i.e.} by the instructions that form the function body. 
+\item Annotate the \textit{declaration} of the selected function. The declaration is the statement that declares the signature of the function (return type, name of the function, list of the parameters with type). A declaration can be followed by the \textit{definition} of the function, \textit{i.e.} by the instructions that form the body of the function. 
 This is called a \textit{defining declaration}.
 \item In case of library of functions where function declarations cannot be changed, the users must re-declare the functions with the \kaapi corresponding annotations.
 \end{itemize}
 
-Once defined, all the annotated function calls are replaced by task creations. The runtime runs each ready task by performing the instructions of the function body. 
+Once defined, any calls to annotated functions are compiled by task creations. The runtime runs every task that is ready by performing the instructions of the function body. 
 
 \paragraph{Function task declaration.}~\\
-The code of figure~\ref{fig:accummainkaapi} illustrates the annotation of two functions selected to be \textit{function task}:
+The code of figure~\ref{fig:accummainkaapi} illustrates the annotation of two functions selected to be \textit{function tasks}:
 \begin{itemize}
 \item The \texttt{\#pragma kaapi task} annotation must precede the function declaration
 \item The access mode of each formal parameter must be defined as well as the memory region accessed by the task.
@@ -768,7 +768,7 @@ void compute( int* result );
 \end{minipage}
 \end{center}
 \vspace*{-2ex}
-\caption{Examples of two function task declarations}
+\caption{Examples of two declarations of function tasks}
 \label{fig:accummainkaapi}
 \end{figure}
 
@@ -780,7 +780,7 @@ The section~\ref{sec:accessmode} presents all the different ways to declare acce
 
 
 \paragraph{Function task definition.}~\\
-As for functions, a function task declaration represents the signature of a function. The task body is the body of the annotated function. This is the instructions performed at runtime to execute the task.
+As for functions, a function task declaration represents the signature of a function. The body of the task is the function body of the annotated function. It contains the instructions performed at runtime to execute the task.
 
 \begin{figure}[ht]
 \begin{center}
@@ -800,7 +800,7 @@ void accumulate (int n, int* array, int *result)
 \caption{Declaration and definition of a function task}
 \label{fig:exdecldef}
 \end{figure}
-In figure \ref{fig:exdecldef}, the line 1 and 2 correspond to the function task declaration. The line 3 through 4 is the function task definition.
+In figure \ref{fig:exdecldef}, the line 1 and 2 correspond to the function task declaration. The line 3 through 4 to the function task definition.
 
 The figure~\ref{fig:exdecldef2} illustrates the case where the declaration and the definition are given by the same statement, i.e. this is a defining declaration of the function:
 \begin{figure}[ht]
@@ -822,11 +822,11 @@ void accumulate (int n, int* array, int *result)
 
 
 \paragraph{Task creation.}~\\
-After the declaration of a function task, The \kaapi compiler replaces each call to the function by a task creation.
+After the declaration of a function task, The \kaapi compiler replaces every call to the function by a task creation.
 Recursive task creations are allowed.
 
-A major difference with the sequential call to function is that the \kaapi task creation is a non blocking operation: the caller does not wait for the task completion. 
-This implies that a variable writes by a task can be read:
+A major difference with the sequential call to function is that the \kaapi task creation is a non-blocking operation: the callee does not wait for the task completion. 
+This implies that a variable written by a task can be read:
 \begin{itemize}
 \item By passing the variable to a task that declares to read it (see section~\ref{sec:accessmode}).
 \item After a synchronization point (see section~\ref{sec:synchro}).
@@ -876,7 +876,7 @@ At the end of a parallel region, an implicit synchronization point waits for all
 
 %\noindent \textit{\paragraph{TODO}: nowait clause ?}\\
 Parallel regions may be embedded inside other parallel regions.
-Before the control flow encounters a parallel region, the execution is driven by the main thread.
+Before the control flow enters a parallel region, the execution is driven by the main thread.
 Outside the outermost parallel region, only the main thread drives the execution. 
 
 This does not imply that synchronization becomes unnecessary in the main thread: task creation is always a non blocking instruction that may require to be synchronized with the C/C++ sequential execution flow.
@@ -888,11 +888,8 @@ The scope of a parallel region is the next instruction or the next basic block (
 %#pragma kaapi parallel 
 %\end{verbatim}
 
-The runtime selects the number of threads using
-\begin{enumerate}
-\item \kaapi environment variables \texttt{KAAPI\_CPUCOUNT} and \texttt{KAAPI\_CPUSET}, that define, respectively, the number of cores and the specific cores to used;\item Otherwise  \kaapi creates one thread per physical core of the machine.
-\end{enumerate}
-See appendix~\ref{sec:compilo} for a detailed description of the environment variables used by \kaapi.
+The runtime selects the number of threads using 1/ \kaapi environment variables \texttt{KAAPI\_CPUCOUNT} and \texttt{KAAPI\_CPUSET}, that define, respectively, the number of cores and the specific cores to used; else 2/ \kaapi creates one thread per physical core of the machine.
+See appendix~\ref{sec:compilo} for a detailed description of these environment variables.
 
 %Any instruction that goes out of the parallel region (\texttt{return} instruction or \texttt{goto} instruction) 
 
@@ -912,20 +909,20 @@ Parallel regions may be defined inside parallel regions. At the difference of Op
 
 The only guarantees are:
 \begin{enumerate}
-\item an implicit synchronization point is inserted at the end of each parallel region; 
+\item an implicit synchronization point is inserted at the end of every parallel region; 
 \item before any parallel region and outside the outermost parallel region, the tasks are performed only by the main thread.
 \end{enumerate}
 
 %%%%
 \subsection{Access mode of tasks} \label{sec:accessmode}
  Two tasks sharing data have the same effective parameter, \textit{i.e.} a region into the shared memory. A task should declare how it accesses regions in the shared memory.   
-Several access modes\footnote{These access modes have either a direct correspondance in SMPSs/StarSs, called direction as in CORBA, as well as in PLASMA.}
- have been defined since the first vesion Athapascan~\cite{Athapascan98}: \textbf{read}, \textbf{write}, \textbf{readwrite} or \textbf{exclusive} and \textbf{cumulative write} (also called \textbf{reduction}). Each of these access mode limits the kind of operation a task can perform on a memory region. For instance, a task that declares an access mode read to one of its effective parameters cannot write value. 
+Several access modes\footnote{These access modes have either a direct correspondence in SMPSs/StarSs, called direction as in CORBA. Same access modes exist in Quark, the PLASMA abstract layer for task creations.}
+ have been defined since the first version of Athapascan~\cite{Athapascan98}: \textbf{read}, \textbf{write}, \textbf{readwrite} or \textbf{exclusive} and \textbf{cumulative write} (also called \textbf{reduction}). Each of those access modes limits the kind of operation a task can perform on a memory region. For instance, a task that declares an read access mode for one of its effective parameters cannot write.
 
 %For instance, the StarSs\textbf{input} direction specification corresponds to the \textbf{read} access mode in \kaapi;  \textbf{output} direction corresponds to \textbf{write}; and \textbf{inout} corresponds to \textbf{readwrite}.  
 
-A task formal parameter not annotated by an access mode is considered as a compilation error.
-The access mode is defined for a memory region, \textit{i.e.} a set of addresses in the virtual address space of the process.
+A task formal parameter that is not annotated by an access mode is considered as a compilation error.
+The access mode is defined for a memory region, \textit{i.e.} a set of addresses in the virtual address space of the processus.
 
 The access modes of formal parameters are declared with:
 \begin{verbatim}
@@ -952,17 +949,18 @@ cumulative write & \texttt{reduction(op:x)} or \texttt{cw(op:x)} & \texttt{reduc
 \end{table}
 
 \subsubsection{Memory region}
-The \texttt{<list declaration>} defines a list of memory region touched by the task. 
-A memory region is described by:\
+
+The \texttt{<list declaration>} defines a list of memory regions touched by the task. 
+The memory region is described by\
 \begin{itemize} 
-\item A memory address given by a variable,
+\item A memory address given by a variable.
 \item A shape that describes a multidimensional array.
 \end{itemize} 
-In listing of figure~\ref{fig:exmemregion1}, line 1 declares 3 memory regions:
+In listing of figure~\ref{fig:exmemregion1}, line 1, declares 3 memory regions:
 \begin{enumerate}
-\item \texttt{n}: this is the memory region starting at address of the variable \texttt{n} whose size is \texttt{sizeof(int)} bytes.
-\item \texttt{array[n]}: this a 1-dimensional array starting at address \texttt{array} and ending at address \texttt{array+n} (exclusive).
-\item \texttt{result}: its memory region corresponds to the the storage of the variable of type \texttt{int} pointed by the value of \texttt{result}.
+\item \texttt{n}: this is the memory region that begins at the address of the variable \texttt{n} with a size of \texttt{sizeof(int)} byte long.
+\item \texttt{array[n]}: this a 1-dimensional array that starts at address \texttt{array} and finishes at address \texttt{array+n}.
+\item \texttt{result}: its memory region corresponds to the storage of the variable of type \texttt{int} pointed by the value of \texttt{result}.
 \end{enumerate}
 %In example~\ref{fig:accummainkaapi}, both \texttt{accumulate} and \texttt{printresult} defined a memory region pointed by the formal parameter \texttt{result}: the region is defined by 1 integer.
 %The region of the read parameter in task \texttt{accumulate} is an 1-D array of size specify in the \texttt{\#pragma kaapi task} clause. Any arithmetic expression (with cast) is possible to defined size of array. The value reference should correspond to the name of the formal parameter. 
@@ -989,8 +987,8 @@ void matmul(int N, double* A, int lda, \
 \label{fig:exmemregion1}
 \end{figure}
 
-At lines 4-6 of the same listing, multidimensional shapes memory regions are defined for formal parameters \texttt{A}, \texttt{B} and \texttt{C}. By default, \kaapi assumes two kinds of storage for matrices. They are illustrated in~\ref{fig:matrix}: in (a) the C storage (also called row major) and in (b) the fortran storage (called column major).
-The function task \texttt{matmul} of listing~\ref{fig:exmemregion1} is supposed to do matrix multiplication of two matrices of dimension \texttt{NxN}. The 2 input matrices \texttt{B} and \texttt{C}, as well as the output matrix \texttt{A}, are defined to have dimension \texttt{[N][N]}. Where \texttt{N} is a pass-by-value parameter. The dimension could be any C or C++ arithmetic expressions (for instance \texttt{[2][3+N]}), see grammar in appendix~\ref{ref:dimensiongrammar}.
+At lines 4-6 of the same listing, multidimensional shapes memory regions are defined for formal parameters \texttt{A}, \texttt{B} and \texttt{C}. \kaapi considers by default two kinds of storage for matrices. Those are illustrated in~\ref{fig:matrix}: in (a) the C storage (also called row major) and in (b) the fortran storage (called column major).
+The function task \texttt{matmul} of listing~\ref{fig:exmemregion1} is supposed to do a matrix multiplication of two matrices of dimension \texttt{NxN}. The 2 input matrices \texttt{B} and \texttt{C}, as well as the output matrix \texttt{A}, are defined to have dimension \texttt{[N][N]}. Where \texttt{N} is a pass-by-value parameter. The dimension could be any C or C++ arithmetic expressions (for instance \texttt{[2][3+N]}), see grammar in appendix~\ref{ref:dimensiongrammar}.
 
 \begin{figure}[ht]
 \begin{center}
@@ -1028,7 +1026,8 @@ void accumulate( int n, int* array, int* result );
 The dimension of array must follow the subset of the C grammar for expression (called \textit{additive expression} in C grammar, see appendix~\ref{sec:grammar}). 
 At runtime, the base address is the value of a pointer type formal parameter.
 
-The second form is to specify an interval between two addresses (as used in most of STL algorithms). The syntax for interval is \texttt{[a:b]}, where \texttt{a} and \texttt{b} are formal parameters identifiers.
+The second form is to specify an interval between two addresses (as used in most of the STL algorithms). The syntax for an interval is \texttt{[a:b]}, where \texttt{a} and \texttt{b} are identifiers of formal parameters.
+
 \begin{verbatim}
 #pragma kaapi task value(n) read( [begin:end] ) write(result)
 void accumulate( int* begin, int* end, int* result );
@@ -1062,7 +1061,7 @@ If not specified, the default value is the \texttt{C}.
 \item The dimension must follow the sub set of the C grammar for expression. 
 \end{itemize}
 There is no order to specify attributes.
-All this rules are defined in the grammar of the appendix~\ref{sec:grammar}.
+All those rules are defined in the grammar in the appendix~\ref{sec:grammar}.
 
 %\paragraph{Examples.}~\\
 %The following examples show different declaration matrix memory regions.
@@ -1087,9 +1086,9 @@ All this rules are defined in the grammar of the appendix~\ref{sec:grammar}.
 
 \subsubsection{Pass-by-value rule}
 Any function parameter passed by value must have a value access mode.
-In this case, the effective parameter is copied at task's creation time and any modification remains local to the function.
+In this case, the effective parameter is copied at the task creation time and any modification remains local to the function.
 
-Any C or C++ type may by defined to be passed by value.
+Any C or C++ type can by defined to be passed by value.
 The syntax is the following:
 \begin{verbatim}
 #pragma kaapi task value( <list declaration> )
@@ -1108,21 +1107,21 @@ The previous example accumulate defines 3 arguments. 2 of them are passed by ref
 
 The access mode name \texttt{mode} of the clause is given by table~\ref{table:accessmode} page~\pageref{table:accessmode}:
 \begin{description}
-\item [write:] the task can write any of the location of the declared memory region. Any read instruction is guarantee to return the value produced by the task. A read instruction to a location no written by the task returns an undefined value.
-\item [read]: the task that reads a location in the memory region declared \texttt{read} accesses the value produced by the previous, in the lexicographic order of tasks in the program, task that has required a write or read-write or cumulative access. If no such task exists, then the value is the value given during initialization.
+\item [write:] the task can write to any location of the declared memory region. Any read instruction is guarantied to return the value produced by the task. A read instruction to a location not written by the task returns an undefined value.
+\item [read]: the task that reads a location in the memory region declared \texttt{read} accesses the value produced by the previous task in the lexicographic order of tasks in the program, that required a write or read-write or cumulative access. If no such task existed, then the value is the value given during initialization.
 
 The task cannot write location of the memory region.
-\item [readwrite:] the task can read or write any location of the memory region. As for \texttt{read} access mode, a read instruction returns the value previously written by the task or the value produced by a previous task or at initialization.
-\item [reduction:] this is the purpose of the next section.
+\item [readwrite:] the task can read or write to any location of the memory region. As for \texttt{read} access mode, a read instruction returns the value previously written by the task or the value produced by a previous task or at initialization.
+\item [reduction:] this is the subject of the next section.
 \end{description}
 
 %%%%
 \subsubsection{Cumulative access mode}\label{sec:cw}
-In \kaapi, it is possible to reduce a variable with an associative operator. The commutativity is not required.
+In \kaapi, it is possible to reduce variable with associative operator. The commutativity is not required.
 A task that requires an accumulative semantic with respect to one of its formal parameters, must declare it with the \texttt{reduction} clause in the \texttt{\#pragma kaapi task}. 
-The reduction clause specifies the operator to use during concurrent reduction and a list of formal parameters the clause is applied to.
+The reduction clause specifies the operator to use during concurrent reduction and a list of formal parameters the clause is applied on.
 
-Two tasks having a reduction access mode onto the same memory region are concurrent, for instance the two tasks created at line 12 and 13 in listing of figure~\ref{fig:exaccu}.
+Two tasks having a reduction access mode to the same memory region are concurrent. The two tasks created at line 12 and 13 in listing of figure~\ref{fig:exaccu} illustrate this case.
 \begin{figure}[ht]
 \begin{center}
 \begin{minipage}[t]{0.99\linewidth}
@@ -1150,13 +1149,13 @@ void accumulate (double* begin, double* end, int *result)
 \caption{Kaapi signature for accumulate with reduction}
 \label{fig:exaccu}
 \end{figure}
-The reduction operator defined in the \texttt{reduction} clause is used to merge result produced by a theft task.
+The reduction operator defined in the \texttt{reduction} clause is used to merge the result produced by a task theft.
 In listing~\ref{fig:exaccu}, if one thread performs all the tasks, then only the operator \texttt{+=} at line 8 is used.
 If one of the task created at line 12 or 13 is theft, then the thief thread performs the task and reduce results on a new variable. This new variable is initialized as described below.
 
 \paragraph{Predefined reduction operators.}~\\
 For all the scalar types of the C or C++ language, \kaapi predefines a list of known operators (table \ref{table:opcumul}).
-For each operator, the neutral element corresponds to the neutral element of the mathematical operator. The list is presented in table~\ref{table:opcumul} follows the same predefined reduction operators in OpenMP-3.0.
+For each operator, the neutral element corresponds to the neutral element of the mathematical operator. The list which is presented in table~\ref{table:opcumul} follows the same predefined reduction operators as in OpenMP-3.0.
 \begin{table}[h]
 \begin{center}
 \small \footnotesize
@@ -1183,7 +1182,7 @@ The user has the ability to define its own reduction operator using \texttt{\#pr
 \item [\texttt{\#pragma kaapi declare reduction}]~\\
 \verb!(reduction-identifier : function-name)!\\
 \verb![ identity( function-name) ]!\\
-The \verb!function-name! must correspond to the name of C/C++ function. The function must comply with one of the following signature:
+The \verb!function-name! must correspond to the name of a C/C++ function that must satisfy one of the following signature:
 \vspace*{-2ex}\begin{verbatim}
   // For  C++
   void function( typename& result, const typename& value )
@@ -1194,7 +1193,7 @@ The \verb!function-name! must correspond to the name of C/C++ function. The func
 The parameter type are inherited from the declaration of the reduction variable in the \texttt{reduction} clause to describe access mode of formal parameter.
 
 
-The identity function is used to initialize a value of a temporary variable to be the neutral of the reduction operator. The identity function signature must be one of the following:
+The identity function is used to initialize a value of a temporary variable to be the neutral of the reduction operator. The signature of the identity function must be one of the following:
 \begin{verbatim}
   // For  C++
   void function( typename& value )
@@ -1211,30 +1210,29 @@ Once task access modes are defined, the runtime is able to detect dependencies b
 \item [Write after Read.] This false dependency is an anti-dependency. Variable renaming suppress them.
 \end{description}
 
-Note that the \kaapi runtime used a lazy approach to remove false dependencies: if it is necessary to execute concurrently two tasks with false dependencies, then the runtime renames the memory region. Otherwise the execution is sequential, using the task creation order.
+Note that the \kaapi runtime used a lazy approach to remove false dependencies: if it is necessary to concurrently execute two tasks with false dependencies, then the runtime renames the memory region. Else, the execution is sequential, using the task creation order.
 
-In both cases, the result of the execution remains the same whatever the execution order between tasks.
+In both cases, the result of the execution remains the same whatever the execution order between tasks is.
 
 
 %%%%
 %%%
 \subsection{Directive for synchronization}\label{sec:synchro}
 
-Because task creations are non blocking instructions, it may be
-necessary to explicitly synchronize the control flow of the thread that creates tasks with the task executions.
+Because task creations are non-blocking instructions, it may be necessary to explicitly synchronize the control flow of the thread that creates tasks with the task executions.
 
 \subsubsection{\#pragma kaapi sync}
 
 This directive forces to wait for the completion of all previously created tasks in the same activation of a task body: tasks created by the parent task are not considered.
 
-For non recursive task creations, this directive waits until all previously created tasks in the control flow have been completed.
+For non-recursive task creations, this directive waits until all previously created tasks in the control flow are completed.
 
-For instance, the synchronization point at line 13 of the recursive computation of Fibonacci number in listing~\ref{ex:fibonacci} page~\pageref{ex:fibonacci} enforces completion of only the two tasks created at lines 11 and 12.
+For instance, the synchronization point at line 13 of the recursive computation of the Fibonacci number in listing~\ref{ex:fibonacci} page~\pageref{ex:fibonacci} enforces completion of the two tasks created at lines 11 and 12 only.
 
 
 \subsubsection{\#pragma kaapi sync(<list\_declaration>)}
 
-This directive forces to wait for the completion of all the last created tasks, in the same task body activation, which writes the memory region  described by a the list of declarations.
+This directive forces to wait for the completion of all the last created tasks, in the same task body activation, which writes to the memory region described by a the list of declarations.
 \begin{figure}[ht]
 \begin{center}
 \begin{minipage}{0.99\linewidth}
@@ -1291,8 +1289,8 @@ As discussed in section~\ref{sec:optimalloca}, the user should ensure enough sco
 
 
 \subsubsection{Control of the allocation scope of data}
-All data passed by reference to tasks must be valid until the task completion.
-For instance, because task creation is a non blocking call, the example of figure~\ref{ex:caplante} is incorrect: the automatic variable \texttt{r} will be suppressed before the execution of the task \texttt{g}.
+All data passed by reference to tasks must be valid until the task completions.
+For instance, because a task creation is a non-blocking call, the example of figure~\ref{ex:caplante} is incorrect: the automatic variable \texttt{r} will be suppressed before the execution of the task \texttt{g}.
 \begin{figure}[ht]
 \begin{center}
 \begin{minipage}{0.99\linewidth}
@@ -1314,7 +1312,7 @@ if (...)
 
 In that case, the user has two possibilities:
 \begin{itemize}
-\item Add a synchronization point between line 4 and 5. It enforces the execution waits for the completion of \texttt{g} (the 2 left solutions in figure~\ref{ex:caplanteplus}).
+\item Add a synchronization point between line 4 and 5. It enforces the execution to wait for the completion of \texttt{g} (the 2 left solutions in figure~\ref{ex:caplanteplus}).
 \item Allocate the data in the same scope as the tasks. In that case, the data is allocated with a scope wide enough to execute the task \texttt{g} (right solution in figure~\ref{ex:caplanteplus}).
 \end{itemize}
 
@@ -1377,7 +1375,7 @@ The \verb!<list of variables>! describes a list of automatic variables to be use
 \end{description}
 
 The \kaapi name of this directive is analog to the \texttt{alloca} function of the C library stdlib.  With sequential C or C++ program, the developper may allocate data in the stack using the \texttt{alloca} function. In that case, the allocation scope is the same as the activation frame where the call to \texttt{alloca} occured.
-With \texttt{\#pragma kaapi alloca}, the user can allocate data within the same scope of the created tasks.
+With \texttt{\#pragma kaapi alloca}, the user can allocate data within the same scope as the created tasks.
 
 %%%%
 \subsubsection{Synchronisation and recursive tasks}\label{sec:alloca}
@@ -1629,7 +1627,7 @@ int main()
 
 
 \subsection{Cholesky factorization}
-This example shows one of the main difference between the StarSS programming model is its inability to view sub matrix without reallocating the user's data structure.\\
+This example shows that one of the main difference between StartSs programming model is its ability to view sub-matrix of matrix without requiring to reallocate the user data structure.\\
 
 \begin{footnotesize}
 \begin{lstlisting}[frame=tb]
@@ -1972,28 +1970,25 @@ parameter in the \verb+#pragma kaapi task+ compiler directive.
 \end{verbatim}
 \subsubsection{Note on access mode}
 Most of the different access modes (\verb+mode_xx :=+ rules) have three formats: long, short and a format compatible with the  SMPSs programming model. 
-If the reduction operator for a \verb+reduction+ access mode is left unspecified, then the default operator is \verb'+' for all the scalar type (integral value and floating point value). 
-For other instance of type or class that does not have the \verb'+' operator defined, then this is an compiler error. The default identity operator is:
-\begin{itemize}
-\item for scalar value (integral value and floating value) to set the value '0' which is the neutral element with respect to the associative default \verb'+' operator,
-\item For other type or class which have a defined \verb'+' operator, then the neutral is assumed to be set by calling the default constructor.
-\end{itemize}
+
+If the reduction operator for an \verb+reduction+ access mode is left unspecified, they the default operator is \verb'+' for all the scalar type (integral value and floating point value). 
+For other instances of type or class that do not have the \verb'+' operator defined, this is an compiler error. The default identity operator is: for scalar value (integral value and floating value) to set the value '0' which is the neutral element with respect to the associative default \verb'+' operator. For other type or class which have a defined \verb'+' operator, then the neutral is assumed to be set by calling the default constructor.
 
 \subsubsection{Note on range declaration}
 
-In the range declaration rule, it is possible for the programmer to define the set of memory address that the task accesses. 
-The set of memory addresses may have any shape. This set is used by the runtime to detect dependencies between tasks. The implementation has currently 2 limits:
+In the range declaration rule, the programmer has the opportunity to define the set of memory address that the task will access. 
+The set of memory address may have any shape. This set serves to detect dependencies between tasks. The implementation has currently 2 limits:
 \begin{enumerate}
 \item The grammar limits the shape to continuous D dimensional arrays, 
 with an implementation limit to 2D data structures (see next section about the grammar).
 \item The detection of dependency between tasks uses a special memory address of the range declaration which is named the \textbf{referent}. This address is the address of the identifier in case of the D-dimensional format. And for 1D definition using the format \verb+[identifier .. identifier]+ this is the memory address given by the value of the first identifier (a pointer).
 \end{enumerate}
 
-The grammar may be extended in the future in order to take into account more complex shape declaration.
+The grammar may be extended in the future in order to take into account more complex shape declarations.
 
 
 \subsubsection{Dimension definition}\label{ref:dimensiongrammar}
-The dimension in range specification is described by the following grammar. Expression rules in the grammar is a subset of the C expression rules.
+The dimension in range specification is described by the following grammar. Expression rules in the grammar are a subset of the C expression rules.
 \begin{verbatim}
       dimension :=
           one_dimension 
@@ -2046,8 +2041,8 @@ The compiler directive \verb+#pragma kaapi declare <reduction_declaration>+ foll
           'identity'  '(' function_name  ')'
         | 'identity'  '(' '{' initializer-list '}' ')'
 \end{verbatim}
-The role of the identity declaration is to specify the initialization a variable with the value that corresponds to the neutral element with respect to the reduction operator. For instance: \texttt{0} for operator \texttt{+} over scalar type.
-For user's defined type, this function should be defined. In C++, if the identity function is not defined, the C++ empty constructor is used to initialize this value. In C, the default identity function set to zero the data structure. 
+The role of the identity declaration is to specify the initialization of a variable with the value that corresponds to the neutral element with respect to the reduction operator. For instance: \texttt{0} for operator \texttt{+} over scalar type.
+For user defined types, this function should be defined. In C++, if the identity function is not defined, the C++ empty constructor is used to initialize the value. In C, the default identity function sets to zero the data structure. 
 
 The signature of the reduction function must be:
 \begin{verbatim}
@@ -2077,8 +2072,8 @@ The following grammar is involved in the directive
           identifier
         | list_of_variables ',' identifier 
 \end{verbatim}
-This directive must be defined in a basic block before the definition of automatic variable.
-It is a compiler error to pass a non automatic name (\textit{e.g.} global variable) or to declare the pragma after the variable definition.
+This directive must be defined in a basic block before the definition of automatic variables.
+This is a compiler error to pass a non-automatic name (\textit{e.g.} global variable) or to declare the pragma after the definition of the variables.
 
 
 %%%
@@ -2090,25 +2085,25 @@ It is a compiler error to pass a non automatic name (\textit{e.g.} global variab
 
 The compilation process with KaCC of a file is the following:
 \begin{enumerate}
-\item Each \kaapi directive  that begins \texttt{\#pragma kaapi} is interpreted and the code is rewritten to call functions of the \kaapi library. Invalid use of \kaapi directive and some warning are outputed.
+\item Each \kaapi directive that begins with \texttt{\#pragma kaapi} is interpreted and the code is rewritten to call functions of the \kaapi library. Invalid use of \kaapi directive and some warning are outputed.
 \item The backend compiler (C or C++) is called on the rewritten code to generate an object file.
 \item To create an executable, KaCC passes the \kaapi library to the linker.
 \end{enumerate}
 
 
 \subsection{KaCC options}
-The KaCC compiler recognizes all the options of Gcc compiler suite (gcc, g++) and add an extra option:
+The KaCC compiler recognizes all the options of the GCC compiler suite (gcc, g++) and add an extra option:
 \begin{description}
-\item [-\,-keep]: keep the intermediate files. For each source file, an intermediate file is generated. It contains the generated calls to \kaapi. Its name follows the convention: if the source name is \texttt{file.c}, the intermediate name is \texttt{file\_\_kacc.c}.
+\item [-\,-keep]: keep the intermediate files. For each file, one intermediate files are generated. It is prefixed by \texttt{kaapi-} and is the translation of the file with replacement of function calls by task creations. 
 \end{description}
 
 
 \subsection{Backend compiler selection}
-The backend compiler is the default C or C++ compiler defined during the installation step (see options with \texttt{configure --help}). It can be changed at configuration by setting the environment variables \texttt{KACC\_CC} and \texttt{KACC\_CXX}.
+The backend compiler is the default C or C++ compiler defined during the installation step (see options with \texttt{configure --help}). It can be changed by setting the environment variables \texttt{CC} and \texttt{CXX}.
 
 \subsection{Runtime environment variables}
 \begin{description}
-\item [KAAPI\_CPUSET]: if defined, and if the operating system supports it, then the variable specifies the set of cores to use in \kaapi program. If not defined, the operating system decides to schedule \kaapi threads onto the cores.
+\item [KAAPI\_CPUSET]: if defined, and if the operating system supports it, then this variable specifies the set of cores to use in \kaapi programs. If not defined, the operating system decides to schedule \kaapi threads onto cores.
 The syntax is a list of core identifiers or a range of core identifiers:
 \begin{verbatim}
 KAAPI_CPUSET=1,2,6,8,21
@@ -2124,9 +2119,9 @@ The identifier corresponds to system identifier for the core.
 \newpage
 \section{ SMPSs task model compatibility}\label{app:smpss}
 
-A parallel  SMPSs program running on a multicore is composed of several threads sharing the same address space. The threads execute tasks which may shared values in the address space, that we call thread shared memory.
+A parallel  SMPSs program running on a multicore is composed of several threads sharing the same address space. The threads execute tasks which may share values in the address space, that we call thread shared memory.
 A task is a function call: a function and the list of its effective parameters. 
-In  SMPSs~\cite{smpss-manual} the definition of task is based on the annotation of the C function as in \kaapi. Figure~\ref{fig:accumulatesmpss} illustrates the methodology. The original sequential code \verb+accumulate+ is annotated to be a task using SMPSs annotation (\verb+#pragma css task+). Each formal parameter is described by the access the task performs: \verb+input+ means that the task requires it to be ready before execution; \verb+output+ means that the task will produce it. And \verb+inout+ for the both. A depicted  in the code, a formal parameter may be defined with a size in order to identify the memory region accessed by the task.
+In  SMPSs~\cite{smpss-manual} the definition of task is based on the annotation of the C function as in \kaapi. Figure~\ref{fig:accumulatesmpss} illustrates the methodology. The original sequential code \verb+accumulate+ is annotated to be a task using SMPSs annotation (\verb+#pragma css task+). Each formal parameter is described by the access the task performs: \verb+input+ means that the task requires it to be ready before execution; \verb+output+ means that the task will produce it. And \verb+inout+ means both. As depicted in the code, a formal parameter may be defined with a size in order to identify the memory region accessed by the task.
 \begin{figure}[ht]
 \begin{center}
 \hrule\vspace*{1ex}
@@ -2162,7 +2157,7 @@ The \kaapi compiler parses and executes correctly all the SMPSs directives witho
 \subsection{Incompatibility}
 Moreover, due to its ability to define memory region of submatrices, \kaapi can be used where SMPSs requires source code modification (for instance in all  inplace SMPSs factorization algorithms -LU, Cholesky, QR, ...-) where data (submatrix) must be reallocated into contiguous memory region.
 
-The semantic of reduction variable in \kaapi allows to avoid locking mechanism at the expense of a memory copy.
+The semantic of reduction variable in \kaapi allows to avoid locking mechanisms at the expense of a memory copy.
 
 
 
