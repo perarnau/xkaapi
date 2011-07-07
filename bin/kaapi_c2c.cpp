@@ -3080,7 +3080,10 @@ int main(int argc, char **argv)
 {
   try {
     // SgProject::set_verbose(10);
-    SgProject *project = frontend(argc, argv);
+
+    SgProject* project = new SgProject();
+    // project->set_template_instantiation_mode(SgProject::e_none);
+    project->parse(argc, argv);
 
     KaapiPragma pragmaKaapi;
     
@@ -5519,7 +5522,6 @@ bool forLoopCanonicalizer::findAffineVariables(void)
   // must be only one such occurence. move every other
   // expression to the end of the body.
   SgNode* node;
-  SgNode* iter_node = NULL;
   bool is_done = false;
   while (1)
   {
@@ -6400,12 +6402,13 @@ static void buildLoopEntrypointBody(
   /* 
    * Generate the body of the entry point 
    */
-  SgExpression* work = 
-    SageBuilder::buildAddressOfOp(
-      SageBuilder::buildArrowExp( 
-        SageBuilder::buildVarRefExp(splitter_context),
-        SageBuilder::buildOpaqueVarRefExp("wq", contexttype->get_scope())
-      )
+  SgExpression* work = SageBuilder::buildAddressOfOp
+    (
+     SageBuilder::buildArrowExp
+     ( 
+      SageBuilder::buildVarRefExp(splitter_context),
+      SageBuilder::buildOpaqueVarRefExp("wq", body)
+     )
     );
 
   SgVariableDeclaration* local_ivar_end = SageBuilder::buildVariableDeclaration (
@@ -6512,7 +6515,7 @@ static void buildLoopEntrypointBody(
               SageBuilder::buildArrowExp( 
                 SageBuilder::buildVarRefExp(context),
                 SageBuilder::buildOpaqueVarRefExp
-		("p_" + (*ivar_beg)->get_name(), contexttype->get_scope())
+		("p_" + (*ivar_beg)->get_name(), body)
               )
             )
           ),
@@ -6616,7 +6619,7 @@ static void buildLoopEntrypointBody(
 	 ( 
 	  SageBuilder::buildVarRefExp(context),
 	  SageBuilder::buildOpaqueVarRefExp
-	  ("p_" + var_sym->get_name(), contexttype->get_scope())
+	  ("p_" + var_sym->get_name(), body)
 	 )
 	);
 
