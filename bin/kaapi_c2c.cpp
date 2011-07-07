@@ -218,11 +218,13 @@ static SgClassDeclaration* buildOutlineArgStruct(
 
 /* return a function from the loop statement
 */
-static SgFunctionDeclaration* buildLoopEntrypoint
+static void buildLoopEntrypoint
 ( 
  SgClassDefinition* this_class_def,
  SgClassDeclaration* contexttype,
- SgGlobal* scope
+ SgGlobal* scope,
+ SgFunctionDeclaration*& partial_decl,
+ SgFunctionDeclaration*& tramp_decl
 );
 
 /* */
@@ -4405,12 +4407,11 @@ void buildInsertSaveRestoreFrame( SgScopeStatement* forloop )
     for (size_t i=0; i<out.size(); ++i)
     {
       /* from node in the edge is the output to the loop to the loop statement */
-      SgStatement* node = isSgStatement(out[i]->get_from()->get_SgNode());
-        std::cout << "2. Find exit loop statement, from:" << out[i]->get_from()->get_SgNode()->class_name() 
-                  << " at line: " << out[i]->get_from()->get_SgNode()->get_file_info()->get_line()
-                  << " to:" << out[i]->get_to()->get_SgNode()->class_name() 
-                  << " at line: " << out[i]->get_to()->get_SgNode()->get_file_info()->get_line()
-                  << std::endl;
+      std::cout << "2. Find exit loop statement, from:" << out[i]->get_from()->get_SgNode()->class_name() 
+		<< " at line: " << out[i]->get_from()->get_SgNode()->get_file_info()->get_line()
+		<< " to:" << out[i]->get_to()->get_SgNode()->class_name() 
+		<< " at line: " << out[i]->get_to()->get_SgNode()->get_file_info()->get_line()
+		<< std::endl;
     }
       
     /* insert kaapi_sched_sync + kaapi_restore_frame after the loop */
@@ -5784,8 +5785,8 @@ SgStatement* buildConvertLoop2Adaptative(
         void loop_entrypoint( contexttype* context )
      The body will be fill after.
   */
-  entrypoint = buildLoopEntrypoint
-    (this_class_def, contexttype, bigscope);
+  SgFunctionDeclaration* partial_decl;
+  buildLoopEntrypoint(this_class_def, contexttype, bigscope, partial_decl, entrypoint);
 
   /* The new block of instruction that will replace the forloop */
   SgBasicBlock* newbbcall = SageBuilder::buildBasicBlock();
@@ -5796,7 +5797,7 @@ SgStatement* buildConvertLoop2Adaptative(
      The interval [0,__kaapi_end] is the number of iteration in the loop.
      Each pop of range [i,j) will iterate to the original index [begin+i*incr
   */
-  SgBasicBlock* body = entrypoint->get_definition()->get_body();
+  SgBasicBlock* body = partial_decl->get_definition()->get_body();
 
   // resolve the splitter
   {
@@ -5810,7 +5811,7 @@ SgStatement* buildConvertLoop2Adaptative(
   /* Complete the body of the entry pointer with splitter information
   */
   buildLoopEntrypointBody(
-    entrypoint,
+    partial_decl,
     splitter,
     listvar,
     contexttype, 
@@ -6377,7 +6378,7 @@ static SgClassDeclaration* buildOutlineArgStruct(
     The body of the function only contains
 */
 
-static SgMemberFunctionDeclaration* buildLoopMethodTrampoline
+static SgFunctionDeclaration* buildLoopMethodTrampoline
 (
  SgClassDefinition* this_class_def,
  SgClassDeclaration* args_decl,
@@ -6388,6 +6389,29 @@ static SgMemberFunctionDeclaration* buildLoopMethodTrampoline
   // static __kaapi_loop_entrypoint_0(void* p, kaapi_thread_t* t)
   // (TT*((T*)p)->data)->called_decl_name(p, t);
 
+  SgFunctionParameterList* const param_list =
+    SageBuilder::buildFunctionParameterList();
+
+  SageInterface::appendArg
+    (
+     param_list, 
+     SageBuilder::buildInitializedName
+     (
+      "splitter_context",
+      SageBuilder::buildPointerType(kaapi_splitter_context_ROSE_type)
+     )
+    );
+
+  SageInterface::appendArg
+    (
+     param_list, 
+     SageBuilder::buildInitializedName
+     (
+      "thread",
+      SageBuilder::buildPointerType(kaapi_thread_ROSE_type)
+     )
+    );
+
   SgName tramp_suffix("_tramp");
   SgName tramp_name(called_decl->get_name() + tramp_suffix);
 
@@ -6396,29 +6420,107 @@ static SgMemberFunctionDeclaration* buildLoopMethodTrampoline
     (
      tramp_name,
      SageBuilder::buildVoidType(),
-     pararm_list
-     this_class_def->get_declaration()->getScope()
+     param_list,
+     this_class_def->get_declaration()->get_scope()
     );
-  func->set_endOfConstruct(SOURCE_POSITION);
+  tramp_decl->get_declarationModifier().get_storageModifier().setStatic();
+  tramp_decl->set_endOfConstruct(SOURCE_POSITION);
 
-  // TODO: mark as static
+  SgBasicBlock* const tramp_body = tramp_decl->get_definition()->get_body();
+  SgScopeStatement* const tramp_scope = SageInterface::getScope(tramp_body);
+  // assume(tramp_body);
 
-  SgBasicBlock* const meth_body =
-    tramp_decl->get_definition()->get_body();
-  // assume(meth_body);
+  // implement the method body as defined above
+  // ((TT*)((T*)fu)->bar)->p_this->called_name(fu, thread);
 
-  // TODO: implement the method body as defined above
+  SgCastExp* const data_expr = SageBuilder::buildCastExp
+    (
+     SageBuilder::buildOpaqueVarRefExp
+     ("((kaapi_splitter_context_t*)splitter_context)->data", tramp_scope),
+     SageBuilder::buildPointerType(args_decl->get_type())
+    );
+
+  SgCastExp* const this_expr = SageBuilder::buildCastExp
+    (
+     SageBuilder::buildArrowExp
+     (
+      data_expr,
+      SageBuilder::buildOpaqueVarRefExp
+      ("p_this", this_class_def->get_declaration()->get_scope())
+     ),
+     SageBuilder::buildPointerType
+     (this_class_def->get_declaration()->get_type())
+    );
+
+  this_expr->set_need_paren(true);
+
+  printf("----\n");
+  printf("this_expr\n%s\n", this_expr->unparseToString().c_str());
+
+#if 0
+  SgExpression* const call_expr = SageBuilder::buildFunctionCallExp
+    (
+     SageBuilder::buildArrowExp
+     (this_expr, SageBuilder::buildFunctionRefExp(called_decl)),
+     SageBuilder::buildExprListExp
+     (
+      SageBuilder::buildVarRefExp("splitter_context", tramp_scope),
+      SageBuilder::buildVarRefExp("thread", tramp_scope)
+     )
+    );
+  SgExprStatement* const call_stmt =
+    SageBuilder::buildFunctionCallStmt(call_expr);
+#else
+  std::string call_string;
+  call_string.append("(");
+  call_string.append(this_expr->unparseToString());
+  call_string.append(")");
+  call_string.append("->");
+  call_string.append(called_decl->get_name().str());
+
+  printf("--\n");
+  printf("call_string: %s\n", call_string.c_str());
+
+  SgExprStatement* const call_stmt = SageBuilder::buildFunctionCallStmt
+    (
+     call_string,
+     SageBuilder::buildVoidType(),
+     SageBuilder::buildExprListExp
+     (
+      SageBuilder::buildVarRefExp("splitter_context", tramp_scope),
+      SageBuilder::buildVarRefExp("thread", tramp_scope)
+     ),
+     tramp_scope
+   );
+#endif
+
+  printf("----\n");
+  printf("call_stmt\n%s\n", call_stmt->unparseToString().c_str());
+
+  SageInterface::appendStatement(call_stmt, tramp_body);
+
+  printf("----\n");
+
+  printf("tramp_body\n%s\n", tramp_body->unparseToString().c_str());
+
+  printf("----\n");
 
   return tramp_decl;
 }
 
-static SgFunctionDeclaration* buildLoopEntrypoint
+static void buildLoopEntrypoint
 (
  SgClassDefinition* this_class_def,
- SgClassDeclaration*          contexttype,
- SgGlobal*                    scope
+ SgClassDeclaration* contexttype,
+ SgGlobal* scope,
+ SgFunctionDeclaration*& partial_decl,
+ SgFunctionDeclaration*& tramp_decl
 )
 {
+  // partial_decl is the function to be build
+  // tramp_decl is the function to be called, which can be
+  // the same as partial_decl if this is not a method
+
   static int cnt = 0;
   std::ostringstream func_name;
   func_name << "__kaapi_loop_entrypoint_" << cnt++;
@@ -6430,27 +6532,45 @@ static SgFunctionDeclaration* buildLoopEntrypoint
   parlist = SageBuilder::buildFunctionParameterList();
   
   /* append 2 declarations : context & thread */
-  SageInterface::appendArg (parlist, 
-    SageBuilder::buildInitializedName(
+  SageInterface::appendArg
+    (
+     parlist, 
+     SageBuilder::buildInitializedName
+     (
       "__kaapi_vcontext", 
       SageBuilder::buildPointerType(SageBuilder::buildVoidType())
-    )
-  );
-  SageInterface::appendArg (parlist, 
-    SageBuilder::buildInitializedName(
+     )
+    );
+
+  SageInterface::appendArg
+    (
+     parlist, 
+     SageBuilder::buildInitializedName
+     (
       "__kaapi_thread", 
       SageBuilder::buildPointerType(kaapi_thread_ROSE_type)
-    )
-  );
+     )
+    );
 
-  SgFunctionDeclaration* func = SageBuilder::buildDefiningFunctionDeclaration(
-      func_name.str(), 
-      return_type, 
-      parlist, 
-      scope
-  );
-  func->set_endOfConstruct(SOURCE_POSITION);
-  return func;
+  // loop body must be a method. generate a trampoline routine.
+  if (this_class_def != NULL)
+  {
+    SgScopeStatement* const class_scope =
+      this_class_def->get_declaration()->get_scope();
+
+    partial_decl = SageBuilder::buildDefiningFunctionDeclaration
+      (func_name.str(), return_type, parlist, class_scope);
+
+    tramp_decl = buildLoopMethodTrampoline
+      (this_class_def, contexttype, partial_decl);
+  }
+  else
+  {
+    tramp_decl = SageBuilder::buildDefiningFunctionDeclaration
+      (func_name.str(), return_type, parlist, scope);
+    partial_decl = tramp_decl;
+  }
+  tramp_decl->set_endOfConstruct(SOURCE_POSITION);
 }
 
 
@@ -7396,7 +7516,6 @@ KaapiReduceOperator_t* Parser::ParseReductionDeclaration(
 {
   std::string name;
   char c;
-  const char* save_rpos = rpos;
   
   skip_ws();
   c = readchar();
