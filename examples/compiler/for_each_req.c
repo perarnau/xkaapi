@@ -42,24 +42,14 @@
 */
 #include <stdlib.h>
 #include <math.h>
-#include <sys/time.h>
 
-/**
-*/
-double get_elapsedtime(void)
-{
-  struct timeval tv;
-  int err = gettimeofday( &tv, 0);
-  if (err  !=0) return 0;
-  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
-}
+#define THRESHOLD 8
 
 #pragma kaapi task write([begin:end)) value (op)
-/*value(op)*/
 void for_each( double* begin, double* end, void (*op)(double*) )
 {
    size_t size = (end-begin);
-  if (size <2)
+  if (size <THRESHOLD)
   {
     while (begin != end)
       op(begin++);
@@ -84,7 +74,6 @@ static void apply_cos( double* v )
  */
 int main(int ac, char** av)
 {
-  double t0,t1;
   double sum = 0.f;
   size_t i;
   size_t iter;
@@ -93,32 +82,7 @@ int main(int ac, char** av)
   static double array[ITEM_COUNT];
   
 #pragma kaapi parallel  
-  /* initialize the runtime */
-  for (iter = 0; iter < 100; ++iter)
-  {
-    /* initialize, apply, check */
-    for (i = 0; i < ITEM_COUNT; ++i)
-      array[i] = 0.f;
+  for_each( array, array+ITEM_COUNT, apply_cos );
 
-#pragma kaapi barrier
-    t0 = get_elapsedtime();
-    for_each( array, array+ITEM_COUNT, apply_cos );
-#pragma kaapi barrier
-    t1 = get_elapsedtime();
-    sum += (t1-t0)*1000; /* ms */
-
-    for (i = 0; i < ITEM_COUNT; ++i)
-      if (array[i] != 1.f)
-      {
-        printf("invalid @%lu == %lf\n", i, array[i]);
-        break ;
-      }
-  }
-
-  printf("done: %lf (ms)\n", sum / 100);
-
-  /* finalize the runtime */
-#pragma kaapi finish
-  
   return 0;
 }

@@ -46,7 +46,6 @@
 #include <stdio.h>
 #include <math.h>
 #include <sys/types.h>
-#include <sys/time.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <cblas.h> 
@@ -78,19 +77,7 @@ void cblas_dgemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA
                  const int lda, const double *B, const int ldb,
                  const double beta, double *C, const int ldc);
 
-double _cholesky_global_time;
 
-/**
-*/
-double get_elapsedtime(void)
-{
-  struct timeval tv;
-  int err = gettimeofday( &tv, 0);
-  if (err  !=0) return 0;
-  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
-}
-
-#if 1
 /* Generate a random matrix symetric definite positive matrix of size m x m 
    - it will be also interesting to generate symetric diagonally dominant 
    matrices which are known to be definite postive.
@@ -105,31 +92,6 @@ static void generate_matrix(double* A, size_t m)
     A[i*m+i] = m*1.0; 
   }
 }
-#else
-/* Generate a random matrix symetric definite positive matrix of size m x m 
-*/
-static void generate_matrix(double* A, size_t N)
-{
-  double* L = new double[N*N];
-  // Lower random part
-  for (size_t i = 0; i< N; ++i)
-  {  
-    size_t j;
-    for (j = 0; j< i+1; ++j)
-      L[i*N+j] = drand48();
-    for (; j< N; ++j)
-      L[i*N+j] = 0.0;
-    L[i*N+i] = N; /* add dominant diagonal, else very ill conditionning */
-  }
-
-  cblas_dgemm
-  (
-    CblasRowMajor, CblasNoTrans,CblasTrans,
-    N, N, N, 1.0, L, N, L, N, 0.0, A, N
-  );
-#pragma kaapi sync(A)    
-}
-#endif
 
 
 /* Block Cholesky factorization A <- L * L^t
@@ -137,6 +99,7 @@ static void generate_matrix(double* A, size_t N)
 */
 void Cholesky( double* A, int N, size_t blocsize )
 {
+#pragma kaapi parallel scheduling()
   for (size_t k=0; k < N; k += blocsize)
   {
     clapack_dpotrf(
@@ -169,17 +132,18 @@ void Cholesky( double* A, int N, size_t blocsize )
       }
     }
   }
-#pragma kaapi sync
 }
 
 
-/* Main of the program
+/* Do one run for cholesky
 */
-void doone_exp( int N, int block_count, int niter, int verif )
+void doone_exp( int N, int block_count )
 {
   size_t blocsize = N / block_count;
 
-  double t0, t1;
+  printf("N         : %i\n", N);
+  printf("size block: %i\n", blocsize);
+  printf("#blocks   : %i\n", block_count);
   double* A = 0;
   if (0 != posix_memalign((void**)&A, 4096, N*N*sizeof(double)))
   {
@@ -187,85 +151,19 @@ void doone_exp( int N, int block_count, int niter, int verif )
     return;
   }
 
-  // Cholesky factorization of A 
-  double sumt = 0.0;
-  double sumgf = 0.0;
-  double sumgf2 = 0.0;
-  double sd;
-  double sumt_exec = 0.0;
-  double sumgf_exec = 0.0;
-  double sumgf2_exec = 0.0;
-  double sd_exec;
-  double gflops;
-  double gflops_max = 0.0;
-  double gflops_exec;
-  double gflops_exec_max = 0.0;
+  generate_matrix(A, N);
 
-  /* formula used by plasma in time_dpotrf.c */
-  double fp_per_mul = 1;
-  double fp_per_add = 1;
-  double fmuls = (N * (1.0 / 6.0 * N + 0.5 ) * N);
-  double fadds = (N * (1.0 / 6.0 * N ) * N);
-      
-  printf("%6d %5d ", (int)N, (int)(N/blocsize) );
-  for (int i=0; i<niter; ++i)
-  {
-    generate_matrix(A, N);
-
-    _cholesky_global_time = 0;
-    t0 = get_elapsedtime();
-    Cholesky(A, N, blocsize);
-    t1 = get_elapsedtime();
-
-    gflops = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / (t1-t0);
-    if (gflops > gflops_max) gflops_max = gflops;
-
-    sumt += (double)(t1-t0);
-    sumgf += gflops;
-    sumgf2 += gflops*gflops;
-
-    gflops_exec = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / _cholesky_global_time;
-    if (gflops_exec > gflops_exec_max) gflops_exec_max = gflops_exec;
-    
-    sumt_exec += (double)(_cholesky_global_time);
-    sumgf_exec += gflops_exec;
-    sumgf2_exec += gflops_exec*gflops_exec;
-  }
-
-  gflops = sumgf/niter;
-  gflops_exec = sumgf_exec/niter;
-  if (niter ==1) 
-  {
-    sd = 0.0;
-    sd_exec = 0.0;
-  } else {
-    sd = sqrt((sumgf2 - (sumgf*sumgf)/niter)/niter);
-    sd_exec = sqrt((sumgf2_exec - (sumgf_exec*sumgf_exec)/niter)/niter);
-  }
+  Cholesky(A, N, blocsize);
   
-  printf("%9.3f %9.3f %9.3f %9.3f %9.3f %9.3f %9.3f %9.3f\n", 
-      sumt/niter, 
-      gflops, 
-      sd, 
-      sumt_exec/niter, 
-      gflops_exec,
-      sd_exec,
-      gflops_max,
-      gflops_exec_max 
-  );
-
   free(A);
 }
 
 
 
-/* main entry point : Kaapi initialization
+/* main entry point
 */
 int main(int argc, char** argv)
 {
-
-printf("Sizeof enum CBLAS_ORDER = %i\n", sizeof(enum CBLAS_ORDER) );
-return 0;
   // matrix dimension
   int n = 32;
   if (argc > 1)
@@ -276,22 +174,7 @@ return 0;
   if (argc > 2)
     block_count = atoi(argv[2]);
     
-  // Number of iterations
-  int niter = 1;
-  if (argc >3)
-    niter = atoi(argv[3]);
+  doone_exp( n, block_count );
 
-  // Make verification ?
-  int verif = 0;
-  if (argc >4)
-    verif = atoi(argv[4]);
-  
-  //int nmax = n+16*incr;
-  printf("size   #threads #bs    time      GFlop/s   Deviation\n");
-  //for (int k=9; k<15; ++k, ++n )
-  {
-    //doone_exp( 1<<k, block_count, niter, verif );
-    doone_exp( n, block_count, niter, verif );
-  }
   return 0;
 }
