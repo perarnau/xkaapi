@@ -212,14 +212,17 @@ SgStatement* buildConvertLoop2Adaptative(
 */
 static SgClassDeclaration* buildOutlineArgStruct(
   const std::set<SgVariableSymbol*>& listvar,
-  SgGlobal*                          scope
+  SgGlobal*                          scope,
+  SgClassDefinition*		     class_def
 );
 
 /* return a function from the loop statement
 */
-static SgFunctionDeclaration* buildLoopEntrypoint( 
-  SgClassDeclaration*          contexttype,
-  SgGlobal*                    scope
+static SgFunctionDeclaration* buildLoopEntrypoint
+( 
+ SgClassDefinition* this_class_def,
+ SgClassDeclaration* contexttype,
+ SgGlobal* scope
 );
 
 /* */
@@ -5729,6 +5732,29 @@ SgStatement* buildConvertLoop2Adaptative(
   }
 
   buildFreeVariable(isSgScopeStatement(loopbody), listvar);
+
+  // for a method, find the class definition
+  SgClassDefinition* this_class_def = NULL;
+  if (SageInterface::is_Cxx_language())
+  {
+    SgFunctionDefinition* const enclosing_def =
+      SageInterface::getEnclosingFunctionDefinition(loopbody);
+    if (enclosing_def != NULL && enclosing_def->get_declaration())
+    {
+      SgMemberFunctionDeclaration* const member_decl =
+	isSgMemberFunctionDeclaration(enclosing_def->get_declaration());
+      if (member_decl != NULL)
+      {
+	// printf("FOUND_METHOD: %s\n", member_decl->get_name().str());
+#if 0 // TODO
+	member_decl->get_class_scope()->get_qualified_name().str();
+	::member_decl->get_name().str();
+#endif // TODO
+
+	this_class_def = member_decl->get_class_scope();
+      }
+    }
+  }
   
   /* suppress any ivar or __kaapi_thread instance 
   */
@@ -5740,11 +5766,11 @@ SgStatement* buildConvertLoop2Adaptative(
 
   /* Build the structure for the argument of most of the other function:
      The data structure contains
-     - the workqueue to store range
      - all free parameters required to call the entrypoint for loop execution
+     - a __kaapi_this_ pointer, if we are in a method
      The structure store pointer to the actual parameters.
   */
-  SgClassDeclaration* contexttype = buildOutlineArgStruct( listvar, bigscope );
+  SgClassDeclaration* contexttype = buildOutlineArgStruct( listvar, bigscope, this_class_def );
   
   /* append the type for the splitter juste before the enclosing function definition
   */
@@ -5758,10 +5784,8 @@ SgStatement* buildConvertLoop2Adaptative(
         void loop_entrypoint( contexttype* context )
      The body will be fill after.
   */
-  entrypoint = buildLoopEntrypoint( 
-    contexttype, 
-    bigscope 
-  );
+  entrypoint = buildLoopEntrypoint
+    (this_class_def, contexttype, bigscope);
 
   /* The new block of instruction that will replace the forloop */
   SgBasicBlock* newbbcall = SageBuilder::buildBasicBlock();
@@ -5983,6 +6007,28 @@ SgStatement* buildConvertLoop2Adaptative(
       SageInterface::appendStatement( exrpassign, newbbcall );
     }
     ++ivar_beg;
+  }
+
+  // if needed, affect p_this to this
+  if (this_class_def != NULL)
+  {
+    SgExprStatement* const assign_stmt = SageBuilder::buildExprStatement
+      (
+       SageBuilder::buildAssignOp
+       (
+	SageBuilder::buildArrowExp
+	(
+	 SageBuilder::buildVarRefExp(local_context),
+	 SageBuilder::buildOpaqueVarRefExp("p_this", contexttype->get_scope())
+	),
+
+	SageBuilder::buildOpaqueVarRefExp
+	("this", SageInterface::getScope(forloop))
+        )
+      );
+
+    assign_stmt->set_endOfConstruct(SOURCE_POSITION);
+    SageInterface::appendStatement(assign_stmt, newbbcall);
   }
 
   // call the entrypoint
@@ -6265,7 +6311,8 @@ SgStatement* buildConvertLoop2Adaptative(
 */
 static SgClassDeclaration* buildOutlineArgStruct(
   const std::set<SgVariableSymbol*>& listvar,
-  SgGlobal*                          scope
+  SgGlobal*                          scope,
+  SgClassDefinition*		     this_class_def
 )
 {
   static int cnt_sa = 0;
@@ -6280,6 +6327,7 @@ static SgClassDeclaration* buildOutlineArgStruct(
      The data structure contains
      - all free parameters required to call the entrypoint for loop execution
      The structure store pointer to the actual parameters.
+     - a p_this pointer, if it is a method
   */
   std::set<SgVariableSymbol*>::iterator ivar_beg = listvar.begin();
   std::set<SgVariableSymbol*>::iterator ivar_end = listvar.end();
@@ -6298,6 +6346,23 @@ static SgClassDeclaration* buildOutlineArgStruct(
 
     ++ivar_beg;
   }
+
+  // add p_this
+  if (this_class_def != NULL)
+  {
+    SgVariableDeclaration* const memberDeclaration =
+      SageBuilder::buildVariableDeclaration
+      (
+       "p_this",
+       SageBuilder::buildPointerType
+       (this_class_def->get_declaration()->get_type()),
+       0,
+       contexttype->get_definition()
+      );
+    memberDeclaration->set_endOfConstruct(SOURCE_POSITION);
+    contexttype->get_definition()->append_member(memberDeclaration);
+  }
+
   contexttype->set_endOfConstruct(SOURCE_POSITION);
 
   return contexttype;
@@ -6311,9 +6376,47 @@ static SgClassDeclaration* buildOutlineArgStruct(
     
     The body of the function only contains
 */
-static SgFunctionDeclaration* buildLoopEntrypoint( 
-  SgClassDeclaration*          contexttype,
-  SgGlobal*                    scope
+
+static SgMemberFunctionDeclaration* buildLoopMethodTrampoline
+(
+ SgClassDefinition* this_class_def,
+ SgClassDeclaration* args_decl,
+ SgFunctionDeclaration* called_decl
+)
+{
+  // generate a method trampoline of the form:
+  // static __kaapi_loop_entrypoint_0(void* p, kaapi_thread_t* t)
+  // (TT*((T*)p)->data)->called_decl_name(p, t);
+
+  SgName tramp_suffix("_tramp");
+  SgName tramp_name(called_decl->get_name() + tramp_suffix);
+
+  SgFunctionDeclaration* tramp_decl =
+    SageBuilder::buildDefiningFunctionDeclaration
+    (
+     tramp_name,
+     SageBuilder::buildVoidType(),
+     pararm_list
+     this_class_def->get_declaration()->getScope()
+    );
+  func->set_endOfConstruct(SOURCE_POSITION);
+
+  // TODO: mark as static
+
+  SgBasicBlock* const meth_body =
+    tramp_decl->get_definition()->get_body();
+  // assume(meth_body);
+
+  // TODO: implement the method body as defined above
+
+  return tramp_decl;
+}
+
+static SgFunctionDeclaration* buildLoopEntrypoint
+(
+ SgClassDefinition* this_class_def,
+ SgClassDeclaration*          contexttype,
+ SgGlobal*                    scope
 )
 {
   static int cnt = 0;
