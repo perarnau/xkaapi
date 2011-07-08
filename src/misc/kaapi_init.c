@@ -282,7 +282,7 @@ int kaapi_init(int flag, int* argc, char*** argv)
   int err = kaapi_mt_init();
 
   if (flag)
-    kaapi_begin_parallel();
+    kaapi_begin_parallel(KAAPI_SCHEDFLAG_DEFAULT);
   return err;
 }
 
@@ -317,7 +317,7 @@ static kaapi_atomic_t kaapi_parallel_stack = {0};
     - after that serveral threads may declare parallel region that
     will implies concurrency
 */
-void kaapi_begin_parallel(void)
+void kaapi_begin_parallel( int schedflag )
 {
   if (KAAPI_ATOMIC_INCR(&kaapi_parallel_stack) == 1)
   {

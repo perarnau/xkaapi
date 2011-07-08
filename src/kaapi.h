@@ -463,8 +463,13 @@ extern int kaapi_finalize(void);
 
 
 /** Declare the beginning of a parallel region
+    \param schedflag flag to drive the scheduling of this parallel region
 */
-extern void kaapi_begin_parallel(void);
+extern void kaapi_begin_parallel(int schedflag);
+
+typedef enum {
+  KAAPI_SCHEDFLAG_DEFAULT = 0
+} kaapi_schedflag_t;
 
 /** Declare the end of a parallel region
     \param flag == 0 then an implicit sync is inserted before existing the region.
@@ -2374,7 +2379,7 @@ extern kaapi_format_id_t kaapi_format_taskregister_func(
     void                        (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
     void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, void*, const void*),
     void                        (*redinit )        (const struct kaapi_format_t*, unsigned int, const void* sp, void* ),
-    void                        (*get_task_binding)(const struct kaapi_format_t*, const kaapi_task_t*, kaapi_task_binding_t*)
+    void                        (*get_task_binding)(const struct kaapi_format_t*, const void*, kaapi_task_binding_t*)
 );
 
 /** \ingroup TASK

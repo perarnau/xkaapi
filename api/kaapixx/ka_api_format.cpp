@@ -164,7 +164,7 @@ FormatTask::FormatTask(
   void                      (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
   void                      (*reducor )        (const struct kaapi_format_t*, unsigned int, void*, const void*),
   void                      (*redinit )        (const struct kaapi_format_t*, unsigned int, const void*, void*),
-  void                      (*get_task_binding)(const struct kaapi_format_t*, const kaapi_task_t*, kaapi_task_binding_t*)
+  void                      (*get_task_binding)(const struct kaapi_format_t*, const void*, kaapi_task_binding_t*)
 ) 
  : Format((kaapi_format_t*)0)
 {

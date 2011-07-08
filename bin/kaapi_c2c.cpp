@@ -1677,8 +1677,8 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
 
 
   /* format::get_task_binding */
-  fout << "void " << kta->name_format << "_get_task_binding(const struct kaapi_format_t* fmt, const kaapi_task_t* t, kaapi_task_binding_t* tb)\n"
-       << "{ return; }\n"
+  fout << "void " << kta->name_format << "_get_task_binding(const struct kaapi_format_t* fmt, const void* sp, kaapi_task_binding_t* tb)\n"
+       << "{ tb->type = KAAPI_BINDING_ANY; return; }\n"
        << std::endl;
 
   std::string wrapper_decl_name;
@@ -2029,7 +2029,7 @@ void Parser::DoKaapiPragmaParallelRegion( SgPragmaDeclaration* sgp )
     callinitStmt = SageBuilder::buildFunctionCallStmt
     (    "kaapi_begin_parallel", 
          SageBuilder::buildVoidType(), 
-         SageBuilder::buildExprListExp(),
+         SageBuilder::buildExprListExp(SageBuilder::buildIntVal(0)),
          bbnode
     );
     callfinishStmt = SageBuilder::buildFunctionCallStmt
@@ -3204,7 +3204,11 @@ int main(int argc, char **argv)
           = SageBuilder::buildNondefiningFunctionDeclaration(
                   name_beginparallel, 
                   SageBuilder::buildVoidType(), 
-                  SageBuilder::buildFunctionParameterList(),
+                  SageBuilder::buildFunctionParameterList(
+                    SageBuilder::buildFunctionParameterTypeList(
+                      SageBuilder::buildIntType()
+                    )
+                  ),
                   gscope
         );
         ((decl_kaapi_beginparallel->get_declarationModifier()).get_storageModifier()).setExtern();
