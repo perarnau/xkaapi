@@ -448,10 +448,11 @@ static inline void kaapi_mem_barrier()
    In case of normal terminaison, all internal objects are (I hope so !) deleted.
    The abort function is used in order to try to flush most of the internal buffer.
    kaapi_init should be called before any other kaapi function.
+   \param flag [IN] if !=0 then start execution in parallel, else only the main thread is started
    \retval 0 in case of sucsess
    \retval EALREADY if already called
 */
-extern int kaapi_init(int* argc, char*** argv);
+extern int kaapi_init(int flag, int* argc, char*** argv);
 
 /* Kaapi finalization. 
    After call to this functions all other kaapi function calls may not success.
@@ -466,8 +467,10 @@ extern int kaapi_finalize(void);
 extern void kaapi_begin_parallel(void);
 
 /** Declare the end of a parallel region
+    \param flag == 0 then an implicit sync is inserted before existing the region.
+    \param flag == 1 then implicit sync is not inserted.
 */
-extern void kaapi_end_parallel(void);
+extern void kaapi_end_parallel(int flag);
 
 /* Get the current processor kid. 
    \retval the current processor id
@@ -779,6 +782,7 @@ typedef int (*kaapi_victim_reducer_t)
 */
 typedef int (*kaapi_thief_reducer_t)
 (struct kaapi_taskadaptive_result_t*, void* arg_from_victim, void*);
+
 
 /** \ingroup ADAPT
     Adaptive stealing header. The header is the
@@ -2141,6 +2145,20 @@ static inline int kaapi_workqueue_steal(
   return 0; /* true */
 }  
 
+
+/** kaapi exported splitters
+ */
+
+typedef struct kaapi_splitter_context
+{
+  kaapi_workqueue_t wq;
+  kaapi_task_body_t body;
+  size_t data_size;
+  unsigned char data[1];
+} kaapi_splitter_context_t;
+
+int kaapi_splitter_default
+(struct kaapi_stealcontext_t*, int, struct kaapi_request_t*, void*);
 
 
 /* ========================================================================= */

@@ -12,7 +12,7 @@ endif
 check_PROGRAMS+=$(MERGESORT_PRGS)
 all-mergesort: $(MERGESORT_PRGS)
 
-mergesort_kaapi___SOURCES=mergesort/mergesort_kaapi++.cpp
+mergesort_kaapi___SOURCES=mergesort/mergesort_kaapi++.cpp 
 
 mergesort_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 mergesort_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)

@@ -1,11 +1,14 @@
 /*
+** kaapi_hashmap.c
 ** xkaapi
 ** 
-** Copyright 2011 INRIA.
+** 
+** Copyright 2010 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -40,33 +43,67 @@
 ** terms.
 ** 
 */
-#include <stdio.h>
+#include "kaapi_impl.h"
+#include <stddef.h>
+#include <string.h>
+#include <sys/types.h>
 
-#pragma kaapi task reduction(+:result) value(n)
-void fibonacci(long* result, const long n)
+int kaapi_splitter_default
+(kaapi_stealcontext_t* sc, int nreq,  kaapi_request_t* req, void* p)
 {
-  if (n<2)
-    *result += n;
-  else 
+ /* default splitter */
+
+  /* victim context */
+  kaapi_splitter_context_t* const vw = (kaapi_splitter_context_t*)p;
+  
+  /* stolen range */
+  kaapi_workqueue_index_t i, j;
+  kaapi_workqueue_index_t range_size;
+
+  size_t total_size;
+  
+  /* reply count */
+  int nrep = 0;
+  
+  /* size per request */
+  kaapi_workqueue_index_t unit_size;
+
+redo_steal:
+  /* do not steal if range size <= PAR_GRAIN */
+#define CONFIG_PAR_GRAIN 4
+  range_size = kaapi_workqueue_size(&vw->wq);
+
+  if (range_size <= CONFIG_PAR_GRAIN) return 0;
+
+  /* how much per req */
+  unit_size = range_size / (nreq + 1);
+  if (unit_size == 0)
   {
-    fibonacci( result, n-1 );
-    fibonacci( result, n-2 );
+    nreq = (range_size / CONFIG_PAR_GRAIN) - 1;
+    unit_size = CONFIG_PAR_GRAIN;
   }
-}
 
-#pragma kaapi task read(result) 
-void print_result( const long* result )
-{
-  printf("Fibonacci(30)=%li\n", *result);
-}
+  /* perform the actual steal. if the range
+     changed size in between, redo the steal
+   */
+  if (kaapi_workqueue_steal(&vw->wq, &i, &j, nreq * unit_size))
+    goto redo_steal;
 
-int main()
-{
-  long result;
-#pragma kaapi parallel
+  total_size = offsetof(kaapi_splitter_context_t, data) + vw->data_size;
+
+  for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
-    fibonacci(&result, 30);
-    print_result(&result);
+    /* thief work: not adaptive result because no preemption is used here  */
+    kaapi_splitter_context_t* const tw = kaapi_reply_init_adaptive_task
+      ( sc, req, vw->body, total_size, 0 );
+
+    kaapi_workqueue_init(&tw->wq, j - unit_size, j);
+    tw->body = vw->body;
+    tw->data_size = vw->data_size;
+    memcpy(tw->data, vw->data, vw->data_size);
+
+    kaapi_reply_push_adaptive_task(sc, req);
   }
-  return 0;
+  
+  return nrep;
 }

@@ -1,7 +1,8 @@
 /*
 ** xkaapi
 ** 
-** Copyright 2011 INRIA.
+** Created on Tue Mar 31 15:16:47 2009
+** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
@@ -40,42 +41,66 @@
 ** terms.
 ** 
 */
-#include <stdio.h>
+#include "kaapi_impl.h"
 
-#pragma kaapi task write(result) read(r1,r2)
-void sum( long* result, const long* r1, const long* r2)
+/*
+*/
+volatile int kaapi_suspendflag;
+
+/*
+*/
+kaapi_atomic_t kaapi_suspendedthreads;
+
+
+/*
+*/
+static pthread_cond_t   wakeupcond_threads;
+static pthread_mutex_t  wakeupmutex_threads;
+
+void kaapi_mt_suspendresume_init(void)
 {
-  *result = *r1 + *r2;
+  kaapi_assert( 0 == pthread_cond_init(&wakeupcond_threads, 0) );
+  kaapi_assert( 0 == pthread_mutex_init(&wakeupmutex_threads, 0) );
+  kaapi_suspendflag = 0;
+  KAAPI_ATOMIC_WRITE(&kaapi_suspendedthreads, 0);
 }
 
-#pragma kaapi task write(result) value(n)
-void fibonacci(long* result, const long n)
+
+void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
 {
-  if (n<2)
-    *result = n;
-  else 
+  pthread_mutex_lock(&wakeupmutex_threads);
+  if (kaapi_suspendflag)
   {
-#pragma kaapi data alloca(r1,r2)
-    long r1,r2;
-    fibonacci( &r1, n-1 );
-    fibonacci( &r2, n-2 );
-    sum( result, &r1, &r2);
+    KAAPI_ATOMIC_INCR( &kaapi_suspendedthreads );
+    pthread_cond_wait(&wakeupcond_threads, &wakeupmutex_threads);
   }
+  pthread_mutex_unlock(&wakeupmutex_threads);
 }
 
-#pragma kaapi task read(result) 
-void print_result( const long* result )
-{
-  printf("Fibonacci(30)=%li\n", *result);
-}
 
-int main()
+/* should always be called by the main thread only
+*/
+void kaapi_mt_suspend_threads(void)
 {
-  long result;
-#pragma kaapi parallel
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == 0 );
+  kaapi_writemem_barrier();
+  kaapi_suspendflag = 1;
+  while (KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) != (kaapi_count_kprocessors-1))
   {
-    fibonacci(&result, 30);
-    print_result(&result);
+    kaapi_slowdown_cpu();
   }
-  return 0;
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );
 }
+
+/*
+*/
+void kaapi_mt_resume_threads(void)
+{
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );
+  pthread_mutex_lock(&wakeupmutex_threads);
+  kaapi_suspendflag = 0;
+  KAAPI_ATOMIC_WRITE(&kaapi_suspendedthreads, 0);
+  pthread_cond_broadcast(&wakeupcond_threads);
+  pthread_mutex_unlock(&wakeupmutex_threads);  
+}
+

@@ -41,27 +41,36 @@
 ** 
 */
 #include <stdio.h>
+#include <stdlib.h>
 
-#pragma kaapi task write(buffer) value(size) read(msg)
-void write_msg(int size, char* buffer, const char* msg)
+#pragma kaapi task reduction(+:result) value(n)
+void fibonacci(long* result, const long n)
 {
-  snprintf(buffer, size, "%s", msg);
-}
-
-#pragma kaapi task read(msg)
-void print_msg(const char* msg)
-{
-  printf("%s\n", msg);
-}
-
-int main(int argc, char** argv)
-{
-  char buffer[32];
-#pragma kaapi parallel 
+  if (n<2)
+    *result += n;
+  else 
   {
-    write_msg(32,buffer, "This is may be a too long message for the buffer.");
-    print_msg(buffer);
+    fibonacci( result, n-1 );
+    fibonacci( result, n-2 );
   }
+}
 
+#pragma kaapi task read(result) 
+void print_result( const long* result )
+{
+  printf("Fibonacci(30)=%li\n", *result);
+}
+
+int main( int argc, char** argv)
+{
+  long result =0;
+  int n;
+  if (argc >1) n = atoi(argv[1]);
+  else n = 30;
+#pragma kaapi parallel
+  {
+    fibonacci(&result, n);
+    print_result(&result);
+  }
   return 0;
 }

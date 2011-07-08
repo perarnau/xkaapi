@@ -118,6 +118,9 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     kaapi_network_poll();
 #endif
 
+    if (kaapi_suspendflag)
+      kaapi_mt_suspend_self(kproc);
+
     /* wakeup a context: either a ready thread (first) or a suspended thread.
        Precise the suspended thread 'thread_condition' in order to wakeup it first and task_condition.
     */

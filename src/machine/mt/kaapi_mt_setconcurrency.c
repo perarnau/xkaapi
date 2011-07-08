@@ -1,5 +1,4 @@
 /*
-** kaapi_mt_setconcurrency
 ** 
 ** Created on Tue Mar 31 15:17:57 2009
 ** Copyright 2009 INRIA.
@@ -87,7 +86,10 @@ int kaapi_setconcurrency(void)
   if (isinit)
     return EINVAL;
   isinit = 1;
-  
+ 
+  /* Need before thread creation */
+  kaapi_mt_suspendresume_init();
+   
   kpl = kaapi_default_param.kproc_list;
 
   if ((!kpl->count) || (kpl->count > KAAPI_MAX_PROCESSOR_LIMIT))
@@ -196,7 +198,10 @@ int kaapi_setconcurrency(void)
   /* broadcast to all threads that they have been started */
   kaapi_barrier_td_setactive(&barrier_init2, 0);
   
-  kaapi_barrier_td_destroy( &barrier_init );    
+  /* this is the main thread that call this function */
+  kaapi_mt_suspend_threads();
+  
+  kaapi_barrier_td_destroy( &barrier_init );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
@@ -261,6 +266,9 @@ void* kaapi_sched_run_processor( void* arg )
   kaapi_perf_thread_start(kproc);
 #endif
 
+  /* suspend the threads */
+  kaapi_mt_suspend_self( kproc );
+  
   /* main work stealing loop */
   kaapi_assert( kproc->thread != 0 );
   kaapi_sched_idle( kproc );

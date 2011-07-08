@@ -1,12 +1,10 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:16:47 2009
-** Copyright 2009 INRIA.
+** Copyright 2011 INRIA.
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -42,38 +40,46 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-/**
-*/
-int kaapi_setcontext( kaapi_processor_t* kproc, kaapi_thread_context_t* thread )
+#pragma kaapi task write(result) read(r1,r2)
+void sum( long* result, const long* r1, const long* r2)
 {
-  if (thread !=0)
-    thread->proc    = kproc;
-  kproc->thread     = thread;
+  *result = *r1 + *r2;
+}
 
-#if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
-  kaapi_current_thread_key = (kaapi_thread_t**)thread;
-#endif
-  return 0;
-
-#if 0  /* TODO: next version when also saving the stack context */
-  proc->flags        = ctxt->flags;
-  proc->dataspecific = ctxt->dataspecific;
-
-  if (ctxt->flags & KAAPI_CONTEXT_SAVE_KSTACK)
+#pragma kaapi task write(result) value(n)
+void fibonacci(long* result, const long n)
+{
+  if (n<2)
+    *result = n;
+  else 
   {
-    proc->kstack     = ctxt->kstack;
+#pragma kaapi data alloca(r1,r2)
+    long r1,r2;
+    fibonacci( &r1, n-1 );
+    fibonacci( &r2, n-2 );
+    sum( result, &r1, &r2);
   }
+}
 
-  if (ctxt->flags & KAAPI_CONTEXT_SAVE_CSTACK)
+#pragma kaapi task read(result) 
+void print_result( const long* result )
+{
+  printf("Fibonacci(30)=%li\n", *result);
+}
+
+int main( int argc, char** argv)
+{
+  long result;
+  int n;
+  if (argc >1) n = atoi(argv[1]);
+  else n = 30;
+#pragma kaapi parallel
   {
-#if defined(KAAPI_USE_UCONTEXT)
-    setcontext( &proc->_ctxt );
-#elif defined(KAAPI_USE_SETJMP)
-    _longjmp( proc->_ctxt,  (int)(long)ctxt);
-#endif
+    fibonacci(&result, n);
+    print_result(&result);
   }
   return 0;
-#endif  /* TODO: next version when also saving the stack context */
 }

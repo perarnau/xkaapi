@@ -587,7 +587,7 @@ namespace ka {
     pointer_rpwp() : base_pointer<T>() {}
     pointer_rpwp( value_type* ptr ) : base_pointer<T>(ptr) {}
     explicit pointer_rpwp( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
-    operator const value_type*() { return base_pointer<T>::ptr(); }
+//    operator value_type*() { return base_pointer<T>::ptr(); }
 
     KAAPI_POINTER_ARITHMETIC_METHODS
   };

@@ -1,12 +1,10 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:16:47 2009
-** Copyright 2009 INRIA.
+** Copyright 2011 INRIA.
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -42,38 +40,49 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
+#include <stdlib.h>
+#include <math.h>
+
+#define THRESHOLD 8
+
+#pragma kaapi task write([begin:end)) value (op)
+void for_each( double* begin, double* end, void (*op)(double*) )
+{
+   size_t size = (end-begin);
+  if (size <THRESHOLD)
+  {
+    while (begin != end)
+      op(begin++);
+  }
+  else {
+    /* simple recursive for_each */
+    size_t med = size/2;
+    for_each( begin, begin+med, op);
+    for_each( begin+med, end, op);
+  }
+}
+
 
 /**
-*/
-int kaapi_setcontext( kaapi_processor_t* kproc, kaapi_thread_context_t* thread )
+ */
+static void apply_cos( double* v )
 {
-  if (thread !=0)
-    thread->proc    = kproc;
-  kproc->thread     = thread;
+  *v += cos(*v);
+}
 
-#if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
-  kaapi_current_thread_key = (kaapi_thread_t**)thread;
-#endif
+/**
+ */
+int main(int ac, char** av)
+{
+  double sum = 0.f;
+  size_t i;
+  size_t iter;
+  
+#define ITEM_COUNT 100000
+  static double array[ITEM_COUNT];
+  
+#pragma kaapi parallel  
+  for_each( array, array+ITEM_COUNT, apply_cos );
+
   return 0;
-
-#if 0  /* TODO: next version when also saving the stack context */
-  proc->flags        = ctxt->flags;
-  proc->dataspecific = ctxt->dataspecific;
-
-  if (ctxt->flags & KAAPI_CONTEXT_SAVE_KSTACK)
-  {
-    proc->kstack     = ctxt->kstack;
-  }
-
-  if (ctxt->flags & KAAPI_CONTEXT_SAVE_CSTACK)
-  {
-#if defined(KAAPI_USE_UCONTEXT)
-    setcontext( &proc->_ctxt );
-#elif defined(KAAPI_USE_SETJMP)
-    _longjmp( proc->_ctxt,  (int)(long)ctxt);
-#endif
-  }
-  return 0;
-#endif  /* TODO: next version when also saving the stack context */
 }

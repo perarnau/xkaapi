@@ -141,7 +141,7 @@ Community System::initialize_community( int& argc, char**& argv )
 
   /** Init should not have been called by InitKaapiCXX
   */
-  kaapi_assert(kaapi_init(&argc, &argv) == 0 );
+  kaapi_assert(kaapi_init(1, &argc, &argv) == 0 );
 
   return Community(0);
 }

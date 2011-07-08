@@ -335,7 +335,7 @@ int main(int ac, char** av)
   static double array[ITEM_COUNT];
   
   /* initialize the runtime */
-  kaapi_init(&ac, &av);
+  kaapi_init(1, &ac, &av);
   
   for (ac = 0; ac < 1000; ++ac)
   {

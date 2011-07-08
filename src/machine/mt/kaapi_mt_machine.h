@@ -650,11 +650,13 @@ typedef struct kaapi_processor_t {
   kaapi_selectvictim_fnc_t fnc_select;                    /* function to select a victim */
   void*                    fnc_selecarg[4];               /* arguments for select victim function, 0 at initialization */
 
+  pthread_mutex_t          suspend_lock;                  /* lock used to suspend / resume the threads */
+  
   void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */
   
   /* hierachical information of other kprocessor */
   int                      cpuid;                         /* os index of the bounded physical cpu */
-  int                      numa_nodeid;                     /* os index of the bounded physical memory ressource. See  kaapi_memory_id_t */
+  int                      numa_nodeid;                   /* os index of the bounded physical memory ressource. See  kaapi_memory_id_t */
   kaapi_cpuhierarchy_t     hlevel;                        /* hierarchy */
 
   /* performance register */
@@ -978,10 +980,10 @@ static inline int kaapi_request_post( kaapi_processor_id_t thief_kid, kaapi_repl
 #if defined(KAAPI_USE_BITMAP_REQUEST)
   kaapi_assert_debug((thief_kid >=0) && (thief_kid < KAAPI_MAX_PROCESSOR_LIMIT));
   req = &victim->hlrequests.requests[thief_kid];
-  req->kid   = thief_kid;
-  req->reply = reply;
+  req->kid       = thief_kid;
+  req->reply     = reply;
   reply->preempt = 0;
-  reply->status = KAAPI_REQUEST_S_POSTED;
+  reply->status  = KAAPI_REQUEST_S_POSTED;
   kaapi_writemem_barrier();
   kaapi_bitmap_set( &victim->hlrequests.bitmap, thief_kid );
   return 0;

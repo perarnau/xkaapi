@@ -27,11 +27,11 @@ include jacobi2D.am
 include linearwork.am
 include listranking.am
 include matrix.am
+include mergesort.am
 include net.am
 include nqueens.am
 include poisson3D.am
 include prefix.am
-include mergesort.am
 # include papi.am
 
 USER_MAKEFILES=\
@@ -170,4 +170,3 @@ uninstall-hook-examples:
 	done
 
 ###########################################
-
