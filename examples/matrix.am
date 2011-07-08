@@ -16,7 +16,7 @@ MATPROG_PRGS+=matprod_bloc_kaapi++ matprod_rowcol_kaapi++\
   matcholesky_bloc_kaapi++\
   matprod_bloc_mapping_kaapi++
 else
-MATPROG_PRGS+=no-cblas
+all-matrix: no-cblas
 endif
 endif
   
