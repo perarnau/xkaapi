@@ -99,7 +99,7 @@ static void generate_matrix(double* A, size_t m)
 */
 void Cholesky( double* A, int N, size_t blocsize )
 {
-#pragma kaapi parallel scheduling()
+#pragma kaapi parallel scheduling(static)
   for (size_t k=0; k < N; k += blocsize)
   {
     clapack_dpotrf(
