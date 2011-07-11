@@ -3201,6 +3201,12 @@ int main(int argc, char **argv)
               SageBuilder::buildPointerType(kaapi_thread_ROSE_type)
             )
         );
+
+	// add stddef.h
+        SageInterface::addTextForUnparser(file->get_globalScope(),
+                    "#include <stddef.h>\n",
+                    AstUnparseAttribute::e_before
+        );
         
   #if 0 // do not work properly
         SageInterface::insertHeader ("kaapi.h", PreprocessingInfo::after, false, gscope);
@@ -3212,7 +3218,7 @@ int main(int argc, char **argv)
                     AstUnparseAttribute::e_before
         );
   #endif
-   
+
         /* declare kaapi_init function */
         static SgName name_init("kaapi_init");
         SgFunctionDeclaration *decl_kaapi_init = SageBuilder::buildNondefiningFunctionDeclaration(
@@ -4490,6 +4496,26 @@ void buildInsertSaveRestoreFrame( SgScopeStatement* forloop )
 
 /** Preorder traversal: */
 class LHSVisitorTraversal : public AstSimpleProcessing {
+private:
+  static inline bool isMemberExpression(SgNode* n)
+  {
+    // consider n a member if
+    // . it is a rhs
+    // . the binary operator is either dot or arrow
+
+    SgNode* const parent = n->get_parent();
+    if (parent == NULL || parent == n) return false;
+    if (isSgBinaryOp(parent) == NULL) return false;
+
+    if (isSgBinaryOp(parent)->get_lhs_operand() == n)
+      return false;
+
+    if (isSgArrowExp(parent) != NULL) return true;
+    else if (isSgDotExp(parent) != NULL) return true;
+
+    return false;
+  }
+
 public:
   LHSVisitorTraversal( )
   { }
@@ -4547,7 +4573,15 @@ public:
       if (n->getAttribute("kaapiOUT"))
       {
 //        outputvar.insert( std::make_pair(varref->get_symbol(), true) );
-          outputvar[varref->get_symbol()] = true;
+
+	  if (isMemberExpression(varref) == false)
+	  {
+	    // in fu->bar = baz; like statements, dont consider
+	    // bar as a variable reference to be passed as a
+	    // member of the task context.
+	    outputvar[varref->get_symbol()] = true;
+	  }
+
           std::cout << varref->get_symbol()->get_name().str() << " " << varref->get_symbol() << " is output" << std::endl;
       }
       else
@@ -4555,7 +4589,13 @@ public:
 //        if (outputvar.find(varref->get_symbol()) == outputvar.end())
 //          outputvar.insert( std::make_pair(varref->get_symbol(), false) );
           std::cout << varref->get_symbol()->get_name().str() << " " << varref->get_symbol() << " is input" << std::endl;
-          outputvar[varref->get_symbol()] |= false;
+
+	  if (isMemberExpression(n) == false)
+	  {
+	    // baz = fu->bar; see above comment.
+	    outputvar[varref->get_symbol()] |= false;
+	  }
+
       }
     }
   }
