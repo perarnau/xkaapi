@@ -218,10 +218,11 @@ If you wish to contact the XKaapi team, please visite the web site at:
 
 To install \kaapi programming environment, you need to:
 \begin{itemize}
-\item install the \kaapi libraries and runtime
-\item install the compiler
+\item install the ROSE compiler framework,
+\item compile the \kaapi library and the \kaapi compiler,
+\item install the \kaapi library and the \kaapi compiler.
 \end{itemize}
-The \kaapi libraries and runtime are available at \url{http://kaapi.gforge.inria.fr} (tarball) or as a Debian package. \kaapi libraries and runtime are distributed under a CeCILL-C license\footnote{\url{http://www.cecill.info/index.en.html} for english version}:
+The \kaapi libraries and runtime are available at \url{http://kaapi.gforge.inria.fr} (tarball). \kaapi libraries and runtime are distributed under a CeCILL-C license\footnote{\url{http://www.cecill.info/index.en.html} for english version}:
 \begin{center}
 \begin{minipage}{0.9\linewidth}
 \it
@@ -245,32 +246,35 @@ Detailed procedures to install ROSE and EDG frontend are described in ROSE docum
 
 Once ROSE is installed, you will be able to generate \verb+kacc+, the \kaapi compiler.
 
-\subsubsection{\kaapi library installation}
-There are 2 ways to install \kaapi:
-\begin{itemize}
-\item using the Debian packages,
-\item installing from source.
-\end{itemize}
+\subsubsection{\kaapi library and compiler installation}
+Currently, \kaapi must be installed from sources. 
+Other packaging (Debian or RPM packages) is under development. Please visit the \kaapi web site for an up-to-date information:
+\begin{center}
+\url{http://kaapi.gforge.inria.fr}
+\end{center}
 
-%% sub
-\subsubsection*{Using the Debian packages}
-Below is a list of the Debian packages provided for using and programming with \kaapi. \\
-\textit{
-TODO: décrire ici le package nécessaire pour le compilateur. A priori uniquement la lib C + éventuellement une lib C++ pour des classes tableaux et/ou autre data structure qui serait déjà 'pré-définie' pour être passer correctement en paramètre de tâche. Je pense ici à la lib des array/range2D qui permet facilement de faire de la découpe récursive de données.
-}
-%% sub
+%There are 2 ways to install \kaapi:
+%\begin{itemize}
+%\item using the Debian packages,
+%\item installing from source.
+%\end{itemize}
+%
+%%% sub
+%\subsubsection*{Using the Debian packages}
+%Below is a list of the Debian packages provided for using and programming with \kaapi. \\
+%\textit{
+%TODO: décrire ici le package nécessaire pour le compilateur. A priori uniquement la lib C + éventuellement une lib C++ pour des classes tableaux et/ou autre data structure qui serait déjà 'pré-définie' pour être passer correctement en paramètre de tâche. Je pense ici à la lib des array/range2D qui permet facilement de faire de la découpe récursive de données.
+%}
+%%% sub
 \subsubsection*{Installing from sources}
 
 There are 2 ways to retrieve the sources:
 \begin{itemize}
 \item download a release snapshot at the following url:\newline
 \url{https://gforge.inria.fr/frs/?group_id=94}.
-\item clone the git repository of the project:\newline
+\item clone the master branch of the git repository of the project:\newline
 \verb+> git clone git://git.ligforge.imag.fr/git/kaapi/xkaapi.git xkaapi+
 \end{itemize}
-\textit{
-TODO: GIT anonymous ou non ? A préciser comment rejoindre le projet si volonté.
-}
 
 
 \paragraph{Configuration.}
@@ -293,6 +297,8 @@ Below is a list of the most important ones:
 \begin{itemize} %% option list
 \item \verb+--enable-mode=debug+ or \verb+release+\newline
 Choose the compilation mode of the library. Defaults to release.
+\item \verb+--with-hwloc+\newline
+To compile with hwloc (\url{http://www.open-mpi.org/projects/hwloc}) library to take advantage of the topological information of the computer.
 \item \verb+--with-perfcounter+\newline
 Enable performance counters support.
 \item \verb+--with-papi+\newline
@@ -310,6 +316,7 @@ Example:
 
 \begin{verbatim}
 ./configure --enable-mode=release --prefix=$HOME/install
+./configure  --prefix=$HOME/install --enable-mode=release --with-hwloc=/usr/local/hwloc --with-perfcounter --with-boost=/usr/local/boost --with-rose=/Users/thierry/Developpment/KAAPI/ROSE/install --enable-kacc --disable-api-atha --disable-api-kastl
 \end{verbatim}
 If there are errors during the configuration process, you have to solve
 them before going further. If dependencies are missing on your
