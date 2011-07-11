@@ -1972,12 +1972,13 @@ void Parser::DoKaapiPragmaParallelRegion( SgPragmaDeclaration* sgp )
 {
   std::string name;
   const char* save_rpos;
-  int flagnowait =0;
+  int schedflag = 0;
+  char c;
   
+  Sg_File_Info* fileInfo = sgp->get_file_info();
   SgBasicBlock* bbnode = isSgBasicBlock(sgp->get_parent());
   if (bbnode ==0)
   {
-    Sg_File_Info* fileInfo = sgp->get_file_info();
     std::cerr <<  "In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
               << " #pragma kaapi parallel: invalid scope declaration"
               << std::endl;
@@ -2004,7 +2005,46 @@ void Parser::DoKaapiPragmaParallelRegion( SgPragmaDeclaration* sgp )
   save_rpos = rpos;
   ParseIdentifier( name );
   if (name == "nowait")
-    flagnowait = 1;
+    schedflag |= 1; /* set no wait flag */
+  else 
+    schedflag |= 0; 
+
+    
+  if (name == "scheduling")
+  {
+    skip_ws();
+    save_rpos = rpos;
+    c = readchar();
+    if (c != '(') 
+    {
+      std::cerr << "****[kaapi_c2c] Error: mal formed scheduling clause. Waiting for '('\n"
+                << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+      KaapiAbort("**** error");
+    }
+    skip_ws();
+    save_rpos = rpos;
+    ParseIdentifier( name );
+
+    skip_ws();
+    c = readchar();
+    if (c != ')') 
+    {
+      std::cerr << "****[kaapi_c2c] Error: mal formed scheduling clause. Waiting for ')'\n"
+                << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+      KaapiAbort("**** error");
+    }
+
+    if (name == "static")
+      schedflag |= 2; /* set static flag */
+    else {
+      std::cerr << "****[kaapi_c2c] Warning: unknown scheduling flag '" << name << "'. Setting value to default.\n"
+                << "     In filename '" << fileInfo->get_filename() << "' LINE: " << fileInfo->get_line()
+                << std::endl;
+      schedflag |= 0;
+    }
+  }
 
   SgNode* nextnode = 
           sgp->get_parent()-> get_traversalSuccessorByIndex( 
@@ -2029,13 +2069,13 @@ void Parser::DoKaapiPragmaParallelRegion( SgPragmaDeclaration* sgp )
     callinitStmt = SageBuilder::buildFunctionCallStmt
     (    "kaapi_begin_parallel", 
          SageBuilder::buildVoidType(), 
-         SageBuilder::buildExprListExp(SageBuilder::buildIntVal(0)),
+         SageBuilder::buildExprListExp(SageBuilder::buildIntVal(schedflag)),
          bbnode
     );
     callfinishStmt = SageBuilder::buildFunctionCallStmt
     (    "kaapi_end_parallel", 
          SageBuilder::buildVoidType(), 
-         SageBuilder::buildExprListExp( SageBuilder::buildIntVal(flagnowait) ),
+         SageBuilder::buildExprListExp( SageBuilder::buildIntVal(schedflag) ),
          bbnode
     );
 
