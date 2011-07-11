@@ -468,7 +468,9 @@ extern int kaapi_finalize(void);
 extern void kaapi_begin_parallel(int schedflag);
 
 typedef enum {
-  KAAPI_SCHEDFLAG_DEFAULT = 0
+  KAAPI_SCHEDFLAG_DEFAULT = 0,
+  KAAPI_SCHEDFLAG_NOWAIT  = 0x1,
+  KAAPI_SCHEDFLAG_STATIC  = 0x2
 } kaapi_schedflag_t;
 
 /** Declare the end of a parallel region

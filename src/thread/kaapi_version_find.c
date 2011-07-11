@@ -57,7 +57,8 @@ kaapi_version_t* kaapi_version_findinsert(
   
   /* first look in the local hash table */
   entry   = kaapi_big_hashmap_find( &tl->kversion_hm, addr );
-  if (entry !=0) {
+  if (entry !=0) 
+  {
     *islocal = 1;
     return version = entry->u.version;
   }
@@ -67,7 +68,9 @@ kaapi_version_t* kaapi_version_findinsert(
   entry   = kaapi_big_hashmap_findinsert( &thread->kversion_hm, addr );
   version = entry->u.version;
   if (version !=0)
+  {
     return version;
+  }
 
   /* init version in global hashtable */
   version = entry->u.version

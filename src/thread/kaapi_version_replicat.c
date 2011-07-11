@@ -54,7 +54,7 @@ kaapi_version_t* kaapi_version_createreplicat(
   kaapi_assert_debug( master_version->master->version == master_version );
 
   /* assert: this not the local version */
-  kaapi_assert_debug( master_version->master->tl != tl );
+//  kaapi_assert_debug( master_version->master->tl != tl );
   
   kaapi_link_version_t* version_link;
   kaapi_version_t*      local_version;

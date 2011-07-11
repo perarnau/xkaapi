@@ -73,7 +73,7 @@ static int kaapi_cpuset2kids(
   return cnt;
 }
 
-#if defined(KAAPI_DEBUG)
+#if 0 //defined(KAAPI_DEBUG)
 static kaapi_atomic_t print_lock = { 1 };
 // warning about buffer overflow: buffer should has at least 1024 entries
 static const char* kaapi_kids2string

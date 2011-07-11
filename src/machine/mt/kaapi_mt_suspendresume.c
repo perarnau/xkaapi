@@ -73,6 +73,7 @@ void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
   {
     KAAPI_ATOMIC_INCR( &kaapi_suspendedthreads );
     pthread_cond_wait(&wakeupcond_threads, &wakeupmutex_threads);
+    memset(&kproc->fnc_selecarg, 0, sizeof(kproc->fnc_selecarg) );
   }
   pthread_mutex_unlock(&wakeupmutex_threads);
 }

@@ -319,7 +319,12 @@ static kaapi_atomic_t kaapi_parallel_stack = {0};
 */
 void kaapi_begin_parallel( int schedflag )
 {
-  if (KAAPI_ATOMIC_INCR(&kaapi_parallel_stack) == 1)
+  if (schedflag & KAAPI_SCHEDFLAG_STATIC)
+  {
+    kaapi_thread_set_unstealable(1);
+  }
+  /* if not static then wakeup thread here */
+  else if (KAAPI_ATOMIC_INCR(&kaapi_parallel_stack) == 1)
   {
     kaapi_mt_resume_threads();
   }
@@ -330,7 +335,18 @@ void kaapi_begin_parallel( int schedflag )
 */
 void kaapi_end_parallel(int flag)
 {
-  if (!flag) kaapi_sched_sync();
+  if (flag & KAAPI_SCHEDFLAG_STATIC) 
+  { /* end of the static parallel region: compute readylist + 
+       set thread stealable + resume thread if 1rst // region*/
+    kaapi_sched_computereadylist();
+    kaapi_thread_set_unstealable(0);
+    if (KAAPI_ATOMIC_INCR(&kaapi_parallel_stack) == 1)
+      kaapi_mt_resume_threads();
+  }
+  
+  if ((flag & KAAPI_SCHEDFLAG_NOWAIT) ==0) 
+    kaapi_sched_sync();
+
   if (KAAPI_ATOMIC_DECR(&kaapi_parallel_stack) == 0)
   {
     kaapi_mt_suspend_threads();
