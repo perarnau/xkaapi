@@ -370,6 +370,12 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
     ')
   }
 
+  static void get_task_binding(const struct kaapi_format_t*, const void* _taskarg, kaapi_task_binding_t* tb)
+  {
+    /*const TaskArg_t* taskarg = static_cast<const TaskArg_t*>(_taskarg);*/
+    tb->type = KAAPI_BINDING_ANY;
+  }
+
   static kaapi_format_t* registerformat()
   {
     // here we assume no concurrency during startup calls of the library that initialize format objects
@@ -386,7 +392,7 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
           &set_view_param,
           &reducor,
           &redinit,
-          0
+          &get_task_binding
     );
       
     return task_fmt.get_c_format();

@@ -149,7 +149,6 @@ FormatTask::FormatTask(
   }
 }
 
-
 // --------------------------------------------------------------------------
 FormatTask::FormatTask( 
   const char*                 name,
