@@ -198,9 +198,11 @@ void dInternalStepIsland_x2 (dxWorldProcessContext *context,
 
   const dReal stepsizeRecip = dRecip(stepsize);
 
+#pragma kaapi parallel
   {
     // number all bodies in the body list - set their tag values
     int i;
+#pragma kaapi loop
     for (i=0; i<nb; ++i) body[i]->tag = i;
   }
 

@@ -4536,9 +4536,6 @@ public:
       }
       else
       {
-	SgNode* const parent = n->get_parent();
-	printf("PARENT: %s\n", parent->class_name().c_str());
-
 //        if (outputvar.find(varref->get_symbol()) == outputvar.end())
 //          outputvar.insert( std::make_pair(varref->get_symbol(), false) );
           std::cout << varref->get_symbol()->get_name().str() << " " << varref->get_symbol() << " is input" << std::endl;
