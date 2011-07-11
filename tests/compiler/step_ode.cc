@@ -213,9 +213,12 @@ void dInternalStepIsland_x2 (dxWorldProcessContext *context,
 
   dReal *invI = context->AllocateArray<dReal> (3*4*nb);
 
+#pragma kaapi parallel
   { // Identical to QuickStep
     dReal *invIrow = invI;
     dxBody *const *const bodyend = body + nb;
+
+#pragma kaapi loop
     for (dxBody *const *bodycurr = body; bodycurr != bodyend; invIrow += 12, ++bodycurr) {
       dMatrix3 tmp;
       dxBody *b = *bodycurr;
@@ -236,6 +239,7 @@ void dInternalStepIsland_x2 (dxWorldProcessContext *context,
     }
   }
 
+#pragma kaapi parallel 
   { // Identical to QuickStep
     // add the gravity force to all bodies
     // since gravity does normally have only one component it's more efficient
@@ -243,6 +247,7 @@ void dInternalStepIsland_x2 (dxWorldProcessContext *context,
     dxBody *const *const bodyend = body + nb;
     dReal gravity_x = world->gravity[0];
     if (gravity_x) {
+#pragma kaapi loop
       for (dxBody *const *bodycurr = body; bodycurr != bodyend; ++bodycurr) {
         dxBody *b = *bodycurr;
         if ((b->flags & dxBodyNoGravity)==0) {
@@ -252,6 +257,7 @@ void dInternalStepIsland_x2 (dxWorldProcessContext *context,
     }
     dReal gravity_y = world->gravity[1];
     if (gravity_y) {
+#pragma kaapi loop
       for (dxBody *const *bodycurr = body; bodycurr != bodyend; ++bodycurr) {
         dxBody *b = *bodycurr;
         if ((b->flags & dxBodyNoGravity)==0) {
@@ -261,6 +267,7 @@ void dInternalStepIsland_x2 (dxWorldProcessContext *context,
     }
     dReal gravity_z = world->gravity[2];
     if (gravity_z) {
+#pragma kaapi loop
       for (dxBody *const *bodycurr = body; bodycurr != bodyend; ++bodycurr) {
         dxBody *b = *bodycurr;
         if ((b->flags & dxBodyNoGravity)==0) {

@@ -3161,6 +3161,12 @@ int main(int argc, char **argv)
               SageBuilder::buildPointerType(kaapi_thread_ROSE_type)
             )
         );
+
+	// add stddef.h
+        SageInterface::addTextForUnparser(file->get_globalScope(),
+                    "#include <stddef.h>\n",
+                    AstUnparseAttribute::e_before
+        );
         
   #if 0 // do not work properly
         SageInterface::insertHeader ("kaapi.h", PreprocessingInfo::after, false, gscope);
@@ -3172,7 +3178,7 @@ int main(int argc, char **argv)
                     AstUnparseAttribute::e_before
         );
   #endif
-   
+
         /* declare kaapi_init function */
         static SgName name_init("kaapi_init");
         SgFunctionDeclaration *decl_kaapi_init = SageBuilder::buildNondefiningFunctionDeclaration(
