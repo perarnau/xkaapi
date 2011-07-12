@@ -58,8 +58,8 @@ int kaapi_sched_computereadylist( void )
   err= kaapi_thread_computereadylist( thread, tasklist  );
   kaapi_thread_tasklistready_push_init( &tasklist->rtl, &tasklist->readylist );
   kaapi_thread_tasklist_commit_ready( tasklist );
-  /* keep the first task to execute outside the workqueue */
-  tasklist->context.chkpt = 2;
+  /* NO */ /*keep the first task to execute outside the workqueue */
+  tasklist->context.chkpt = 0;
   thread->sfp->tasklist = tasklist;
   return err;
 }
@@ -106,8 +106,9 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_tasklis
   frame    = thread->sfp;
   
   /* initialize hashmap for version */
-  kaapi_big_hashmap_init( &thread->kversion_hm, 0 );  
-  kaapi_big_hashmap_init( &tasklist->kversion_hm, 0 );  
+  if (thread->kversion_hm ==0)
+    thread->kversion_hm = (kaapi_big_hashmap_t*)malloc( sizeof(kaapi_big_hashmap_t) );
+  kaapi_big_hashmap_init( thread->kversion_hm, 0 );  
   
   /* iteration over all tasks of the current top frame thread->sfp */
   task_top    = frame->pc;
@@ -118,7 +119,11 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_tasklis
     --task_top;
   } /* end while task */
 
- kaapi_big_hashmap_destroy( &thread->kversion_hm );  
- kaapi_big_hashmap_destroy( &tasklist->kversion_hm );  
- return 0;
+  /* */
+//  kaapi_thread_tasklist_print( stdout, tasklist );
+  
+  kaapi_big_hashmap_destroy( thread->kversion_hm );
+  free( thread->kversion_hm );
+  thread->kversion_hm = 0;
+  return 0;
 }

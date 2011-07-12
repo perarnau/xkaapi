@@ -775,7 +775,7 @@ typedef struct kaapi_thread_context_t {
   kaapi_threadgroup_t            the_thgrp;      /* not null iff execframe != kaapi_thread_execframe */
   int                            unstealable;    /* !=0 -> cannot be stolen */
   int                            partid;         /* used by static scheduling to identify the thread in the group */
-  kaapi_big_hashmap_t            kversion_hm;    /* used by static scheduling */
+  kaapi_big_hashmap_t*           kversion_hm;    /* used by static scheduling */
   
   struct kaapi_thread_context_t* _next;          /** to be linkable either in proc->lfree or proc->lready */
   struct kaapi_thread_context_t* _prev;          /** to be linkable either in proc->lfree or proc->lready */

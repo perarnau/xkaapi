@@ -55,22 +55,11 @@ kaapi_version_t* kaapi_version_findinsert(
   kaapi_hashentries_t* entry;
   kaapi_version_t* version;
   
-  /* first look in the local hash table */
-  entry   = kaapi_big_hashmap_find( &tl->kversion_hm, addr );
-  if (entry !=0) 
-  {
-    *islocal = 1;
-    return version = entry->u.version;
-  }
-  
   /* else look into the global hash table */
-  *islocal = 0;
-  entry   = kaapi_big_hashmap_findinsert( &thread->kversion_hm, addr );
+  entry   = kaapi_big_hashmap_findinsert( thread->kversion_hm, addr );
   version = entry->u.version;
   if (version !=0)
-  {
     return version;
-  }
 
   /* init version in global hashtable */
   version = entry->u.version
@@ -86,9 +75,6 @@ kaapi_version_t* kaapi_version_findinsert(
   version->writer_task     = 0;
 #endif
 
-  /* insert the same version in the local tasklist table */
-  entry = kaapi_big_hashmap_insert( &tl->kversion_hm, addr );
-  entry->u.version = version;
-
+  *islocal = 1; // not used 
   return version;
 }

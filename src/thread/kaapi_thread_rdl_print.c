@@ -91,7 +91,7 @@ static int kaapi_task_descriptor_print( FILE* file, int pad, kaapi_taskdescr_t* 
     {
       tda = lk->td;
       fprintf(file, "(td: %p, wc: %i, task: %p) ", 
-            (void*)tda, KAAPI_ATOMIC_READ(&tda->counter), 
+            (void*)tda, tda->wc,
             (void*)&tda->task);
       lk = lk->next;
     }

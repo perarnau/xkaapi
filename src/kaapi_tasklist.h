@@ -220,7 +220,6 @@ typedef struct kaapi_tasklist_t {
   } context;
 
   /* constant state (after creation) */
-  kaapi_big_hashmap_t     kversion_hm; /* tasklist specific hashmap */
   kaapi_activationlist_t  readylist;   /* readylist of task descriptor */
 #if defined(KAAPI_DEBUG)
   kaapi_activationlist_t  allocated_td; /* list of all allocated tasks, debug only */
