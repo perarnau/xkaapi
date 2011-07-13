@@ -248,16 +248,21 @@ typedef struct kaapi_link_version_t {
 typedef struct kaapi_version_t {
   kaapi_access_mode_t      last_mode;       /* */
   kaapi_data_t*            handle;          /* */
+#if 0
   kaapi_link_version_t*    master;          /* points to the master or 0 */
+#endif
   kaapi_taskdescr_t*       writer_task;     /* last writer task of the version, 0 if no indentify task (input data) */
 } kaapi_version_t;
 
 
 /** Find the version object associated to the addr.
-    If not find, then insert into the table a new
-    with last_mode == KAAPI_ACCESS_MODE_VOID.
-    The returned object should be initialized correctly
-    with the first initial access.
+    If not find, then insert into the table a new with 
+      last_mode == KAAPI_ACCESS_MODE_VOID.
+    The returned object should be initialized correctly 
+    with a first initial access not KAAPI_ACCESS_MODE_VOID.
+    See kaapi_version_add_initialaccess.
+    On return islocal is set to 1 iff the access is local to the thread 'thread'.
+    [Not: this is for partitioning into multiple threads; currently not used ]
 */
 extern kaapi_version_t* kaapi_version_findinsert( 
     int* islocal,
@@ -266,12 +271,12 @@ extern kaapi_version_t* kaapi_version_findinsert(
     const void*             addr 
 );
 
-/** Add a new version for futur tasks in the tasklist tl.
+/** Set the initial access of a version.
     The new version is associated with an initial task which
     dependent on the initial access mode (m=R|RM -> task move,
     m=W|CW -> task alloc).
-    The version is already allocated and inserted into the thread
-    hash map, but it is not initialized.
+    In case of move, the source data (host pointer) is supposed
+    to be recopied into the remote address space.
 */
 extern int kaapi_version_add_initialaccess( 
     kaapi_version_t*           ver, 

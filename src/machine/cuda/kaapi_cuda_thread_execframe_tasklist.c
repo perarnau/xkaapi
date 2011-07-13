@@ -1244,8 +1244,7 @@ int kaapi_cuda_thread_execframe_tasklist
 
     if (td->fmt != NULL) /* cuda user task */
     {
-      cuda_task_body_t body = (cuda_task_body_t)
-      td->fmt->entrypoint_wh[proc_type];
+      cuda_task_body_t body = (cuda_task_body_t)td->fmt->entrypoint_wh[proc_type];
 
       wait_fifo_t* const kernel_fifo = get_kernel_fifo(wp);
 

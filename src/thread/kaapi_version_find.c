@@ -65,11 +65,13 @@ kaapi_version_t* kaapi_version_findinsert(
   version = entry->u.version
       = (kaapi_version_t*)kaapi_tasklist_allocate( tl, sizeof(kaapi_version_t) );
   version->last_mode       = KAAPI_ACCESS_MODE_VOID;
+#if 0
   version->master  
       = (kaapi_link_version_t*)kaapi_tasklist_allocate( tl, sizeof(kaapi_link_version_t) );
   version->master->version = version; /* only the master will have version->master->version == version ! */
   version->master->next    = 0;
   version->master->tl      = tl;
+#endif
 #if defined(KAAPI_DEBUG)
   version->handle          = 0;
   version->writer_task     = 0;
