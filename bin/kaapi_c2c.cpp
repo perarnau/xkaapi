@@ -5912,12 +5912,11 @@ SgStatement* buildConvertLoop2Adaptative(
   /* fwd declaration of the entry point */
   if (this_class_def == NULL)
   {
-    SageInterface::prependStatement
-      (
-       SageBuilder::buildNondefiningFunctionDeclaration
-       (entrypoint, forloop->get_scope()),
-       bigscope
-      );
+    SgFunctionDeclaration* const fwd_decl = 
+      SageBuilder::buildNondefiningFunctionDeclaration
+      (entrypoint, forloop->get_scope());
+    fwd_decl->get_declarationModifier().get_storageModifier().setStatic();
+    SageInterface::prependStatement(fwd_decl, bigscope);
   }
 
   /* Generate the calle new basic block
@@ -6643,6 +6642,7 @@ static void buildLoopEntrypoint
   {
     tramp_decl = SageBuilder::buildDefiningFunctionDeclaration
       (func_name.str(), return_type, parlist, scope);
+    tramp_decl->get_declarationModifier().get_storageModifier().setStatic();
     tramp_decl->set_endOfConstruct(SOURCE_POSITION);
     partial_decl = tramp_decl;
   }

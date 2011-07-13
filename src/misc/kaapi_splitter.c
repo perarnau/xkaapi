@@ -68,9 +68,14 @@ int kaapi_splitter_default
   /* size per request */
   kaapi_workqueue_index_t unit_size;
 
+  /* due to conflicts missed steal count */
+  unsigned int nmiss = 0;
+
 redo_steal:
+  if (nmiss == 3) return 0;
+
   /* do not steal if range size <= PAR_GRAIN */
-#define CONFIG_PAR_GRAIN 4
+#define CONFIG_PAR_GRAIN 512
   range_size = kaapi_workqueue_size(&vw->wq);
 
   if (range_size <= CONFIG_PAR_GRAIN) return 0;
@@ -87,13 +92,16 @@ redo_steal:
      changed size in between, redo the steal
    */
   if (kaapi_workqueue_steal(&vw->wq, &i, &j, nreq * unit_size))
+  {
+    ++nmiss;
     goto redo_steal;
+  }
 
   total_size = offsetof(kaapi_splitter_context_t, data) + vw->data_size;
 
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
-    /* thief work: not adaptive result because no preemption is used here  */
+    /* no adaptive result since preemption unused */
     kaapi_splitter_context_t* const tw = kaapi_reply_init_adaptive_task
       ( sc, req, vw->body, total_size, 0 );
 
@@ -104,6 +112,6 @@ redo_steal:
 
     kaapi_reply_push_adaptive_task(sc, req);
   }
-  
+
   return nrep;
 }
