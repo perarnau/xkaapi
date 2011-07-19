@@ -949,7 +949,7 @@ typedef struct kaapi_reply_t {
     /* thread */
     struct kaapi_thread_context_t* s_thread;
   } u;
-#define KAAPI_REPLY_DATA_SIZE_MAX (8*KAAPI_CACHE_LINE)
+#define KAAPI_REPLY_DATA_SIZE_MAX (32 * KAAPI_CACHE_LINE)
   unsigned char udata[KAAPI_REPLY_DATA_SIZE_MAX]; /* task data */
 #endif /* private */
 
