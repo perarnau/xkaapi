@@ -354,6 +354,9 @@ int main( int argc, char** argv)
     }
   }
 
+  // add implicit -D__KACC_C2C_PASS__
+  preprocess_options.push_back( "-D__KACC_C2C_PASS__" );
+
   if (nolink && (oseen == false))
   {
     // need to generate the corresponding -o
