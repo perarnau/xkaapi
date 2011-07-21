@@ -2153,6 +2153,7 @@ typedef struct kaapi_splitter_context
 {
   kaapi_workqueue_t wq;
   kaapi_task_body_t body;
+  size_t ktr_size;
   size_t data_size;
   unsigned char data[1];
 } kaapi_splitter_context_t;

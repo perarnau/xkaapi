@@ -205,7 +205,8 @@ SgStatement* buildConvertLoop2Adaptative(
   SgScopeStatement*       loop,
   SgFunctionDeclaration*& thiefentrypoint,
   SgFunctionDeclaration*& splitter,
-  SgClassDeclaration*&    contexttype
+  SgClassDeclaration*&    contexttype,
+  KaapiTaskAttribute*     kta
 );
 
 /* return the structure containing variable in listvar 
@@ -213,7 +214,8 @@ SgStatement* buildConvertLoop2Adaptative(
 static SgClassDeclaration* buildOutlineArgStruct(
   const std::set<SgVariableSymbol*>& listvar,
   SgGlobal*                          scope,
-  SgClassDefinition*		     class_def
+  SgClassDefinition*		     class_def,
+  const char*			     name_prefix = NULL
 );
 
 /* return a function from the loop statement
@@ -224,7 +226,8 @@ static void buildLoopEntrypoint
  SgClassDeclaration* contexttype,
  SgGlobal* scope,
  SgFunctionDeclaration*& partial_decl,
- SgFunctionDeclaration*& tramp_decl
+ SgFunctionDeclaration*& tramp_decl,
+ KaapiTaskAttribute*     kta
 );
 
 /* */
@@ -363,7 +366,8 @@ public:
       typedefparamclass(0),
       func_decl(0),
       wrapper_decl(0),
-      fwd_wrapper_decl(0)
+      fwd_wrapper_decl(0),
+      class_decl(0)
   { }
 
   bool				                is_signature;      /* signature pragma */
@@ -387,6 +391,74 @@ public:
   SgFunctionDeclaration*            fwd_wrapper_decl;      /* its declaration */
 
   std::string                       name_format;       /* name of the format */
+
+  SgClassDeclaration*		    class_decl;
+
+  bool hasReduction() const
+  {
+    {
+      std::vector<KaapiTaskFormalParam>::const_iterator pos = formal_param.begin();
+      std::vector<KaapiTaskFormalParam>::const_iterator end = formal_param.end();
+      for (; pos != end; ++pos) if (pos->mode == KAAPI_CW_MODE) return true;
+    }
+    {
+      std::vector<KaapiTaskFormalParam>::const_iterator pos = extra_param.begin();
+      std::vector<KaapiTaskFormalParam>::const_iterator end = extra_param.end();
+      for (; pos != end; ++pos) if (pos->mode == KAAPI_CW_MODE) return true;
+    }
+    return false;
+  }
+
+  SgClassDeclaration* buildInsertClassDeclaration
+  (
+   SgGlobal* global_scope,
+   SgScopeStatement* local_scope,
+   SgClassDefinition* class_def = NULL
+  )
+  {
+    // if it does not exist yet, build a class
+    // declaration containing the formal params
+
+    if (class_decl != 0) return class_decl;
+
+    // build the variable symbol set from param vectors
+    std::set<SgVariableSymbol*> symbol_set;
+    {
+      std::vector<KaapiTaskFormalParam>::const_iterator pos = formal_param.begin();
+      std::vector<KaapiTaskFormalParam>::const_iterator end = formal_param.end();
+      for (; pos != end; ++pos)
+      {
+	SgVariableSymbol* const sym =
+	  isSgVariableSymbol(pos->initname->get_symbol_from_symbol_table());
+	if (sym == NULL) continue ;
+	symbol_set.insert(sym);
+      }
+    }
+    {
+      std::vector<KaapiTaskFormalParam>::const_iterator pos = extra_param.begin();
+      std::vector<KaapiTaskFormalParam>::const_iterator end = extra_param.end();
+      for (; pos != end; ++pos)
+      {
+	SgVariableSymbol* const sym =
+	  isSgVariableSymbol(pos->initname->get_symbol_from_symbol_table());
+	if (sym == NULL) continue ;
+	symbol_set.insert(sym);
+      }
+    }
+
+    // build type from symbol set
+    class_decl = buildOutlineArgStruct
+      (symbol_set, global_scope, class_def, "__kaapi_task_result_");
+    if (class_decl == NULL) return NULL;
+
+    // insert the declaration statement
+    SgFunctionDeclaration* const func_decl = 
+      SageInterface::getEnclosingFunctionDeclaration(local_scope, true);
+    if (func_decl == NULL) KaapiAbort("func_decl == NULL");
+    SageInterface::insertStatement(func_decl, class_decl);
+
+    return class_decl;
+  }
 };
 
 
@@ -679,11 +751,86 @@ void Parser::DoKaapiPragmaLoop( SgPragmaDeclaration* sgp )
               << std::endl;
     KaapiAbort("**** error");
   }
+
+  // parse as if it was a task declaration with
+  // output and reduction clauses.
+  // KaapiTaskDeclaration cannot be used since we
+  // dont have a functionDeclaration for adaptive
+  // loops (todo).
+
+  KaapiTaskAttribute* kta = new KaapiTaskAttribute;
+  kta->is_signature = false;
+  kta->func_decl = NULL;
+  kta->has_retval = false;
+  kta->has_this = false;
+
+  // __to_replace__
+  std::string clause;
+  ParseIdentifier(clause);
+
+  if (clause == "reduction")
+  {
+    skip_ws();
+    char c = readchar();
+    if (c == EOF || c != '(') KaapiAbort("syntax error '('");
+
+    while (true)
+    {
+      // parse reducer:variable pair
+      skip_ws();
+      std::string red_name;
+      ParseIdentifier(red_name);
+
+      std::map<std::string,KaapiReduceOperator_t*>::iterator red_pos =
+	kaapi_user_definedoperator.find(red_name);
+      if (red_pos == kaapi_user_definedoperator.end())
+	KaapiAbort("reduction operator not found");
+
+      skip_ws();
+      c = readchar();
+      if (c != ':') KaapiAbort("syntax error ':'");
+
+      skip_ws();
+      std::string var_name;
+      ParseIdentifier(var_name);
+
+      SgVariableSymbol* const var_sym =
+	SageInterface::lookupVariableSymbolInParentScopes(var_name, forloop);
+      if (var_sym == NULL) KaapiAbort("variable not found\n");
+
+      // build the corresponding parameter
+      KaapiTaskFormalParam param;
+      param.mode = KAAPI_CW_MODE;
+      param.redop = red_pos->second;
+      param.attr = new KaapiParamAttribute;
+      param.attr->type = KAAPI_ARRAY_NDIM_TYPE;
+      param.attr->storage = KAAPI_COL_MAJOR;
+      param.attr->dim = 0;
+      param.initname = var_sym->get_declaration();
+      param.type = param.initname->get_type();
+      param.kaapi_format = ConvertCType2KaapiFormat(param.type);
+
+      // insert in the kta
+      const unsigned int index = kta->formal_param.size();
+      kta->lookup.insert(std::make_pair(var_name, index));
+      kta->formal_param.push_back(param);
+      kta->israngedecl.push_back(0);
+
+      skip_ws();
+      c = readchar();
+      if (c != ',') break ;
+    }
+  }
+  else if (clause.size()) KaapiAbort("clause not implemented");
+  // __to_replace__
+
   SgFunctionDeclaration* entrypoint;
   SgFunctionDeclaration* splitter;
   SgClassDeclaration* contexttype;
 
-  SgStatement* stmt = buildConvertLoop2Adaptative( forloop, entrypoint, splitter, contexttype );
+  SgStatement* stmt = buildConvertLoop2Adaptative( forloop, entrypoint, splitter, contexttype, kta );
+
+  delete kta;
 
   if (stmt !=0)
   {
@@ -3471,6 +3618,20 @@ int main(int argc, char **argv)
           ((decl->get_declarationModifier()).get_storageModifier()).setExtern();
         }
 
+        {/* declare kaapi_adaptive_result_data function */
+          static SgName name("kaapi_adaptive_result_data");
+          SgFunctionDeclaration *decl = SageBuilder::buildNondefiningFunctionDeclaration(
+              name, 
+              SageBuilder::buildPointerType(SageBuilder::buildVoidType()),
+              SageBuilder::buildFunctionParameterList( 
+                  SageBuilder::buildFunctionParameterTypeList( 
+                    SageBuilder::buildPointerType(kaapi_stealcontext_ROSE_type)
+		)
+              ),
+              gscope);
+          ((decl->get_declarationModifier()).get_storageModifier()).setExtern();
+        }
+
         /* Process all #pragma */
         Rose_STL_Container<SgNode*> pragmaDeclarationList = NodeQuery::querySubTree (project,V_SgPragmaDeclaration);
         Rose_STL_Container<SgNode*>::iterator i;
@@ -5646,7 +5807,8 @@ static void buildLoopEntrypointBody
   SgGlobal*                    scope,
   bool			       hasIncrementalIterationSpace,
   bool			       isInclusiveUpperBound,
-  forLoopCanonicalizer::AffineVariableList&
+  forLoopCanonicalizer::AffineVariableList&,
+  KaapiTaskAttribute*
 );
 
 
@@ -5684,7 +5846,8 @@ SgStatement* buildConvertLoop2Adaptative(
   SgScopeStatement*       loop,
   SgFunctionDeclaration*& entrypoint,
   SgFunctionDeclaration*& splitter,
-  SgClassDeclaration*&    contexttype  
+  SgClassDeclaration*&    contexttype,
+  KaapiTaskAttribute*     kta
 )
 {
   entrypoint  = 0;
@@ -5826,7 +5989,7 @@ SgStatement* buildConvertLoop2Adaptative(
      The body will be fill after.
   */
   SgFunctionDeclaration* partial_decl;
-  buildLoopEntrypoint(this_class_def, contexttype, bigscope, partial_decl, entrypoint);
+  buildLoopEntrypoint(this_class_def, contexttype, bigscope, partial_decl, entrypoint, kta);
 
   /* The new block of instruction that will replace the forloop */
   SgBasicBlock* newbbcall = SageBuilder::buildBasicBlock();
@@ -5862,7 +6025,8 @@ SgStatement* buildConvertLoop2Adaptative(
     bigscope,
     hasIncrementalIterationSpace,
     isInclusiveUpperBound,
-    affine_vars
+    affine_vars,
+    kta
   );
 
   /* fwd declaration of the entry point */
@@ -6010,6 +6174,36 @@ SgStatement* buildConvertLoop2Adaptative(
     SageInterface::appendStatement(assign_stmt, newbbcall);
   }
 
+  // __splitter_context->ktr_size = sizeof(type)
+  {
+    SgExprStatement* assign_stmt;
+    if (kta->hasReduction())
+    {
+      // get the corresponding ktr type
+      SgClassDeclaration* const type_decl =
+	kta->buildInsertClassDeclaration(bigscope, forloop, this_class_def);
+      if (type_decl == NULL) KaapiAbort("type_decl == NULL");
+
+      assign_stmt = SageBuilder::buildAssignStatement
+      (
+       SageBuilder::buildOpaqueVarRefExp
+       ("__splitter_context->ktr_size", body),
+       SageBuilder::buildSizeOfOp(type_decl->get_type())
+      );
+    }
+    else
+    {
+      assign_stmt = SageBuilder::buildAssignStatement
+      (
+       SageBuilder::buildOpaqueVarRefExp
+       ("__splitter_context->ktr_size", body),
+       SageBuilder::buildUnsignedLongVal(0)
+      );
+    }
+    assign_stmt->set_endOfConstruct(SOURCE_POSITION);
+    SageInterface::appendStatement(assign_stmt, newbbcall);
+  }
+
   // __splitter_context->data_size = sizeof(type)
   {
     SgExprStatement* assign_stmt = SageBuilder::buildAssignStatement
@@ -6080,19 +6274,32 @@ SgStatement* buildConvertLoop2Adaptative(
   }
 
   // call the entrypoint
-  SgExprStatement* callStmt = SageBuilder::buildFunctionCallStmt
+  SgExprListExp* const callArgs = SageBuilder::buildExprListExp();
+  callArgs->append_expression
     (
-     SageBuilder::buildFunctionRefExp(entrypoint),
-     SageBuilder::buildExprListExp
-     (
       SageBuilder::buildCastExp
       (
        SageBuilder::buildVarRefExp(splitter_context),
        SageBuilder::buildPointerType(SageBuilder::buildVoidType())
-      ),
-      SageBuilder::buildVarRefExp(newkaapi_threadvar)
-     )
+      )
     );
+
+  callArgs->append_expression(SageBuilder::buildVarRefExp(newkaapi_threadvar));
+
+  if (kta->hasReduction())
+  {
+    SgExpression* const null_expr = SageBuilder::buildCastExp
+      (
+       SageBuilder::buildUnsignedLongVal(0),
+       SageBuilder::buildPointerType(SageBuilder::buildVoidType())
+      );
+
+    callArgs->append_expression(null_expr);
+  }
+
+  SgExprStatement* callStmt = SageBuilder::buildFunctionCallStmt
+    (SageBuilder::buildFunctionRefExp(entrypoint), callArgs);
+
   callStmt->set_endOfConstruct(SOURCE_POSITION);
   SageInterface::appendStatement( callStmt, newbbcall );
 
@@ -6358,12 +6565,14 @@ SgStatement* buildConvertLoop2Adaptative(
 static SgClassDeclaration* buildOutlineArgStruct(
   const std::set<SgVariableSymbol*>& listvar,
   SgGlobal*                          scope,
-  SgClassDefinition*		     this_class_def
+  SgClassDefinition*		     this_class_def,
+  const char*			     name_prefix
 )
 {
   static int cnt_sa = 0;
+  if (name_prefix == NULL) name_prefix = "__kaapi_task_arg_";
   std::ostringstream context_name;
-  context_name << "__kaapi_task_arg_" << cnt_sa++;
+  context_name << name_prefix << cnt_sa++;
   SgClassDeclaration* contexttype =  buildClassDeclarationAndDefinition( 
       context_name.str(),
       scope
@@ -6545,7 +6754,8 @@ static void buildLoopEntrypoint
  SgClassDeclaration* contexttype,
  SgGlobal* scope,
  SgFunctionDeclaration*& partial_decl,
- SgFunctionDeclaration*& tramp_decl
+ SgFunctionDeclaration*& tramp_decl,
+ KaapiTaskAttribute* kta
 )
 {
   // partial_decl is the function to be build
@@ -6583,6 +6793,19 @@ static void buildLoopEntrypoint
      )
     );
 
+  if (kta->hasReduction())
+  {
+    SageInterface::appendArg
+      (
+       parlist, 
+       SageBuilder::buildInitializedName
+       (
+	"__kaapi_sc",
+	SageBuilder::buildPointerType(kaapi_stealcontext_ROSE_type)
+       )
+      );
+  }
+
   // loop body must be a method. generate a trampoline routine.
   if (this_class_def != NULL)
   {
@@ -6617,7 +6840,8 @@ static void buildLoopEntrypointBody(
   SgGlobal*                    scope,
   bool			       hasIncrementalIterationSpace,
   bool			       isInclusiveUpperBound,
-  forLoopCanonicalizer::AffineVariableList& affine_vars
+  forLoopCanonicalizer::AffineVariableList& affine_vars,
+  KaapiTaskAttribute*	       kta
 )
 {
   SgBasicBlock* body = func->get_definition()->get_body();
@@ -6652,6 +6876,49 @@ static void buildLoopEntrypointBody(
       body
   );
   SageInterface::appendStatement( context, body );
+
+  // __kaapi_result = __kaapi_sc ? kaapi_adaptive_result_data(__kaapi_sc) : 0
+  SgVariableDeclaration* result_data = NULL;
+  if (kta->hasReduction() == true)
+  {
+    SgClassDeclaration* const class_decl =
+      kta->buildInsertClassDeclaration(scope, isSgScopeStatement(loopbody));
+    if (class_decl == NULL) KaapiAbort("class_decl == NULL");
+
+    SgExpression* const null_expr = SageBuilder::buildCastExp
+      (
+       SageBuilder::buildUnsignedLongVal(0),
+       SageBuilder::buildPointerType(SageBuilder::buildVoidType())
+      );
+
+    SgExpression* const noteq_expr = SageBuilder::buildNotEqualOp
+      (SageBuilder::buildOpaqueVarRefExp("__kaapi_sc", body), null_expr);
+
+    SgFunctionCallExp* const call_expr = SageBuilder::buildFunctionCallExp
+      (
+       "kaapi_adaptive_result_data",
+       SageBuilder::buildPointerType(SageBuilder::buildVoidType()),
+       SageBuilder::buildExprListExp
+       (SageBuilder::buildOpaqueVarRefExp("__kaapi_sc", body)),
+       body
+      );
+
+    SgConditionalExp* const tern_expr =
+      SageBuilder::buildConditionalExp(noteq_expr, call_expr, null_expr);
+
+    result_data = SageBuilder::buildVariableDeclaration
+    (
+      "__kaapi_result",
+      SageBuilder::buildPointerType(class_decl->get_type()),
+      SageBuilder::buildAssignInitializer
+      (
+       SageBuilder::buildCastExp
+       (tern_expr, SageBuilder::buildPointerType(class_decl->get_type()))
+      ),
+      body
+    );
+    SageInterface::appendStatement(result_data, body);
+  }
 
   /* 
    * Generate the body of the entry point 
@@ -6793,6 +7060,24 @@ static void buildLoopEntrypointBody(
   }
 
   /* begin adaptive section */
+  SgBinaryOp* flags_op;
+  if (kta->hasReduction() == true)
+  {
+    flags_op = SageBuilder::buildBitOrOp
+      (
+       SageBuilder::buildOpaqueVarRefExp( "KAAPI_SC_CONCURRENT", body),
+       SageBuilder::buildOpaqueVarRefExp( "KAAPI_SC_PREEMPTION", body)
+      );
+  }
+  else
+  {
+    flags_op = SageBuilder::buildBitOrOp
+      (
+       SageBuilder::buildOpaqueVarRefExp( "KAAPI_SC_CONCURRENT", body),
+       SageBuilder::buildOpaqueVarRefExp( "KAAPI_SC_NOPREEMPTION", body)
+      );
+  }
+
   SgExprStatement* wc_init = SageBuilder::buildExprStatement(
     SageBuilder::buildAssignOp(
       SageBuilder::buildVarRefExp(wc),
@@ -6801,14 +7086,7 @@ static void buildLoopEntrypointBody(
         SageBuilder::buildPointerType(kaapi_stealcontext_ROSE_type), 
         SageBuilder::buildExprListExp(
           SageBuilder::buildVarRefExp(newkaapi_threadvar),
-#if 0
-          SageBuilder::buildIntVal(0), /* flag !! */
-#else
-          SageBuilder::buildBitOrOp(
-            SageBuilder::buildOpaqueVarRefExp( "KAAPI_SC_CONCURRENT", body),
-            SageBuilder::buildOpaqueVarRefExp( "KAAPI_SC_NOPREEMPTION", body)
-          ),
-#endif
+	  flags_op,
           SageBuilder::buildAddressOfOp(SageBuilder::buildFunctionRefExp(splitter)),
           SageBuilder::buildVarRefExp(splitter_context)
         ),
