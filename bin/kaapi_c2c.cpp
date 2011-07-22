@@ -368,7 +368,8 @@ public:
       func_decl(0),
       wrapper_decl(0),
       fwd_wrapper_decl(0),
-      class_decl(0)
+      class_decl(0),
+      reducer_decl(0)
   { }
 
   bool				                is_signature;      /* signature pragma */
@@ -394,6 +395,7 @@ public:
   std::string                       name_format;       /* name of the format */
 
   SgClassDeclaration*		    class_decl;
+  SgFunctionDeclaration*	    reducer_decl;
 
   bool hasReduction() const
   {
@@ -464,6 +466,15 @@ public:
     SageInterface::insertStatement(func_decl, class_decl);
 
     return class_decl;
+  }
+
+  SgFunctionDeclaration* buildInsertReducer()
+  {
+    if (reducer_decl) return reducer_decl;
+
+    // TODO
+
+    return reducer_decl;
   }
 };
 
@@ -3629,6 +3640,20 @@ int main(int argc, char **argv)
           SgFunctionDeclaration *decl = SageBuilder::buildNondefiningFunctionDeclaration(
               name, 
               SageBuilder::buildPointerType(SageBuilder::buildVoidType()),
+              SageBuilder::buildFunctionParameterList( 
+                  SageBuilder::buildFunctionParameterTypeList( 
+                    SageBuilder::buildPointerType(kaapi_stealcontext_ROSE_type)
+		)
+              ),
+              gscope);
+          ((decl->get_declarationModifier()).get_storageModifier()).setExtern();
+        }
+
+        {/* declare kaapi_get_thief_head function */
+          static SgName name("kaapi_get_thief_head");
+          SgFunctionDeclaration *decl = SageBuilder::buildNondefiningFunctionDeclaration(
+              name, 
+              SageBuilder::buildPointerType(SageBuilder::buildPointerType(kaapi_taskadaptive_result_ROSE_type)),
               SageBuilder::buildFunctionParameterList( 
                   SageBuilder::buildFunctionParameterTypeList( 
                     SageBuilder::buildPointerType(kaapi_stealcontext_ROSE_type)
@@ -7277,9 +7302,47 @@ static void buildLoopEntrypointBody(
     // false statment: master, wait for thieves, reduce, end_adaptive
     SgBasicBlock* const false_bb = SageBuilder::buildBasicBlock();
     {
-      // TODO: wait for next thief
+      // while ((ktr = kaapi_get_thief(sc)) != NULL) kaapi_preempt_thief();
 
-      // TODO: reduce the thief
+      SgExpression* const null_expr = SageBuilder::buildCastExp
+	(
+	 SageBuilder::buildUnsignedLongVal(0),
+	 SageBuilder::buildPointerType(SageBuilder::buildVoidType())
+	);
+
+      SgVariableDeclaration* const ktr_decl = SageBuilder::buildVariableDeclaration
+	(
+	 "__kaapi_ktr",
+	 SageBuilder::buildPointerType(kaapi_taskadaptive_result_ROSE_type),
+	 0, 
+	 isSgScopeStatement(false_bb)
+	);
+      SageInterface::appendStatement(ktr_decl, isSgScopeStatement(false_bb));
+
+      SgVarRefExp* const ktr_expr = SageBuilder::buildVarRefExp(ktr_decl);
+
+      SgExpression* const getthief_expr = SageBuilder::buildFunctionCallExp
+	(    
+	 "kaapi_get_thief_head",
+	 SageBuilder::buildPointerType(kaapi_taskadaptive_result_ROSE_type),
+	 SageBuilder::buildExprListExp(SageBuilder::buildVarRefExp(wc)),
+	 scope
+	);
+
+      SgExprStatement* const assign_stmt =
+	SageBuilder::buildAssignStatement(ktr_expr, getthief_expr);
+
+      SgNotEqualOp* const cond_stmt = SageBuilder::buildNotEqualOp
+	(assign_stmt->get_expression(), null_expr);
+
+      SgBasicBlock* const while_bb = SageBuilder::buildBasicBlock();
+
+      // TODO: preempt_stmt
+      // kaapi_preempt_thief(sc, ktr, NULL, reducer, (void*)&work);
+
+      SgWhileStmt* const while_stmt =
+	SageBuilder::buildWhileStmt(cond_stmt, isSgStatement(while_bb));
+      false_bb->append_statement(while_stmt);
 
       SgExprStatement* call_stmt = SageBuilder::buildFunctionCallStmt
 	(    
