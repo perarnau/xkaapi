@@ -592,7 +592,7 @@ public:
        ),
        reducer_body
       );
-    SageInterface::prependStatement(tw_decl, reducer_body);
+    SageInterface::appendStatement(tw_decl, reducer_body);
 
     // work_type* __kaapi_vw = (work_type*)__kaapi_varg;
     SgVariableDeclaration* vw_decl = SageBuilder::buildVariableDeclaration
@@ -603,14 +603,14 @@ public:
        (
 	SageBuilder::buildCastExp
 	(
-	 SageBuilder::buildVarRefExp("__kaapi_tdata", reducer_body),
+	 SageBuilder::buildVarRefExp("__kaapi_varg", reducer_body),
 	 SageBuilder::buildPointerType(work_type)
 	),
 	0
        ),
        reducer_body
       );
-    SageInterface::prependStatement(vw_decl, reducer_body);
+    SageInterface::appendStatement(vw_decl, reducer_body);
 
     // for each reduction variable, apply redop(tw->p_xxx, &vw->xxx)
     std::set<KaapiTaskFormalParam*> param_set;
@@ -619,22 +619,39 @@ public:
     std::set<KaapiTaskFormalParam*>::const_iterator end = param_set.end();
     for (; pos != end; ++pos)
     {
-#if 0 // TODO
+      // FIXME: for now, only dimensionless types, non
+      // builtin operators supported by this function
+
       KaapiReduceOperator_t* const red_op = (*pos)->redop;
-      if (red_op->isbuiltin)
-      {
-      }
-      else
-      {
-      }
-#endif // TODO
+      if (red_op->isbuiltin) KaapiAbort("isbuiltin not yet supported");
+
+      std::string lhs_name;
+      lhs_name.append("tw->p_");
+      lhs_name.append((*pos)->initname->get_name().str());
+
+      std::string rhs_name;
+      rhs_name.append("&vw->");
+      rhs_name.append((*pos)->initname->get_name().str());
+
+      SgExprStatement* const call_stmt = SageBuilder::buildFunctionCallStmt
+	(
+	 red_op->name_reducor,
+	 SageBuilder::buildVoidType(), 
+	 SageBuilder::buildExprListExp
+	 (
+	  SageBuilder::buildVarRefExp(lhs_name, reducer_body),
+	  SageBuilder::buildVarRefExp(rhs_name, reducer_body)
+	 ),
+	 reducer_body
+	);
+
+      SageInterface::appendStatement(call_stmt, reducer_body);
     }
 
     // return 0
     SgReturnStmt* const return_stmt = SageBuilder::buildReturnStmt
       (SageBuilder::buildIntVal(0));
-    SgFunctionDefinition* const reducer_def = reducer_decl->get_definition();
-    reducer_def->append_statement(return_stmt);
+    SageInterface::appendStatement(return_stmt, reducer_body);
 
     return reducer_decl;
   }
