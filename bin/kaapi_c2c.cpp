@@ -468,11 +468,86 @@ public:
     return class_decl;
   }
 
-  SgFunctionDeclaration* buildInsertReducer()
+  SgFunctionDeclaration* buildInsertReducer(SgGlobal* global_scope)
   {
+    // build a reducer function. this function iterate over the
+    // variable symbol set and call the corresponding reducer
+
+    static unsigned int id = 0;
+
     if (reducer_decl) return reducer_decl;
 
-    // TODO
+    SgFunctionParameterList* const param_list =
+      SageBuilder::buildFunctionParameterList();
+
+    SageInterface::appendArg
+      (
+       param_list, 
+       SageBuilder::buildInitializedName
+       (
+	"__kaapi_sc",
+	SageBuilder::buildPointerType(kaapi_stealcontext_ROSE_type)
+       )
+      );
+
+    SageInterface::appendArg
+      (
+       param_list, 
+       SageBuilder::buildInitializedName
+       (
+	"__kaapi_targ",
+	SageBuilder::buildPointerType(SageBuilder::buildVoidType())
+       )
+      );
+
+    SageInterface::appendArg
+      (
+       param_list, 
+       SageBuilder::buildInitializedName
+       (
+	"__kaapi_tdata",
+	SageBuilder::buildPointerType(SageBuilder::buildVoidType())
+       )
+      );
+
+    SageInterface::appendArg
+      (
+       param_list, 
+       SageBuilder::buildInitializedName
+       (
+	"__kaapi_tsize",
+	SageBuilder::buildUnsignedLongType()
+       )
+      );
+
+    SageInterface::appendArg
+      (
+       param_list, 
+       SageBuilder::buildInitializedName
+       (
+	"__kaapi_varg",
+	SageBuilder::buildPointerType(SageBuilder::buildVoidType())
+       )
+      );
+
+    std::ostringstream reducer_name;
+    reducer_name << "__kaapi_reducer_" << (id++);
+    reducer_decl = SageBuilder::buildDefiningFunctionDeclaration
+      (
+       reducer_name.str(),
+       SageBuilder::buildIntType(),
+       param_list,
+       global_scope
+      );
+    reducer_decl->get_declarationModifier().get_storageModifier().setStatic();
+    reducer_decl->set_endOfConstruct(SOURCE_POSITION);
+    SageInterface::prependStatement
+      (reducer_decl, isSgScopeStatement(global_scope));
+
+    SgReturnStmt* const return_stmt = SageBuilder::buildReturnStmt
+      (SageBuilder::buildIntVal(0));
+    SgFunctionDefinition* const reducer_def = reducer_decl->get_definition();
+    reducer_def->append_statement(return_stmt);
 
     return reducer_decl;
   }
@@ -7337,8 +7412,28 @@ static void buildLoopEntrypointBody(
 
       SgBasicBlock* const while_bb = SageBuilder::buildBasicBlock();
 
-      // TODO: preempt_stmt
+      SgFunctionDeclaration* const reducer_decl = kta->buildInsertReducer(scope);
+
       // kaapi_preempt_thief(sc, ktr, NULL, reducer, (void*)&work);
+      SgExprStatement* const preempt_stmt = SageBuilder::buildFunctionCallStmt
+	(
+	 "kaapi_preempt_thief",
+	 SageBuilder::buildIntType(),
+	 SageBuilder::buildExprListExp
+	 (
+	  SageBuilder::buildVarRefExp(wc),
+	  ktr_expr,
+	  null_expr,
+	  SageBuilder::buildFunctionRefExp(reducer_decl),
+	  SageBuilder::buildCastExp
+	  (
+	   SageBuilder::buildVarRefExp(context),
+	   SageBuilder::buildPointerType(SageBuilder::buildVoidType())
+	  )
+         ),
+	 scope
+        );
+      while_bb->append_statement(preempt_stmt);
 
       SgWhileStmt* const while_stmt =
 	SageBuilder::buildWhileStmt(cond_stmt, isSgStatement(while_bb));
