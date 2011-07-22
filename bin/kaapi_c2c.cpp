@@ -215,7 +215,8 @@ static SgClassDeclaration* buildOutlineArgStruct(
   const std::set<SgVariableSymbol*>& listvar,
   SgGlobal*                          scope,
   SgClassDefinition*		     class_def,
-  const char*			     name_prefix = NULL
+  const char*			     name_prefix = NULL,
+  bool				     do_pointers = true
 );
 
 /* return a function from the loop statement
@@ -409,20 +410,8 @@ public:
     return false;
   }
 
-  SgClassDeclaration* buildInsertClassDeclaration
-  (
-   SgGlobal* global_scope,
-   SgScopeStatement* local_scope,
-   SgClassDefinition* class_def = NULL
-  )
+  void buildReductionSet(std::set<SgVariableSymbol*>& symbol_set)
   {
-    // if it does not exist yet, build a class
-    // declaration containing the formal params
-
-    if (class_decl != 0) return class_decl;
-
-    // build the variable symbol set from param vectors
-    std::set<SgVariableSymbol*> symbol_set;
     {
       std::vector<KaapiTaskFormalParam>::const_iterator pos = formal_param.begin();
       std::vector<KaapiTaskFormalParam>::const_iterator end = formal_param.end();
@@ -445,10 +434,27 @@ public:
 	symbol_set.insert(sym);
       }
     }
+  }
+
+  SgClassDeclaration* buildInsertClassDeclaration
+  (
+   SgGlobal* global_scope,
+   SgScopeStatement* local_scope,
+   SgClassDefinition* class_def = NULL
+  )
+  {
+    // if it does not exist yet, build a class
+    // declaration containing the formal params
+
+    if (class_decl != 0) return class_decl;
+
+    // build the variable symbol set from param vectors
+    std::set<SgVariableSymbol*> symbol_set;
+    buildReductionSet(symbol_set);
 
     // build type from symbol set
     class_decl = buildOutlineArgStruct
-      (symbol_set, global_scope, class_def, "__kaapi_task_result_");
+      (symbol_set, global_scope, class_def, "__kaapi_task_result_", false);
     if (class_decl == NULL) return NULL;
 
     // insert the declaration statement
@@ -6566,7 +6572,8 @@ static SgClassDeclaration* buildOutlineArgStruct(
   const std::set<SgVariableSymbol*>& listvar,
   SgGlobal*                          scope,
   SgClassDefinition*		     this_class_def,
-  const char*			     name_prefix
+  const char*			     name_prefix,
+  bool				     do_pointers
 )
 {
   static int cnt_sa = 0;
@@ -6588,14 +6595,29 @@ static SgClassDeclaration* buildOutlineArgStruct(
   std::set<SgVariableSymbol*>::iterator ivar_end = listvar.end();
   while (ivar_beg != ivar_end)
   {
-    /* add p_<name> */
-    SgVariableDeclaration* memberDeclaration =
-      SageBuilder::buildVariableDeclaration (
-        "p_" + (*ivar_beg)->get_name(),
-        SageBuilder::buildPointerType((*ivar_beg)->get_type()),
-        0, 
-        contexttype->get_definition()
-    );
+    SgVariableDeclaration* memberDeclaration;
+    if (do_pointers == true)
+    {
+      /* add p_<name> */
+      memberDeclaration = SageBuilder::buildVariableDeclaration
+	(
+	 "p_" + (*ivar_beg)->get_name(),
+	 SageBuilder::buildPointerType((*ivar_beg)->get_type()),
+	 0, 
+	 contexttype->get_definition()
+	);
+    }
+    else
+    {
+      /* add p_<name> */
+      memberDeclaration = SageBuilder::buildVariableDeclaration
+	(
+	 (*ivar_beg)->get_name(),
+	 (*ivar_beg)->get_type(),
+	 0, 
+	 contexttype->get_definition()
+	);
+    }
     memberDeclaration->set_endOfConstruct(SOURCE_POSITION);
     contexttype->get_definition()->append_member(memberDeclaration);
 
@@ -6605,15 +6627,28 @@ static SgClassDeclaration* buildOutlineArgStruct(
   // add p_this
   if (this_class_def != NULL)
   {
-    SgVariableDeclaration* const memberDeclaration =
-      SageBuilder::buildVariableDeclaration
-      (
-       "p_this",
-       SageBuilder::buildPointerType
-       (this_class_def->get_declaration()->get_type()),
-       0,
-       contexttype->get_definition()
-      );
+    SgVariableDeclaration* memberDeclaration;
+    if (do_pointers == true)
+    {
+      memberDeclaration = SageBuilder::buildVariableDeclaration
+	(
+	 "p_this",
+	 SageBuilder::buildPointerType
+	 (this_class_def->get_declaration()->get_type()),
+	 0,
+	 contexttype->get_definition()
+	);
+    }
+    else
+    {
+      memberDeclaration = SageBuilder::buildVariableDeclaration
+	(
+	 "this",
+	 this_class_def->get_declaration()->get_type(),
+	 0,
+	 contexttype->get_definition()
+	);
+    }
     memberDeclaration->set_endOfConstruct(SOURCE_POSITION);
     contexttype->get_definition()->append_member(memberDeclaration);
   }
@@ -7015,7 +7050,7 @@ static void buildLoopEntrypointBody(
     else {
       SgVariableDeclaration* alocalvar;
 
-      // dont assign if affine, since its done at each pop
+      // dont assign if affine, since it is done at each pop
       typedef forLoopCanonicalizer::AffineVariable AffineVariable;
       std::list<AffineVariable>::iterator pos = affine_vars.begin();
       std::list<AffineVariable>::iterator end = affine_vars.end();
@@ -7198,21 +7233,83 @@ static void buildLoopEntrypointBody(
   new_forloop->set_endOfConstruct(SOURCE_POSITION);
   SageInterface::appendStatement( new_forloop, isSgBasicBlock(while_popsizeloop->get_body( ))  );
 
-  SageInterface::appendStatement( while_popsizeloop, body  );
-  
-  /* end_adaptive
-  */
-  SgExprStatement* wc_term = SageBuilder::buildFunctionCallStmt(    
-      "kaapi_task_end_adaptive",
-      SageBuilder::buildVoidType(), 
-      SageBuilder::buildExprListExp(
-        SageBuilder::buildVarRefExp(wc)
-      ),
-      body
-  );
-  wc_term->set_endOfConstruct(SOURCE_POSITION);
-  SageInterface::appendStatement( wc_term, body );
+  SageInterface::appendStatement( while_popsizeloop, body );
 
+  if (kta->hasReduction())
+  {
+    // there is reduction. if we are the master, wait for thieves
+    // to terminate and reduce their result. When there is no more
+    // thief, update the original variables.
+    // if we are a slave, update the ktr.
+
+    SgExpression* const null_expr = SageBuilder::buildCastExp
+      (
+       SageBuilder::buildUnsignedLongVal(0),
+       SageBuilder::buildPointerType(SageBuilder::buildVoidType())
+      );
+
+    SgNotEqualOp* const cond_stmt = SageBuilder::buildNotEqualOp
+      (SageBuilder::buildVarRefExp(result_data), null_expr);
+
+    // true statment: thief, update data
+    SgBasicBlock* const true_bb = SageBuilder::buildBasicBlock();
+    {
+      std::set<SgVariableSymbol*> symbol_set;
+      kta->buildReductionSet(symbol_set);
+
+      std::set<SgVariableSymbol*>::const_iterator pos = symbol_set.begin();
+      std::set<SgVariableSymbol*>::const_iterator end = symbol_set.end();
+      for (; pos != end; ++pos)
+      {
+	SgVarRefExp* const ref_expr =
+	  SageBuilder::buildOpaqueVarRefExp((*pos)->get_name(), body);
+
+	SgArrowExp* const arrow_expr = SageBuilder::buildArrowExp
+	  (SageBuilder::buildVarRefExp(result_data), ref_expr);
+
+	SgExprStatement* const assign_stmt =
+	  SageBuilder::buildAssignStatement(arrow_expr, ref_expr);
+
+	true_bb->append_statement(assign_stmt);
+      }
+    }
+
+    // false statment: master, wait for thieves, reduce, end_adaptive
+    SgBasicBlock* const false_bb = SageBuilder::buildBasicBlock();
+    {
+      // TODO: wait for next thief
+
+      // TODO: reduce the thief
+
+      SgExprStatement* call_stmt = SageBuilder::buildFunctionCallStmt
+	(    
+	 "kaapi_task_end_adaptive",
+	 SageBuilder::buildVoidType(), 
+	 SageBuilder::buildExprListExp(SageBuilder::buildVarRefExp(wc)),
+	 body
+	);
+      false_bb->append_statement(call_stmt);
+    }
+
+    SgIfStmt* const if_stmt = SageBuilder::buildIfStmt
+      (cond_stmt, isSgStatement(true_bb), isSgStatement(false_bb));
+    if_stmt->set_endOfConstruct(SOURCE_POSITION);
+    SageInterface::appendStatement(if_stmt, body);
+  }
+  else
+  {
+    // no reduction, unconditionnally call kaapi_task_end_adpative
+    SgExprStatement* call_stmt = SageBuilder::buildFunctionCallStmt
+      (    
+       "kaapi_task_end_adaptive",
+       SageBuilder::buildVoidType(), 
+       SageBuilder::buildExprListExp(SageBuilder::buildVarRefExp(wc)),
+       body
+      );
+    call_stmt->set_endOfConstruct(SOURCE_POSITION);
+    SageInterface::appendStatement(call_stmt, body);
+  }
+  
   return;
 }
 
