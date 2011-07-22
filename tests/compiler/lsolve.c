@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <math.h>
 
@@ -11,6 +12,7 @@ typedef double real_type;
 
 static void reduce_sum(real_type* lhs, const real_type* rhs)
 {
+  printf("reduce_sum: %lx, %lx\n", (uintptr_t)lhs, (uintptr_t)rhs);
   *lhs += *rhs;
 }
 
@@ -38,6 +40,8 @@ static void lsolve
   unsigned int i;
   unsigned int j;
   real_type sum;
+
+  printf("sum: %lx\n", (uintptr_t)&sum);
 
   for (i = 0; i < m; ++i)
   {
@@ -104,8 +108,8 @@ static void get_ab
 
 int main(int ac, char** av)
 {
-  static const unsigned int m = 4;
-  static const unsigned int lda = 4;
+  static const unsigned int m = 1024;
+  static const unsigned int lda = 1024;
 
   real_type* const a = malloc(m * m * sizeof(real_type));
   real_type* const b = malloc(m * sizeof(real_type));

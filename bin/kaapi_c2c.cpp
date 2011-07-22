@@ -7477,7 +7477,10 @@ static void buildLoopEntrypointBody(
       }
     }
 
-    // false statment: master, wait for thieves, reduce, end_adaptive
+    // false statment. master, update variables with our local
+    // result, wait for thieves, reduce, end_adaptive.
+    // FIXME: we should reduce, not assign
+    // TODO: should update output too.
     SgBasicBlock* const false_bb = SageBuilder::buildBasicBlock();
     {
       // while ((ktr = kaapi_get_thief(sc)) != NULL) kaapi_preempt_thief();
@@ -7496,6 +7499,33 @@ static void buildLoopEntrypointBody(
 	 isSgScopeStatement(false_bb)
 	);
       SageInterface::appendStatement(ktr_decl, isSgScopeStatement(false_bb));
+
+      // update original result before reducing thieves
+      std::set<SgVariableSymbol*> symbol_set;
+      kta->buildReductionSet(symbol_set);
+
+      std::set<SgVariableSymbol*>::const_iterator pos = symbol_set.begin();
+      std::set<SgVariableSymbol*>::const_iterator end = symbol_set.end();
+      for (; pos != end; ++pos)
+      {
+	// *__kaapi_context->p_xxx = xxx;
+
+	std::string lhs_string;
+	lhs_string.append("*__kaapi_context->p_");
+	lhs_string.append((*pos)->get_name().str());
+
+	std::string rhs_string;
+	rhs_string.append((*pos)->get_name().str());
+
+	SgExprStatement* const assign_stmt = SageBuilder::buildAssignStatement
+	  (
+	   SageBuilder::buildVarRefExp(lhs_string, body),
+	   SageBuilder::buildVarRefExp(rhs_string, body)
+	  );
+	false_bb->append_statement(assign_stmt);
+      }
+
+      // preempt and reduce thieves
 
       SgVarRefExp* const ktr_expr = SageBuilder::buildVarRefExp(ktr_decl);
 
