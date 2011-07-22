@@ -14,7 +14,7 @@ static void reduce_sum(real_type* lhs, const real_type* rhs)
   *lhs += *rhs;
 }
 
-#pragma kaapi declare reduction(reduce_sum: reduce_sum)
+#pragma kaapi declare reduction(reduce_sum_id: reduce_sum)
 
 
 /* solve ax = b */
@@ -42,7 +42,7 @@ static void lsolve
   for (i = 0; i < m; ++i)
   {
     sum = 0;
-#pragma kaapi loop reduction(reduce_sum:sum)
+#pragma kaapi loop reduction(reduce_sum_id:sum)
     for (j = 0; j < i; ++j)
       sum += a[i * lda + j] * x[j];
     x[i] = (b[i] - sum) / a[i * lda + i];

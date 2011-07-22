@@ -570,7 +570,7 @@ public:
       );
     reducer_decl->get_declarationModifier().get_storageModifier().setStatic();
     reducer_decl->set_endOfConstruct(SOURCE_POSITION);
-    SageInterface::prependStatement
+    SageInterface::appendStatement
       (reducer_decl, isSgScopeStatement(global_scope));
 
     // build the reducer body.
@@ -626,11 +626,11 @@ public:
       if (red_op->isbuiltin) KaapiAbort("isbuiltin not yet supported");
 
       std::string lhs_name;
-      lhs_name.append("tw->p_");
+      lhs_name.append("__kaapi_vw->p_");
       lhs_name.append((*pos)->initname->get_name().str());
 
       std::string rhs_name;
-      rhs_name.append("&vw->");
+      rhs_name.append("&__kaapi_tw->");
       rhs_name.append((*pos)->initname->get_name().str());
 
       SgExprStatement* const call_stmt = SageBuilder::buildFunctionCallStmt
