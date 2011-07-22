@@ -7500,7 +7500,23 @@ static void buildLoopEntrypointBody(
 	);
       SageInterface::appendStatement(ktr_decl, isSgScopeStatement(false_bb));
 
-      // update original result before reducing thieves
+      // we cannot use the original variable for reduction
+      // since they may be used by the thieves during. Thus,
+      // we create a second temporary __kaapi_context. This
+      // context member point to the master local variable,
+      // on which the reduction is made. when all the thieves
+      // have been preempted, do original variable update.
+
+      SgVariableDeclaration* const tmp_context =
+	SageBuilder::buildVariableDeclaration
+	(
+	 "__kaapi_tmp_context",
+	 contexttype->get_type(),
+	 0,
+	 false_bb
+	);
+      false_bb->append_statement(tmp_context);
+
       std::set<SgVariableSymbol*> symbol_set;
       kta->buildReductionSet(symbol_set);
 
@@ -7508,10 +7524,10 @@ static void buildLoopEntrypointBody(
       std::set<SgVariableSymbol*>::const_iterator end = symbol_set.end();
       for (; pos != end; ++pos)
       {
-	// *__kaapi_context->p_xxx = xxx;
+	// __kaapi_tmp_context.p_xxx = &xxx;
 
 	std::string lhs_string;
-	lhs_string.append("*__kaapi_context->p_");
+	lhs_string.append("__kaapi_tmp_context.p_");
 	lhs_string.append((*pos)->get_name().str());
 
 	std::string rhs_string;
@@ -7520,7 +7536,8 @@ static void buildLoopEntrypointBody(
 	SgExprStatement* const assign_stmt = SageBuilder::buildAssignStatement
 	  (
 	   SageBuilder::buildVarRefExp(lhs_string, body),
-	   SageBuilder::buildVarRefExp(rhs_string, body)
+	   SageBuilder::buildAddressOfOp
+	   (SageBuilder::buildVarRefExp(rhs_string, body))
 	  );
 	false_bb->append_statement(assign_stmt);
       }
@@ -7561,7 +7578,8 @@ static void buildLoopEntrypointBody(
 	  SageBuilder::buildFunctionRefExp(reducer_decl),
 	  SageBuilder::buildCastExp
 	  (
-	   SageBuilder::buildVarRefExp(context),
+	   SageBuilder::buildAddressOfOp
+	   (SageBuilder::buildVarRefExp(tmp_context)),
 	   SageBuilder::buildPointerType(SageBuilder::buildVoidType())
 	  )
          ),
@@ -7573,6 +7591,29 @@ static void buildLoopEntrypointBody(
 	SageBuilder::buildWhileStmt(cond_stmt, isSgStatement(while_bb));
       false_bb->append_statement(while_stmt);
 
+      // update the original values
+      pos = symbol_set.begin();
+      end = symbol_set.end();
+      for (; pos != end; ++pos)
+      {
+	// *__kaapi_context->p_xxx = xxx;
+
+	std::string lhs_string;
+	lhs_string.append("*__kaapi_context->p_");
+	lhs_string.append((*pos)->get_name().str());
+
+	std::string rhs_string;
+	rhs_string.append((*pos)->get_name().str());
+
+	SgExprStatement* const assign_stmt = SageBuilder::buildAssignStatement
+	  (
+	   SageBuilder::buildVarRefExp(lhs_string, body),
+	   SageBuilder::buildVarRefExp(rhs_string, body)
+	  );
+	false_bb->append_statement(assign_stmt);
+      }
+
+      // kaapi_task_end_adaptive
       SgExprStatement* call_stmt = SageBuilder::buildFunctionCallStmt
 	(    
 	 "kaapi_task_end_adaptive",

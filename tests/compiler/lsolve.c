@@ -12,7 +12,7 @@ typedef double real_type;
 
 static void reduce_sum(real_type* lhs, const real_type* rhs)
 {
-  printf("reduce_sum: %lx, %lx\n", (uintptr_t)lhs, (uintptr_t)rhs);
+  printf("reduce_sum: %lx(%lf), %lx(%lf)\n", (uintptr_t)lhs, *lhs, (uintptr_t)rhs, *rhs);
   *lhs += *rhs;
 }
 
