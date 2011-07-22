@@ -419,6 +419,8 @@ public:
       std::vector<KaapiTaskFormalParam>::const_iterator end = formal_param.end();
       for (; pos != end; ++pos)
       {
+	if (pos->mode != KAAPI_CW_MODE) continue ;
+
 	SgVariableSymbol* const sym =
 	  isSgVariableSymbol(pos->initname->get_symbol_from_symbol_table());
 	if (sym == NULL) continue ;
@@ -430,10 +432,35 @@ public:
       std::vector<KaapiTaskFormalParam>::const_iterator end = extra_param.end();
       for (; pos != end; ++pos)
       {
+	if (pos->mode != KAAPI_CW_MODE) continue ;
+
 	SgVariableSymbol* const sym =
 	  isSgVariableSymbol(pos->initname->get_symbol_from_symbol_table());
 	if (sym == NULL) continue ;
 	symbol_set.insert(sym);
+      }
+    }
+  }
+
+  void buildReductionSet(std::set<KaapiTaskFormalParam*>& param_set)
+  {
+    // fixme: redundant with the above function
+    {
+      std::vector<KaapiTaskFormalParam>::iterator pos = formal_param.begin();
+      std::vector<KaapiTaskFormalParam>::iterator end = formal_param.end();
+      for (; pos != end; ++pos)
+      {
+	if (pos->mode != KAAPI_CW_MODE) continue ;
+	param_set.insert(&(*pos));
+      }
+    }
+    {
+      std::vector<KaapiTaskFormalParam>::iterator pos = extra_param.begin();
+      std::vector<KaapiTaskFormalParam>::iterator end = extra_param.end();
+      for (; pos != end; ++pos)
+      {
+	if (pos->mode != KAAPI_CW_MODE) continue ;
+	param_set.insert(&(*pos));
       }
     }
   }
@@ -468,7 +495,9 @@ public:
     return class_decl;
   }
 
-  SgFunctionDeclaration* buildInsertReducer(SgGlobal* global_scope)
+  // TODO: should be non member static function
+  SgFunctionDeclaration* buildInsertReducer
+  (SgType* work_type, SgType* result_type, SgGlobal* global_scope)
   {
     // build a reducer function. this function iterate over the
     // variable symbol set and call the corresponding reducer
@@ -516,7 +545,7 @@ public:
        SageBuilder::buildInitializedName
        (
 	"__kaapi_tsize",
-	SageBuilder::buildUnsignedLongType()
+	SageBuilder::buildOpaqueType("size_t", global_scope)
        )
       );
 
@@ -544,6 +573,64 @@ public:
     SageInterface::prependStatement
       (reducer_decl, isSgScopeStatement(global_scope));
 
+    // build the reducer body.
+    SgBasicBlock* const reducer_body = reducer_decl->get_definition()->get_body();
+
+    // result_type* __kaapi_tw = (result_type*)__kaapi_tdata;
+    SgVariableDeclaration* tw_decl = SageBuilder::buildVariableDeclaration
+      ( 
+       "__kaapi_tw", 
+       SageBuilder::buildPointerType(result_type),
+       SageBuilder::buildAssignInitializer
+       (
+	SageBuilder::buildCastExp
+	(
+	 SageBuilder::buildVarRefExp("__kaapi_tdata", reducer_body),
+	 SageBuilder::buildPointerType(result_type)
+	),
+	0
+       ),
+       reducer_body
+      );
+    SageInterface::prependStatement(tw_decl, reducer_body);
+
+    // work_type* __kaapi_vw = (work_type*)__kaapi_varg;
+    SgVariableDeclaration* vw_decl = SageBuilder::buildVariableDeclaration
+      ( 
+       "__kaapi_vw", 
+       SageBuilder::buildPointerType(work_type),
+       SageBuilder::buildAssignInitializer
+       (
+	SageBuilder::buildCastExp
+	(
+	 SageBuilder::buildVarRefExp("__kaapi_tdata", reducer_body),
+	 SageBuilder::buildPointerType(work_type)
+	),
+	0
+       ),
+       reducer_body
+      );
+    SageInterface::prependStatement(vw_decl, reducer_body);
+
+    // for each reduction variable, apply redop(tw->p_xxx, &vw->xxx)
+    std::set<KaapiTaskFormalParam*> param_set;
+    buildReductionSet(param_set);
+    std::set<KaapiTaskFormalParam*>::const_iterator pos = param_set.begin();
+    std::set<KaapiTaskFormalParam*>::const_iterator end = param_set.end();
+    for (; pos != end; ++pos)
+    {
+#if 0 // TODO
+      KaapiReduceOperator_t* const red_op = (*pos)->redop;
+      if (red_op->isbuiltin)
+      {
+      }
+      else
+      {
+      }
+#endif // TODO
+    }
+
+    // return 0
     SgReturnStmt* const return_stmt = SageBuilder::buildReturnStmt
       (SageBuilder::buildIntVal(0));
     SgFunctionDefinition* const reducer_def = reducer_decl->get_definition();
@@ -5917,7 +6004,6 @@ static void buildLoopEntrypointBody
   KaapiTaskAttribute*
 );
 
-
 /** Transform a loop with independent iteration in an adaptive form
     The loop must have a cannonical form:
        for ( i = begin; i<end; ++i)
@@ -7412,7 +7498,8 @@ static void buildLoopEntrypointBody(
 
       SgBasicBlock* const while_bb = SageBuilder::buildBasicBlock();
 
-      SgFunctionDeclaration* const reducer_decl = kta->buildInsertReducer(scope);
+      SgFunctionDeclaration* const reducer_decl = kta->buildInsertReducer
+	(contexttype->get_type(), kta->class_decl->get_type(), scope);
 
       // kaapi_preempt_thief(sc, ktr, NULL, reducer, (void*)&work);
       SgExprStatement* const preempt_stmt = SageBuilder::buildFunctionCallStmt
@@ -7570,7 +7657,6 @@ static void RecGenerateGetDimensionExpression(
     KaapiAbort("*** Bad expression for dimension");
   }
 }
-
 
 /***/
 std::string GenerateGetDimensionExpression(
