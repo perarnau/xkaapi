@@ -12,7 +12,7 @@ typedef double real_type;
 
 static void reduce_sum(real_type* lhs, const real_type* rhs)
 {
-  printf("reduce_sum: %lx(%lf), %lx(%lf)\n", (uintptr_t)lhs, *lhs, (uintptr_t)rhs, *rhs);
+/*   printf("reduce_sum: %lx(%lf), %lx(%lf)\n", (uintptr_t)lhs, *lhs, (uintptr_t)rhs, *rhs); */
   *lhs += *rhs;
 }
 
@@ -40,8 +40,6 @@ static void lsolve
   unsigned int i;
   unsigned int j;
   real_type sum;
-
-  printf("sum: %lx\n", (uintptr_t)&sum);
 
   for (i = 0; i < m; ++i)
   {
@@ -78,7 +76,7 @@ static int check
       sum += a[i * lda + j] * x[j];
 
     /* above threshold error */
-    if (fabs(sum - b[i]) > 0.001) return -1;
+    if (fabs(sum - b[i]) > 0.0001) return -1;
   }
 
   return 0;
@@ -99,7 +97,7 @@ static void get_ab
   {
     b[i] = 1;
     for (j = 0; j < m; ++j)
-      a[i * lda + j] = 1;
+      a[i * lda + j] = i;
   }
 }
 

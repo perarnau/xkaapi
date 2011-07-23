@@ -12,7 +12,7 @@ typedef double real_type;
 
 static void reduce_sum(real_type* lhs, const real_type* rhs)
 {
-  printf("reduce_sum: %lx(%lf), %lx(%lf)\n", (uintptr_t)lhs, *lhs, (uintptr_t)rhs, *rhs);
+  /* printf("reduce_sum: %lx(%lf), %lx(%lf)\n", (uintptr_t)lhs, *lhs, (uintptr_t)rhs, *rhs); */
   *lhs += *rhs;
 }
 
@@ -24,7 +24,7 @@ static real_type accumulate(const real_type* v, unsigned int n)
   unsigned int i;
   real_type sum = 0;
 #pragma kaapi loop reduction(reduce_sum_id:sum)
-  for (i = 0; i < n; ++i) sum += v[i];
+  for (i = 0; i < n; ++i) sum += v[i] * sin(v[i]) * cos(v[i]);
   return sum;
 }
 
@@ -32,7 +32,7 @@ static real_type accumulate(const real_type* v, unsigned int n)
 
 int main(int ac, char** av)
 {
-  static const unsigned int n = 1024 * 1024;
+  static const unsigned int n = 32 * 1024 * 1024;
   real_type* const v = malloc(n * sizeof(real_type));
   real_type sum;
   unsigned int i;
