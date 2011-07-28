@@ -75,7 +75,7 @@ redo_steal:
   if (nmiss == 3) return 0;
 
   /* do not steal if range size <= PAR_GRAIN */
-#define CONFIG_PAR_GRAIN 32
+#define CONFIG_PAR_GRAIN 256
   range_size = kaapi_workqueue_size(&vw->wq);
 
   if (range_size <= CONFIG_PAR_GRAIN) return 0;

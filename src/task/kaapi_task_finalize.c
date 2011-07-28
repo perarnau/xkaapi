@@ -88,6 +88,14 @@ void kaapi_task_end_adaptive( kaapi_stealcontext_t* sc )
    */
   if (sc->header.flag & KAAPI_SC_PREEMPTION)
   {
+    /* fixme: we assume that no steal can occur if the
+       workqueue is empty. but kaapi_thread_restore_frame
+       deallocates data, and the workqueue can now point
+       everywhere. a steal may thus occur. I doubt the
+       above call to kaapi_synchronize_steal is enough.
+     */
+    kaapi_synchronize_steal(sc);
+
     kaapi_assert_debug(sc->thieves.list.head == 0);
     kaapi_task_setbody(sc->ownertask, kaapi_nop_body);
     kaapi_thread_restore_frame(thread, &sc->frame);

@@ -5427,9 +5427,6 @@ bool forLoopCanonicalizer::getNormalizedStep
 	// must be at least one arg
 	if (expr_list.size() == 0)
 	{
-#ifdef CONFIG_LOCAL_DEBUG
-	  printf("invalid list size: %u\n", expr_list.size());
-#endif
 	  return false;
 	}
 
@@ -5457,9 +5454,6 @@ bool forLoopCanonicalizer::getNormalizedStep
       {
 	if (expr_list.size() < (2 - has_this))
 	{
-#ifdef CONFIG_LOCAL_DEBUG
-	  printf("invalid list size: %u\n", expr_list.size());
-#endif
 	  return false;
 	}
 
@@ -5471,9 +5465,6 @@ bool forLoopCanonicalizer::getNormalizedStep
       {
 	if (expr_list.size() < (2 - has_this))
 	{
-#ifdef CONFIG_LOCAL_DEBUG
-	  printf("invalid list size: %u\n", expr_list.size());
-#endif
 	  return false;
 	}
 
@@ -7451,7 +7442,112 @@ static void buildLoopEntrypointBody(
        SageBuilder::buildPointerType(SageBuilder::buildVoidType())
       );
 
-    SgNotEqualOp* const cond_stmt = SageBuilder::buildNotEqualOp
+    // while ((ktr = kaapi_get_thief(sc)) != NULL) kaapi_preempt_thief();
+
+    SgVariableDeclaration* const ktr_decl = SageBuilder::buildVariableDeclaration
+      (
+       "__kaapi_ktr",
+       SageBuilder::buildPointerType(kaapi_taskadaptive_result_ROSE_type),
+       0, 
+       isSgScopeStatement(body)
+      );
+    body->prepend_statement(ktr_decl);
+
+    // we cannot use the original variable for reduction
+    // since they may be used by the thieves during. Thus,
+    // we create a second temporary __kaapi_context. This
+    // context member point to the master local variable,
+    // on which the reduction is made. when all the thieves
+    // have been preempted, do original variable update.
+
+    SgVariableDeclaration* const tmp_context =
+      SageBuilder::buildVariableDeclaration
+      (
+       "__kaapi_tmp_context",
+       contexttype->get_type(),
+       0,
+       body
+      );
+    body->prepend_statement(tmp_context);
+
+    // build tmp_context
+    {
+      std::set<SgVariableSymbol*> symbol_set;
+      kta->buildReductionSet(symbol_set);
+
+      std::set<SgVariableSymbol*>::const_iterator pos = symbol_set.begin();
+      std::set<SgVariableSymbol*>::const_iterator end = symbol_set.end();
+      for (; pos != end; ++pos)
+      {
+	// __kaapi_tmp_context.p_xxx = &xxx;
+
+	std::string lhs_string;
+	lhs_string.append("__kaapi_tmp_context.p_");
+	lhs_string.append((*pos)->get_name().str());
+
+	std::string rhs_string;
+	rhs_string.append((*pos)->get_name().str());
+
+	SgExprStatement* const assign_stmt = SageBuilder::buildAssignStatement
+	  (
+	   SageBuilder::buildVarRefExp(lhs_string, body),
+	   SageBuilder::buildAddressOfOp
+	   (SageBuilder::buildVarRefExp(rhs_string, body))
+	  );
+	body->append_statement(assign_stmt);
+      }
+    } // build tmp_context
+
+    // preempt and reduce thieves
+    SgVarRefExp* const ktr_expr = SageBuilder::buildVarRefExp(ktr_decl);
+    SgExpression* const getthief_expr = SageBuilder::buildFunctionCallExp
+      (    
+       "kaapi_get_thief_head",
+       SageBuilder::buildPointerType(kaapi_taskadaptive_result_ROSE_type),
+       SageBuilder::buildExprListExp(SageBuilder::buildVarRefExp(wc)),
+       scope
+      );
+
+    SgExprStatement* const assign_stmt =
+      SageBuilder::buildAssignStatement(ktr_expr, getthief_expr);
+
+    SgNotEqualOp* cond_stmt = SageBuilder::buildNotEqualOp
+      (assign_stmt->get_expression(), null_expr);
+
+    SgBasicBlock* const while_bb = SageBuilder::buildBasicBlock();
+
+    SgFunctionDeclaration* const reducer_decl = kta->buildInsertReducer
+      (contexttype->get_type(), kta->class_decl->get_type(), scope);
+
+    // kaapi_preempt_thief(sc, ktr, NULL, reducer, (void*)&work);
+    SgExprStatement* const preempt_stmt = SageBuilder::buildFunctionCallStmt
+      (
+       "kaapi_preempt_thief",
+       SageBuilder::buildIntType(),
+       SageBuilder::buildExprListExp
+       (
+	SageBuilder::buildVarRefExp(wc),
+	ktr_expr,
+	null_expr,
+	SageBuilder::buildFunctionRefExp(reducer_decl),
+	SageBuilder::buildCastExp
+	(
+	 SageBuilder::buildAddressOfOp
+	 (SageBuilder::buildVarRefExp(tmp_context)),
+	 SageBuilder::buildPointerType(SageBuilder::buildVoidType())
+        )
+       ),
+       scope
+      );
+    while_bb->append_statement(preempt_stmt);
+
+    SgWhileStmt* const while_stmt =
+      SageBuilder::buildWhileStmt(cond_stmt, isSgStatement(while_bb));
+    body->append_statement(while_stmt);
+
+    // if (__kaapi_result != NULL)
+
+    cond_stmt = SageBuilder::buildNotEqualOp
       (SageBuilder::buildVarRefExp(result_data), null_expr);
 
     // true statment: thief, update data
@@ -7477,123 +7573,19 @@ static void buildLoopEntrypointBody(
       }
     }
 
-    // false statment. master, update variables with our local
-    // result, wait for thieves, reduce, end_adaptive.
+    // false statment, master, update variables with our local result
     // FIXME: we should reduce, not assign
     // TODO: should update output too.
     SgBasicBlock* const false_bb = SageBuilder::buildBasicBlock();
     {
-      // while ((ktr = kaapi_get_thief(sc)) != NULL) kaapi_preempt_thief();
-
-      SgExpression* const null_expr = SageBuilder::buildCastExp
-	(
-	 SageBuilder::buildUnsignedLongVal(0),
-	 SageBuilder::buildPointerType(SageBuilder::buildVoidType())
-	);
-
-      SgVariableDeclaration* const ktr_decl = SageBuilder::buildVariableDeclaration
-	(
-	 "__kaapi_ktr",
-	 SageBuilder::buildPointerType(kaapi_taskadaptive_result_ROSE_type),
-	 0, 
-	 isSgScopeStatement(false_bb)
-	);
-      SageInterface::appendStatement(ktr_decl, isSgScopeStatement(false_bb));
-
-      // we cannot use the original variable for reduction
-      // since they may be used by the thieves during. Thus,
-      // we create a second temporary __kaapi_context. This
-      // context member point to the master local variable,
-      // on which the reduction is made. when all the thieves
-      // have been preempted, do original variable update.
-
-      SgVariableDeclaration* const tmp_context =
-	SageBuilder::buildVariableDeclaration
-	(
-	 "__kaapi_tmp_context",
-	 contexttype->get_type(),
-	 0,
-	 false_bb
-	);
-      false_bb->append_statement(tmp_context);
+      // update the original values
 
       std::set<SgVariableSymbol*> symbol_set;
       kta->buildReductionSet(symbol_set);
 
       std::set<SgVariableSymbol*>::const_iterator pos = symbol_set.begin();
       std::set<SgVariableSymbol*>::const_iterator end = symbol_set.end();
-      for (; pos != end; ++pos)
-      {
-	// __kaapi_tmp_context.p_xxx = &xxx;
 
-	std::string lhs_string;
-	lhs_string.append("__kaapi_tmp_context.p_");
-	lhs_string.append((*pos)->get_name().str());
-
-	std::string rhs_string;
-	rhs_string.append((*pos)->get_name().str());
-
-	SgExprStatement* const assign_stmt = SageBuilder::buildAssignStatement
-	  (
-	   SageBuilder::buildVarRefExp(lhs_string, body),
-	   SageBuilder::buildAddressOfOp
-	   (SageBuilder::buildVarRefExp(rhs_string, body))
-	  );
-	false_bb->append_statement(assign_stmt);
-      }
-
-      // preempt and reduce thieves
-
-      SgVarRefExp* const ktr_expr = SageBuilder::buildVarRefExp(ktr_decl);
-
-      SgExpression* const getthief_expr = SageBuilder::buildFunctionCallExp
-	(    
-	 "kaapi_get_thief_head",
-	 SageBuilder::buildPointerType(kaapi_taskadaptive_result_ROSE_type),
-	 SageBuilder::buildExprListExp(SageBuilder::buildVarRefExp(wc)),
-	 scope
-	);
-
-      SgExprStatement* const assign_stmt =
-	SageBuilder::buildAssignStatement(ktr_expr, getthief_expr);
-
-      SgNotEqualOp* const cond_stmt = SageBuilder::buildNotEqualOp
-	(assign_stmt->get_expression(), null_expr);
-
-      SgBasicBlock* const while_bb = SageBuilder::buildBasicBlock();
-
-      SgFunctionDeclaration* const reducer_decl = kta->buildInsertReducer
-	(contexttype->get_type(), kta->class_decl->get_type(), scope);
-
-      // kaapi_preempt_thief(sc, ktr, NULL, reducer, (void*)&work);
-      SgExprStatement* const preempt_stmt = SageBuilder::buildFunctionCallStmt
-	(
-	 "kaapi_preempt_thief",
-	 SageBuilder::buildIntType(),
-	 SageBuilder::buildExprListExp
-	 (
-	  SageBuilder::buildVarRefExp(wc),
-	  ktr_expr,
-	  null_expr,
-	  SageBuilder::buildFunctionRefExp(reducer_decl),
-	  SageBuilder::buildCastExp
-	  (
-	   SageBuilder::buildAddressOfOp
-	   (SageBuilder::buildVarRefExp(tmp_context)),
-	   SageBuilder::buildPointerType(SageBuilder::buildVoidType())
-	  )
-         ),
-	 scope
-        );
-      while_bb->append_statement(preempt_stmt);
-
-      SgWhileStmt* const while_stmt =
-	SageBuilder::buildWhileStmt(cond_stmt, isSgStatement(while_bb));
-      false_bb->append_statement(while_stmt);
-
-      // update the original values
-      pos = symbol_set.begin();
-      end = symbol_set.end();
       for (; pos != end; ++pos)
       {
 	// *__kaapi_context->p_xxx = xxx;
@@ -7612,38 +7604,27 @@ static void buildLoopEntrypointBody(
 	  );
 	false_bb->append_statement(assign_stmt);
       }
-
-      // kaapi_task_end_adaptive
-      SgExprStatement* call_stmt = SageBuilder::buildFunctionCallStmt
-	(    
-	 "kaapi_task_end_adaptive",
-	 SageBuilder::buildVoidType(), 
-	 SageBuilder::buildExprListExp(SageBuilder::buildVarRefExp(wc)),
-	 body
-	);
-      false_bb->append_statement(call_stmt);
     }
 
     SgIfStmt* const if_stmt = SageBuilder::buildIfStmt
       (cond_stmt, isSgStatement(true_bb), isSgStatement(false_bb));
     if_stmt->set_endOfConstruct(SOURCE_POSITION);
     SageInterface::appendStatement(if_stmt, body);
-  }
-  else
-  {
-    // no reduction, unconditionnally call kaapi_task_end_adpative
-    SgExprStatement* call_stmt = SageBuilder::buildFunctionCallStmt
-      (    
-       "kaapi_task_end_adaptive",
-       SageBuilder::buildVoidType(), 
-       SageBuilder::buildExprListExp(SageBuilder::buildVarRefExp(wc)),
-       body
-      );
-    call_stmt->set_endOfConstruct(SOURCE_POSITION);
-    SageInterface::appendStatement(call_stmt, body);
-  }
+
+  } // kta->hasReduction() == true
+
+  // unconditionnally call kaapi_task_end_adpative
+  SgExprStatement* call_stmt = SageBuilder::buildFunctionCallStmt
+    (    
+     "kaapi_task_end_adaptive",
+     SageBuilder::buildVoidType(), 
+     SageBuilder::buildExprListExp(SageBuilder::buildVarRefExp(wc)),
+     body
+    );
+  call_stmt->set_endOfConstruct(SOURCE_POSITION);
+  SageInterface::appendStatement(call_stmt, body);
   
-  return;
+  return ;
 }
 
 /***/
