@@ -15,5 +15,5 @@ kaapi_event_reader_SOURCES=kaapi_event_reader.cpp PajeGenerator.cpp PajeGenerato
 
 kaapi_event_reader_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
 kaapi_event_reader_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIPROGS_BUILD_CXXFLAGS)
-kaapi_event_reader_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIPROGS_BUILD_LDFLAGS)
-kaapi_event_reader_LDADD   =$(LIBS)        $(KAAPIPROGS_BUILD_LIBS)
+kaapi_event_reader_LDFLAGS =$(AM_LDFLAGS)
+kaapi_event_reader_LDADD   =$(LIBS)
