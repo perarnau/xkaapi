@@ -223,7 +223,7 @@ int main(int ac, char** av)
   static double array[ITEM_COUNT];
   
   /* initialize the runtime */
-  kaapi_init(&ac, &av);
+  kaapi_init(1, &ac, &av);
 
   /* create performance counter id set. use the
      KAAPI_PERF_PAPIES=a,b,c environ variable to
