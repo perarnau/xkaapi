@@ -315,8 +315,7 @@ private:
   static bool getNormalizedStep
   (SgExpression*, unsigned int&, SgExpression*&, SgExpression*&);
 
-  forLoopCanonicalizer
-  (SgForStatement* for_stmt, std::list<AffineVariable>& affine_vars)
+  forLoopCanonicalizer(SgForStatement* for_stmt, std::list<AffineVariable>& affine_vars)
     : for_stmt_(for_stmt), affine_vars_(affine_vars) {}
 
   // applied transforms and passes
@@ -472,9 +471,11 @@ bool forLoopCanonicalizer::doStrictIntegerTransform()
   }
 
   //
-  // generate the variable holding the difference
-  // unsigned long count = ((hi - lo) % incr ? 1 : 0) + (hi - lo) / incr;
-  // use signed long type as in kaapi workqueue
+  // generate the variable holding the difference. note that the
+  // resulting count may be positive even if the loop cond is not
+  // initially true. This case is handled by the canonicalizer
+  // in generateInitialTest.
+  // long count = ((hi - lo) % incr ? 1 : 0) + (hi - lo) / incr;
 
   // scope
   SgScopeStatement* const count_scope =
@@ -1207,7 +1208,10 @@ bool forLoopCanonicalizer::findAffineVariables(void)
 }
 
 bool forLoopCanonicalizer::canonicalize
-(SgForStatement* for_stmt, std::list<AffineVariable>& affine_vars)
+(
+ SgForStatement* for_stmt,
+ std::list<AffineVariable>& affine_vars
+)
 {
   forLoopCanonicalizer canon(for_stmt, affine_vars);
 
@@ -1314,6 +1318,8 @@ SgStatement* buildConvertLoop2Adaptative(
 
   SgForStatement* forloop = isSgForStatement( loop );
   SgScopeStatement* scope = SageInterface::getScope( forloop->get_parent() );
+
+  SgExpression* const saved_test_expr = forloop->get_test_expr();
 
   std::list<forLoopCanonicalizer::AffineVariable> affine_vars;
   if (forLoopCanonicalizer::canonicalize(forloop, affine_vars) == false)
@@ -2005,8 +2011,17 @@ SgStatement* buildConvertLoop2Adaptative(
   /* append the new function declaration at the end of the scope */
   if (this_class_def == NULL)
     SageInterface::appendStatement ( entrypoint, bigscope );
-  
-  return newbbcall;
+
+  // a test of the loop condition must be done since
+  // the generated iterator may be positive even if
+  // the loop condition is not initially met.
+  SgIfStmt* const if_stmt = SageBuilder::buildIfStmt
+  (
+   isSgStatement(SageBuilder::buildExprStatement(saved_test_expr)),
+   isSgStatement(newbbcall),
+   NULL
+  );
+  return isSgStatement(if_stmt);
 }
 
 
