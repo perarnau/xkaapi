@@ -238,6 +238,36 @@ void Parser::DoKaapiPragmaLoop( SgPragmaDeclaration* sgp )
       std::string red_name;
       ParseIdentifier(red_name);
 
+      if (red_name.empty())
+      {
+	/* try to read char -> basic operator +, - etc */
+	char c;
+	c = readchar();
+	if ((c == '+') || (c == '-') || (c == '*') || (c == '^'))
+	{
+	  red_name = c;
+	  c = readchar();
+	}
+	else if ((c == '&') || (c == '|'))
+	{ /* may be && or || */
+	  char c1;
+	  c1 = readchar();
+	  if (c != c1)
+	  {
+	    red_name = c;
+	  }
+	  else
+	  {
+	    if (c == '&') red_name = "&&";
+	    else red_name = "||";
+	  }
+	}
+	else
+	{
+	  KaapiAbort("invalid reduction operator");
+	}
+      }
+
       std::map<std::string,KaapiReduceOperator_t*>::iterator red_pos =
 	kaapi_user_definedoperator.find(red_name);
       if (red_pos == kaapi_user_definedoperator.end())
@@ -285,7 +315,8 @@ void Parser::DoKaapiPragmaLoop( SgPragmaDeclaration* sgp )
   SgFunctionDeclaration* splitter;
   SgClassDeclaration* contexttype;
 
-  SgStatement* stmt = buildConvertLoop2Adaptative( forloop, entrypoint, splitter, contexttype, kta );
+  SgStatement* stmt = buildConvertLoop2Adaptative
+    ( forloop, entrypoint, splitter, contexttype, kta );
 
   delete kta;
 
@@ -293,7 +324,8 @@ void Parser::DoKaapiPragmaLoop( SgPragmaDeclaration* sgp )
   {
 #if 0
     SageInterface::prependStatement(
-      SageBuilder::buildNondefiningFunctionDeclaration( entrypoint, forloop->get_scope() ),
+      SageBuilder::buildNondefiningFunctionDeclaration
+      ( entrypoint, forloop->get_scope() ),
       forloop->get_scope()
     );
 #endif
