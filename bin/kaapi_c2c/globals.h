@@ -83,6 +83,8 @@ extern std::set<SgFunctionDeclaration*> all_signature_func_decl;
 extern std::set<std::string> all_template_instanciate; 
 extern std::set<SgFunctionDefinition*> all_template_instanciate_definition;
 
+extern std::map<std::string,KaapiReduceOperator_t*> kaapi_user_definedoperator;
+
 extern SgType* kaapi_access_ROSE_type;
 extern SgType* kaapi_task_ROSE_type;
 extern SgType* kaapi_thread_ROSE_type;

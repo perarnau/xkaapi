@@ -60,6 +60,8 @@ std::set<SgFunctionDeclaration*> all_signature_func_decl;
 std::set<std::string> all_template_instanciate;
 std::set<SgFunctionDefinition*> all_template_instanciate_definition;
 
+std::map<std::string,KaapiReduceOperator_t*> kaapi_user_definedoperator;
+
 SgType* kaapi_access_ROSE_type;
 SgType* kaapi_task_ROSE_type;
 SgType* kaapi_thread_ROSE_type;
