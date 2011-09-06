@@ -47,46 +47,67 @@
 #include <string>
 #include <iostream>
 #include <algorithm>
+#include <vector>
 #include <map>
 #include <list>
 #include <set>
 #include <sstream>
 #include <iomanip>
+#include <string.h>
 #include <ctype.h>
 #include <time.h>
 #include <stdexcept>
 #include "rose_headers.h"
 
+
+class fortranDirectiveProcessing : public AstSimpleProcessing
+{
+private:
+  static bool is_sentinel(char c)
+  {
+    return c == '!' || c == '*' || c == 'C';
+  }
+
+  static bool is_directive(const std::string& s)
+  {
+    static const char token[] = "$KAAPI";
+
+    if (s.size() < (sizeof(token) + 1 - 1)) return false;
+    if (is_sentinel(s[0]) == false) return false;
+    return 0 == memcmp(s.data() + 1, token, sizeof(token) - 1);
+  }
+
+public:
+  fortranDirectiveProcessing() {}
+
+  virtual void visit(SgNode* node)
+  {
+    SgLocatedNode* const locatedNode = isSgLocatedNode(node);
+    if (locatedNode == NULL) return ;
+
+    AttachedPreprocessingInfoType* const comments =
+      locatedNode->getAttachedPreprocessingInfo();
+    if (comments == NULL) return ;
+
+    AttachedPreprocessingInfoType::iterator pos = comments->begin();
+    AttachedPreprocessingInfoType::iterator end = comments->end();
+    for (; pos != end; ++pos)
+    {
+      const std::string& s = (*pos)->getString();
+      if (is_directive(s) == false) continue ;
+
+      printf("new_directive: %s\n", (*pos)->getString().c_str());
+    }
+  }
+};
+
+
+
 int main(int argc, char **argv) 
 {
-  try {
-    // debugging
-    // SgProject::set_verbose(10);
-
-    SgProject* project = new SgProject();
-    project->parse(argc, argv);
-
-    int nfile = project->numberOfFiles();
-    for (int i=0; i<nfile; ++i)
-    {
-      SgSourceFile* file = isSgSourceFile((*project)[i]);
-      if (file !=0)
-      {
-        /* else add extern definition in the scope */
-        SgGlobal* gscope = file->get_globalScope();
-
-	std::ostringstream fout; //("kaapi-format.cpp");
-
-	SageInterface::addTextForUnparser
-	  (file->get_globalScope(), fout.str(), AstUnparseAttribute::e_after);
-      }
-    }
-
-    project->unparse();
-  } catch (...)
-  {
-    printf("****[kaapi_f2f] catch unknown exception");
-    return -1;
-  }
+  SgProject* project = frontend(argc, argv);
+  project->set_Fortran_only(true);
+  fortranDirectiveProcessing().traverse(project, preorder);
+  backend(project);
   return 0;
 }
