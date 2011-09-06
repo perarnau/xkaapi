@@ -687,6 +687,31 @@ AC_SUBST(BOOST_BUILD_CFLAGS)
 AC_SUBST(BOOST_BUILD_LDFLAGS)
 AC_SUBST(BOOST_BUILD_LIBS)
 
+dnl -----------------------------------------------------------------------
+dnl The "--with-java" required for kacc compiler with rose
+dnl -----------------------------------------------------------------------
+AC_ARG_WITH([java],[AS_HELP_STRING([--with-java=<dir>],
+		 [choose java directory. required for if enable kaapi compiler])],
+     [],
+     [with_java=no]
+)
+
+AS_CASE([$with_java],
+  [no], [dnl
+  ], 
+  [*], [dnl
+    AC_MSG_NOTICE([Adding java support '$with_java'])
+    # not using AC*DEFINE as we want this available for examples too
+    KAAPI_USE_JAVA=yes
+    JAVA_BUILD_LDFLAGS=-L$with_java
+    JAVA_BUILD_LIBS=
+    AC_MSG_NOTICE([JAVA_BUILD_LDFLAGS=$JAVA_BUILD_LDFLAGS])
+    AC_MSG_NOTICE([JAVA_BUILD_LIBS=$JAVA_BUILD_LIBS])
+  ]
+)
+AC_SUBST(JAVA_BUILD_LDFLAGS)
+AC_SUBST(JAVA_BUILD_LIBS)
+
 
 dnl -----------------------------------------------------------------------
 dnl The "--with-rose"
@@ -706,8 +731,8 @@ AS_CASE([$with_rose],
     KAAPI_USE_ROSE=yes
     ROSE_BUILD_CPPFLAGS="-I$with_rose/include $BOOST_BUILD_CPPFLAGS"
     ROSE_BUILD_CFLAGS=
-    ROSE_BUILD_LDFLAGS="-L$with_rose/lib $BOOST_BUILD_LDFLAGS"
-    ROSE_BUILD_LIBS="-framework JavaVM -L$with_rose/lib -lrose $ROSE_BUILD_LDFLAGS  $BOOST_BUILD_LDFLAGS -lm -lboost_date_time -lboost_thread -lboost_filesystem -lboost_program_options -lboost_regex -lboost_system -lboost_wave -ldl"
+    ROSE_BUILD_LDFLAGS="-L$with_rose/lib $BOOST_BUILD_LDFLAGS $JAVA_BUILD_LDFLAGS"
+    ROSE_BUILD_LIBS="-framework JavaVM -L$with_rose/lib -lrose $ROSE_BUILD_LDFLAGS  $BOOST_BUILD_LDFLAGS -lm -lboost_date_time -lboost_thread -lboost_filesystem -lboost_program_options -lboost_regex -lboost_system -lboost_wave -ldl $JAVA_BUILD_LDFLAGS -ljvm"
     AC_MSG_NOTICE([ROSE_BUILD_CPPFLAGS=$ROSE_BUILD_CPPFLAGS])
     AC_MSG_NOTICE([ROSE_BUILD_CFLAGS=$ROSE_BUILD_CFLAGS])
     AC_MSG_NOTICE([ROSE_BUILD_LDFLAGS=$ROSE_BUILD_LDFLAGS])
@@ -824,6 +849,7 @@ AC_CONFIG_FILES([
 	bin/Makefile
 	bin/kacc/Makefile
 	bin/kaapi_c2c/Makefile
+	bin/kaapi_f2f/Makefile
 	bin/kaapi_event_reader/Makefile
 	bin/kacc/kacc.cpp
 	tests/static/Makefile
