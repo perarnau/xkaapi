@@ -704,7 +704,7 @@ AS_CASE([$with_java],
     # not using AC*DEFINE as we want this available for examples too
     KAAPI_USE_JAVA=yes
     JAVA_BUILD_LDFLAGS=-L$with_java
-    JAVA_BUILD_LIBS=
+    JAVA_BUILD_LIBS=-ljvm
     AC_MSG_NOTICE([JAVA_BUILD_LDFLAGS=$JAVA_BUILD_LDFLAGS])
     AC_MSG_NOTICE([JAVA_BUILD_LIBS=$JAVA_BUILD_LIBS])
   ]
@@ -732,7 +732,7 @@ AS_CASE([$with_rose],
     ROSE_BUILD_CPPFLAGS="-I$with_rose/include $BOOST_BUILD_CPPFLAGS"
     ROSE_BUILD_CFLAGS=
     ROSE_BUILD_LDFLAGS="-L$with_rose/lib $BOOST_BUILD_LDFLAGS $JAVA_BUILD_LDFLAGS"
-    ROSE_BUILD_LIBS="-framework JavaVM -L$with_rose/lib -lrose $ROSE_BUILD_LDFLAGS  $BOOST_BUILD_LDFLAGS -lm -lboost_date_time -lboost_thread -lboost_filesystem -lboost_program_options -lboost_regex -lboost_system -lboost_wave -ldl $JAVA_BUILD_LDFLAGS -ljvm"
+    ROSE_BUILD_LIBS="-framework JavaVM -L$with_rose/lib -lrose $ROSE_BUILD_LDFLAGS  $BOOST_BUILD_LDFLAGS -lm -lboost_date_time -lboost_thread -lboost_filesystem -lboost_program_options -lboost_regex -lboost_system -lboost_wave -ldl $JAVA_BUILD_LDFLAGS $JAVA_BUILD_LIBS"
     AC_MSG_NOTICE([ROSE_BUILD_CPPFLAGS=$ROSE_BUILD_CPPFLAGS])
     AC_MSG_NOTICE([ROSE_BUILD_CFLAGS=$ROSE_BUILD_CFLAGS])
     AC_MSG_NOTICE([ROSE_BUILD_LDFLAGS=$ROSE_BUILD_LDFLAGS])
