@@ -49,6 +49,7 @@
 #include <sstream>
 #include <string.h> // strdup
 
+#define SATIC_GASNET_LIB 0
 #if !defined(__pic__) && defined(__GNUC__)
 #  if defined(KAAPI_USE_GASNET)
 #    include "gasnet/kagasnet_init.h"
@@ -93,7 +94,7 @@ void Network::initialize( int* argc, char*** argv )
 
 #if !defined(__pic__) && defined(__GNUC__)
 #  if defined(KAAPI_USE_GASNET)
-#pragma message "Static link with gasnet"
+#pragma warning "Static link with gasnet"
     { /* link statically with gasnet */
       ka::DeviceFactory* df_gasnet = gasnet_factory();
       int err = DeviceFactory::register_factory(df_gasnet->get_name(), df_gasnet );

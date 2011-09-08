@@ -1,12 +1,13 @@
 /*
 ** xkaapi
 ** 
-** Created on Thu Feb 24 15:35:09 2011
-** Copyright 2011 INRIA.
+** Created on Tue Mar 31 15:19:09 2009
+** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** vincent.danjean@imag.fr
+** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -41,25 +42,22 @@
 ** terms.
 ** 
 */
-#ifndef _KAAPI_COMPILER_H_
-#define _KAAPI_COMPILER_H_ 1
-
-/** Implementation note.
-    - This file should list all feature depending on the used compiler
-    - This file is private (should not be included in public headers)
-*/
 
 
-/** weak symbols */
-#ifdef __GNUC__
-#  if defined(__APPLE__)
-#    define __KA_COMPILER_WEAK __attribute__((weak_import))
-#  else
-#    define __KA_COMPILER_WEAK __attribute__((weak))
-#  endif
-#else
-#  error No weak symbols defined for this compiler
-#endif
+#include <iostream>
 
 
-#endif /* _KAAPI_COMPILER_H_ */
+void DoKaapiGenerateInitializer(std::ostream& fout)
+{
+  fout << "__attribute__ ((constructor)) static void kaapi_abi_constructor(void)\n"
+       << "{ \n"
+       << "    kaapi_init(0, 0,0);\n" // first 0 == do not start threads
+       << "}\n"
+       << std::endl;
+
+  fout << "__attribute__ ((destructor)) static void kaapi_abi_destructor(void)\n"
+       << "{\n"
+       << "    kaapi_finalize();\n"
+       << "}\n"
+       << std::endl;
+}

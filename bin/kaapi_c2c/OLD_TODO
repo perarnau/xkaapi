@@ -1,0 +1,40 @@
+/* TODO LIST
+  OK : fait et un peu tester
+  NOK: not OK
+  
+OK    - gestion des args si paramètre range: begin -> access, end -> size_t (taille)
+OK    - reduction & parsing de la declaration des fonctions + support moteur executif
+OK/NOK- les boucles sont gérés comme suit:
+        __kaapi_thread = kaapi_push_frame()
+        for(... ) { ... }
+        kaapi_sched_sync();
+        __kaapi_thread = kaapi_pop_frame()
+OK     Les break ne pose pas de problème. 
+OK     Les return non plus (l'appelant exécutant les tâches créées).
+NOK    Le cas des gotos n'est pas géré.
+     
+NOK   - vérification des accès effectués en fonction des modes déclarés
+        - mode d'accès R/W/RW/CW
+          * arithmetique de pointeurs
+          * accès: R/RW/CW/W: rhs
+          * accès: W/CW/RW: lvalue
+          * accès: CW pas de vérification supplémentaire sur l'ensemble des opérations 
+          séquentielle.
+        - portée des variables:
+          * scope de déclaration supérieur à l'appel de fonction
+            - ok pour les paramètres formel
+            - ok si sync ou fin de boucle (sync implicite) après l'utilisation par une tâche
+          * sinon émettre une erreur / warning ?
+
+NOK   - parsing de fin des pragmas: on ne vérifie pas la fin de la phrase...
+
+   - adaptive loop. See OpenMP canonical form of Loop. Not all kinds of expression
+   can occurs in expressions of the for loop (init_expr; cond_expr; incr_expr )
+        - for_each: ok
+
+NOK   - global variable:
+        - add extra parameter (ok in struct args + function call)
+        - recover the global variable in the task execution body: NOK
+        
+   - generation of serialization operators
+*/

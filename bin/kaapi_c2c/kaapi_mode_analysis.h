@@ -1,12 +1,13 @@
 /*
 ** xkaapi
 ** 
-** Created on Thu Feb 24 15:35:09 2011
-** Copyright 2011 INRIA.
+** Created on Tue Mar 31 15:19:09 2009
+** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** vincent.danjean@imag.fr
+** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -41,25 +42,28 @@
 ** terms.
 ** 
 */
-#ifndef _KAAPI_COMPILER_H_
-#define _KAAPI_COMPILER_H_ 1
-
-/** Implementation note.
-    - This file should list all feature depending on the used compiler
-    - This file is private (should not be included in public headers)
-*/
 
 
-/** weak symbols */
-#ifdef __GNUC__
-#  if defined(__APPLE__)
-#    define __KA_COMPILER_WEAK __attribute__((weak_import))
-#  else
-#    define __KA_COMPILER_WEAK __attribute__((weak))
-#  endif
-#else
-#  error No weak symbols defined for this compiler
-#endif
+#ifndef KAAPI_MODE_ANALYSIS_H_INCLUDED
+# define KAAPI_MODE_ANALYSIS_H_INCLUDED
 
 
-#endif /* _KAAPI_COMPILER_H_ */
+#include <set>
+#include <vector>
+#include "kaapi_task.h"
+#include "rose_headers.h"
+
+
+bool DoKaapiModeAnalysis
+(
+ SgProject* project,
+ std::set<SgFunctionDeclaration*>& explored_decls,
+ SgFunctionDeclaration* func_decl,
+ std::vector<SgInitializedName*>& param_names
+);
+
+bool DoKaapiModeAnalysis(SgProject* project, KaapiTaskAttribute* kta);
+bool DoKaapiModeAnalysis(SgProject* project);
+
+
+#endif /* ! KAAPI_MODE_ANALYSIS_H_INCLUDED */

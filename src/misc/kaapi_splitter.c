@@ -75,7 +75,7 @@ redo_steal:
   if (nmiss == 3) return 0;
 
   /* do not steal if range size <= PAR_GRAIN */
-#define CONFIG_PAR_GRAIN 512
+#define CONFIG_PAR_GRAIN 256
   range_size = kaapi_workqueue_size(&vw->wq);
 
   if (range_size <= CONFIG_PAR_GRAIN) return 0;
@@ -101,12 +101,27 @@ redo_steal:
 
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
+    /* for reduction, a result is needed. take care of initializing it */
+    kaapi_taskadaptive_result_t* ktr = NULL;
+    if (vw->ktr_size)
+    {
+      ktr = kaapi_allocate_thief_result(req, vw->ktr_size, NULL);
+
+      /* FIXME: this should not be necessary. looking at the xkaapi examples,
+	 this is done to handle the case a thief is preempted without having
+	 a chance to update the ktr contents. This should not occur, and if
+	 it does, memset is not enough...
+      */
+      memset(ktr->data, 0, vw->ktr_size);
+    }
+
     /* no adaptive result since preemption unused */
     kaapi_splitter_context_t* const tw = kaapi_reply_init_adaptive_task
-      ( sc, req, vw->body, total_size, 0 );
+      (sc, req, vw->body, total_size, ktr);
 
     kaapi_workqueue_init(&tw->wq, j - unit_size, j);
     tw->body = vw->body;
+    tw->ktr_size = vw->ktr_size;
     tw->data_size = vw->data_size;
     memcpy(tw->data, vw->data, vw->data_size);
 

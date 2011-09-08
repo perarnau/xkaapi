@@ -1,12 +1,13 @@
 /*
 ** xkaapi
 ** 
-** Created on Thu Feb 24 15:35:09 2011
-** Copyright 2011 INRIA.
+** Created on Tue Mar 31 15:19:09 2009
+** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** vincent.danjean@imag.fr
+** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -41,25 +42,52 @@
 ** terms.
 ** 
 */
-#ifndef _KAAPI_COMPILER_H_
-#define _KAAPI_COMPILER_H_ 1
 
-/** Implementation note.
-    - This file should list all feature depending on the used compiler
-    - This file is private (should not be included in public headers)
+
+#ifndef KAAPI_TASKCALL_H_INCLUDED
+# define KAAPI_TASKCALL_H_INCLUDED
+
+
+#include <list>
+#include "kaapi_task.h"
+#include "rose_headers.h"
+
+
+/* Find all calls to task 
 */
+struct OneCall {
+  OneCall( 
+    SgScopeStatement*   _scope,
+    SgFunctionCallExp*  _fc,
+    SgStatement*        _s,
+    KaapiTaskAttribute* _kta,
+    SgScopeStatement*   _fl
+  ) : fc(_fc), scope(_scope), statement(_s), kta(_kta), forloop(_fl) {}
+
+  SgFunctionCallExp*  fc;         /* function call exp to a task */
+  SgScopeStatement*   scope;      /* enclosing scope of fc */
+  SgStatement*        statement;  /* enclosing statement of fc */
+  KaapiTaskAttribute* kta;        /* attached task attribute */
+  SgScopeStatement*   forloop;    /* enclosing loop of fc */
+};
 
 
-/** weak symbols */
-#ifdef __GNUC__
-#  if defined(__APPLE__)
-#    define __KA_COMPILER_WEAK __attribute__((weak_import))
-#  else
-#    define __KA_COMPILER_WEAK __attribute__((weak))
-#  endif
-#else
-#  error No weak symbols defined for this compiler
-#endif
+/** This method traverse all the AST tree to find call to function task:
+    - the call is registered into the _listcall of the object
+*/
+class KaapiTaskCallTraversal : public AstSimpleProcessing {
+public:
+  KaapiTaskCallTraversal(){}
+  virtual void visit(SgNode* node);
+
+public:
+  std::list<OneCall> _listcall;
+};
 
 
-#endif /* _KAAPI_COMPILER_H_ */
+/* 
+*/
+void DoKaapiTaskCall( KaapiTaskCallTraversal* ktct, SgGlobal* gscope );
+
+
+#endif /* ! KAAPI_TASKCALL_H_INCLUDED */

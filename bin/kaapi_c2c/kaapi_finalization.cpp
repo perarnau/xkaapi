@@ -1,12 +1,13 @@
 /*
 ** xkaapi
 ** 
-** Created on Thu Feb 24 15:35:09 2011
-** Copyright 2011 INRIA.
+** Created on Tue Mar 31 15:19:09 2009
+** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** vincent.danjean@imag.fr
+** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -41,25 +42,31 @@
 ** terms.
 ** 
 */
-#ifndef _KAAPI_COMPILER_H_
-#define _KAAPI_COMPILER_H_ 1
-
-/** Implementation note.
-    - This file should list all feature depending on the used compiler
-    - This file is private (should not be included in public headers)
-*/
 
 
-/** weak symbols */
-#ifdef __GNUC__
-#  if defined(__APPLE__)
-#    define __KA_COMPILER_WEAK __attribute__((weak_import))
-#  else
-#    define __KA_COMPILER_WEAK __attribute__((weak))
-#  endif
-#else
-#  error No weak symbols defined for this compiler
-#endif
+#include "rose_headers.h"
+#include "globals.h"
 
 
-#endif /* _KAAPI_COMPILER_H_ */
+// kaapi finalization pass
+
+void DoKaapiFinalization(SgProject* project)
+{
+  // add a kaapi_sched_sync all before each synced_call
+  synced_stmt_iterator_type pos = all_synced_stmts.begin();
+  synced_stmt_iterator_type end = all_synced_stmts.end();
+  for (; pos != end; ++pos)
+  {
+    SgExprStatement* const sync_stmt =
+      SageBuilder::buildFunctionCallStmt
+      (
+       "kaapi_sched_sync", 
+       SageBuilder::buildIntType(), 
+       SageBuilder::buildExprListExp(),
+       pos->second.scope_
+      );
+
+    // insert before stmt
+    SageInterface::insertStatement(pos->first, sync_stmt, true);
+  }
+}

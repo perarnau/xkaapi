@@ -822,7 +822,10 @@ AC_CONFIG_FILES([
 	network/taknet/Makefile
 	src/Makefile
 	bin/Makefile
-	bin/kacc.cpp
+	bin/kacc/Makefile
+	bin/kaapi_c2c/Makefile
+	bin/kaapi_event_reader/Makefile
+	bin/kacc/kacc.cpp
 	tests/static/Makefile
 
 	atha.pc
