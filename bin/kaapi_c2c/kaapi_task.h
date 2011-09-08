@@ -97,7 +97,7 @@ struct KaapiReduceOperator_t {
   std::string name_reducor;
   std::string name_redinit;
 };
-static std::map<std::string,KaapiReduceOperator_t*> kaapi_user_definedoperator;
+
 
 enum KaapiStorage_t {
   KAAPI_BAD_STORAGE = 0,

@@ -44,58 +44,70 @@
 */
 
 
-#ifndef GLOBALS_H_INCLUDED
-# define GLOBALS_H_INCLUDED
-
-
 #include <string>
-#include <set>
-#include <list>
-#include <map>
+#include <iostream>
 #include <algorithm>
+#include <vector>
+#include <map>
+#include <list>
+#include <set>
+#include <sstream>
+#include <iomanip>
+#include <string.h>
+#include <ctype.h>
+#include <time.h>
+#include <stdexcept>
 #include "rose_headers.h"
-#include "kaapi_task.h"
 
 
-typedef struct synced_stmt
+class fortranDirectiveProcessing : public AstSimpleProcessing
 {
-  // synced calls needs scope + varlist
-  SgScopeStatement* scope_;
-  std::list<SgInitializedName*> var_;
+private:
+  static bool is_sentinel(char c)
+  {
+    return c == '!' || c == '*' || c == 'C';
+  }
 
-  synced_stmt() : scope_(NULL) {}
+  static bool is_directive(const std::string& s)
+  {
+    static const char token[] = "$KAAPI";
 
-} synced_stmt_t;
+    if (s.size() < (sizeof(token) + 1 - 1)) return false;
+    if (is_sentinel(s[0]) == false) return false;
+    return 0 == memcmp(s.data() + 1, token, sizeof(token) - 1);
+  }
 
-typedef std::pair<SgStatement*, synced_stmt> synced_stmt_pair_type;
-typedef std::map<SgStatement*, synced_stmt > synced_stmt_map_type;
-typedef synced_stmt_map_type::iterator synced_stmt_iterator_type;
-extern synced_stmt_map_type all_synced_stmts;
+public:
+  fortranDirectiveProcessing() {}
 
-extern std::list<KaapiTaskAttribute*> all_tasks;
-extern std::map<std::string,KaapiTaskAttribute*> all_manglename2tasks;
+  virtual void visit(SgNode* node)
+  {
+    SgLocatedNode* const locatedNode = isSgLocatedNode(node);
+    if (locatedNode == NULL) return ;
 
-typedef std::list<std::pair<SgFunctionDeclaration*, std::string> > ListTaskFunctionDeclaration;
-extern ListTaskFunctionDeclaration all_task_func_decl;
-extern std::set<SgFunctionDeclaration*> all_signature_func_decl;
+    AttachedPreprocessingInfoType* const comments =
+      locatedNode->getAttachedPreprocessingInfo();
+    if (comments == NULL) return ;
 
-// used to mark already instanciated template
-extern std::set<std::string> all_template_instanciate; 
-extern std::set<SgFunctionDefinition*> all_template_instanciate_definition;
+    AttachedPreprocessingInfoType::iterator pos = comments->begin();
+    AttachedPreprocessingInfoType::iterator end = comments->end();
+    for (; pos != end; ++pos)
+    {
+      const std::string& s = (*pos)->getString();
+      if (is_directive(s) == false) continue ;
 
-extern std::map<std::string,KaapiReduceOperator_t*> kaapi_user_definedoperator;
-
-extern SgType* kaapi_access_ROSE_type;
-extern SgType* kaapi_task_ROSE_type;
-extern SgType* kaapi_thread_ROSE_type;
-extern SgType* kaapi_frame_ROSE_type;
-extern SgType* kaapi_workqueue_ROSE_type;
-extern SgType* kaapi_workqueue_index_ROSE_type;
-extern SgType* kaapi_stealcontext_ROSE_type;
-extern SgType* kaapi_request_ROSE_type;
-extern SgType* kaapi_taskadaptive_result_ROSE_type;
-extern SgType* kaapi_task_body_ROSE_type;
-extern SgType* kaapi_splitter_context_ROSE_type;
+      printf("new_directive: %s\n", (*pos)->getString().c_str());
+    }
+  }
+};
 
 
-#endif // ! GLOBALS_H_INCLUDED
+
+int main(int argc, char **argv) 
+{
+  SgProject* project = frontend(argc, argv);
+  project->set_Fortran_only(true);
+  fortranDirectiveProcessing().traverse(project, preorder);
+  backend(project);
+  return 0;
+}

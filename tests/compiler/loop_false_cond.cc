@@ -1,13 +1,11 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:09 2009
-** Copyright 2009 INRIA.
+** Copyright 2011 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -43,32 +41,14 @@
 ** 
 */
 
+#include <stdio.h>
 
-#include "globals.h"
-
-
-// all the global variables are defined here
-
-synced_stmt_map_type all_synced_stmts;
-std::list<KaapiTaskAttribute*> all_tasks;
-std::map<std::string,KaapiTaskAttribute*> all_manglename2tasks;
-
-ListTaskFunctionDeclaration all_task_func_decl;
-std::set<SgFunctionDeclaration*> all_signature_func_decl;
-
-// used to mark already instanciated template
-std::set<std::string> all_template_instanciate;
-std::set<SgFunctionDefinition*> all_template_instanciate_definition;
-
-std::map<std::string,KaapiReduceOperator_t*> kaapi_user_definedoperator;
-SgType* kaapi_access_ROSE_type;
-SgType* kaapi_task_ROSE_type;
-SgType* kaapi_thread_ROSE_type;
-SgType* kaapi_frame_ROSE_type;
-SgType* kaapi_workqueue_ROSE_type;
-SgType* kaapi_workqueue_index_ROSE_type;
-SgType* kaapi_stealcontext_ROSE_type;
-SgType* kaapi_request_ROSE_type;
-SgType* kaapi_taskadaptive_result_ROSE_type;
-SgType* kaapi_task_body_ROSE_type;
-SgType* kaapi_splitter_context_ROSE_type;
+int main(int argc, char** argv)
+{
+#pragma kaapi parallel 
+  {
+#pragma kaapi loop
+    for (int i = -2; i > 0; --i) printf("should_not_execute\n");
+  }
+  return 0;
+}

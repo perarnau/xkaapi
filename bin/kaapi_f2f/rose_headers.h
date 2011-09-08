@@ -44,58 +44,14 @@
 */
 
 
-#ifndef GLOBALS_H_INCLUDED
-# define GLOBALS_H_INCLUDED
+#ifndef ROSE_HEADERS_H_INCLUDED
+# define ROSE_HEADERS_H_INCLUDED
 
 
-#include <string>
-#include <set>
-#include <list>
-#include <map>
-#include <algorithm>
-#include "rose_headers.h"
-#include "kaapi_task.h"
+#include <rose.h>
+#include <interproceduralCFG.h>
+#include "DefUseAnalysis.h"
+#include "DefUseAnalysis_perFunction.h"
 
 
-typedef struct synced_stmt
-{
-  // synced calls needs scope + varlist
-  SgScopeStatement* scope_;
-  std::list<SgInitializedName*> var_;
-
-  synced_stmt() : scope_(NULL) {}
-
-} synced_stmt_t;
-
-typedef std::pair<SgStatement*, synced_stmt> synced_stmt_pair_type;
-typedef std::map<SgStatement*, synced_stmt > synced_stmt_map_type;
-typedef synced_stmt_map_type::iterator synced_stmt_iterator_type;
-extern synced_stmt_map_type all_synced_stmts;
-
-extern std::list<KaapiTaskAttribute*> all_tasks;
-extern std::map<std::string,KaapiTaskAttribute*> all_manglename2tasks;
-
-typedef std::list<std::pair<SgFunctionDeclaration*, std::string> > ListTaskFunctionDeclaration;
-extern ListTaskFunctionDeclaration all_task_func_decl;
-extern std::set<SgFunctionDeclaration*> all_signature_func_decl;
-
-// used to mark already instanciated template
-extern std::set<std::string> all_template_instanciate; 
-extern std::set<SgFunctionDefinition*> all_template_instanciate_definition;
-
-extern std::map<std::string,KaapiReduceOperator_t*> kaapi_user_definedoperator;
-
-extern SgType* kaapi_access_ROSE_type;
-extern SgType* kaapi_task_ROSE_type;
-extern SgType* kaapi_thread_ROSE_type;
-extern SgType* kaapi_frame_ROSE_type;
-extern SgType* kaapi_workqueue_ROSE_type;
-extern SgType* kaapi_workqueue_index_ROSE_type;
-extern SgType* kaapi_stealcontext_ROSE_type;
-extern SgType* kaapi_request_ROSE_type;
-extern SgType* kaapi_taskadaptive_result_ROSE_type;
-extern SgType* kaapi_task_body_ROSE_type;
-extern SgType* kaapi_splitter_context_ROSE_type;
-
-
-#endif // ! GLOBALS_H_INCLUDED
+#endif // ! ROSE_HEADERS_H_INCLUDED

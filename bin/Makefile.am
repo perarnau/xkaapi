@@ -12,5 +12,6 @@ SUBDIRS=kaapi_event_reader
 
 if KAAPI_TARGET_KACC
 SUBDIRS+=kaapi_c2c
+SUBDIRS+=kaapi_f2f
 SUBDIRS+=kacc
 endif
