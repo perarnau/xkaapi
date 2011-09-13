@@ -3,17 +3,19 @@
 
 
 #include <stdlib.h>
+#include <stddef.h>
 #include <sys/types.h>
+#include "kaapi_impl.h"
 
 
-struct kaapi_task;
-struct kaapi_request;
+typedef void* xxx_kaapi_task_t;
+typedef void* xxx_kaapi_request_t;
 
 
 typedef struct kaapi_ws_queue
 {
-  int (*push)(void*, struct kaapi_task*);
-  int (*stealn)(void*, struct kaapi_request*);
+  int (*push)(void*, xxx_kaapi_task_t*);
+  int (*stealn)(void*, xxx_kaapi_request_t*);
   void (*destroy)(void*);
 
   unsigned char data[1];
@@ -25,8 +27,8 @@ kaapi_ws_queue_t* kaapi_ws_queue_create_lifo(void);
 
 static inline kaapi_ws_queue_t* kaapi_ws_queue_create(size_t size)
 {
-  const size_t size = offsetof(kaapi_ws_queue_t, data);
-  kaapi_ws_queue_t* const q = malloc(size);
+  const size_t total_size = offsetof(kaapi_ws_queue_t, data) + size;
+  kaapi_ws_queue_t* const q = malloc(total_size);
   kaapi_assert(q);
 
   q->push = NULL;
@@ -36,17 +38,19 @@ static inline kaapi_ws_queue_t* kaapi_ws_queue_create(size_t size)
   return q;
 }
 
-static inline int kaapi_ws_queue_push(kaapi_ws_queue_t* q)
+static inline int kaapi_ws_queue_push
+(kaapi_ws_queue_t* q, xxx_kaapi_task_t* task)
 {
-  return q->push((void*)q->data);
+  return q->push((void*)q->data, task);
 }
 
-static inline int kaapi_ws_queue_stealn(kaapi_ws_queue_t* q)
+static inline int kaapi_ws_queue_stealn
+(kaapi_ws_queue_t* q, xxx_kaapi_request_t* req)
 {
-  return q->stealn((void*)q->data);
+  return q->stealn((void*)q->data, req);
 }
 
-static inline int kaapi_ws_queue_destroy(kaapi_ws_queue_t* q)
+static inline void kaapi_ws_queue_destroy(kaapi_ws_queue_t* q)
 {
   q->destroy((void*)q->data);
   free(q);

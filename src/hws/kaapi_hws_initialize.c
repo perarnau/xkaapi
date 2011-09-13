@@ -3,14 +3,34 @@
 
 #include "kaapi_impl.h"
 #include "kaapi_procinfo.h"
+#include "kaapi_ws_queue.h"
+
+
+#if 0 /* unused */
+typedef struct kaapi_hws_request
+{
+  void* reply_area;
+
+} kaapi_hws_request_t;
+#endif /* unused */
 
 
 typedef struct kaapi_ws_block
 {
   /* kid map of all the participants */
-  kaapi_atomic_t lock;
   kaapi_processor_id_t* kids;
   unsigned int kid_count;
+
+  /* concurrent workstealing sync */
+  kaapi_atomic_t lock;
+
+  /* workstealing queue */
+  kaapi_ws_queue_t* queue;
+  
+#if 0
+  kaapi_ws_request_t* requests;
+#endif
+
 } kaapi_ws_block_t;
 
 
@@ -30,14 +50,27 @@ static unsigned int hws_level_count;
 static kaapi_hws_level_t* hws_levels;
 
 
-/* lookup the ws block given
- */
-
 static inline kaapi_ws_block_t* get_self_ws_block
-(kaapi_processor_id_t kid, unsigned int level)
+(kaapi_processor_t* self, unsigned int level)
 {
-  /* assume self,level dont overflow */
-  return hws_levels[level].kid_to_block[kid];
+  /* return the ws block for the kproc at given level */
+  /* assume self, level dont overflow */
+
+  return hws_levels[level].kid_to_block[self->kid];
+}
+
+static kaapi_processor_id_t select_victim
+(kaapi_ws_block_t* block, kaapi_processor_id_t self_kid)
+{
+  /* select a victim in the block */
+  /* assume block->kid_count > 1 */
+
+  unsigned int kid;
+
+ redo_rand:
+  kid = block->kids[rand() % block->kid_count];
+  if (kid == self_kid) goto redo_rand;
+  return (kaapi_processor_id_t)kid;
 }
 
 
@@ -171,7 +204,7 @@ int kaapi_hws_init_global(void)
 
       /* initialize the block */
       /* todo: allocate on a page boundary pinned on the node */
-      KAAPI_ATOMIC_WRITE(&block->lock, 0);
+      kaapi_sched_initlock(&block->lock);
 
       block->kids = malloc(affin_set->ncpu * sizeof(kaapi_processor_id_t));
       kaapi_assert(block->kids);
@@ -202,9 +235,127 @@ int kaapi_hws_init_global(void)
 
 int kaapi_hws_fini_global(void)
 {
+  /* todo: release maps, blocks, levels */
   return 0;
 }
 
 
-/* steal request emission
+/* hierarchical workstealing request emission
  */
+
+kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
+{
+  kaapi_ws_block_t* block;
+  kaapi_processor_id_t victim_kid = (kaapi_processor_id_t)-1;
+  unsigned int level = 0;
+
+  for (; level < hws_level_count; ++level)
+  {
+    block = get_self_ws_block(kproc, level);
+
+    /* next_level if alone in the block */
+    if (block->kid_count <= 1) continue ;
+
+    victim_kid = select_victim(block, kproc->kid);
+
+#if 0 /* todo */
+    /* emit the request */
+    post_hws_request();
+#endif /* todo */
+
+    /* wait for lock or reply */
+    while (1)
+    {
+      if (kaapi_sched_trylock(&block->lock))
+      {
+	/* got the lock, reply all. if there is no
+	   task to extract for this level, go next.
+	 */
+
+#if 0 /* todo */
+	kaapi_ws_queue_t* const q = block->queue;
+	if (q->stealn(block, reqs) == failed)
+	{
+	  goto next_level;
+	}
+#endif /* todo */
+      }
+
+#if 0 /* todo */
+      if (kaapi_hws_reply_test(reply))
+      {
+	/* request got replied */
+      }
+#endif /* todo */
+
+    }
+  }
+
+  /* unlock all levels < level */
+  if (level > 0)
+  {
+    printf("[%u] unlocking from %u\n", kproc->kid, level);
+    for (; level; --level)
+    {
+      block = get_self_ws_block(kproc, level - 1);
+      if (block->kid_count <= 1) continue ;
+      kaapi_sched_unlock(&block->lock);
+    }
+  }
+
+  printf("[%u] extract replied task\n", kproc->kid);
+
+#if 0 /* TODO */
+
+  /* extract the replied task */
+  switch (kaapi_hws_reply_status(reply))
+  {
+  case KAAPI_REPLY_S_TASK_FMT:
+    /* convert fmtid to a task body */
+    reply->u.s_task.body = kaapi_format_resolvebyfmit
+      (reply->u.s_taskfmt.fmt)->entrypoint[kproc->proc_type];
+    kaapi_assert_debug(reply->u.s_task.body);
+
+  case KAAPI_REPLY_S_TASK:
+    /* initialize and push the task */
+    self_thread = kaapi_threadcontext2thread(kproc->thread);
+    kaapi_task_init
+    (
+     kaapi_thread_toptask(self_thread),
+     reply->u.s_task.body,
+     (void*)(reply->udata + reply->offset)
+    );
+
+    kaapi_thread_pushtask(self_thread);
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+    ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
+#endif
+    return kproc->thread;
+    break ; /* KAAPI_REPLY_S_TASK */
+
+  case KAAPI_REPLY_S_THREAD:
+#if defined(KAAPI_USE_PERFCOUNTER)
+    ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
+#endif
+    (*kproc->fnc_select)(kproc, &victim, KAAPI_STEAL_SUCCESS);
+    return reply->u.s_thread;
+    break ; /* KAAPI_REPLY_S_THREAD */
+
+  case KAAPI_REPLY_S_NOK:
+    return 0;
+    break ;
+
+  case KAAPI_REPLY_S_ERROR:
+    kaapi_assert_debug_m(0, "Error code in request status");
+    break ;
+
+  default:
+    kaapi_assert_debug_m(0, "Bad request status");
+    break ;
+  }
+
+#endif /* TODO */
+
+  return 0;
+}
