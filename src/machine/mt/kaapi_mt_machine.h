@@ -612,7 +612,7 @@ typedef struct kaapi_onelevel_t {
   int                   nsize;   /* allocation size of kids */
   kaapi_processor_id_t* kids;    /* kids[0..nkids-1] == kprocessor id in this hierarchy level */
   int                   nnotself;/* allocation size for notself */
-  kaapi_processor_id_t* notself; /* kids[0..nnotself-1] == kid that shared parent set but not self set */
+  kaapi_processor_id_t* notself; /* notself[0..nnotself-1] == kid that shared parent set but not self set */
   kaapi_affinityset_t*  set;     /* set[i] set used to by kids[i] */
 } kaapi_onelevel_t;
 

@@ -136,9 +136,9 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
   }
   else
   {
-  execute_ubody:
+    execute_ubody:
 #endif /* KAAPI_USE_CUDA */
-  adata->ubody((void*)adata->udata, thread, sc);
+    adata->ubody((void*)adata->udata, thread, sc);
 #if defined(KAAPI_USE_CUDA)
   }
 #endif

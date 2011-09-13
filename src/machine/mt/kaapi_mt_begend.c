@@ -1,8 +1,8 @@
 /*
-** kaapi_defs.h
+** kaapi_init.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:09 2009
+** Created on Tue Mar 31 15:19:03 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -43,46 +43,43 @@
 ** terms.
 ** 
 */
-#ifndef _KAAPI_DEFS_H
-#define _KAAPI_DEFS_H 1
+#include <stdlib.h>
+#include <inttypes.h> 
+#include "kaapi_impl.h"
 
-
-#define KAAPI_BLOCENTRIES_SIZE 2048
-#define KAAPI_BLOCALLOCATOR_SIZE 8*4096
-
-
-#if defined(__cplusplus)
-extern "C" {
+#if defined(KAAPI_DEBUG)
+#  include <unistd.h>
+#  include <sys/time.h>
+#  include <signal.h>
 #endif
 
-#ifdef __linux__
-#  ifdef HAVE_UCONTEXT_H
-#    define KAAPI_USE_UCONTEXT
-#  elif HAVE_SETJMP_H
-#    error "Not implemented yet"
-#    define KAAPI_USE_SETJMP
-#  endif
-#endif
 
-#ifdef __APPLE__
-#  include <libkern/OSAtomic.h>
-#endif
+/* Counter of enclosed parallel/begin calls.
+*/
+static kaapi_atomic_t kaapi_parallel_stack = {0};
 
-#ifdef __APPLE__
-#  ifdef HAVE_SETJMP_H
-#    define KAAPI_USE_SETJMP
-#  elif HAVE_UCONTEXT_H
-#    define KAAPI_USE_UCONTEXT
-#  endif
-#endif
-
-#if !(defined(__i386__) || defined(__x86_64__) || defined(__ia64__) || \
-	 defined(__ppc__) || defined(__PPC__) || defined(__PPC64__) || defined(__arm__))
-#  error "Unsupported Architecture"
-#endif
-
-#if defined(__cplusplus)
+/** begin parallel & and parallel
+    - it should not have any concurrency on the first increment
+    because only the main thread is running before parallel computation
+    - after that serveral threads may declare parallel region that
+    will implies concurrency
+*/
+void kaapi_mt_begin_parallel(void)
+{
+  if (KAAPI_ATOMIC_DECR(&kaapi_parallel_stack) == 1)
+  {
+    kaapi_mt_resume_threads();
+  }
 }
-#endif
 
-#endif /* _KAAPI_DEFS_H */
+
+/**
+*/
+void kaapi_mt_end_parallel(void)
+{  
+  if (KAAPI_ATOMIC_DECR(&kaapi_parallel_stack) == 0)
+  {
+    kaapi_sched_sync();
+    kaapi_finalize();
+  }
+}

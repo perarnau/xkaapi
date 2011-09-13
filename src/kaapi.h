@@ -1420,7 +1420,7 @@ extern void* kaapi_reply_init_adaptive_task (
     struct kaapi_stealcontext_t*        sc,
     kaapi_request_t*                    req,
     kaapi_task_body_t                   body,
-    size_t				                      size,
+    size_t				                size,
     struct kaapi_taskadaptive_result_t* result
 );
 
@@ -1558,8 +1558,8 @@ extern int kaapi_preemptasync_thief(
 */
 extern int kaapi_preemptasync_waitthief
 ( 
- kaapi_stealcontext_t*               sc,
- struct kaapi_taskadaptive_result_t* ktr
+  kaapi_stealcontext_t*               sc,
+  struct kaapi_taskadaptive_result_t* ktr
 );
 
 /** \ingroup ADAPTIVE
@@ -1583,12 +1583,13 @@ extern int kaapi_remove_finishedthief(
    where ... is the same extra arguments passed to kaapi_preempt_nextthief.
 */
 
-static inline int kaapi_preempt_thief
-(kaapi_stealcontext_t* sc,
- kaapi_taskadaptive_result_t* ktr,
- void* thief_arg,
- kaapi_victim_reducer_t reducer,
- void* reducer_arg)
+static inline int kaapi_preempt_thief(
+  kaapi_stealcontext_t* sc,
+  kaapi_taskadaptive_result_t* ktr,
+  void* thief_arg,
+  kaapi_victim_reducer_t reducer,
+  void* reducer_arg
+)
 {
   int res = 0;
 
@@ -1644,13 +1645,14 @@ extern int kaapi_preemptpoint_after_reducer_call (
     \retval 0 else
 */
 
-static inline int kaapi_preemptpoint
-(kaapi_stealcontext_t* sc,
- kaapi_thief_reducer_t reducer,
- void* victim_arg,
- void* result_data,
- size_t result_size,
- void* reducer_arg)
+static inline int kaapi_preemptpoint(
+  kaapi_stealcontext_t* sc,
+  kaapi_thief_reducer_t reducer,
+  void* victim_arg,
+  void* result_data,
+  size_t result_size,
+  void* reducer_arg
+)
 {
   int res = 0;
 
@@ -1719,8 +1721,6 @@ typedef struct kaapi_memory_view_t {
 /** Identifier to an address space id
 */
 typedef uint64_t  kaapi_address_space_id_t;
-
-
 
 /** Returns the numa node (>=0 value) that stores address addr
     Return -1 in case of failure and set errno to the error code.
@@ -2070,7 +2070,7 @@ static inline int kaapi_workqueue_push(
 
 
 /** Helper function called in case of conflict.
-    Return EBUSY is the queue is empty.
+    Return EBUSY if the queue is empty.
     Return EINVAL if invalid arguments
     Return ESRCH if the current thread is not a kaapi thread.
 */
@@ -2155,14 +2155,13 @@ static inline int kaapi_workqueue_steal(
 
 /** kaapi exported splitters
  */
-
 typedef struct kaapi_splitter_context
 {
   kaapi_workqueue_t wq;
   kaapi_task_body_t body;
-  size_t ktr_size;
-  size_t data_size;
-  unsigned char data[1];
+  size_t            ktr_size;
+  size_t            data_size;
+  unsigned char     data[1];
 } kaapi_splitter_context_t;
 
 int kaapi_splitter_default
@@ -2328,8 +2327,8 @@ extern struct kaapi_format_t* kaapi_format_allocate(void);
     Register a format
 */
 extern kaapi_format_id_t kaapi_format_register( 
-        struct kaapi_format_t*      fmt,
-        const char*                 name
+    struct kaapi_format_t*      fmt,
+    const char*                 name
 );
 
 /** \ingroup TASK
