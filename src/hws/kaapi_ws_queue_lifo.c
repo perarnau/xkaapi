@@ -1,6 +1,3 @@
-#include <stdlib.h>
-#include <stddef.h>
-#include <sys/types.h>
 #include "kaapi_ws_queue.h"
 
 
