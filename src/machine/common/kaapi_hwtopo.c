@@ -276,13 +276,13 @@ int kaapi_hw_init(void)
   printf("Whole CPU SET:'%s'\n",kaapi_cpuset2string(kaapi_default_param.syscpucount, &kaapi_default_param.usedcpu));
   for (depth=0; depth < kaapi_default_param.memory.depth; ++depth)
   {
-    printf("level[%i]: #memory:%i \t", depth, (int)kaapi_default_param.memory.levels[depth].count );
+    printf("level[%i]: \n\t#memory:%i\n\t", depth, (int)kaapi_default_param.memory.levels[depth].count );
     for (i=0; i< kaapi_default_param.memory.levels[depth].count; ++i)
     {
       if (kaapi_cpuset_intersect( &kaapi_default_param.memory.levels[depth].affinity[i].who, &kaapi_default_param.usedcpu))
       {
         const char* str = kaapi_cpuset2string(kaapi_default_param.syscpucount, &kaapi_default_param.memory.levels[depth].affinity[i].who);
-        printf("[size:%lu, cpuset:'%s', type:%u]   ", 
+        printf("[size:%lu, cpuset:'%s', type:%u]\n\t", 
           (unsigned long)kaapi_default_param.memory.levels[depth].affinity[i].mem_size,
           str, 
           (unsigned int)kaapi_default_param.memory.levels[depth].affinity[i].type

@@ -60,17 +60,26 @@ static int kaapi_cpuset2kids(
   int nproc
 )
 {
-  int cnt;
-  cnt = 0;
-  for (int i=0; i<nproc; ++i)
+  int i = 0;
+  int j = 0;
+
+  while (nproc)
   {
-    if (kaapi_cpuset_has( cpuset, i))
+    /* kaapi_assert(i < (sizeof(kaapi_cpuset_t) * 8)); */
+    if (i == (sizeof(kaapi_cpuset_t) * 8)) break ;
+
+    if (kaapi_cpuset_has(cpuset, i))
     {
-      kids[cnt] = kaapi_default_param.cpu2kid[i];
-      if (kids[cnt] !=(kaapi_processor_id_t)-1) ++cnt;
+      --nproc;
+
+      kids[j] = kaapi_default_param.cpu2kid[i];
+      if (kids[j] != (kaapi_processor_id_t)-1) ++j;
     }
+
+    ++i;
   }
-  return cnt;
+
+  return j;
 }
 
 #if defined(KAAPI_DEBUG)
@@ -165,7 +174,7 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
   FILE* file;
   pid_t tid;
   int err;
-  
+
   if (kaapi_default_param.memory.depth == 0) 
     return ENOENT;
   
@@ -249,34 +258,45 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
   {
     int i;
     int ncpu;
+
     for (i=0; i< kaapi_default_param.memory.levels[depth].count; ++i)
     {
       /* look if current processor is par of this affinity_set or not and the set contains at least 2 processors ? */
+
       if (kaapi_cpuset_has( &kaapi_default_param.memory.levels[depth].affinity[i].who, kproc->cpuid))
       {
+#if 0
+	printf("%u is in level=%u, sub=%u, set=%08lx%08lx\n",
+	       kproc->kid, depth, i,
+	       kaapi_default_param.memory.levels[depth].affinity[i].who[1],
+	       kaapi_default_param.memory.levels[depth].affinity[i].who[0]);
+#endif
+
         curr_set = &kaapi_default_param.memory.levels[depth].affinity[i];
         if (curr_set->type == KAAPI_MEM_NODE)
           kproc->numa_nodeid = curr_set->os_index;
         ncpu = curr_set->ncpu;
 
-        /* allocate curr_kids to compute number of kids before storing it into the hierarchy if > 1 */
-        if (curr_kids == 0)
-        {
-          curr_nsize = ncpu;
-          curr_kids  = (kaapi_processor_id_t*)calloc(curr_nsize, sizeof(kaapi_processor_id_t));
-        } 
-        else if (curr_nsize < ncpu)
-        {
-          free( curr_kids );
-          curr_nsize = ncpu;
-          curr_kids  = (kaapi_processor_id_t*)calloc(curr_nsize, sizeof(kaapi_processor_id_t));
-        }
+	/* dont reuse memory ... */
+	curr_nsize = ncpu;
+	curr_kids  = (kaapi_processor_id_t*)calloc(curr_nsize, sizeof(kaapi_processor_id_t));
+
         /* compute the kids array for this processor */
         curr_nkids = kaapi_cpuset2kids(
             &curr_set->who, 
             curr_kids, 
             curr_nsize
         );
+
+#if 0
+	printf("[%u] CUR_KID[%u](%08lx%08lx) == %u, %u\n",
+	       kproc->kid,
+	       depth,
+	       curr_set->who[1],
+	       curr_set->who[0],
+	       curr_nkids,
+	       curr_nsize);
+#endif
 
         if (curr_nkids >1) // ok store it into the hierarchy 
         {
