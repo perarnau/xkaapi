@@ -112,6 +112,7 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
     kaapi_mem_map_initialize(&kproc->mem_map, 1 + kpi->proc_index);
   
   kaapi_processor_computetopo( kproc );  
+  kaapi_hws_init_perproc(kproc);
 
   ctxt = (kaapi_thread_context_t*)kaapi_context_alloc( kproc );
   kaapi_assert(ctxt !=0);

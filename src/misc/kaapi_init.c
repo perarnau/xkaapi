@@ -281,6 +281,8 @@ int kaapi_init(int flag, int* argc, char*** argv)
   kaapi_memory_init();
   int err = kaapi_mt_init();
 
+  kaapi_hws_init_global();
+
   if (flag)
     kaapi_begin_parallel();
   return err;
@@ -294,6 +296,8 @@ int kaapi_finalize(void)
   kaapi_sched_sync();
   if (KAAPI_ATOMIC_DECR(&kaapi_count_init) !=0) 
     return EAGAIN;
+
+  kaapi_hws_fini_global();
 
   kaapi_memory_destroy();
 

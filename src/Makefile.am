@@ -80,7 +80,8 @@ libkaapi_la_SOURCES=\
   workstealing/kaapi_sched_criticalsteal.c \
   workstealing/kaapi_sched_lready.c \
   workstealing/kaapi_sched_wsqueue.c \
-  workstealing/kaapi_sched_affinity_queue.c 
+  workstealing/kaapi_sched_affinity_queue.c \
+  hws/kaapi_hws_initialize.c
 
 #Libtask
 libkaapi_la_SOURCES+=\

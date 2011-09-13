@@ -194,6 +194,7 @@ int kaapi_setconcurrency(void)
      thus the mappings cpu2kid and kid2cpu are valid.
   */
   kaapi_processor_computetopo( kaapi_all_kprocessors[0] );
+  kaapi_hws_init_perproc(kaapi_all_kprocessors[0]);
     
   /* broadcast to all threads that they have been started */
   kaapi_barrier_td_setactive(&barrier_init2, 0);

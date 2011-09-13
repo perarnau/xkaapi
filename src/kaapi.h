@@ -2474,6 +2474,24 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     kaapi_format_structregister( &formatobject, name, size, cstor, dstor, cstorcopy, copy, assign );\
   }
 
+
+/* ========================================================================== */
+/** \ingroup HWS
+    initialize hierarchical workstealing. must be called only once globally.
+    \retval -1 on error, 0 on success
+ */
+extern int kaapi_hws_init_global(void);
+extern int kaapi_hws_fini_global(void);
+
+/* ========================================================================== */
+/** \ingroup HWS
+    initialize hierarchical workstealing. must be called only once per kproc.
+    \retval -1 on error, 0 on success
+ */
+extern int kaapi_hws_init_perproc(struct kaapi_processor_t*);
+extern int kaapi_hws_fini_perproc(struct kaapi_processor_t*);
+
+
 #ifdef __cplusplus
 }
 #endif
