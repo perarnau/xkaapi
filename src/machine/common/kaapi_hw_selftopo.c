@@ -298,7 +298,9 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
 	       curr_nsize);
 #endif
 
+#if 0
         if (curr_nkids >1) // ok store it into the hierarchy 
+#endif
         {
           kproc->hlevel.levels[kproc->hlevel.depth].set   = curr_set;
           kproc->hlevel.levels[kproc->hlevel.depth].nkids = curr_nkids;

@@ -207,11 +207,13 @@ int kaapi_mt_init(void)
   /* set the kprocessor AFTER topology !!! */
   kaapi_assert_m( 0 == kaapi_setconcurrency(), "kaapi_setconcurrency" );
 
+  /* initialize before destroying procinfo */
+  kaapi_hws_init_global();
+
   /* destroy the procinfo list, thread args no longer valid */
   kaapi_procinfo_list_free(kaapi_default_param.kproc_list);
   free(kaapi_default_param.kproc_list);
   kaapi_default_param.kproc_list = 0;
-
 
 /*** TODO BEG: this code should but outside machine specific init*/
   /* push dummy task in exec mode */
@@ -306,7 +308,7 @@ int kaapi_mt_finalize(void)
   */
   if (kaapi_suspendflag)
     kaapi_mt_resume_threads();
-  
+
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
   kaapi_perf_thread_stop(kaapi_all_kprocessors[0]);
@@ -413,6 +415,8 @@ int kaapi_mt_finalize(void)
     printf("Average steal requests aggregation : %e\n", ((double)cnt_stealreq)/(double)cnt_stealop);
   }
 #endif  
+
+  kaapi_hws_fini_global();
   
   /* TODO: destroy topology data structure */
   return 0;
