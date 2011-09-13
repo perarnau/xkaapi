@@ -1,3 +1,9 @@
+/* TODO
+   . one request block per memory level,block having more than one kid
+   . allocate data in local pages
+   . ws_queue interface error codes
+ */
+
 #include <stdio.h>
 #include <string.h>
 
@@ -74,19 +80,6 @@ static kaapi_processor_id_t select_victim
 }
 
 
-#if 0
-
-/* what is it used for:
- */
-
-static void get_self_siblings
-(kaapi_processor_t* self, kaapi_bitmap_value_t* siblings)
-{
-  /* get all the sibling nodes of a given */
-}
-
-#endif
-
 __attribute__((unused))
 static void print_selftopo_levels(kaapi_processor_t* kproc)
 {
@@ -143,9 +136,7 @@ int kaapi_hws_init_perproc(kaapi_processor_t* kproc)
 {
   /* assume kaapi_processor_computetopo called */
 
-#if 0
-  print_selftopo_levels(kproc);
-#endif
+  /* print_selftopo_levels(kproc); */
 
   return 0;
 }
