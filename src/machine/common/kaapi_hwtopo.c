@@ -40,6 +40,8 @@
 ** terms.
 ** 
 */
+
+#include <string.h>
 #include "kaapi_impl.h"
 #include "kaapi_procinfo.h"
 #if defined(KAAPI_USE_HWLOC)
@@ -185,6 +187,10 @@ int kaapi_hw_init(void)
     {
       if (obj->arity >1) { ++memdepth; }
     }
+    else if (obj->type == HWLOC_OBJ_SOCKET)
+    {
+      ++memdepth;
+    }
     else if (obj->type == HWLOC_OBJ_NODE)
     {
       ++memdepth;
@@ -221,13 +227,21 @@ int kaapi_hw_init(void)
             obj->cpuset 
         );
       }
+
+      kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_MACHINE;
     }
-    else if ((obj->type == HWLOC_OBJ_NODE) || (obj->type == HWLOC_OBJ_CACHE))
+    else if ((obj->type == HWLOC_OBJ_NODE) || (obj->type == HWLOC_OBJ_CACHE) || (obj->type == HWLOC_OBJ_SOCKET))
     {
       --memdepth;
       ncousin = (int)kaapi_hw_countcousin( obj );
       kaapi_default_param.memory.levels[memdepth].count = ncousin;
       kaapi_default_param.memory.levels[memdepth].affinity = (kaapi_affinityset_t*)calloc(ncousin, sizeof(kaapi_affinityset_t) );
+      if (obj->type == HWLOC_OBJ_NODE)
+	kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_NUMA;
+      else if (obj->type == HWLOC_OBJ_SOCKET)
+	kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_SOCKET;
+      else if (obj->type == HWLOC_OBJ_CACHE)
+	kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_L3;
 
       /* iterator over all cousins */
       idx = 0;
@@ -261,7 +275,7 @@ int kaapi_hw_init(void)
           obj = obj->next_cousin;
         }
       }
-    } 
+    }
   }
   /* end of detection of memory hierarchy */
   

@@ -101,18 +101,43 @@ typedef struct kaapi_ws_block
 
 typedef struct kaapi_hws_level
 {
-  /* describes the kids involved a given memory level */
+  kaapi_hws_levelid_t levelid;
+
   kaapi_ws_block_t** kid_to_block;
+
   kaapi_ws_block_t* blocks;
   unsigned int block_count;
+
 } kaapi_hws_level_t;
 
 
 /* globals
  */
 
-static unsigned int hws_level_count;
+static const unsigned int hws_level_count = KAAPI_HWS_LEVELID_MAX;
 static kaapi_hws_level_t* hws_levels;
+
+/* levelid filtering. todo: parametric */
+static const kaapi_hws_levelmask_t hws_levelmask =
+  KAAPI_HWS_LEVELMASK_NUMA |
+  KAAPI_HWS_LEVELMASK_SOCKET |
+  KAAPI_HWS_LEVELMASK_MACHINE |
+  KAAPI_HWS_LEVELMASK_FLAT;
+
+
+static const char* levelid_to_str(kaapi_hws_levelid_t levelid)
+{
+  static const char* const strs[] =
+  {
+    "KAAPI_HWS_LEVELID_L3",
+    "KAAPI_HWS_LEVELID_NUMA",
+    "KAAPI_HWS_LEVELID_SOCKET",
+    "KAAPI_HWS_LEVELID_MACHINE",
+    "KAAPI_HWS_LEVELID_FLAT"
+  };
+
+  return strs[(unsigned int)levelid];
+}
 
 
 static inline kaapi_ws_block_t* get_self_ws_block
@@ -125,18 +150,31 @@ static inline kaapi_ws_block_t* get_self_ws_block
 }
 
 
-static kaapi_processor_id_t select_victim
-(kaapi_ws_block_t* block, kaapi_processor_id_t self_kid)
+static int select_block_victim
+(
+ kaapi_processor_t* kproc,
+ kaapi_victim_t* victim,
+ kaapi_selecvictim_flag_t flag
+)
 {
   /* select a victim in the block */
   /* assume block->kid_count > 1 */
 
+  kaapi_ws_block_t* block;
   unsigned int kid;
+
+  if (flag != KAAPI_SELECT_VICTIM) return 0;
+
+  block = kproc->fnc_selecarg[0];
 
  redo_rand:
   kid = block->kids[rand() % block->kid_count];
-  if (kid == self_kid) goto redo_rand;
-  return (kaapi_processor_id_t)kid;
+  if (kid == kproc->kid) goto redo_rand;
+
+  victim->kproc = kaapi_all_kprocessors[kid];
+  victim->level = 0;
+
+  return 0;
 }
 
 
@@ -166,15 +204,17 @@ static void print_selftopo_levels(kaapi_processor_t* kproc)
 __attribute__((unused))
 static void print_hws_levels(void)
 {
-  unsigned int depth;
+  kaapi_hws_levelid_t levelid;
 
-  for (depth = 0; depth < hws_level_count; ++depth)
+  for (levelid = 0; levelid < hws_level_count; ++levelid)
   {
-    kaapi_hws_level_t* const level = &hws_levels[depth];
+    kaapi_hws_level_t* const level = &hws_levels[levelid];
     kaapi_ws_block_t* block = level->blocks;
     unsigned int i;
 
-    printf("-- depth[%u], #%u\n", depth, level->block_count);
+    if (!(hws_levelmask & (1 << levelid))) continue ;
+
+    printf("-- level: %s, #%u\n", levelid_to_str(levelid), level->block_count);
 
     for (i = 0; i < level->block_count; ++i, ++block)
     {
@@ -217,46 +257,57 @@ int kaapi_hws_init_global(void)
 
   const unsigned int kid_count = kaapi_default_param.kproc_list->count;
 
-  unsigned int depth;
+  kaapi_hws_level_t* hws_level;
+
+  int depth;
   kaapi_hierarchy_one_level_t flat_level;
+  kaapi_hierarchy_one_level_t* one_level;
   kaapi_affinityset_t flat_affin_set[KAAPI_MAX_PROCESSOR];
 
   /* add 1 for the flat level */
-  hws_level_count = kaapi_default_param.memory.depth + 1;
   hws_levels = malloc(hws_level_count * sizeof(kaapi_hws_level_t));
   kaapi_assert(hws_levels);
 
-  /* foreach level */
-  for (depth = 0; depth < hws_level_count; ++depth)
+  /* create the flat level if needed */
+  if (hws_levelmask & KAAPI_HWS_LEVELMASK_FLAT)
   {
-    kaapi_hws_level_t* const hws_level = &hws_levels[depth];
-    kaapi_hierarchy_one_level_t* one_level;
+    /* build a flat level containing all the kids */
+
+    unsigned int i;
+
+    for (i = 0; i < kid_count; ++i)
+    {
+      kaapi_affinityset_t* const affin_set = &flat_affin_set[i];
+      kaapi_procinfo_t* pos = kaapi_default_param.kproc_list->head;
+      kaapi_cpuset_clear(&affin_set->who);
+      for (; pos != NULL; pos = pos->next)
+	kaapi_cpuset_set(&affin_set->who, pos->bound_cpu);
+      affin_set->ncpu = kid_count;
+    }
+
+    flat_level.count = kid_count;
+    flat_level.affinity = flat_affin_set;
+    flat_level.levelid = KAAPI_HWS_LEVELID_FLAT;
+    one_level = &flat_level;
+
+    /* this level is not part of the hwloc topo */
+    depth = -1;
+
+    goto add_hws_level;
+  }
+
+  /* foreach non filtered discovered level, create a hws_level */
+  for (depth = 0; depth < kaapi_default_param.memory.depth; ++depth)
+  {
     unsigned int node_count;
+    unsigned int node;
 
-    if (depth == (hws_level_count - 1))
-    {
-      /* build a flat level containing all the kids */
+    one_level = &kaapi_default_param.memory.levels[depth];
 
-      unsigned int i;
+    if (!(hws_levelmask & (1 << one_level->levelid))) continue ;
 
-      for (i = 0; i < kid_count; ++i)
-      {
-	kaapi_affinityset_t* const affin_set = &flat_affin_set[i];
-	kaapi_procinfo_t* pos = kaapi_default_param.kproc_list->head;
-	kaapi_cpuset_clear(&affin_set->who);
-	for (; pos != NULL; pos = pos->next)
-	  kaapi_cpuset_set(&affin_set->who, pos->bound_cpu);
-	affin_set->ncpu = kid_count;
-      }
-
-      flat_level.count = kid_count;
-      flat_level.affinity = flat_affin_set;
-      one_level = &flat_level;
-    }
-    else /* != flat level */
-    {
-      one_level = &kaapi_default_param.memory.levels[depth];
-    }
+  add_hws_level:
+    hws_level = &hws_levels[one_level->levelid];
 
     node_count = one_level->count;
 
@@ -271,7 +322,6 @@ int kaapi_hws_init_global(void)
     memset(hws_level->kid_to_block, 0, kid_count * sizeof(kaapi_ws_block_t*));
 
     /* foreach node at level */
-    unsigned int node;
     for (node = 0; node < node_count; ++node)
     {
       kaapi_affinityset_t* const affin_set = &one_level->affinity[node];
@@ -318,9 +368,11 @@ int kaapi_hws_init_global(void)
       block->kid_count = i;
 
     } /* foreach node in level */
+
   } /* foreach level in topo */
 
-  /* print_hws_levels(); */
+  print_hws_levels();
+  while (1) ;
 
   return 0;
 }
@@ -355,8 +407,8 @@ static kaapi_thread_context_t* steal_kproc_queues
 
 kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
 {
+  kaapi_thread_context_t* thread = NULL;
   kaapi_ws_block_t* block;
-  kaapi_processor_id_t victim_kid = (kaapi_processor_id_t)-1;
   unsigned int level = 0;
   kaapi_ws_request_t* req;
 
@@ -365,11 +417,28 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
     block = get_self_ws_block(kproc, level);
 
     /* steal in the level queue first */
-    
-    /* next_level if alone in the block */
-    if (block->kid_count <= 1) continue ;
+    {
+    }
+    /* steal in the level queue first */
 
-    victim_kid = select_victim(block, kproc->kid);
+    /* randomly steal in a random kproc local queue */
+    if (block->kid_count >= 2)
+    {
+      kaapi_selectvictim_fnc_t saved_fn = kproc->fnc_select;
+      void* saved_arg = kproc->fnc_selecarg[0];
+
+      kproc->fnc_select = select_block_victim;
+      kproc->fnc_selecarg[0] = block;
+      thread = kaapi_sched_emitsteal(kproc);
+      kproc->fnc_select = saved_fn;
+      kproc->fnc_selecarg[0] = saved_arg;
+
+      if (thread != NULL)
+      {
+	goto on_replied;
+      }
+    }
+    /* randomly steal in a random kproc local queue */
 
     /* emit the request */
     req = block->kid_to_req[kproc->kid];
@@ -470,5 +539,25 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
 
 #endif /* TODO */
 
+  return thread;
+}
+
+
+/* push a task at a given hierarchy level
+ */
+
+int kaapi_hws_pushtask
+(void* task, void* data, kaapi_hws_levelid_t levelid)
+{
+  kaapi_assert(hws_levelmask & (1 << levelid));
+
+#if 0 /* TODO */
+  kaapi_processor_t* const kproc = kaapi_get_current_processor();
+  const kaapi_processor_id_t kid = self_proc->kid;
+  kaapi_hws_level_t* const level = levelid_to_level[levelid];
+  kaapi_ws_block_t* const block = level->blocks[level->kid_to_block[kid]];
+  kaapi_ws_queue_t* const queue = block->queue;
+  kaapi_ws_queue_push(queue, task, data);
+#endif
   return 0;
 }

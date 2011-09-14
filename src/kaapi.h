@@ -2491,6 +2491,62 @@ extern int kaapi_hws_fini_global(void);
 extern int kaapi_hws_init_perproc(struct kaapi_processor_t*);
 extern int kaapi_hws_fini_perproc(struct kaapi_processor_t*);
 
+/* ========================================================================== */
+/** \ingroup HWS
+    hierarchy level identifiers and masks
+ */
+
+typedef enum kaapi_hws_levelid
+{
+  KAAPI_HWS_LEVELID_L3 = 0,
+  KAAPI_HWS_LEVELID_NUMA,
+  KAAPI_HWS_LEVELID_SOCKET,
+  KAAPI_HWS_LEVELID_MACHINE,
+  KAAPI_HWS_LEVELID_FLAT,
+  KAAPI_HWS_LEVELID_MAX
+} kaapi_hws_levelid_t;
+
+typedef enum kaapi_hws_levelmask
+{
+  KAAPI_HWS_LEVELMASK_L3 = 1 << KAAPI_HWS_LEVELID_L3,
+  KAAPI_HWS_LEVELMASK_NUMA = 1 << KAAPI_HWS_LEVELID_NUMA,
+  KAAPI_HWS_LEVELMASK_SOCKET = 1 << KAAPI_HWS_LEVELID_SOCKET,
+  KAAPI_HWS_LEVELMASK_MACHINE = 1 << KAAPI_HWS_LEVELID_MACHINE,
+  KAAPI_HWS_LEVELMASK_FLAT = 1 << KAAPI_HWS_LEVELID_FLAT,
+
+  KAAPI_HWS_LEVELMASK_ALL =
+  KAAPI_HWS_LEVELMASK_L3 |
+  KAAPI_HWS_LEVELMASK_NUMA |
+  KAAPI_HWS_LEVELMASK_SOCKET |
+  KAAPI_HWS_LEVELMASK_MACHINE |
+  KAAPI_HWS_LEVELMASK_FLAT,
+
+  KAAPI_HWS_LEVELMASK_INVALID = 0
+
+} kaapi_hws_levelmask_t;
+
+/* ========================================================================== */
+/** \ingroup HWS
+    push a task at a given hierarchy level
+    \retval -1 on error, 0 on success
+ */
+extern int kaapi_hws_pushtask(void*, void*, kaapi_hws_levelid_t);
+
+static inline int kaapi_hws_pushtask_flat(void* task, void* data)
+{
+  return kaapi_hws_pushtask(task, data, KAAPI_HWS_LEVELID_FLAT);
+}
+
+static inline int kaapi_hws_pushtask_machine(void* task, void* data)
+{
+  return kaapi_hws_pushtask(task, data, KAAPI_HWS_LEVELID_MACHINE);
+}
+
+static inline int kaapi_hws_pushtask_numa(void* task, void* data)
+{
+  return kaapi_hws_pushtask(task, data, KAAPI_HWS_LEVELID_NUMA);
+}
+
 
 #ifdef __cplusplus
 }
