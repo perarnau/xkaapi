@@ -24,6 +24,7 @@ typedef struct kaapi_ws_queue
 {
   kaapi_ws_error_t (*push)(void*, xxx_kaapi_task_t*);
   kaapi_ws_error_t (*stealn)(void*, xxx_kaapi_request_t*);
+  kaapi_ws_error_t (*pop)(void*);
   void (*destroy)(void*);
 
   unsigned char data[1];
@@ -41,6 +42,7 @@ static inline kaapi_ws_queue_t* kaapi_ws_queue_create(size_t size)
 
   q->push = NULL;
   q->stealn = NULL;
+  q->pop = NULL;
   q->destroy = NULL;
 
   return q;
@@ -56,6 +58,12 @@ static inline kaapi_ws_error_t kaapi_ws_queue_stealn
 (kaapi_ws_queue_t* q, xxx_kaapi_request_t* req)
 {
   return q->stealn((void*)q->data, req);
+}
+
+static inline kaapi_ws_error_t kaapi_ws_queue_pop
+(kaapi_ws_queue_t* q)
+{
+  return q->pop((void*)q->data);
 }
 
 static inline void kaapi_ws_queue_destroy(kaapi_ws_queue_t* q)
