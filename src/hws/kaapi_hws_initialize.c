@@ -117,12 +117,13 @@ typedef struct kaapi_hws_level
 static const unsigned int hws_level_count = KAAPI_HWS_LEVELID_MAX;
 static kaapi_hws_level_t* hws_levels;
 
-/* levelid filtering. todo: parametric */
-static const kaapi_hws_levelmask_t hws_levelmask =
+static const kaapi_hws_levelmask_t hws_default_levelmask =
   KAAPI_HWS_LEVELMASK_NUMA |
   KAAPI_HWS_LEVELMASK_SOCKET |
   KAAPI_HWS_LEVELMASK_MACHINE |
   KAAPI_HWS_LEVELMASK_FLAT;
+
+static kaapi_hws_levelmask_t hws_levelmask;
 
 
 static const char* levelid_to_str(kaapi_hws_levelid_t levelid)
@@ -137,6 +138,51 @@ static const char* levelid_to_str(kaapi_hws_levelid_t levelid)
   };
 
   return strs[(unsigned int)levelid];
+}
+
+
+static kaapi_hws_levelid_t str_to_levelid(const char* str, unsigned int len)
+{
+#define STATIC_STRCMP(__fu, __bar, __baz) \
+  ((__bar == (sizeof(__baz) - 1)) && (memcmp(__fu, __baz, __bar) == 0))
+
+  if (STATIC_STRCMP(str, len, "L3"))
+    return KAAPI_HWS_LEVELID_L3;
+  else if (STATIC_STRCMP(str, len, "NUMA"))
+    return KAAPI_HWS_LEVELID_NUMA;
+  else if (STATIC_STRCMP(str, len, "SOCKET"))
+    return KAAPI_HWS_LEVELID_SOCKET;
+  else if (STATIC_STRCMP(str, len, "MACHINE"))
+    return KAAPI_HWS_LEVELID_MACHINE;
+  else if (STATIC_STRCMP(str, len, "FLAT"))
+    return KAAPI_HWS_LEVELID_FLAT;
+
+  return KAAPI_HWS_LEVELID_MAX;
+}
+
+
+static kaapi_hws_levelmask_t levelmask_from_env(void)
+{
+  const char* s = getenv("KAAPI_HWS_LEVELS");
+  const char* p = s;
+  kaapi_hws_levelmask_t levelmask = 0;
+  kaapi_hws_levelid_t levelid;
+
+  if (s == NULL) return hws_default_levelmask;
+
+  while (1)
+  {
+    if ((*s == ',') || (*s == 0))
+    {
+      levelid = str_to_levelid(p, s - p);
+      levelmask |= 1 << levelid;
+      p = s + 1;
+    }
+    if (*s == 0) break ;
+    ++s;
+  }
+
+  return levelmask;
 }
 
 
@@ -264,7 +310,8 @@ int kaapi_hws_init_global(void)
   kaapi_hierarchy_one_level_t* one_level;
   kaapi_affinityset_t flat_affin_set[KAAPI_MAX_PROCESSOR];
 
-  /* add 1 for the flat level */
+  hws_levelmask = levelmask_from_env();
+
   hws_levels = malloc(hws_level_count * sizeof(kaapi_hws_level_t));
   kaapi_assert(hws_levels);
 
