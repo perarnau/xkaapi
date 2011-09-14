@@ -49,7 +49,7 @@
 
 
 #include "rose_headers.h"
-#include "kaapi_task.h"
+#include "kaapi_c2c_task.h"
 
 
 SgStatement* buildConvertLoop2Adaptative
