@@ -13,30 +13,44 @@
 #include "kaapi_ws_queue.h"
 
 
-#if 0 /* unused */
-typedef struct kaapi_hws_request
+#if 1 /* todo: replace by kaapi_request_t */
+
+typedef struct kaapi_ws_request
 {
   void* reply_area;
+} kaapi_ws_request_t;
 
-} kaapi_hws_request_t;
-#endif /* unused */
+static void init_request(kaapi_ws_request_t* r)
+{
+}
+
+static void post_request(kaapi_ws_request_t* r)
+{
+}
+
+static int test_reply(kaapi_ws_request_t* r)
+{
+  return 0;
+}
+
+#endif /* todo */
 
 
 typedef struct kaapi_ws_block
 {
-  /* kid map of all the participants */
-  kaapi_processor_id_t* kids;
-  unsigned int kid_count;
-
   /* concurrent workstealing sync */
+  /* todo: cache aligned, alone in the line */
   kaapi_atomic_t lock;
 
   /* workstealing queue */
   kaapi_ws_queue_t* queue;
-  
-#if 0
+
+  /* kid map of all the participants */
+  kaapi_processor_id_t* kids;
+  unsigned int kid_count;
+
+  /* one request per kid */
   kaapi_ws_request_t* requests;
-#endif
 
 } kaapi_ws_block_t;
 
@@ -55,6 +69,29 @@ typedef struct kaapi_hws_level
 
 static unsigned int hws_level_count;
 static kaapi_hws_level_t* hws_levels;
+static kaapi_ws_request_t** hws_request_map;
+
+
+static inline kaapi_ws_request_t* get_self_request
+(
+ kaapi_processor_t* kproc,
+ unsigned int level
+)
+{
+  /* hws_request_map[kid][level] ordering for prefetch + cache */
+  return hws_request_map[kproc->kid * hws_level_count + level];
+}
+
+
+static inline void set_kid_request
+(
+ kaapi_processor_id_t kid,
+ unsigned int level,
+ kaapi_ws_request_t* req
+)
+{
+  hws_request_map[kid * hws_level_count + level] = req;
+}
 
 
 static inline kaapi_ws_block_t* get_self_ws_block
@@ -166,6 +203,10 @@ int kaapi_hws_init_global(void)
   hws_levels = malloc(hws_level_count * sizeof(kaapi_hws_level_t));
   kaapi_assert(hws_levels);
 
+  hws_request_map = malloc
+    (hws_level_count * kid_count * sizeof(kaapi_ws_request_t*));
+  kaapi_assert(hws_request_map);
+
   /* foreach level */
   for (depth = 0; depth < hws_level_count; ++depth)
   {
@@ -201,6 +242,12 @@ int kaapi_hws_init_global(void)
       block->kids = malloc(affin_set->ncpu * sizeof(kaapi_processor_id_t));
       kaapi_assert(block->kids);
 
+      block->requests = malloc(affin_set->ncpu * sizeof(kaapi_ws_request_t));
+      kaapi_assert(block->requests);
+
+      block->queue = kaapi_ws_queue_create_lifo();
+      kaapi_assert(block->queue);
+
       /* for each cpu in this node */
       kaapi_procinfo_t* pos = kaapi_default_param.kproc_list->head;
       for (; pos != NULL; pos = pos->next)
@@ -209,7 +256,15 @@ int kaapi_hws_init_global(void)
 	  continue ;
 
 	hws_level->kid_to_block[pos->kid] = block;
-	block->kids[i++] = pos->kid;
+	block->kids[i] = pos->kid;
+
+	/* todo: initialize the request */
+	init_request(&block->requests[i]);
+
+	/* update the request mapping table */
+	set_kid_request(pos->kid, depth, &block->requests[i]);
+
+	++i;
 
       } /* foreach cpu in node */
 
@@ -240,6 +295,7 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
   kaapi_ws_block_t* block;
   kaapi_processor_id_t victim_kid = (kaapi_processor_id_t)-1;
   unsigned int level = 0;
+  kaapi_ws_request_t* req;
 
   for (; level < hws_level_count; ++level)
   {
@@ -250,10 +306,9 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
 
     victim_kid = select_victim(block, kproc->kid);
 
-#if 0 /* todo */
     /* emit the request */
-    post_hws_request();
-#endif /* todo */
+    req = get_self_request(kproc, level);
+    post_request(req);
 
     /* wait for lock or reply */
     while (1)
@@ -264,25 +319,26 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
 	   task to extract for this level, go next.
 	 */
 
-#if 0 /* todo */
-	kaapi_ws_queue_t* const q = block->queue;
-	if (q->stealn(block, reqs) == failed)
+	kaapi_ws_queue_t* const queue = block->queue;
+	const kaapi_ws_error_t error = kaapi_ws_queue_stealn(queue, NULL);
+	if (error == KAAPI_WS_ERROR_EMPTY)
 	{
 	  goto next_level;
 	}
-#endif /* todo */
       }
 
-#if 0 /* todo */
-      if (kaapi_hws_reply_test(reply))
+      if (test_reply(req))
       {
 	/* request got replied */
+	goto on_replied;
       }
-#endif /* todo */
 
     }
+
+  next_level: ;
   }
 
+ on_replied:
   /* unlock all levels < level */
   if (level > 0)
   {

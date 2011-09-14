@@ -12,10 +12,18 @@ typedef void* xxx_kaapi_task_t;
 typedef void* xxx_kaapi_request_t;
 
 
+typedef enum kaapi_ws_error
+{
+  KAAPI_WS_ERROR_SUCCESS = 0,
+  KAAPI_WS_ERROR_EMPTY,
+  KAAPI_WS_ERROR_FAILURE
+} kaapi_ws_error_t;
+
+
 typedef struct kaapi_ws_queue
 {
-  int (*push)(void*, xxx_kaapi_task_t*);
-  int (*stealn)(void*, xxx_kaapi_request_t*);
+  kaapi_ws_error_t (*push)(void*, xxx_kaapi_task_t*);
+  kaapi_ws_error_t (*stealn)(void*, xxx_kaapi_request_t*);
   void (*destroy)(void*);
 
   unsigned char data[1];
@@ -38,13 +46,13 @@ static inline kaapi_ws_queue_t* kaapi_ws_queue_create(size_t size)
   return q;
 }
 
-static inline int kaapi_ws_queue_push
+static inline kaapi_ws_error_t kaapi_ws_queue_push
 (kaapi_ws_queue_t* q, xxx_kaapi_task_t* task)
 {
   return q->push((void*)q->data, task);
 }
 
-static inline int kaapi_ws_queue_stealn
+static inline kaapi_ws_error_t kaapi_ws_queue_stealn
 (kaapi_ws_queue_t* q, xxx_kaapi_request_t* req)
 {
   return q->stealn((void*)q->data, req);
