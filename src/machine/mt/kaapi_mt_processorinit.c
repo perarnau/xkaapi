@@ -94,6 +94,8 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
   kproc->fnc_selecarg[2] = 0;
   kproc->fnc_selecarg[3] = 0;
   kproc->fnc_select      = kaapi_default_param.wsselect;
+
+  kproc->emitsteal = kaapi_default_param.emitsteal;
   
   kaapi_assert(0 == pthread_mutex_init(&kproc->suspend_lock, 0) );
   /* */

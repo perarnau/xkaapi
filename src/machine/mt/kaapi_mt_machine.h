@@ -650,6 +650,8 @@ typedef struct kaapi_processor_t {
   kaapi_selectvictim_fnc_t fnc_select;                    /* function to select a victim */
   void*                    fnc_selecarg[4];               /* arguments for select victim function, 0 at initialization */
 
+  kaapi_emitsteal_fnc_t	   emitsteal;
+
   pthread_mutex_t          suspend_lock;                  /* lock used to suspend / resume the threads */
   
   void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */

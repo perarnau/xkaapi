@@ -380,6 +380,13 @@ typedef enum kaapi_selecvictim_flag_t {
 */
 typedef int (*kaapi_selectvictim_fnc_t)( struct kaapi_processor_t*, struct kaapi_victim_t*, kaapi_selecvictim_flag_t flag );
 
+/** \ingroup WS
+    Emit a steal request
+    \param kproc [IN] the kaapi_processor_t that want to emit a request
+    \retval the stolen thread
+*/
+typedef struct kaapi_thread_context_t* (*kaapi_emitsteal_fnc_t)(struct kaapi_processor_t*);
+
 
 /* =======vvvvvvvvvvvvvvvvvv===================== Default parameters ============================ */
 /** Initialise default formats
@@ -444,6 +451,7 @@ typedef struct kaapi_rtparam_t {
   unsigned int             syscpucount;                     /* number of physical cpus of the system */
   unsigned int             cpucount;                        /* number of physical cpu used for execution */
   kaapi_selectvictim_fnc_t wsselect;                        /* default method to select a victim */
+  kaapi_emitsteal_fnc_t	   emitsteal;
   unsigned int		       use_affinity;                    /* use cpu affinity */
   int                      display_perfcounter;             /* set to 1 iff KAAPI_DISPLAY_PERF */
   uint64_t                 startuptime;                     /* time at the end of kaapi_init */
@@ -1883,6 +1891,13 @@ extern kaapi_thread_context_t* kaapi_sched_wakeup (
     \retval a pointer to a stack that is the result of one workstealing operation.
 */
 extern kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc );
+
+/** \ingroup HWS
+    Hierarchical workstealing routine
+    \retval 0 in case failure of stealing something
+    \retval a pointer to a stack that is the result of one workstealing operation.
+*/
+extern kaapi_thread_context_t* kaapi_hws_emitsteal ( kaapi_processor_t* kproc );
 
 
 /** \ingroup WS

@@ -172,6 +172,7 @@ kaapi_format_t* kaapi_voidp_format = &kaapi_voidp_object;
 static int kaapi_setup_param()
 {
   const char* wsselect;
+  const char* emitsteal;
     
   /* compute the number of cpu of the system */
 #if defined(__linux__)
@@ -224,6 +225,14 @@ static int kaapi_setup_param()
   else if ((wsselect != 0) && (strcmp(wsselect, "pws") ==0))
     kaapi_default_param.wsselect = &kaapi_sched_select_victim_pws;
 #endif
+
+  kaapi_default_param.emitsteal = kaapi_sched_emitsteal;
+  emitsteal = getenv("KAAPI_EMITSTEAL");
+  if (emitsteal != NULL)
+  {
+    if (strcmp(emitsteal, "hws") == 0)
+      kaapi_default_param.emitsteal = kaapi_hws_emitsteal;
+  }
   
   return 0;
 }

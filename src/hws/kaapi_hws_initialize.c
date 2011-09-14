@@ -1,5 +1,6 @@
 /* TODO
    . one request block per memory level,block having more than one kid
+   . build a kaapi_listrequest_iterator as the levels are walked
    . allocate data in local pages
    . ws_queue interface error codes
  */
