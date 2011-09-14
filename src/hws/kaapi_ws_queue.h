@@ -9,7 +9,6 @@
 
 
 typedef void* xxx_kaapi_task_t;
-typedef void* xxx_kaapi_request_t;
 
 
 typedef enum kaapi_ws_error
@@ -23,7 +22,7 @@ typedef enum kaapi_ws_error
 typedef struct kaapi_ws_queue
 {
   kaapi_ws_error_t (*push)(void*, xxx_kaapi_task_t*);
-  kaapi_ws_error_t (*stealn)(void*, xxx_kaapi_request_t*);
+  kaapi_ws_error_t (*stealn)(void*, kaapi_listrequest_t*, kaapi_listrequest_iterator_t*);
   kaapi_ws_error_t (*pop)(void*);
   void (*destroy)(void*);
 
@@ -55,9 +54,9 @@ static inline kaapi_ws_error_t kaapi_ws_queue_push
 }
 
 static inline kaapi_ws_error_t kaapi_ws_queue_stealn
-(kaapi_ws_queue_t* q, xxx_kaapi_request_t* req)
+(kaapi_ws_queue_t* q, kaapi_listrequest_t* r, kaapi_listrequest_iterator_t* i)
 {
-  return q->stealn((void*)q->data, req);
+  return q->stealn((void*)q->data, r, i);
 }
 
 static inline kaapi_ws_error_t kaapi_ws_queue_pop

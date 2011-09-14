@@ -1,3 +1,11 @@
+/* todo
+   . we want a task available in a <level> queue not to be distribute
+
+   . flatize requests
+   -> there is one bitmap per level, ored has the thread walks the hierarchy
+   -> the request/reply info are in a global array [KAAPI_MAX_PROCESSOR]
+ */
+
 /* desgin
    . hlrequest contains on request per participant and a map
    -> create_hl_requests(kids);
@@ -124,6 +132,8 @@ static const kaapi_hws_levelmask_t hws_default_levelmask =
   KAAPI_HWS_LEVELMASK_FLAT;
 
 static kaapi_hws_levelmask_t hws_levelmask;
+
+static kaapi_listrequest_t hws_requests;
 
 
 static const char* levelid_to_str(kaapi_hws_levelid_t levelid)
@@ -418,8 +428,9 @@ int kaapi_hws_init_global(void)
 
   } /* foreach level in topo */
 
+#if 1 /* debug */
   print_hws_levels();
-  while (1) ;
+#endif /* debug */
 
   return 0;
 }
@@ -441,7 +452,7 @@ static kaapi_thread_context_t* steal_level_queue
   return NULL;
 }
 
-static kaapi_thread_context_t* steal_kproc_queues
+static kaapi_thread_context_t* steal_ws_block
 (kaapi_processor_t* kproc, kaapi_ws_block_t* block)
 {
 #if 0
@@ -458,6 +469,7 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
   kaapi_ws_block_t* block;
   unsigned int level = 0;
   kaapi_ws_request_t* req;
+  kaapi_listrequest_iterator_t lri;
 
   for (; level < hws_level_count; ++level)
   {
@@ -501,7 +513,8 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
 	 */
 
 	kaapi_ws_queue_t* const queue = block->queue;
-	const kaapi_ws_error_t error = kaapi_ws_queue_stealn(queue, NULL);
+	const kaapi_ws_error_t error =
+	  kaapi_ws_queue_stealn(queue, &hws_requests, &lri);
 	if (error == KAAPI_WS_ERROR_EMPTY)
 	{
 	  goto next_level;

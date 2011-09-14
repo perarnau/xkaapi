@@ -1,3 +1,4 @@
+#include "kaapi_impl.h"
 #include "kaapi_ws_queue.h"
 
 
@@ -17,7 +18,8 @@ static kaapi_ws_error_t push(void* p, xxx_kaapi_task_t* task)
 }
 
 
-static kaapi_ws_error_t stealn(void* p, xxx_kaapi_request_t* reqs)
+static kaapi_ws_error_t stealn
+(void* p, kaapi_listrequest_t* r, kaapi_listrequest_iterator_t* i)
 {
   lifo_queue_t* const q = (lifo_queue_t*)p;
   return KAAPI_WS_ERROR_EMPTY;
