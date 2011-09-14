@@ -1,4 +1,6 @@
 /* todo
+   . set kproc->issteal = 0
+   . fail the request after a steal since they may be captured in the lri bitmap
    . initial splitting: local request list + splitter + push in right queues
    . we want a task available in a <level> queue not to be distribute
 
@@ -7,25 +9,6 @@
    -> the request/reply info are in a global array [KAAPI_MAX_PROCESSOR]
  */
 
-/* desgin
-   . hlrequest contains on request per participant and a map
-   -> create_hl_requests(kids);
-
-   . one queue per kproc
-   . one queue per level
-   algorithm
-   . steal in level queues first
-   -> aggregation + lock
-   . then steal in all the kproc belonging to a given level
-   -> kaapi_sched_emitsteal_with_kids(kids)
- */
-
-/* TODO
-   . one request block per memory level,block having more than one kid
-   . build a kaapi_listrequest_iterator as the levels are walked
-   . allocate data in local pages
-   . ws_queue interface error codes
- */
 
 #include <stdio.h>
 #include <string.h>
@@ -33,29 +16,6 @@
 #include "kaapi_impl.h"
 #include "kaapi_procinfo.h"
 #include "kaapi_ws_queue.h"
-
-
-#if 1 /* todo: replace by kaapi_request_t */
-
-typedef struct kaapi_ws_request
-{
-  void* reply_area;
-} kaapi_ws_request_t;
-
-static void init_request(kaapi_ws_request_t* r)
-{
-}
-
-static void post_request(kaapi_ws_request_t* r)
-{
-}
-
-static int test_reply(kaapi_ws_request_t* r)
-{
-  return 0;
-}
-
-#endif /* todo */
 
 
 typedef struct kaapi_ws_block
@@ -71,20 +31,11 @@ typedef struct kaapi_ws_block
   kaapi_processor_id_t* kids;
   unsigned int kid_count;
 
-  /* one request per kid */
-  kaapi_ws_request_t* requests;
-
-  /* req = kid_to_req[kid] map */
-  /* todo: this is equivalent hlrequest in kproc */
-  kaapi_ws_request_t** kid_to_req;
-
 } kaapi_ws_block_t;
 
 
 typedef struct kaapi_hws_level
 {
-  kaapi_hws_levelid_t levelid;
-
   kaapi_ws_block_t** kid_to_block;
 
   kaapi_ws_block_t* blocks;
@@ -367,12 +318,6 @@ int kaapi_hws_init_global(void)
       block->kids = malloc(affin_set->ncpu * sizeof(kaapi_processor_id_t));
       kaapi_assert(block->kids);
 
-      block->requests = malloc(affin_set->ncpu * sizeof(kaapi_ws_request_t));
-      kaapi_assert(block->requests);
-
-      block->kid_to_req = malloc(kid_count * sizeof(kaapi_ws_request_t*));
-      kaapi_assert(block->kid_to_req);
-
       block->queue = kaapi_ws_queue_create_lifo();
       kaapi_assert(block->queue);
 
@@ -384,12 +329,6 @@ int kaapi_hws_init_global(void)
 
 	hws_level->kid_to_block[pos->kid] = block;
 	block->kids[i] = pos->kid;
-
-	/* todo: initialize the request */
-	init_request(&block->requests[i]);
-
-	/* update the request mapping table */
-	block->kid_to_req[pos->kid] = &block->requests[i];
 
 	++i;
 
@@ -417,24 +356,148 @@ int kaapi_hws_fini_global(void)
 }
 
 
-/* hierarchical workstealing request emission
+/* steal request emission
  */
 
-static kaapi_thread_context_t* steal_level_queue
-(kaapi_processor_t* kproc, kaapi_ws_block_t* block)
+static void fail_requests
+(
+ kaapi_listrequest_t* lr,
+ kaapi_listrequest_iterator_t* lri
+)
+{
+  kaapi_request_t* req = kaapi_listrequest_iterator_get(lr, lri);
+
+  while (req != NULL)
+  {
+    _kaapi_request_reply(req, KAAPI_REPLY_S_NOK);
+    req = kaapi_listrequest_iterator_next(lr, lri);
+  }
+}
+
+
+static kaapi_thread_context_t* steal_block
+(
+ kaapi_processor_t* kproc,
+ kaapi_reply_t* reply,
+ kaapi_ws_block_t* block,
+ kaapi_listrequest_t* lr,
+ kaapi_listrequest_iterator_t* lri
+)
+{
+  kaapi_thread_context_t* thread = NULL;
+
+  while (!kaapi_sched_trylock(&block->lock))
+  {
+    if (kaapi_reply_test(reply))
+      goto on_request_replied;
+  }
+
+  /* got the lock: reply and unlock */
+
+  kaapi_ws_queue_stealn(block->queue, lr, lri);
+
+  kaapi_sched_unlock(&block->lock);
+
+ on_request_replied:
+  kaapi_replysync_data( reply );
+
+  switch (kaapi_reply_status(reply))
+  {
+  case KAAPI_REPLY_S_TASK_FMT:
+    {
+      kaapi_format_t* const format =
+	kaapi_format_resolvebyfmit(reply->u.s_taskfmt.fmt);
+      reply->u.s_task.body = format->entrypoint[kproc->proc_type];
+      kaapi_assert_debug(reply->u.s_task.body);
+
+    } /* KAAPI_REPLY_S_TASK_FMT */
+
+  case KAAPI_REPLY_S_TASK:
+    {
+      kaapi_thread_t* const self_thread =
+	kaapi_threadcontext2thread(kproc->thread);
+
+      kaapi_task_init
+      (
+       kaapi_thread_toptask(self_thread),
+       reply->u.s_task.body,
+       (void*)(reply->udata + reply->offset)
+      );
+
+      kaapi_thread_pushtask(self_thread);
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+      ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
+#endif
+      return kproc->thread;
+
+    } /* KAAPI_REPLY_S_TASK */
+
+  case KAAPI_REPLY_S_THREAD:
+    {
+#if defined(KAAPI_USE_PERFCOUNTER)
+      ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
+#endif
+      return reply->u.s_thread;
+
+    } /* KAAPI_REPLY_S_THREAD */
+
+  default: break ;
+  }
+
+  return NULL;
+}
+
+
+static kaapi_thread_context_t* steal_level
+(
+ kaapi_processor_t* kproc,
+ kaapi_reply_t* reply,
+ kaapi_hws_level_t* level,
+ kaapi_listrequest_t* lr,
+ kaapi_listrequest_iterator_t* lri
+)
+{
+  kaapi_thread_context_t* thread = NULL;
+  unsigned int i;
+
+  for (i = 0; i < level->block_count; ++i)
+  {
+    thread = steal_block(kproc, reply, &level->blocks[i], lr, lri);
+    if (thread != NULL) break ;
+  }
+
+  return thread;
+}
+
+
+static kaapi_thread_context_t* pop_ws_block
+(
+ kaapi_processor_t* kproc,
+ kaapi_ws_block_t* block
+)
 {
   return NULL;
 }
 
-static kaapi_thread_context_t* steal_ws_block
-(kaapi_processor_t* kproc, kaapi_ws_block_t* block)
+
+static kaapi_reply_t* post_request(kaapi_processor_t* kproc)
 {
-#if 0
-  /* todo */
-  return kaapi_sched_emitsteal_with_kids(block->kids, block->kid_count);
-#else
-  return NULL;
-#endif
+  kaapi_request_t* const req = &hws_requests.requests[kproc->kid];
+  kaapi_reply_t* const rep = &kproc->thread->static_reply;
+
+  /* from kaapi_mt_machine.h/kaapi_request_post */
+  
+  req->kid = kproc->kid;
+  req->reply = rep;
+
+  rep->offset = 0;
+  rep->preempt = 0;
+  rep->status = KAAPI_REQUEST_S_POSTED;
+  kaapi_writemem_barrier();
+  kaapi_bitmap_set(&hws_requests.bitmap, kproc->kid);
+
+  return rep;
 }
 
 kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
@@ -442,8 +505,12 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
   kaapi_thread_context_t* thread = NULL;
   kaapi_ws_block_t* block;
   unsigned int level = 0;
-  kaapi_ws_request_t* req;
+  kaapi_reply_t* reply;
   kaapi_listrequest_iterator_t lri;
+
+  kproc->issteal = 1;
+
+  reply = post_request(kproc);
 
   for (; level < hws_level_count; ++level)
   {
@@ -473,10 +540,6 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
     }
     /* randomly steal in a random kproc local queue */
 
-    /* emit the request */
-    req = block->kid_to_req[kproc->kid];
-    post_request(req);
-
     /* wait for lock or reply */
     while (1)
     {
@@ -495,7 +558,7 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
 	}
       }
 
-      if (test_reply(req))
+      if (kaapi_reply_test(reply))
       {
 	/* request got replied */
 	goto on_replied;
@@ -519,60 +582,6 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
     }
   }
 
-  printf("[%u] extract replied task\n", kproc->kid);
-
-#if 0 /* TODO */
-
-  /* extract the replied task */
-  switch (kaapi_hws_reply_status(reply))
-  {
-  case KAAPI_REPLY_S_TASK_FMT:
-    /* convert fmtid to a task body */
-    reply->u.s_task.body = kaapi_format_resolvebyfmit
-      (reply->u.s_taskfmt.fmt)->entrypoint[kproc->proc_type];
-    kaapi_assert_debug(reply->u.s_task.body);
-
-  case KAAPI_REPLY_S_TASK:
-    /* initialize and push the task */
-    self_thread = kaapi_threadcontext2thread(kproc->thread);
-    kaapi_task_init
-    (
-     kaapi_thread_toptask(self_thread),
-     reply->u.s_task.body,
-     (void*)(reply->udata + reply->offset)
-    );
-
-    kaapi_thread_pushtask(self_thread);
-
-#if defined(KAAPI_USE_PERFCOUNTER)
-    ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
-#endif
-    return kproc->thread;
-    break ; /* KAAPI_REPLY_S_TASK */
-
-  case KAAPI_REPLY_S_THREAD:
-#if defined(KAAPI_USE_PERFCOUNTER)
-    ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
-#endif
-    (*kproc->fnc_select)(kproc, &victim, KAAPI_STEAL_SUCCESS);
-    return reply->u.s_thread;
-    break ; /* KAAPI_REPLY_S_THREAD */
-
-  case KAAPI_REPLY_S_NOK:
-    return 0;
-    break ;
-
-  case KAAPI_REPLY_S_ERROR:
-    kaapi_assert_debug_m(0, "Error code in request status");
-    break ;
-
-  default:
-    kaapi_assert_debug_m(0, "Bad request status");
-    break ;
-  }
-
-#endif /* TODO */
-
   return thread;
 }
 
@@ -585,9 +594,7 @@ int kaapi_hws_pushtask(void* task, void* data, kaapi_hws_levelid_t levelid)
   /* kaapi_assert(hws_levelmask & (1 << levelid)); */
 
   kaapi_processor_t* const kproc = kaapi_get_current_processor();
-  const kaapi_processor_id_t kid = kproc->kid;
-  kaapi_hws_level_t* const level = &hws_levels[levelid];
-  kaapi_ws_block_t* const block = level->kid_to_block[kid];
+  kaapi_ws_block_t* const block = hws_levels[levelid].kid_to_block[kproc->kid];
   kaapi_ws_queue_t* const queue = block->queue;
   kaapi_ws_queue_push(queue, task, data);
 
