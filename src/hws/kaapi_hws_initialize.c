@@ -1,4 +1,5 @@
 /* todo
+   . initial splitting: local request list + splitter + push in right queues
    . we want a task available in a <level> queue not to be distribute
 
    . flatize requests
@@ -24,33 +25,6 @@
    . build a kaapi_listrequest_iterator as the levels are walked
    . allocate data in local pages
    . ws_queue interface error codes
- */
-
-/* todo
-
-   queue container
-   . there must be one queue per kproc per memory level
-   push(task, numa) is pushing the task in queue(self->kid, level)
-   . queue_map[level, kid]
-   . {get,set}_self_queue
-
-   stealing protocol
-   . select a random queue, q = queue_map(level, node, kid)
-   . post a request at to q
-   . synchronize concurrent stealing on q->lock
-   . locking is having access to all the queues
-
-   task push at level
-   . refer to above comment
- */
-
-/* notes
-   2 possibilities
-   . either a per kproc queue, per level
-   -> currently the case for flat stealing
-   -> a lock is put to synchronize
-   . or a per level queue
-   -> 
  */
 
 #include <stdio.h>
@@ -606,18 +580,16 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
 /* push a task at a given hierarchy level
  */
 
-int kaapi_hws_pushtask
-(void* task, void* data, kaapi_hws_levelid_t levelid)
+int kaapi_hws_pushtask(void* task, void* data, kaapi_hws_levelid_t levelid)
 {
-  kaapi_assert(hws_levelmask & (1 << levelid));
+  /* kaapi_assert(hws_levelmask & (1 << levelid)); */
 
-#if 0 /* TODO */
   kaapi_processor_t* const kproc = kaapi_get_current_processor();
-  const kaapi_processor_id_t kid = self_proc->kid;
-  kaapi_hws_level_t* const level = levelid_to_level[levelid];
-  kaapi_ws_block_t* const block = level->blocks[level->kid_to_block[kid]];
+  const kaapi_processor_id_t kid = kproc->kid;
+  kaapi_hws_level_t* const level = &hws_levels[levelid];
+  kaapi_ws_block_t* const block = level->kid_to_block[kid];
   kaapi_ws_queue_t* const queue = block->queue;
   kaapi_ws_queue_push(queue, task, data);
-#endif
+
   return 0;
 }

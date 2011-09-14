@@ -11,7 +11,7 @@ typedef struct lifo_queue
 } lifo_queue_t;
 
 
-static kaapi_ws_error_t push(void* p, xxx_kaapi_task_t* task)
+static kaapi_ws_error_t push(void* p, void* task, void* data)
 {
   lifo_queue_t* const q = (lifo_queue_t*)p;
   return KAAPI_WS_ERROR_EMPTY;
