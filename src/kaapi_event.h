@@ -70,7 +70,7 @@ extern "C" {
 #define KAAPI_EVT_SCHED_IDLE_BEG  9     /* begin when k-processor starts to be idle */
 #define KAAPI_EVT_SCHED_IDLE_END  10    /* end when k-processor starts to be idle */
 
-#define KAAPI_EVT_NUMBER          10    /* total number of event ! */
+#define KAAPI_EVT_NUMBER          10    /* total number of events ! */
 
 /* ........................................ Implementation notes ........................................*/
 
@@ -206,6 +206,16 @@ static inline void kaapi_event_push2_(
 #  define kaapi_event_push1(kproc, kthread, eventno, p1 )
 #  define kaapi_event_push2(kproc, kthread, eventno, p1, p2 )
 #endif
+
+/* Signal handler attached to:
+    - SIGINT
+    - SIGQUIT
+    - SIGABRT
+    - SIGTERM
+    - SIGSTOP
+  when the library is configured with --with-perfcounter in order to flush some counters.
+*/
+extern void _kaapi_signal_dump_counters(int);
 
 
 #if defined(__cplusplus)

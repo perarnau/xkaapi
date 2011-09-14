@@ -117,4 +117,4 @@ static inline void* kaapi_allocator_allocate( kaapi_allocator_t* va, size_t size
 }
 #endif
 
-#endif /* _KAAPI_IMPL_H */
+#endif /* */
