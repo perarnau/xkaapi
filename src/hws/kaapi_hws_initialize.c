@@ -1,8 +1,48 @@
+/* desgin
+   . hlrequest contains on request per participant and a map
+   -> create_hl_requests(kids);
+
+   . one queue per kproc
+   . one queue per level
+   algorithm
+   . steal in level queues first
+   -> aggregation + lock
+   . then steal in all the kproc belonging to a given level
+   -> kaapi_sched_emitsteal_with_kids(kids)
+ */
+
 /* TODO
    . one request block per memory level,block having more than one kid
    . build a kaapi_listrequest_iterator as the levels are walked
    . allocate data in local pages
    . ws_queue interface error codes
+ */
+
+/* todo
+
+   queue container
+   . there must be one queue per kproc per memory level
+   push(task, numa) is pushing the task in queue(self->kid, level)
+   . queue_map[level, kid]
+   . {get,set}_self_queue
+
+   stealing protocol
+   . select a random queue, q = queue_map(level, node, kid)
+   . post a request at to q
+   . synchronize concurrent stealing on q->lock
+   . locking is having access to all the queues
+
+   task push at level
+   . refer to above comment
+ */
+
+/* notes
+   2 possibilities
+   . either a per kproc queue, per level
+   -> currently the case for flat stealing
+   -> a lock is put to synchronize
+   . or a per level queue
+   -> 
  */
 
 #include <stdio.h>
@@ -52,6 +92,10 @@ typedef struct kaapi_ws_block
   /* one request per kid */
   kaapi_ws_request_t* requests;
 
+  /* req = kid_to_req[kid] map */
+  /* todo: this is equivalent hlrequest in kproc */
+  kaapi_ws_request_t** kid_to_req;
+
 } kaapi_ws_block_t;
 
 
@@ -69,29 +113,6 @@ typedef struct kaapi_hws_level
 
 static unsigned int hws_level_count;
 static kaapi_hws_level_t* hws_levels;
-static kaapi_ws_request_t** hws_request_map;
-
-
-static inline kaapi_ws_request_t* get_self_request
-(
- kaapi_processor_t* kproc,
- unsigned int level
-)
-{
-  /* hws_request_map[kid][level] ordering for prefetch + cache */
-  return hws_request_map[kproc->kid * hws_level_count + level];
-}
-
-
-static inline void set_kid_request
-(
- kaapi_processor_id_t kid,
- unsigned int level,
- kaapi_ws_request_t* req
-)
-{
-  hws_request_map[kid * hws_level_count + level] = req;
-}
 
 
 static inline kaapi_ws_block_t* get_self_ws_block
@@ -102,6 +123,7 @@ static inline kaapi_ws_block_t* get_self_ws_block
 
   return hws_levels[level].kid_to_block[self->kid];
 }
+
 
 static kaapi_processor_id_t select_victim
 (kaapi_ws_block_t* block, kaapi_processor_id_t self_kid)
@@ -163,7 +185,7 @@ static void print_hws_levels(void)
 
       printf("  -- block[%u] #%u: ", i, block->kid_count);
       for (j = 0; j < block->kid_count; ++j)
-	printf(" %u", block->kids[j]);
+	printf(" %u", kaapi_default_param.kid2cpu[block->kids[j]]);
       printf("\n");
     }
   }
@@ -193,29 +215,50 @@ int kaapi_hws_init_global(void)
 
   /* build stealing blocks. redundant with kaapi_processor_computetopo. */
 
-  kaapi_assert(kaapi_default_param.kproc_list);
-
   const unsigned int kid_count = kaapi_default_param.kproc_list->count;
 
   unsigned int depth;
+  kaapi_hierarchy_one_level_t flat_level;
+  kaapi_affinityset_t flat_affin_set[KAAPI_MAX_PROCESSOR];
 
-  hws_level_count = kaapi_default_param.memory.depth;
+  /* add 1 for the flat level */
+  hws_level_count = kaapi_default_param.memory.depth + 1;
   hws_levels = malloc(hws_level_count * sizeof(kaapi_hws_level_t));
   kaapi_assert(hws_levels);
-
-  hws_request_map = malloc
-    (hws_level_count * kid_count * sizeof(kaapi_ws_request_t*));
-  kaapi_assert(hws_request_map);
 
   /* foreach level */
   for (depth = 0; depth < hws_level_count; ++depth)
   {
     kaapi_hws_level_t* const hws_level = &hws_levels[depth];
+    kaapi_hierarchy_one_level_t* one_level;
+    unsigned int node_count;
 
-    kaapi_hierarchy_one_level_t* const one_level =
-      &kaapi_default_param.memory.levels[depth];
+    if (depth == (hws_level_count - 1))
+    {
+      /* build a flat level containing all the kids */
 
-    const unsigned int node_count = one_level->count;
+      unsigned int i;
+
+      for (i = 0; i < kid_count; ++i)
+      {
+	kaapi_affinityset_t* const affin_set = &flat_affin_set[i];
+	kaapi_procinfo_t* pos = kaapi_default_param.kproc_list->head;
+	kaapi_cpuset_clear(&affin_set->who);
+	for (; pos != NULL; pos = pos->next)
+	  kaapi_cpuset_set(&affin_set->who, pos->bound_cpu);
+	affin_set->ncpu = kid_count;
+      }
+
+      flat_level.count = kid_count;
+      flat_level.affinity = flat_affin_set;
+      one_level = &flat_level;
+    }
+    else /* != flat level */
+    {
+      one_level = &kaapi_default_param.memory.levels[depth];
+    }
+
+    node_count = one_level->count;
 
     /* allocate steal blocks for this level */
     hws_level->block_count = node_count;
@@ -233,6 +276,7 @@ int kaapi_hws_init_global(void)
     {
       kaapi_affinityset_t* const affin_set = &one_level->affinity[node];
       kaapi_ws_block_t* const block = &hws_level->blocks[node];
+      kaapi_procinfo_t* pos = kaapi_default_param.kproc_list->head;
       unsigned int i = 0;
 
       /* initialize the block */
@@ -245,11 +289,13 @@ int kaapi_hws_init_global(void)
       block->requests = malloc(affin_set->ncpu * sizeof(kaapi_ws_request_t));
       kaapi_assert(block->requests);
 
+      block->kid_to_req = malloc(kid_count * sizeof(kaapi_ws_request_t*));
+      kaapi_assert(block->kid_to_req);
+
       block->queue = kaapi_ws_queue_create_lifo();
       kaapi_assert(block->queue);
 
       /* for each cpu in this node */
-      kaapi_procinfo_t* pos = kaapi_default_param.kproc_list->head;
       for (; pos != NULL; pos = pos->next)
       {
 	if (!kaapi_cpuset_has(&affin_set->who, pos->bound_cpu))
@@ -262,7 +308,7 @@ int kaapi_hws_init_global(void)
 	init_request(&block->requests[i]);
 
 	/* update the request mapping table */
-	set_kid_request(pos->kid, depth, &block->requests[i]);
+	block->kid_to_req[pos->kid] = &block->requests[i];
 
 	++i;
 
@@ -290,6 +336,23 @@ int kaapi_hws_fini_global(void)
 /* hierarchical workstealing request emission
  */
 
+static kaapi_thread_context_t* steal_level_queue
+(kaapi_processor_t* kproc, kaapi_ws_block_t* block)
+{
+  return NULL;
+}
+
+static kaapi_thread_context_t* steal_kproc_queues
+(kaapi_processor_t* kproc, kaapi_ws_block_t* block)
+{
+#if 0
+  /* todo */
+  return kaapi_sched_emitsteal_with_kids(block->kids, block->kid_count);
+#else
+  return NULL;
+#endif
+}
+
 kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
 {
   kaapi_ws_block_t* block;
@@ -301,13 +364,15 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
   {
     block = get_self_ws_block(kproc, level);
 
+    /* steal in the level queue first */
+    
     /* next_level if alone in the block */
     if (block->kid_count <= 1) continue ;
 
     victim_kid = select_victim(block, kproc->kid);
 
     /* emit the request */
-    req = get_self_request(kproc, level);
+    req = block->kid_to_req[kproc->kid];
     post_request(req);
 
     /* wait for lock or reply */
