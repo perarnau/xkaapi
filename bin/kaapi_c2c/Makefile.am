@@ -19,7 +19,7 @@ utils.cpp\
 kaapi_abort.cpp\
 kaapi_loop.cpp\
 kaapi_pragma.cpp\
-kaapi_task.cpp\
+kaapi_c2c_task.cpp\
 kaapi_ssa.cpp\
 kaapi_taskcall.cpp\
 kaapi_initializer.cpp\

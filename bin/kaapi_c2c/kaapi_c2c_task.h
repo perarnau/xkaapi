@@ -98,6 +98,7 @@ struct KaapiReduceOperator_t {
   std::string name_redinit;
 };
 
+
 enum KaapiStorage_t {
   KAAPI_BAD_STORAGE = 0,
   KAAPI_ROW_MAJOR = 1,

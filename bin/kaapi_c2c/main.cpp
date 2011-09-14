@@ -58,7 +58,7 @@
 #include "rose_headers.h"
 #include "globals.h"
 #include "parser.h"
-#include "kaapi_task.h"
+#include "kaapi_c2c_task.h"
 #include "kaapi_pragma.h"
 #include "kaapi_abort.h"
 #include "kaapi_ssa.h"
@@ -156,16 +156,16 @@ int main(int argc, char **argv)
                     AstUnparseAttribute::e_before
         );
         
-  #if 0 // do not work properly
+#if 0 // do not work properly
         SageInterface::insertHeader ("kaapi.h", PreprocessingInfo::after, false, gscope);
-  #else
+#else
         /** Add #include <kaapi.h> to each input file
         */
         SageInterface::addTextForUnparser(file->get_globalScope(),
                     "#include <kaapi.h>\n",
                     AstUnparseAttribute::e_before
         );
-  #endif
+#endif
 
         /* declare kaapi_init function */
         static SgName name_init("kaapi_init");

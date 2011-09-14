@@ -50,11 +50,12 @@ kaapi_version_t* kaapi_version_createreplicat(
     kaapi_version_t*        master_version
 )
 {
+#if 0
   /* assert: this is the master copy */
   kaapi_assert_debug( master_version->master->version == master_version );
 
   /* assert: this not the local version */
-  kaapi_assert_debug( master_version->master->tl != tl );
+//  kaapi_assert_debug( master_version->master->tl != tl );
   
   kaapi_link_version_t* version_link;
   kaapi_version_t*      local_version;
@@ -77,7 +78,10 @@ kaapi_version_t* kaapi_version_createreplicat(
   local_version->handle        = 0;
   local_version->writer_task   = 0;
 #endif
+
   return local_version;
+#endif //
+  return 0;
 }
 
 
@@ -89,6 +93,7 @@ int kaapi_thread_insert_synchro(
     kaapi_access_mode_t  m
 )
 {
+#if 0
   kaapi_version_t* version_master = version->master->version;
   kaapi_assert_debug( version_master != version );
   
@@ -160,6 +165,7 @@ int kaapi_thread_insert_synchro(
       kaapi_activationlist_pushback( td_writer->u.acl.bcast, link );
     }
   }
+#endif
   return 0;
 }
 
@@ -170,6 +176,7 @@ int kaapi_version_invalidatereplicat(
     kaapi_version_t*        version
 )
 {
+#if 0
   /* invalidate */
   kaapi_link_version_t* head = version->master;
   while (head !=0)
@@ -182,5 +189,6 @@ int kaapi_version_invalidatereplicat(
     /* pass to the next */
     head = head->next;
   }
+#endif
   return 0;
 }

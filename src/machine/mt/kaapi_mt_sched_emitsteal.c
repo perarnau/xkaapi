@@ -134,8 +134,10 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
 
   /* steal in the local queue first */
   kaapi_affinity_queue_t* queue = kaapi_sched_affinity_lookup_numa_queue(kproc->numa_nodeid);
-  thread = _kaapi_sched_emitsteal_onglobal_queue( kproc, queue );
-  if (thread !=0) return thread;
+  if (queue !=0) {
+    thread = _kaapi_sched_emitsteal_onglobal_queue( kproc, queue );
+    if (thread !=0) return thread;
+  }
   
   if (kaapi_count_kprocessors <2) return 0;
   

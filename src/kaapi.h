@@ -81,6 +81,7 @@
 #endif
 
 #include "kaapi_error.h"
+#include "kaapi_atomic.h"
 #include <limits.h>
 
 #if defined(__cplusplus)
@@ -126,322 +127,6 @@ struct kaapi_request_t;
 struct kaapi_reply_t;
 struct kaapi_tasklist_t;
   
-/** Atomic type
-*/
-typedef struct kaapi_atomic32_t {
-  volatile uint32_t _counter;
-} kaapi_atomic32_t;
-typedef kaapi_atomic32_t kaapi_atomic_t;
-
-
-typedef struct kaapi_atomic64_t {
-  volatile uint64_t _counter;
-} kaapi_atomic64_t;
-
-/* ========================= Low level memory barrier, inline for perf... so ============================= */
-/** Implementation note
-    - all functions or macros without _ORIG return the new value after apply the operation.
-    - all functions or macros with ORIG return the old value before applying the operation.
-*/
-#if defined(KAAPI_DEBUG)
-static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
-{
-  kaapi_assert( (((uintptr_t)a) & ((unsigned long)byte - 1)) == 0 );
-  return 1;
-}
-#  define __KAAPI_ISALIGNED_ATOMIC(a,instruction)\
-      (__kaapi_isaligned( &(a)->_counter, sizeof((a)->_counter)) ? (instruction) : 0)
-#else
-static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
-{
-  if ((((uintptr_t)a) & ((unsigned long)byte - 1)) == 0 ) return 1;
-  return 0;
-}
-#  define __KAAPI_ISALIGNED_ATOMIC(a,instruction)\
-      (instruction)
-#endif
-
-#define KAAPI_ATOMIC_READ(a) \
-  __KAAPI_ISALIGNED_ATOMIC(a, (a)->_counter)
-
-#define KAAPI_ATOMIC_WRITE(a, value) \
-  __KAAPI_ISALIGNED_ATOMIC(a, (a)->_counter = value)
-
-#define KAAPI_ATOMIC_WRITE_BARRIER(a, value) \
-    __KAAPI_ISALIGNED_ATOMIC(a, (kaapi_mem_barrier(), (a)->_counter = value))
-
-//BEFORE:    __KAAPI_ISALIGNED_ATOMIC(a, (kaapi_writemem_barrier(), (a)->_counter = value))
-
-#if (((__GNUC__ == 4) && (__GNUC_MINOR__ >= 1)) || (__GNUC__ > 4) \
-|| defined(__INTEL_COMPILER))
-/* Note: ICC seems to also support these builtins functions */
-#  if defined(__INTEL_COMPILER)
-#    warning Using ICC. Please, check if icc really support atomic operations
-/* ia64 impl using compare and exchange */
-/*#    define KAAPI_CAS(_a, _o, _n) _InterlockedCompareExchange(_a, _n, _o ) */
-#  endif
-
-#  define KAAPI_ATOMIC_CAS(a, o, n) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_bool_compare_and_swap( &((a)->_counter), o, n))
-
-/* functions which return new value (NV) */
-#  define KAAPI_ATOMIC_INCR(a) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_add_and_fetch( &((a)->_counter), 1 ))
-
-#  define KAAPI_ATOMIC_DECR(a) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), 1 ))
-
-#  define KAAPI_ATOMIC_ADD(a, value) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_add_and_fetch( &((a)->_counter), value ))
-
-#  define KAAPI_ATOMIC_SUB(a, value) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), value ))
-
-#  define KAAPI_ATOMIC_AND(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_and_and_fetch( &((a)->_counter), o ))
-
-#  define KAAPI_ATOMIC_OR(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_or_and_fetch( &((a)->_counter), o ))
-
-#  define KAAPI_ATOMIC_XOR(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_xor_and_fetch( &((a)->_counter), o ))
-
-/* linux functions which return old value */
-#  define KAAPI_ATOMIC_AND_ORIG(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_and( &((a)->_counter), o ))
-
-#  define KAAPI_ATOMIC_OR_ORIG(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_or( &((a)->_counter), o ))
-
-#  define KAAPI_ATOMIC_XOR_ORIG(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_xor( &((a)->_counter), o ))
-
-/* linux 64 bit versions */
-#  define KAAPI_ATOMIC_CAS64(a, o, n) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_bool_compare_and_swap( &((a)->_counter), o, n))
-
-/* linux functions which return new value (NV) */
-#  define KAAPI_ATOMIC_INCR64(a) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_add_and_fetch( &((a)->_counter), 1 ) )
-
-#  define KAAPI_ATOMIC_DECR64(a) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), 1 ) )
-
-#  define KAAPI_ATOMIC_ADD64(a, value) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_add_and_fetch( &((a)->_counter), value ) )
-
-#  define KAAPI_ATOMIC_SUB64(a, value) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_sub_and_fetch( &((a)->_counter), value ) )
-
-#  define KAAPI_ATOMIC_AND64(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_and_and_fetch( &((a)->_counter), o ))
-
-#  define KAAPI_ATOMIC_OR64(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_or_and_fetch( &((a)->_counter), o ))
-
-#  define KAAPI_ATOMIC_XOR64(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_xor_and_fetch( &((a)->_counter), o ))
-
-/* functions which return old value */
-#  define KAAPI_ATOMIC_AND64_ORIG(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_and( &((a)->_counter), o ))
-
-#  define KAAPI_ATOMIC_OR64_ORIG(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_or( &((a)->_counter), o ))
-
-#  define KAAPI_ATOMIC_XOR64_ORIG(a, o) \
-    __KAAPI_ISALIGNED_ATOMIC(a, __sync_fetch_and_xor( &((a)->_counter), o ))
-
-
-#elif defined(__APPLE__) /* if gcc version on Apple is less than 4.1 */
-
-#  include <libkern/OSAtomic.h>
-
-#  define KAAPI_ATOMIC_CAS(a, o, n) \
-    OSAtomicCompareAndSwap32( o, n, &((a)->_counter)) 
-
-/* functions which return new value (NV) */
-#  define KAAPI_ATOMIC_INCR(a) \
-    OSAtomicIncrement32Barrier( &((a)->_counter) ) 
-
-#  define KAAPI_ATOMIC_DECR32(a) \
-    OSAtomicDecrement32Barrier(&((a)->_counter) ) 
-
-#  define KAAPI_ATOMIC_ADD(a, value) \
-    OSAtomicAdd32Barrier( value, &((a)->_counter) ) 
-
-#  define KAAPI_ATOMIC_SUB(a, value) \
-    OSAtomicAdd32Barrier( -value, &((a)->_counter) ) 
-
-#  define KAAPI_ATOMIC_AND(a, o) \
-    OSAtomicAnd32Barrier( o, &((a)->_counter) )
-
-#  define KAAPI_ATOMIC_OR(a, o) \
-    OSAtomicOr32Barrier( o, &((a)->_counter) )
-
-#  define KAAPI_ATOMIC_XOR(a, o) \
-    OSAtomicXor32Barrier( o, &((a)->_counter) )
-
-/* functions which return old value */
-#  define KAAPI_ATOMIC_AND_ORIG(a, o) \
-    OSAtomicAnd32OrigBarrier( o, &((a)->_counter) )
-
-#  define KAAPI_ATOMIC_OR_ORIG(a, o) \
-    OSAtomicOr32OrigBarrier( o, &((a)->_counter) )
-
-#  define KAAPI_ATOMIC_XOR_ORIG(a, o) \
-    OSAtomicXor32OrigBarrier( o, &((a)->_counter) )
-
-/* 64 bit versions */
-#  define KAAPI_ATOMIC_CAS64(a, o, n) \
-    OSAtomicCompareAndSwap64( o, n, &((a)->_counter)) 
-
-/* functions which return new value (NV) */
-#  define KAAPI_ATOMIC_INCR64(a) \
-    OSAtomicIncrement64Barrier( &((a)->_counter) ) 
-
-#  define KAAPI_ATOMIC_DECR64(a) \
-    OSAtomicDecrement64Barrier(&((a)->_counter) ) 
-
-#  define KAAPI_ATOMIC_ADD64(a, value) \
-    OSAtomicAdd64Barrier( value, &((a)->_counter) ) 
-
-#  define KAAPI_ATOMIC_SUB64(a, value) \
-    OSAtomicAdd64Barrier( -value, &((a)->_counter) ) 
-
-#  define KAAPI_ATOMIC_AND64(a, o) \
-    OSAtomicAnd64Barrier( o, &((a)->_counter) )
-
-#  define KAAPI_ATOMIC_OR64(a, o) \
-    OSAtomicOr64Barrier( o, &((a)->_counter) )
-
-#  define KAAPI_ATOMIC_XOR64(a, o) \
-    OSAtomicXor64Barrier( o, &((a)->_counter) )
-
-/* functions which return old value */
-#  define KAAPI_ATOMIC_AND64_ORIG(a, o) \
-    OSAtomicAnd64OrigBarrier( o, &((a)->_counter) )
-
-#  define KAAPI_ATOMIC_OR64_ORIG(a, o) \
-    OSAtomicOr64OrigBarrier( o, &((a)->_counter) )
-
-#  define KAAPI_ATOMIC_XOR64_ORIG(a, o) \
-    OSAtomicXor64OrigBarrier( o, &((a)->_counter) )
-#else
-#  error "Please add support for atomic operations on this system/architecture"
-#endif /* GCC > 4.1 */
-
-
-#if defined(__i386__)||defined(__x86_64)
-#  define kaapi_slowdown_cpu() \
-      do { __asm__ __volatile__("pause\n\t"); } while (0)
-#else
-#  define kaapi_slowdown_cpu()
-#endif
-
-
-
-#if defined(__APPLE__)
-#  include <libkern/OSAtomic.h>
-static inline void kaapi_writemem_barrier()  
-{
-#  ifdef __ppc__
-  OSMemoryBarrier();
-#  elif defined(__x86_64) || defined(__i386__)
-  /* not need sfence on X86 archi: write are ordered */
-  __asm__ __volatile__ ("":::"memory");
-#  else
-#    error "bad configuration"
-#  endif
-}
-
-static inline void kaapi_readmem_barrier()  
-{
-#  ifdef __ppc__
-  OSMemoryBarrier();
-#  elif defined(__x86_64) || defined(__i386__)
-  /* not need lfence on X86 archi: read are ordered */
-  __asm__ __volatile__ ("lfence":::"memory");
-#  else
-#    error "bad configuration"
-#  endif
-}
-
-/* should be both read & write barrier */
-static inline void kaapi_mem_barrier()  
-{
-#  ifdef __ppc__
-  OSMemoryBarrier();
-#  elif defined(__x86_64) || defined(__i386__)
-  /* not need lfence on X86 archi: read are ordered */
-  __asm__ __volatile__ ("mfence":::"memory");
-#  else
-#    error "bad configuration"
-#  endif
-}
-
-#elif defined(__linux__)
-
-static inline void kaapi_writemem_barrier()  
-{
-#  if defined(__x86_64) || defined(__i386__)
-  /* not need sfence on X86 archi: write are ordered */
-  __asm__ __volatile__ ("":::"memory");
-#  elif defined(__GNUC__)
-  __sync_synchronize();
-#  else
-#  error "Compiler not supported"
-/* xlC ->__lwsync() / bultin */  
-#  endif
-}
-
-static inline void kaapi_readmem_barrier()  
-{
-#  if defined(__x86_64) || defined(__i386__)
-  /* not need lfence on X86 archi: read are ordered */
-  __asm__ __volatile__ ("":::"memory");
-#  else
-  __sync_synchronize();
-#  endif
-}
-
-/* should be both read & write barrier */
-static inline void kaapi_mem_barrier()  
-{
-  __sync_synchronize();
-}
-
-#elif defined(_WIN32)
-static inline void kaapi_writemem_barrier()  
-{
-  /* Compiler fence to keep operations from */
-  /* not need sfence on X86 archi: write are ordered */
-  __asm__ __volatile__ ("":::"memory");
-}
-
-static inline void kaapi_readmem_barrier()  
-{
-  /* Compiler fence to keep operations from */
-  /* not need lfence on X86 archi: read are ordered */
-  __asm__ __volatile__ ("":::"memory");
-}
-
-/* should be both read & write barrier */
-static inline void kaapi_mem_barrier()  
-{
-   LONG Barrier = 0;
-   __asm__ __volatile__("xchgl %%eax,%0 "
-     :"=r" (Barrier));
-
-  /* Compiler fence to keep operations from */
-  __asm__ __volatile__("" : : : "memory" );
-}
-
-
-#else
-#  error "Undefined barrier"
-#endif
-
 
 /* ========================================================================== */
 /* Main function: initialization of the library; terminaison and abort        
@@ -463,8 +148,15 @@ extern int kaapi_finalize(void);
 
 
 /** Declare the beginning of a parallel region
+    \param schedflag flag to drive the scheduling of this parallel region
 */
-extern void kaapi_begin_parallel(void);
+extern void kaapi_begin_parallel(int schedflag);
+
+typedef enum {
+  KAAPI_SCHEDFLAG_DEFAULT = 0,
+  KAAPI_SCHEDFLAG_NOWAIT  = 0x1,
+  KAAPI_SCHEDFLAG_STATIC  = 0x2
+} kaapi_schedflag_t;
 
 /** Declare the end of a parallel region
     \param flag == 0 then an implicit sync is inserted before existing the region.
@@ -1413,7 +1105,7 @@ extern void* kaapi_reply_init_adaptive_task (
     struct kaapi_stealcontext_t*        sc,
     kaapi_request_t*                    req,
     kaapi_task_body_t                   body,
-    size_t				                      size,
+    size_t				                size,
     struct kaapi_taskadaptive_result_t* result
 );
 
@@ -1551,8 +1243,8 @@ extern int kaapi_preemptasync_thief(
 */
 extern int kaapi_preemptasync_waitthief
 ( 
- kaapi_stealcontext_t*               sc,
- struct kaapi_taskadaptive_result_t* ktr
+  kaapi_stealcontext_t*               sc,
+  struct kaapi_taskadaptive_result_t* ktr
 );
 
 /** \ingroup ADAPTIVE
@@ -1576,12 +1268,13 @@ extern int kaapi_remove_finishedthief(
    where ... is the same extra arguments passed to kaapi_preempt_nextthief.
 */
 
-static inline int kaapi_preempt_thief
-(kaapi_stealcontext_t* sc,
- kaapi_taskadaptive_result_t* ktr,
- void* thief_arg,
- kaapi_victim_reducer_t reducer,
- void* reducer_arg)
+static inline int kaapi_preempt_thief(
+  kaapi_stealcontext_t* sc,
+  kaapi_taskadaptive_result_t* ktr,
+  void* thief_arg,
+  kaapi_victim_reducer_t reducer,
+  void* reducer_arg
+)
 {
   int res = 0;
 
@@ -1637,13 +1330,14 @@ extern int kaapi_preemptpoint_after_reducer_call (
     \retval 0 else
 */
 
-static inline int kaapi_preemptpoint
-(kaapi_stealcontext_t* sc,
- kaapi_thief_reducer_t reducer,
- void* victim_arg,
- void* result_data,
- size_t result_size,
- void* reducer_arg)
+static inline int kaapi_preemptpoint(
+  kaapi_stealcontext_t* sc,
+  kaapi_thief_reducer_t reducer,
+  void* victim_arg,
+  void* result_data,
+  size_t result_size,
+  void* reducer_arg
+)
 {
   int res = 0;
 
@@ -1712,8 +1406,6 @@ typedef struct kaapi_memory_view_t {
 /** Identifier to an address space id
 */
 typedef uint64_t  kaapi_address_space_id_t;
-
-
 
 /** Returns the numa node (>=0 value) that stores address addr
     Return -1 in case of failure and set errno to the error code.
@@ -2063,7 +1755,7 @@ static inline int kaapi_workqueue_push(
 
 
 /** Helper function called in case of conflict.
-    Return EBUSY is the queue is empty.
+    Return EBUSY if the queue is empty.
     Return EINVAL if invalid arguments
     Return ESRCH if the current thread is not a kaapi thread.
 */
@@ -2148,14 +1840,13 @@ static inline int kaapi_workqueue_steal(
 
 /** kaapi exported splitters
  */
-
 typedef struct kaapi_splitter_context
 {
   kaapi_workqueue_t wq;
   kaapi_task_body_t body;
-  size_t ktr_size;
-  size_t data_size;
-  unsigned char data[1];
+  size_t            ktr_size;
+  size_t            data_size;
+  unsigned char     data[1];
 } kaapi_splitter_context_t;
 
 int kaapi_splitter_default
@@ -2321,8 +2012,8 @@ extern struct kaapi_format_t* kaapi_format_allocate(void);
     Register a format
 */
 extern kaapi_format_id_t kaapi_format_register( 
-        struct kaapi_format_t*      fmt,
-        const char*                 name
+    struct kaapi_format_t*      fmt,
+    const char*                 name
 );
 
 /** \ingroup TASK
@@ -2375,7 +2066,7 @@ extern kaapi_format_id_t kaapi_format_taskregister_func(
     void                        (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
     void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, void*, const void*),
     void                        (*redinit )        (const struct kaapi_format_t*, unsigned int, const void* sp, void* ),
-    void                        (*get_task_binding)(const struct kaapi_format_t*, const kaapi_task_t*, kaapi_task_binding_t*)
+    void                        (*get_task_binding)(const struct kaapi_format_t*, const void*, kaapi_task_binding_t*)
 );
 
 /** \ingroup TASK

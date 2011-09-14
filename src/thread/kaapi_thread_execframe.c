@@ -188,7 +188,7 @@ push_frame:
       }
       else if ( kaapi_task_state_isterm( state ) )
       {
-        /* means that task has been steal */
+        /* means that task has been steal or set to term if no debug */
         kaapi_assert_debug( kaapi_task_state_issteal( state ) );
       }
       else if ( kaapi_task_state_issteal( state ) ) /* but not terminate ! so swap */

@@ -46,6 +46,11 @@
 #ifndef _KAAPI_DEFS_H
 #define _KAAPI_DEFS_H 1
 
+
+#define KAAPI_BLOCENTRIES_SIZE 2048
+#define KAAPI_BLOCALLOCATOR_SIZE 8*4096
+
+
 #if defined(__cplusplus)
 extern "C" {
 #endif

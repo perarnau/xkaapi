@@ -54,7 +54,7 @@
 #include "rose_headers.h"
 #include "utils.h"
 #include "globals.h"
-#include "kaapi_task.h"
+#include "kaapi_c2c_task.h"
 #include "kaapi_abort.h"
 
 

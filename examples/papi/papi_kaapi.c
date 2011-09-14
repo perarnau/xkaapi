@@ -145,7 +145,6 @@ static int extract_seq(work_t* w, double** pos, double** end)
 
 /** thief entrypoint 
  */
-
 static void inline common_entry
 (double* beg, double* end, void (*op)(double*))
 {

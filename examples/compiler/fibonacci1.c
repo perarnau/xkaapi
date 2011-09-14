@@ -41,12 +41,7 @@
 ** 
 */
 #include <stdio.h>
-
-#pragma kaapi task write(result) read(r1,r2)
-void sum( long* result, const long* r1, const long* r2)
-{
-  *result = *r1 + *r2;
-}
+#include <stdlib.h>
 
 #pragma kaapi task write(result) value(n)
 void fibonacci(long* result, const long n)
@@ -55,11 +50,11 @@ void fibonacci(long* result, const long n)
     *result = n;
   else 
   {
-#pragma kaapi data alloca(r1,r2)
     long r1,r2;
     fibonacci( &r1, n-1 );
     fibonacci( &r2, n-2 );
-    sum( result, &r1, &r2);
+#pragma kaapi sync
+    *result = r1 + r2;
   }
 }
 
@@ -69,12 +64,15 @@ void print_result( const long* result )
   printf("Fibonacci(30)=%li\n", *result);
 }
 
-int main()
+int main( int argc, char** argv)
 {
   long result;
+  int n;
+  if (argc >1) n = atoi(argv[1]);
+  else n = 30;
 #pragma kaapi parallel
   {
-    fibonacci(&result, 30);
+    fibonacci(&result, n);
     print_result(&result);
   }
   return 0;

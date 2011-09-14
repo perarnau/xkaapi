@@ -122,10 +122,10 @@ static inline void _kaapi_bitmapkid2cpuset( kaapi_cpuset_t* cpusetrequest, kaapi
  */
 static kaapi_request_t* _kaapi_matching_request
 (
- kaapi_listrequest_t*          lr,
- kaapi_listrequest_iterator_t* lri,
- kaapi_cpuset_t*               mapping
- )
+   kaapi_listrequest_t*          lr,
+   kaapi_listrequest_iterator_t* lri,
+   kaapi_cpuset_t*               mapping
+)
 {
   kaapi_cpuset_t cpusetrequest;
   _kaapi_bitmapkid2cpuset( &cpusetrequest, &lri->bitmap );
@@ -155,12 +155,12 @@ static kaapi_request_t* _kaapi_matching_request
  */
 static int kaapi_sched_stealframe
 (
- kaapi_thread_context_t*       thread, 
- kaapi_frame_t*                frame, 
- kaapi_hashmap_t*              map, 
- kaapi_listrequest_t*          lrequests, 
- kaapi_listrequest_iterator_t* lrrange
- )
+  kaapi_thread_context_t*       thread, 
+  kaapi_frame_t*                frame, 
+  kaapi_hashmap_t*              map, 
+  kaapi_listrequest_t*          lrequests, 
+  kaapi_listrequest_iterator_t* lrrange
+)
 {
   const kaapi_format_t* task_fmt;
   kaapi_task_body_t     task_body;
@@ -207,7 +207,6 @@ static int kaapi_sched_stealframe
 #endif        
           {
             /* steal sucess */
-            
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
             /* possible race, reread the splitter */
             splitter = sc->splitter;
@@ -297,12 +296,13 @@ static int kaapi_sched_stealframe
 
 /** Steal ready task in tasklist 
  */
-static void kaapi_sched_steal_tasklist( 
-                                       kaapi_thread_context_t*       thread, 
-                                       kaapi_frame_t*                frame, 
-                                       kaapi_listrequest_t*          lrequests, 
-                                       kaapi_listrequest_iterator_t* lrrange
-                                       )
+static void kaapi_sched_steal_tasklist
+( 
+  kaapi_thread_context_t*       thread, 
+  kaapi_frame_t*                frame, 
+  kaapi_listrequest_t*          lrequests, 
+  kaapi_listrequest_iterator_t* lrrange
+)
 {
   int                     err;
   kaapi_tasklist_t*       tasklist;
@@ -311,8 +311,7 @@ static void kaapi_sched_steal_tasklist(
   size_t size_steal;
   
   tasklist= frame->tasklist;  
-  kaapi_workqueue_index_t count_req 
-  = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
+  kaapi_workqueue_index_t count_req = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
 #if 0
   kaapi_workqueue_index_t size_ws;
   size_ws = kaapi_workqueue_size( &tasklist->wq_ready );
@@ -340,14 +339,14 @@ static void kaapi_sched_steal_tasklist(
       //printf("%i::[steal] steal size:%i\n", kaapi_get_self_kid(), (int)(steal_end - steal_beg) );
       /* steal ok: reply */
       kaapi_task_splitter_readylist( 
-                                    thread,
-                                    tasklist,
-                                    steal_td_beg,
-                                    steal_td_end,
-                                    lrequests, 
-                                    lrrange,
-                                    count_req
-                                    );
+                  thread,
+                  tasklist,
+                  steal_td_beg,
+                  steal_td_end,
+                  lrequests, 
+                  lrrange,
+                  count_req
+      );
       return;
     }
     
@@ -363,11 +362,11 @@ static void kaapi_sched_steal_tasklist(
  */
 int kaapi_sched_stealstack  
 ( 
- kaapi_thread_context_t*       thread, 
- kaapi_task_t*                 curr __attribute__((unused)), 
- kaapi_listrequest_t*          lrequests, 
- kaapi_listrequest_iterator_t* lrrange
- )
+   kaapi_thread_context_t*       thread, 
+   kaapi_task_t*                 curr __attribute__((unused)), 
+   kaapi_listrequest_t*          lrequests, 
+   kaapi_listrequest_iterator_t* lrrange
+)
 {
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
   kaapi_frame_t*           top_frame;
@@ -388,7 +387,7 @@ int kaapi_sched_stealstack
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)  
   /* try to steal in each frame */
   for (  top_frame =thread->stackframe; 
-       (top_frame <= thread->sfp) && !kaapi_listrequest_iterator_empty(lrrange); 
+        (top_frame <= thread->sfp) && !kaapi_listrequest_iterator_empty(lrrange); 
        ++top_frame)
   {
     /* void frame ? */

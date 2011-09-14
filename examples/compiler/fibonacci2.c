@@ -1,12 +1,11 @@
 /*
 ** xkaapi
 ** 
-** Created on Thu Feb 24 15:35:09 2011
 ** Copyright 2011 INRIA.
 **
 ** Contributors :
 **
-** vincent.danjean@imag.fr
+** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -41,25 +40,46 @@
 ** terms.
 ** 
 */
-#ifndef _KAAPI_COMPILER_H_
-#define _KAAPI_COMPILER_H_ 1
+#include <stdio.h>
+#include <stdlib.h>
 
-/** Implementation note.
-    - This file should list all feature depending on the used compiler
-    - This file is private (should not be included in public headers)
-*/
+#pragma kaapi task write(result) read(r1,r2)
+void sum( long* result, const long* r1, const long* r2)
+{
+  *result = *r1 + *r2;
+}
 
+#pragma kaapi task write(result) value(n)
+void fibonacci(long* result, const long n)
+{
+  if (n<2)
+    *result = n;
+  else 
+  {
+#pragma kaapi data alloca(r1,r2)
+    long r1,r2;
+    fibonacci( &r1, n-1 );
+    fibonacci( &r2, n-2 );
+    sum( result, &r1, &r2);
+  }
+}
 
-/** weak symbols */
-#ifdef __GNUC__
-#  if defined(__APPLE__)
-#    define __KA_COMPILER_WEAK __attribute__((weak_import))
-#  else
-#    define __KA_COMPILER_WEAK __attribute__((weak))
-#  endif
-#else
-#  error No weak symbols defined for this compiler
-#endif
+#pragma kaapi task read(result) 
+void print_result( const long* result )
+{
+  printf("Fibonacci(30)=%li\n", *result);
+}
 
-
-#endif /* _KAAPI_COMPILER_H_ */
+int main( int argc, char** argv)
+{
+  long result;
+  int n;
+  if (argc >1) n = atoi(argv[1]);
+  else n = 30;
+#pragma kaapi parallel
+  {
+    fibonacci(&result, n);
+    print_result(&result);
+  }
+  return 0;
+}
