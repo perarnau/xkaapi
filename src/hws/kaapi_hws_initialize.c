@@ -12,6 +12,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <sys/types.h>
 
 #include "kaapi_impl.h"
 #include "kaapi_procinfo.h"
@@ -26,7 +27,7 @@ static const kaapi_hws_levelmask_t hws_default_levelmask =
   KAAPI_HWS_LEVELMASK_FLAT;
 
 
-static const char* levelid_to_str(kaapi_hws_levelid_t levelid)
+const char* kaapi_hws_levelid_to_str(kaapi_hws_levelid_t levelid)
 {
   static const char* const strs[] =
   {
@@ -43,18 +44,18 @@ static const char* levelid_to_str(kaapi_hws_levelid_t levelid)
 
 static kaapi_hws_levelid_t str_to_levelid(const char* str, unsigned int len)
 {
-#define STATIC_STRCMP(__fu, __bar, __baz) \
+#define STATIC_STREQ(__fu, __bar, __baz) \
   ((__bar == (sizeof(__baz) - 1)) && (memcmp(__fu, __baz, __bar) == 0))
 
-  if (STATIC_STRCMP(str, len, "L3"))
+  if (STATIC_STREQ(str, len, "L3"))
     return KAAPI_HWS_LEVELID_L3;
-  else if (STATIC_STRCMP(str, len, "NUMA"))
+  else if (STATIC_STREQ(str, len, "NUMA"))
     return KAAPI_HWS_LEVELID_NUMA;
-  else if (STATIC_STRCMP(str, len, "SOCKET"))
+  else if (STATIC_STREQ(str, len, "SOCKET"))
     return KAAPI_HWS_LEVELID_SOCKET;
-  else if (STATIC_STRCMP(str, len, "MACHINE"))
+  else if (STATIC_STREQ(str, len, "MACHINE"))
     return KAAPI_HWS_LEVELID_MACHINE;
-  else if (STATIC_STRCMP(str, len, "FLAT"))
+  else if (STATIC_STREQ(str, len, "FLAT"))
     return KAAPI_HWS_LEVELID_FLAT;
 
   return KAAPI_HWS_LEVELID_MAX;
@@ -74,11 +75,20 @@ static kaapi_hws_levelmask_t levelmask_from_env(void)
   {
     if ((*s == ',') || (*s == 0))
     {
-      levelid = str_to_levelid(p, s - p);
+      const size_t len = s - p;
+
+      if (STATIC_STREQ(p, len, "ALL"))
+	return KAAPI_HWS_LEVELMASK_ALL;
+      else if (STATIC_STREQ(p, len, "NONE"))
+	return 0;
+
+      levelid = str_to_levelid(p, len);
       levelmask |= 1 << levelid;
       p = s + 1;
     }
+
     if (*s == 0) break ;
+
     ++s;
   }
 
@@ -120,9 +130,11 @@ static void print_hws_levels(void)
     kaapi_ws_block_t* block = level->blocks;
     unsigned int i;
 
-    if (!(hws_levelmask & (1 << levelid))) continue ;
+    if (!kaapi_hws_is_levelid_set(levelid)) continue ;
 
-    printf("-- level: %s, #%u\n", levelid_to_str(levelid), level->block_count);
+    printf("-- level: %s, #%u\n",
+	   kaapi_hws_levelid_to_str(levelid),
+	   level->block_count);
 
     for (i = 0; i < level->block_count; ++i, ++block)
     {
@@ -177,8 +189,10 @@ int kaapi_hws_init_global(void)
   hws_levels = malloc(hws_level_count * sizeof(kaapi_hws_level_t));
   kaapi_assert(hws_levels);
 
-  /* create the flat level if needed */
-  if (hws_levelmask & KAAPI_HWS_LEVELMASK_FLAT)
+  /* create the flat level even if not masked, since a local
+     queue is always required an no longer stored in the kproc.
+   */
+  /* if (hws_levelmask & KAAPI_HWS_LEVELMASK_FLAT) */
   {
     /* build a flat level containing all the kids */
 
@@ -213,7 +227,7 @@ int kaapi_hws_init_global(void)
 
     one_level = &kaapi_default_param.memory.levels[depth];
 
-    if (!(hws_levelmask & (1 << one_level->levelid))) continue ;
+    if (!kaapi_hws_is_levelid_set(one_level->levelid)) continue ;
 
   add_hws_level:
     hws_level = &hws_levels[one_level->levelid];

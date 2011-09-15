@@ -2498,12 +2498,17 @@ extern int kaapi_hws_fini_perproc(struct kaapi_processor_t*);
 
 typedef enum kaapi_hws_levelid
 {
+  KAAPI_HWS_LEVELID_LO = -1,
+
   KAAPI_HWS_LEVELID_L3 = 0,
   KAAPI_HWS_LEVELID_NUMA,
   KAAPI_HWS_LEVELID_SOCKET,
   KAAPI_HWS_LEVELID_MACHINE,
   KAAPI_HWS_LEVELID_FLAT,
-  KAAPI_HWS_LEVELID_MAX
+  KAAPI_HWS_LEVELID_MAX,
+
+  KAAPI_HWS_LEVELID_FIRST = 0
+
 } kaapi_hws_levelid_t;
 
 typedef enum kaapi_hws_levelmask

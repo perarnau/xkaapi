@@ -618,6 +618,13 @@ static inline void kaapi_listrequest_iterator_update
   kaapi_listrequest_iterator_next( lrequests, lrrange );
 }
 
+/* clear the iterator internal bitmap */
+static inline void kaapi_listrequest_iterator_clear
+(kaapi_listrequest_iterator_t* lrrange)
+{
+  kaapi_bitmap_value_clear(&lrrange->bitmap);
+}
+
 #elif defined(KAAPI_USE_CIRBUF_REQUEST)
 
 /** \ingroup WS

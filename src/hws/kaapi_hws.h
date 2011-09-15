@@ -43,5 +43,14 @@ static const unsigned int hws_level_count = KAAPI_HWS_LEVELID_MAX;
 extern kaapi_hws_level_t* hws_levels;
 extern kaapi_hws_levelmask_t hws_levelmask;
 
+/* internal exported functions */
+extern const char* kaapi_hws_levelid_to_str(kaapi_hws_levelid_t);
+
+static inline const unsigned int
+kaapi_hws_is_levelid_set(kaapi_hws_levelid_t levelid)
+{
+  return hws_levelmask & (1 << levelid);
+}
+
 
 #endif /* ! KAAPI_HWS_H_INCLUDED */
