@@ -82,6 +82,9 @@ libkaapi_la_SOURCES=\
   workstealing/kaapi_sched_wsqueue.c \
   workstealing/kaapi_sched_affinity_queue.c \
   hws/kaapi_hws_initialize.c \
+  hws/kaapi_hws_emitsteal.c \
+  hws/kaapi_hws_pushtask.c \
+  hws/kaapi_hws_globals.c \
   hws/kaapi_ws_queue_lifo.c
 
 #Libtask
