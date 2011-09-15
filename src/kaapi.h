@@ -2530,21 +2530,21 @@ typedef enum kaapi_hws_levelmask
     push a task at a given hierarchy level
     \retval -1 on error, 0 on success
  */
-extern int kaapi_hws_pushtask(void*, void*, kaapi_hws_levelid_t);
+extern int kaapi_hws_pushtask(kaapi_task_body_t, void*, kaapi_hws_levelid_t);
 
-static inline int kaapi_hws_pushtask_flat(void* task, void* data)
+static inline int kaapi_hws_pushtask_flat(kaapi_task_body_t body, void* data)
 {
-  return kaapi_hws_pushtask(task, data, KAAPI_HWS_LEVELID_FLAT);
+  return kaapi_hws_pushtask(body, data, KAAPI_HWS_LEVELID_FLAT);
 }
 
-static inline int kaapi_hws_pushtask_machine(void* task, void* data)
+static inline int kaapi_hws_pushtask_machine(kaapi_task_body_t body, void* data)
 {
-  return kaapi_hws_pushtask(task, data, KAAPI_HWS_LEVELID_MACHINE);
+  return kaapi_hws_pushtask(body, data, KAAPI_HWS_LEVELID_MACHINE);
 }
 
-static inline int kaapi_hws_pushtask_numa(void* task, void* data)
+static inline int kaapi_hws_pushtask_numa(kaapi_task_body_t body, void* data)
 {
-  return kaapi_hws_pushtask(task, data, KAAPI_HWS_LEVELID_NUMA);
+  return kaapi_hws_pushtask(body, data, KAAPI_HWS_LEVELID_NUMA);
 }
 
 

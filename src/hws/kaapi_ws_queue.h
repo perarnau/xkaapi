@@ -18,8 +18,8 @@ typedef enum kaapi_ws_error
 
 typedef struct kaapi_ws_queue
 {
-  kaapi_ws_error_t (*push)(void*, void*, void*);
-  kaapi_ws_error_t (*stealn)(void*, kaapi_listrequest_t*, kaapi_listrequest_iterator_t*);
+  kaapi_ws_error_t (*push)(void*, kaapi_task_body_t, void*);
+  kaapi_ws_error_t (*steal)(void*, kaapi_thread_context_t*, kaapi_listrequest_t*, kaapi_listrequest_iterator_t*);
   kaapi_ws_error_t (*pop)(void*);
   void (*destroy)(void*);
 
@@ -37,7 +37,7 @@ static inline kaapi_ws_queue_t* kaapi_ws_queue_create(size_t size)
   kaapi_assert(q);
 
   q->push = NULL;
-  q->stealn = NULL;
+  q->steal = NULL;
   q->pop = NULL;
   q->destroy = NULL;
 
@@ -45,15 +45,20 @@ static inline kaapi_ws_queue_t* kaapi_ws_queue_create(size_t size)
 }
 
 static inline kaapi_ws_error_t kaapi_ws_queue_push
-(kaapi_ws_queue_t* q, void* task, void* data)
+(kaapi_ws_queue_t* q, kaapi_task_body_t body, void* arg)
 {
-  return q->push((void*)q->data, task, data);
+  return q->push((void*)q->data, body, arg);
 }
 
-static inline kaapi_ws_error_t kaapi_ws_queue_stealn
-(kaapi_ws_queue_t* q, kaapi_listrequest_t* r, kaapi_listrequest_iterator_t* i)
+static inline kaapi_ws_error_t kaapi_ws_queue_steal
+(
+ kaapi_ws_queue_t* q,
+ kaapi_thread_context_t* t,
+ kaapi_listrequest_t* r,
+ kaapi_listrequest_iterator_t* i
+)
 {
-  return q->stealn((void*)q->data, r, i);
+  return q->steal((void*)q->data, t, r, i);
 }
 
 static inline kaapi_ws_error_t kaapi_ws_queue_pop

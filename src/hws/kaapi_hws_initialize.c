@@ -384,8 +384,6 @@ static kaapi_thread_context_t* steal_block
  kaapi_listrequest_iterator_t* lri
 )
 {
-  kaapi_thread_context_t* thread = NULL;
-
   while (!kaapi_sched_trylock(&block->lock))
   {
     if (kaapi_reply_test(reply))
@@ -394,12 +392,12 @@ static kaapi_thread_context_t* steal_block
 
   /* got the lock: reply and unlock */
 
-  kaapi_ws_queue_stealn(block->queue, lr, lri);
+  kaapi_ws_queue_steal(block->queue, kproc->thread, lr, lri);
 
   kaapi_sched_unlock(&block->lock);
 
  on_request_replied:
-  kaapi_replysync_data( reply );
+  kaapi_replysync_data(reply);
 
   switch (kaapi_reply_status(reply))
   {
@@ -521,6 +519,7 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
     }
     /* steal in the level queue first */
 
+#if 0
     /* randomly steal in a random kproc local queue */
     if (block->kid_count >= 2)
     {
@@ -539,6 +538,7 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
       }
     }
     /* randomly steal in a random kproc local queue */
+#endif
 
     /* wait for lock or reply */
     while (1)
@@ -551,7 +551,7 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
 
 	kaapi_ws_queue_t* const queue = block->queue;
 	const kaapi_ws_error_t error =
-	  kaapi_ws_queue_stealn(queue, &hws_requests, &lri);
+	  kaapi_ws_queue_steal(queue, kproc->thread, &hws_requests, &lri);
 	if (error == KAAPI_WS_ERROR_EMPTY)
 	{
 	  goto next_level;
@@ -589,14 +589,15 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
 /* push a task at a given hierarchy level
  */
 
-int kaapi_hws_pushtask(void* task, void* data, kaapi_hws_levelid_t levelid)
+int kaapi_hws_pushtask
+(kaapi_task_body_t body, void* data, kaapi_hws_levelid_t levelid)
 {
   /* kaapi_assert(hws_levelmask & (1 << levelid)); */
 
   kaapi_processor_t* const kproc = kaapi_get_current_processor();
   kaapi_ws_block_t* const block = hws_levels[levelid].kid_to_block[kproc->kid];
   kaapi_ws_queue_t* const queue = block->queue;
-  kaapi_ws_queue_push(queue, task, data);
+  kaapi_ws_queue_push(queue, body, data);
 
   return 0;
 }
