@@ -242,7 +242,7 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
     }
 
     /* popping failed at this level, steal in level children */
-    for (child_levelid = levelid - 1; child_levelid; --child_levelid)
+    for (child_levelid = levelid - 1; child_levelid >= 0; --child_levelid)
     {
       kaapi_hws_level_t* const child_level = &hws_levels[child_levelid];
       if (!kaapi_hws_is_levelid_set(child_levelid)) continue ;
