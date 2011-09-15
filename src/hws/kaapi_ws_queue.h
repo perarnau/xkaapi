@@ -23,6 +23,10 @@ typedef struct kaapi_ws_queue
   kaapi_ws_error_t (*pop)(void*);
   void (*destroy)(void*);
 
+  /* toremove, kaapi_hws_sched_sync */
+  unsigned int (*is_empty)(void*);
+  /* toremove, kaapi_hws_sched_sync */
+
   unsigned char data[1];
 
 } kaapi_ws_queue_t;
@@ -73,5 +77,9 @@ static inline void kaapi_ws_queue_destroy(kaapi_ws_queue_t* q)
   free(q);
 }
 
+static inline unsigned int kaapi_ws_queue_is_empty(kaapi_ws_queue_t* q)
+{
+  return q->is_empty((void*)q->data);
+}
 
 #endif /* ! KAAPI_WS_QUEUE_H_INCLUDED */

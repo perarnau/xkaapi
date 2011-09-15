@@ -66,7 +66,15 @@ static kaapi_ws_error_t pop(void* p)
 
 static void destroy(void* p)
 {
+  /* unused */
+  p = p;
+}
+
+
+static unsigned int is_empty(void* p)
+{
   lifo_queue_t* const q = (lifo_queue_t*)p;
+  return q->top == 0;
 }
 
 
@@ -84,6 +92,7 @@ kaapi_ws_queue_t* kaapi_ws_queue_create_lifo(void)
   wsq->steal = steal;
   wsq->pop = pop;
   wsq->destroy = destroy;
+  wsq->is_empty = is_empty;
 
   q->top = 0;
 

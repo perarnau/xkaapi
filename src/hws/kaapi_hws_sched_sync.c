@@ -1,4 +1,7 @@
+#include <unistd.h> /* toremove, usleep */
+
 #include "kaapi_impl.h"
+#include "kaapi_hws.h"
 #include "kaapi_ws_queue.h"
 
 
@@ -16,8 +19,39 @@ void kaapi_hws_sched_sync(void)
   while (1)
   {
     ctxt = kproc->thread;
+
     thread = kaapi_hws_emitsteal(kproc);
-    if (thread == NULL) continue ;
+    if (thread == NULL)
+    {
+#if 1 /* toremove */
+      /* are all the levels empty */
+      kaapi_ws_block_t* block;
+      kaapi_hws_level_t* level;
+      kaapi_hws_levelid_t levelid;
+      unsigned int i;
+
+      for (levelid = 0; levelid < hws_level_count; ++levelid)
+      {
+	if (!kaapi_hws_is_levelid_set(levelid)) continue ;
+
+	level = &hws_levels[levelid];
+	for (i = 0; i < level->block_count; ++i)
+	{
+	  block = &level->blocks[i];
+	  if (!kaapi_ws_queue_is_empty(block->queue)) break;
+	}
+	if (i != level->block_count) break ;
+      }
+      /* all level are empty */
+      if (levelid == hws_level_count)
+      {
+	usleep(1000);
+	return ;
+      }
+#endif /* toremove */
+
+      continue ;
+    }
 
     if (thread != ctxt)
     {
