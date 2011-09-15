@@ -7,6 +7,7 @@
 typedef struct wrapped_uint
 {
   kaapi_access_t val;
+  unsigned int stor;
 } wrapped_uint_t;
 
 
@@ -60,12 +61,22 @@ KAAPI_REGISTER_TASKFORMAT
 
 int main(int ac, char** av)
 {
+  wrapped_uint_t numa_wui;
+  wrapped_uint_t flat_wui;
+
   kaapi_init(1, &ac, &av);
 
-  kaapi_hws_pushtask_flat(flat_body, (void*)(uintptr_t)42);
-  kaapi_hws_pushtask_numa(numa_body, (void*)(uintptr_t)24);
+  flat_wui.stor = 42;
+  kaapi_access_init(&flat_wui.val, &flat_wui.stor);
+  kaapi_hws_pushtask_flat(flat_body, (void*)&flat_wui);
+
+  numa_wui.stor = 24;
+  kaapi_access_init(&numa_wui.val, &numa_wui.stor);
+  kaapi_hws_pushtask_numa(numa_body, (void*)&numa_wui);
+
   kaapi_sched_sync();
-  while (1) ;
+
+  printf("done\n");
 
   kaapi_finalize();
 
