@@ -8,7 +8,7 @@
 int kaapi_hws_pushtask
 (kaapi_task_body_t body, void* data, kaapi_hws_levelid_t levelid)
 {
-  /* kaapi_assert(hws_levelmask & (1 << levelid)); */
+  /* kaapi_assert(kaapi_hws_is_levelid_set(levelid)); */
 
   kaapi_processor_t* const kproc = kaapi_get_current_processor();
   kaapi_ws_block_t* const block = hws_levels[levelid].kid_to_block[kproc->kid];
