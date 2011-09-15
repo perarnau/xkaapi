@@ -241,7 +241,12 @@ int kaapi_hw_init(void)
       else if (obj->type == HWLOC_OBJ_SOCKET)
 	kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_SOCKET;
       else if (obj->type == HWLOC_OBJ_CACHE)
-	kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_L3;
+      {
+	if (obj->attr && (obj->attr->cache.depth == 3))
+	  kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_L3;
+	else
+	  kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_MAX;
+      }
 
       /* iterator over all cousins */
       idx = 0;
