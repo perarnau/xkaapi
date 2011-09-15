@@ -76,7 +76,7 @@ int main(int ac, char** av)
   kaapi_access_init(&numa_wui.val, &numa_wui.stor);
   kaapi_hws_pushtask_numa(numa_body, (void*)&numa_wui);
 
-  kaapi_sched_sync();
+  kaapi_hws_sched_sync();
 
   printf("done: %u %u\n", flat_wui.stor, numa_wui.stor);
 

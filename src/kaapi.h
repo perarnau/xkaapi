@@ -2548,6 +2548,13 @@ static inline int kaapi_hws_pushtask_numa(kaapi_task_body_t body, void* data)
 }
 
 
+/* ========================================================================== */
+/** \ingroup HWS
+    wait until all the tasks pushed in the hierarchy queues are done
+ */
+void kaapi_hws_sched_sync(void);
+
+
 #ifdef __cplusplus
 }
 #endif
