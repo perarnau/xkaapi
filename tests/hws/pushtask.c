@@ -80,9 +80,9 @@ int main(int ac, char** av)
       kaapi_access_init(&flat_wui.val, &flat_wui.stor);
       kaapi_hws_pushtask_flat(flat_body, (void*)&flat_wui);
 
-      /* numa_wui.stor = 24; */
-      /* kaapi_access_init(&numa_wui.val, &numa_wui.stor); */
-      /* kaapi_hws_pushtask_numa(numa_body, (void*)&numa_wui); */
+      numa_wui.stor = 24;
+      kaapi_access_init(&numa_wui.val, &numa_wui.stor);
+      kaapi_hws_pushtask_numa(numa_body, (void*)&numa_wui);
     }
   }
 
