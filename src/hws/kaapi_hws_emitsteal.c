@@ -52,7 +52,7 @@ static kaapi_thread_context_t* steal_block
 
   /* got the lock: reply and unlock */
 
-  kaapi_listrequest_iterator_update(lr, lri);
+  kaapi_listrequest_iterator_update(lr, lri, &block->kid_mask);
 
   kaapi_ws_queue_steal(block->queue, kproc->thread, lr, lri);
 
@@ -129,8 +129,6 @@ static kaapi_thread_context_t* steal_block_leaves
  redo_rand:
   kid = block->kids[rand() % block->kid_count];
   if (kid == kproc->kid) goto redo_rand;
-
-  /* printf("%u, victim: %u\n", kproc->kid, kid); */
 
   /* get the leaf block (ie. block at flat level) */
   leaf_block = hws_levels[KAAPI_HWS_LEVELID_FLAT].kid_to_block[kid];
@@ -283,9 +281,8 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
     if (levelid != KAAPI_HWS_LEVELID_FLAT)
     {
       /* todo: this is a pop, not a steal */
-      thread = steal_block(block, kproc, reply, &hws_requests, &lri);
-
       /* todo: dont rely upon thread for termination condition */
+      thread = steal_block(block, kproc, reply, &hws_requests, &lri);
       if (thread != NULL)
       {
 	/* something replied, we are done */
@@ -301,6 +298,7 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
 	thread = steal_level(child_level, kproc, reply, &hws_requests, &lri);
 	if (thread != NULL) goto on_done;
       }
+
     } /* levelid != KAAPI_HWS_LEVELID_FLAT */
 
     /* child level stealing failed, steal in block leaf local queues */

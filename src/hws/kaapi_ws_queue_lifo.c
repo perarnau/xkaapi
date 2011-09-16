@@ -10,7 +10,7 @@ typedef struct lifo_queue
 {
   unsigned int top; /* first avail */
   kaapi_atomic_t lock; /* toremove */
-  kaapi_task_t tasks[32];
+  kaapi_task_t tasks[128];
 } lifo_queue_t;
 
 

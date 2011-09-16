@@ -24,6 +24,9 @@ typedef struct kaapi_ws_block
   /* kid map of all the participants */
   kaapi_processor_id_t* kids;
   unsigned int kid_count;
+  
+  /* kid mask, for request iterator update operation */
+  kaapi_bitmap_value_t kid_mask;
 
 } kaapi_ws_block_t;
 

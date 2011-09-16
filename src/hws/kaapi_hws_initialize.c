@@ -254,6 +254,8 @@ int kaapi_hws_init_global(void)
       block->kids = malloc(affin_set->ncpu * sizeof(kaapi_processor_id_t));
       kaapi_assert(block->kids);
 
+      kaapi_bitmap_value_clear(&block->kid_mask);
+
       block->queue = kaapi_ws_queue_create_lifo();
       kaapi_assert(block->queue);
 
@@ -265,6 +267,8 @@ int kaapi_hws_init_global(void)
 
 	hws_level->kid_to_block[pos->kid] = block;
 	block->kids[i] = pos->kid;
+
+	kaapi_bitmap_value_set(&block->kid_mask, pos->kid);
 
 	++i;
 

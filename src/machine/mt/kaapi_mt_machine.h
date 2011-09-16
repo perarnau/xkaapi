@@ -298,6 +298,30 @@ static inline void kaapi_bitmap_or0_32( kaapi_bitmap32_t* b, kaapi_bitmap_value3
   v->proc32 |= KAAPI_ATOMIC_AND_ORIG(&b->proc32, 0);
 }
 
+static inline void kaapi_bitmap_and_32
+(
+ kaapi_bitmap_value32_t* fu,
+ kaapi_bitmap32_t* b,
+ kaapi_bitmap_value32_t* v
+) 
+{
+  fu->proc32 = KAAPI_ATOMIC_AND_ORIG(&b->proc32, v->proc32);
+}
+
+static inline void kaapi_bitmap_value_neg_32
+(
+ kaapi_bitmap_value32_t* fu,
+ kaapi_bitmap_value32_t* bar
+) 
+{
+  fu->proc32 = ~bar->proc32;
+}
+
+static inline void kaapi_bitmap_value_or_32( kaapi_bitmap_value32_t* fu, kaapi_bitmap_value32_t* bar ) 
+{
+  fu->proc32 |= bar->proc32;
+}
+
 static inline int kaapi_bitmap_set_32( kaapi_bitmap32_t* b, int i )
 {
   kaapi_assert_debug( (i<32) && (i>=0) );
@@ -365,6 +389,30 @@ static inline void kaapi_bitmap_swap0_64( kaapi_bitmap64_t* b, kaapi_bitmap_valu
 static inline void kaapi_bitmap_or0_64( kaapi_bitmap64_t* b, kaapi_bitmap_value64_t* v ) 
 {
   v->proc64 |= KAAPI_ATOMIC_AND64_ORIG(&b->proc64, (uint64_t)0);
+}
+
+static inline void kaapi_bitmap_and_64
+(
+ kaapi_bitmap_value64_t* fu,
+ kaapi_bitmap64_t* b,
+ kaapi_bitmap_value64_t* v
+) 
+{
+  fu->proc64 = KAAPI_ATOMIC_AND_ORIG(&b->proc64, v->proc64);
+}
+
+static inline void kaapi_bitmap_value_neg_64
+(
+ kaapi_bitmap_value64_t* fu,
+ kaapi_bitmap_value64_t* bar
+) 
+{
+  fu->proc64 = ~bar->proc64;
+}
+
+static inline void kaapi_bitmap_value_or_64( kaapi_bitmap_value64_t* fu, kaapi_bitmap_value64_t* bar ) 
+{
+  fu->proc64 |= bar->proc64;
 }
 
 static inline int kaapi_bitmap_set_64( kaapi_bitmap64_t* b, int i ) 
@@ -446,6 +494,30 @@ static inline void kaapi_bitmap_or0_128( kaapi_bitmap128_t* b, kaapi_bitmap_valu
   (v->proc128)[1] |= KAAPI_ATOMIC_AND64_ORIG( &(b->proc128)[1], (uint64_t)0); 
 }
 
+static inline void kaapi_bitmap_and_128
+(
+ kaapi_bitmap_value128_t* fu,
+ kaapi_bitmap128_t* b,
+ kaapi_bitmap_value128_t* v
+) 
+{
+  fu->proc128[0] = KAAPI_ATOMIC_AND_ORIG(&b->proc128[0], v->proc128[0]);
+  fu->proc128[1] = KAAPI_ATOMIC_AND_ORIG(&b->proc128[1], v->proc128[1]);
+}
+
+static inline void kaapi_bitmap_value_neg_128
+( kaapi_bitmap_value128_t* fu, kaapi_bitmap_value128_t* bar ) 
+{
+  fu->proc128[0] = ~bar->proc128[0];
+  fu->proc128[1] = ~bar->proc128[1];
+}
+
+static inline void kaapi_bitmap_value_or_128( kaapi_bitmap_value128_t* fu, kaapi_bitmap_value128_t* bar ) 
+{
+  fu->proc128[0] |= bar->proc128[0];
+  fu->proc128[1] |= bar->proc128[1];
+}
+
 static inline int kaapi_bitmap_set_128( kaapi_bitmap128_t* b, int i ) 
 { 
   kaapi_assert_debug( (i<128) && (i>=0) );
@@ -496,6 +568,9 @@ extern void (*kaapi_bitmap_value_unset)( kaapi_bitmap_value_t* b, int i );
 extern void (*kaapi_bitmap_value_copy)( kaapi_bitmap_value_t* retval, kaapi_bitmap_value_t* b);
 extern void (*kaapi_bitmap_swap0)( kaapi_bitmap_t* b, kaapi_bitmap_value_t* v );
 extern void (*kaapi_bitmap_or0)( kaapi_bitmap_t* b, kaapi_bitmap_value_t* v );
+extern void (*kaapi_bitmap_and)( kaapi_bitmap_value_t*, kaapi_bitmap_t* b, kaapi_bitmap_value_t* v );
+extern void (*kaapi_bitmap_value_or)( kaapi_bitmap_value_t* b, kaapi_bitmap_value_t* v ) ;
+extern void (*kaapi_bitmap_value_neg)( kaapi_bitmap_value_t* b, kaapi_bitmap_value_t* v ) ;
 extern int (*kaapi_bitmap_set)( kaapi_bitmap_t* b, int i );
 extern int (*kaapi_bitmap_count)( kaapi_bitmap_value_t b );
 extern int (*kaapi_bitmap_first1_and_zero)( kaapi_bitmap_value_t* b );
@@ -525,6 +600,9 @@ typedef kaapi_bitmap_value128_t kaapi_bitmap_value_t;
 #    define kaapi_bitmap_value_copy(r,b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_copy)((r),(b))
 #    define kaapi_bitmap_swap0(b,v) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_swap0)((b),(v))
 #    define kaapi_bitmap_or0(b,v) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_or0)((b),(v))
+#    define kaapi_bitmap_and(fu,b,v) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_and)((fu), (b),(v))
+#    define kaapi_bitmap_value_or(b,v) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_or)((b),(v))
+#    define kaapi_bitmap_value_neg(b,v) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_neg)((b),(v))
 #    define kaapi_bitmap_set(b, i) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_set)((b), (i))
 #    define kaapi_bitmap_count(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_count)(b)
 #    define kaapi_bitmap_first1_and_zero(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_first1_and_zero)(b)
@@ -606,12 +684,27 @@ static inline void kaapi_listrequest_iterator_init
   kaapi_listrequest_iterator_next( lrequests, lrrange );
 }
 
-/* atomically intersect the request bitmap with the current one, and clear */
+/* atomically intersect the request bitmap with the
+   current one, keeping only the bits in mask. the
+   non masked bits are left untouched in target.
+ */
 static inline void kaapi_listrequest_iterator_update
-(kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange)
+(
+ kaapi_listrequest_t* lrequests,
+ kaapi_listrequest_iterator_t* lrrange,
+ kaapi_bitmap_value_t* mask
+)
 {
+  kaapi_bitmap_value_t neg_mask;
+  kaapi_bitmap_value_t orig_bitmap;
+
   lrrange->idcurr = -1;
-  kaapi_bitmap_or0( &lrequests->bitmap, &lrrange->bitmap );
+
+  /* keep only the masked bits by anding with neg */
+  kaapi_bitmap_value_neg(&neg_mask, mask);
+  kaapi_bitmap_and(&orig_bitmap, &lrequests->bitmap, &neg_mask);
+  kaapi_bitmap_value_or(&lrrange->bitmap, &orig_bitmap);
+
 #if defined(KAAPI_DEBUG)
   kaapi_bitmap_value_copy( &lrrange->bitmap_t0, &lrrange->bitmap );
 #endif
