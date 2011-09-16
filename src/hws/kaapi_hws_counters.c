@@ -1,38 +1,9 @@
 #include <string.h>
 #include "kaapi_impl.h"
+#include "kaapi_hws.h"
 
 
-static kaapi_atomic_t hws_steal_counters[KAAPI_MAX_PROCESSOR][KAAPI_MAX_PROCESSOR];
-static kaapi_atomic_t hws_hit_counters[KAAPI_MAX_PROCESSOR][KAAPI_MAX_PROCESSOR];
-static kaapi_atomic_t hws_pop_counters[KAAPI_MAX_PROCESSOR];
-
-
-void kaapi_hws_init_counters(void)
-{
-  memset(hws_steal_counters, 0, sizeof(hws_steal_counters));
-  memset(hws_hit_counters, 0, sizeof(hws_hit_counters));
-  memset(hws_pop_counters, 0, sizeof(hws_pop_counters));
-}
-
-
-void kaapi_hws_inc_steal_counter
-(kaapi_processor_id_t fu, kaapi_processor_id_t bar)
-{
-  KAAPI_ATOMIC_INCR(&hws_steal_counters[fu][bar]);
-}
-
-
-void kaapi_hws_inc_hit_counter
-(kaapi_processor_id_t fu, kaapi_processor_id_t bar)
-{
-  KAAPI_ATOMIC_INCR(&hws_hit_counters[fu][bar]);
-}
-
-
-void kaapi_hws_inc_pop_counter(kaapi_processor_id_t fu)
-{
-  KAAPI_ATOMIC_INCR(&hws_pop_counters[fu]);
-}
+#if CONFIG_HWS_COUNTERS
 
 
 static inline unsigned int is_kid_used(kaapi_processor_id_t kid)
@@ -40,32 +11,59 @@ static inline unsigned int is_kid_used(kaapi_processor_id_t kid)
   return (kaapi_default_param.kid2cpu[kid] != -1);
 }
 
-static inline unsigned int kid2cpu(kaapi_processor_id_t kid)
+static inline unsigned int kid_to_cpu(kaapi_processor_id_t kid)
 {
   return kaapi_default_param.kid2cpu[kid];
 }
 
 void kaapi_hws_print_counters(void)
 {
-  kaapi_processor_id_t fu;
-  kaapi_processor_id_t bar;
+  /* walk the tree and print for all blocks */
 
-  for (fu = 0; fu < KAAPI_MAX_PROCESSOR; ++fu)
+  kaapi_hws_levelid_t levelid;
+
+  printf("== HWS_COUNTERS\n");
+
+  for (levelid = 0; levelid < hws_level_count; ++levelid)
   {
-    if (is_kid_used(fu) == 0) continue ;
+    kaapi_hws_level_t* const level = &hws_levels[levelid];
+    kaapi_ws_block_t* block = level->blocks;
+    unsigned int i;
 
-    printf("%02u:", kid2cpu(fu));
+    /* have to prinr the local pop counters even if flat not set */
+    if (levelid != KAAPI_HWS_LEVELID_FLAT)
+      if (!kaapi_hws_is_levelid_set(levelid)) continue ;
 
-    printf(" %08u", KAAPI_ATOMIC_READ(&hws_pop_counters[fu]));
+    printf("-- level %s\n", kaapi_hws_levelid_to_str(levelid));
 
-    for (bar = 0; bar < KAAPI_MAX_PROCESSOR; ++bar)
+    for (i = 0; i < level->block_count; ++i, ++block)
     {
-      if (is_kid_used(bar) == 0) continue ;
-      printf(" %08u,%08u",
-	     KAAPI_ATOMIC_READ(&hws_steal_counters[fu][bar]),
-	     KAAPI_ATOMIC_READ(&hws_hit_counters[fu][bar]));
+      kaapi_processor_id_t kid;
+
+      printf("BLOCK: %lx\n", (unsigned long)block);
+
+      printf("--- #pop  : %08u\n", KAAPI_ATOMIC_READ(&block->pop_counter));
+
+      /* dont print steal counters if FLAT not set */
+      if (levelid == KAAPI_HWS_LEVELID_FLAT)
+	if (!kaapi_hws_is_levelid_set(KAAPI_HWS_LEVELID_FLAT))
+	  continue ;
+
+      printf("--- #steal:");
+
+      for (kid = 0; kid < KAAPI_MAX_PROCESSOR; ++kid)
+      {
+	if (is_kid_used(kid) == 0) continue ;
+	printf(" (%02u)%08u", kid_to_cpu(kid),
+	       KAAPI_ATOMIC_READ(&block->steal_counters[kid]));
+      }
+
+      printf("\n");
     }
 
     printf("\n");
   }
 }
+
+
+#endif /* CONFIG_HWS_COUNTERS */

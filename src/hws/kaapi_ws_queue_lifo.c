@@ -1,6 +1,9 @@
 #include "kaapi_impl.h"
 #include "kaapi_ws_queue.h"
 
+/* needed for kaapi_hws_inc_xxx */
+#include "kaapi_hws.h"
+
 
 typedef struct lifo_queue
 {
@@ -49,6 +52,10 @@ static kaapi_ws_error_t steal
     kaapi_task_body_t task_body = kaapi_task_getbody(task);
     kaapi_tasksteal_arg_t* const argsteal = (kaapi_tasksteal_arg_t*)rep->udata;
 
+#if CONFIG_HWS_COUNTERS
+    kaapi_hws_inc_steal_counter(p, req->kid);
+#endif
+
     argsteal->origin_thread = thread;
     argsteal->origin_task = task;
     argsteal->origin_fmt = kaapi_format_resolvebybody(task_body);
@@ -88,7 +95,9 @@ static kaapi_ws_error_t pop
     kaapi_task_body_t task_body = kaapi_task_getbody(task);
     kaapi_tasksteal_arg_t* const argsteal = (kaapi_tasksteal_arg_t*)rep->udata;
 
-    kaapi_hws_inc_pop_counter(kproc->kid);
+#if CONFIG_HWS_COUNTERS
+    kaapi_hws_inc_pop_counter(p);
+#endif
 
     error = KAAPI_WS_ERROR_SUCCESS;
 

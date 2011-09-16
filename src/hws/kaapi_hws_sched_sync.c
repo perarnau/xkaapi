@@ -32,7 +32,9 @@ void kaapi_hws_sched_sync(void)
 
       for (levelid = 0; levelid < hws_level_count; ++levelid)
       {
-	if (!kaapi_hws_is_levelid_set(levelid)) continue ;
+	/* look in local queue even if flat not set */
+	if (levelid != KAAPI_HWS_LEVELID_FLAT)
+	  if (!kaapi_hws_is_levelid_set(levelid)) continue ;
 
 	level = &hws_levels[levelid];
 	for (i = 0; i < level->block_count; ++i)
