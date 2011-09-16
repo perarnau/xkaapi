@@ -1,12 +1,5 @@
 /* todo
-   . set kproc->issteal = 0
-   . fail the request after a steal since they may be captured in the lri bitmap
    . initial splitting: local request list + splitter + push in right queues
-   . we want a task available in a <level> queue not to be distribute
-
-   . flatize requests
-   -> there is one bitmap per level, ored has the thread walks the hierarchy
-   -> the request/reply info are in a global array [KAAPI_MAX_PROCESSOR]
  */
 
 
