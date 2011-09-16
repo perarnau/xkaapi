@@ -34,6 +34,12 @@ typedef struct kaapi_ws_queue
 
 kaapi_ws_queue_t* kaapi_ws_queue_create_lifo(void);
 
+static void kaapi_ws_queue_unimpl_destroy(void* fu)
+{
+  /* destroy may be unimplemented */
+  fu = fu;
+}
+
 static inline kaapi_ws_queue_t* kaapi_ws_queue_create(size_t size)
 {
   const size_t total_size = offsetof(kaapi_ws_queue_t, data) + size;
@@ -43,7 +49,8 @@ static inline kaapi_ws_queue_t* kaapi_ws_queue_create(size_t size)
   q->push = NULL;
   q->steal = NULL;
   q->pop = NULL;
-  q->destroy = NULL;
+  q->destroy = kaapi_ws_queue_unimpl_destroy;
+  q->is_empty = NULL;
 
   return q;
 }

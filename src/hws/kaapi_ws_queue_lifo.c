@@ -105,13 +105,6 @@ static kaapi_ws_error_t pop
 }
 
 
-static void destroy(void* p)
-{
-  /* unused */
-  p = p;
-}
-
-
 static unsigned int is_empty(void* p)
 {
   lifo_queue_t* const q = (lifo_queue_t*)p;
@@ -138,7 +131,6 @@ kaapi_ws_queue_t* kaapi_ws_queue_create_lifo(void)
   wsq->push = push;
   wsq->steal = steal;
   wsq->pop = pop;
-  wsq->destroy = destroy;
   wsq->is_empty = is_empty;
 
   kaapi_sched_initlock(&q->lock);
