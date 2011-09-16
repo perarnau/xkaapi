@@ -301,10 +301,10 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
       kaapi_hws_level_t* const child_level = &hws_levels[child_levelid];
       if (!kaapi_hws_is_levelid_set(child_levelid)) continue ;
 
-      /*
-	printf("[%u] child@%s\n", kproc->kid,
-	kaapi_hws_levelid_to_str(child_levelid));
-      */
+#if 0 /* debugging */
+      printf("[%u] child@%s\n", kproc->kid,
+	     kaapi_hws_levelid_to_str(child_levelid));
+#endif
 
       thread = steal_level(child_level, kproc, reply, &hws_requests, &lri);
       if (thread != NULL) goto on_done;

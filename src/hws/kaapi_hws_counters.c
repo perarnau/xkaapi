@@ -34,8 +34,9 @@ void kaapi_hws_print_counters(void)
     level = &hws_levels[levelid];
     block = level->blocks;
 
-    /* have to prinr the local pop counters even if flat not set */
-    if (!kaapi_hws_is_levelid_set(levelid)) continue ;
+    /* always display flat level: see steal_block_leaves */
+    if (levelid != KAAPI_HWS_LEVELID_FLAT)
+      if (!kaapi_hws_is_levelid_set(levelid)) continue ;
 
     printf("\n- %s\n", kaapi_hws_levelid_to_str(levelid));
 
@@ -79,7 +80,6 @@ void kaapi_hws_print_counters(void)
 
   /* flat level */
   printf("= HWS_POP_COUNTERS\n");
-  printf("- KAAPI_HWS_LEVELID_FLAT\n");
 
   level = &hws_levels[KAAPI_HWS_LEVELID_FLAT];
   block = level->blocks;
