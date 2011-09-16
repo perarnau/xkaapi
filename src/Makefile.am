@@ -86,6 +86,7 @@ libkaapi_la_SOURCES=\
   hws/kaapi_hws_pushtask.c \
   hws/kaapi_hws_sched_sync.c \
   hws/kaapi_hws_globals.c \
+  hws/kaapi_hws_counters.c \
   hws/kaapi_ws_queue_lifo.c
 
 #Libtask

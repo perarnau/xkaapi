@@ -255,6 +255,11 @@ int kaapi_hws_init_global(void)
       block->queue = kaapi_ws_queue_create_lifo();
       kaapi_assert(block->queue);
 
+#if CONFIG_HWS_COUNTERS
+      memset(block->steal_counters, 0, sizeof(block->steal_counters));
+      memset(block->pop_counters, 0, sizeof(block->pop_counters));
+#endif CONFIG_HWS_COUNTERS
+
       /* for each cpu in this node */
       for (; pos != NULL; pos = pos->next)
       {

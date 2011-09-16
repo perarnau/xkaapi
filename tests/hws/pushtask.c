@@ -84,6 +84,8 @@ int main(int ac, char** av)
 
   printf("done: %u %u\n", flat_wui.stor, numa_wui.stor);
 
+  kaapi_hws_print_counters();
+
   kaapi_finalize();
 
   return 0;

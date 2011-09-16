@@ -2,6 +2,9 @@
 # define KAAPI_HWS_H_INCLUDED
 
 
+#define CONFIG_HWS_COUNTERS 1
+
+
 #include "kaapi_impl.h"
 
 
@@ -23,6 +26,12 @@ typedef struct kaapi_ws_block
   /* kid map of all the participants */
   kaapi_processor_id_t* kids;
   unsigned int kid_count;
+
+#if CONFIG_HWS_COUNTERS
+  /* counters, one per remote kid */
+  kaapi_atomic_t steal_counters[KAAPI_MAX_PROCESSOR];
+  kaapi_atomic_t pop_counters[KAAPI_MAX_PROCESSOR];
+#endif /* CONFIG_HWS_COUNTERS */
 
 } kaapi_ws_block_t;
 
@@ -50,6 +59,20 @@ static inline const unsigned int
 kaapi_hws_is_levelid_set(kaapi_hws_levelid_t levelid)
 {
   return hws_levelmask & (1 << levelid);
+}
+
+/* hws counters */
+
+static inline void kaapi_hws_inc_pop_counter(void* q)
+{
+  /* increment the counter associated to the block containing a queue */
+  KAAPI_ATOMIC_INCR(&hws_pop_counters[fu]);
+}
+
+static inline void kaapi_hws_inc_pop_counter(void* q)
+{
+  /* increment the counter associated to the block containing a queue */
+  KAAPI_ATOMIC_INCR(&hws_pop_counters[fu]);
 }
 
 

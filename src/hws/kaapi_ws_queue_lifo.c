@@ -88,6 +88,8 @@ static kaapi_ws_error_t pop
     kaapi_task_body_t task_body = kaapi_task_getbody(task);
     kaapi_tasksteal_arg_t* const argsteal = (kaapi_tasksteal_arg_t*)rep->udata;
 
+    kaapi_hws_inc_pop_counter(kproc->kid);
+
     error = KAAPI_WS_ERROR_SUCCESS;
 
     argsteal->origin_thread = thread;

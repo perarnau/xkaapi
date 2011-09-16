@@ -2559,6 +2559,12 @@ static inline int kaapi_hws_pushtask_numa(kaapi_task_body_t body, void* data)
  */
 void kaapi_hws_sched_sync(void);
 
+/* ========================================================================== */
+/** \ingroup HWS
+    print counters
+ */
+void kaapi_hws_print_counters(void);
+
 
 #ifdef __cplusplus
 }
