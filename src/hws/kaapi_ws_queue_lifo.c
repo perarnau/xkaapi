@@ -67,11 +67,41 @@ static kaapi_ws_error_t steal
 }
 
 
-static kaapi_ws_error_t pop(void* p)
+static kaapi_ws_error_t pop
+(
+ void* p,
+ kaapi_thread_context_t* thread,
+ kaapi_request_t* req
+)
 {
-  /* todo */
-  p = p;
-  return KAAPI_WS_ERROR_EMPTY;
+  /* currently, the kproc request is passed even if not posted */
+
+  lifo_queue_t* const q = (lifo_queue_t*)p;
+  kaapi_ws_error_t error = KAAPI_WS_ERROR_EMPTY;
+
+  kaapi_sched_lock(&q->lock);
+
+  if (q->top)
+  {
+    kaapi_task_t* const task = &q->tasks[--q->top];
+    kaapi_reply_t* const rep = kaapi_request_getreply(req);
+    kaapi_task_body_t task_body = kaapi_task_getbody(task);
+    kaapi_tasksteal_arg_t* const argsteal = (kaapi_tasksteal_arg_t*)rep->udata;
+
+    error = KAAPI_WS_ERROR_SUCCESS;
+
+    argsteal->origin_thread = thread;
+    argsteal->origin_task = task;
+    argsteal->origin_fmt = kaapi_format_resolvebybody(task_body);
+    argsteal->war_param = 0;
+    argsteal->cw_param = 0;
+    rep->u.s_task.body = kaapi_tasksteal_body;
+
+    _kaapi_request_reply(req, KAAPI_REPLY_S_TASK);
+  }
+  kaapi_sched_unlock(&q->lock);
+
+  return error;
 }
 
 

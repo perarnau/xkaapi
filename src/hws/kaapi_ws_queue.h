@@ -20,7 +20,7 @@ typedef struct kaapi_ws_queue
 {
   kaapi_ws_error_t (*push)(void*, kaapi_task_body_t, void*);
   kaapi_ws_error_t (*steal)(void*, kaapi_thread_context_t*, kaapi_listrequest_t*, kaapi_listrequest_iterator_t*);
-  kaapi_ws_error_t (*pop)(void*);
+  kaapi_ws_error_t (*pop)(void*, kaapi_thread_context_t*, kaapi_request_t*);
   void (*destroy)(void*);
 
   /* toremove, kaapi_hws_sched_sync */
@@ -66,9 +66,13 @@ static inline kaapi_ws_error_t kaapi_ws_queue_steal
 }
 
 static inline kaapi_ws_error_t kaapi_ws_queue_pop
-(kaapi_ws_queue_t* q)
+(
+ kaapi_ws_queue_t* q,
+ kaapi_thread_context_t* t,
+ kaapi_request_t* r
+)
 {
-  return q->pop((void*)q->data);
+  return q->pop((void*)q->data, t, r);
 }
 
 static inline void kaapi_ws_queue_destroy(kaapi_ws_queue_t* q)

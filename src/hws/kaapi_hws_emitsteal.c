@@ -167,6 +167,61 @@ static kaapi_thread_context_t* pop_ws_block
  kaapi_processor_t* kproc
 )
 {
+  /* not a real steal operation, dont actually post */
+  kaapi_request_t* const req = &hws_requests.requests[kproc->kid];
+  kaapi_reply_t* const rep = &kproc->thread->static_reply;
+
+  req->kid = kproc->kid;
+  req->reply = rep;
+
+  rep->offset = 0;
+  rep->preempt = 0;
+  rep->status = KAAPI_REQUEST_S_POSTED;
+
+  switch (kaapi_reply_status(rep))
+  {
+  case KAAPI_REPLY_S_TASK_FMT:
+    {
+      kaapi_format_t* const format =
+	kaapi_format_resolvebyfmit(rep->u.s_taskfmt.fmt);
+      rep->u.s_task.body = format->entrypoint[kproc->proc_type];
+      kaapi_assert_debug(rep->u.s_task.body);
+
+    } /* KAAPI_REPLY_S_TASK_FMT */
+
+  case KAAPI_REPLY_S_TASK:
+    {
+      kaapi_thread_t* const self_thread =
+	kaapi_threadcontext2thread(kproc->thread);
+
+      kaapi_task_init
+      (
+       kaapi_thread_toptask(self_thread),
+       rep->u.s_task.body,
+       (void*)(rep->udata + rep->offset)
+      );
+
+      kaapi_thread_pushtask(self_thread);
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+      ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
+#endif
+      return kproc->thread;
+
+    } /* KAAPI_REPLY_S_TASK */
+
+  case KAAPI_REPLY_S_THREAD:
+    {
+#if defined(KAAPI_USE_PERFCOUNTER)
+      ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
+#endif
+      return rep->u.s_thread;
+
+    } /* KAAPI_REPLY_S_THREAD */
+
+  default: break ;
+  }
+
   return NULL;
 }
 
@@ -198,7 +253,6 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
   kaapi_hws_levelid_t levelid = 0;
   kaapi_reply_t* reply;
   kaapi_listrequest_iterator_t lri;
-  kaapi_ws_error_t error;
 
   /* printf("[%u] >> emitsteal\n", kproc->kid); */
 
@@ -208,8 +262,8 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
   /* pop locally without emitting request */
   /* todo: kaapi_ws_queue_pop should fit the steal interface */
   block = get_self_ws_block(kproc, KAAPI_HWS_LEVELID_FLAT);
-  error = kaapi_ws_queue_pop(block->queue);
-  if (error != KAAPI_WS_ERROR_EMPTY) return NULL;
+  thread = pop_ws_block(block, kproc);
+  if (thread != NULL) return thread;
 
   /* printf("[%u] @local: empty\n", kproc->kid); */
 
