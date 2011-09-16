@@ -92,15 +92,9 @@ static kaapi_ws_error_t pop
   if (q->top)
   {
     kaapi_task_t* const task = &q->tasks[--q->top];
-    kaapi_reply_t* const rep = kaapi_request_getreply(req);
     kaapi_task_body_t task_body = kaapi_task_getbody(task);
+    kaapi_reply_t* const rep = kaapi_request_getreply(req);
     kaapi_tasksteal_arg_t* const argsteal = (kaapi_tasksteal_arg_t*)rep->udata;
-
-#if CONFIG_HWS_COUNTERS
-    kaapi_hws_inc_pop_counter(p);
-#endif
-
-    error = KAAPI_WS_ERROR_SUCCESS;
 
     argsteal->origin_thread = thread;
     argsteal->origin_task = task;
@@ -110,6 +104,12 @@ static kaapi_ws_error_t pop
     rep->u.s_task.body = kaapi_tasksteal_body;
 
     _kaapi_request_reply(req, KAAPI_REPLY_S_TASK);
+
+#if CONFIG_HWS_COUNTERS
+    kaapi_hws_inc_pop_counter(p);
+#endif
+
+    error = KAAPI_WS_ERROR_SUCCESS;
   }
   kaapi_sched_unlock(&q->lock);
 

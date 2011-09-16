@@ -161,7 +161,7 @@ static kaapi_thread_context_t* steal_level
 }
 
 
-static kaapi_thread_context_t* pop_ws_block
+static kaapi_thread_context_t* pop_block
 (
  kaapi_ws_block_t* block,
  kaapi_processor_t* kproc
@@ -179,7 +179,7 @@ static kaapi_thread_context_t* pop_ws_block
   rep->preempt = 0;
   rep->status = KAAPI_REQUEST_S_POSTED;
 
-  err = kaapi_ws_queue_pop(block->queue, kproc->thread, rep);
+  err = kaapi_ws_queue_pop(block->queue, kproc->thread, req);
   if (err != KAAPI_WS_ERROR_SUCCESS) return NULL;
    
   switch (kaapi_reply_status(rep))
@@ -264,7 +264,7 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
   /* pop locally without emitting request */
   /* todo: kaapi_ws_queue_pop should fit the steal interface */
   block = get_self_ws_block(kproc, KAAPI_HWS_LEVELID_FLAT);
-  thread = pop_ws_block(block, kproc);
+  thread = pop_block(block, kproc);
   if (thread != NULL) return thread;
 
   /* post the stealing request */
