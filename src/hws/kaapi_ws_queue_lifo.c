@@ -1,8 +1,9 @@
 #include "kaapi_impl.h"
-#include "kaapi_ws_queue.h"
 
-/* needed for kaapi_hws_inc_xxx */
+/* needed for config_hws_counters */
 #include "kaapi_hws.h"
+
+#include "kaapi_ws_queue.h"
 
 
 typedef struct lifo_queue

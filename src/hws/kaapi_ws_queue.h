@@ -4,8 +4,14 @@
 
 #include <stdlib.h>
 #include <stddef.h>
+#include <string.h>
 #include <sys/types.h>
 #include "kaapi_impl.h"
+
+
+#ifndef CONFIG_HWS_COUNTERS
+# error "kaapi_hws_h_not_included"
+#endif
 
 
 typedef enum kaapi_ws_error
@@ -26,6 +32,13 @@ typedef struct kaapi_ws_queue
   /* toremove, kaapi_hws_sched_sync */
   unsigned int (*is_empty)(void*);
   /* toremove, kaapi_hws_sched_sync */
+
+#if CONFIG_HWS_COUNTERS
+  /* counters, one per remote kid */
+  /* todo: put in the ws_block */
+  kaapi_atomic_t steal_counters[KAAPI_MAX_PROCESSOR];
+  kaapi_atomic_t pop_counter;
+#endif
 
   unsigned char data[1];
 
@@ -51,6 +64,11 @@ static inline kaapi_ws_queue_t* kaapi_ws_queue_create(size_t size)
   q->pop = NULL;
   q->destroy = kaapi_ws_queue_unimpl_destroy;
   q->is_empty = NULL;
+
+#if CONFIG_HWS_COUNTERS
+  memset(q->steal_counters, 0, sizeof(q->steal_counters));
+  memset(&q->pop_counter, 0, sizeof(q->pop_counter));
+#endif
 
   return q;
 }

@@ -25,12 +25,6 @@ typedef struct kaapi_ws_block
   kaapi_processor_id_t* kids;
   unsigned int kid_count;
 
-#if CONFIG_HWS_COUNTERS
-  /* counters, one per remote kid */
-  kaapi_atomic_t steal_counters[KAAPI_MAX_PROCESSOR];
-  kaapi_atomic_t pop_counter;
-#endif /* CONFIG_HWS_COUNTERS */
-
 } kaapi_ws_block_t;
 
 
@@ -62,30 +56,29 @@ kaapi_hws_is_levelid_set(kaapi_hws_levelid_t levelid)
 
 #if CONFIG_HWS_COUNTERS
 
-#define container_of(__ptr, __type, __member) \
-  (__type*)((char*)__ptr - offsetof(__type, __member));
+#include <stdint.h>
 
-static inline kaapi_ws_block_t* __p_to_block(void* p)
+#define container_of(__ptr, __type, __member) \
+  (__type*)((uintptr_t)(__ptr) - offsetof(__type, __member))
+
+static inline kaapi_ws_queue_t* __p_to_queue(void* p)
 {
-  kaapi_ws_queue_t* const q = container_of(p, kaapi_ws_queue_t, data);
-  return container_of(q, kaapi_ws_block_t, queue);
+  return container_of(p, kaapi_ws_queue_t, data);
 }
 
 static inline void kaapi_hws_inc_pop_counter(void* p)
 {
   /* increment the counter associated to the block containing a queue */
-  kaapi_ws_block_t* const block = __p_to_block(p);
-  printf("INCR_POP(%lx)\n", (unsigned long)block);
-  KAAPI_ATOMIC_INCR(&block->pop_counter);
+  kaapi_ws_queue_t* const q = __p_to_queue(p);
+  KAAPI_ATOMIC_INCR(&q->pop_counter);
 }
 
 static inline void kaapi_hws_inc_steal_counter
 (void* p, kaapi_processor_id_t kid)
 {
   /* increment the counter associated to the block containing a queue */
-  kaapi_ws_block_t* const block = __p_to_block(p);
-  printf("INCR_STEAL(%lx)\n", (unsigned long)block);
-  KAAPI_ATOMIC_INCR(&block->steal_counters[kid]);
+  kaapi_ws_queue_t* const q = __p_to_queue(p);
+  KAAPI_ATOMIC_INCR(&q->steal_counters[kid]);
 }
 
 #endif /* CONFIG_HWS_COUNTERS */

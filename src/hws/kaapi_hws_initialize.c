@@ -9,6 +9,8 @@
 
 #include "kaapi_impl.h"
 #include "kaapi_procinfo.h"
+
+/* include before ws_queue, for CONFIG_HWS_COUNTERS */
 #include "kaapi_hws.h"
 #include "kaapi_ws_queue.h"
 
@@ -255,11 +257,6 @@ int kaapi_hws_init_global(void)
       block->queue = kaapi_ws_queue_create_lifo();
       kaapi_assert(block->queue);
 
-#if CONFIG_HWS_COUNTERS
-      memset(block->steal_counters, 0, sizeof(block->steal_counters));
-      memset(&block->pop_counter, 0, sizeof(block->pop_counter));
-#endif /* CONFIG_HWS_COUNTERS */
-
       /* for each cpu in this node */
       for (; pos != NULL; pos = pos->next)
       {
@@ -280,7 +277,7 @@ int kaapi_hws_init_global(void)
 
   } /* foreach level in topo */
 
-#if 1 /* debug */
+#if 0 /* debug */
   print_hws_levels();
 #endif /* debug */
 
