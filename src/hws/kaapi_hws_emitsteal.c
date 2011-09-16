@@ -170,6 +170,7 @@ static kaapi_thread_context_t* pop_ws_block
   /* not a real steal operation, dont actually post */
   kaapi_request_t* const req = &hws_requests.requests[kproc->kid];
   kaapi_reply_t* const rep = &kproc->thread->static_reply;
+  kaapi_ws_error_t err;
 
   req->kid = kproc->kid;
   req->reply = rep;
@@ -178,6 +179,9 @@ static kaapi_thread_context_t* pop_ws_block
   rep->preempt = 0;
   rep->status = KAAPI_REQUEST_S_POSTED;
 
+  err = kaapi_ws_queue_pop(block->queue, kproc->thread, rep);
+  if (err != KAAPI_WS_ERROR_SUCCESS) return NULL;
+   
   switch (kaapi_reply_status(rep))
   {
   case KAAPI_REPLY_S_TASK_FMT:
@@ -254,8 +258,6 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
   kaapi_reply_t* reply;
   kaapi_listrequest_iterator_t lri;
 
-  /* printf("[%u] >> emitsteal\n", kproc->kid); */
-
   /* dont fail_request with an uninitialized bitmap */
   kaapi_listrequest_iterator_clear(&lri);
 
@@ -264,8 +266,6 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
   block = get_self_ws_block(kproc, KAAPI_HWS_LEVELID_FLAT);
   thread = pop_ws_block(block, kproc);
   if (thread != NULL) return thread;
-
-  /* printf("[%u] @local: empty\n", kproc->kid); */
 
   /* post the stealing request */
   kproc->issteal = 1;
@@ -282,7 +282,9 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
     /* dont steal at flat level during ascension */
     if (levelid != KAAPI_HWS_LEVELID_FLAT)
     {
-      /* printf("[%u] @%s\n", kproc->kid, kaapi_hws_levelid_to_str(levelid)); */
+#if 0 /* debug */
+      printf("[%u] @%s\n", kproc->kid, kaapi_hws_levelid_to_str(levelid));
+#endif
 
       /* todo: this is a pop, not a steal */
       thread = steal_block(block, kproc, reply, &hws_requests, &lri);
@@ -301,7 +303,7 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
       kaapi_hws_level_t* const child_level = &hws_levels[child_levelid];
       if (!kaapi_hws_is_levelid_set(child_levelid)) continue ;
 
-#if 0 /* debugging */
+#if 0 /* debug */
       printf("[%u] child@%s\n", kproc->kid,
 	     kaapi_hws_levelid_to_str(child_levelid));
 #endif
@@ -310,10 +312,10 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
       if (thread != NULL) goto on_done;
     }
 
-    /*
+#if 0 /* debug */
       printf("[%u] @leaves_of(%s)\n", kproc->kid,
-      kaapi_hws_levelid_to_str(levelid));
-    */
+	     kaapi_hws_levelid_to_str(levelid));
+#endif
 
     /* child level stealing failed, steal in block leaf local queues */
     thread = steal_block_leaves(block, kproc, reply, &hws_requests, &lri);
@@ -326,8 +328,6 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
   fail_requests(&hws_requests, &lri);
 
   kproc->issteal = 0;
-
-  /* printf("[%u] << emitsteal\n", kproc->kid); */
 
   return thread;
 }

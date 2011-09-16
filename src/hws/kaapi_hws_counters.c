@@ -62,7 +62,10 @@ void kaapi_hws_print_counters(void)
       /* dont print steal counters if FLAT not set */
       if (levelid == KAAPI_HWS_LEVELID_FLAT)
 	if (!kaapi_hws_is_levelid_set(KAAPI_HWS_LEVELID_FLAT))
+	{
+	  printf("\n");
 	  continue ;
+	}
 
       for (kid = 0; kid < KAAPI_MAX_PROCESSOR; ++kid)
       {
