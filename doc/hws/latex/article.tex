@@ -110,11 +110,27 @@ TODO
 
 \subsection{Steal request emission algorithm}
 \paragraph{}
-TODO
+The steal request emission entrypoint is the kaapi\_hws\_emitsteal routine. It
+is still in progress, the final implementation will depend on the performances
+achieved during the benchmarking process. Currently, the algorithm is as follow:
+\begin{enumerate}
+\item try to pop from the local queue, stop upon success.
+\item steal in each parent level.
+\item during the parent level iteration, try to steal in each child level.
+\item if child level stealing fails, try to steal in parent level leaves.
+\item fail the unanswered requests.
+\end{enumerate}
 
 \subsection{Workstealing queue virtualization}
 \paragraph{}
-TODO
+To provide better flexibility regarding workstealing decision, a new \textit{queue}
+interface has been added. It contains the following methods:
+\begin{itemize}
+  \item push: push a task in the queue,
+  \item pop: pop a task from the local queue,
+  \item steal: reply to a set of steal requests.
+\end{itemize}
+Currently, there is only a basic static lifo implementation.
 
 \subsection{Emisteal routine virtualization}
 \paragraph{}
@@ -126,6 +142,10 @@ implementation used:
 \textit{kaapi\_hws\_sched\_emitsteal} routine,
 \item any other value: use the default \textit{kaapi\_sched\_emitsteal} routine.
 \end{itemize}
+
+\subsection{Workstealing blocks}
+\paragraph{}
+TODO
 
 
 % Benchmarks
