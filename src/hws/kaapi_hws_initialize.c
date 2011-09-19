@@ -179,6 +179,9 @@ int kaapi_hws_init_global(void)
   kaapi_hierarchy_one_level_t* one_level;
   kaapi_affinityset_t flat_affin_set[KAAPI_MAX_PROCESSOR];
 
+  /* initialize the request list */
+  kaapi_bitmap_clear(&hws_requests.bitmap);
+
   hws_levelmask = levelmask_from_env();
 
   hws_levels = malloc(hws_level_count * sizeof(kaapi_hws_level_t));
@@ -249,7 +252,7 @@ int kaapi_hws_init_global(void)
 
       /* initialize the block */
       /* todo: allocate on a page boundary pinned on the node */
-      kaapi_sched_initlock(&block->lock);
+      kaapi_ws_lock_init(&block->lock);
 
       block->kids = malloc(affin_set->ncpu * sizeof(kaapi_processor_id_t));
       kaapi_assert(block->kids);
