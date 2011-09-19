@@ -56,6 +56,9 @@ static kaapi_ws_error_t steal
     kaapi_task_body_t task_body = kaapi_task_getbody(task);
     kaapi_tasksteal_arg_t* const argsteal = (kaapi_tasksteal_arg_t*)rep->udata;
 
+    /* avoid assertions, set the task state */
+    kaapi_task_orstate(task, KAAPI_MASK_BODY_STEAL);
+
 #if CONFIG_HWS_COUNTERS
     kaapi_hws_inc_steal_counter(p, req->kid);
 #endif
