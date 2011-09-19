@@ -24,6 +24,9 @@ typedef enum kaapi_ws_error
 
 typedef struct kaapi_ws_queue
 {
+  /* TODO: use an union to isolate the ops in cache */
+  /* TODO: allocation should be cache aligned */
+
   kaapi_ws_error_t (*push)(void*, kaapi_task_body_t, void*);
   kaapi_ws_error_t (*steal)(void*, kaapi_thread_context_t*, kaapi_listrequest_t*, kaapi_listrequest_iterator_t*);
   kaapi_ws_error_t (*pop)(void*, kaapi_thread_context_t*, kaapi_request_t*);
