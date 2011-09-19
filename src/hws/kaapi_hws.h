@@ -2,6 +2,9 @@
 # define KAAPI_HWS_H_INCLUDED
 
 
+/* internal to hws */
+
+
 #define CONFIG_HWS_COUNTERS 1
 
 
@@ -9,14 +12,50 @@
 #include "kaapi_ws_queue.h"
 
 
-/* internal to hws */
+/* workstealing lock, cas implementation only */
+/* todo: replace with kaapi_sched_lock */
 
+typedef kaapi_atomic_t kaapi_ws_lock_t;
+
+static inline void kaapi_ws_lock_init(kaapi_ws_lock_t* lock)
+{
+  KAAPI_ATOMIC_WRITE(lock, 0);
+}
+
+static inline int kaapi_ws_lock_trylock
+(kaapi_ws_lock_t* lock)
+{
+  if (KAAPI_ATOMIC_READ(lock) == 0)
+    if (KAAPI_ATOMIC_CAS(lock, 0, 1))
+      return 1; /* locked */
+  return 0;
+}
+
+static inline void kaapi_ws_lock_lock(kaapi_ws_lock_t* lock)
+{
+  while (1)
+  {
+    if (KAAPI_ATOMIC_READ(lock) == 0)
+      if (KAAPI_ATOMIC_CAS(lock, 0, 1))
+	return ;
+
+    kaapi_slowdown_cpu();
+  }
+}
+
+static inline void kaapi_ws_lock_unlock(kaapi_ws_lock_t* lock)
+{
+  KAAPI_ATOMIC_WRITE_BARRIER(lock, 0);
+}
+
+
+/* workstealing block */
 
 typedef struct kaapi_ws_block
 {
   /* concurrent workstealing sync */
   /* todo: cache aligned, alone in the line */
-  kaapi_atomic_t lock;
+  kaapi_ws_lock_t lock;
 
   /* workstealing queue */
   struct kaapi_ws_queue* queue;
@@ -46,6 +85,8 @@ typedef struct kaapi_hws_level
 static const unsigned int hws_level_count = KAAPI_HWS_LEVELID_MAX;
 extern kaapi_hws_level_t* hws_levels;
 extern kaapi_hws_levelmask_t hws_levelmask;
+extern kaapi_listrequest_t hws_requests;
+
 
 /* internal exported functions */
 extern const char* kaapi_hws_levelid_to_str(kaapi_hws_levelid_t);
