@@ -170,14 +170,21 @@ int kaapi_hws_init_global(void)
 
   /* build stealing blocks. redundant with kaapi_processor_computetopo. */
 
+  /* assume kid_count is (kid_max - 1) */
   const unsigned int kid_count = kaapi_default_param.kproc_list->count;
 
+  kaapi_procinfo_t* pos;
   kaapi_hws_level_t* hws_level;
   kaapi_processor_id_t kid;
   int depth;
+  unsigned int i;
   kaapi_hierarchy_one_level_t flat_level;
   kaapi_hierarchy_one_level_t* one_level;
   kaapi_affinityset_t flat_affin_set[KAAPI_MAX_PROCESSOR];
+
+  /* toremove */
+  kaapi_hws_sched_init_sync();
+  /* toremove */
 
   /* initialize the request list */
   kaapi_bitmap_clear(&hws_requests.bitmap);
@@ -189,35 +196,32 @@ int kaapi_hws_init_global(void)
   hws_levels = malloc(hws_level_count * sizeof(kaapi_hws_level_t));
   kaapi_assert(hws_levels);
 
-  /* create the flat level even if not masked, since a local
-     queue is always required an no longer stored in the kproc.
+  /* create the flat level even if not masked, since a local queue
+     is always required and stack no longer stored in the kproc.
+     the flat level contains one block per kid. each kid belongs to
+     the block. special care is taken later to initialize kid_to_block 
    */
-  /* if (hws_levelmask & KAAPI_HWS_LEVELMASK_FLAT) */
+
+  for (i = 0; i < kid_count; ++i)
   {
-    /* build a flat level containing all the kids */
-
-    unsigned int i;
-
-    for (i = 0; i < kid_count; ++i)
-    {
-      kaapi_affinityset_t* const affin_set = &flat_affin_set[i];
-      kaapi_procinfo_t* pos = kaapi_default_param.kproc_list->head;
-      kaapi_cpuset_clear(&affin_set->who);
-      for (; pos != NULL; pos = pos->next)
-	kaapi_cpuset_set(&affin_set->who, pos->bound_cpu);
-      affin_set->ncpu = kid_count;
-    }
-
-    flat_level.count = kid_count;
-    flat_level.affinity = flat_affin_set;
-    flat_level.levelid = KAAPI_HWS_LEVELID_FLAT;
-    one_level = &flat_level;
-
-    /* this level is not part of the hwloc topo */
-    depth = -1;
-
-    goto add_hws_level;
+    kaapi_affinityset_t* const affin_set = &flat_affin_set[i];
+    kaapi_cpuset_clear(&affin_set->who);
+    pos = kaapi_default_param.kproc_list->head;
+    for (; pos != NULL; pos = pos->next)
+      kaapi_cpuset_set(&affin_set->who, pos->bound_cpu);
+    affin_set->ncpu = kid_count;
   }
+
+  flat_level.count = kid_count;
+  flat_level.affinity = flat_affin_set;
+  flat_level.levelid = KAAPI_HWS_LEVELID_FLAT;
+  one_level = &flat_level;
+
+  /* this level is not part of the hwloc topo */
+  depth = -1;
+
+  /* bypass first iteration to add the flat level */
+  goto add_hws_level;
 
   /* foreach non filtered discovered level, create a hws_level */
   for (depth = 0; depth < kaapi_default_param.memory.depth; ++depth)
@@ -252,6 +256,10 @@ int kaapi_hws_init_global(void)
       kaapi_procinfo_t* pos = kaapi_default_param.kproc_list->head;
       unsigned int i = 0;
 
+      /* flat level special handling */
+      if (one_level->levelid == KAAPI_HWS_LEVELID_FLAT)
+	hws_level->kid_to_block[(kaapi_processor_id_t)node] = block;
+
       /* initialize the block */
       /* todo: allocate on a page boundary pinned on the node */
       kaapi_ws_lock_init(&block->lock);
@@ -270,7 +278,12 @@ int kaapi_hws_init_global(void)
 	if (!kaapi_cpuset_has(&affin_set->who, pos->bound_cpu))
 	  continue ;
 
-	hws_level->kid_to_block[pos->kid] = block;
+	if (one_level->levelid != KAAPI_HWS_LEVELID_FLAT)
+	{
+	  /* assume kid_to_block[pos->kid] == 0 */
+	  hws_level->kid_to_block[pos->kid] = block;
+	}
+
 	block->kids[i] = pos->kid;
 
 	kaapi_bitmap_value_set(&block->kid_mask, pos->kid);

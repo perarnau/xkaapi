@@ -49,6 +49,10 @@
 # include "../machine/cuda/kaapi_cuda_execframe.h"
 #endif
 
+/* toremove */
+extern void kaapi_hws_sched_dec_sync(void);
+/* toremove */
+
 /**
 */
 void kaapi_taskwrite_body( 
@@ -151,6 +155,10 @@ void kaapi_taskwrite_body(
     oldstate = kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
   else 
     oldstate = kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
+
+  /* toremove */
+  kaapi_hws_sched_dec_sync();
+  /* toremove */
 }
 
 

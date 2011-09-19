@@ -1,3 +1,4 @@
+#include "kaapi_impl.h"
 #include "kaapi_hws.h"
 
 kaapi_hws_level_t* hws_levels;

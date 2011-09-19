@@ -32,7 +32,6 @@ void kaapi_hws_print_counters(void)
   for (levelid = 0; levelid < hws_level_count; ++levelid)
   {
     level = &hws_levels[levelid];
-    block = level->blocks;
 
     /* always display flat level: see steal_block_leaves */
     if (levelid != KAAPI_HWS_LEVELID_FLAT)
@@ -54,8 +53,10 @@ void kaapi_hws_print_counters(void)
     printf("\n");
 
     /* print steal counters */
-    for (i = 0; i < level->block_count; ++i, ++block)
+    for (i = 0; i < level->block_count; ++i)
     {
+      block = level->blocks + i;
+
       /* block count */
       printf("#%02u", i);
 
@@ -85,7 +86,6 @@ void kaapi_hws_print_counters(void)
   printf("= HWS_POP_COUNTERS\n");
 
   level = &hws_levels[KAAPI_HWS_LEVELID_FLAT];
-  block = level->blocks;
 
   /* print used kids */
   printf("CPU ");
@@ -100,13 +100,19 @@ void kaapi_hws_print_counters(void)
   for (; i; --i) printf("-");
   printf("\n");
 
-  for (i = 0; i < level->block_count; ++i, ++block)
+  printf("    ");
+  for (kid = 0; kid < KAAPI_MAX_PROCESSOR; ++kid)
   {
+    if (is_kid_used(kid) == 0) continue ;
+
+    block = level->kid_to_block[kid];
+
     /* print pop counters */
     val = KAAPI_ATOMIC_READ(&block->queue->pop_counter);
-    if (val) printf("%08lu", val);
-    printf("\n");
+    if (val) printf("%08lu ", val);
+    else printf("         ");
   }
+  printf("\n");
 }
 
 

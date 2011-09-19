@@ -32,10 +32,6 @@ typedef struct kaapi_ws_queue
   kaapi_ws_error_t (*pop)(void*, kaapi_thread_context_t*, kaapi_request_t*);
   void (*destroy)(void*);
 
-  /* toremove, kaapi_hws_sched_sync */
-  unsigned int (*is_empty)(void*);
-  /* toremove, kaapi_hws_sched_sync */
-
 #if CONFIG_HWS_COUNTERS
   /* counters, one per remote kid */
   /* todo: put in the ws_block */
@@ -66,7 +62,6 @@ static inline kaapi_ws_queue_t* kaapi_ws_queue_create(size_t size)
   q->steal = NULL;
   q->pop = NULL;
   q->destroy = kaapi_ws_queue_unimpl_destroy;
-  q->is_empty = NULL;
 
 #if CONFIG_HWS_COUNTERS
   memset(q->steal_counters, 0, sizeof(q->steal_counters));
@@ -109,9 +104,5 @@ static inline void kaapi_ws_queue_destroy(kaapi_ws_queue_t* q)
   free(q);
 }
 
-static inline unsigned int kaapi_ws_queue_is_empty(kaapi_ws_queue_t* q)
-{
-  return q->is_empty((void*)q->data);
-}
 
 #endif /* ! KAAPI_WS_QUEUE_H_INCLUDED */

@@ -5,6 +5,28 @@
 #include "kaapi_ws_queue.h"
 
 
+/* toremove */
+
+static kaapi_atomic_t hws_sync;
+
+void kaapi_hws_sched_init_sync(void)
+{
+  KAAPI_ATOMIC_WRITE(&hws_sync, 0);
+}
+
+void kaapi_hws_sched_inc_sync(void)
+{
+  KAAPI_ATOMIC_INCR(&hws_sync);
+}
+
+void kaapi_hws_sched_dec_sync(void)
+{
+  KAAPI_ATOMIC_DECR(&hws_sync);
+}
+
+/* to remove */
+
+
 void kaapi_hws_sched_sync(void)
 {
   /* todo: q->push must push in local stack too,
@@ -23,34 +45,11 @@ void kaapi_hws_sched_sync(void)
     thread = kaapi_hws_emitsteal(kproc);
     if (thread == NULL)
     {
-#if 1 /* toremove */
-      /* are all the levels empty */
-      kaapi_ws_block_t* block;
-      kaapi_hws_level_t* level;
-      kaapi_hws_levelid_t levelid;
-      unsigned int i;
-
-      for (levelid = 0; levelid < hws_level_count; ++levelid)
+      if (KAAPI_ATOMIC_READ(&hws_sync) == 0)
       {
-	/* look in local queue even if flat not set */
-	if (levelid != KAAPI_HWS_LEVELID_FLAT)
-	  if (!kaapi_hws_is_levelid_set(levelid)) continue ;
-
-	level = &hws_levels[levelid];
-	for (i = 0; i < level->block_count; ++i)
-	{
-	  block = &level->blocks[i];
-	  if (!kaapi_ws_queue_is_empty(block->queue)) break;
-	}
-	if (i != level->block_count) break ;
+	/* no more tasks in queue to sync with */
+	break ;
       }
-      /* all level are empty */
-      if (levelid == hws_level_count)
-      {
-	usleep(1000);
-	return ;
-      }
-#endif /* toremove */
 
       continue ;
     }
@@ -74,4 +73,7 @@ void kaapi_hws_sched_sync(void)
     if (err == EWOULDBLOCK)
       kaapi_sched_suspend(kproc);
   }
+
+  /* sync local stack */
+  kaapi_sched_sync();
 }

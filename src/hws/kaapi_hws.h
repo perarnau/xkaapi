@@ -128,4 +128,11 @@ static inline void kaapi_hws_inc_steal_counter
 #endif /* CONFIG_HWS_COUNTERS */
 
 
+/* toremove */
+extern void kaapi_hws_sched_init_sync(void);
+extern void kaapi_hws_sched_inc_sync(void);
+extern void kaapi_hws_sched_dec_sync(void);
+/* toremove */
+
+
 #endif /* ! KAAPI_HWS_H_INCLUDED */

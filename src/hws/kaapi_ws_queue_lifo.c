@@ -123,19 +123,6 @@ static kaapi_ws_error_t pop
 }
 
 
-static unsigned int is_empty(void* p)
-{
-  lifo_queue_t* const q = (lifo_queue_t*)p;
-  unsigned int is_empty;
-
-  kaapi_ws_lock_lock(&q->lock);
-  is_empty = (q->top == 0);
-  kaapi_ws_lock_unlock(&q->lock);
-
-  return is_empty;
-}
-
-
 /* exported
  */
 
@@ -149,7 +136,6 @@ kaapi_ws_queue_t* kaapi_ws_queue_create_lifo(void)
   wsq->push = push;
   wsq->steal = steal;
   wsq->pop = pop;
-  wsq->is_empty = is_empty;
 
   kaapi_ws_lock_init(&q->lock);
   q->top = 0;
