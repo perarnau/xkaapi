@@ -14,9 +14,9 @@ typedef struct wrapped_uint
 static void numa_body(void* p, kaapi_thread_t* t)
 {
   wrapped_uint_t* wui = (wrapped_uint_t*)p;
-  const unsigned int val = *kaapi_data(unsigned int, &wui->val);
 
-  printf("xx [%u] %s %u\n", kaapi_get_self_kid(), __FUNCTION__, val);
+  /* const unsigned int val = *kaapi_data(unsigned int, &wui->val); */
+  /* printf("xx [%u] %s %u\n", kaapi_get_self_kid(), __FUNCTION__, val); */
 
   *kaapi_data(unsigned int, &wui->val) = 3;
 }
@@ -25,9 +25,9 @@ static void numa_body(void* p, kaapi_thread_t* t)
 static void flat_body(void* p, kaapi_thread_t* t)
 {
   wrapped_uint_t* wui = (wrapped_uint_t*)p;
-  const unsigned int val = *kaapi_data(unsigned int, &wui->val);
 
-  printf("xx [%u] %s %u\n", kaapi_get_self_kid(), __FUNCTION__, val);
+  /* const unsigned int val = *kaapi_data(unsigned int, &wui->val); */
+  /* printf("xx [%u] %s %u\n", kaapi_get_self_kid(), __FUNCTION__, val); */
 
   *kaapi_data(unsigned int, &wui->val) = 3;
 }
