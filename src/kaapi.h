@@ -1339,6 +1339,7 @@ typedef enum kaapi_stealcontext_flag {
   KAAPI_SC_NOPREEMPTION  = 0x8,
   KAAPI_SC_INIT          = 0x10,   /* 1 == iff initilized (for lazy init) */
   KAAPI_SC_AGGREGATE	 = 0x20,
+  KAAPI_SC_HWS_SPLITTER	 = 0x30,
   
   KAAPI_SC_DEFAULT = KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION
 } kaapi_stealcontext_flag;
@@ -2551,13 +2552,33 @@ static inline int kaapi_hws_pushtask_numa(kaapi_task_body_t body, void* data)
 {
   return kaapi_hws_pushtask(body, data, KAAPI_HWS_LEVELID_NUMA);
 }
+/* ========================================================================== */
+/** \ingroup HWS
+    retrieve the memory node id for the given request
+    \retval the node id
+ */
+extern unsigned int kaapi_hws_get_request_nodeid(const struct kaapi_request_t*);
 
+/* ========================================================================== */
+/** \ingroup HWS
+    get the node count at the given hierarchy level
+    \retval the node count
+ */
+extern unsigned int kaapi_hws_get_node_count(kaapi_hws_levelid_t);
+
+/* ========================================================================== */
+/** \ingroup HWS
+    get splitter info related to HWS
+    \retval -1 if this is not a HWS splitter. 0 otherwise.
+ */
+extern int kaapi_hws_get_splitter_info
+(kaapi_stealcontext_t*, kaapi_hws_levelid_t*);
 
 /* ========================================================================== */
 /** \ingroup HWS
     wait until all the tasks pushed in the hierarchy queues are done
  */
-void kaapi_hws_sched_sync(void);
+extern void kaapi_hws_sched_sync(void);
 
 /* ========================================================================== */
 /** \ingroup HWS

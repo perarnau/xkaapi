@@ -84,6 +84,7 @@ libkaapi_la_SOURCES=\
   hws/kaapi_hws_initialize.c \
   hws/kaapi_hws_emitsteal.c \
   hws/kaapi_hws_pushtask.c \
+  hws/kaapi_hws_splitter.c \
   hws/kaapi_hws_sched_sync.c \
   hws/kaapi_hws_globals.c \
   hws/kaapi_hws_counters.c \

@@ -10,7 +10,8 @@ typedef struct lifo_queue
 {
   unsigned int top; /* first avail */
   kaapi_ws_lock_t lock; /* toremove, use block lock */
-  kaapi_task_t tasks[128];
+#define CONFIG_QUEUE_SIZE 128
+  kaapi_task_t tasks[CONFIG_QUEUE_SIZE];
 } lifo_queue_t;
 
 

@@ -45,6 +45,7 @@ void kaapi_hws_sched_sync(void)
     thread = kaapi_hws_emitsteal(kproc);
     if (thread == NULL)
     {
+      __sync_synchronize();
       if (KAAPI_ATOMIC_READ(&hws_sync) == 0)
       {
 	/* no more tasks in queue to sync with */
