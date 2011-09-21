@@ -584,6 +584,7 @@ static inline int kaapi_bitmap_first1_and_zero_128( kaapi_bitmap_value128_t* b )
 #  ifdef KAAPI_MAX_PROCESSOR_GENERIC
 /* Global function pointers initialized in kaapi_hw_standardinit() */
 extern void (*kaapi_bitmap_clear)( kaapi_bitmap_t* b );
+extern int (*kaapi_bitmap_empty)( kaapi_bitmap_t* b );
 extern int (*kaapi_bitmap_value_empty)( kaapi_bitmap_value_t* b );
 extern void (*kaapi_bitmap_value_set)( kaapi_bitmap_value_t* b, int i );
 extern void (*kaapi_bitmap_value_unset)( kaapi_bitmap_value_t* b, int i );
@@ -616,6 +617,7 @@ typedef kaapi_bitmap_value128_t kaapi_bitmap_value_t;
 #      error No implementation available
 #    endif
 #    define kaapi_bitmap_clear(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_clear)(b)
+#    define kaapi_bitmap_empty(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_empty)(b)
 #    define kaapi_bitmap_value_clear(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_clear)(b)
 #    define kaapi_bitmap_value_empty(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_empty)(b)
 #    define kaapi_bitmap_value_set(b,i) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_set)((b),(i))

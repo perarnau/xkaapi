@@ -185,8 +185,3 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
   
   kaapi_writemem_barrier();
 }
-
-void kaapi_adapt_body_but_not_splittable(void* arg, kaapi_thread_t* thread)
-{
-  kaapi_adapt_body(arg, thread);
-}

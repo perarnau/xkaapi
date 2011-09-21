@@ -175,11 +175,7 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
     /* todo: levelid should be an argument */
     static const kaapi_hws_levelid_t levelid = KAAPI_HWS_LEVELID_NUMA;
     kaapi_assert_debug(!(flag & KAAPI_SC_AGGREGATE));
-
     kaapi_hws_splitter(sc, splitter, argsplitter, levelid);
-
-    /* todo: see kaapi_hws_get_splitter_info */
-    sc->header.flag &= ~KAAPI_SC_HWS_SPLITTER;
   }
 
   if (flag & KAAPI_SC_AGGREGATE)

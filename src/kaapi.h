@@ -1339,7 +1339,7 @@ typedef enum kaapi_stealcontext_flag {
   KAAPI_SC_NOPREEMPTION  = 0x8,
   KAAPI_SC_INIT          = 0x10,   /* 1 == iff initilized (for lazy init) */
   KAAPI_SC_AGGREGATE	 = 0x20,
-  KAAPI_SC_HWS_SPLITTER	 = 0x30,
+  KAAPI_SC_HWS_SPLITTER	 = 0x40,
   
   KAAPI_SC_DEFAULT = KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION
 } kaapi_stealcontext_flag;
@@ -2573,12 +2573,25 @@ extern unsigned int kaapi_hws_get_node_count(kaapi_hws_levelid_t);
  */
 extern int kaapi_hws_get_splitter_info
 (kaapi_stealcontext_t*, kaapi_hws_levelid_t*);
+extern void kaapi_hws_clear_splitter_info
+(kaapi_stealcontext_t*);
+
+/* ========================================================================== */
+/** \ingroup HWS
+    adaptive request related routines
+ */
+extern void* kaapi_hws_init_adaptive_task
+(kaapi_stealcontext_t*, kaapi_request_t*, kaapi_task_body_t, size_t, kaapi_task_splitter_t);
+
+extern void kaapi_hws_reply_adaptive_task
+(kaapi_stealcontext_t*, kaapi_request_t*);
 
 /* ========================================================================== */
 /** \ingroup HWS
     wait until all the tasks pushed in the hierarchy queues are done
  */
 extern void kaapi_hws_sched_sync(void);
+extern void kaapi_hws_sched_sync_once(void);
 
 /* ========================================================================== */
 /** \ingroup HWS

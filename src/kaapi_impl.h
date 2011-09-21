@@ -1908,6 +1908,11 @@ extern kaapi_thread_context_t* kaapi_hws_emitsteal ( kaapi_processor_t* kproc );
 extern int kaapi_hws_splitter
 (kaapi_stealcontext_t*, kaapi_task_splitter_t, void*, kaapi_hws_levelid_t);
 
+/** \ingroup HWS
+    equivalent of kaapi_adapt_body, tailored for HWS
+*/
+extern void kaapi_hws_adapt_body(void* arg, kaapi_thread_t* thread);
+
 
 /** \ingroup WS
     Advance polling of request for the current running thread.

@@ -48,6 +48,8 @@ static double* allocate_double_array
   /* init mapping info */
   mi->page_size = page_size;
   mi->page_pernode = size / (mi->page_size * node_count);
+  if (mi->page_size * node_count * mi->page_pernode != size)
+    mi->page_pernode += 1;
   mi->elem_size = sizeof(double);
 
   /* bind the pages */
@@ -73,21 +75,21 @@ static void map_range
 )
 {
   /* get i and j such that array[i, j] is allocated on nodeid */
-  *i = (kaapi_workqueue_index_t)((nodeid * mi->page_size) / mi->elem_size);
-  *j = *i + mi->page_pernode / mi->elem_size;
+
+  const unsigned long elem_per_node =
+    (mi->page_pernode * mi->page_size) / mi->elem_size;
+
+  *i = (kaapi_workqueue_index_t)(nodeid * elem_per_node);
+  *j = *i + elem_per_node;
 }
 
-
-/**
-*/
 typedef work_t thief_work_t;
 
 
-/* fwd decl */
-static void thief_entrypoint(void*, kaapi_thread_t*, kaapi_stealcontext_t*);
+static void thief_entrypoint(void*, kaapi_thread_t*);
 
+static int splitter(kaapi_stealcontext_t*, int, kaapi_request_t*, void*);
 
-/* parallel work splitter */
 
 static int do_hws_splitter
 (
@@ -112,18 +114,22 @@ static int do_hws_splitter
     const unsigned int nodeid = kaapi_hws_get_request_nodeid(req);
     kaapi_workqueue_index_t i, j;
 
-    thief_work_t* const tw = kaapi_reply_init_adaptive_task
-      (sc, req, (kaapi_task_body_t)thief_entrypoint, sizeof(thief_work_t), 0);
+    thief_work_t* const tw = kaapi_hws_init_adaptive_task
+      (sc, req, thief_entrypoint, sizeof(thief_work_t), splitter);
 
     map_range(vw->mi, nodeid, &i, &j);
     if (j > size) j = size;
 
-    printf("mapping: [%ld - %ld] @ %u\n", i, j, nodeid);
+#if 0
+    printf("push %lx - %lx @ %u\n", i, j, nodeid);
+#endif
 
     kaapi_workqueue_init(&tw->cr, i, j);
     tw->op = vw->op;
     tw->array = vw->array;
-    kaapi_reply_push_adaptive_task(sc, req);
+
+    /* commit the reply */
+    kaapi_hws_reply_adaptive_task(sc, req);
   }
 
   return retval;
@@ -159,10 +165,10 @@ static int do_flat_splitter
     return 0;
 
   /* how much per req */
-  unit_size = range_size / (nreq + 1);
+  unit_size = range_size / nreq;
   if (unit_size == 0)
   {
-    nreq = (range_size / CONFIG_PAR_GRAIN) - 1;
+    nreq = range_size / CONFIG_PAR_GRAIN;
     unit_size = CONFIG_PAR_GRAIN;
   }
 
@@ -174,15 +180,15 @@ static int do_flat_splitter
 
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
-    /* thief work */
-    thief_work_t* const tw = kaapi_reply_init_adaptive_task
-      ( sc, req, (kaapi_task_body_t)thief_entrypoint, sizeof(thief_work_t), 0 );
+    thief_work_t* const tw = kaapi_hws_init_adaptive_task
+      (sc, req, thief_entrypoint, sizeof(thief_work_t), splitter);
 
     kaapi_workqueue_init(&tw->cr, j - unit_size, j);
     tw->op = vw->op;
     tw->array = vw->array;
 
-    kaapi_reply_push_adaptive_task(sc, req);
+    /* commit the reply */
+    kaapi_hws_reply_adaptive_task(sc, req);
   }
 
   return nrep;
@@ -201,7 +207,8 @@ static int splitter
   kaapi_hws_levelid_t levelid;
   if (kaapi_hws_get_splitter_info(sc, &levelid) == 0)
   {
-    /* this is a hws splitter, short default splitter */
+    /* this is a hws splitter, shunt the default splitter */
+    kaapi_hws_clear_splitter_info(sc);
     return do_hws_splitter(sc, nreq, req, args, levelid);
   }
 
@@ -225,8 +232,10 @@ static int extract_seq(work_t* w, double** pos, double** end)
 }
 
 
-static void thief_entrypoint
-(void* args, kaapi_thread_t* thread, kaapi_stealcontext_t* sc)
+__attribute__((aligned))
+static volatile unsigned long global_counter;
+
+static void thief_entrypoint(void* args, kaapi_thread_t* thread)
 {
   /* range to process */
   double* beg;
@@ -235,11 +244,24 @@ static void thief_entrypoint
   /* process the work */
   thief_work_t* thief_work = (thief_work_t*)args;
 
-  /* set the splitter for this task */
-  kaapi_steal_setsplitter(sc, splitter, thief_work );
+#if 0
+  {
+    printf("[%u] %s: 0x%lx, 0x%lx\n",
+	   kaapi_get_self_kid(),
+	   __FUNCTION__,
+	   thief_work->cr.beg,
+	   thief_work->cr.end);
+  }
+#endif
 
   while (!extract_seq(thief_work, &beg, &end))
+  {
+    unsigned long count = end - beg;
+
     for (; beg != end; ++beg) thief_work->op(beg);
+
+    __sync_fetch_and_sub(&global_counter, count);
+  }
 }
 
 /* For each main function */
@@ -248,10 +270,9 @@ static void for_each
 {
   /* range to process */
   kaapi_thread_t* thread;
-  kaapi_stealcontext_t* sc;
-  work_t  work;
-  double* pos;
-  double* end;
+  work_t work;
+
+  global_counter = (unsigned long)size;
 
   /* get the self thread */
   thread = kaapi_self_thread();
@@ -263,20 +284,19 @@ static void for_each
   work.mi = mi;
 
   /* push an adaptive task */
-  sc = kaapi_task_begin_adaptive
+  kaapi_task_begin_adaptive
   (
    thread, 
-   KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION | KAAPI_SC_HWS_SPLITTER, 
+   KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION | KAAPI_SC_HWS_SPLITTER,
    splitter, 
    &work
   );
-  
-  /* while there is sequential work to do*/
-  while (!extract_seq(&work, &pos, &end))
-    for (; pos != end; ++pos) op(pos);
 
-  /* wait for thieves */
-  kaapi_task_end_adaptive(sc);
+  while (1)
+  {
+    kaapi_hws_sched_sync_once();
+    if (global_counter == 0) break ;
+  }
 }
 
 
@@ -300,8 +320,12 @@ int main(int ac, char** av)
 
 #define ITEM_COUNT 100000
   array = allocate_double_array(ITEM_COUNT, &mi);
+
+#if 0
+  printf("RANGE: %lx - %lx\n", 0, ITEM_COUNT);
+#endif
   
-  for (iter = 0; iter < 100; ++iter)
+  for (iter = 0; iter < 1; ++iter)
   {
     for (i = 0; i < ITEM_COUNT; ++i) array[i] = 0.f;
 

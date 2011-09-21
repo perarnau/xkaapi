@@ -66,8 +66,6 @@ static kaapi_thread_context_t* steal_block
       kaapi_format_t* const format =
 	kaapi_format_resolvebyfmit(reply->u.s_taskfmt.fmt);
       reply->u.s_task.body = format->entrypoint[kproc->proc_type];
-      kaapi_assert_debug(reply->u.s_task.body);
-
     } /* KAAPI_REPLY_S_TASK_FMT */
 
   case KAAPI_REPLY_S_TASK:
@@ -75,11 +73,15 @@ static kaapi_thread_context_t* steal_block
       kaapi_thread_t* const self_thread =
 	kaapi_threadcontext2thread(kproc->thread);
 
+      /* data is stored in the first word of udata */
+      void* const dont_break_aliasing = (void*)reply->udata;
+      void* const data = *(void**)dont_break_aliasing;
+
       kaapi_task_init
       (
        kaapi_thread_toptask(self_thread),
        reply->u.s_task.body,
-       (void*)(reply->udata + reply->offset)
+       data
       );
 
       kaapi_thread_pushtask(self_thread);
@@ -194,11 +196,15 @@ static kaapi_thread_context_t* pop_block
       kaapi_thread_t* const self_thread =
 	kaapi_threadcontext2thread(kproc->thread);
 
+      /* data is stored in the first word of udata */
+      void* const dont_break_aliasing = (void*)rep->udata;
+      void* const data = *(void**)dont_break_aliasing;
+
       kaapi_task_init
       (
        kaapi_thread_toptask(self_thread),
        rep->u.s_task.body,
-       (void*)(rep->udata + rep->offset)
+       data
       );
 
       kaapi_thread_pushtask(self_thread);

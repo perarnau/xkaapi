@@ -44,8 +44,6 @@
 */
 #include "kaapi_impl.h"
 
-extern void kaapi_adapt_body_but_not_splittable(void* arg, kaapi_thread_t* thread);
-
 /*
  */
 void* kaapi_reply_init_adaptive_task
@@ -88,7 +86,7 @@ void* kaapi_reply_init_adaptive_task
 
   /* initialize user related */
   adata->ubody = (kaapi_adaptive_thief_body_t)body;
-  krep->u.s_task.body = kaapi_adapt_body_but_not_splittable;
+  krep->u.s_task.body = kaapi_adapt_body;
 
   /* return this area to the user */
   return (void*)adata->udata;

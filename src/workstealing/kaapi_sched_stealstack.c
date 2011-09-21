@@ -186,7 +186,7 @@ static int kaapi_sched_stealframe
     task_body = kaapi_task_getbody(task_top);
     
     /* its an adaptive task !!! */
-    if (task_body == kaapi_adapt_body)
+    if (task_body == kaapi_adapt_body || task_body == kaapi_hws_adapt_body)
     {
       /* only steal into an correctly initialized steal context */
       kaapi_stealcontext_t* const sc = kaapi_task_getargst(task_top, kaapi_stealcontext_t);
