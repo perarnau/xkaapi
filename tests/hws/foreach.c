@@ -105,9 +105,12 @@ static int do_hws_splitter
      . the algorithm is not yet published, so non concurrency issues
   */
 
-  const int retval = nreq;
   work_t* const vw = (work_t*)arg;
   const unsigned int size = (unsigned int)kaapi_workqueue_size(&vw->cr);
+
+#define KAAPI_WS_ERROR_SUCCESS 0
+#define KAAPI_WS_ERROR_EMPTY 1
+  if (size == 0) return KAAPI_WS_ERROR_EMPTY;
 
   for (; nreq; --nreq, ++req)
   {
@@ -132,7 +135,7 @@ static int do_hws_splitter
     kaapi_hws_reply_adaptive_task(sc, req);
   }
 
-  return retval;
+  return KAAPI_WS_ERROR_SUCCESS;
 }
 
 
@@ -161,8 +164,7 @@ static int do_flat_splitter
   /* do not steal if range size <= PAR_GRAIN */
 #define CONFIG_PAR_GRAIN 128
   range_size = kaapi_workqueue_size(&vw->cr);
-  if (range_size <= CONFIG_PAR_GRAIN)
-    return 0;
+  if (range_size == 0) return KAAPI_WS_ERROR_EMPTY;
 
   /* how much per req */
   unit_size = range_size / nreq;
@@ -191,7 +193,7 @@ static int do_flat_splitter
     kaapi_hws_reply_adaptive_task(sc, req);
   }
 
-  return nrep;
+  return KAAPI_WS_ERROR_SUCCESS;
 }
 
 
@@ -232,9 +234,6 @@ static int extract_seq(work_t* w, double** pos, double** end)
 }
 
 
-__attribute__((aligned))
-static volatile unsigned long global_counter;
-
 static void thief_entrypoint(void* args, kaapi_thread_t* thread)
 {
   /* range to process */
@@ -255,13 +254,7 @@ static void thief_entrypoint(void* args, kaapi_thread_t* thread)
 #endif
 
   while (!extract_seq(thief_work, &beg, &end))
-  {
-    unsigned long count = end - beg;
-
     for (; beg != end; ++beg) thief_work->op(beg);
-
-    __sync_fetch_and_sub(&global_counter, count);
-  }
 }
 
 /* For each main function */
@@ -269,10 +262,9 @@ static void for_each
 (double* array, size_t size, void (*op)(double*), const mapping_info_t* mi)
 {
   /* range to process */
+  kaapi_stealcontext_t* sc;
   kaapi_thread_t* thread;
   work_t work;
-
-  global_counter = (unsigned long)size;
 
   /* get the self thread */
   thread = kaapi_self_thread();
@@ -284,7 +276,7 @@ static void for_each
   work.mi = mi;
 
   /* push an adaptive task */
-  kaapi_task_begin_adaptive
+  sc = kaapi_task_begin_adaptive
   (
    thread, 
    KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION | KAAPI_SC_HWS_SPLITTER,
@@ -292,11 +284,7 @@ static void for_each
    &work
   );
 
-  while (1)
-  {
-    kaapi_hws_sched_sync_once();
-    if (global_counter == 0) break ;
-  }
+  kaapi_hws_end_adaptive(sc);
 }
 
 
@@ -325,7 +313,7 @@ int main(int ac, char** av)
   printf("RANGE: %lx - %lx\n", 0, ITEM_COUNT);
 #endif
   
-  for (iter = 0; iter < 1; ++iter)
+  for (iter = 0; iter < 100; ++iter)
   {
     for (i = 0; i < ITEM_COUNT; ++i) array[i] = 0.f;
 

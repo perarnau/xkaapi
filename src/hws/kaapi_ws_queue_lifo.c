@@ -81,8 +81,13 @@ static kaapi_ws_error_t steal
 
 	    if (splitter != NULL)
 	    {
-              kaapi_task_splitter_adapt
+	      const kaapi_ws_error_t err = kaapi_task_splitter_adapt
 		(thread, task, splitter, argsplitter, lr, lri);
+	      if (err == KAAPI_WS_ERROR_EMPTY)
+	      {
+		KAAPI_ATOMIC_DECR(&sc->header.msc->thieves.count);
+		sc->splitter = NULL;
+	      }
 
 	      /* update request */
 	      req = kaapi_listrequest_iterator_get(lr, lri);

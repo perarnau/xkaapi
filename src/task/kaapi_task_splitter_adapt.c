@@ -80,7 +80,5 @@ int kaapi_task_splitter_adapt(
 /* here do not need copy */
 #endif
   /* call the splitter */
-  splitter( stc, count, requests, argsplitter);
-
-  return count;
+  return splitter( stc, count, requests, argsplitter);
 }

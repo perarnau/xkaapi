@@ -285,3 +285,10 @@ void kaapi_hws_reply_adaptive_task
 {
   kaapi_request_reply(sc, req, 0);
 }
+
+
+void kaapi_hws_end_adaptive(kaapi_stealcontext_t* sc)
+{
+  while (KAAPI_ATOMIC_READ(&sc->thieves.count))
+    kaapi_hws_sched_sync_once();
+}

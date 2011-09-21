@@ -2578,13 +2578,15 @@ extern void kaapi_hws_clear_splitter_info
 
 /* ========================================================================== */
 /** \ingroup HWS
-    adaptive request related routines
+    adaptive task related routines
  */
 extern void* kaapi_hws_init_adaptive_task
 (kaapi_stealcontext_t*, kaapi_request_t*, kaapi_task_body_t, size_t, kaapi_task_splitter_t);
 
 extern void kaapi_hws_reply_adaptive_task
 (kaapi_stealcontext_t*, kaapi_request_t*);
+
+extern void kaapi_hws_end_adaptive(kaapi_stealcontext_t* sc);
 
 /* ========================================================================== */
 /** \ingroup HWS
