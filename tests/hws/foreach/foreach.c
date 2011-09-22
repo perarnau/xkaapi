@@ -8,6 +8,26 @@
 # define CONFIG_OMP 0
 #endif
 
+#ifndef CONFIG_IDKOIFF
+# define CONFIG_IDKOIFF 0
+#endif
+
+#ifndef CONFIG_IDFREEZE
+# define CONFIG_IDFREEZE 0
+#endif
+
+#if CONFIG_IDFREEZE
+# define CONFIG_MAX_PROC 48
+# define CONFIG_MAX_NODE 8 /* numa node count */
+# define CONFIG_CACHE_SIZE (5 * 1024 * 1024)
+#elif CONFIG_IDKOIFF
+# define CONFIG_MAX_PROC 16
+# define CONFIG_MAX_NODE 8
+# define CONFIG_CACHE_SIZE (1024 * 1024)
+#else
+# error "undefined host"
+#endif
+
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -34,7 +54,7 @@ static int kaapi_numa_bind(const void* addr, size_t size, int node)
 
   const int mode = MPOL_BIND;
   const unsigned int flags = MPOL_MF_STRICT | MPOL_MF_MOVE;
-  const unsigned long maxnode = maxproc;
+  const unsigned long maxnode = CONFIG_MAX_PROC;
   
   if ((size & 0xfff) !=0) /* should be divisible by 4096 */
   {
@@ -56,7 +76,10 @@ static int kaapi_numa_bind(const void* addr, size_t size, int node)
     1UL << (node % (8 * sizeof(unsigned long)));
 
   if (mbind((void*)addr, size, mode, nodemask, maxnode, flags))
+  {
+    perror("mbind");
     return -1;
+  }
 
   return 0;
 }
@@ -87,15 +110,12 @@ typedef struct mapping_info
 
 
 static double* allocate_double_array
-(
- unsigned int item_count,
- mapping_info_t* mi
-)
+(size_t item_count, mapping_info_t* mi)
 {
   static const size_t page_size = 0x1000;
   const size_t size = item_count * sizeof(double);
 #if CONFIG_OMP
-  const size_t node_count = 8;
+  const size_t node_count = CONFIG_MAX_NODE;
 #else
   const size_t node_count = kaapi_hws_get_node_count(KAAPI_HWS_LEVELID_NUMA);
 #endif
@@ -431,8 +451,7 @@ int main(int ac, char** av)
   kaapi_init(1, &ac, &av);
 #endif /* CONFIG_KAAPI */
 
-#define CACHE_SIZE (1024 * 1024)
-#define TOTAL_SIZE (10 * 16 * 2 * CACHE_SIZE)
+#define TOTAL_SIZE (1 * CONFIG_MAX_PROC * 2 * CONFIG_CACHE_SIZE)
 #define ITEM_COUNT (TOTAL_SIZE / sizeof(double))
   array = allocate_double_array(ITEM_COUNT, &mi);
 
