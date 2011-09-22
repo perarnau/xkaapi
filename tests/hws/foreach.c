@@ -59,8 +59,36 @@ static double* allocate_double_array
       ((uintptr_t)p + i * mi->page_pernode * mi->page_size);
     size_t bind_size = mi->page_pernode * mi->page_size;
     if (i == (node_count - 1))
-      bind_size = size - (node_count - 1) * mi->page_pernode;
-    kaapi_numa_bind(addr, bind_size, i);
+    {
+      bind_size = size - bind_size * (node_count - 1);
+      if (bind_size & (mi->page_size - 1UL))
+	bind_size = (bind_size + mi->page_size) & ~(mi->page_size - 1UL);
+    }
+
+#if 1
+    if (kaapi_numa_bind(addr, bind_size, i))
+    {
+      printf("[!] kaapi_numa_bind (%lx, %lu, %u)\n", addr, bind_size, i);
+      exit(-1);
+    }
+#endif
+
+#if 1
+    /* check the page mapping */
+    {
+      uintptr_t fu = (uintptr_t)addr;
+      uintptr_t bar = fu + bind_size;
+      for (; fu < bar; fu += mi->page_size)
+      {
+	const int nodeid = kaapi_numa_get_page_node(fu);
+	if (nodeid != i)
+	{
+	  printf("invalid mapping %lx@%u!=@%u\n", fu, nodeid, i);
+	  exit(-1);
+	}
+      }
+    }
+#endif
   }
 
   return (double*)p;
@@ -122,10 +150,6 @@ static int do_hws_splitter
 
     map_range(vw->mi, nodeid, &i, &j);
     if (j > size) j = size;
-
-#if 0
-    printf("push %lx - %lx @ %u\n", i, j, nodeid);
-#endif
 
     kaapi_workqueue_init(&tw->cr, i, j);
     tw->op = vw->op;
@@ -243,16 +267,6 @@ static void thief_entrypoint(void* args, kaapi_thread_t* thread)
   /* process the work */
   thief_work_t* thief_work = (thief_work_t*)args;
 
-#if 0
-  {
-    printf("[%u] %s: 0x%lx, 0x%lx\n",
-	   kaapi_get_self_kid(),
-	   __FUNCTION__,
-	   thief_work->cr.beg,
-	   thief_work->cr.end);
-  }
-#endif
-
   while (!extract_seq(thief_work, &beg, &end))
     for (; beg != end; ++beg) thief_work->op(beg);
 }
@@ -306,14 +320,16 @@ int main(int ac, char** av)
   /* initialize the runtime */
   kaapi_init(1, &ac, &av);
 
-#define ITEM_COUNT 100000
+#define CACHE_SIZE (1024 * 1024)
+#define TOTAL_SIZE (16 * 2 * CACHE_SIZE)
+#define ITEM_COUNT (TOTAL_SIZE / sizeof(double))
   array = allocate_double_array(ITEM_COUNT, &mi);
 
 #if 0
   printf("RANGE: %lx - %lx\n", 0, ITEM_COUNT);
 #endif
   
-  for (iter = 0; iter < 100; ++iter)
+  for (iter = 0; iter < 10; ++iter)
   {
     for (i = 0; i < ITEM_COUNT; ++i) array[i] = 0.f;
 
