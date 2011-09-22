@@ -181,7 +181,10 @@ static double* allocate_double_array
 
 static void init_double_array(double* p, unsigned int n)
 {
-  memset(p, 0, n * sizeof(double));
+  unsigned int i;
+
+  for (i = 0; i < n; ++i, ++p)
+    *p = 1;
 }
 
 
@@ -190,7 +193,7 @@ static void init_double_array(double* p, unsigned int n)
 typedef struct work
 {
   kaapi_workqueue_t cr;
-  void (*op)(double*);
+  double res;
   double* array;
   const struct mapping_info* mi;
 } work_t;
@@ -216,9 +219,24 @@ static void map_range
 typedef work_t thief_work_t;
 
 
-static void thief_entrypoint(void*, kaapi_thread_t*);
+static void thief_entrypoint
+(void*, kaapi_thread_t*, kaapi_stealcontext_t*);
 
 static int splitter(kaapi_stealcontext_t*, int, kaapi_request_t*, void*);
+
+
+static int reducer
+(kaapi_stealcontext_t* sc, void* targ, void* tdata, size_t tsize, void* varg)
+{
+  work_t* const vw = (work_t*)varg;
+  thief_work_t* const tw = (thief_work_t*)tdata;
+
+  vw->res += tw->res;
+
+  kaapi_workqueue_set(&vw->cr, tw->cr.beg, tw->cr.end);
+
+  return 0;
+}
 
 
 static int do_hws_splitter
@@ -247,15 +265,23 @@ static int do_hws_splitter
     const unsigned int nodeid = kaapi_hws_get_request_nodeid(req);
     kaapi_workqueue_index_t i, j;
 
+    kaapi_taskadaptive_result_t* const ktr =
+      kaapi_allocate_thief_result(req, sizeof(thief_work_t), NULL);
+
     thief_work_t* const tw = kaapi_hws_init_adaptive_task
-      (sc, req, thief_entrypoint, sizeof(thief_work_t), splitter, NULL);
+      (sc, req, (kaapi_task_body_t)thief_entrypoint, sizeof(thief_work_t), splitter, ktr);
 
     map_range(vw->mi, nodeid, &i, &j);
     if (j > size) j = size;
 
     kaapi_workqueue_init(&tw->cr, i, j);
-    tw->op = vw->op;
+    tw->res = 0;
     tw->array = vw->array;
+    tw->mi = vw->mi;
+
+    /* initialize ktr task may be preempted before entrypoint */
+    ((thief_work_t*)ktr->data)->cr = vw->cr;
+    ((thief_work_t*)ktr->data)->res = 0.f;
 
     /* commit the reply */
     kaapi_hws_reply_adaptive_task(sc, req);
@@ -318,12 +344,16 @@ static int do_flat_splitter
 
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
+    kaapi_taskadaptive_result_t* const ktr =
+      kaapi_allocate_thief_result(req, sizeof(thief_work_t), NULL);
+
     thief_work_t* const tw = kaapi_hws_init_adaptive_task
-      (sc, req, thief_entrypoint, sizeof(thief_work_t), splitter, NULL);
+      (sc, req, (kaapi_task_body_t)thief_entrypoint, sizeof(thief_work_t), splitter, ktr);
 
     kaapi_workqueue_init(&tw->cr, j - unit_size, j);
-    tw->op = vw->op;
+    tw->res = 0;
     tw->array = vw->array;
+    tw->mi = vw->mi;
 
     /* commit the reply */
     kaapi_hws_reply_adaptive_task(sc, req);
@@ -370,8 +400,11 @@ static int extract_seq(work_t* w, double** pos, double** end)
 }
 
 
-static void thief_entrypoint(void* args, kaapi_thread_t* thread)
+static void thief_entrypoint
+(void* args, kaapi_thread_t* thread, kaapi_stealcontext_t* sc)
 {
+  kaapi_taskadaptive_result_t* ktr;
+
   /* range to process */
   double* beg;
   double* end;
@@ -379,13 +412,21 @@ static void thief_entrypoint(void* args, kaapi_thread_t* thread)
   /* process the work */
   thief_work_t* thief_work = (thief_work_t*)args;
 
+ redo_work:
   while (!extract_seq(thief_work, &beg, &end))
-    for (; beg != end; ++beg) thief_work->op(beg);
+    for (; beg != end; ++beg) thief_work->res += *beg;
+
+  /* preempt reduce */
+  if ((ktr = kaapi_get_thief_head(sc)) != NULL)
+  {
+    kaapi_preempt_thief(sc, ktr, NULL, reducer, (void*)thief_work);
+    goto redo_work;
+  }
 }
 
 /* For each main function */
-static void for_each
-(double* array, size_t size, void (*op)(double*), const mapping_info_t* mi)
+static double accumulate
+(double* array, size_t size, const mapping_info_t* mi)
 {
   /* range to process */
   kaapi_stealcontext_t* sc;
@@ -397,7 +438,7 @@ static void for_each
 
   /* initialize work */
   kaapi_workqueue_init(&work.cr, 0, (kaapi_workqueue_index_t)size);
-  work.op = op;
+  work.res = 0;
   work.array = array;
   work.mi = mi;
 
@@ -405,12 +446,15 @@ static void for_each
   sc = kaapi_task_begin_adaptive
   (
    thread, 
-   KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION | KAAPI_SC_HWS_SPLITTER,
+   KAAPI_SC_CONCURRENT | KAAPI_SC_PREEMPTION | KAAPI_SC_HWS_SPLITTER,
    splitter, 
    &work
   );
 
   kaapi_hws_end_adaptive(sc);
+
+  /* todo: return res; */
+  return 42;
 }
 
 #endif /* CONFIG_XKAAPI */
@@ -418,33 +462,30 @@ static void for_each
 #if CONFIG_OMP
 
 /* For each main function */
-static void for_each
-(double* array, size_t size, void (*op)(double*), const mapping_info_t* mi)
+static double accumulate
+(double* array, size_t size, mapping_info_t* mi)
 {
+  double res = 0;
   unsigned int i;
 
-#pragma omp parallel for
+#pragma omp parallel for reduction(+:res)
   for (i = 0; i < size; ++i)
-    op(array + i);
+    res += array[i];
+
+  return res;
 }
 
 #endif /* CONFIG_OMP */
 
 
-static void apply_cos(double* v)
-{
-  *v += cos(*v);
-}
-
- 
 int main(int ac, char** av)
 {
   double t0,t1;
   double sum = 0.f;
   size_t i;
-  size_t iter;
   double* array;
   mapping_info_t mi;
+  double res;
 
 #if CONFIG_KAAPI
   /* initialize the runtime */
@@ -461,25 +502,18 @@ int main(int ac, char** av)
   printf("RANGE: %lx - %lx\n", 0, ITEM_COUNT);
 #endif
   
-  for (iter = 0; iter < 1; ++iter)
-  {
-    for (i = 0; i < ITEM_COUNT; ++i) array[i] = 0.f;
+  for (i = 0; i < ITEM_COUNT; ++i) array[i] = 0.f;
+  
+  t0 = kaapi_get_elapsedns();
+  res = accumulate(array, ITEM_COUNT, &mi);
+  t1 = kaapi_get_elapsedns();
 
-    t0 = kaapi_get_elapsedns();
-    for_each(array, ITEM_COUNT, apply_cos, &mi);
-    t1 = kaapi_get_elapsedns();
+  sum += (t1 - t0) / 1000;
 
-    sum += (t1 - t0) / 1000;
-
-#if 0
-    for (i = 0; i < ITEM_COUNT; ++i)
-      if (array[i] != 1.f)
-      {
-        printf("invalid @%lu == %lf\n", i, array[i]);
-        break ;
-      }
+#if 1
+  if (res != (((1 + ITEM_COUNT) * ITEM_COUNT) / 2))
+    printf("invalid @%lu == %lf\n", i, array[i]);
 #endif
-  }
 
   printf("done: %lf (ms)\n", sum / 100);
 

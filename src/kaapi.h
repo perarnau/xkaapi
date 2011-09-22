@@ -2581,7 +2581,11 @@ extern void kaapi_hws_clear_splitter_info
     adaptive task related routines
  */
 extern void* kaapi_hws_init_adaptive_task
-(kaapi_stealcontext_t*, kaapi_request_t*, kaapi_task_body_t, size_t, kaapi_task_splitter_t);
+(
+ kaapi_stealcontext_t*, kaapi_request_t*,
+ kaapi_task_body_t, size_t,
+ kaapi_task_splitter_t, kaapi_taskadaptive_result_t*
+);
 
 extern void kaapi_hws_reply_adaptive_task
 (kaapi_stealcontext_t*, kaapi_request_t*);

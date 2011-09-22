@@ -94,8 +94,8 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
      * remains to initialize other field
   */
   sc->preempt          = &self_thread->static_reply.preempt;
-  sc->save_splitter    = 0;
-  sc->save_argsplitter = 0;
+  sc->splitter		= 0;
+  sc->argsplitter	= 0;
   sc->ownertask	       = kaapi_thread_toptask(thread) + 1;
 
   if (sc->header.flag & KAAPI_SC_PREEMPTION)

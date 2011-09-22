@@ -56,7 +56,8 @@ void* kaapi_hws_init_adaptive_task
  kaapi_request_t* req,
  kaapi_task_body_t body,
  size_t arg_size,
- kaapi_task_splitter_t splitter
+ kaapi_task_splitter_t splitter,
+ kaapi_taskadaptive_result_t* ktr
 )
 {
   /* initialize an adpative task that is to be
@@ -71,12 +72,7 @@ void* kaapi_hws_init_adaptive_task
   kaapi_reply_t* rep;
 
   /* toremove */
-  if (parent_sc->header.flag & KAAPI_SC_PREEMPTION)
-  {
-    printf("[!] KAAPI_SC_PREEMPTION\n");
-    fflush(stdout);
-    while (1) ;
-  }
+  kaapi_assert(!(parent_sc->header.flag & KAAPI_SC_PREEMPTION));
   /* toremove */
 
   kaapi_assert(arg_size <= KAAPI_REPLY_USER_DATA_SIZE_MAX);
@@ -94,21 +90,28 @@ void* kaapi_hws_init_adaptive_task
   /* sc->header */
   sc->header.flag = parent_sc->header.flag | KAAPI_SC_INIT;
   sc->header.msc = parent_sc->header.msc;
-  sc->header.ktr = NULL;
+  sc->header.ktr = ktr;
+  req->ktr = ktr;
 
   sc->preempt = NULL;
   sc->splitter = splitter;
   sc->argsplitter = (void*)adata->udata;
-
   sc->ownertask = 0;
-
   sc->save_splitter = 0;
   sc->save_argsplitter = 0;
-
   sc->data_victim = 0;
   sc->sz_data_victim = 0;
 
-  KAAPI_ATOMIC_WRITE(&sc->thieves.count, 0);
+  if (sc->header.flag & KAAPI_SC_PREEMPTION)
+  {
+    KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
+    sc->thieves.list.head = 0;
+    sc->thieves.list.tail = 0;
+  }
+  else
+  {
+    KAAPI_ATOMIC_WRITE(&sc->thieves.count, 0);
+  }
 
   adata->ubody = (kaapi_adaptive_thief_body_t)body;
 
@@ -210,8 +213,23 @@ void kaapi_hws_reply_adaptive_task
 
 void kaapi_hws_end_adaptive(kaapi_stealcontext_t* sc)
 {
-  while (KAAPI_ATOMIC_READ(&sc->thieves.count))
-    kaapi_hws_sched_sync_once();
+  if (sc->header.flag & KAAPI_SC_PREEMPTION)
+  {
+    /* todo */
+
+    /* while there is ktr, preempt, reduce and continue.
+       if the task has not been executed, execute without
+       merging the results.
+       the reducer should be passed as an argument.
+     */
+
+    kaapi_assert(0);
+  }
+  else
+  {
+    while (KAAPI_ATOMIC_READ(&sc->thieves.count))
+      kaapi_hws_sched_sync_once();
+  }
 
   /* todo: deallocate sc, allocated with pushdata_align */
 }
