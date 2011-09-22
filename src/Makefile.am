@@ -86,6 +86,7 @@ libkaapi_la_SOURCES=\
   hws/kaapi_hws_pushtask.c \
   hws/kaapi_hws_splitter.c \
   hws/kaapi_hws_adaptive.c \
+  hws/kaapi_hws_misc.c \
   hws/kaapi_hws_sched_sync.c \
   hws/kaapi_hws_globals.c \
   hws/kaapi_hws_counters.c \
