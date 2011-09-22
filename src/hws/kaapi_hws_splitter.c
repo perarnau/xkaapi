@@ -275,8 +275,11 @@ void kaapi_hws_adapt_body(void* arg, kaapi_thread_t* thread)
   }
 
   kaapi_thread_restore_frame(thread, &sc->frame);
-  
+
   kaapi_writemem_barrier();
+
+  /* deallocate the stealcontext if not master */
+  if (sc != sc->header.msc) free(sc);
 }
 
 
@@ -291,4 +294,6 @@ void kaapi_hws_end_adaptive(kaapi_stealcontext_t* sc)
 {
   while (KAAPI_ATOMIC_READ(&sc->thieves.count))
     kaapi_hws_sched_sync_once();
+
+  /* deallocate sc, allocated with pushdata_align */
 }

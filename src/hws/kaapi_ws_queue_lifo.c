@@ -68,6 +68,7 @@ static kaapi_ws_error_t steal
 
       kaapi_stealcontext_t* const sc =
 	kaapi_task_getargst(task, kaapi_stealcontext_t);
+      if (sc == NULL) continue ;
 
       if (sc->header.flag & KAAPI_SC_INIT)
       {
@@ -86,7 +87,10 @@ static kaapi_ws_error_t steal
 	      if (err == KAAPI_WS_ERROR_EMPTY)
 	      {
 		KAAPI_ATOMIC_DECR(&sc->header.msc->thieves.count);
-		sc->splitter = NULL;
+
+		/* deallocate the stealcontext */
+		free(sc);
+		task->sp = NULL;
 	      }
 
 	      /* update request */

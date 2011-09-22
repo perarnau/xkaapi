@@ -30,11 +30,11 @@
 
 static int kaapi_numa_bind(const void* addr, size_t size, int node)
 {
-#define KAAPI_MAX_PROCESSOR 64
+  static const unsigned long maxproc = 64;
 
   const int mode = MPOL_BIND;
   const unsigned int flags = MPOL_MF_STRICT | MPOL_MF_MOVE;
-  const unsigned long maxnode = KAAPI_MAX_PROCESSOR;
+  const unsigned long maxnode = maxproc;
   
   if ((size & 0xfff) !=0) /* should be divisible by 4096 */
   {
@@ -48,7 +48,7 @@ static int kaapi_numa_bind(const void* addr, size_t size, int node)
   }
   
   unsigned long nodemask
-    [(KAAPI_MAX_PROCESSOR + (8 * sizeof(unsigned long) -1))/ (8 * sizeof(unsigned long))];
+    [(maxproc + (8 * sizeof(unsigned long) -1))/ (8 * sizeof(unsigned long))];
 
   memset(nodemask, 0, sizeof(nodemask));
 
@@ -426,7 +426,7 @@ int main(int ac, char** av)
 #endif /* CONFIG_KAAPI */
 
 #define CACHE_SIZE (1024 * 1024)
-#define TOTAL_SIZE (16 * 2 * CACHE_SIZE)
+#define TOTAL_SIZE (10 * 16 * 2 * CACHE_SIZE)
 #define ITEM_COUNT (TOTAL_SIZE / sizeof(double))
   array = allocate_double_array(ITEM_COUNT, &mi);
 
@@ -434,7 +434,7 @@ int main(int ac, char** av)
   printf("RANGE: %lx - %lx\n", 0, ITEM_COUNT);
 #endif
   
-  for (iter = 0; iter < 10; ++iter)
+  for (iter = 0; iter < 1; ++iter)
   {
     for (i = 0; i < ITEM_COUNT; ++i) array[i] = 0.f;
 
