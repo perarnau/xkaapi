@@ -184,25 +184,35 @@ static int do_flat_splitter
   /* size per request */
   kaapi_workqueue_index_t unit_size;
 
- redo_steal:
   /* do not steal if range size <= PAR_GRAIN */
-#define CONFIG_PAR_GRAIN 128
   range_size = kaapi_workqueue_size(&vw->cr);
   if (range_size == 0) return KAAPI_WS_ERROR_EMPTY;
 
-  /* how much per req */
-  unit_size = range_size / nreq;
-  if (unit_size == 0)
+#define CONFIG_PAR_GRAIN 256
+  if (range_size < CONFIG_PAR_GRAIN)
   {
-    nreq = range_size / CONFIG_PAR_GRAIN;
-    unit_size = CONFIG_PAR_GRAIN;
+    unit_size = range_size;
+    nreq = 1;
+  }
+  else if (nreq == 1)
+  {
+    unit_size = range_size / 2;
+  }
+  else /* how much per req */
+  {
+    /* equally sized among nreq */
+    unit_size = range_size / nreq;
+    if (unit_size == 0)
+    {
+      nreq = range_size / CONFIG_PAR_GRAIN;
+      unit_size = CONFIG_PAR_GRAIN;
+    }
   }
 
   /* perform the actual steal. if the range
      changed size in between, redo the steal
    */
-  if (kaapi_workqueue_steal(&vw->cr, &i, &j, nreq * unit_size))
-    goto redo_steal;
+  kaapi_workqueue_steal(&vw->cr, &i, &j, nreq * unit_size);
 
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
