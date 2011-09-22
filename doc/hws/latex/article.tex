@@ -158,4 +158,25 @@ TODO
 TODO
 
 
+% TODOs
+% 
+\newpage
+\section{TODOs}
+\paragraph{}
+The following list keeps track of previously discussed ideas not yet implemented:
+\begin{itemize}
+\item merge with current runtime. Especially, kprocs should be part of the
+  hierarchy (ie. as leaves). The related queue methods should be specialized
+  on the current stealprocessor and execframe implementation.
+\item the request should have a pointer for the data allocated area. If this
+  pointer is set to NULL, this is left to the splitter to allocate the area
+  and set the pointer accordingly.
+\item preemption of adaptive task is not yet supported. Implement an accumulate
+  algorithm for testing.
+\item kaapi\_c2c compiler integration.
+\item one bitmap per hierarchy level: avoid global bitmap contention by having
+  one bitmap per memory level.
+\end{itemize}
+
+
 \end{document}
