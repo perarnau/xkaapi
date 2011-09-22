@@ -11,7 +11,6 @@
 # CPU_SET="0:15";
 CPU_SET=`seq -s',' 0 2 15`;
 
-CPU_SET=`seq -s' ' 0 47`
 GOMP_CPU_AFFINITY="$CPU_SET" \
 ./a.out.omp
 

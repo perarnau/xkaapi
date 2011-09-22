@@ -179,12 +179,6 @@ static double* allocate_double_array
 }
 
 
-static void init_double_array(double* p, unsigned int n)
-{
-  memset(p, 0, n * sizeof(double));
-}
-
-
 #if CONFIG_KAAPI
 
 typedef struct work
@@ -454,8 +448,6 @@ int main(int ac, char** av)
 #define TOTAL_SIZE (1 * CONFIG_MAX_PROC * 2 * CONFIG_CACHE_SIZE)
 #define ITEM_COUNT (TOTAL_SIZE / sizeof(double))
   array = allocate_double_array(ITEM_COUNT, &mi);
-
-  init_double_array(array, ITEM_COUNT);
 
 #if 0
   printf("RANGE: %lx - %lx\n", 0, ITEM_COUNT);

@@ -6,4 +6,4 @@ HOSTNAME=`hostname`
 [ "$HOSTNAME" == "idkoiff" ] && CFLAGS="$CFLAGS -DCONFIG_IDKOIFF=1";
 
 gcc $CFLAGS -DCONFIG_OMP=0 -DCONFIG_KAAPI=1 -O3 -Wall -I$HOME/install/xkaapi_hws/include -o a.out.kaapi accumulate.c -L$HOME/install/xkaapi_hws/lib -lkaapi -lm
-gcc $CFLAGS -DCONFIG_OMP=1 -DCONFIG_KAAPI=0 -fopenmp -O3 -Wall -I$HOME/install/xkaapi_hws/include -o a.out.omp accumulate.c -lnuma -lm
+gcc $CFLAGS -DCONFIG_OMP=1 -DCONFIG_KAAPI=0 -fopenmp -O3 -Wall -o a.out.omp accumulate.c -lnuma -lm

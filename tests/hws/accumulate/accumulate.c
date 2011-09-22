@@ -179,15 +179,6 @@ static double* allocate_double_array
 }
 
 
-static void init_double_array(double* p, unsigned int n)
-{
-  unsigned int i;
-
-  for (i = 0; i < n; ++i, ++p)
-    *p = 1;
-}
-
-
 #if CONFIG_KAAPI
 
 typedef struct work
@@ -468,7 +459,10 @@ static double accumulate
   double res = 0;
   unsigned int i;
 
-#pragma omp parallel for reduction(+:res)
+#pragma omp parallel for \
+  shared(array) \
+  private(i) \
+  reduction(+:res)
   for (i = 0; i < size; ++i)
     res += array[i];
 
@@ -482,10 +476,10 @@ int main(int ac, char** av)
 {
   double t0,t1;
   double sum = 0.f;
-  size_t i;
   double* array;
   mapping_info_t mi;
   double res;
+  size_t i;
 
 #if CONFIG_KAAPI
   /* initialize the runtime */
@@ -496,13 +490,11 @@ int main(int ac, char** av)
 #define ITEM_COUNT (TOTAL_SIZE / sizeof(double))
   array = allocate_double_array(ITEM_COUNT, &mi);
 
-  init_double_array(array, ITEM_COUNT);
+  for (i = 0; i < ITEM_COUNT; ++i) array[i] = 1.f;
 
 #if 0
   printf("RANGE: %lx - %lx\n", 0, ITEM_COUNT);
 #endif
-  
-  for (i = 0; i < ITEM_COUNT; ++i) array[i] = 0.f;
   
   t0 = kaapi_get_elapsedns();
   res = accumulate(array, ITEM_COUNT, &mi);
@@ -511,8 +503,10 @@ int main(int ac, char** av)
   sum += (t1 - t0) / 1000;
 
 #if 1
-  if (res != (((1 + ITEM_COUNT) * ITEM_COUNT) / 2))
-    printf("invalid @%lu == %lf\n", i, array[i]);
+  {
+    const double fu = ITEM_COUNT;
+    if (res != fu) printf("invalid: %lf != %lf\n", res, fu);
+  }
 #endif
 
   printf("done: %lf (ms)\n", sum / 100);
