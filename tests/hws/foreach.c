@@ -1,19 +1,79 @@
-#include "kaapi.h"
+/* gcc -DCONFIG_KAAPI=1 -O3 -Wall a.out.kaapi foreach.c -lkaapi -lm */
+#ifndef CONFIG_KAAPI
+# define CONFIG_KAAPI 0
+#endif
+
+/* gcc -DCONFIG_OMP=1 -fopenmp -O3 -Wall foreach.c -lnuma -lm */
+#ifndef CONFIG_OMP
+# define CONFIG_OMP 0
+#endif
+
+#include <stdio.h>
+#include <errno.h>
 #include <string.h>
 #include <math.h>
 #include <stdint.h>
 #include <sys/types.h>
 
+#if CONFIG_KAAPI
+#include "kaapi.h"
+#endif
 
-struct mapping_info;
 
-typedef struct work
+#if CONFIG_OMP
+
+#include <numaif.h>
+#include <numa.h>
+#include <errno.h>
+#include <stdint.h>
+#include <sys/time.h>
+
+static int kaapi_numa_bind(const void* addr, size_t size, int node)
 {
-  kaapi_workqueue_t cr;
-  void (*op)(double*);
-  double* array;
-  const struct mapping_info* mi;
-} work_t;
+#define KAAPI_MAX_PROCESSOR 64
+
+  const int mode = MPOL_BIND;
+  const unsigned int flags = MPOL_MF_STRICT | MPOL_MF_MOVE;
+  const unsigned long maxnode = KAAPI_MAX_PROCESSOR;
+  
+  if ((size & 0xfff) !=0) /* should be divisible by 4096 */
+  {
+    errno = EINVAL;
+    return -1;
+  }
+  if (((uintptr_t)addr & 0xfff) !=0) /* should aligned on page boundary */
+  {
+    errno = EFAULT;
+    return -1;
+  }
+  
+  unsigned long nodemask
+    [(KAAPI_MAX_PROCESSOR + (8 * sizeof(unsigned long) -1))/ (8 * sizeof(unsigned long))];
+
+  memset(nodemask, 0, sizeof(nodemask));
+
+  nodemask[node / (8 * sizeof(unsigned long))] |=
+    1UL << (node % (8 * sizeof(unsigned long)));
+
+  if (mbind((void*)addr, size, mode, nodemask, maxnode, flags))
+    return -1;
+
+  return 0;
+}
+
+static uint64_t kaapi_get_elapsedns(void)
+{
+  struct timeval tv;
+  uint64_t retval = 0;
+  int err = gettimeofday( &tv, 0);
+  if (err  !=0) return 0;
+  retval = (uint64_t)tv.tv_sec;
+  retval *= 1000000UL;
+  retval += (uint64_t)tv.tv_usec;
+  return retval*1000UL;
+}
+
+#endif /* CONFIG_OMP */
 
 
 /* array allocation routines */
@@ -34,7 +94,11 @@ static double* allocate_double_array
 {
   static const size_t page_size = 0x1000;
   const size_t size = item_count * sizeof(double);
+#if CONFIG_OMP
+  const size_t node_count = 8;
+#else
   const size_t node_count = kaapi_hws_get_node_count(KAAPI_HWS_LEVELID_NUMA);
+#endif
   size_t i;
   double* p;
 
@@ -68,12 +132,12 @@ static double* allocate_double_array
 #if 1
     if (kaapi_numa_bind(addr, bind_size, i))
     {
-      printf("[!] kaapi_numa_bind (%lx, %lu, %u)\n", addr, bind_size, i);
+      printf("[!] kaapi_numa_bind\n");
       exit(-1);
     }
 #endif
 
-#if 1
+#if 0
     /* check the page mapping */
     {
       uintptr_t fu = (uintptr_t)addr;
@@ -93,6 +157,18 @@ static double* allocate_double_array
 
   return (double*)p;
 }
+
+
+#if CONFIG_KAAPI
+
+typedef struct work
+{
+  kaapi_workqueue_t cr;
+  void (*op)(double*);
+  double* array;
+  const struct mapping_info* mi;
+} work_t;
+
 
 static void map_range
 (
@@ -311,6 +387,23 @@ static void for_each
   kaapi_hws_end_adaptive(sc);
 }
 
+#endif /* CONFIG_XKAAPI */
+
+#if CONFIG_OMP
+
+/* For each main function */
+static void for_each
+(double* array, size_t size, void (*op)(double*), const mapping_info_t* mi)
+{
+  unsigned int i;
+
+#pragma omp parallel for
+  for (i = 0; i < size; ++i)
+    op(array + i);
+}
+
+#endif /* CONFIG_OMP */
+
 
 static void apply_cos(double* v)
 {
@@ -327,8 +420,10 @@ int main(int ac, char** av)
   double* array;
   mapping_info_t mi;
 
+#if CONFIG_KAAPI
   /* initialize the runtime */
   kaapi_init(1, &ac, &av);
+#endif /* CONFIG_KAAPI */
 
 #define CACHE_SIZE (1024 * 1024)
 #define TOTAL_SIZE (16 * 2 * CACHE_SIZE)
@@ -361,8 +456,12 @@ int main(int ac, char** av)
 
   printf("done: %lf (ms)\n", sum / 100);
 
+  free(array);
+
+#if CONFIG_KAAPI
   /* finalize the runtime */
   kaapi_finalize();
+#endif /* CONFIG_KAAPI */
   
   return 0;
 }
