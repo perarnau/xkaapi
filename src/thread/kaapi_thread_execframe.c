@@ -94,8 +94,8 @@ thread->pc=stack->sp | xxxxx  |< thread->sfp->pc = thread->sfp->sp
 */
 int kaapi_thread_execframe( kaapi_thread_context_t* thread )
 {
-  kaapi_task_t*              pc; /* cache */
   kaapi_task_t*              sp; /* cache */
+  kaapi_task_t*              pc; /* cache */
   kaapi_frame_t*             fp; /* cache for thread->sfp */
 
   uintptr_t	                 state;
@@ -112,8 +112,8 @@ int kaapi_thread_execframe( kaapi_thread_context_t* thread )
 
 push_frame:
 
-  pc = fp->pc;
   sp = fp->sp;
+  pc = fp->pc;
 
   /* init new frame for the next task to execute */
   thread->sfp[1].pc        = sp;
@@ -126,7 +126,6 @@ push_frame:
   /* push and update the current frame */
   thread->sfp = ++fp;
   kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
-
   
   /* stack of task growth down ! */
   while (pc != sp)
@@ -222,9 +221,9 @@ push_frame:
       /* finish to execute child tasks, pop current task of the frame */
       if (--fp->pc > fp->sp)
       {
-        kaapi_sched_lock(&thread->proc->lock);
+        kaapi_sched_lock(&thread->lock);
         thread->sfp = fp;
-        kaapi_sched_unlock(&thread->proc->lock);
+        kaapi_sched_unlock(&thread->lock);
         goto push_frame; /* remains work do do */
       }
     } 

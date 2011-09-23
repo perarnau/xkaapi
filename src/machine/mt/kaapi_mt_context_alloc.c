@@ -147,7 +147,7 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
   ctxt->size = (uint32_t)k_stacksize;
 
   /* should be aligned on a multiple of 64bit due to atomic read / write of pc in each kaapi_frame_t */
-  //ctxt->stackframe = kaapi_malloc_align(64, sizeof(kaapi_frame_t)*KAAPI_MAX_RECCALL, &ctxt->alloc_ptr);
+  ctxt->stackframe = kaapi_malloc_align(64, sizeof(kaapi_frame_t)*KAAPI_MAX_RECCALL, &ctxt->alloc_ptr);
   kaapi_assert_m( __kaapi_isaligned( &ctxt->stackframe, 8), "StackFrame pointer not aligned to 64 bits boundary");
   if (ctxt->stackframe ==0) {
 #if defined (_WIN32)
@@ -156,6 +156,11 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc )
     munmap( ctxt, ctxt->size );
 #endif
     return 0;
+  }
+
+  for (int i=0; i<KAAPI_MAX_RECCALL; ++i)
+  {
+    kaapi_frame_clear( &ctxt->stackframe[i] );
   }
 
   kaapi_thread_clear(ctxt);

@@ -755,8 +755,9 @@ typedef struct kaapi_thread_context_t {
   kaapi_frame_t*        volatile sfp;            /** pointer to the current frame (in stackframe) */
   kaapi_frame_t*                 esfp;           /** first frame until to execute all frame  */
   struct kaapi_processor_t*      proc;           /** access to the running processor */
-  void*                          pad;            /** a padding */
-  kaapi_frame_t                  stackframe[KAAPI_MAX_RECCALL];  /** for execution, see kaapi_thread_execframe */
+  kaapi_frame_t*                 stackframe;     /** for execution, see kaapi_thread_execframe */
+
+  kaapi_atomic_t                 lock __attribute__((aligned(KAAPI_CACHE_LINE)));
 
   /* execution state for stack of task */
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)

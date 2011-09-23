@@ -57,6 +57,8 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   thread->sfp->sp    = thread->sfp->pc  = thread->task; /* empty frame */
   thread->sfp->sp_data = (char*)&thread->data; /* empty frame */
   thread->sfp->tasklist= 0;
+  
+  kaapi_sched_initlock( &thread->lock );
 
   thread->the_thgrp  = 0;
   thread->unstealable= 0;

@@ -56,6 +56,9 @@
 #include "kaapi_hws.h"
 #include "kaapi_ws_queue.h"
 
+kaapi_hws_level_t* hws_levels;
+kaapi_hws_levelmask_t hws_levelmask;
+kaapi_listrequest_t hws_requests;
 
 static const kaapi_hws_levelmask_t hws_default_levelmask =
   KAAPI_HWS_LEVELMASK_NUMA |

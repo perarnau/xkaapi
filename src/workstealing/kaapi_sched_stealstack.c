@@ -386,6 +386,8 @@ int kaapi_sched_stealstack
   kaapi_hashmap_init( &access_to_gd, &stackbloc );
   
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)  
+  kaapi_sched_lock(&thread->lock);
+  
   /* try to steal in each frame */
   for (  top_frame =thread->stackframe; 
        (top_frame <= thread->sfp) && !kaapi_listrequest_iterator_empty(lrrange); 
@@ -401,7 +403,8 @@ int kaapi_sched_stealstack
     /* */
       kaapi_sched_steal_tasklist( thread, top_frame, lrequests, lrrange );
   }
-  
+  kaapi_sched_unlock(&thread->lock);
+
 #elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
 #else
 #  error "Bad steal frame method"    
