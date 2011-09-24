@@ -41,6 +41,7 @@
 ** 
 */
 #include <stdio.h>
+#include <stdlib.h>
 
 #pragma kaapi task reduction(+:result) value(n)
 void fibonacci(long* result, const long n)
@@ -60,12 +61,15 @@ void print_result( const long* result )
   printf("Fibonacci(30)=%li\n", *result);
 }
 
-int main()
+int main( int argc, char** argv)
 {
-  long result;
+  long result =0;
+  int n;
+  if (argc >1) n = atoi(argv[1]);
+  else n = 30;
 #pragma kaapi parallel
   {
-    fibonacci(&result, 30);
+    fibonacci(&result, n);
     print_result(&result);
   }
   return 0;

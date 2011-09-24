@@ -544,7 +544,7 @@ typedef struct kaapi_format_t {
 
   void                  (*reducor )        (const struct kaapi_format_t*, unsigned int, void* sp, const void* value);
   void                  (*redinit )        (const struct kaapi_format_t*, unsigned int, const void* sp, void* value );
-  void			        (*get_task_binding)(const struct kaapi_format_t*, const kaapi_task_t*, kaapi_task_binding_t*);
+  void			        (*get_task_binding)(const struct kaapi_format_t*, const void* sp, kaapi_task_binding_t*);
 
   /* fields to link the format is the internal tables */
   struct kaapi_format_t      *next_bybody;                            /* link in hash table */
@@ -665,6 +665,18 @@ void kaapi_format_redinit_neutral (const struct kaapi_format_t* fmt, unsigned in
 }
 
 
+static inline void kaapi_format_get_task_binding 
+  (const struct kaapi_format_t* fmt, const void* sp, kaapi_task_binding_t* b)
+{
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) 
+    *b = fmt->_task_binding;
+  else {
+    if (fmt->get_task_binding == 0)
+      b->type = KAAPI_BINDING_ANY; 
+    fmt->get_task_binding(fmt, sp, b );
+  }
+}
+
 
 /* ============================= Helper for bloc allocation of individual entries ============================ */
 
@@ -774,7 +786,7 @@ typedef struct kaapi_thread_context_t {
   kaapi_threadgroup_t            the_thgrp;      /* not null iff execframe != kaapi_thread_execframe */
   int                            unstealable;    /* !=0 -> cannot be stolen */
   int                            partid;         /* used by static scheduling to identify the thread in the group */
-  kaapi_big_hashmap_t            kversion_hm;    /* used by static scheduling */
+  kaapi_big_hashmap_t*           kversion_hm;    /* used by static scheduling */
   
   struct kaapi_thread_context_t* _next;          /** to be linkable either in proc->lfree or proc->lready */
   struct kaapi_thread_context_t* _prev;          /** to be linkable either in proc->lfree or proc->lready */

@@ -93,7 +93,6 @@ int kaapi_thread_computedep_task(
 
   /* new task descriptor in the task list */
   taskdescr = kaapi_tasklist_allocate_td( tasklist, task, task_fmt );
-  
 
   /* compute binding and ocr if required before renaming of task' parameters to kaapi_global_data*/
   task_fmt->get_task_binding(task_fmt, task, &binding);
@@ -101,11 +100,10 @@ int kaapi_thread_computedep_task(
   { 
     kaapi_sched_affinity_binding2mapping( &taskdescr->u.acl.mapping, &binding, task_fmt, task, 0 );
   }
-  
 
   /* Compute for each access i if it is ready or not.
      If all accesses of the task are ready then the taskdescr is pushed into readylist
-     of the tasklist.
+     of the tasklist. Else it stay where allocated and it will be move to ready list during execution.
   */
   void* sp = task->sp;
   size_t count_params = kaapi_format_get_count_params(task_fmt, sp );
@@ -128,9 +126,11 @@ int kaapi_thread_computedep_task(
     {
       kaapi_memory_view_t view = kaapi_format_get_view_param(task_fmt, i, task->sp);
       kaapi_version_add_initialaccess( version, tasklist, m, access.data, &view );
+      islocal = 1;
     }
 
-    if (!islocal)
+#if 0
+    if (!islocal) /* for partitoning into multiple list: currently not used */
     {
       /* non local version: 
          - create a copy if m is read. 
@@ -143,6 +143,7 @@ int kaapi_thread_computedep_task(
       /* Insert synchronization: may affect both master version and current version */
       kaapi_thread_insert_synchro( tasklist, version, m );
     }
+#endif
 
     /* compute readiness of the access and return the handle to assign to the global data 
        to assign to the task
@@ -153,10 +154,12 @@ int kaapi_thread_computedep_task(
     access.data = handle;
     kaapi_format_set_access_param(task_fmt, i, task->sp, &access);
     
+#if 0
     if (KAAPI_ACCESS_IS_WRITE(m) && (version->master->next !=0))
     { /* invalidate the replicat */
       kaapi_version_invalidatereplicat( version );
     }
+#endif
 
   } /* end for all arguments of the task */
   

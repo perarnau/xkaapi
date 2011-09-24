@@ -245,7 +245,6 @@ extern int kaapi_memory_deallocate(
 );
 
 
-
 /** Copy a view of a data to an other view in a remote address space.
     Source and destination memory region cannot overlap.
     \retval 0 in case of success
@@ -328,14 +327,13 @@ static inline kaapi_globalid_t kaapi_pointer2gid(kaapi_pointer_t p)
 */
 static inline void kaapi_memory_view_clear( kaapi_memory_view_t* kmv )
 {
-  kmv->type = -1;
+  kmv->type     = -1;
 #if defined(KAAPI_DEBUG)
   kmv->size[0]  = kmv->size[1] = 0;
   kmv->lda      = 0;
   kmv->wordsize = 0;
 #endif
 }
-
 
 /** assume that now the view points to a new allocate view
 */
@@ -350,8 +348,6 @@ static inline void kaapi_memory_view_reallocated( kaapi_memory_view_t* kmv )
       break;
   }
 }
-
-
 
 /** Meta data attached to a pointer and its remote copies on a set of address spaces.
     The data structure store information for at most 64 address spaces.
@@ -396,7 +392,6 @@ extern kaapi_metadata_info_t* kaapi_memory_bind(
   size_t size 
 );
 
-
 /** Bind an address of the calling virtual space of the process in the address space data structure kasid.
     Once binded the memory will be deallocated if the sticky flag is not set in flag.
     Return the pointer.
@@ -407,7 +402,6 @@ extern kaapi_metadata_info_t* kaapi_memory_bind_view(
   void* ptr, 
   const kaapi_memory_view_t* view 
 );
-
 
 /** Unbind the address from the address space kasid.
     If the data exist in kasid, then the caller takes the owner ship of the data.

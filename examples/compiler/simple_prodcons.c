@@ -42,7 +42,7 @@
 */
 #include <stdio.h>
 
-#pragma kaapi task write(buffer) value(size) read(msg)
+#pragma kaapi task write(buffer[size]) value(size) read(msg)
 void write_msg(int size, char* buffer, const char* msg)
 {
   snprintf(buffer, size, "%s", msg);

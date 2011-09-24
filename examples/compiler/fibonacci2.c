@@ -1,13 +1,11 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:09 2009
-** Copyright 2009 INRIA.
+** Copyright 2011 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** vincent.danjean@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -42,76 +40,46 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
-#include "kaapi_network.h"
-#include "kaapi_compiler.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-
-#if 1//ndef KAAPI_USE_NETWORK
-/* Weak symbols that will be overloaded by libkanet when
- * linked with it
- */
-
-/**
-*/
-__KA_COMPILER_WEAK int kaapi_network_init (int* argc, char*** argv) 
+#pragma kaapi task write(result) read(r1,r2)
+void sum( long* result, const long* r1, const long* r2)
 {
-///  printf("Use default weak symbol...\n");
+  *result = *r1 + *r2;
+}
+
+#pragma kaapi task write(result) value(n)
+void fibonacci(long* result, const long n)
+{
+  if (n<2)
+    *result = n;
+  else 
+  {
+#pragma kaapi data alloca(r1,r2)
+    long r1,r2;
+    fibonacci( &r1, n-1 );
+    fibonacci( &r2, n-2 );
+    sum( result, &r1, &r2);
+  }
+}
+
+#pragma kaapi task read(result) 
+void print_result( const long* result )
+{
+  printf("Fibonacci(30)=%li\n", *result);
+}
+
+int main( int argc, char** argv)
+{
+  long result;
+  int n;
+  if (argc >1) n = atoi(argv[1]);
+  else n = 30;
+#pragma kaapi parallel
+  {
+    fibonacci(&result, n);
+    print_result(&result);
+  }
   return 0;
 }
-
-/**
-*/
-__KA_COMPILER_WEAK int kaapi_network_finalize(void)
-{  
-  return 0;
-}
-
-
-/**
-*/
-__KA_COMPILER_WEAK kaapi_globalid_t kaapi_network_get_current_globalid(void)
-{
-  return 0;
-}
-
-
-/**
-*/
-__KA_COMPILER_WEAK uint32_t kaapi_network_get_count(void)
-{
-  return 1;
-}
-
-
-__KA_COMPILER_WEAK void kaapi_network_poll(void)
-{
-}
-
-__KA_COMPILER_WEAK void kaapi_network_barrier(void)
-{
-}
-
-__KA_COMPILER_WEAK int kaapi_network_get_seginfo(kaapi_address_space_t* retval,
-			      kaapi_globalid_t gid )
-{
-  retval->segaddr = 0;
-  retval->segsize = (size_t)-1;
-  return 0;
-}
-
-__KA_COMPILER_WEAK int kaapi_network_rdma(
-  kaapi_globalid_t gid_dest, 
-  kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-  const void* src, const kaapi_memory_view_t* view_src 
-)
-{
-  return 0;
-}
-
-__KA_COMPILER_WEAK void* kaapi_network_allocate_rdma(size_t size)
-{
-  return 0;
-}
-
-#endif

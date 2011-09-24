@@ -207,7 +207,6 @@ static int kaapi_sched_stealframe
 #endif        
           {
             /* steal sucess */
-            
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
             /* possible race, reread the splitter */
             splitter = sc->splitter;

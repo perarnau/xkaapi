@@ -171,7 +171,8 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   kaapi_thread_tasklist_commit_ready( tasklist );
 
   /* keep the first task to execute outside the workqueue */
-  tasklist->context.chkpt = 2;
+//FALSE  tasklist->context.chkpt = 2;
+  tasklist->context.chkpt = 0;
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* here sfp is initialized, dump graph if required */
