@@ -54,7 +54,7 @@
 #include "globals.h"
 #include "utils.h"
 #include "kaapi_pragma.h"
-#include "kaapi_task.h"
+#include "kaapi_c2c_task.h"
 #include "kaapi_abort.h"
 #include "rose_headers.h"
 #include "kaapi_loop.h"
@@ -798,9 +798,11 @@ void Parser::DoKaapiPragmaNoTask( SgPragmaDeclaration* sgp )
     KaapiAbort( "*** Internal compiler error: mal formed AST" );
     
   /* it is assumed that the statement following the #pragma kaapi task is a declaration */
-  SgNode* fnode = 
+  SgNode* fnode = SageInterface::getNextStatement( sgp );
+#if 0
           sgp->get_parent()-> get_traversalSuccessorByIndex( 
               1+ sgp->get_parent()->get_childIndex( sgp ) );
+#endif
 
   SgExprStatement* exprstatement = isSgExprStatement(fnode);
   if ((exprstatement ==0) || (isSgFunctionCallExp( exprstatement->get_expression() ) ==0))
@@ -2154,7 +2156,7 @@ void Parser::DoKaapiPragmaParallelRegion( SgPragmaDeclaration* sgp )
     callinitStmt = SageBuilder::buildFunctionCallStmt
     (    "kaapi_begin_parallel", 
          SageBuilder::buildVoidType(), 
-         SageBuilder::buildExprListExp(),
+         SageBuilder::buildExprListExp(SageBuilder::buildIntVal(0) ),
          bbnode
     );
     callfinishStmt = SageBuilder::buildFunctionCallStmt

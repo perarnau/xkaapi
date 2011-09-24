@@ -58,7 +58,7 @@
 #include "rose_headers.h"
 #include "globals.h"
 #include "parser.h"
-#include "kaapi_task.h"
+#include "kaapi_c2c_task.h"
 #include "kaapi_pragma.h"
 #include "kaapi_abort.h"
 #include "kaapi_ssa.h"
@@ -198,7 +198,11 @@ int main(int argc, char **argv)
           = SageBuilder::buildNondefiningFunctionDeclaration(
                   name_beginparallel, 
                   SageBuilder::buildVoidType(), 
-                  SageBuilder::buildFunctionParameterList(),
+                  SageBuilder::buildFunctionParameterList(
+                    SageBuilder::buildFunctionParameterTypeList(
+                      SageBuilder::buildIntType()
+                    )
+                  ),
                   gscope
         );
         ((decl_kaapi_beginparallel->get_declarationModifier()).get_storageModifier()).setExtern();
