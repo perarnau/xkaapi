@@ -211,6 +211,8 @@ push_frame:
 
   kaapi_assert_debug( fp >= eframe);
 
+//  kaapi_sched_lock(&thread->proc->lock);
+//  kaapi_sched_lock(&thread->lock);
   if (fp >= eframe)
   {
     /* here it's a pop of frame: we lock the thread */
@@ -221,15 +223,27 @@ push_frame:
       /* finish to execute child tasks, pop current task of the frame */
       if (--fp->pc > fp->sp)
       {
-        kaapi_sched_lock(&thread->lock);
         thread->sfp = fp;
-        kaapi_sched_unlock(&thread->lock);
+        kaapi_writemem_barrier();        
+        if (thread->thieffp > fp)
+        {
+          kaapi_mem_barrier();
+          while (thread->thieffp > fp)
+            kaapi_slowdown_cpu();
+        }
         goto push_frame; /* remains work do do */
       }
     } 
     fp->sp = fp->pc;
   }
   thread->sfp = fp;
+  kaapi_writemem_barrier();        
+  if (thread->thieffp > fp)
+  {
+    kaapi_mem_barrier();
+    while (thread->thieffp > fp)
+      kaapi_slowdown_cpu();
+  }
   
   /* end of the pop: we have finish to execute all the tasks */
   kaapi_assert_debug( fp->pc == fp->sp );

@@ -59,7 +59,8 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   thread->sfp->tasklist= 0;
   
   kaapi_sched_initlock( &thread->lock );
-
+  thread->thieffp    = 0;
+  
   thread->the_thgrp  = 0;
   thread->unstealable= 0;
   thread->partid     = -10; /* out of bound value */

@@ -766,10 +766,10 @@ struct kaapi_wsqueuectxt_cell_t;
 typedef struct kaapi_thread_context_t {
   kaapi_frame_t*        volatile sfp;            /** pointer to the current frame (in stackframe) */
   kaapi_frame_t*                 esfp;           /** first frame until to execute all frame  */
-  struct kaapi_processor_t*      proc;           /** access to the running processor */
+  kaapi_atomic_t                 lock;           // __attribute__((aligned(KAAPI_CACHE_LINE)));
+  kaapi_frame_t*        volatile thieffp;        /** pointer to the current stolen frame (in stackframe) */
   kaapi_frame_t*                 stackframe;     /** for execution, see kaapi_thread_execframe */
-
-  kaapi_atomic_t                 lock __attribute__((aligned(KAAPI_CACHE_LINE)));
+  struct kaapi_processor_t*      proc;           /** access to the running processor */
 
   /* execution state for stack of task */
 #if (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
@@ -1409,10 +1409,11 @@ extern kaapi_hashentries_t* kaapi_big_hashmap_insert( kaapi_big_hashmap_t* khm, 
 */
 static inline int kaapi_thread_reset(kaapi_thread_context_t* th )
 {
-  th->sfp        = th->stackframe;
-  th->esfp       = th->stackframe;
-  th->sfp->sp    = th->sfp->pc  = th->task; /* empty frame */
-  th->sfp->sp_data = (char*)&th->data;     /* empty frame */
+  th->sfp         = th->stackframe;
+  th->esfp        = th->stackframe;
+  th->sfp->sp     = th->sfp->pc  = th->task; /* empty frame */
+  th->sfp->sp_data= (char*)&th->data;     /* empty frame */
+  th->thieffp     = 0;
   th->affinity[0] = ~0UL;
   th->affinity[1] = ~0UL;
   th->unstealable= 0;
