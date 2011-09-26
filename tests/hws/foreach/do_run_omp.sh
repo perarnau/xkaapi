@@ -12,14 +12,15 @@ if [ "$HOSTNAME" == "idfreeze" ]; then
     CPU_COUNT=32;
     CPU_SET="$CPU_SET 16 17 18 19 40 41 42 43";
     CPU_COUNT=40;
-    # CPU_SET="$CPU_SET 20 21 22 23 44 45 46 47";
-    # CPU_COUNT=48;
+    CPU_SET="$CPU_SET 20 21 22 23 44 45 46 47";
+    CPU_COUNT=48;
+
+    CPU_SET=`seq -s' ' 0 47`;
+    CPU_COUNT=48;
+
 elif [ "$HOSTNAME" == "idkoiff" ]; then
     CPU_SET=`seq -s' ' 0 15`;
 fi
 
 OMP_NUM_THREADS=$CPU_COUNT GOMP_CPU_AFFINITY="$CPU_SET" \
 ./a.out.omp
-
-
-

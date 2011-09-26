@@ -157,6 +157,7 @@ static double* allocate_double_array
     }
 #endif
 
+#if CONFIG_KAAPI
 #if 0
     /* check the page mapping */
     {
@@ -173,6 +174,8 @@ static double* allocate_double_array
       }
     }
 #endif
+#endif
+
   }
 
   return (double*)p;
@@ -444,8 +447,8 @@ static void apply_cos(double* v)
   /* *v += sqrt(*v); */
   *v += pow(*v, 5);
   /* *v += cos(*v); */
-  /* *(volatile double*)(v + 0) = 0; */
-  /* *(volatile double*)v += *(volatile double*)v; */
+  /* *(volatile double*)v = 0; */
+  /* *(volatile double*)v += *(volatile double*)(v + 1025); */
 }
 
  

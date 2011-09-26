@@ -7,7 +7,7 @@ if [ "$HOSTNAME" == "idfreeze" ]; then
     CPU_SET="$CPU_SET,8,9,10,11,32,33,34,35";
     CPU_SET="$CPU_SET,12,13,14,15,36,37,38,39";
     CPU_SET="$CPU_SET,16,17,18,19,40,41,42,43";
-#    CPU_SET="$CPU_SET,20,21,22,23,44,45,46,47";
+    CPU_SET="$CPU_SET,20,21,22,23,44,45,46,47";
 elif [ "$HOSTNAME" == "idkoiff" ]; then
     CPU_SET="0:15";
 fi
