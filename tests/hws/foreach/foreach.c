@@ -258,6 +258,11 @@ static int do_hws_splitter
   return KAAPI_WS_ERROR_SUCCESS;
 }
 
+#define CONFIG_COUNTERS 0
+#if CONFIG_COUNTERS
+static volatile unsigned long counters[48] = {0, };
+static volatile unsigned long qties[48] = {0, };
+#endif
 
 static int do_flat_splitter
 (
@@ -282,27 +287,28 @@ static int do_flat_splitter
 
   /* do not steal if range size <= PAR_GRAIN */
   range_size = kaapi_workqueue_size(&vw->cr);
-  if (range_size == 0) return KAAPI_WS_ERROR_EMPTY;
 
-#define CONFIG_PAR_GRAIN 256
-  if (range_size < CONFIG_PAR_GRAIN)
+#define CONFIG_PAR_GRAIN 32
+  if (range_size < CONFIG_PAR_GRAIN) return KAAPI_WS_ERROR_EMPTY;
+
+  if (range_size < (nreq * CONFIG_PAR_GRAIN))
   {
-    unit_size = range_size;
-    nreq = 1;
+    nreq = range_size / CONFIG_PAR_GRAIN;
+    if (nreq == 0) nreq = 1;
+    unit_size = CONFIG_PAR_GRAIN;
   }
-  else if (nreq == 1)
+  else
   {
-    unit_size = range_size / 2;
-  }
-  else /* how much per req */
-  {
-    /* equally sized among nreq */
-    unit_size = range_size / nreq;
-    if (unit_size == 0)
-    {
-      nreq = range_size / CONFIG_PAR_GRAIN;
-      unit_size = CONFIG_PAR_GRAIN;
-    }
+    /* note, todo:
+       this part is important: since local stealing is not
+       implemented, dividing by 2 leads to unbalanced work
+     */
+
+    const unsigned int leaf_count =
+      kaapi_hws_get_leaf_count(KAAPI_HWS_LEVELID_NUMA);
+
+    unit_size = range_size / (nreq * 4 * leaf_count);
+    if (unit_size == 0) unit_size = range_size / nreq;
   }
 
   /* perform the actual steal. if the range
@@ -318,6 +324,11 @@ static int do_flat_splitter
     kaapi_workqueue_init(&tw->cr, j - unit_size, j);
     tw->op = vw->op;
     tw->array = vw->array;
+
+#if CONFIG_COUNTERS
+    ++counters[(unsigned int)kaapi_hws_get_request_nodeid(req)];
+    qties[(unsigned int)kaapi_hws_get_request_nodeid(req)] += unit_size;
+#endif
 
     /* commit the reply */
     kaapi_hws_reply_adaptive_task(sc, req);
@@ -430,7 +441,11 @@ static void for_each
 
 static void apply_cos(double* v)
 {
-  *v += cos(*v);
+  /* *v += sqrt(*v); */
+  *v += pow(*v, 5);
+  /* *v += cos(*v); */
+  /* *(volatile double*)(v + 0) = 0; */
+  /* *(volatile double*)v += *(volatile double*)v; */
 }
 
  
@@ -463,12 +478,13 @@ int main(int ac, char** av)
   
   for (iter = 0; iter < 1; ++iter)
   {
-    for (i = 0; i < ITEM_COUNT; ++i) array[i] = 0.f;
+    for (i = 0; i < ITEM_COUNT; ++i) array[i] = 5.f;
 
     t0 = kaapi_get_elapsedns();
     for_each(array, ITEM_COUNT, apply_cos, &mi);
     t1 = kaapi_get_elapsedns();
 
+    /* skip first one */
     sum += (t1 - t0) / 1000;
 
 #if 0
@@ -482,6 +498,15 @@ int main(int ac, char** av)
   }
 
   printf("done: %lf (ms)\n", sum / 100);
+
+#if CONFIG_KAAPI && CONFIG_COUNTERS
+  for (i = 0; i < 48; ++i)
+  {
+    if ((i % 6) == 0) printf("\n");
+    printf(" % 2lu(% 9lu)", counters[i], qties[i]);
+  }
+  printf("\n");
+#endif
 
   free(array);
 

@@ -60,3 +60,18 @@ unsigned int kaapi_hws_get_node_count(kaapi_hws_levelid_t levelid)
   kaapi_assert_debug(kaapi_hws_is_levelid_set(levelid));
   return hws_levels[levelid].block_count;
 }
+
+
+unsigned int kaapi_hws_get_leaf_count(kaapi_hws_levelid_t levelid)
+{
+  /* fixme:
+     assume the leaf count is the same for all
+     trees of a given level. otherwise, the tree
+     (ie. actually the steal block) must be passed
+     as an argument, but this is not yet available
+     in the splitter.
+   */
+
+  kaapi_assert_debug(kaapi_hws_is_levelid_set(levelid));
+  return hws_levels[levelid].blocks[0].kid_count;
+}
