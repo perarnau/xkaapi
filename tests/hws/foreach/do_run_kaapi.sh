@@ -1,12 +1,12 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
-# idfreeze
-#CPU_SET="0:47";
-#CPU_SET=0,1,2,3,24,25,26,27;
-
-#idkoiff
-CPU_SET="0:15";
-#CPU_SET=`seq -s',' 0 2 15`;
+HOSTNAME=`hostname`
+if [ "$HOSTNAME" == "idfreeze" ]; then
+    # CPU_SET=0,1,2,3,24,25,26,27;
+    CPU_SET=0:47
+elif [ "$HOSTNAME" == "idkoiff" ]; then
+    CPU_SET="0:15";
+fi
 
 KAAPI_HWS_LEVELS=NUMA \
 KAAPI_EMITSTEAL=hws \
