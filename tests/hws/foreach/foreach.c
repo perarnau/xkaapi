@@ -448,7 +448,12 @@ int main(int ac, char** av)
   kaapi_init(1, &ac, &av);
 #endif /* CONFIG_KAAPI */
 
+#if CONFIG_IDFREEZE
+#define TOTAL_SIZE (1 * CONFIG_MAX_PROC * 2 * CONFIG_CACHE_SIZE)
+#else
 #define TOTAL_SIZE (10 * CONFIG_MAX_PROC * 2 * CONFIG_CACHE_SIZE)
+#endif
+
 #define ITEM_COUNT (TOTAL_SIZE / sizeof(double))
   array = allocate_double_array(ITEM_COUNT, &mi);
 
