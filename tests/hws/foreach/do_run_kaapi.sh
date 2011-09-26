@@ -2,7 +2,8 @@
 
 HOSTNAME=`hostname`
 if [ "$HOSTNAME" == "idfreeze" ]; then
-    CPU_SET=0,1,2,3,24,25,26,27;
+    # CPU_SET=0,1,2,3,24,25,26,27;
+    CPU_SET=0:47
 elif [ "$HOSTNAME" == "idkoiff" ]; then
     CPU_SET="0:15";
 fi
