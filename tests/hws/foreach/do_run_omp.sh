@@ -15,8 +15,8 @@ if [ "$HOSTNAME" == "idfreeze" ]; then
     CPU_SET="$CPU_SET 20 21 22 23 44 45 46 47";
     CPU_COUNT=48;
 
-    CPU_SET=`seq -s' ' 0 47`;
-    CPU_COUNT=48;
+#    CPU_SET=`seq -s' ' 0 47`;
+#    CPU_COUNT=48;
 
 elif [ "$HOSTNAME" == "idkoiff" ]; then
     CPU_SET=`seq -s' ' 0 15`;

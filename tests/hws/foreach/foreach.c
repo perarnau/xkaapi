@@ -445,9 +445,9 @@ static void for_each
 static void apply_cos(double* v)
 {
   /* *v += sqrt(*v); */
-  *v += pow(*v, 5);
+  /* *v += pow(*v, 5); */
   /* *v += cos(*v); */
-  /* *(volatile double*)v = 0; */
+  *(volatile double*)v = 0;
   /* *(volatile double*)v += *(volatile double*)(v + 1025); */
 }
 
