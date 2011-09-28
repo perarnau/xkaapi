@@ -2575,6 +2575,13 @@ extern unsigned int kaapi_hws_get_node_count(kaapi_hws_levelid_t);
 
 /* ========================================================================== */
 /** \ingroup HWS
+    get the leaf count at the given hierarchy level
+    \retval the leaf count
+ */
+extern unsigned int kaapi_hws_get_leaf_count(kaapi_hws_levelid_t);
+
+/* ========================================================================== */
+/** \ingroup HWS
     get splitter info related to HWS
     \retval -1 if this is not a HWS splitter. 0 otherwise.
  */

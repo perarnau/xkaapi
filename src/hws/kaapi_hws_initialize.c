@@ -183,7 +183,7 @@ static void print_hws_levels(void)
       /* is there actually a kid in this block */
       if (block->kid_count == 0) continue ;
 
-      printf("  -- block[%u] #%u: ", i, block->kid_count);
+      printf("  -- block[%u, phys=%u] #%u: ", i, i, block->kid_count);
       for (j = 0; j < block->kid_count; ++j)
 	printf(" %u", kaapi_default_param.kid2cpu[block->kids[j]]);
       printf("\n");
@@ -255,6 +255,7 @@ int kaapi_hws_init_global(void)
     for (; pos != NULL; pos = pos->next)
       kaapi_cpuset_set(&affin_set->who, pos->bound_cpu);
     affin_set->ncpu = kid_count;
+    affin_set->os_index = (unsigned int)i;
   }
 
   flat_level.count = kid_count;
@@ -272,7 +273,7 @@ int kaapi_hws_init_global(void)
   for (depth = 0; depth < kaapi_default_param.memory.depth; ++depth)
   {
     unsigned int node_count;
-    unsigned int node;
+    unsigned int lnode; /* the LOGICAL node index */
 
     one_level = &kaapi_default_param.memory.levels[depth];
 
@@ -294,16 +295,22 @@ int kaapi_hws_init_global(void)
     memset(hws_level->kid_to_block, 0, kid_count * sizeof(kaapi_ws_block_t*));
 
     /* foreach node at level */
-    for (node = 0; node < node_count; ++node)
+    for (lnode = 0; lnode < node_count; ++lnode)
     {
-      kaapi_affinityset_t* const affin_set = &one_level->affinity[node];
-      kaapi_ws_block_t* const block = &hws_level->blocks[node];
+      kaapi_affinityset_t* const affin_set = &one_level->affinity[lnode];
+
+      /* use the PHYSICAL node as the hws index */
+      const unsigned int pnode = affin_set->os_index;
+
+      kaapi_ws_block_t* const block = &hws_level->blocks[pnode];
       kaapi_procinfo_t* pos = kaapi_default_param.kproc_list->head;
       unsigned int i = 0;
 
+      kaapi_assert(pnode < node_count);
+
       /* flat level special handling */
       if (one_level->levelid == KAAPI_HWS_LEVELID_FLAT)
-	hws_level->kid_to_block[(kaapi_processor_id_t)node] = block;
+	hws_level->kid_to_block[pnode] = block;
 
       /* initialize the block */
       /* todo: allocate on a page boundary pinned on the node */
