@@ -90,7 +90,8 @@ libkaapi_la_SOURCES=\
   hws/kaapi_hws_sched_sync.c \
   hws/kaapi_hws_globals.c \
   hws/kaapi_hws_counters.c \
-  hws/kaapi_ws_queue_lifo.c
+  hws/kaapi_ws_queue_lifo.c \
+  hws/kaapi_ws_queue_kproc.c
 
 #Libtask
 libkaapi_la_SOURCES+=\
