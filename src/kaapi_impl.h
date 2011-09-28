@@ -60,6 +60,7 @@ extern "C" {
 #include "config.h"
 #include "kaapi.h"
 #include "kaapi_error.h"
+#include "kaapi_atomic.h"
 #include <string.h>
 
 #include "kaapi_defs.h"
@@ -1522,70 +1523,23 @@ static inline int kaapi_sched_suspendlist_empty(kaapi_processor_t* kproc)
   return 0;
 }
 
-/** Note on scheduler lock:
-  KAAPI_SCHED_LOCK_CAS -> lock state == 1 iff lock is taken, else 0
-  KAAPI_SCHED_LOCK_CAS not defined: see 
-    Sewell, P., Sarkar, S., Owens, S., Nardelli, F. Z., and Myreen, M. O. 2010. 
-    x86-TSO: a rigorous and usable programmer's model for x86 multiprocessors. 
-    Commun. ACM 53, 7 (Jul. 2010), 89-97. 
-    DOI= http://doi.acm.org/10.1145/1785414.1785443
+/**
 */
 static inline int kaapi_sched_initlock( kaapi_atomic_t* lock )
 {
-#if defined(KAAPI_SCHED_LOCK_CAS)
-  KAAPI_ATOMIC_WRITE(lock,0);
-#else
-  KAAPI_ATOMIC_WRITE(lock,1);
-#endif
-  return 0;
+  return kaapi_atomic_initlock(lock);
 }
 
 static inline int kaapi_sched_trylock( kaapi_atomic_t* lock )
 {
-#if defined(KAAPI_SCHED_LOCK_CAS)
-  int ok;
-  /* implicit barrier in KAAPI_ATOMIC_CAS if lock is taken */
-  ok = (KAAPI_ATOMIC_READ(lock) ==0) && KAAPI_ATOMIC_CAS(lock, 0, 1);
-  kaapi_assert_debug( !ok || (ok && KAAPI_ATOMIC_READ(lock) == 1) );
-  return ok;
-#else
-  if (KAAPI_ATOMIC_DECR(lock) ==0) 
-  {
-    return 1;
-  }
-  return 0;
-#endif
+  return kaapi_atomic_trylock(lock);
 }
 
 /** 
 */
 static inline int kaapi_sched_lock( kaapi_atomic_t* lock )
 {
-#if defined(KAAPI_SCHED_LOCK_CAS)
-  int ok;
-  do {
-    ok = (KAAPI_ATOMIC_READ(lock) ==0) && KAAPI_ATOMIC_CAS(lock, 0, 1);
-    if (ok) break;
-    kaapi_slowdown_cpu();
-#if defined(KAAPI_USE_NETWORK)
-    kaapi_network_poll();
-#endif
-  } while (1);
-  /* implicit barrier in KAAPI_ATOMIC_CAS */
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(lock) != 0 );
-  return 0;
-#else
-acquire:
-  if (KAAPI_ATOMIC_DECR(lock) ==0) return 1;
-  while (KAAPI_ATOMIC_READ(lock) <=0)
-  {
-#if defined(KAAPI_USE_NETWORK)
-    kaapi_network_poll();
-#endif
-    kaapi_slowdown_cpu();
-  }
-  goto acquire;
-#endif
+  return kaapi_atomic_lock(lock);
 }
 
 
@@ -1593,23 +1547,7 @@ acquire:
 */
 static inline int kaapi_sched_lock_spin( kaapi_atomic_t* lock, int spincount )
 {
-#if defined(KAAPI_SCHED_LOCK_CAS)
-  int ok;
-  do {
-    ok = (KAAPI_ATOMIC_READ(lock) ==0) && KAAPI_ATOMIC_CAS(lock, 0, 1);
-    if (ok) break;
-    kaapi_slowdown_cpu();
-  } while (1);
-  /* implicit barrier in KAAPI_ATOMIC_CAS */
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(lock) != 0 );
-#else
-  int i;
-  if (KAAPI_ATOMIC_DECR(lock) ==0) return 1;
-  for (i=0; (KAAPI_ATOMIC_READ(lock) <=0) && (i<spincount); ++i)
-    kaapi_slowdown_cpu();
-  if (KAAPI_ATOMIC_DECR(lock) ==0) return 1;
-#endif
-  return 0;
+  return kaapi_atomic_lock_spin(lock, spincount);
 }
 
 
@@ -1617,34 +1555,17 @@ static inline int kaapi_sched_lock_spin( kaapi_atomic_t* lock, int spincount )
 */
 static inline int kaapi_sched_unlock( kaapi_atomic_t* lock )
 {
-#if defined(KAAPI_SCHED_LOCK_CAS)
-  kaapi_assert_debug( (unsigned)KAAPI_ATOMIC_READ(lock) == (unsigned)(1) );
-  /* implicit barrier in KAAPI_ATOMIC_WRITE_BARRIER */
-  KAAPI_ATOMIC_WRITE_BARRIER(lock, 0);
-#else
-  KAAPI_ATOMIC_WRITE_BARRIER(lock, 1);
-#endif
-  return 0;
+  return kaapi_atomic_unlock(lock);
 }
 
 static inline void kaapi_sched_waitlock(kaapi_atomic_t* lock)
 {
-  /* wait until reaches the unlocked state */
-#if defined(KAAPI_SCHED_LOCK_CAS)
-  while (KAAPI_ATOMIC_READ(lock))
-#else
-  while (KAAPI_ATOMIC_READ(lock) == 0)
-#endif
-    kaapi_slowdown_cpu();
+  kaapi_atomic_waitlock(lock);
 }
 
 static inline int kaapi_sched_islocked( kaapi_atomic_t* lock )
 {
-#if defined(KAAPI_SCHED_LOCK_CAS)
-  return KAAPI_ATOMIC_READ(lock) != 0;
-#else
-  return KAAPI_ATOMIC_READ(lock) != 1;
-#endif
+  return kaapi_atomic_islocked(lock);
 }
 
 /** steal/pop (no distinction) a thread to thief with kid
