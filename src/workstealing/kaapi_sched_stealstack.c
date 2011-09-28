@@ -1,5 +1,4 @@
 /*
- ** kaapi_sched_stealstack.c
  ** xkaapi
  ** 
  ** Created on Tue Mar 31 15:18:04 2009
@@ -165,7 +164,7 @@ static int kaapi_sched_stealframe
   const kaapi_format_t* task_fmt;
   kaapi_task_body_t     task_body;
   kaapi_task_t*         task_top;
-  kaapi_task_t*         task_exec;
+  kaapi_task_t*         task_sp;
   int                   replycount;
   kaapi_task_splitter_t splitter; 
   void*                 argsplitter;
@@ -174,7 +173,6 @@ static int kaapi_sched_stealframe
   kaapi_hashmap_clear( map );
   task_top   = frame->pc;
   task_sp    = frame->sp;
-  task_exec  = 0;
   replycount = 0;
   
   /** HERE TODO: if they are enough tasks in the frame (up to a threshold which may depend
