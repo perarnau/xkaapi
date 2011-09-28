@@ -942,7 +942,6 @@ extern void kaapi_taskfinalizer_body( void*, kaapi_thread_t* );
 /**@{ */
 
 #if (__SIZEOF_POINTER__ == 4)
-
 static inline uintptr_t kaapi_task_getstate(const kaapi_task_t* task)
 {
   return KAAPI_ATOMIC_READ(&task->u.state);

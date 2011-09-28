@@ -114,6 +114,7 @@ void kaapi_taskwrite_body(
     }
   }
 
+#if 1 // TG TO TEST IMPACT OF THIS OPTIMISATION
   /* if signaled thread was suspended, move it to the local queue */
   kaapi_wsqueuectxt_cell_t* wcs = arg->origin_thread->wcs;
   if ((wcs != 0) && (arg->origin_thread->sfp->pc == arg->origin_task)) /* means thread has been suspended on this task */
@@ -147,14 +148,15 @@ void kaapi_taskwrite_body(
       }
     }
   }
+#endif
 
   /* signal the task : mark it as executed, the old returned body should have steal flag */
+  kaapi_mem_barrier();
   kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate( arg->origin_task) ) );
-  uintptr_t oldstate __attribute__((unused));
   if ((war_param ==0) && (cw_param ==0))
-    oldstate = kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
+    kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
   else 
-    oldstate = kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
+    kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
 
   /* toremove */
   kaapi_hws_sched_dec_sync();
@@ -233,10 +235,6 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 #endif
     body(orig_task_args, thread);
 
-    /* push task that will be executed after all created task by the user task */
-    task = kaapi_thread_toptask( thread );
-    kaapi_task_init( task, kaapi_taskwrite_body, arg );
-    kaapi_thread_pushtask( thread );
   }
   else /* it exists at least one w parameter with war dependency or a cw_param: recopies the arguments */
   {
@@ -292,12 +290,14 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
       }
     }
 
+#if 0 // DEPRECATED
     /* Execute the orinal body function with the copy of args: do not push it... ?
        WHY to push a nop ?
     */
     task = kaapi_thread_toptask( thread );
     kaapi_task_init( task, kaapi_nop_body, copy_task_args);
     kaapi_thread_pushtask( thread );
+#endif
 
     /* call directly the stolen body function */
 #if defined(KAAPI_USE_CUDA)
@@ -313,10 +313,11 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     else
 #endif
     body( copy_task_args, thread);
-
-    /* push task that will be executed after all created task by the user task */
-    task = kaapi_thread_toptask( thread );
-    kaapi_task_init( task, kaapi_taskwrite_body, arg );
-    kaapi_thread_pushtask( thread );
   }
+
+  /* push task that will be executed after all created task by the user task */
+  task = kaapi_thread_toptask( thread );
+  kaapi_task_init( task, kaapi_taskwrite_body, arg );
+  kaapi_thread_pushtask( thread );
+
 }

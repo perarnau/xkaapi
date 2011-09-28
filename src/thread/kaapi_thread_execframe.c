@@ -213,7 +213,7 @@ push_frame:
 
 //  kaapi_sched_lock(&thread->proc->lock);
 //  kaapi_sched_lock(&thread->lock);
-  if (fp >= eframe)
+  if (fp > eframe)
   {
     /* here it's a pop of frame: we lock the thread */
     while (fp > eframe) 

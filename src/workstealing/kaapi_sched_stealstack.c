@@ -173,6 +173,7 @@ static int kaapi_sched_stealframe
   /* suppress history of the previous frame ! */
   kaapi_hashmap_clear( map );
   task_top   = frame->pc;
+  task_sp    = frame->sp;
   task_exec  = 0;
   replycount = 0;
   
@@ -181,7 +182,7 @@ static int kaapi_sched_stealframe
    it is interesting to compute the tasklist viewed as a speeding data structure
    for next steal requests. 
    */
-  while ( !kaapi_listrequest_iterator_empty(lrrange) && (task_top > frame->sp))
+  while ( !kaapi_listrequest_iterator_empty(lrrange) && (task_top > task_sp))
   {
     task_body = kaapi_task_getbody(task_top);
     
