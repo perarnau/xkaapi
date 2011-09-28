@@ -160,9 +160,11 @@ void kaapi_taskwrite_body(
     kaapi_task_setbody( arg->origin_task, kaapi_aftersteal_body );
 //    kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
 
+#if 0
   /* toremove */
   kaapi_hws_sched_dec_sync();
   /* toremove */
+#endif
 }
 
 
@@ -199,7 +201,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   arg = (kaapi_tasksteal_arg_t*)taskarg;
  
   /* format of the original stolen task */  
-  body            = kaapi_task_getbody(arg->origin_task);
+  body            = arg->origin_body;
   kaapi_assert_debug( kaapi_isvalid_body( body ) );
 
   fmt             = kaapi_format_resolvebybody( body );

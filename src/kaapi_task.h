@@ -206,9 +206,9 @@ static inline int kaapi_task_casbody(kaapi_task_t* task, kaapi_task_body_t oldbo
 
 static inline kaapi_task_body_t kaapi_task_markexec( kaapi_task_t* task )
 {
-  kaapi_task_body_t oldbody = task->body;
-  if (oldbody == kaapi_steal_body) return 0;
-  if (KAAPI_ATOMIC_CASPTR( &task->body, oldbody, &kaapi_exec_body ))
+  kaapi_task_body_t oldbody;
+  oldbody = task->body;
+  if ((oldbody != kaapi_steal_body) && (KAAPI_ATOMIC_CASPTR( &task->body, oldbody, kaapi_exec_body)))
     return oldbody;
   return 0;
 }

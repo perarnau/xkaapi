@@ -119,7 +119,7 @@ push_frame: /* here assume fp current frame where to execute task */
   fp[1].sp_data   = fp->sp_data;
   
   /* force previous write before next write */
-  kaapi_mem_barrier();
+  kaapi_writemem_barrier();
 
   /* push and update the current frame */
   stack->sfp = ++fp;
@@ -143,8 +143,7 @@ push_frame: /* here assume fp current frame where to execute task */
          Test the following case with THIS (!) order :
          - kaapi_steal_body: return with EWOULDBLOCK value
       */
-      if ( body == kaapi_steal_body )
-        goto error_swap_body;
+      goto error_swap_body;
       kaapi_assert_debug(0);
     }
 
@@ -172,7 +171,7 @@ push_frame: /* here assume fp current frame where to execute task */
 
   kaapi_assert_debug( fp >= eframe);
 
-  kaapi_sched_lock(&stack->proc->lock);
+//  kaapi_sched_lock(&stack->proc->lock);
   if (fp > eframe)
   {
     /* here it's a pop of frame: we lock the thread */
@@ -184,14 +183,14 @@ push_frame: /* here assume fp current frame where to execute task */
       if (--fp->pc > fp->sp)
       {
         stack->sfp = fp;
-        kaapi_sched_unlock(&stack->proc->lock);
+//        kaapi_sched_unlock(&stack->proc->lock);
         goto push_frame; /* remains work do do */
       }
     } 
     fp->sp = fp->pc;
   }
   stack->sfp = fp;
-  kaapi_sched_unlock(&stack->proc->lock);
+//  kaapi_sched_unlock(&stack->proc->lock);
 
   /* end of the pop: we have finish to execute all the tasks */
   kaapi_assert_debug( fp->pc == fp->sp );
@@ -207,7 +206,7 @@ push_frame: /* here assume fp current frame where to execute task */
 error_swap_body:
   /* write back to memory some data */
   fp[-1].pc = pc;    
-  kaapi_assert_debug(stack->sfp- fp == 1);
+  kaapi_assert_debug(stack->sfp - fp == 0);
   /* implicityly pop the dummy frame */
   stack->sfp = fp-1;
   
