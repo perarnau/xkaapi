@@ -42,8 +42,8 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
-//#include <string.h>
+#include "kaapi_format.h"
+#include <string.h>
 
 kaapi_format_t* kaapi_all_format_byfmtid[256] = 
 {
@@ -77,9 +77,9 @@ kaapi_format_id_t kaapi_format_register(
   kaapi_format_t* head;
 
   memset( fmt, 0, sizeof(kaapi_format_t) );
-  fmt->fmtid = kaapi_hash_value( name );
-  fmt->name         = strdup(name); /* TODO: strdup ? */
-  fmt->isinit       = 1;
+  fmt->fmtid  = kaapi_hash_value( name );
+  fmt->name   = strdup(name); /* TODO: strdup ? */
+  fmt->isinit = 1;
 
   /* register it into hashmap: fmtid -> fmt */
   entry = (uint8_t) (fmt->fmtid & (kaapi_format_id_t)0xFFUL);
