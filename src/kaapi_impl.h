@@ -61,8 +61,11 @@ extern "C" {
 #include "kaapi.h"
 #include "kaapi_error.h"
 #include "kaapi_atomic.h"
+#include "kaapi_allocator.h"
 #include "kaapi_hashmap.h"
 #include "kaapi_memory.h"
+#include "kaapi_format.h"
+
 #include <string.h>
 
 #include "kaapi_defs.h"
@@ -110,53 +113,6 @@ extern "C" {
 #ifndef KAAPI_USE_EXECTASK_METHOD
 #define KAAPI_USE_EXECTASK_METHOD KAAPI_CAS_METHOD
 #endif
-
-
-/** Highest level, more trace generated */
-#define KAAPI_LOG_LEVEL 10
-
-#if defined(KAAPI_DEBUG)
-#  define kaapi_assert_debug_m(cond, msg) \
-      { int __kaapi_cond = cond; \
-        if (!__kaapi_cond) \
-        { \
-          printf("[%s]: LINE: %u FILE: %s, ", msg, __LINE__, __FILE__);\
-          abort();\
-        }\
-      }
-#  define KAAPI_LOG(l, fmt, ...) \
-      do { if (l<= KAAPI_LOG_LEVEL) { printf("%i:"fmt, kaapi_get_current_processor()->kid, ##__VA_ARGS__); fflush(0); } } while (0)
-
-#  define KAAPI_DEBUG_INST(inst) inst
-#else
-#  define kaapi_assert_debug_m(cond, msg)
-#  define KAAPI_LOG(l, fmt, ...) 
-#  define KAAPI_DEBUG_INST(inst)
-#endif /* defined(KAAPI_DEBUG)*/
-
-#define kaapi_assert_m(cond, msg) \
-      { \
-        if (!(cond)) \
-        { \
-          printf("[%s]: \n\tLINE: %u FILE: %s, ", msg, __LINE__, __FILE__);\
-          abort();\
-        }\
-      }
-
-
-#ifdef __GNU__
-#  define likely(x)      __builtin_expect(!!(x), 1)
-#  define unlikely(x)    __builtin_expect(!!(x), 0)
-#else
-#  define likely(x)      (x)
-#  define unlikely(x)    (x)
-#endif
-
-#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
-#  ifndef EWOULDBLOCK
-#    define EWOULDBLOCK     EAGAIN
-#  endif 
-#endif 
 
 
 
@@ -385,78 +341,6 @@ enum kaapi_reply_status_t {
   KAAPI_REPLY_S_ERROR    = 5
 };
 
-
-
-/* ============================= Format for task/data structure ============================ */
-#include "kaapi_format.h"
-
-
-/* ============================= Helper for bloc allocation of individual entries ============================ */
-
-/*
-*/
-#define KAAPI_BLOCALLOCATOR_SIZE 8*4096
-
-/* Macro to define a generic bloc allocator of byte.
-*/
-typedef struct kaapi_allocator_bloc_t {
-  double                           data[KAAPI_BLOCALLOCATOR_SIZE/sizeof(double)
-                                        - sizeof(uintptr_t) - sizeof(struct kaapi_allocator_bloc_t*)];
-  uintptr_t                        pos;  /* next free in data */
-  struct kaapi_allocator_bloc_t*   next; /* link list of bloc */
-} kaapi_allocator_bloc_t;
-
-typedef struct kaapi_allocator_t {
-  kaapi_allocator_bloc_t* currentbloc;
-  kaapi_allocator_bloc_t* allocatedbloc;
-} kaapi_allocator_t;
-
-#define KAAPI_DECLARE_GENBLOCENTRIES(ALLOCATORNAME) \
-  typedef kaapi_allocator_t ALLOCATORNAME
-
-/**/
-static inline int kaapi_allocator_init( kaapi_allocator_t* va ) 
-{
-  va->allocatedbloc = 0;
-  va->currentbloc = 0;
-  return 0;
-}
-
-/**/
-static inline int kaapi_allocator_destroy( kaapi_allocator_t* va )
-{
-  while (va->allocatedbloc !=0)
-  {
-    kaapi_allocator_bloc_t* curr = va->allocatedbloc;
-    va->allocatedbloc = curr->next;
-    free (curr);
-  }
-  va->allocatedbloc = 0;
-  va->currentbloc = 0;
-  return 0;
-}
-
-/* Here size is size in Bytes
-*/
-extern void* _kaapi_allocator_allocate_slowpart( kaapi_allocator_t* va, size_t size );
-
-
-/**/
-static inline void* kaapi_allocator_allocate( kaapi_allocator_t* va, size_t size )
-{
-  void* retval;
-  /* round size to double size */
-  size = (size+sizeof(double)-1)/sizeof(double);
-  const size_t sz_max = KAAPI_BLOCALLOCATOR_SIZE/sizeof(double)-sizeof(uintptr_t)-sizeof(kaapi_allocator_bloc_t*);
-  if ((va->currentbloc != 0) && (va->currentbloc->pos + size < sz_max))
-  {
-    retval = &va->currentbloc->data[va->currentbloc->pos];
-    va->currentbloc->pos += size;
-    KAAPI_DEBUG_INST( memset( retval, 0, size*sizeof(double) ) );
-    return retval;
-  }
-  return _kaapi_allocator_allocate_slowpart(va, size);
-}
 
 
 /* ============================= Simple C API for network ============================ */
