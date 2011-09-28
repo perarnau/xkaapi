@@ -11,7 +11,7 @@ static kaapi_ws_error_t pop
 {
   kaapi_processor_t* const kproc = *(kaapi_processor_t**)p;
 
-  printf("%s\n", __FUNCTION__);
+  printf("%s(%u)\n", __FUNCTION__, kproc->kid);
 
   return KAAPI_WS_ERROR_SUCCESS;
 }
@@ -28,6 +28,9 @@ static kaapi_ws_error_t steal
   /* todo: kaapi_sched_stealprocessor.c */
 
   kaapi_processor_t* const kproc = *(kaapi_processor_t**)p;
+
+  printf("%s(%u)\n", __FUNCTION__, kproc->kid);
+
   return KAAPI_WS_ERROR_SUCCESS;
 }
 
@@ -40,6 +43,9 @@ static kaapi_ws_error_t push
 )
 {
   kaapi_processor_t* const kproc = *(kaapi_processor_t**)p;
+
+  printf("%s(%u)\n", __FUNCTION__, kproc->kid);
+
   return KAAPI_WS_ERROR_SUCCESS;
 }
 
@@ -52,9 +58,10 @@ kaapi_ws_queue_t* kaapi_ws_queue_create_kproc(kaapi_processor_t* kproc)
   /* points to the given kproc and use local function to steal, pop */
 
   kaapi_ws_queue_t* const wsq =
-    kaapi_ws_create(sizeof(kaapi_processor_t*));
+    kaapi_ws_queue_create(sizeof(kaapi_processor_t*));
 
-  *(void**)(void*)wsq->data = (void*)kproc;
+  void* const aliasing_fix = (void*)wsq->data;
+  *(void**)aliasing_fix = (void*)kproc;
 
   wsq->push = push;
   wsq->steal = steal;

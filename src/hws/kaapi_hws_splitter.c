@@ -73,11 +73,12 @@ int kaapi_hws_splitter
   unsigned int count;
   unsigned int i;
 
-  kaapi_assert_debug(kaapi_is_levelid_set(levelid));
-  kaapi_assert_debug(count < KAAPI_MAX_PROCESSOR);
+  kaapi_assert_debug(kaapi_hws_is_levelid_set(levelid));
 
   level = &hws_levels[levelid];
   count = level->block_count;
+
+  kaapi_assert_debug(count < KAAPI_MAX_PROCESSOR);
 
   /* generate a request array and call the splitter */
   for (i = 0; i < count; ++i)
