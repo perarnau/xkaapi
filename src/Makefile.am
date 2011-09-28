@@ -54,9 +54,11 @@ libkaapi_la_SOURCES=\
   kaapi_impl.h \
   kaapi_format.h \
   kaapi_hashmap.h \
+  kaapi_allocator.h \
   kaapi_network.h \
   kaapi_compiler.h \
   kaapi_event.h\
+  kaapi_event_record.h\
   machine/common/kaapi_procinfo.c \
   machine/common/kaapi_procinfo.h \
   machine/common/kaapi_hwtopo.c \

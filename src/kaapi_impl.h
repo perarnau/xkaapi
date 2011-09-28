@@ -1547,7 +1547,7 @@ inline static int kaapi_task_isstealable(const kaapi_task_t* task)
 
 #include "kaapi_tasklist.h"
 #include "kaapi_partition.h"
-#include "kaapi_event.h"
+#include "kaapi_event_recorder.h"
 
 /** Call only on thread in list of suspended threads.
 */
