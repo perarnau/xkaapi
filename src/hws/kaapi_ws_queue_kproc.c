@@ -9,6 +9,8 @@ static kaapi_ws_error_t pop
  kaapi_request_t* req
 )
 {
+  /* todo: kaapi_thread_execframe */
+
   kaapi_processor_t* const kproc = *(kaapi_processor_t**)p;
 
   printf("%s(%u)\n", __FUNCTION__, kproc->kid);
@@ -42,11 +44,9 @@ static kaapi_ws_error_t push
  void* arg
 )
 {
-  kaapi_processor_t* const kproc = *(kaapi_processor_t**)p;
-
-  printf("%s(%u)\n", __FUNCTION__, kproc->kid);
-
-  return KAAPI_WS_ERROR_SUCCESS;
+  /* pushing in a non local queue is not allowed */
+  kaapi_assert(0);
+  return KAAPI_WS_ERROR_FAILURE;
 }
 
 

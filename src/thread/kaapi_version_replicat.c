@@ -119,7 +119,7 @@ int kaapi_thread_insert_synchro(
     
     kaapi_recv_arg_t*  arg_recv 
         = (kaapi_recv_arg_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_recv_arg_t) );
-#warning "init arg recv"
+    /* #warning "init arg recv" */
     td_recv         = kaapi_tasklist_allocate_td_withbody( tl_master, 0, kaapi_taskrecv_body, arg_recv );
 
     /* find td bcast into ltd_bcast */
@@ -133,7 +133,7 @@ int kaapi_thread_insert_synchro(
       kaapi_activationlink_t* curr = ltd_bcast->front;
       while (curr !=0)
       {
-#warning "Test is bad !!!"
+	/* #warning "Test is bad !!!" */
         if (curr->queue == tl)
         {
           td_bcast = curr->td;
@@ -148,7 +148,7 @@ int kaapi_thread_insert_synchro(
     {
       kaapi_bcast_arg_t*  arg 
           = (kaapi_bcast_arg_t*)kaapi_tasklist_allocate(tl_master, sizeof(kaapi_bcast_arg_t) );
-#warning "init arg bcast"
+      /* #warning "init arg bcast" */
 
       kaapi_activationlink_t* link;
       

@@ -13,7 +13,7 @@ elif [ "$HOSTNAME" == "idkoiff" ]; then
     CPU_SET="0,2";
 fi
 
-KAAPI_HWS_LEVELS=FLAT,NUMA \
+KAAPI_HWS_LEVELS=FLAT \
 KAAPI_EMITSTEAL=hws \
 KAAPI_CPUSET="$CPU_SET" \
 LD_LIBRARY_PATH=$HOME/install/xkaapi_hws/lib \

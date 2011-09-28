@@ -102,8 +102,8 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
         goto redo_execute;
       }
     }
-    
-#pragma message ("TODO: thread is detached")
+
+    /* TODO: thread is detached */
     if (kproc->thread == 0) continue ;
     
     /* steal request */
