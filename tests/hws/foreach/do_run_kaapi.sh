@@ -9,11 +9,10 @@ if [ "$HOSTNAME" == "idfreeze" ]; then
     CPU_SET="$CPU_SET,16,17,18,19,40,41,42,43";
     CPU_SET="$CPU_SET,20,21,22,23,44,45,46,47";
 elif [ "$HOSTNAME" == "idkoiff" ]; then
-#    CPU_SET="0:15";
-    CPU_SET="0,2";
+    CPU_SET="0:15";
 fi
 
-KAAPI_HWS_LEVELS=FLAT \
+KAAPI_HWS_LEVELS=NUMA \
 KAAPI_EMITSTEAL=hws \
 KAAPI_CPUSET="$CPU_SET" \
 LD_LIBRARY_PATH=$HOME/install/xkaapi_hws/lib \

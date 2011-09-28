@@ -9,13 +9,9 @@ static kaapi_ws_error_t pop
  kaapi_request_t* req
 )
 {
-  /* todo: kaapi_thread_execframe */
-
-  kaapi_processor_t* const kproc = *(kaapi_processor_t**)p;
-
-  printf("%s(%u)\n", __FUNCTION__, kproc->kid);
-
-  return KAAPI_WS_ERROR_SUCCESS;
+  /* todo, kaapi_sched_idle.c, local wakeup first */
+  /* kaapi_processor_t* const kproc = *(kaapi_processor_t**)p; */
+  return KAAPI_WS_ERROR_EMPTY;
 }
 
 
@@ -27,13 +23,12 @@ static kaapi_ws_error_t steal
  kaapi_listrequest_iterator_t* lri
 )
 {
-  /* todo: kaapi_sched_stealprocessor.c */
-
   kaapi_processor_t* const kproc = *(kaapi_processor_t**)p;
-
-  printf("%s(%u)\n", __FUNCTION__, kproc->kid);
-
-  return KAAPI_WS_ERROR_SUCCESS;
+  const int saved_count = kaapi_listrequest_iterator_count(lri);
+  kaapi_sched_stealprocessor(kproc, lr, lri);
+  if (kaapi_listrequest_iterator_count(lri) == saved_count)
+    return KAAPI_WS_ERROR_SUCCESS;
+  return KAAPI_WS_ERROR_EMPTY;
 }
 
 

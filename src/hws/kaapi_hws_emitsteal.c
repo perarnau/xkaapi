@@ -98,7 +98,8 @@ static kaapi_thread_context_t* steal_block
 
   kaapi_listrequest_iterator_update(lr, lri, &block->kid_mask);
 
-  kaapi_ws_queue_steal(block->queue, kproc->thread, lr, lri);
+  if (!kaapi_listrequest_iterator_empty(lri))
+    kaapi_ws_queue_steal(block->queue, kproc->thread, lr, lri);
 
   kaapi_ws_lock_unlock(&block->lock);
 
@@ -205,6 +206,7 @@ static kaapi_thread_context_t* steal_level
 }
 
 
+__attribute__((unused))
 static kaapi_thread_context_t* pop_block
 (
  kaapi_ws_block_t* block,
@@ -306,14 +308,15 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
   kaapi_reply_t* reply;
   kaapi_listrequest_iterator_t lri;
 
+#if 0 /* already done by the caller */
   /* pop locally without emitting request */
   /* todo: kaapi_ws_queue_pop should fit the steal interface */
   block = get_self_ws_block(kproc, KAAPI_HWS_LEVELID_FLAT);
   thread = pop_block(block, kproc);
   if (thread != NULL) return thread;
+#endif /* already done by the caller */
 
   /* dont fail_request with an uninitialized bitmap */
-  /* todo: wrap the above in a new routine, prepare(&lri) */
   kaapi_listrequest_iterator_prepare(&lri);
 
   /* post the stealing request */
