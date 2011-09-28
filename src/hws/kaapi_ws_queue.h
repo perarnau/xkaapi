@@ -106,7 +106,7 @@ static inline kaapi_ws_queue_t* kaapi_ws_queue_create(size_t size)
 
   kaapi_ws_queue_t* q;
   const int err = posix_memalign((void**)&q, sizeof(void*), total_size);
-  kaapi_assert(err);
+  kaapi_assert(err == 0);
 
   q->push = NULL;
   q->steal = NULL;
