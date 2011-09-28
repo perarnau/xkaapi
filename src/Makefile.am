@@ -53,6 +53,7 @@ libkaapi_la_SOURCES=\
   kaapi_atomic.h \
   kaapi_impl.h \
   kaapi_format.h \
+  kaapi_hashmap.h \
   kaapi_network.h \
   kaapi_compiler.h \
   kaapi_event.h\

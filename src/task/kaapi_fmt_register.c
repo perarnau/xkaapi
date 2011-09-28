@@ -43,6 +43,7 @@
 ** 
 */
 #include "kaapi_format.h"
+#include "kaapi_hashmap.h"
 #include <string.h>
 
 kaapi_format_t* kaapi_all_format_byfmtid[256] = 
