@@ -114,7 +114,7 @@ void kaapi_taskwrite_body(
     }
   }
 
-#if 1 // TG TO TEST IMPACT OF THIS OPTIMISATION
+#if 0 // TG TO TEST IMPACT OF THIS OPTIMISATION
   /* if signaled thread was suspended, move it to the local queue */
   kaapi_wsqueuectxt_cell_t* wcs = arg->origin_thread->wcs;
   if ((wcs != 0) && (arg->origin_thread->stack.sfp->pc == arg->origin_task)) /* means thread has been suspended on this task */
@@ -152,11 +152,13 @@ void kaapi_taskwrite_body(
 
   /* signal the task : mark it as executed, the old returned body should have steal flag */
   kaapi_mem_barrier();
-  kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate( arg->origin_task) ) );
+  kaapi_assert_debug( kaapi_task_getbody(arg->origin_task) == kaapi_steal_body );
   if ((war_param ==0) && (cw_param ==0))
-    kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
+    kaapi_task_setbody( arg->origin_task, kaapi_term_body );
+//    kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
   else 
-    kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
+    kaapi_task_setbody( arg->origin_task, kaapi_aftersteal_body );
+//    kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
 
   /* toremove */
   kaapi_hws_sched_dec_sync();
@@ -206,8 +208,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   /* the the original task arguments */
   orig_task_args  = kaapi_task_getargs(arg->origin_task);
 
-  kaapi_assert_debug
-    ( kaapi_task_state_issteal( kaapi_task_getstate(arg->origin_task) ) );
+  kaapi_assert_debug( kaapi_task_getbody(arg->origin_task) == kaapi_steal_body );
 
   /* not a bound task */
   count_params    = kaapi_format_get_count_params(fmt, orig_task_args); 

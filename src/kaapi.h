@@ -363,9 +363,7 @@ typedef kaapi_frame_t kaapi_thread_t;
 */
 typedef void (*kaapi_task_body_t)(void* /*task arg*/, kaapi_thread_t* /* thread or stream */);
 typedef void (*kaapi_task_vararg_body_t)(void* /*task arg*/,  kaapi_thread_t* /* thread or stream */, ...);
-/* do not separate representation of the body and its identifier (should be format identifier) */
 typedef kaapi_task_body_t kaapi_task_bodyid_t;
-
 
 #if !defined(KAAPI_COMPILE_SOURCE)
 typedef struct kaapi_thread_context_t {
@@ -425,22 +423,10 @@ typedef struct kaapi_task_binding
     The body field is the pointer to the function to execute. The special value 0 correspond to a nop instruction.
 */
 typedef struct kaapi_task_t {
-#if (__SIZEOF_POINTER__ == 4)
-  struct task_and_body {
-    kaapi_task_bodyid_t   body;      /** task body  */
-    kaapi_atomic32_t      state;     /** bit */
-  } u;
-#else
-  union task_and_body {
-    kaapi_task_bodyid_t   body;      /** task body  */
-    kaapi_atomic64_t      state;     /** bit */
-  } u;
-#endif
-  void*                   sp;        /** data stack pointer of the data frame for the task  */
-  kaapi_task_binding_t    binding;   /** binding information or 0  */
+  kaapi_task_body_t     body;      /** task body  */
+  void*                 sp;        /** data stack pointer of the data frame for the task  */
+//TO ADD AFTER  kaapi_task_binding_t  binding;   /** binding information or 0  */
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
-
-#define kaapi_task_getuserbody( t ) (t)->u.body
 
 
 
@@ -851,12 +837,6 @@ static inline int kaapi_thread_pushtask_withocr(kaapi_thread_t* thread, const vo
    (kaapi_task_binding_t*)kaapi_thread_pushdata( thread, sizeof(kaapi_task_binding_t) );
   attribut->type = KAAPI_BINDING_OCR_ADDR;
   attribut->u.ocr_addr.addr = (uintptr_t)ptr;
-  /* see kaapi_impl.h KAAPI_MASK_BODY_OCR */
-#if (__SIZEOF_POINTER__ == 4)
-  KAAPI_ATOMIC_WRITE( &thread->sp->u.state, KAAPI_ATOMIC_READ(&thread->sp->u.state) | 0x9);
-#else
-  thread->sp->u.body = (kaapi_task_body_t)((uintptr_t)thread->sp->u.body | (0x9UL << 58UL));
-#endif
   kaapi_thread_pushtask(thread);
   return 0;
 }
@@ -865,37 +845,12 @@ static inline int kaapi_thread_pushtask_withocr(kaapi_thread_t* thread, const vo
 /** \ingroup TASK
     Task initialization routines
 */
-static inline void kaapi_task_initdfg_with_state
-  (kaapi_task_t* task, kaapi_task_body_t body, uintptr_t state, void* arg)
-{
-  task->sp = arg;
-#if (__SIZEOF_POINTER__ == 4)
-  KAAPI_ATOMIC_WRITE(&task->u.state, state);
-  task->u.body = body;
-#else
-  task->u.body = (kaapi_task_body_t)((uintptr_t)body | state);
-#endif
-  task->binding.type = KAAPI_BINDING_ANY;
-}
-
-static inline void kaapi_task_init_with_state
-  (kaapi_task_t* task, kaapi_task_body_t body, uintptr_t state, void* arg)
-{
-  kaapi_task_initdfg_with_state(task, body, state, arg);
-}
-
 static inline void kaapi_task_initdfg
   (kaapi_task_t* task, kaapi_task_body_t body, void* arg)
 {
-  task->sp = arg;
-
-#if (__SIZEOF_POINTER__ == 4)
-  KAAPI_ATOMIC_WRITE(&task->u.state, 0);
-  task->u.body = body;
-#else
-  task->u.body = body;
-#endif
-  task->binding.type = KAAPI_BINDING_ANY;
+  task->body = body;
+  task->sp   = arg;
+//  task->binding.type = KAAPI_BINDING_ANY;
 }
 
 static inline int kaapi_task_init

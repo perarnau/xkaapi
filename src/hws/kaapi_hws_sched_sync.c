@@ -112,7 +112,7 @@ void kaapi_hws_sched_sync(void)
     kaapi_setcontext(kproc, thread);
 
     if (kproc->thread->stack.sfp->tasklist == 0)
-      err = kaapi_thread_execframe(kproc->thread);
+      err = kaapi_stack_execframe(&kproc->thread->stack);
     else
       err = kaapi_thread_execframe_tasklist( kproc->thread );
 
@@ -152,7 +152,7 @@ void kaapi_hws_sched_sync_once(void)
   kaapi_setcontext(kproc, thread);
 
   if (kproc->thread->stack.sfp->tasklist == 0)
-    err = kaapi_thread_execframe(kproc->thread);
+    err = kaapi_stack_execframe(&kproc->thread->stack);
   else
     err = kaapi_thread_execframe_tasklist( kproc->thread );
 

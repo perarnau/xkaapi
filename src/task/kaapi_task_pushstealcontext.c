@@ -185,7 +185,7 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
      this is needed for the assumptions made by the
      kaapi_task_lock_steal rouines, see for comments.
    */
-  kaapi_task_init_with_state(task, kaapi_adapt_body, KAAPI_MASK_BODY_EXEC, sc);
+  kaapi_task_init(task, kaapi_adapt_body, sc);
 
   /* barrier done by kaapi_thread_pushtask */
   kaapi_thread_pushtask(thread);

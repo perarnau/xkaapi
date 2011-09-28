@@ -47,7 +47,8 @@
 void kaapi_task_splitter_dfg_single
 (
   kaapi_thread_context_t*       thread, 
-  kaapi_task_t*                 task, 
+  kaapi_task_body_t             body, 
+  kaapi_task_t*                 task,
   const kaapi_format_t*         task_fmt,
   unsigned int                  war_param, 
   unsigned int                  cw_param, 
@@ -71,6 +72,7 @@ void kaapi_task_splitter_dfg_single
   argsteal = (kaapi_tasksteal_arg_t*)stealreply->udata;
   argsteal->origin_thread         = thread;
   argsteal->origin_task           = task;
+  argsteal->origin_body           = body;
   argsteal->origin_fmt            = task_fmt;
   argsteal->war_param             = war_param;  
   argsteal->cw_param              = cw_param;  
@@ -84,7 +86,8 @@ void kaapi_task_splitter_dfg_single
 */
 int kaapi_task_splitter_dfg( 
   kaapi_thread_context_t*       thread, 
-  kaapi_task_t*                 task, 
+  kaapi_task_body_t             body,
+  kaapi_task_t*                 task,
   const kaapi_format_t*         task_fmt,
   unsigned int                  war_param, 
   unsigned int                  cw_param, 
@@ -97,8 +100,7 @@ int kaapi_task_splitter_dfg(
 #if defined(KAAPI_SCHED_LOCK_CAS)
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&thread->proc->lock) != 0 );
 #endif
-  kaapi_assert_debug( task !=0 );
-  kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate( task) ) );
+  kaapi_assert_debug( body !=0 );
 
   /* find the first request in the list */
   request = kaapi_listrequest_iterator_get( lrequests, lrrange );
@@ -106,7 +108,7 @@ int kaapi_task_splitter_dfg(
 
   kaapi_task_splitter_dfg_single(
     thread, 
-    task, 
+    body, task, 
     task_fmt, 
     war_param, 
     cw_param,

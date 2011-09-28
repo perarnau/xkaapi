@@ -119,7 +119,7 @@ redo:
   else
 #endif /* KAAPI_USE_CUDA */
   if (thread->stack.sfp->tasklist == 0) 
-    err = kaapi_thread_execframe(thread);
+    err = kaapi_stack_execframe(&thread->stack);
   else
     err = kaapi_thread_execframe_tasklist(thread);
 

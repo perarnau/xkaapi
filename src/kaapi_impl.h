@@ -70,14 +70,6 @@ extern "C" {
 
 #include "kaapi_defs.h"
 
-/* Maximal number of recursive calls used to store the stack of frames.
-   The value indicates the maximal number of frames that can be pushed
-   into the stackframe for each thread.
-   
-   If an assertion is thrown at runtime, and if this macro appears then
-   it is necessary to increase the maximal number of frames in a stack.
-*/
-#define KAAPI_MAX_RECCALL 256
 
 /* Define if ready list is used
    This flag activates :
@@ -836,7 +828,7 @@ static inline int kaapi_stack_isready( kaapi_stack_t* stack )
     return 0;
   }
 
-  return kaapi_task_state_isready( kaapi_task_getstate(fp->pc) );
+  return kaapi_task_isready(fp->pc);
 }
 
 /** DEPRECATED

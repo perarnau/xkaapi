@@ -78,11 +78,11 @@ static const char* tab_bit[] = {
 typedef char state_type_t[4];
 static void kaapi_getstatename( kaapi_task_t* task, state_type_t char_state )
 {
-  uintptr_t state = kaapi_task_getstate(task);
-  char_state[0] = (kaapi_task_state_isterm(state) ? 'T' : '_');
-  char_state[1] = (kaapi_task_state_isaftersteal(state) ? 'A' : '_');
-  char_state[2] = (kaapi_task_state_isexec(state) ? 'E' : '_');
-  char_state[3] = (kaapi_task_state_issteal(state) ? 'S' : '_');
+  kaapi_task_body_t body = kaapi_task_getbody(task);
+  char_state[0] = (body == kaapi_term_body ? 'T' : '_');
+  char_state[1] = (body == kaapi_aftersteal_body ? 'A' : '_');
+  char_state[2] = (body == kaapi_exec_body ? 'E' : '_');
+  char_state[3] = (body == kaapi_steal_body ? 'S' : '_');
 }
 
 static char kaapi_getmodename( kaapi_access_mode_t m )
@@ -121,12 +121,13 @@ int kaapi_task_print(
   count_params = kaapi_format_get_count_params(fmt, sp );
   kaapi_getstatename(task, state);
 
-  int st = kaapi_task_state2int( kaapi_task_getstate(task) );
-  fprintf( file, "@%p |%c%c%c%c|, name:%-20.20s, bit:%-4.4s, sp:%p, #p:%u\n", 
+//  int st = kaapi_task_state2int( kaapi_task_getstate(task) );
+//  fprintf( file, "@%p |%c%c%c%c|, name:%-20.20s, bit:%-4.4s, sp:%p, #p:%u\n", 
+  fprintf( file, "@%p |%c%c%c%c|, name:%-20.20s, sp:%p, #p:%u\n", 
         (void*)task, 
         state[3], state[2], state[1], state[0],
         fmt->name, 
-        ( ((st>=0) && (st<16)) ? tab_bit[st] : "<OB>" ),
+  //      ( ((st>=0) && (st<16)) ? tab_bit[st] : "<OB>" ),
         sp,
 	(unsigned int)count_params );
         
@@ -199,10 +200,10 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
 
   count = 0;
 
-  frame    = thread->stack.stackframe;
+  frame    = kaapi_stack_topframe(&thread->stack);
   if (frame ==0) return 0;
   iframe   = 0;
-  task_bot = kaapi_thread_bottomtask(&thread->stack);
+  task_bot = kaapi_stack_bottomtask(&thread->stack);
 
   do 
   {

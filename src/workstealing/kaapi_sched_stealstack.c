@@ -117,6 +117,7 @@ static inline void _kaapi_bitmapkid2cpuset( kaapi_cpuset_t* cpusetrequest, kaapi
     kaapi_cpuset_set(cpusetrequest, kaapi_all_kprocessors[kid]->cpuid);
 }
 
+
 /* find and clear the first request whose emiter matches the numaid
  */
 static kaapi_request_t* _kaapi_matching_request
@@ -197,9 +198,10 @@ static int kaapi_sched_stealframe
         
         if ( (splitter !=0) && (argsplitter !=0) )
         {
-          const uintptr_t state = kaapi_task_orstate( task_top, KAAPI_MASK_BODY_STEAL );
+//          const uintptr_t state = kaapi_task_orstate( task_top, KAAPI_MASK_BODY_STEAL );
+          int state = kaapi_task_casbody(task_top, kaapi_adapt_body, kaapi_steal_body);
           /* do not steal if terminated */
-          if (likely( !kaapi_task_state_isterm(state) ) )
+          if (likely( state ) )
           {
             /* steal sucess */
             /* possible race, reread the splitter */
@@ -209,7 +211,7 @@ static int kaapi_sched_stealframe
               kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, lrequests, lrrange );
             
             /* here suspend bit was set: reset it */
-            kaapi_task_andstate( task_top, ~KAAPI_MASK_BODY_STEAL );
+            kaapi_task_setbody(task_top, kaapi_adapt_body);
           }
         }
       } /* end if init */
@@ -230,9 +232,10 @@ static int kaapi_sched_stealframe
         size_t wc = kaapi_task_computeready( task_top, kaapi_task_getargs(task_top), task_fmt, &war_param, &cw_param, map );
         if ((wc ==0) && kaapi_task_isstealable(task_top))
         {
-          uintptr_t state = kaapi_task_orstate( task_top, KAAPI_MASK_BODY_STEAL);
-          if (likely( kaapi_task_state_isstealable(state) ) ) // means SUSPEND and EXEC was not set before
+          kaapi_task_body_t body = kaapi_task_marksteal( task_top );
+          if (likely( body ) ) // means SUSPEND and EXEC was not set before
           {
+#if 0
             /* get binding for the task or no binding */
             kaapi_task_binding_t binding;
             task_fmt->get_task_binding(task_fmt, task_top, &binding);
@@ -245,13 +248,21 @@ static int kaapi_sched_stealframe
               kaapi_request_t* const req = _kaapi_matching_request(lrequests, lrrange, &mapping);
               
               if (req != NULL)
-                kaapi_task_splitter_dfg_single(thread, task_top, task_fmt, war_param, cw_param, req);
+                kaapi_task_splitter_dfg_single(
+                      thread, 
+                      body, task_top, 
+                      task_fmt, war_param, cw_param, req
+                );
               else 
               {
                 /* get queue where to push task */
                 kaapi_affinity_queue_t* queue = kaapi_sched_affinity_lookup_queue(&mapping);
                 if (queue == 0)
-                  kaapi_task_splitter_dfg_single(thread, task_top, task_fmt, war_param, cw_param, req);
+                  kaapi_task_splitter_dfg_single(
+                      thread, 
+                      body, task_top, 
+                      task_fmt, war_param, cw_param, req
+                  );
                 else {
                   /* push the task in the bound queue */
                   kaapi_taskdescr_t* td = kaapi_sched_affinity_allocate_td_dfg( queue, thread, task_top, task_fmt, war_param);
@@ -260,12 +271,15 @@ static int kaapi_sched_stealframe
               }
             }
             else
+#endif
             {
               /* default, reply to the current request */
-              kaapi_task_splitter_dfg
-                  (thread, task_top, task_fmt, war_param, cw_param, lrequests, lrrange );
+              kaapi_task_splitter_dfg(
+                      thread, 
+                      body, task_top,
+                      task_fmt, war_param, cw_param, lrequests, lrrange 
+              );
             }
-            
           }
         }
       } /* if fmt != 0 */

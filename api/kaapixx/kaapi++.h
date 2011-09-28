@@ -2653,7 +2653,7 @@ namespace ka {
       kaapi_staticschedtask_arg_t* arg 
         = (kaapi_staticschedtask_arg_t*)kaapi_thread_pushdata( thread, sizeof(kaapi_staticschedtask_arg_t) );
       arg->sub_sp   = task->sp;
-      arg->sub_body = (kaapi_task_vararg_body_t)kaapi_task_getuserbody(task);
+      arg->sub_body = (kaapi_task_vararg_body_t)task->body;
       arg->schedinfo.nkproc[0]                   = (uint32_t)_nress;
       arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU] = (uint32_t)_ngpu;
       arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU] = (uint32_t)_ngpu;

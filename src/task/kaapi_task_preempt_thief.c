@@ -108,7 +108,8 @@ int kaapi_preempt_thief_helper
   uint64_t t1;
 #endif
   
-  uintptr_t state;
+  kaapi_task_body_t body;
+  int retval;
   
   kaapi_assert_debug(ktr != 0);
   
@@ -123,18 +124,27 @@ int kaapi_preempt_thief_helper
   kaapi_writemem_barrier();
   
   /* preempt the task if not already terminated */
-  state = kaapi_task_orstate(&ktr->state, KAAPI_MASK_BODY_PREEMPT);
-  if (!kaapi_task_state_isterm(state))
+  body = kaapi_task_getbody(&ktr->state);
+  if (body != kaapi_term_body)
   {
-    *ktr->preempt = 1;
-    kaapi_mem_barrier();
-    
-    /* wait until task is terminated */
-    while (1)
+    retval = kaapi_task_casbody(&ktr->state, body, kaapi_preempt_body);
+    if (!retval) 
     {
-      if (kaapi_task_teststate(&ktr->state, KAAPI_MASK_BODY_TERM))
-        break ;
-      kaapi_slowdown_cpu();
+      kaapi_writemem_barrier();
+      body = kaapi_task_getbody(&ktr->state);
+      kaapi_assert( body == kaapi_term_body );
+    }
+    else {
+      *ktr->preempt = 1;
+      kaapi_mem_barrier();
+      
+      /* wait until task is terminated */
+      while (1)
+      {
+        if (kaapi_task_getbody(&ktr->state) == kaapi_term_body)
+          break;
+        kaapi_slowdown_cpu();
+      }
     }
   }
   
@@ -162,7 +172,8 @@ int kaapi_preemptasync_thief
  void*                               arg_to_thief 
  )
 {
-  uintptr_t state;
+  kaapi_task_body_t body;
+  int retval;
 
   if (ktr ==0) return 0;
   
@@ -171,8 +182,10 @@ int kaapi_preemptasync_thief
   kaapi_writemem_barrier();
 
   /* preempt the task if not already terminated */
-  state = kaapi_task_orstate(&ktr->state, KAAPI_MASK_BODY_PREEMPT);
-  if (!kaapi_task_state_isterm(state))
+  body = kaapi_task_getbody(&ktr->state);
+  if (body == kaapi_term_body) return 0;
+  retval = kaapi_task_casbody(&ktr->state, body, kaapi_preempt_body);
+  if (retval)
   {
     *ktr->preempt = 1;
     return 0;
@@ -189,17 +202,17 @@ int kaapi_preemptasync_waitthief
  struct kaapi_taskadaptive_result_t* ktr 
  )
 {
-  uintptr_t state;
+  kaapi_task_body_t body;
 
   if (ktr ==0) return 0;
   
-  state = kaapi_task_getstate(&ktr->state);
-  kaapi_assert_debug( kaapi_task_state_ispreempted(state) );
+  body = kaapi_task_getbody(&ktr->state);
+  kaapi_assert_debug( (body == kaapi_term_body) || (body == kaapi_preempt_body) );
   
-  if (!kaapi_task_state_isterm(state))
+  if (body != kaapi_term_body)
   {
     /* wait until task is terminated */
-    while (!kaapi_task_teststate(&ktr->state, KAAPI_MASK_BODY_TERM))
+    while (kaapi_task_getbody(&ktr->state) != kaapi_term_body)
     {
       kaapi_slowdown_cpu();
     }

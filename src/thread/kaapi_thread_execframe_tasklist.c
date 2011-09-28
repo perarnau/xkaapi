@@ -113,7 +113,7 @@ execute_first:
         /* get the correct body for the proc type */
         if (td->fmt ==0)
         { /* currently some internal tasks do not have format */
-          body = kaapi_task_getuserbody( pc );
+          body = kaapi_task_getbody( pc );
         }
         else 
         {
@@ -145,7 +145,7 @@ execute_first:
         if (unlikely(fp->sp > stack->sfp->sp))
         {
 redo_frameexecution:
-          err = kaapi_thread_execframe( thread );
+          err = kaapi_stack_execframe( &thread->stack );
           if (err == EWOULDBLOCK)
           {
             tasklist->context.chkpt     = 1;

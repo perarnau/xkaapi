@@ -1,5 +1,4 @@
 /*
-** kaapi_thread_execframe.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:14 2009
@@ -45,7 +44,7 @@
 #include "kaapi_impl.h"
 
 
-/** kaapi_thread_execframe
+/** 
     Here the stack of task is organised like this, task1 is pointed by pc and
     it will be the first running task.
 
@@ -92,14 +91,12 @@ thread->pc=stack->sp | xxxxx  |< thread->sfp->pc = thread->sfp->sp
 
 /*
 */
-int kaapi_thread_execframe( kaapi_thread_context_t* thread )
+int kaapi_stack_execframe( kaapi_stack_t* stack )
 {
-  kaapi_stack_t* const stack = &thread->stack;
   kaapi_task_t*              sp; /* cache */
   kaapi_task_t*              pc; /* cache */
   kaapi_frame_t*             fp; /* cache for stack->sfp */
 
-  uintptr_t	                 state;
   kaapi_task_body_t          body;
   kaapi_frame_t*             eframe = stack->esfp;
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -122,7 +119,7 @@ push_frame: /* here assume fp current frame where to execute task */
   fp[1].sp_data   = fp->sp_data;
   
   /* force previous write before next write */
-  kaapi_writemem_barrier();
+  kaapi_mem_barrier();
 
   /* push and update the current frame */
   stack->sfp = ++fp;
@@ -133,15 +130,8 @@ push_frame: /* here assume fp current frame where to execute task */
   {
     kaapi_assert_debug( pc > sp );
 
-    state = kaapi_task_orstate( pc, KAAPI_MASK_BODY_EXEC );
-#if (__SIZEOF_POINTER__ == 4)
-    body = pc->u.body;
-#else
-    body = kaapi_task_state2body( state );
-#endif /* __SIZEOF_POINTER__ */
-
-
-    if (likely( kaapi_task_state_isnormal(state) ))
+    body = kaapi_task_markexec( pc );
+    if (likely( body ))
     {
       /* here... */
       body( pc->sp, (kaapi_thread_t*)fp );
@@ -149,39 +139,14 @@ push_frame: /* here assume fp current frame where to execute task */
     else
     { 
       /* It is a special task: it means that before atomic or update, the body
-         has already one of the special flag set (either exec, either suspend).
+         has already one of the special body.
          Test the following case with THIS (!) order :
-         - kaapi_task_body_isaftersteal(body) -> call aftersteal body
-         - kaapi_task_body_issteal(body) -> error
-         - else it means that the task has been executed by a thief, but it 
-         does not require aftersteal body to merge results.
+         - kaapi_steal_body: return with EWOULDBLOCK value
       */
-      if ( kaapi_task_state_isaftersteal( state ) )
-      {
-        /* means that task has been steal & not yet terminated due
-           to some merge to do
-        */
-        kaapi_assert_debug( kaapi_task_state_issteal( state ) );
-        kaapi_aftersteal_body( pc->sp, (kaapi_thread_t*)fp );      
-      }
-      else if ( kaapi_task_state_isterm( state ) )
-      {
-        /* means that task has been steal or set to term if no debug */
-        kaapi_assert_debug( kaapi_task_state_issteal( state ) );
-      }
-      else if ( kaapi_task_state_issteal( state ) ) /* but not terminate ! so swap */
-      {
+      if ( body == kaapi_steal_body )
         goto error_swap_body;
-      }
-      else {
-        kaapi_assert_debug(0);
-      }
+      kaapi_assert_debug(0);
     }
-#if defined(KAAPI_DEBUG)
-    const uintptr_t debug_state = kaapi_task_orstate(pc, KAAPI_MASK_BODY_TERM );
-    kaapi_assert_debug( !kaapi_task_state_isterm(debug_state) || (kaapi_task_state_isterm(debug_state) && kaapi_task_state_issteal(debug_state))  );
-    kaapi_assert_debug( kaapi_task_state_isexec(debug_state) );
-#endif    
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
@@ -189,9 +154,7 @@ push_frame: /* here assume fp current frame where to execute task */
 
     /* post execution: new tasks created ??? */
     if (unlikely(sp > fp->sp))
-    {
       goto push_frame;
-    }
 #if defined(KAAPI_DEBUG)
     else if (unlikely(sp < fp->sp))
     {
@@ -235,7 +198,7 @@ push_frame: /* here assume fp current frame where to execute task */
   kaapi_assert_debug( stack->sfp == eframe );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-  KAAPI_PERF_REG(thread->stack.proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+  KAAPI_PERF_REG(stack->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   cnt_tasks = 0;
 #endif
   return 0;
@@ -249,7 +212,7 @@ error_swap_body:
   stack->sfp = fp-1;
   
 #if defined(KAAPI_USE_PERFCOUNTER)
-  KAAPI_PERF_REG(thread->stack.proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+  KAAPI_PERF_REG(stack->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   cnt_tasks = 0;
 #endif
   return EWOULDBLOCK;

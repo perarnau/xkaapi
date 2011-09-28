@@ -93,7 +93,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   } 
   else {
     task_condition = thread_condition->stack.sfp->pc;
-    if (kaapi_task_state_isready( kaapi_task_getstate(task_condition) )) 
+    if (kaapi_task_isready( task_condition )) 
     {
 #if defined(KAAPI_USE_PERFCOUNTER)
       kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
@@ -226,7 +226,7 @@ redo_execution:
     else
 #endif /* KAAPI_USE_CUDA */
     if (kproc->thread->stack.sfp->tasklist ==0)
-      err = kaapi_thread_execframe(kproc->thread);
+      err = kaapi_stack_execframe(&kproc->thread->stack);
     else
       err = kaapi_thread_execframe_tasklist(kproc->thread);
 
