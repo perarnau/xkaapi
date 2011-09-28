@@ -97,24 +97,6 @@ extern "C" {
 */
 //#define KAAPI_ADDRSPACE_ISOADDRESS 1
 
-/* Flags to define method to manage concurrency between victim and thieves
-   - CAS: based on atomic modify update
-   - THE: based on Dijkstra like protocol to ensure mutual exclusion
-   - SEQ: only used to test performances penalty with comparizon of ideal seq. impl.
-   Code using SEQ execution method cannot runs with several threads.
-*/
-#define KAAPI_CAS_METHOD 0
-#define KAAPI_THE_METHOD 1
-#define KAAPI_SEQ_METHOD 2
-
-/* Selection of the method to manage concurrency between victim/thief 
-   to steal task:
-*/
-#ifndef KAAPI_USE_EXECTASK_METHOD
-#define KAAPI_USE_EXECTASK_METHOD KAAPI_CAS_METHOD
-#endif
-
-
 
 /** This is the new version on top of X-Kaapi
 */
