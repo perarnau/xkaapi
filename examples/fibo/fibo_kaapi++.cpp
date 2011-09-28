@@ -100,7 +100,7 @@ struct TaskBodyCPU<TaskDelete>
 {
   void operator() ( ka::pointer_rw<long> ptr ) 
   {
-printf("Delete @:%p\n", (void*)ptr); fflush(stdout);
+//printf("Delete @:%p\n", (void*)ptr); fflush(stdout);
     delete ptr;
   }
 };
@@ -130,9 +130,7 @@ struct TaskBodyCPU<TaskFibo>
       long* otr2 = new long;
       ka::pointer<long> ptr1 = otr1;
       ka::pointer<long> ptr2 = otr2;
-printf("New @:%p\n", (long*)otr1); 
-printf("New @:%p\n", (long*)otr2); 
-fflush(stdout);
+//printf("New @:%p\n", (long*)otr1); printf("New @:%p\n", (long*)otr2); fflush(stdout);
 
       /* the Spawn keyword is used to spawn new task
        * new tasks are executed in parallel as long as dependencies are respected
