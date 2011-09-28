@@ -269,4 +269,4 @@ extern void kaapi_init_basicformat(void);
 }
 #endif
 
-#endif /* _KAAPI_IMPL_H */
+#endif

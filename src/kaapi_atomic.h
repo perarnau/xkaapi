@@ -508,4 +508,4 @@ static inline int kaapi_atomic_islocked( kaapi_atomic_t* lock )
 }
 #endif
 
-#endif /* _KAAPI_H */
+#endif

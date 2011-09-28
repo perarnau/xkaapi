@@ -109,4 +109,4 @@ typedef struct kaapi_event_buffer_t {
 }
 #endif
 
-#endif /* _KAAPI_EVENT_H_ */
+#endif

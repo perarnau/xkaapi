@@ -1,5 +1,4 @@
 /*
-** kaapi_impl.h
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:09 2009
@@ -1589,4 +1588,4 @@ extern void _kaapi_signal_dump_counters(int);
 }
 #endif
 
-#endif /* _KAAPI_IMPL_H */
+#endif

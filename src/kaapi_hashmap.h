@@ -305,4 +305,4 @@ extern kaapi_hashentries_t* kaapi_big_hashmap_insert( kaapi_big_hashmap_t* khm, 
 }
 #endif
 
-#endif /* _KAAPI_IMPL_H */
+#endif
