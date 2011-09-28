@@ -92,6 +92,7 @@ typedef struct kaapi_ws_queue
 
 
 kaapi_ws_queue_t* kaapi_ws_queue_create_lifo(void);
+kaapi_ws_queue_t* kaapi_ws_queue_create_kproc(struct kaapi_processor_t*);
 
 static void kaapi_ws_queue_unimpl_destroy(void* fu)
 {
@@ -102,8 +103,10 @@ static void kaapi_ws_queue_unimpl_destroy(void* fu)
 static inline kaapi_ws_queue_t* kaapi_ws_queue_create(size_t size)
 {
   const size_t total_size = offsetof(kaapi_ws_queue_t, data) + size;
-  kaapi_ws_queue_t* const q = malloc(total_size);
-  kaapi_assert(q);
+
+  kaapi_ws_queue_t* q;
+  const int err = posix_memalign((void**)&q, sizeof(void*), total_size);
+  kaapi_assert(err == 0);
 
   q->push = NULL;
   q->steal = NULL;

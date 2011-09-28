@@ -273,7 +273,7 @@ int kaapi_hws_init_global(void)
   for (depth = 0; depth < kaapi_default_param.memory.depth; ++depth)
   {
     unsigned int node_count;
-    unsigned int lnode; /* the LOGICAL node index */
+    unsigned int lnode; /* the hwloc::LOGICAL node index */
 
     one_level = &kaapi_default_param.memory.levels[depth];
 
@@ -299,11 +299,11 @@ int kaapi_hws_init_global(void)
     {
       kaapi_affinityset_t* const affin_set = &one_level->affinity[lnode];
 
-      /* use the PHYSICAL node as the hws index */
+      /* use the hwloc::PHYSICAL node as the hws index */
       const unsigned int pnode = affin_set->os_index;
 
       kaapi_ws_block_t* const block = &hws_level->blocks[pnode];
-      kaapi_procinfo_t* pos = kaapi_default_param.kproc_list->head;
+      kaapi_procinfo_t* pos;
       unsigned int i = 0;
 
       kaapi_assert(pnode < node_count);
@@ -321,11 +321,20 @@ int kaapi_hws_init_global(void)
 
       kaapi_bitmap_value_clear(&block->kid_mask);
 
-      block->queue = kaapi_ws_queue_create_lifo();
+      if (one_level->levelid == KAAPI_HWS_LEVELID_FLAT)
+      {
+	/* lnode corresponds to the kid */
+	kaapi_assert(kaapi_all_kprocessors[lnode]);
+	block->queue = kaapi_ws_queue_create_kproc(kaapi_all_kprocessors[lnode]);
+      }
+      else
+      {
+	block->queue = kaapi_ws_queue_create_lifo();
+      }
       kaapi_assert(block->queue);
 
       /* for each cpu in this node */
-      for (; pos != NULL; pos = pos->next)
+      for (pos = kaapi_default_param.kproc_list->head; pos; pos = pos->next)
       {
 	if (!kaapi_cpuset_has(&affin_set->who, pos->bound_cpu))
 	  continue ;
