@@ -199,10 +199,10 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
 
   count = 0;
 
-  frame    = thread->stackframe;
+  frame    = thread->stack.stackframe;
   if (frame ==0) return 0;
   iframe   = 0;
-  task_bot = kaapi_thread_bottomtask(thread);
+  task_bot = kaapi_thread_bottomtask(&thread->stack);
 
   do 
   {
@@ -292,7 +292,7 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
 
     ++frame;
     ++iframe;
-  } while (frame <= thread->sfp);
+  } while (frame <= thread->stack.sfp);
 
   fflush(file);
   return 0;

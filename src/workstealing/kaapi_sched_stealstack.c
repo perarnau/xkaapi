@@ -315,7 +315,7 @@ static void kaapi_sched_steal_tasklist(
   //#warning "Only for debug here"
   while (size_steal >0)
   {
-    kaapi_assert_debug( kaapi_sched_islocked( &thread->proc->lock ) );
+    kaapi_assert_debug( kaapi_sched_islocked( &thread->stack.proc->lock ) );
     err = kaapi_thread_tasklistready_steal( &tasklist->rtl, &steal_td_beg, &steal_td_end, size_steal);
     if (err ==0)
     {
@@ -363,14 +363,14 @@ int kaapi_sched_stealstack
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &access_to_gd, &stackbloc );
   
-  kaapi_sched_lock(&thread->lock);
+  kaapi_sched_lock(&thread->stack.lock);
   
   /* try to steal in each frame */
-  for (  top_frame =thread->stackframe; 
-       (top_frame <= thread->sfp) && !kaapi_listrequest_iterator_empty(lrrange); 
+  for (  top_frame =thread->stack.stackframe; 
+       (top_frame <= thread->stack.sfp) && !kaapi_listrequest_iterator_empty(lrrange); 
        ++top_frame)
   {
-    thread->thieffp = top_frame;
+    thread->stack.thieffp = top_frame;
     /* void frame ? */
     if (top_frame->tasklist == 0)
     {
@@ -381,8 +381,8 @@ int kaapi_sched_stealstack
     /* */
       kaapi_sched_steal_tasklist( thread, top_frame, lrequests, lrrange );
   }
-  thread->thieffp = 0;
-  kaapi_sched_unlock(&thread->lock);
+  thread->stack.thieffp = 0;
+  kaapi_sched_unlock(&thread->stack.lock);
 
   kaapi_hashmap_destroy( &access_to_gd );
   

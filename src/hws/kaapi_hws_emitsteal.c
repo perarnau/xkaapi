@@ -319,7 +319,7 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
   /* post the stealing request */
   kproc->issteal = 1;
   reply = post_request(kproc);
-  kaapi_thread_reset(kproc->thread);
+  kaapi_stack_reset(&kproc->thread->stack);
 
   /* foreach parent level, pop. if pop failed, steal in level children. */
   for (levelid = KAAPI_HWS_LEVELID_FIRST; levelid < hws_level_count; ++levelid)

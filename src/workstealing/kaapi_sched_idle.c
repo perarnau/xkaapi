@@ -142,7 +142,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     }
     else
 #endif /* KAAPI_USE_CUDA */
-      if (kproc->thread->sfp->tasklist ==0)
+      if (kproc->thread->stack.sfp->tasklist ==0)
         err = kaapi_thread_execframe(kproc->thread);
       else
         err = kaapi_thread_execframe_tasklist( kproc->thread );

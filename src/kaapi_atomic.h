@@ -504,6 +504,32 @@ static inline int kaapi_atomic_islocked( kaapi_atomic_t* lock )
 }
 
 
+
+#if (__SIZEOF_POINTER__ == 4)
+#  define KAAPI_ATOMIC_CASPTR(a, o, n) \
+    KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)a, (uint32_t)o, (uint32_t)n )
+#  define KAAPI_ATOMIC_ORPTR_ORIG(a, v) \
+    KAAPI_ATOMIC_OR_ORIG( (kaapi_atomic_t*)a, (uint32_t)v)
+#  define KAAPI_ATOMIC_ANDPTR_ORIG(a, v) \
+    KAAPI_ATOMIC_AND_ORIG( (kaapi_atomic_t*)a, (uint32_t)v)
+#  define KAAPI_ATOMIC_WRITEPTR_BARRIER(a, v) \
+    KAAPI_ATOMIC_WRITE_BARRIER( (kaapi_atomic_t*)a, (uint32_t)v)
+
+#elif (__SIZEOF_POINTER__ == 8)
+#  define KAAPI_ATOMIC_CASPTR(a, o, n) \
+    KAAPI_ATOMIC_CAS64( (kaapi_atomic64_t*)(a), (uint64_t)o, (uint64_t)n )
+#  define KAAPI_ATOMIC_ORPTR_ORIG(a, v) \
+    KAAPI_ATOMIC_OR64_ORIG( (kaapi_atomic64_t*)(a), (uint64_t)v)
+#  define KAAPI_ATOMIC_ANDPTR_ORIG(a, v) \
+    KAAPI_ATOMIC_AND64_ORIG( (kaapi_atomic64_t*)(a), (uint64_t)v)
+#  define KAAPI_ATOMIC_WRITEPTR_BARRIER(a, v) \
+    KAAPI_ATOMIC_WRITE_BARRIER( (kaapi_atomic64_t*)a, (uint64_t)v)
+
+#else
+#  error "No implementation for pointer to function with size greather than 8 bytes. Please contact the authors."
+#endif
+
+
 #ifdef __cplusplus
 }
 #endif

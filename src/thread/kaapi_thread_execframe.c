@@ -94,38 +94,39 @@ thread->pc=stack->sp | xxxxx  |< thread->sfp->pc = thread->sfp->sp
 */
 int kaapi_thread_execframe( kaapi_thread_context_t* thread )
 {
+  kaapi_stack_t* const stack = &thread->stack;
   kaapi_task_t*              sp; /* cache */
   kaapi_task_t*              pc; /* cache */
-  kaapi_frame_t*             fp; /* cache for thread->sfp */
+  kaapi_frame_t*             fp; /* cache for stack->sfp */
 
   uintptr_t	                 state;
   kaapi_task_body_t          body;
-  kaapi_frame_t*             eframe = thread->esfp;
+  kaapi_frame_t*             eframe = stack->esfp;
 #if defined(KAAPI_USE_PERFCOUNTER)
   uint32_t                   cnt_tasks = 0;
 #endif
 
-  kaapi_assert_debug(thread->sfp >= thread->stackframe);
-  kaapi_assert_debug(thread->sfp < thread->stackframe+KAAPI_MAX_RECCALL);
+  kaapi_assert_debug(stack->sfp >= stack->stackframe);
+  kaapi_assert_debug(stack->sfp < stack->stackframe+KAAPI_MAX_RECCALL);
 
-  fp = (kaapi_frame_t*)thread->sfp;
+  fp = (kaapi_frame_t*)stack->sfp;
 
-push_frame:
+push_frame: /* here assume fp current frame where to execute task */
 
   sp = fp->sp;
   pc = fp->pc;
 
   /* init new frame for the next task to execute */
-  thread->sfp[1].pc        = sp;
-  thread->sfp[1].sp        = sp;
-  thread->sfp[1].sp_data   = fp->sp_data;
+  fp[1].pc        = sp;
+  fp[1].sp        = sp;
+  fp[1].sp_data   = fp->sp_data;
   
   /* force previous write before next write */
   kaapi_writemem_barrier();
 
   /* push and update the current frame */
-  thread->sfp = ++fp;
-  kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
+  stack->sfp = ++fp;
+  kaapi_assert_debug( stack->sfp - stack->stackframe <KAAPI_MAX_RECCALL);
   
   /* stack of task growth down ! */
   while (pc != sp)
@@ -142,9 +143,6 @@ push_frame:
 
     if (likely( kaapi_task_state_isnormal(state) ))
     {
-      /* task execution */
-      kaapi_assert_debug(pc == thread->sfp[-1].pc);
-
       /* here... */
       body( pc->sp, (kaapi_thread_t*)fp );
     }
@@ -211,8 +209,7 @@ push_frame:
 
   kaapi_assert_debug( fp >= eframe);
 
-//  kaapi_sched_lock(&thread->proc->lock);
-//  kaapi_sched_lock(&thread->lock);
+  kaapi_sched_lock(&stack->proc->lock);
   if (fp > eframe)
   {
     /* here it's a pop of frame: we lock the thread */
@@ -223,34 +220,22 @@ push_frame:
       /* finish to execute child tasks, pop current task of the frame */
       if (--fp->pc > fp->sp)
       {
-        thread->sfp = fp;
-        kaapi_writemem_barrier();        
-        if (thread->thieffp > fp)
-        {
-          kaapi_mem_barrier();
-          while (thread->thieffp > fp)
-            kaapi_slowdown_cpu();
-        }
+        stack->sfp = fp;
+        kaapi_sched_unlock(&stack->proc->lock);
         goto push_frame; /* remains work do do */
       }
     } 
     fp->sp = fp->pc;
   }
-  thread->sfp = fp;
-  kaapi_writemem_barrier();        
-  if (thread->thieffp > fp)
-  {
-    kaapi_mem_barrier();
-    while (thread->thieffp > fp)
-      kaapi_slowdown_cpu();
-  }
-  
+  stack->sfp = fp;
+  kaapi_sched_unlock(&stack->proc->lock);
+
   /* end of the pop: we have finish to execute all the tasks */
   kaapi_assert_debug( fp->pc == fp->sp );
-  kaapi_assert_debug( thread->sfp == eframe );
+  kaapi_assert_debug( stack->sfp == eframe );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-  KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+  KAAPI_PERF_REG(thread->stack.proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   cnt_tasks = 0;
 #endif
   return 0;
@@ -259,12 +244,12 @@ push_frame:
 error_swap_body:
   /* write back to memory some data */
   fp[-1].pc = pc;    
-  kaapi_assert_debug(thread->sfp- fp == 1);
+  kaapi_assert_debug(stack->sfp- fp == 1);
   /* implicityly pop the dummy frame */
-  thread->sfp = fp-1;
+  stack->sfp = fp-1;
   
 #if defined(KAAPI_USE_PERFCOUNTER)
-  KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+  KAAPI_PERF_REG(thread->stack.proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   cnt_tasks = 0;
 #endif
   return EWOULDBLOCK;

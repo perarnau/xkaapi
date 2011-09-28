@@ -38,6 +38,7 @@ libkaapi_la_SOURCES=\
   misc/kaapi_default_netapi.c\
   misc/kaapi_event_flush.c\
   misc/kaapi_splitter.c\
+  task/kaapi_fmt_initbasic.c \
   task/kaapi_fmt_accessors.c \
   task/kaapi_fmt_register.c \
   task/kaapi_fmt_taskregister.c \
@@ -55,6 +56,7 @@ libkaapi_la_SOURCES=\
   kaapi_format.h \
   kaapi_hashmap.h \
   kaapi_allocator.h \
+  kaapi_task.h \
   kaapi_network.h \
   kaapi_compiler.h \
   kaapi_event.h\

@@ -77,7 +77,7 @@ pthread_key_t kaapi_current_processor_key;
 
 kaapi_thread_t* kaapi_self_thread(void)
 {
-  return (kaapi_thread_t*)kaapi_get_current_processor()->thread->sfp;
+  return (kaapi_thread_t*)kaapi_get_current_processor()->thread->stack.sfp;
 }
 kaapi_threadgroup_t kaapi_self_threadgroup(void)
 {
@@ -223,14 +223,10 @@ int kaapi_mt_init(void)
   kaapi_thread_pushtask(kaapi_threadcontext2thread(thread));
 
   /* push the current frame that correspond to the execution of the startup task */
-  thread->sfp[1].pc      = thread->sfp->sp;
-  thread->sfp[1].sp      = thread->sfp->sp;
-  thread->sfp[1].sp_data = thread->sfp->sp_data;
-  ++thread->sfp;
-
-  /* WARNING strong impact on execution, see kaapi_sched_sync */
-/*  kaapi_stack2threadcontext(stack)->frame_sp = stack->sp; */
-/*** END */
+  thread->stack.sfp[1].pc      = thread->stack.sfp->sp;
+  thread->stack.sfp[1].sp      = thread->stack.sfp->sp;
+  thread->stack.sfp[1].sp_data = thread->stack.sfp->sp_data;
+  ++thread->stack.sfp;
 
   /* dump output information */
   if (kaapi_default_param.display_perfcounter)

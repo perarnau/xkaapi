@@ -117,10 +117,10 @@ void kaapi_taskwrite_body(
 #if 1 // TG TO TEST IMPACT OF THIS OPTIMISATION
   /* if signaled thread was suspended, move it to the local queue */
   kaapi_wsqueuectxt_cell_t* wcs = arg->origin_thread->wcs;
-  if ((wcs != 0) && (arg->origin_thread->sfp->pc == arg->origin_task)) /* means thread has been suspended on this task */
+  if ((wcs != 0) && (arg->origin_thread->stack.sfp->pc == arg->origin_task)) /* means thread has been suspended on this task */
   { 
     kaapi_readmem_barrier();
-    kaapi_processor_t* kproc = arg->origin_thread->proc;
+    kaapi_processor_t* kproc = arg->origin_thread->stack.proc;
     kaapi_assert_debug( kproc != 0);
 
     if (kaapi_cpuset_has( &wcs->affinity, kproc->kid))

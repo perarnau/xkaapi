@@ -116,7 +116,6 @@ typedef void (*kaapi_redinit_t)(void* /*result*/);
 /* Fwd decl
 */
 struct kaapi_task_t;
-struct kaapi_thread_t;
 struct kaapi_thread_context_t;
 struct kaapi_stealcontext_t;
 struct kaapi_taskadaptive_result_t;
@@ -191,17 +190,6 @@ static inline void* _kaapi_align_ptr_for_alloca(void* ptr, uintptr_t align)
 }
 
 #define kaapi_alloca_align( align, size) _kaapi_align_ptr_for_alloca( alloca(size + (align <8 ? 0 : align -1) ), align )
-
-
-/* ========================================================================== */
-/** Task body
-    \ingroup TASK
-    See internal doc in order to have better documentation of invariant between the task and the thread.
-*/
-typedef void (*kaapi_task_body_t)(void* /*task arg*/, struct kaapi_thread_t* /* thread or stream */);
-typedef void (*kaapi_task_vararg_body_t)(void* /*task arg*/, struct kaapi_thread_t* /* thread or stream */, ...);
-/* do not separate representation of the body and its identifier (should be format identifier) */
-typedef kaapi_task_body_t kaapi_task_bodyid_t;
 
 
 /** Define the cache line size. 
@@ -352,17 +340,6 @@ extern struct kaapi_format_t* kaapi_voidp_format;
 /* ========================================================================= */
 /* Task and stack interface                                                  */
 /* ========================================================================= */
-/** Kaapi Thread context
-    This is the public view of the stack of frame contains in kaapi_thread_context_t
-    We only expose the field to push task or data.
-*/
-typedef struct kaapi_thread_t {
-    struct kaapi_task_t*     pc;
-    struct kaapi_task_t*     sp;
-    char*                    sp_data;
-    struct kaapi_tasklist_t* tasklist;  /* Not null -> list of ready task, see static_sched.h */
-} kaapi_thread_t;
-
 
 /** Kaapi frame definition
    \ingroup TASK
@@ -375,6 +352,19 @@ typedef struct kaapi_frame_t {
     struct kaapi_tasklist_t* tasklist;  /* Not null -> list of ready task, see static_sched.h */
 } kaapi_frame_t;
 
+
+typedef kaapi_frame_t kaapi_thread_t;
+
+
+/* ========================================================================== */
+/** Task body
+    \ingroup TASK
+    See internal doc in order to have better documentation of invariant between the task and the thread.
+*/
+typedef void (*kaapi_task_body_t)(void* /*task arg*/, kaapi_thread_t* /* thread or stream */);
+typedef void (*kaapi_task_vararg_body_t)(void* /*task arg*/,  kaapi_thread_t* /* thread or stream */, ...);
+/* do not separate representation of the body and its identifier (should be format identifier) */
+typedef kaapi_task_body_t kaapi_task_bodyid_t;
 
 
 #if !defined(KAAPI_COMPILE_SOURCE)

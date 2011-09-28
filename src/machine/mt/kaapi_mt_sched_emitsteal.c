@@ -164,7 +164,7 @@ redo_select:
   kaapi_request_post( kproc->kid, reply, victim.kproc );
   
   /* reset thief stack/thread will steals are under progression */
-  kaapi_thread_reset( kproc->thread );
+  kaapi_stack_reset( &kproc->thread->stack );
   
   victim_hlr = &victim.kproc->hlrequests;
 

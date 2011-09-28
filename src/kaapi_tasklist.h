@@ -44,11 +44,13 @@
 ** 
 */
 #ifndef _KAAPI_TASKLIST_H_
-#define _KAAPI_TASKLIST_H_
+#define _KAAPI_TASKLIST_H_ 1
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
+#include "config.h"
+#include "kaapi_atomic.h"
 
 /* ........................................ Implementation notes ........................................*/
 
@@ -166,7 +168,7 @@ typedef struct kaapi_taskdescr_t {
       kaapi_activationlist_t    list;      /* list of tasks descr. activated after bcast list */     
     } acl;
     struct { /* case of stealing task from origin DFG stack */
-      kaapi_thread_context_t*   thread;
+      struct kaapi_thread_context_t*   thread;
       unsigned int              war;
     } dfg;
   } u;
@@ -206,7 +208,7 @@ typedef struct kaapi_tasklist_t {
   /* execution state for ready task using tasklist */
   kaapi_readytasklist_t   rtl;        /* the workqueue of ready tasks */
 
-  kaapi_thread_context_t* thread;     /* thread that execute the task list */
+  struct kaapi_thread_context_t* thread; /* thread that execute the task list */
   
   struct kaapi_tasklist_t*master;     /* master tasklist to signal at the end */
   kaapi_recvactlink_t*    recv;       /* next entry to receive */
@@ -224,7 +226,7 @@ typedef struct kaapi_tasklist_t {
 #if defined(KAAPI_DEBUG)
   kaapi_activationlist_t  allocated_td; /* list of all allocated tasks, debug only */
 #endif
-  uintptr_t               count_recv; /* number of extern synchronization to receive before detecting end of execution */
+  uintptr_t               count_recv; /* number of extern synchronization to receive before detecting end of execution*/
   kaapi_recv_list_t       recvlist;   /* put by pushsignal into ready list to signal incomming data */
   kaapi_allocator_t       allocator;  /* where to push task descriptor and other data structure */
   uint64_t                cnt_tasks;  /* number of tasks in the tasklist */
@@ -266,7 +268,7 @@ typedef struct kaapi_version_t {
 */
 extern kaapi_version_t* kaapi_version_findinsert( 
     int* islocal,
-    kaapi_thread_context_t* thread,
+    struct kaapi_thread_context_t* thread,
     kaapi_tasklist_t*       tl,
     const void*             addr 
 );
@@ -395,32 +397,7 @@ static inline int kaapi_readytasklist_init( kaapi_readytasklist_t* rtl, kaapi_ta
    pointers to taskdescr during execution.
    It should be remove for partitionnig
 */
-static inline int kaapi_tasklist_init( kaapi_tasklist_t* tl, kaapi_thread_context_t* thread )
-{
-  kaapi_sched_initlock(&tl->lock);
-  KAAPI_ATOMIC_WRITE(&tl->count_thief, 0);
-
-  kaapi_readytasklist_init( &tl->rtl, (kaapi_taskdescr_t**)thread->sfp->sp );
-
-  tl->master          = 0;
-  tl->thread          = thread;
-  tl->recv            = 0;
-  tl->context.chkpt   = 0;
-#if defined(KAAPI_DEBUG)  
-  tl->context.fp      = 0;
-  tl->context.td      = 0;
-#endif  
-  tl->count_recv      = 0;
-  kaapi_activationlist_clear( &tl->readylist );
-#if defined(KAAPI_DEBUG)
-  kaapi_activationlist_clear( &tl->allocated_td );
-#endif
-  kaapi_recvlist_clear(&tl->recvlist);
-  kaapi_allocator_init( &tl->allocator );
-  tl->cnt_tasks     = 0;
-  tl->t_infinity    = 0;
-  return 0;
-}
+extern int kaapi_tasklist_init( kaapi_tasklist_t* tl, struct kaapi_thread_context_t* thread );
 
 /**/
 static inline int kaapi_tasklist_destroy( kaapi_tasklist_t* tl )
@@ -664,7 +641,7 @@ extern void kaapi_tasklist_push_broadcasttask(
     \retval 0 in case of success
 */
 extern int kaapi_thread_computedep_task(
-  kaapi_thread_context_t* thread, 
+  struct kaapi_thread_context_t* thread, 
   kaapi_tasklist_t*       tasklist, 
   kaapi_task_t* task
 );
@@ -675,7 +652,7 @@ extern int kaapi_thread_computedep_task(
     \retval EBUSY if a ready list already exist for the thread
 */
 extern int kaapi_thread_computereadylist( 
-    kaapi_thread_context_t* thread, 
+    struct kaapi_thread_context_t* thread, 
     kaapi_tasklist_t* tasklist 
 );
 
@@ -817,9 +794,9 @@ static inline int kaapi_thread_tasklist_commit_ready( kaapi_tasklist_t* tasklist
   if (tasklist->rtl.task_pushed)
   {
     /* ABA problem here if we suppress lock/unlock? seems to be true */
-    kaapi_sched_lock( &tasklist->thread->proc->lock );
+    kaapi_atomic_lock( &tasklist->thread->stack.proc->lock );
     kaapi_workqueue_push(&tasklist->rtl.wq, tasklist->rtl.next); /* do not keep tasklist->next for local exec */
-    kaapi_sched_unlock( &tasklist->thread->proc->lock );
+    kaapi_atomic_unlock( &tasklist->thread->stack.proc->lock );
     tasklist->rtl.task_pushed = 0;
     return 0;
   }
@@ -837,9 +814,9 @@ static inline kaapi_taskdescr_t* kaapi_thread_tasklist_commit_ready_and_steal( k
   if (tasklist->rtl.task_pushed)
   {
     /* ABA problem here if we suppress lock/unlock? seems to be true */
-    kaapi_sched_lock( &tasklist->thread->proc->lock );
+    kaapi_atomic_lock( &tasklist->thread->stack.proc->lock );
     kaapi_workqueue_push(&tasklist->rtl.wq, 1+tasklist->rtl.next); /* keep tasklist->next_exec for local exec */
-    kaapi_sched_unlock( &tasklist->thread->proc->lock );
+    kaapi_atomic_unlock( &tasklist->thread->stack.proc->lock );
     tasklist->rtl.task_pushed = 0;
     return tasklist->rtl.base[tasklist->rtl.next];
   }
@@ -870,7 +847,7 @@ static inline int kaapi_thread_tasklistready_steal(
 /** How to execute task with readylist
     It is assumed that top frame is a frame with a ready list.
 */
-extern int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread );
+extern int kaapi_thread_execframe_tasklist( struct kaapi_thread_context_t* thread );
 
 /**
 */

@@ -43,17 +43,14 @@
 ** 
 */
 #include "kaapi_format.h"
-
-/* == 0 if lib is not initialized
-*/
-static kaapi_atomic_t kaapi_count_init = {0};
+#include <string.h>
 
 
 /**
 */
 #define KAAPI_DECL_BASICTYPEFORMAT( formatobject, type, fmt ) \
   static kaapi_format_t formatobject##_object;\
-  static kaapi_format_t* formatobject= &formatobject##_object;\
+  kaapi_format_t* formatobject= &formatobject##_object;\
   static void formatobject##_cstor(void* dest)  { *(type*)dest = 0; }\
   static void formatobject##_dstor(void* dest) { *(type*)dest = 0; }\
   static void formatobject##_cstorcopy( void* dest, const void* src) { *(type*)dest = *(type*)src; } \
@@ -135,7 +132,7 @@ static kaapi_format_t* voidp_type_fnc(void)
   return &kaapi_voidp_object;
 }
 
-static kaapi_format_t* kaapi_voidp_format = &kaapi_voidp_object;
+kaapi_format_t* kaapi_voidp_format = &kaapi_voidp_object;
 
 
 
