@@ -336,7 +336,7 @@ struct kaapi_wsqueuectxt_cell_t;
 */
 typedef struct kaapi_thread_context_t {
   kaapi_stack_t                  stack;
-
+  
 #if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   kaapi_threadgroup_t            thgrp;          /** the current thread group, used to push task */
 #endif

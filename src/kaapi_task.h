@@ -49,12 +49,17 @@
 extern "C" {
 #endif
 
+
 #include "config.h"
 #include "kaapi_error.h"
 #include "kaapi_atomic.h"
 #include "kaapi_cpuset.h"
 
 #include "kaapi_defs.h"
+
+#if defined(KAAPI_USE_JMP)
+#include <setjmp.h>
+#endif
 
 /* Maximal number of recursive calls used to store the stack of frames.
    The value indicates the maximal number of frames that can be pushed
@@ -75,7 +80,10 @@ struct kaapi_listrequest_t;
 #define KAAPI_TASK_STATE_STEAL    0x1
 #define KAAPI_TASK_STATE_EXEC     0x2
 #define KAAPI_TASK_STATE_TERM     0x4
-#define KAAPI_TASK_STATE_PREEMPT  0x8
+#define KAAPI_TASK_STATE_AFTER    0x8
+#define KAAPI_TASK_STATE_PREEMPT  0x10
+
+typedef void (*kaapi_task_body_internal_t)(void* /*task arg*/, kaapi_thread_t* /* thread or stream */, kaapi_task_t*);
 
 /* ============================= The stack of task data structure ============================ */
 /** The stack of tasks data structure
@@ -97,6 +105,9 @@ typedef struct kaapi_stack_t {
   struct kaapi_processor_t*      proc;           /** access to the running processor */
   kaapi_task_t*                  task;           /** bottom of the stack of task */
   char*                          data;           /** begin of stack of data */ 
+#if defined(KAAPI_USE_JMP)
+  jmp_buf*                       jbuf;
+#endif
 
   /* execution state for stack of task */
   kaapi_frame_t*        volatile thieffp __attribute__((aligned (KAAPI_CACHE_LINE))); /** pointer to the thief frame where to steal */
@@ -105,6 +116,14 @@ typedef struct kaapi_stack_t {
 
 
 /* ===================== Default internal task body ==================================== */
+
+/** Body of task used to mark a theft task into a victim stack
+    \ingroup TASK
+*/
+extern void kaapi_anormal_body( void*, kaapi_thread_t*, kaapi_task_t* );
+
+
+#if 1 // DEPRECATED_ATTRIBUTE
 /** Body of the task used to mark a thread suspend in its execution
     \ingroup TASK
 */
@@ -118,7 +137,7 @@ extern void kaapi_exec_body( void*, kaapi_thread_t*);
 /** Body of task used to mark a theft task into a victim stack
     \ingroup TASK
 */
-extern void kaapi_steal_body( void*, kaapi_thread_t* );
+extern void kaapi_steal_body( void*, kaapi_thread_t*, kaapi_task_t* );
 
 /** Body of a task terminated.
     This state is set by a thief to mark a theft task as terminated.
@@ -131,14 +150,14 @@ extern void kaapi_term_body( void*, kaapi_thread_t* );
     \ingroup TASK
 */
 extern void kaapi_preempt_body( void*, kaapi_thread_t* );
-
+#endif
 
 /** Merge result after a steal
     This body is set by a thief at the end of the steal operation in case of 
     results to merge. Else the thief set the task' steal body to kaapi_term_body
     \ingroup TASK
 */
-extern void kaapi_aftersteal_body( void*, kaapi_thread_t* );
+extern void kaapi_aftersteal_body( void*, kaapi_thread_t*, kaapi_task_t* task );
 
 /** Body of the nop task that do nothing
     \ingroup TASK
@@ -214,29 +233,35 @@ static inline int kaapi_task_casbody(kaapi_task_t* task, kaapi_task_body_t oldbo
   return KAAPI_ATOMIC_CASPTR( &task->body, oldbody, newbody);
 }
 
-static inline kaapi_task_body_t kaapi_task_markexec( kaapi_task_t* task )
+/* Return the state of the task
+*/
+static inline uintptr_t kaapi_task_markexec( kaapi_task_t* task )
 {
-  if (likely(KAAPI_ATOMIC_CASPTR( &task->state, 0, kaapi_exec_body)))
-    return task->body;
+  if (likely(KAAPI_ATOMIC_CASPTR( &task->state, 0, KAAPI_TASK_STATE_EXEC)))
+    return KAAPI_TASK_STATE_EXEC;
   return task->state;
 }
 
-/* do not return body if task cannot be stolen */
+/* return the body iff the task can change to state 'steal'
+*/
 static inline kaapi_task_body_t kaapi_task_marksteal( kaapi_task_t* task )
 {
-  if (likely(KAAPI_ATOMIC_CASPTR( &task->state, 0, kaapi_steal_body)))
+  if (likely(KAAPI_ATOMIC_CASPTR( &task->state, 0, KAAPI_TASK_STATE_STEAL)))
     return task->body;
   return 0;
-#if 0
-  kaapi_task_body_t oldbody = task->body;
-  if (oldbody == kaapi_exec_body) return 0;
-  if (oldbody == kaapi_steal_body) return 0;
-  if (oldbody == kaapi_term_body) return 0;
-  if (oldbody == kaapi_aftersteal_body) return 0;
-  if (KAAPI_ATOMIC_CASPTR( &task->body, oldbody, &kaapi_steal_body ))
-    return oldbody;
-  return 0;
-#endif
+}
+
+
+static inline void kaapi_task_markterm( kaapi_task_t* task )
+{
+  int retval = KAAPI_ATOMIC_CASPTR( &task->state, KAAPI_TASK_STATE_STEAL, KAAPI_TASK_STATE_TERM);
+  kaapi_assert(retval != 0);
+}
+
+static inline void kaapi_task_markaftersteal( kaapi_task_t* task )
+{
+  int retval = KAAPI_ATOMIC_CASPTR( &task->state, KAAPI_TASK_STATE_STEAL, KAAPI_TASK_STATE_AFTER);
+  kaapi_assert(retval != 0);
 }
 
 
@@ -290,27 +315,6 @@ inline static void kaapi_task_unlock_adaptive_steal(kaapi_stealcontext_t* sc)
 #endif
 }
 
-
-/** Should be only use in debug mode
-    - other bodies should be added
-*/
-#if !defined(KAAPI_NDEBUG)
-static inline int kaapi_isvalid_body( kaapi_task_body_t body)
-{
-  return 
-    (kaapi_format_resolvebybody( body ) != 0) 
-      || (body == kaapi_taskmain_body)
-      || (body == kaapi_tasksteal_body)
-      || (body == kaapi_taskwrite_body)
-      || (body == kaapi_aftersteal_body)
-      || (body == kaapi_nop_body)
-      || (body == kaapi_taskmove_body)
-      || (body == kaapi_taskalloc_body)
-  ;
-}
-#else
-#define kaapi_isvalid_body( body) 
-#endif
 
 /** \ingroup TASK
     The function kaapi_frame_isempty() will return non-zero value iff the frame is empty. Otherwise return 0.
@@ -393,6 +397,9 @@ static inline int kaapi_stack_clear(kaapi_stack_t* stack )
   kaapi_atomic_initlock( &stack->lock );
   stack->sfp->tasklist= 0;
   stack->thieffp      = 0;
+#if defined(KAAPI_USE_JMP)
+  stack->jbuf         = 0;
+#endif
   return 0;
 }
 
@@ -558,9 +565,7 @@ static inline int kaapi_task_isstealable(const kaapi_task_t* task)
 */
 static inline int kaapi_task_isready(const kaapi_task_t* task)
 { 
-  kaapi_task_body_t body = task->body;
-  return (body != kaapi_steal_body)
-    ;
+  return (((uintptr_t)task->state & ~KAAPI_TASK_STATE_TERM) == 0);
 }
 
 

@@ -150,15 +150,14 @@ void kaapi_taskwrite_body(
   }
 #endif
 
-  /* signal the task : mark it as executed, the old returned body should have steal flag */
-  kaapi_assert_debug( kaapi_task_getbody(arg->origin_task) == kaapi_steal_body );
   kaapi_mem_barrier();
+
+//printf("Signal end of: %p\n", arg->origin_task); fflush(stdout);
+  /* signal the task : mark it as executed, the old returned body should have steal flag */
   if ((war_param ==0) && (cw_param ==0))
-    kaapi_task_setbody( arg->origin_task, kaapi_term_body );
-//    kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
+    kaapi_task_markterm( arg->origin_task );
   else 
-    kaapi_task_setbody( arg->origin_task, kaapi_aftersteal_body );
-//    kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
+    kaapi_task_markaftersteal( arg->origin_task );
 
 #if 0
   /* toremove */
@@ -202,15 +201,14 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
  
   /* format of the original stolen task */  
   body            = arg->origin_body;
-  kaapi_assert_debug( kaapi_isvalid_body( body ) );
-
   fmt             = kaapi_format_resolvebybody( body );
   kaapi_assert_debug( fmt !=0 );
+//printf("Steal task: %p\n", arg->origin_task); fflush(stdout);
 
   /* the original task arguments */
   orig_task_args  = kaapi_task_getargs(arg->origin_task);
 
-  kaapi_assert_debug( kaapi_task_getbody(arg->origin_task) == kaapi_steal_body );
+  kaapi_assert_debug( kaapi_task_getbody(arg->origin_task) == body );
 
   /* not a bound task */
   count_params    = kaapi_format_get_count_params(fmt, orig_task_args); 

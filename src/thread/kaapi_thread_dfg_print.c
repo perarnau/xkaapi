@@ -78,11 +78,11 @@ static const char* tab_bit[] = {
 typedef char state_type_t[4];
 static void kaapi_getstatename( kaapi_task_t* task, state_type_t char_state )
 {
-  kaapi_task_body_t body = kaapi_task_getbody(task);
-  char_state[0] = (body == kaapi_term_body ? 'T' : '_');
-  char_state[1] = (body == kaapi_aftersteal_body ? 'A' : '_');
-  char_state[2] = (body == kaapi_exec_body ? 'E' : '_');
-  char_state[3] = (body == kaapi_steal_body ? 'S' : '_');
+  uintptr_t state = (uintptr_t)task->state;
+  char_state[0] = (state & KAAPI_TASK_STATE_TERM ? 'T' : '_');
+  char_state[1] = (state & KAAPI_TASK_STATE_AFTER ? 'A' : '_');
+  char_state[2] = (state & KAAPI_TASK_STATE_EXEC ? 'E' : '_');
+  char_state[3] = (state & KAAPI_TASK_STATE_STEAL ? 'S' : '_');
 }
 
 static char kaapi_getmodename( kaapi_access_mode_t m )

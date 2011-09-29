@@ -97,8 +97,14 @@ int kaapi_stack_execframe( kaapi_stack_t* stack )
   kaapi_task_t*              pc; /* cache */
   kaapi_frame_t*             fp; /* cache for stack->sfp */
 
-  kaapi_task_body_t          body;
+//  kaapi_task_body_internal_t body;
+  uintptr_t                  state;
   kaapi_frame_t*             eframe = stack->esfp;
+#if defined(KAAPI_USE_JMP)
+  jmp_buf jmpbuff;
+  int retval;
+#endif
+  
 #if defined(KAAPI_USE_PERFCOUNTER)
   uint32_t                   cnt_tasks = 0;
 #endif
@@ -106,6 +112,25 @@ int kaapi_stack_execframe( kaapi_stack_t* stack )
   kaapi_assert_debug(stack->sfp >= stack->stackframe);
   kaapi_assert_debug(stack->sfp < stack->stackframe+KAAPI_MAX_RECCALL);
 
+#if defined(KAAPI_USE_JMP)
+  jmp_buf* save_buff = stack->jbuf;
+  stack->jbuf = &jmpbuff;
+  if ((retval = _setjmp(jmpbuff)) !=0) 
+  {
+    if (retval == EWOULDBLOCK)
+    {
+      /* here iff execute abnormal task: save pc, fp and return EWOULDBLOCK */
+      stack->jbuf = save_buff;
+      return EWOULDBLOCK;
+    }
+    else { // is EINTR: task is terminated
+      --fp; 
+      fp->pc = --pc;
+      goto push_frame;
+    }
+  }
+#endif
+  
   fp = (kaapi_frame_t*)stack->sfp;
 
 push_frame: /* here assume fp current frame where to execute task */
@@ -126,36 +151,28 @@ push_frame: /* here assume fp current frame where to execute task */
   kaapi_assert_debug( stack->sfp - stack->stackframe <KAAPI_MAX_RECCALL);
   
   /* stack of task growth down ! */
-  while (pc != sp)
+  for (; pc != sp; --pc)
   {
     kaapi_assert_debug( pc > sp );
-redo_exec:
-    body = kaapi_task_markexec( pc );
-#if 0
-    if (likely( body ))
+//    body = (kaapi_task_body_internal_t)kaapi_task_markexec( pc );
+    state = kaapi_task_markexec( pc );
+
+#if !defined(KAAPI_USE_JMP)
+    if (likely(state == KAAPI_TASK_STATE_EXEC))
 #endif
-    {
-      /* here... */
-      body( pc->sp, (kaapi_thread_t*)fp );
-    }
-#if 0
-    else
-    { 
-      /* It is a special task: it means that before atomic or update, the body
-         has already one of the special body.
-         Test the following case with THIS (!) order :
-         - kaapi_steal_body: return with EWOULDBLOCK value
-      */
-#if 1
-      printf("Wait task %p becomes ready...\n",pc);
-      while (kaapi_task_getbody(pc) == kaapi_steal_body)
-        kaapi_slowdown_cpu();
-      printf("Task %p is ready\n",pc);
-      fflush(stdout);
-      goto redo_exec;
-#else
-      goto error_swap_body;
-#endif
+      ((kaapi_task_body_internal_t)pc->body)( pc->sp, fp, pc );
+#if !defined(KAAPI_USE_JMP)
+    else {
+      if (state == KAAPI_TASK_STATE_AFTER)
+      {
+        kaapi_aftersteal_body(pc->sp, fp, pc);
+      }
+      else if (state != KAAPI_TASK_STATE_TERM)
+      {
+        fp[-1].pc = pc;  
+        stack->sfp = fp-1;
+        return EWOULDBLOCK;
+      }
     }
 #endif
 
@@ -165,7 +182,11 @@ redo_exec:
 
     /* post execution: new tasks created ??? */
     if (unlikely(sp > fp->sp))
+    {
+      /* same pc in fp */
+      fp[-1].pc = pc;
       goto push_frame;
+    }
 #if defined(KAAPI_DEBUG)
     else if (unlikely(sp < fp->sp))
     {
@@ -174,7 +195,7 @@ redo_exec:
 #endif
 
     /* next task to execute, store pc in memory */
-    --pc;    
+//    --pc;    
   } /* end of the loop */
   kaapi_assert_debug( pc == sp );
 
@@ -196,6 +217,7 @@ redo_exec:
       {
         stack->sfp = fp;
         kaapi_sched_unlock(&stack->proc->lock);
+//        printf("Pop framefp:%p, pc: %p, state (%i)\n", (void*)(fp), (void*)pc, (int)pc->state ); fflush(stdout);
         goto push_frame; /* remains work do do */
       }
     } 
@@ -213,18 +235,4 @@ redo_exec:
   cnt_tasks = 0;
 #endif
   return 0;
-
-
-error_swap_body:
-  /* write back to memory some data */
-  fp[-1].pc = pc;  
-  kaapi_assert_debug(stack->sfp - fp == 0);
-  /* implicityly pop the dummy frame */
-  stack->sfp = fp-1;
-  
-#if defined(KAAPI_USE_PERFCOUNTER)
-  KAAPI_PERF_REG(stack->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
-  cnt_tasks = 0;
-#endif
-  return EWOULDBLOCK;
 }

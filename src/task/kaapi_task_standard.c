@@ -79,13 +79,15 @@ void kaapi_term_body(
 /*
 */
 void kaapi_steal_body( 
-  void* taskarg __attribute__((unused)), 
-  kaapi_thread_t* thread __attribute__((unused))
+  void*           taskarg __attribute__((unused)), 
+  kaapi_thread_t* thread __attribute__((unused)),
+  kaapi_task_t*   task 
 )
 {
   /* do not allow rexecuting already executed task */
   kaapi_assert_debug( 0 );
 }
+
 
 /*
 */
@@ -99,7 +101,48 @@ void kaapi_preempt_body(
 }
 
 
-
+/*
+*/
+void kaapi_anormal_body( 
+  void*           taskarg,
+  kaapi_thread_t* fp,
+  kaapi_task_t*   task 
+)
+{
+  if (task->state == KAAPI_TASK_STATE_AFTER)
+  {
+//    printf("This is AN AFTERSTEAL task\n"); fflush(stdout);
+    kaapi_aftersteal_body(taskarg, fp, task);
+    return;
+  }
+  if (task->state == KAAPI_TASK_STATE_TERM)
+  {
+    return; // avoid to re jump to execute term task
+//    _longjmp(*ctxt->stack.jbuf, EINTR);
+  }
+  
+  /* do not allow rexecuting already executed task */
+  /* It is a special task: it means that before atomic or update, the body
+     has already one of the special body.
+     Test the following case with THIS (!) order :
+     - kaapi_steal_body: return with EWOULDBLOCK value
+  */
+#if 0
+  printf("Wait task %p becomes ready...\n", task);
+  while (((uintptr_t)task->state & KAAPI_TASK_STATE_TERM) == 0)
+    kaapi_slowdown_cpu();
+  printf("Task %p is ready\n",task);
+#else
+#if defined(KAAPI_USE_JMP)
+  kaapi_thread_context_t* ctxt = kaapi_self_thread_context();  
+  fp[-1].pc = task;  
+  kaapi_assert_debug(ctxt->stack.sfp - fp == 0);
+  ctxt->stack.sfp = fp-1;
+//  printf("Task %p, fp: %p  Do jump...\n", (void*)task, (void*)thread); fflush(stdout);
+  _longjmp(*ctxt->stack.jbuf, EWOULDBLOCK);
+#endif
+#endif
+}
 /** Dumy task pushed at startup into the main thread
 */
 void kaapi_taskstartup_body( 
@@ -108,6 +151,7 @@ void kaapi_taskstartup_body(
 )
 {
 }
+
 
 /*
 */

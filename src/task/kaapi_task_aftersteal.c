@@ -47,18 +47,16 @@
 
 /**
 */
-void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
+void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread, kaapi_task_t*  task )
 {
 printf("In AFTER STEAL \n");
   unsigned int          i;
   size_t                count_params;
-  kaapi_task_t*         task;
   const kaapi_format_t* fmt;   /* format of the task */
   const kaapi_format_t* fmt_param;
   kaapi_access_t        access_param;
   
   /* the task has been stolen: the body contains the original task body */
-  task = thread[-1].pc;
   kaapi_assert_debug( task->sp == taskarg );
   fmt = kaapi_format_resolvebybody( kaapi_task_getbody(task) );
   kaapi_assert_debug( fmt !=0 );
