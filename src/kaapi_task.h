@@ -218,8 +218,9 @@ static inline kaapi_task_body_t kaapi_task_marksteal( kaapi_task_t* task )
 {
   kaapi_task_body_t oldbody = task->body;
   if (oldbody == kaapi_exec_body) return 0;
-  if (oldbody == kaapi_aftersteal_body) return 0;
+  if (oldbody == kaapi_steal_body) return 0;
   if (oldbody == kaapi_term_body) return 0;
+  if (oldbody == kaapi_aftersteal_body) return 0;
   if (KAAPI_ATOMIC_CASPTR( &task->body, oldbody, &kaapi_steal_body ))
     return oldbody;
   return 0;

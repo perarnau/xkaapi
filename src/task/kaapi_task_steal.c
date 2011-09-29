@@ -151,8 +151,8 @@ void kaapi_taskwrite_body(
 #endif
 
   /* signal the task : mark it as executed, the old returned body should have steal flag */
-  kaapi_mem_barrier();
   kaapi_assert_debug( kaapi_task_getbody(arg->origin_task) == kaapi_steal_body );
+  kaapi_mem_barrier();
   if ((war_param ==0) && (cw_param ==0))
     kaapi_task_setbody( arg->origin_task, kaapi_term_body );
 //    kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
@@ -207,7 +207,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   fmt             = kaapi_format_resolvebybody( body );
   kaapi_assert_debug( fmt !=0 );
 
-  /* the the original task arguments */
+  /* the original task arguments */
   orig_task_args  = kaapi_task_getargs(arg->origin_task);
 
   kaapi_assert_debug( kaapi_task_getbody(arg->origin_task) == kaapi_steal_body );
@@ -237,7 +237,6 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     else
 #endif
     body(orig_task_args, thread);
-
   }
   else /* it exists at least one w parameter with war dependency or a cw_param: recopies the arguments */
   {

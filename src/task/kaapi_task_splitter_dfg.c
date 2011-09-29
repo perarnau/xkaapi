@@ -62,6 +62,7 @@ void kaapi_task_splitter_dfg_single
   kaapi_assert_debug(stealreply);
 
   kaapi_task_print( stdout, task, body );
+  fflush(stdout);
   
   /* - create the task steal that will execute the stolen task
      The task stealtask stores:
