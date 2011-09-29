@@ -404,14 +404,6 @@ typedef enum {
 typedef struct kaapi_task_binding
 {
   kaapi_task_binding_type_t type;
-  union {
-    struct {
-      uintptr_t addr;
-    } ocr_addr; 
-    struct {
-      uint64_t  bitmap;
-    } ocr_param;
-  } u;
 } kaapi_task_binding_t;
 
 
@@ -423,8 +415,10 @@ typedef struct kaapi_task_binding
     The body field is the pointer to the function to execute. The special value 0 correspond to a nop instruction.
 */
 typedef struct kaapi_task_t {
+  kaapi_task_body_t     state;
   kaapi_task_body_t     body;      /** task body  */
   void*                 sp;        /** data stack pointer of the data frame for the task  */
+//  uintptr_t             state;     /** state of the task */
 //TO ADD AFTER  kaapi_task_binding_t  binding;   /** binding information or 0  */
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
@@ -836,7 +830,7 @@ static inline int kaapi_thread_pushtask_withocr(kaapi_thread_t* thread, const vo
   kaapi_task_binding_t* attribut = 
    (kaapi_task_binding_t*)kaapi_thread_pushdata( thread, sizeof(kaapi_task_binding_t) );
   attribut->type = KAAPI_BINDING_OCR_ADDR;
-  attribut->u.ocr_addr.addr = (uintptr_t)ptr;
+//TODO  attribut->u.ocr_addr.addr = (uintptr_t)ptr;
   kaapi_thread_pushtask(thread);
   return 0;
 }
@@ -848,8 +842,9 @@ static inline int kaapi_thread_pushtask_withocr(kaapi_thread_t* thread, const vo
 static inline void kaapi_task_initdfg
   (kaapi_task_t* task, kaapi_task_body_t body, void* arg)
 {
-  task->body = body;
-  task->sp   = arg;
+  task->body  = body;
+  task->sp    = arg;
+  task->state = 0;
 //  task->binding.type = KAAPI_BINDING_ANY;
 }
 

@@ -69,6 +69,15 @@ struct kaapi_listrequest_iterator_t;
 struct kaapi_listrequest_t;
 
 /* ============================= The stack of task data structure ============================ */
+/** State of a task
+*/
+#define KAAPI_TASK_STATE_INIT     0x0
+#define KAAPI_TASK_STATE_STEAL    0x1
+#define KAAPI_TASK_STATE_EXEC     0x2
+#define KAAPI_TASK_STATE_TERM     0x4
+#define KAAPI_TASK_STATE_PREEMPT  0x8
+
+/* ============================= The stack of task data structure ============================ */
 /** The stack of tasks data structure
     This data structure is a stack of tasks with following method:
     - push (defined in kaapi.h)
@@ -190,31 +199,34 @@ static inline kaapi_task_body_t kaapi_task_getbody(const kaapi_task_t* task)
 
 static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_body_t body)
 {
-  task->body = body;
+  ((kaapi_task_t*volatile)task)->body = body;
 }
 
 static inline void kaapi_task_setbody_barrier(kaapi_task_t* task, kaapi_task_body_t body)
 {
   kaapi_mem_barrier();
-  task->body = body;
+  ((kaapi_task_t*volatile)task)->body = body;
 }
 
 static inline int kaapi_task_casbody(kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody)
 {
+  kaapi_assert(0);
   return KAAPI_ATOMIC_CASPTR( &task->body, oldbody, newbody);
 }
 
 static inline kaapi_task_body_t kaapi_task_markexec( kaapi_task_t* task )
 {
-  kaapi_task_body_t oldbody;
-  oldbody = task->body;
-  if ((oldbody != kaapi_steal_body) && (KAAPI_ATOMIC_CASPTR( &task->body, oldbody, kaapi_exec_body)))
-    return oldbody;
-  return 0;
+  if (likely(KAAPI_ATOMIC_CASPTR( &task->state, 0, kaapi_exec_body)))
+    return task->body;
+  return task->state;
 }
 
 static inline kaapi_task_body_t kaapi_task_marksteal( kaapi_task_t* task )
 {
+  if (likely(KAAPI_ATOMIC_CASPTR( &task->state, 0, kaapi_steal_body)))
+    return task->body;
+  return 0;
+#if 0
   kaapi_task_body_t oldbody = task->body;
   if (oldbody == kaapi_exec_body) return 0;
   if (oldbody == kaapi_aftersteal_body) return 0;
@@ -222,6 +234,7 @@ static inline kaapi_task_body_t kaapi_task_marksteal( kaapi_task_t* task )
   if (KAAPI_ATOMIC_CASPTR( &task->body, oldbody, &kaapi_steal_body ))
     return oldbody;
   return 0;
+#endif
 }
 
 

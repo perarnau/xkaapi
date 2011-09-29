@@ -116,7 +116,8 @@ int kaapi_sched_affinity_binding2mapping(
          and not only the numa node of the first page
       */
       kaapi_cpuset_clear(mapping);
-      int numanodeid = kaapi_numa_get_page_node( (void*)binding->u.ocr_addr.addr);
+      int numanodeid = 0;
+      //TODO kaapi_numa_get_page_node( (void*)binding->u.ocr_addr.addr);
       kaapi_assert( (numanodeid >=0) && (numanodeid <KAAPI_TABLE_QUEUE_NUMA) );
       kaapi_cpuset_or( mapping, NUMA_cpusettable[numanodeid] );
       return 1;
@@ -131,7 +132,8 @@ int kaapi_sched_affinity_binding2mapping(
       */
       void *addr;
       int numanodeid;
-      int paramid = kaapi_bitmap_first1_and_zero_64( (kaapi_bitmap_value64_t*)&binding->u.ocr_param.bitmap );
+      int paramid = 0;
+      // TODO kaapi_bitmap_first1_and_zero_64( (kaapi_bitmap_value64_t*)&binding->u.ocr_param.bitmap );
       if (paramid ==0)
       {
         kaapi_cpuset_full( mapping );

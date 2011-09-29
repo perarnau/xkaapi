@@ -131,11 +131,14 @@ push_frame: /* here assume fp current frame where to execute task */
     kaapi_assert_debug( pc > sp );
 
     body = kaapi_task_markexec( pc );
+#if 0
     if (likely( body ))
+#endif
     {
       /* here... */
       body( pc->sp, (kaapi_thread_t*)fp );
     }
+#if 0
     else
     { 
       /* It is a special task: it means that before atomic or update, the body
@@ -146,6 +149,7 @@ push_frame: /* here assume fp current frame where to execute task */
       goto error_swap_body;
       kaapi_assert_debug(0);
     }
+#endif
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
@@ -171,7 +175,7 @@ push_frame: /* here assume fp current frame where to execute task */
 
   kaapi_assert_debug( fp >= eframe);
 
-//  kaapi_sched_lock(&stack->proc->lock);
+  kaapi_sched_lock(&stack->proc->lock);
   if (fp > eframe)
   {
     /* here it's a pop of frame: we lock the thread */
@@ -183,14 +187,14 @@ push_frame: /* here assume fp current frame where to execute task */
       if (--fp->pc > fp->sp)
       {
         stack->sfp = fp;
-//        kaapi_sched_unlock(&stack->proc->lock);
+        kaapi_sched_unlock(&stack->proc->lock);
         goto push_frame; /* remains work do do */
       }
     } 
     fp->sp = fp->pc;
   }
   stack->sfp = fp;
-//  kaapi_sched_unlock(&stack->proc->lock);
+  kaapi_sched_unlock(&stack->proc->lock);
 
   /* end of the pop: we have finish to execute all the tasks */
   kaapi_assert_debug( fp->pc == fp->sp );
