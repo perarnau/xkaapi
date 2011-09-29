@@ -213,6 +213,7 @@ static inline kaapi_task_body_t kaapi_task_markexec( kaapi_task_t* task )
   return 0;
 }
 
+/* do not return body if task cannot be stolen */
 static inline kaapi_task_body_t kaapi_task_marksteal( kaapi_task_t* task )
 {
   kaapi_task_body_t oldbody = task->body;
@@ -384,7 +385,7 @@ static inline int kaapi_stack_clear(kaapi_stack_t* stack )
 
 /** Useful
 */
-extern int kaapi_task_print( FILE* file, kaapi_task_t* task );
+extern int kaapi_task_print( FILE* file, kaapi_task_t* task, kaapi_task_body_t body );
 
 /** \ingroup TASK
     The function kaapi_thread_execframe() execute all the tasks in the thread' stack following

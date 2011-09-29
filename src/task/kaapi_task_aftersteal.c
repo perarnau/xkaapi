@@ -49,6 +49,7 @@
 */
 void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread)
 {
+printf("In AFTER STEAL \n");
   unsigned int          i;
   size_t                count_params;
   kaapi_task_t*         task;

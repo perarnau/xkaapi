@@ -129,7 +129,7 @@ push_frame: /* here assume fp current frame where to execute task */
   while (pc != sp)
   {
     kaapi_assert_debug( pc > sp );
-
+redo_exec:
     body = kaapi_task_markexec( pc );
     if (likely( body ))
     {
@@ -143,8 +143,16 @@ push_frame: /* here assume fp current frame where to execute task */
          Test the following case with THIS (!) order :
          - kaapi_steal_body: return with EWOULDBLOCK value
       */
+#if 1
+      printf("Wait task %p becomes ready...\n",pc);
+      while (kaapi_task_getbody(pc) == kaapi_steal_body)
+        kaapi_slowdown_cpu();
+      printf("Task %p is ready\n",pc);
+      fflush(stdout);
+      goto redo_exec;
+#else
       goto error_swap_body;
-      kaapi_assert_debug(0);
+#endif
     }
 
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -205,7 +213,7 @@ push_frame: /* here assume fp current frame where to execute task */
 
 error_swap_body:
   /* write back to memory some data */
-  fp[-1].pc = pc;    
+  fp[-1].pc = pc;  
   kaapi_assert_debug(stack->sfp - fp == 0);
   /* implicityly pop the dummy frame */
   stack->sfp = fp-1;

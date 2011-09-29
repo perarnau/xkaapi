@@ -129,7 +129,7 @@ static inline void _kaapi_print_tag_node(
 
 
 /**/
-static inline void _kaapi_print_task( 
+static void _kaapi_print_task( 
     FILE* file, 
     kaapi_hashmap_t* data_khm,
     kaapi_task_t* task, 

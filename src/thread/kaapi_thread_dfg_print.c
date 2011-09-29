@@ -102,17 +102,16 @@ static char kaapi_getmodename( kaapi_access_mode_t m )
 */
 int kaapi_task_print( 
   FILE* file,
-  kaapi_task_t* task
+  kaapi_task_t* task,
+  kaapi_task_body_t body
 )
 {
   const kaapi_format_t* fmt;
   unsigned int i;
-  kaapi_task_body_t body;
   size_t count_params;
   state_type_t state;
 
-  body = kaapi_task_getbody(task);
-  fmt = kaapi_format_resolvebybody( body );
+  fmt = kaapi_format_resolvebybody(body);
   
   char* sp;
   sp = task->sp;
@@ -252,17 +251,17 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
         {
           kaapi_tasksteal_arg_t* arg = kaapi_task_getargst( task_bot, kaapi_tasksteal_arg_t );
           fprintf(file, ", thief task:" );
-          kaapi_task_print(file, arg->origin_task );
+          kaapi_task_print(file, arg->origin_task, body );
         }
         else if (body == kaapi_aftersteal_body)
         {
           fprintf(file, ", steal/term task:" );
-          kaapi_task_print(file, task_bot );
+          kaapi_task_print(file, task_bot, body );
         }
         else if (body == kaapi_suspend_body)
         {
           fprintf(file, ", steal/under task:" );
-          kaapi_task_print(file, task_bot );
+          kaapi_task_print(file, task_bot, body );
         }
         fputc('\n', file);
         
@@ -282,7 +281,7 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
 
       /* print the task */
       fprintf( file, "  [%04i]: ", count );
-      kaapi_task_print(file, task_bot );
+      kaapi_task_print(file, task_bot, body );
 
       ++count;
       --task_bot;
