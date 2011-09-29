@@ -204,7 +204,8 @@ push_frame: /* here assume fp current frame where to execute task */
 
   kaapi_assert_debug( fp >= eframe);
 
-  kaapi_sched_lock(&stack->proc->lock);
+//  kaapi_sched_lock(&stack->proc->lock);
+  int tolock = 0;
   if (fp > eframe)
   {
     /* here it's a pop of frame: we lock the thread */
@@ -212,11 +213,16 @@ push_frame: /* here assume fp current frame where to execute task */
     {
       --fp;
 
+      tolock = tolock || (fp <= stack->thieffp);
+      if (tolock)
+        kaapi_sched_lock(&stack->lock);
       /* finish to execute child tasks, pop current task of the frame */
       if (--fp->pc > fp->sp)
       {
         stack->sfp = fp;
-        kaapi_sched_unlock(&stack->proc->lock);
+//        kaapi_sched_unlock(&stack->proc->lock);
+        if (tolock)
+          kaapi_sched_unlock(&stack->lock);
 //        printf("Pop framefp:%p, pc: %p, state (%i)\n", (void*)(fp), (void*)pc, (int)pc->state ); fflush(stdout);
         goto push_frame; /* remains work do do */
       }
@@ -224,7 +230,9 @@ push_frame: /* here assume fp current frame where to execute task */
     fp->sp = fp->pc;
   }
   stack->sfp = fp;
-  kaapi_sched_unlock(&stack->proc->lock);
+//  kaapi_sched_unlock(&stack->proc->lock);
+  if (tolock)
+    kaapi_sched_unlock(&stack->lock);
 
   /* end of the pop: we have finish to execute all the tasks */
   kaapi_assert_debug( fp->pc == fp->sp );
