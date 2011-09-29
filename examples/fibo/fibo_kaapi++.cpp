@@ -100,7 +100,6 @@ struct TaskBodyCPU<TaskDelete>
 {
   void operator() ( ka::pointer_rw<long> ptr ) 
   {
-printf("Delete @:%p\n", (void*)ptr); fflush(stdout);
     delete ptr;
   }
 };
