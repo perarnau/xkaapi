@@ -99,9 +99,12 @@ int kaapi_preemptpoint_after_reducer_call(
   kaapi_writemem_barrier();
 
   /* signal termination */
+#warning TODO HERE
 redo:
+#if 0
   body = kaapi_task_getbody(&ktr->state);
   retval = kaapi_task_casbody(&ktr->state, body, kaapi_term_body);
+#endif
   if (retval)
   {
     if (body == kaapi_preempt_body)

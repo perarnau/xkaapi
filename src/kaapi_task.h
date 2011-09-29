@@ -100,7 +100,6 @@ typedef void (*kaapi_task_body_internal_t)(void* /*task arg*/, kaapi_thread_t* /
 typedef struct kaapi_stack_t {
   kaapi_frame_t*        volatile sfp;            /** pointer to the current frame (in stackframe) */
   kaapi_frame_t*                 esfp;           /** first frame until to execute all frame  */
-  kaapi_atomic_t                 lock;           // __attribute__((aligned(KAAPI_CACHE_LINE)));
   kaapi_frame_t*                 stackframe;     /** for execution, see kaapi_thread_execframe */
   struct kaapi_processor_t*      proc;           /** access to the running processor */
   kaapi_task_t*                  task;           /** bottom of the stack of task */
@@ -111,6 +110,7 @@ typedef struct kaapi_stack_t {
 
   /* execution state for stack of task */
   kaapi_frame_t*        volatile thieffp __attribute__((aligned (KAAPI_CACHE_LINE))); /** pointer to the thief frame where to steal */
+  kaapi_atomic_t                 lock;           // __attribute__((aligned(KAAPI_CACHE_LINE)));
 
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_stack_t;
 
@@ -221,16 +221,25 @@ static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_body_t body
   ((kaapi_task_t*volatile)task)->body = body;
 }
 
+static inline uintptr_t kaapi_task_getstate(const kaapi_task_t* task)
+{
+  return ((kaapi_task_t*volatile)task)->state;
+}
+
+static inline void kaapi_task_setstate(kaapi_task_t* task, uintptr_t state)
+{
+  ((kaapi_task_t*volatile)task)->state = state;
+}
+
 static inline void kaapi_task_setbody_barrier(kaapi_task_t* task, kaapi_task_body_t body)
 {
   kaapi_mem_barrier();
   ((kaapi_task_t*volatile)task)->body = body;
 }
 
-static inline int kaapi_task_casbody(kaapi_task_t* task, kaapi_task_body_t oldbody, kaapi_task_body_t newbody)
+static inline uintptr_t kaapi_task_casstate(kaapi_task_t* task, uintptr_t oldstate, uintptr_t newstate)
 {
-  kaapi_assert(0);
-  return KAAPI_ATOMIC_CASPTR( &task->body, oldbody, newbody);
+  return KAAPI_ATOMIC_CASPTR( &task->state, oldstate, newstate);
 }
 
 /* Return the state of the task

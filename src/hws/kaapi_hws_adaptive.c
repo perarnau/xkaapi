@@ -182,12 +182,14 @@ void kaapi_hws_adapt_body(void* arg, kaapi_thread_t* thread)
     kaapi_synchronize_steal(sc);
     ktr->rhead = sc->thieves.list.head;
     ktr->rtail = sc->thieves.list.tail;
-    
+
+#warning TODO HERE
+#if 0
 //    state = kaapi_task_orstate(&ktr->state, KAAPI_MASK_BODY_TERM);
 //    if (state & KAAPI_MASK_BODY_PREEMPT)
     do {
       body = kaapi_task_getbody(&ktr->state);
-      retval = kaapi_task_casbody(&ktr->state, body, kaapi_term_body);
+      retval = kaapi_task_casstate(&ktr->state, body, kaapi_term_body);
     } while (!retval);
     if (body == kaapi_preempt_body)
     {
@@ -199,6 +201,7 @@ void kaapi_hws_adapt_body(void* arg, kaapi_thread_t* thread)
       while (*ktr->preempt == 0)
         kaapi_slowdown_cpu();
     }
+#endif
   }
 
   kaapi_thread_restore_frame(thread, &sc->frame);

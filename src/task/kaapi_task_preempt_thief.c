@@ -123,6 +123,8 @@ int kaapi_preempt_thief_helper
   /* next write should ne be reorder with previous */
   kaapi_writemem_barrier();
   
+#warning TODO HERE
+#if 0
   /* preempt the task if not already terminated */
   body = kaapi_task_getbody(&ktr->state);
   if (body != kaapi_term_body)
@@ -147,7 +149,8 @@ int kaapi_preempt_thief_helper
       }
     }
   }
-  
+#endif
+
   /* remove thief and replace the thieves of ktr into the list */
   kaapi_remove_finishedthief(sc, ktr);
   
@@ -181,10 +184,13 @@ int kaapi_preemptasync_thief
   ktr->arg_from_victim = arg_to_thief;  
   kaapi_writemem_barrier();
 
+#warning TODO HERE
+#if 0
   /* preempt the task if not already terminated */
   body = kaapi_task_getbody(&ktr->state);
   if (body == kaapi_term_body) return 0;
   retval = kaapi_task_casbody(&ktr->state, body, kaapi_preempt_body);
+#endif
   if (retval)
   {
     *ktr->preempt = 1;

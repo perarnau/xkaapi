@@ -120,8 +120,11 @@ static kaapi_ws_error_t steal
         {
           //	  state = kaapi_task_orstate(task, KAAPI_MASK_BODY_STEAL);
           //	  if (!kaapi_task_state_isterm(state))
-          state = kaapi_task_casbody(task, kaapi_hws_adapt_body, kaapi_steal_body);
-          if (state)
+          uintptr_t orig_state = kaapi_task_getstate(task);
+          /* do not steal if terminated */
+          if (    (orig_state == KAAPI_TASK_STATE_INIT) && (orig_state == KAAPI_TASK_STATE_EXEC)
+               && likely(kaapi_task_casstate(task, orig_state, KAAPI_TASK_STATE_STEAL))
+             )
           {
             kaapi_task_splitter_t splitter = sc->splitter;
             void* const argsplitter = sc->argsplitter;
@@ -141,7 +144,8 @@ static kaapi_ws_error_t steal
               /* update request */
               req = kaapi_listrequest_iterator_get(lr, lri);
             }
-            kaapi_task_setbody(task, kaapi_hws_adapt_body);
+            /* reset initial state of the task */
+            kaapi_task_setstate(task, orig_state);
           }
         }
       }

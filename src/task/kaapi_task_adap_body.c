@@ -169,6 +169,8 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
     ktr->rhead = sc->thieves.list.head;
     ktr->rtail = sc->thieves.list.tail;
     
+#warning TODO HERE
+#if 0
 //    state = kaapi_task_orstate(&ktr->state, KAAPI_MASK_BODY_TERM);
 //    if (state & KAAPI_MASK_BODY_PREEMPT)
     do {
@@ -184,6 +186,7 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
       while (*ktr->preempt == 0)
         kaapi_slowdown_cpu();
     }
+#endif
   }
 
   kaapi_thread_restore_frame(thread, &sc->frame);

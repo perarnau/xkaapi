@@ -48,7 +48,7 @@
 
 /** Bits are SEAT
 */
-static const char* tab_bit[] = {
+static const char* tab_bit[] __attribute__((unused)) = {
   "0000",
   "0001",
   "0010",
@@ -231,7 +231,7 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
           fname = "suspend";
         else if (body == kaapi_tasksteal_body) 
           fname = "steal";
-        else if (body == kaapi_aftersteal_body) 
+        else if (body == (kaapi_task_body_t)kaapi_aftersteal_body) 
           fname = "aftersteal";
         else if (body == kaapi_taskmove_body) 
           fname = "move";
@@ -253,7 +253,7 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
           fprintf(file, ", thief task:" );
           kaapi_task_print(file, arg->origin_task, body );
         }
-        else if (body == kaapi_aftersteal_body)
+        else if (body == (kaapi_task_body_t)kaapi_aftersteal_body)
         {
           fprintf(file, ", steal/term task:" );
           kaapi_task_print(file, task_bot, body );

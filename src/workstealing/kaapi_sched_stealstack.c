@@ -120,12 +120,12 @@ static inline void _kaapi_bitmapkid2cpuset( kaapi_cpuset_t* cpusetrequest, kaapi
 
 /* find and clear the first request whose emiter matches the numaid
  */
-static kaapi_request_t* _kaapi_matching_request
+static kaapi_request_t* _kaapi_matching_request 
 (
  kaapi_listrequest_t*          lr,
  kaapi_listrequest_iterator_t* lri,
  kaapi_cpuset_t*               mapping
- )
+ ) 
 {
   kaapi_cpuset_t cpusetrequest;
   _kaapi_bitmapkid2cpuset( &cpusetrequest, &lri->bitmap );
@@ -192,33 +192,33 @@ static int kaapi_sched_stealframe
       kaapi_stealcontext_t* const sc = kaapi_task_getargst(task_top, kaapi_stealcontext_t);
       if (sc->header.flag & KAAPI_SC_INIT) 
       {
-        /* should not be reorder before the barrier */
         splitter = sc->splitter;
         argsplitter = sc->argsplitter;
         
         if ( (splitter !=0) && (argsplitter !=0) )
         {
-//          const uintptr_t state = kaapi_task_orstate( task_top, KAAPI_MASK_BODY_STEAL );
-          int state = kaapi_task_casbody(task_top, kaapi_adapt_body, kaapi_steal_body);
+          uintptr_t orig_state = kaapi_task_getstate(task_top);
           /* do not steal if terminated */
-          if (likely( state ) )
+          if (    (orig_state == KAAPI_TASK_STATE_INIT) && (orig_state == KAAPI_TASK_STATE_EXEC)
+               && likely(kaapi_task_casstate(task_top, orig_state, KAAPI_TASK_STATE_STEAL))
+             )
           {
-            /* steal sucess */
-            /* possible race, reread the splitter */
+            /* steal may sucess: possible race, reread the splitter */
             splitter = sc->splitter;
             argsplitter = sc->argsplitter;
             if ((splitter != 0) && (argsplitter != 0))
               kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, lrequests, lrrange );
             
-            /* here suspend bit was set: reset it */
-            kaapi_task_setbody(task_top, kaapi_adapt_body);
+            /* reset initial state of the task */
+            kaapi_task_setstate(task_top, orig_state);
           }
         }
       } /* end if init */
       --task_top;
       continue;
     }
-    
+
+
     /* * weak symbol may also be used ? 
      * not that recv body is an empty function to serve as a mark. It could
      be put into the nonpartitioning code...
@@ -229,7 +229,11 @@ static int kaapi_sched_stealframe
       {
         unsigned int war_param = 0;
         unsigned int cw_param = 0;
-        size_t wc = kaapi_task_computeready( task_top, kaapi_task_getargs(task_top), task_fmt, &war_param, &cw_param, map );
+        size_t wc = kaapi_task_computeready( 
+              task_top, kaapi_task_getargs(task_top), 
+              task_fmt, 
+              &war_param, 
+              &cw_param, map );
         if ((wc ==0) && kaapi_task_isstealable(task_top))
         {
           kaapi_task_body_t body = kaapi_task_marksteal( task_top );
@@ -359,11 +363,11 @@ static void kaapi_sched_steal_tasklist(
  */
 int kaapi_sched_stealstack  
 ( 
- kaapi_thread_context_t*       thread, 
- kaapi_task_t*                 curr __attribute__((unused)), 
- kaapi_listrequest_t*          lrequests, 
- kaapi_listrequest_iterator_t* lrrange
- )
+  kaapi_thread_context_t*       thread, 
+  kaapi_task_t*                 curr __attribute__((unused)), 
+  kaapi_listrequest_t*          lrequests, 
+  kaapi_listrequest_iterator_t* lrrange
+)
 {
   kaapi_frame_t*           top_frame;  
   int                      replycount;
@@ -384,10 +388,10 @@ int kaapi_sched_stealstack
        (top_frame <= thread->stack.sfp) && !kaapi_listrequest_iterator_empty(lrrange); 
        ++top_frame)
   {
-    thread->stack.thieffp = top_frame;
     /* void frame ? */
     if (top_frame->tasklist == 0)
     {
+      thread->stack.thieffp = top_frame;
       /* classical steal */
       if (top_frame->pc == top_frame->sp) continue;
       kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );
