@@ -131,11 +131,14 @@ push_frame: /* here assume fp current frame where to execute task */
     kaapi_assert_debug( pc > sp );
 redo_exec:
     body = kaapi_task_markexec( pc );
+#if 0
     if (likely( body ))
+#endif
     {
       /* here... */
       body( pc->sp, (kaapi_thread_t*)fp );
     }
+#if 0
     else
     { 
       /* It is a special task: it means that before atomic or update, the body
@@ -154,6 +157,7 @@ redo_exec:
       goto error_swap_body;
 #endif
     }
+#endif
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
