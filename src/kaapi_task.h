@@ -280,14 +280,12 @@ static inline kaapi_task_body_t kaapi_task_marksteal( kaapi_task_t* task )
 
 static inline void kaapi_task_markterm( kaapi_task_t* task )
 {
-  int retval = KAAPI_ATOMIC_CASPTR( &task->state, KAAPI_TASK_STATE_STEAL, KAAPI_TASK_STATE_TERM);
-  kaapi_assert(retval != 0);
+  while (!KAAPI_ATOMIC_CASPTR( &task->state, KAAPI_TASK_STATE_STEAL, KAAPI_TASK_STATE_TERM)) ;
 }
 
 static inline void kaapi_task_markaftersteal( kaapi_task_t* task )
 {
-  int retval = KAAPI_ATOMIC_CASPTR( &task->state, KAAPI_TASK_STATE_STEAL, KAAPI_TASK_STATE_MERGE);
-  kaapi_assert(retval != 0);
+  while (!KAAPI_ATOMIC_CASPTR( &task->state, KAAPI_TASK_STATE_STEAL, KAAPI_TASK_STATE_MERGE)) ;
 }
 
 
