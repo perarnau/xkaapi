@@ -120,6 +120,7 @@ static kaapi_thread_context_t* _kaapi_sched_emitsteal_onglobal_queue(
 */
 kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
 {
+  kaapi_atomic_t               status __attribute__((aligned(8)));
   kaapi_thread_context_t*      thread;
   kaapi_victim_t               victim;
   kaapi_thread_t*	           self_thread;
@@ -169,7 +170,7 @@ redo_select:
   /* (1) 
      Fill & Post the request to the victim processor 
   */
-  self_request = kaapi_request_post( kproc->kid, thief_task, thief_sp, victim.kproc );
+  self_request = kaapi_request_post( kproc->kid, &status, thief_task, thief_sp, victim.kproc );
   
   victim_hlr = &victim.kproc->hlrequests;
 
@@ -197,7 +198,7 @@ acquire:
   if (KAAPI_ATOMIC_DECR(&victim.kproc->lock) ==0) goto enter;
   while (KAAPI_ATOMIC_READ(&victim.kproc->lock) <=0)
   {
-    if (kaapi_request_test( self_request )) 
+    if (kaapi_request_status_test( &status )) 
       goto return_value;
 #if defined(KAAPI_USE_NETWORK)
     kaapi_network_poll();
@@ -248,7 +249,7 @@ enter:
   /* unlock the victim kproc after processing the steal operation */
   kaapi_sched_unlock( &victim.kproc->lock );
 
-  if (kaapi_request_test( self_request ))
+  if (kaapi_request_status_test( &status ))
     goto return_value;
   
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -261,12 +262,12 @@ enter:
 return_value:
   /* mark current processor as no stealing anymore */
   kproc->issteal = 0;
-  kaapi_assert_debug( (kaapi_request_status(self_request) != KAAPI_REQUEST_S_POSTED) ); 
+  kaapi_assert_debug( (kaapi_request_status_get(&status) != KAAPI_REQUEST_S_POSTED) ); 
 
   /* test if my request is ok */
   kaapi_request_syncdata( self_request );
 
-  switch (kaapi_request_status(self_request))
+  switch (kaapi_request_status_get(&status))
   {
     case KAAPI_REQUEST_S_OK:
       /* push the task into the thread (only allocated) */

@@ -109,7 +109,7 @@ static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
   __KAAPI_ISALIGNED_ATOMIC(a, (a)->_counter = value)
 
 #define KAAPI_ATOMIC_WRITE_BARRIER(a, value) \
-    __KAAPI_ISALIGNED_ATOMIC(a, (kaapi_mem_barrier(), (a)->_counter = value))
+    __KAAPI_ISALIGNED_ATOMIC(a, (kaapi_writemem_barrier(), (a)->_counter = value))
 
 //BEFORE:    __KAAPI_ISALIGNED_ATOMIC(a, (kaapi_writemem_barrier(), (a)->_counter = value))
 
