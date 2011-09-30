@@ -151,12 +151,14 @@ void kaapi_taskwrite_body(
 #endif
 
   kaapi_writemem_barrier();
+#if 0
   while (kaapi_task_getstate(arg->origin_task) != KAAPI_TASK_STATE_STEAL)
   {
     uintptr_t state = kaapi_task_getstate(arg->origin_task);
     kaapi_assert( (state == KAAPI_TASK_STATE_PREEMPTED) || (state == KAAPI_TASK_STATE_STEAL) );
     kaapi_slowdown_cpu();
   }
+#endif
 
   /* signal the task : mark it as executed, the old returned body should have steal flag */
   if ((war_param ==0) && (cw_param ==0))
