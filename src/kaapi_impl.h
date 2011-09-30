@@ -303,7 +303,20 @@ extern kaapi_rtparam_t kaapi_default_param;
     \ingroup WS
     
     The protocol to steal work is very simple:
-    - 
+    1- the thief that want to post should provide:
+      - an status to indicate the completion of the request (kaapi_atomic_t)
+      - a task allocated in its own queue, the task is initialized to be
+      in state KAAPI_TASK_STATE_ALLOCATED with kaapi_tasksteal_body entry point
+      - a task sp that point to a kaapi_tasksteal_arg_t. It is the argument of the
+      task
+    2. The post method initialize fields, do a write barrier and set the status to
+    KAAPI_REQUEST_S_POSTED
+    3. A victim thread that replies must fill the kaapi_tasksteal_arg_t and
+    call kaapi_request_replytask with the status of the steal request: 
+    either KAAPI_REQUEST_S_OK in case of success, else KAAPI_REQUEST_S_NOK.
+    If the victim want to change kind of reply, it can change the body of the
+    task. The pre-allocated arguments for the task is currently of size 
+    sizeof(kaapi_tasksteal_arg_t).
 */
 typedef enum kaapi_reply_status_t {
   KAAPI_REQUEST_S_POSTED   = 0,
@@ -316,7 +329,8 @@ typedef enum kaapi_reply_status_t {
     Reply to a steal request.
     Return !=0 if the request cannot be replied.
 */
-static inline int kaapi_request_replytask( 
+static inline int kaapi_request_replytask
+( 
   kaapi_request_t*      request, 
   kaapi_reply_status_t	status
 )

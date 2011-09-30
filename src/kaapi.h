@@ -639,8 +639,8 @@ typedef struct kaapi_request_t {
     Kaapi access, public
 */
 typedef struct kaapi_access_t {
-  void*                  data;    /* global data */
-  void*                  version; /* used to set the data to access (R/W/RW/CW) if steal, used to store output after steal */
+  void*    data;    /* global data */
+  void*    version; /* used to set the data to access (R/W/RW/CW) if steal, used to store output after steal */
 } kaapi_access_t;
 
 #define kaapi_data(type, a)\

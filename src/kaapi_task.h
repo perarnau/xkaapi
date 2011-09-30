@@ -111,6 +111,7 @@ struct kaapi_listrequest_t;
 #define KAAPI_TASK_STATE_INIT       0x0
 #define KAAPI_TASK_STATE_EXEC       0x1
 #define KAAPI_TASK_STATE_STEAL      0x2
+#define KAAPI_TASK_STATE_MARK_STEAL 0x80
 #define KAAPI_TASK_STATE_TERM       0x4
 #define KAAPI_TASK_STATE_MERGE      0x8
 #define KAAPI_TASK_STATE_ALLOCATED  0x10
@@ -255,7 +256,7 @@ static inline uintptr_t kaapi_task_casstate(kaapi_task_t* task, uintptr_t oldsta
 */
 static inline uintptr_t kaapi_task_markexec( kaapi_task_t* task )
 {
-  if (likely(KAAPI_ATOMIC_CASPTR( &task->state, 0, KAAPI_TASK_STATE_EXEC)))
+  if (likely(KAAPI_ATOMIC_CASPTR( &task->state, KAAPI_TASK_STATE_INIT, KAAPI_TASK_STATE_EXEC)))
     return KAAPI_TASK_STATE_EXEC;
   return task->state;
 }
@@ -264,7 +265,7 @@ static inline uintptr_t kaapi_task_markexec( kaapi_task_t* task )
 */
 static inline kaapi_task_body_t kaapi_task_marksteal( kaapi_task_t* task )
 {
-  if (likely(KAAPI_ATOMIC_CASPTR( &task->state, 0, KAAPI_TASK_STATE_STEAL)))
+  if (likely(KAAPI_ATOMIC_CASPTR( &task->state, KAAPI_TASK_STATE_INIT, KAAPI_TASK_STATE_MARK_STEAL)))
     return task->body;
   return 0;
 }
@@ -565,14 +566,8 @@ typedef struct kaapi_taskadaptive_user_taskarg_t {
 */
 static inline int kaapi_task_isstealable(const kaapi_task_t* task)
 { 
-  kaapi_task_body_t body = task->body;
-  return (body != kaapi_taskstartup_body) 
-      && (body != kaapi_nop_body)
-      && (body != kaapi_tasksteal_body) 
-      && (body != kaapi_taskwrite_body)
-      && (body != kaapi_taskfinalize_body) 
-      && (body != kaapi_adapt_body)
-      ;
+  uintptr_t state = kaapi_task_getstate(task);
+  return (state == KAAPI_TASK_STATE_INIT);
 }
 
 /** \ingroup TASK

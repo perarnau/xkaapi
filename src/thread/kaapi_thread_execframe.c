@@ -43,6 +43,7 @@
 */
 #include "kaapi_impl.h"
 
+static int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc );
 
 /** 
     Here the stack of task is organised like this, task1 is pointed by pc and
@@ -167,11 +168,19 @@ push_frame: /* here assume fp current frame where to execute task */
       {
         kaapi_aftersteal_body(pc->sp, fp, pc);
       }
-      else if (state != KAAPI_TASK_STATE_TERM)
+      /* if preempted -> do nothing, the victim get it back... */
+      else if (state == KAAPI_TASK_STATE_STEAL)
       {
         fp[-1].pc = pc;  
         stack->sfp = fp-1;
         return EWOULDBLOCK;
+      }
+      else if (state == KAAPI_TASK_STATE_MARK_STEAL)
+      {
+        fp[-1].pc = pc;  
+        stack->sfp = fp-1;
+        if (__kaapi_try_preempt(stack,pc)) 
+          return EWOULDBLOCK
       }
     }
 #endif
@@ -243,4 +252,13 @@ push_frame: /* here assume fp current frame where to execute task */
   cnt_tasks = 0;
 #endif
   return 0;
+}
+
+
+int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
+{
+  printf("In __kaapi_try_preempt\n"); fflush(stdout);
+  while (kaapi_task_getstate(pc) != KAAPI_TASK_STATE_MARK_STEAL)
+    kaapi_slowdown_cpu();
+  return EWOULDBLOCK;
 }

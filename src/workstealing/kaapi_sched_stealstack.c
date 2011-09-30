@@ -185,6 +185,7 @@ static int kaapi_sched_stealframe
     request = kaapi_listrequest_iterator_get( lrequests, lrrange );
     task_body = kaapi_task_getbody(task_top);
     
+#warning TODO HERE
     /* its an adaptive task !!! */
     if (task_body == kaapi_adapt_body || task_body == kaapi_hws_adapt_body)
     {
@@ -236,12 +237,13 @@ static int kaapi_sched_stealframe
               &cw_param, map );
         if ((wc ==0) && kaapi_task_isstealable(task_top))
         {
-          task_top->reserved = request->thief_task;
-          kaapi_writemem_barrier();
           kaapi_task_body_t body = kaapi_task_marksteal( task_top );
-
-          if (likely( body ) ) 
+          if (likely( body ) ) /* success */
           {
+            ((kaapi_task_t* volatile)task_top)->reserved = request->thief_task;
+            kaapi_writemem_barrier();
+            kaapi_task_setstate( task_top, KAAPI_TASK_STATE_STEAL);
+            
             /* - create the task steal that will execute the stolen task
                The task stealtask stores:
                  - the original thread
@@ -257,7 +259,7 @@ static int kaapi_sched_stealframe
             argsteal->war_param             = war_param;  
             argsteal->cw_param              = cw_param;
             request->thief_task->body       = kaapi_tasksteal_body; /* TODO MUST be always this task no write */
-            kaapi_request_replytask( request, KAAPI_REQUEST_S_OK); /* success of steal */
+            kaapi_request_replytask( request, KAAPI_REQUEST_S_OK);  /* success of steal */
             
             /* advance to the next request */
             kaapi_listrequest_iterator_next( lrequests, lrrange );
