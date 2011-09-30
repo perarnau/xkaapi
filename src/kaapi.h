@@ -845,7 +845,6 @@ static inline void kaapi_task_initdfg
   task->body  = body;
   task->sp    = arg;
   task->state = 0;
-  task->thief = 0;
 //  task->binding.type = KAAPI_BINDING_ANY;
 }
 
