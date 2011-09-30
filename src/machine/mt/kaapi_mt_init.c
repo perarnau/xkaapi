@@ -208,7 +208,7 @@ int kaapi_mt_init(void)
   kaapi_assert_m( 0 == kaapi_setconcurrency(), "kaapi_setconcurrency" );
 
   /* initialize before destroying procinfo */
-  kaapi_hws_init_global();
+  //kaapi_hws_init_global();
 
   /* destroy the procinfo list, thread args no longer valid */
   kaapi_procinfo_list_free(kaapi_default_param.kproc_list);
@@ -412,7 +412,7 @@ int kaapi_mt_finalize(void)
   }
 #endif  
 
-  kaapi_hws_fini_global();
+  //kaapi_hws_fini_global();
   
   /* TODO: destroy topology data structure */
   return 0;

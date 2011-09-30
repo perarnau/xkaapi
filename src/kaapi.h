@@ -418,6 +418,7 @@ typedef struct kaapi_task_t {
   uintptr_t             state;
   kaapi_task_body_t     body;      /** task body  */
   void*                 sp;        /** data stack pointer of the data frame for the task  */
+  struct kaapi_task_t*  thief;
 //  uintptr_t             state;     /** state of the task */
 //TO ADD AFTER  kaapi_task_binding_t  binding;   /** binding information or 0  */
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
@@ -845,6 +846,7 @@ static inline void kaapi_task_initdfg
   task->body  = body;
   task->sp    = arg;
   task->state = 0;
+  task->thief = 0;
 //  task->binding.type = KAAPI_BINDING_ANY;
 }
 
