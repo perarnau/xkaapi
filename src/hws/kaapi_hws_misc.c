@@ -51,7 +51,7 @@
 
 unsigned int kaapi_hws_get_request_nodeid(const kaapi_request_t* req)
 {
-  return (unsigned int)req->kid;
+  return (unsigned int)req->ident;
 } 
 
 

@@ -74,14 +74,48 @@ struct kaapi_listrequest_iterator_t;
 struct kaapi_listrequest_t;
 
 /* ============================= The stack of task data structure ============================ */
-/** State of a task
+/** States of a task.
+    The state diagram is the following:
+    *  INIT -> EXEC -> TERM
+    Normal execution of tasks, the task is created, under execution and then terminated.
+    This path is tried to be as fast as possible.
+    
+    *  INIT -> STEAL -> TERM  
+    Execution of the task stolen: the task is created, marked STEAL while the thief execute it,
+    and then it is marked terminated if no merge of results are required.
+
+    *  INIT -> STEAL -> MERGE [-> EXEC -> TERM]
+    Execution of the task stolen: the task is created, marked STEAL while the thief execute it,
+    and then it is marked MERGE if some merge of results are required. Then the victim will
+    execute a post processing functions. The last two states between brackets are not explicitly
+    represented. After the execution of the merge operation the task is considered as terminated.
+    
+    * ALLOCATED -> INIT -> ... then see above the possible transitions 
+    This is the case of that occurs during a steal operation: the thief thread has a task in state
+    ALLOCATED before it mades steal request. This task will store the information about the stolen 
+    task to execute. Then, when the thief finish to get information about the stolen task, it
+    made the transition to INIT, then the thief task can be executed or stolen using previous transitions.
+    If the transition to INIT is impossible, then it means that the task has been preempted by the victim.
+    
+    * ALLOCATED -> PREEMPTED
+    As in the previous transition, but the victim will preempt the thief task before the thief thread
+    finish to steal the task and made the transition to INIT. 
+    
+    * INIT -> PREEMPTED
+    Same as previous transition: the vicitm preempt the thief task before execution begin. Then the this
+    will abort its tansition to EXEC.
+    
+    * TODO:  EXEC -> SIGNALED
+    If a thief task receive a request for preemption during its execution
 */
-#define KAAPI_TASK_STATE_INIT     0x0
-#define KAAPI_TASK_STATE_STEAL    0x1
-#define KAAPI_TASK_STATE_EXEC     0x2
-#define KAAPI_TASK_STATE_TERM     0x4
-#define KAAPI_TASK_STATE_AFTER    0x8
-#define KAAPI_TASK_STATE_PREEMPT  0x10
+#define KAAPI_TASK_STATE_INIT       0x0
+#define KAAPI_TASK_STATE_EXEC       0x1
+#define KAAPI_TASK_STATE_STEAL      0x2
+#define KAAPI_TASK_STATE_TERM       0x4
+#define KAAPI_TASK_STATE_MERGE      0x8
+#define KAAPI_TASK_STATE_ALLOCATED  0x10
+#define KAAPI_TASK_STATE_PREEMPTED  0x20
+#define KAAPI_TASK_STATE_SIGNALED   0x40
 
 typedef void (*kaapi_task_body_internal_t)(void* /*task arg*/, kaapi_thread_t* /* thread or stream */, kaapi_task_t*);
 
@@ -122,35 +156,10 @@ typedef struct kaapi_stack_t {
 */
 extern void kaapi_anormal_body( void*, kaapi_thread_t*, kaapi_task_t* );
 
-
-#if 1 // DEPRECATED_ATTRIBUTE
 /** Body of the task used to mark a thread suspend in its execution
     \ingroup TASK
 */
-extern void kaapi_suspend_body( void*, kaapi_thread_t*);
-
-/** Body of the task used to mark a task as under execution
-    \ingroup TASK
-*/
-extern void kaapi_exec_body( void*, kaapi_thread_t*);
-
-/** Body of task used to mark a theft task into a victim stack
-    \ingroup TASK
-*/
-extern void kaapi_steal_body( void*, kaapi_thread_t*, kaapi_task_t* );
-
-/** Body of a task terminated.
-    This state is set by a thief to mark a theft task as terminated.
-    \ingroup TASK
-*/
-extern void kaapi_term_body( void*, kaapi_thread_t* );
-
-/** Body of a task marked as preempted.
-    This state is set by a victim to preempt a stolen task.
-    \ingroup TASK
-*/
-extern void kaapi_preempt_body( void*, kaapi_thread_t* );
-#endif
+extern void kaapi_execthread_body( void*, kaapi_thread_t*);
 
 /** Merge result after a steal
     This body is set by a thief at the end of the steal operation in case of 
@@ -269,7 +278,7 @@ static inline void kaapi_task_markterm( kaapi_task_t* task )
 
 static inline void kaapi_task_markaftersteal( kaapi_task_t* task )
 {
-  int retval = KAAPI_ATOMIC_CASPTR( &task->state, KAAPI_TASK_STATE_STEAL, KAAPI_TASK_STATE_AFTER);
+  int retval = KAAPI_ATOMIC_CASPTR( &task->state, KAAPI_TASK_STATE_STEAL, KAAPI_TASK_STATE_MERGE);
   kaapi_assert(retval != 0);
 }
 
@@ -452,9 +461,8 @@ extern int kaapi_threadgroup_execframe( struct kaapi_thread_context_t* thread );
     \retval the number of positive replies to the thieves
 */
 extern int kaapi_sched_stealstack  ( 
-  struct kaapi_thread_context_t* thread, 
-  kaapi_task_t* curr, 
-  struct kaapi_listrequest_t* lrequests, 
+  struct kaapi_thread_context_t*       thread, 
+  struct kaapi_listrequest_t*          lrequests, 
   struct kaapi_listrequest_iterator_t* lrrange
 );
 

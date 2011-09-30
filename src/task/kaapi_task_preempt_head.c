@@ -59,7 +59,7 @@ void kaapi_synchronize_steal(kaapi_stealcontext_t* sc)
    */
 
   kaapi_writemem_barrier();
-  while (kaapi_task_getbody(sc->ownertask) == kaapi_steal_body)
+  while (kaapi_task_getstate(sc->ownertask) == KAAPI_TASK_STATE_STEAL)
     kaapi_slowdown_cpu();
   kaapi_readmem_barrier();
 }

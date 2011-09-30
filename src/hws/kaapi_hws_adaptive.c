@@ -115,15 +115,16 @@ void* kaapi_hws_init_adaptive_task
 
   adata->ubody = (kaapi_adaptive_thief_body_t)body;
 
-  rep = req->reply;
-  rep->u.s_task.body = kaapi_hws_adapt_body;
-
+  req->thief_task->body = kaapi_hws_adapt_body;
+  return req->thief_sp;
+#if 0
   {
     void* const dont_break_aliasing = (void*)rep->udata;
     *(void**)dont_break_aliasing = (void*)sc;
   }
 
   return (void*)adata->udata;
+#endif
 }
 
 

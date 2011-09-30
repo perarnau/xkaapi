@@ -234,7 +234,7 @@ int kaapi_hws_init_global(void)
   /* initialize the request list */
   kaapi_bitmap_clear(&hws_requests.bitmap);
   for (kid = 0; kid < KAAPI_MAX_PROCESSOR; ++kid)
-    hws_requests.requests[kid].kid = kid;
+    hws_requests.requests[kid].ident = kid;
 
   hws_levelmask = levelmask_from_env();
 

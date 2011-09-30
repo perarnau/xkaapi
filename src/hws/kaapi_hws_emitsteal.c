@@ -1,48 +1,48 @@
 /*
-** kaapi_hws_emitsteal.c
-** xkaapi
-** 
-** Created on Tue Mar 31 15:19:14 2009
-** Copyright 2009 INRIA.
-**
-** Contributors :
-**
-** thierry.gautier@inrialpes.fr
-** fabien.lementec@gmail.com / fabien.lementec@imag.fr
-** 
-** This software is a computer program whose purpose is to execute
-** multithreaded computation with data flow synchronization between
-** threads.
-** 
-** This software is governed by the CeCILL-C license under French law
-** and abiding by the rules of distribution of free software.  You can
-** use, modify and/ or redistribute the software under the terms of
-** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
-** following URL "http://www.cecill.info".
-** 
-** As a counterpart to the access to the source code and rights to
-** copy, modify and redistribute granted by the license, users are
-** provided only with a limited warranty and the software's author,
-** the holder of the economic rights, and the successive licensors
-** have only limited liability.
-** 
-** In this respect, the user's attention is drawn to the risks
-** associated with loading, using, modifying and/or developing or
-** reproducing the software by the user in light of its specific
-** status of free software, that may mean that it is complicated to
-** manipulate, and that also therefore means that it is reserved for
-** developers and experienced professionals having in-depth computer
-** knowledge. Users are therefore encouraged to load and test the
-** software's suitability as regards their requirements in conditions
-** enabling the security of their systems and/or data to be ensured
-** and, more generally, to use and operate it in the same conditions
-** as regards security.
-** 
-** The fact that you are presently reading this means that you have
-** had knowledge of the CeCILL-C license and that you accept its
-** terms.
-** 
-*/
+ ** kaapi_hws_emitsteal.c
+ ** xkaapi
+ ** 
+ ** Created on Tue Mar 31 15:19:14 2009
+ ** Copyright 2009 INRIA.
+ **
+ ** Contributors :
+ **
+ ** thierry.gautier@inrialpes.fr
+ ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+ ** 
+ ** This software is a computer program whose purpose is to execute
+ ** multithreaded computation with data flow synchronization between
+ ** threads.
+ ** 
+ ** This software is governed by the CeCILL-C license under French law
+ ** and abiding by the rules of distribution of free software.  You can
+ ** use, modify and/ or redistribute the software under the terms of
+ ** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
+ ** following URL "http://www.cecill.info".
+ ** 
+ ** As a counterpart to the access to the source code and rights to
+ ** copy, modify and redistribute granted by the license, users are
+ ** provided only with a limited warranty and the software's author,
+ ** the holder of the economic rights, and the successive licensors
+ ** have only limited liability.
+ ** 
+ ** In this respect, the user's attention is drawn to the risks
+ ** associated with loading, using, modifying and/or developing or
+ ** reproducing the software by the user in light of its specific
+ ** status of free software, that may mean that it is complicated to
+ ** manipulate, and that also therefore means that it is reserved for
+ ** developers and experienced professionals having in-depth computer
+ ** knowledge. Users are therefore encouraged to load and test the
+ ** software's suitability as regards their requirements in conditions
+ ** enabling the security of their systems and/or data to be ensured
+ ** and, more generally, to use and operate it in the same conditions
+ ** as regards security.
+ ** 
+ ** The fact that you are presently reading this means that you have
+ ** had knowledge of the CeCILL-C license and that you accept its
+ ** terms.
+ ** 
+ */
 
 /* todo: kaapi_hws_level_iterator_t
  */
@@ -57,7 +57,7 @@ static inline kaapi_ws_block_t* get_self_ws_block
 {
   /* return the ws block for the kproc at given level */
   /* assume self, level dont overflow */
-
+  
   return hws_levels[levelid].kid_to_block[self->kid];
 }
 
@@ -66,14 +66,14 @@ static void fail_requests
 (
  kaapi_listrequest_t* lr,
  kaapi_listrequest_iterator_t* lri
-)
+ )
 {
   kaapi_request_t* req;
-
+  
   req = kaapi_listrequest_iterator_get(lr, lri);
   while (req != NULL)
   {
-    _kaapi_request_reply(req, KAAPI_REPLY_S_NOK);
+    kaapi_request_replytask( req, KAAPI_REQUEST_S_NOK);
     req = kaapi_listrequest_iterator_next(lr, lri);
   }
 }
@@ -83,75 +83,47 @@ static kaapi_thread_context_t* steal_block
 (
  kaapi_ws_block_t* block,
  kaapi_processor_t* kproc,
- kaapi_reply_t* reply,
+ kaapi_request_t* request,
  kaapi_listrequest_t* lr,
  kaapi_listrequest_iterator_t* lri
-)
+ )
 {
   while (!kaapi_ws_lock_trylock(&block->lock))
   {
-    if (kaapi_reply_test(reply))
+    if (kaapi_request_test(request))
       goto on_request_replied;
   }
-
+  
   /* got the lock: reply and unlock */
-
+  
   kaapi_listrequest_iterator_update(lr, lri, &block->kid_mask);
-
+  
   if (!kaapi_listrequest_iterator_empty(lri))
     kaapi_ws_queue_steal(block->queue, kproc->thread, lr, lri);
-
+  
   kaapi_ws_lock_unlock(&block->lock);
-
- on_request_replied:
-  kaapi_replysync_data(reply);
-
-  switch (kaapi_reply_status(reply))
+  
+on_request_replied:
+  kaapi_request_syncdata(request);
+  
+  switch (kaapi_request_status(request))
   {
-  case KAAPI_REPLY_S_TASK_FMT:
-    {
-      kaapi_format_t* const format =
-	kaapi_format_resolvebyfmit(reply->u.s_taskfmt.fmt);
-      reply->u.s_task.body = format->entrypoint[kproc->proc_type];
-    } /* KAAPI_REPLY_S_TASK_FMT */
-
-  case KAAPI_REPLY_S_TASK:
+    case KAAPI_REQUEST_S_OK:
     {
       kaapi_thread_t* const self_thread =
-	kaapi_threadcontext2thread(kproc->thread);
-
-      /* data is stored in the first word of udata */
-      void* const dont_break_aliasing = (void*)reply->udata;
-      void* const data = *(void**)dont_break_aliasing;
-
-      kaapi_task_init
-      (
-       kaapi_thread_toptask(self_thread),
-       reply->u.s_task.body,
-       data
-      );
-
+          kaapi_threadcontext2thread(kproc->thread);
       kaapi_thread_pushtask(self_thread);
-
+      
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
       return kproc->thread;
-
+      
     } /* KAAPI_REPLY_S_TASK */
-
-  case KAAPI_REPLY_S_THREAD:
-    {
-#if defined(KAAPI_USE_PERFCOUNTER)
-      ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
-#endif
-      return reply->u.s_thread;
-
-    } /* KAAPI_REPLY_S_THREAD */
-
-  default: break ;
+      
+    default: break ;
   }
-
+  
   return NULL;
 }
 
@@ -160,27 +132,27 @@ static kaapi_thread_context_t* steal_block_leaves
 (
  kaapi_ws_block_t* block,
  kaapi_processor_t* kproc,
- kaapi_reply_t* reply,
+ kaapi_request_t* request,
  kaapi_listrequest_t* lr,
  kaapi_listrequest_iterator_t* lri
-)
+ )
 {
   /* steal randomly amongst the block leaves */
-
+  
   kaapi_processor_id_t kid;
   kaapi_ws_block_t* leaf_block;
-
+  
   /* actually block->kid_count == 1 */
   if (block->kid_count <= 1) return NULL;
-
- redo_rand:
+  
+redo_rand:
   kid = block->kids[rand() % block->kid_count];
   if (kid == kproc->kid) goto redo_rand;
-
+  
   /* get the leaf block (ie. block at flat level) */
   leaf_block = hws_levels[KAAPI_HWS_LEVELID_FLAT].kid_to_block[kid];
-
-  return steal_block(leaf_block, kproc, reply, lr, lri);
+  
+  return steal_block(leaf_block, kproc, request, lr, lri);
 }
 
 
@@ -188,20 +160,20 @@ static kaapi_thread_context_t* steal_level
 (
  kaapi_hws_level_t* level,
  kaapi_processor_t* kproc,
- kaapi_reply_t* reply,
+ kaapi_request_t* request,
  kaapi_listrequest_t* lr,
  kaapi_listrequest_iterator_t* lri
-)
+ )
 {
   kaapi_thread_context_t* thread = NULL;
   unsigned int i;
-
+  
   for (i = 0; i < level->block_count; ++i)
   {
-    thread = steal_block(&level->blocks[i], kproc, reply, lr, lri);
+    thread = steal_block(&level->blocks[i], kproc, request, lr, lri);
     if (thread != NULL) break ;
   }
-
+  
   return thread;
 }
 
@@ -211,92 +183,75 @@ static kaapi_thread_context_t* pop_block
 (
  kaapi_ws_block_t* block,
  kaapi_processor_t* kproc
-)
+ )
 {
   /* not a real steal operation, dont actually post */
   kaapi_request_t* const req = &hws_requests.requests[kproc->kid];
-  kaapi_reply_t* const rep = &kproc->thread->static_reply;
+  kaapi_task_t*          thief_task;
+  kaapi_tasksteal_arg_t* thief_sp;
   kaapi_ws_error_t err;
-
-  req->kid = kproc->kid;
-  req->reply = rep;
-
-  rep->offset = 0;
-  rep->preempt = 0;
-  rep->status = KAAPI_REQUEST_S_POSTED;
-
+ 
+  kaapi_thread_t* const self_thread =
+      kaapi_threadcontext2thread(kproc->thread);
+  thief_task = kaapi_thread_toptask( self_thread );
+  thief_sp = kaapi_thread_pushdata(self_thread, sizeof(kaapi_tasksteal_arg_t));
+  kaapi_task_init(  thief_task, 
+                    kaapi_tasksteal_body, 
+                    thief_sp
+  );
+  req->status       = KAAPI_REQUEST_S_POSTED;
+  req->ident        = kproc->kid;
+  req->thief_task   = thief_task;
+  thief_task->state = KAAPI_TASK_STATE_ALLOCATED;
+  req->thief_sp     = thief_sp;
+  
   err = kaapi_ws_queue_pop(block->queue, kproc->thread, req);
   if (err != KAAPI_WS_ERROR_SUCCESS) return NULL;
-   
-  switch (kaapi_reply_status(rep))
-  {
-  case KAAPI_REPLY_S_TASK_FMT:
+  
+  switch (kaapi_request_status(req))
+  {      
+    case KAAPI_REQUEST_S_OK:
     {
-      kaapi_format_t* const format =
-	kaapi_format_resolvebyfmit(rep->u.s_taskfmt.fmt);
-      rep->u.s_task.body = format->entrypoint[kproc->proc_type];
-      kaapi_assert_debug(rep->u.s_task.body);
-
-    } /* KAAPI_REPLY_S_TASK_FMT */
-
-  case KAAPI_REPLY_S_TASK:
-    {
-      kaapi_thread_t* const self_thread =
-	kaapi_threadcontext2thread(kproc->thread);
-
-      /* data is stored in the first word of udata */
-      void* const dont_break_aliasing = (void*)rep->udata;
-      void* const data = *(void**)dont_break_aliasing;
-
-      kaapi_task_init
-      (
-       kaapi_thread_toptask(self_thread),
-       rep->u.s_task.body,
-       data
-      );
-
       kaapi_thread_pushtask(self_thread);
-
+      
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
       return kproc->thread;
-
+      
     } /* KAAPI_REPLY_S_TASK */
 
-  case KAAPI_REPLY_S_THREAD:
-    {
-#if defined(KAAPI_USE_PERFCOUNTER)
-      ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
-#endif
-      return rep->u.s_thread;
-
-    } /* KAAPI_REPLY_S_THREAD */
-
-  default: break ;
+    default: break ;
   }
-
+  
   return NULL;
 }
 
 
-static kaapi_reply_t* post_request(kaapi_processor_t* kproc)
+static kaapi_request_t* post_request(kaapi_processor_t* kproc)
 {
   kaapi_request_t* const req = &hws_requests.requests[kproc->kid];
-  kaapi_reply_t* const rep = &kproc->thread->static_reply;
+  kaapi_task_t*          thief_task;
+  kaapi_tasksteal_arg_t* thief_sp;
+
+  kaapi_thread_t* const self_thread =
+      kaapi_threadcontext2thread(kproc->thread);
+  thief_task = kaapi_thread_toptask( self_thread );
+  thief_sp = kaapi_thread_pushdata(self_thread, sizeof(kaapi_tasksteal_arg_t));
+  kaapi_task_init(  thief_task, 
+                    kaapi_tasksteal_body, 
+                    thief_sp
+  );
 
   /* from kaapi_mt_machine.h/kaapi_request_post */
-  
-  req->kid = kproc->kid;
-  req->reply = rep;
-
-  rep->offset = 0;
-  rep->preempt = 0;
-  rep->status = KAAPI_REQUEST_S_POSTED;
+  req->status       = KAAPI_REQUEST_S_POSTED;
+  req->ident        = kproc->kid;
+  req->thief_task   = thief_task;
+  thief_task->state = KAAPI_TASK_STATE_ALLOCATED;
+  req->thief_sp     = thief_sp;
   kaapi_writemem_barrier();
   kaapi_bitmap_set(&hws_requests.bitmap, kproc->kid);
-
-  return rep;
+  return req;
 }
 
 kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
@@ -305,9 +260,9 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
   kaapi_ws_block_t* block;
   kaapi_hws_levelid_t child_levelid;
   kaapi_hws_levelid_t levelid = 0;
-  kaapi_reply_t* reply;
+  kaapi_request_t* request;
   kaapi_listrequest_iterator_t lri;
-
+  
 #if 0 /* already done by the caller */
   /* pop locally without emitting request */
   /* todo: kaapi_ws_queue_pop should fit the steal interface */
@@ -315,57 +270,57 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
   thread = pop_block(block, kproc);
   if (thread != NULL) return thread;
 #endif /* already done by the caller */
-
+  
   /* dont fail_request with an uninitialized bitmap */
   kaapi_listrequest_iterator_prepare(&lri);
-
+  
   /* post the stealing request */
   kproc->issteal = 1;
-  reply = post_request(kproc);
+  request = post_request(kproc);
   kaapi_stack_reset(&kproc->thread->stack);
-
+  
   /* foreach parent level, pop. if pop failed, steal in level children. */
   for (levelid = KAAPI_HWS_LEVELID_FIRST; levelid < hws_level_count; ++levelid)
   {
     if (!(kaapi_hws_is_levelid_set(levelid))) continue ;
-
+    
     block = get_self_ws_block(kproc, levelid);
-
+    
     /* dont steal at flat level during ascension */
     if (levelid != KAAPI_HWS_LEVELID_FLAT)
     {
       /* todo: this is a pop, not a steal */
       /* todo: dont rely upon thread for termination condition */
-      thread = steal_block(block, kproc, reply, &hws_requests, &lri);
+      thread = steal_block(block, kproc, request, &hws_requests, &lri);
       if (thread != NULL)
       {
-	/* something replied, we are done */
-	goto on_done;
+        /* something replied, we are done */
+        goto on_done;
       }
-
+      
       /* popping failed at this level, steal in level children */
       for (child_levelid = levelid - 1; child_levelid >= 0; --child_levelid)
       {
-	kaapi_hws_level_t* const child_level = &hws_levels[child_levelid];
-	if (!kaapi_hws_is_levelid_set(child_levelid)) continue ;
-
-	thread = steal_level(child_level, kproc, reply, &hws_requests, &lri);
-	if (thread != NULL) goto on_done;
+        kaapi_hws_level_t* const child_level = &hws_levels[child_levelid];
+        if (!kaapi_hws_is_levelid_set(child_levelid)) continue ;
+        
+        thread = steal_level(child_level, kproc, request, &hws_requests, &lri);
+        if (thread != NULL) goto on_done;
       }
-
+      
     } /* levelid != KAAPI_HWS_LEVELID_FLAT */
-
+    
     /* child level stealing failed, steal in block leaf local queues */
-    thread = steal_block_leaves(block, kproc, reply, &hws_requests, &lri);
+    thread = steal_block_leaves(block, kproc, request, &hws_requests, &lri);
     if (thread != NULL) goto on_done;
-
+    
     /* next level */
   }
-
- on_done:
+  
+on_done:
   fail_requests(&hws_requests, &lri);
-
+  
   kproc->issteal = 0;
-
+  
   return thread;
 }

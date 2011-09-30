@@ -1094,36 +1094,8 @@ static inline int kaapi_isterminated(void)
 static inline void kaapi_request_init( struct kaapi_processor_t* kproc, struct kaapi_request_t* pkr )
 {
 #if defined(KAAPI_USE_BITMAP_REQUEST)
-  pkr->kid    = (uint16_t)kproc->kid; 
-#elif defined(KAAPI_USE_CIRBUF_REQUEST)
-#else
+  pkr->ident    = (uint16_t)kproc->kid; 
 #endif
-}
-
-/** \ingroup ADAPTIVE
-    Reply to a steal request. If retval is !=0 it means that the request
-    has successfully adapt to steal work. Else 0.
-    This function is machine dependent.
-*/
-static inline int _kaapi_request_reply( 
-  kaapi_request_t* request, 
-  int	             status
-)
-{
-#if defined(KAAPI_DEBUG)
-  /* Warning: we cannot set req->reply to 0 after the write of the 
-     status: an other thread may have 1/ view the reply; 2/ post a new request 
-     before the write to req->reply=0 which will discard the request.
-  */
-  kaapi_reply_t* savereply = request->reply;
-  request->reply = 0;
-  kaapi_writemem_barrier();
-  savereply->status = status;
-#else
-  kaapi_writemem_barrier();
-  request->reply->status = status;
-#endif
-  return 0;
 }
 
 
@@ -1156,21 +1128,27 @@ extern uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
   \param return 0 if the request has been successully posted
   \param return !=0 if the request been not been successully posted and the status of the request contains the error code
 */
-static inline int kaapi_request_post( kaapi_processor_id_t thief_kid, kaapi_reply_t* reply, kaapi_processor_t* victim )
+static inline kaapi_request_t* kaapi_request_post( 
+  kaapi_processor_id_t thief_kid, 
+  kaapi_task_t* thief_task, 
+  kaapi_tasksteal_arg_t* thief_sp,
+  kaapi_processor_t* victim 
+)
 {
   kaapi_request_t* req;
-  if (victim ==0) return EINVAL;
+  if (victim ==0) return 0;
 
 #if defined(KAAPI_USE_BITMAP_REQUEST)
   kaapi_assert_debug((thief_kid >=0) && (thief_kid < KAAPI_MAX_PROCESSOR_LIMIT));
   req = &victim->hlrequests.requests[thief_kid];
-  req->kid       = thief_kid;
-  req->reply     = reply;
-  reply->preempt = 0;
-  reply->status  = KAAPI_REQUEST_S_POSTED;
+  req->status       = KAAPI_REQUEST_S_POSTED;
+  req->ident        = thief_kid;
+  req->thief_task   = thief_task;
+  thief_task->state = KAAPI_TASK_STATE_ALLOCATED;
+  req->thief_sp     = thief_sp;
   kaapi_writemem_barrier();
   kaapi_bitmap_set( &victim->hlrequests.bitmap, thief_kid );
-  return 0;
+  return req;
 #elif defined(KAAPI_USE_CIRBUF_REQUEST)
 #  error "Not implemented"
 #else

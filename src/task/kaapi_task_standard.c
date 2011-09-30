@@ -56,42 +56,7 @@ void kaapi_nop_body(
 
 /*
 */
-void kaapi_exec_body( 
-  void* taskarg __attribute__((unused)), 
-  kaapi_thread_t* thread __attribute__((unused))
-)
-{
-  /* do not allow rexecuting already executed task */
-  kaapi_assert_debug( 0 );
-}
-
-
-/*
-*/
-void kaapi_term_body( 
-  void* taskarg __attribute__((unused)), 
-  kaapi_thread_t* thread __attribute__((unused))
-)
-{
-}
-
-
-/*
-*/
-void kaapi_steal_body( 
-  void*           taskarg __attribute__((unused)), 
-  kaapi_thread_t* thread __attribute__((unused)),
-  kaapi_task_t*   task 
-)
-{
-  /* do not allow rexecuting already executed task */
-  kaapi_assert_debug( 0 );
-}
-
-
-/*
-*/
-void kaapi_preempt_body( 
+void kaapi_execthread_body( 
   void* taskarg __attribute__((unused)), 
   kaapi_thread_t* thread __attribute__((unused))
 )
@@ -109,7 +74,7 @@ void kaapi_anormal_body(
   kaapi_task_t*   task 
 )
 {
-  if (task->state == KAAPI_TASK_STATE_AFTER)
+  if (task->state == KAAPI_TASK_STATE_MERGE)
   {
 //    printf("This is AN AFTERSTEAL task\n"); fflush(stdout);
     kaapi_aftersteal_body(taskarg, fp, task);
@@ -153,16 +118,6 @@ void kaapi_taskstartup_body(
 }
 
 
-/*
-*/
-void kaapi_suspend_body( 
-  void* taskarg __attribute__((unused)), 
-  kaapi_thread_t* thread __attribute__((unused))
-)
-{
-  printf("In kaapi_suspend_body\n"); fflush(stdout);
-  /* kaapi_self_thread_context()->errcode |= EWOULDBLOCK << 8; */
-}
 
 /*
 */

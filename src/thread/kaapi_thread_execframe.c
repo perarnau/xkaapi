@@ -163,7 +163,7 @@ push_frame: /* here assume fp current frame where to execute task */
       ((kaapi_task_body_internal_t)pc->body)( pc->sp, fp, pc );
 #if !defined(KAAPI_USE_JMP)
     else {
-      if (state == KAAPI_TASK_STATE_AFTER)
+      if (state == KAAPI_TASK_STATE_MERGE)
       {
         kaapi_aftersteal_body(pc->sp, fp, pc);
       }
