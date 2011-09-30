@@ -1130,6 +1130,7 @@ extern uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
 */
 static inline kaapi_request_t* kaapi_request_post( 
   kaapi_processor_id_t thief_kid, 
+  kaapi_atomic_t* status,
   kaapi_task_t* thief_task, 
   kaapi_tasksteal_arg_t* thief_sp,
   kaapi_processor_t* victim 
@@ -1141,11 +1142,12 @@ static inline kaapi_request_t* kaapi_request_post(
 #if defined(KAAPI_USE_BITMAP_REQUEST)
   kaapi_assert_debug((thief_kid >=0) && (thief_kid < KAAPI_MAX_PROCESSOR_LIMIT));
   req = &victim->hlrequests.requests[thief_kid];
-  req->status       = KAAPI_REQUEST_S_POSTED;
   req->ident        = thief_kid;
   req->thief_task   = thief_task;
   thief_task->state = KAAPI_TASK_STATE_ALLOCATED;
   req->thief_sp     = thief_sp;
+  req->status       = status;
+  KAAPI_ATOMIC_WRITE_BARRIER(status, KAAPI_REQUEST_S_POSTED);
   kaapi_writemem_barrier();
   kaapi_bitmap_set( &victim->hlrequests.bitmap, thief_kid );
   return req;

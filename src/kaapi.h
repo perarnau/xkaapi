@@ -626,7 +626,7 @@ typedef struct kaapi_reply_t {
     This opaque data structure is pass in parameter of the splitter function.
 */
 typedef struct kaapi_request_t {
-  volatile int                  status;         /* request status */
+  kaapi_atomic_t*               status;         /* request status */
   kaapi_processor_id_t          ident;          /* system wide id of the remote queue */
   kaapi_task_t*                 thief_task;     /* placeholder to store the solen task */
   struct kaapi_tasksteal_arg_t* thief_sp;       /* placeholder to store thief task sp  */
@@ -845,7 +845,6 @@ static inline void kaapi_task_initdfg
   task->body  = body;
   task->sp    = arg;
   task->state = 0;
-  task->thief = 0;
 //  task->binding.type = KAAPI_BINDING_ANY;
 }
 

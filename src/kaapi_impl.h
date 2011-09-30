@@ -301,6 +301,9 @@ extern kaapi_rtparam_t kaapi_default_param;
 /* ============================= REQUEST ============================ */
 /** Private status of request
     \ingroup WS
+    
+    The protocol to steal work is very simple:
+    - 
 */
 typedef enum kaapi_reply_status_t {
   KAAPI_REQUEST_S_POSTED   = 0,
@@ -320,18 +323,17 @@ static inline int kaapi_request_replytask(
 {
   if (status == KAAPI_REQUEST_S_OK)
   {
-    kaapi_writemem_barrier();
     if (kaapi_task_casstate(request->thief_task, KAAPI_TASK_STATE_ALLOCATED, KAAPI_TASK_STATE_INIT))
-      request->status = KAAPI_REQUEST_S_OK;
+      KAAPI_ATOMIC_WRITE_BARRIER(request->status, KAAPI_REQUEST_S_OK);
     else {
       /* else task was preempted */
       kaapi_assert_debug( request->thief_task->state == KAAPI_TASK_STATE_PREEMPTED );
-      request->status = KAAPI_REQUEST_S_NOK;
+      KAAPI_ATOMIC_WRITE_BARRIER(request->status, KAAPI_REQUEST_S_NOK);
     }
   }
   else
     /* failed to steal: avoid unnecessary memory barrier */
-    request->status = KAAPI_REQUEST_S_NOK;
+    KAAPI_ATOMIC_WRITE(request->status, KAAPI_REQUEST_S_NOK);
   return 0;
 }
 
@@ -749,8 +751,26 @@ static inline kaapi_processor_id_t kaapi_request_getthiefid(kaapi_request_t* r)
   \retval KAAPI_REQUEST_S_NOK steal request has failed
   \retval KAAPI_REQUEST_S_ERROR error during steal request processing
 */
-static inline uint64_t kaapi_request_status( kaapi_request_t* kr ) 
-{ return kr->status; }
+static inline int kaapi_request_status_get( kaapi_atomic_t* status ) 
+{ return KAAPI_ATOMIC_READ(status); }
+
+/** Return the request status
+  \param pksr kaapi_request_t
+  \retval KAAPI_REQUEST_S_OK sucessfull steal operation
+  \retval KAAPI_REQUEST_S_NOK steal request has failed
+  \retval KAAPI_REQUEST_S_ERROR error during steal request processing
+*/
+static inline int kaapi_request_status( kaapi_request_t* kr ) 
+{ return kaapi_request_status_get(kr->status); }
+
+/** Return true iff the request has been posted
+  \param kr kaapi_request_t
+  \retval KAAPI_REQUEST_S_OK sucessfull steal operation
+  \retval KAAPI_REQUEST_S_NOK steal request has failed
+  \retval KAAPI_REQUEST_S_ERROR steal request has failed to be posted because the victim refused request
+*/
+static inline int kaapi_request_status_test( kaapi_atomic_t* status )
+{ return KAAPI_ATOMIC_READ(status) != KAAPI_REQUEST_S_POSTED; }
 
 /** Return true iff the request has been posted
   \param kr kaapi_request_t
@@ -759,7 +779,7 @@ static inline uint64_t kaapi_request_status( kaapi_request_t* kr )
   \retval KAAPI_REQUEST_S_ERROR steal request has failed to be posted because the victim refused request
 */
 static inline int kaapi_request_test( kaapi_request_t* kr )
-{ return kaapi_request_status(kr) != KAAPI_REQUEST_S_POSTED; }
+{ return kaapi_request_status_test(kr->status); }
 
 /** Return true iff the request is a success steal
   \param kr kaapi_request_t
