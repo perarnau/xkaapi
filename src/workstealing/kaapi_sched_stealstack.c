@@ -258,6 +258,9 @@ static int kaapi_sched_stealframe
             argsteal->cw_param              = cw_param;
             request->thief_task->body       = kaapi_tasksteal_body; /* TODO MUST be always this task no write */
             kaapi_request_replytask( request, KAAPI_REQUEST_S_OK); /* success of steal */
+            
+            /* advance to the next request */
+            kaapi_listrequest_iterator_next( lrequests, lrrange );
           }
         }
       } /* if fmt != 0 */

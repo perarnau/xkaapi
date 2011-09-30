@@ -126,7 +126,6 @@ libkaapi_la_SOURCES+=\
   task/kaapi_task_aftersteal.c \
   task/kaapi_task_steal.c \
   task/kaapi_task_stealready_body.c \
-  task/kaapi_task_splitter_dfg.c \
   task/kaapi_task_splitter_adapt.c \
   task/kaapi_task_splitter_readylist.c \
   task/kaapi_task_pushstealcontext.c \

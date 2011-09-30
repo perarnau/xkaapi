@@ -145,9 +145,9 @@ kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
   
   /* reset thief stack/thread will steals are under progression */
   kaapi_stack_reset( &kproc->thread->stack );
-  self_thread = kaapi_threadcontext2thread(kproc->thread);
 
   /* allocate thief task data on the stack */
+  self_thread = kaapi_threadcontext2thread(kproc->thread);
   thief_task = kaapi_thread_toptask( self_thread );
   thief_sp = kaapi_thread_pushdata(self_thread, sizeof(kaapi_tasksteal_arg_t));
   kaapi_task_init(  thief_task, 
