@@ -180,7 +180,7 @@ push_frame: /* here assume fp current frame where to execute task */
         fp[-1].pc = pc;  
         stack->sfp = fp-1;
         if (__kaapi_try_preempt(stack,pc)) 
-          return EWOULDBLOCK
+          return EWOULDBLOCK;
       }
     }
 #endif
@@ -258,7 +258,12 @@ push_frame: /* here assume fp current frame where to execute task */
 int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
 {
   printf("In __kaapi_try_preempt\n"); fflush(stdout);
-  while (kaapi_task_getstate(pc) != KAAPI_TASK_STATE_MARK_STEAL)
+  while (kaapi_task_getstate(pc) == KAAPI_TASK_STATE_MARK_STEAL)
     kaapi_slowdown_cpu();
+S
+  do {
+    uintptr_t state = kaapi_task_getstate(pc);
+    if ((state != KAAPI_TASK_STATE_MARK_STEAL) || (state 
+  } while (1);
   return EWOULDBLOCK;
 }
