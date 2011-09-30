@@ -258,7 +258,7 @@ push_frame: /* here assume fp current frame where to execute task */
 int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
 {
   printf("In __kaapi_try_preempt\n"); fflush(stdout);
-  while (kaapi_task_getstate(pc) != KAAPI_TASK_STATE_MARK_STEAL)
+  while (kaapi_task_getstate(pc) == KAAPI_TASK_STATE_MARK_STEAL)
     kaapi_slowdown_cpu();
   return EWOULDBLOCK;
 }
