@@ -70,12 +70,13 @@ int kaapi_sched_stealprocessor(
   /* 1/ steal in ready list */
   while ((request !=0) && !kaapi_sched_readyempty(kproc))
   {
-    thread = kaapi_sched_stealready( kproc, request->kid);
+    thread = kaapi_sched_stealready( kproc, request->ident);
     if (thread != 0)
     {
-      /* reply */
-      request->reply->u.s_thread = thread;
-      _kaapi_request_reply(request, KAAPI_REPLY_S_THREAD);
+      /* reply a task to execute the thread */
+      request->thief_task->body = kaapi_execthread_body;
+      request->thief_task->sp   = thread;      
+      kaapi_request_replytask(request, KAAPI_REQUEST_S_OK);
       request = kaapi_listrequest_iterator_next( lrequests, lrrange );
     }
   }
@@ -87,7 +88,7 @@ int kaapi_sched_stealprocessor(
     thread = cell->thread;
     if (thread != 0)
     {
-      kaapi_sched_stealstack( thread, 0, lrequests, lrrange );
+      kaapi_sched_stealstack( thread, lrequests, lrrange );
 
 #if 0 /* not working */
       /* some get stolen */
@@ -103,7 +104,7 @@ int kaapi_sched_stealprocessor(
     thread = kproc->thread;
 
     /* signal that count thefts are waiting */
-    kaapi_sched_stealstack( thread, 0, lrequests, lrrange );
+    kaapi_sched_stealstack( thread, lrequests, lrrange );
 
 #if 0 /* not working */
     /* some get stolen */

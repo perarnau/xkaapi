@@ -415,10 +415,10 @@ typedef struct kaapi_task_binding
     The body field is the pointer to the function to execute. The special value 0 correspond to a nop instruction.
 */
 typedef struct kaapi_task_t {
-  uintptr_t             state;
+  uintptr_t             state;     /** state of the task */
   kaapi_task_body_t     body;      /** task body  */
   void*                 sp;        /** data stack pointer of the data frame for the task  */
-//  uintptr_t             state;     /** state of the task */
+  struct kaapi_task_t*  reserved;  /** reserved field for internal usage */
 //TO ADD AFTER  kaapi_task_binding_t  binding;   /** binding information or 0  */
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
@@ -626,11 +626,11 @@ typedef struct kaapi_reply_t {
     This opaque data structure is pass in parameter of the splitter function.
 */
 typedef struct kaapi_request_t {
-  kaapi_processor_id_t         kid;            /* system wide kproc id */
-  kaapi_affinity_t             mapping;        /* mapping of the thief onto the architecture */
-  kaapi_reply_t*               reply;          /* points to thief thread reply data structure */
-  kaapi_taskadaptive_result_t* ktr;            /* only used in adaptive interface to avoid  */
-  uint8_t                data[1];        /* not used data[0]...data[XX] ? */
+  volatile int                  status;         /* request status */
+  kaapi_processor_id_t          ident;          /* system wide id of the remote queue */
+  kaapi_task_t*                 thief_task;     /* placeholder to store the solen task */
+  struct kaapi_tasksteal_arg_t* thief_sp;       /* placeholder to store thief task sp  */
+  kaapi_taskadaptive_result_t*  ktr;            /* only used in adaptive interface to avoid  */
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_request_t;
 
 

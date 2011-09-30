@@ -208,20 +208,14 @@ int kaapi_preemptasync_waitthief
  struct kaapi_taskadaptive_result_t* ktr 
  )
 {
-  kaapi_task_body_t body;
-
   if (ktr ==0) return 0;
+
+#warning TODO HERE
   
-  body = kaapi_task_getbody(&ktr->state);
-  kaapi_assert_debug( (body == kaapi_term_body) || (body == kaapi_preempt_body) );
-  
-  if (body != kaapi_term_body)
+  /* wait until task is terminated */
+  while (kaapi_task_getstate(&ktr->state) != KAAPI_TASK_STATE_TERM)
   {
-    /* wait until task is terminated */
-    while (kaapi_task_getbody(&ktr->state) != kaapi_term_body)
-    {
-      kaapi_slowdown_cpu();
-    }
+    kaapi_slowdown_cpu();
   }
   
   /* remove thief and replace the thieves of ktr into the list */

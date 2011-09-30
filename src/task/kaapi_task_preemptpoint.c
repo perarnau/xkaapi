@@ -104,7 +104,6 @@ redo:
 #if 0
   body = kaapi_task_getbody(&ktr->state);
   retval = kaapi_task_casbody(&ktr->state, body, kaapi_term_body);
-#endif
   if (retval)
   {
     if (body == kaapi_preempt_body)
@@ -116,6 +115,7 @@ redo:
   }
   else 
     goto redo;
+#endif
 
   /* adapt_body needs to know about preemption */
   stc->header.ktr = 0;

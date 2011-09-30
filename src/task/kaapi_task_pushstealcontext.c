@@ -107,8 +107,11 @@ static void do_initial_split(kaapi_processor_t* kproc)
     kaapi_request_t* kreq = kaapi_listrequest_iterator_get(klr, &kli);
     while (kreq != 0)
     {
+#warning TODO HERE
+#if 0
       _kaapi_request_reply(kreq, KAAPI_REPLY_S_NOK);
       kreq = kaapi_listrequest_iterator_next(klr, &kli);
+#endif
     }
   }
 }

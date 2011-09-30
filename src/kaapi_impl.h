@@ -302,15 +302,38 @@ extern kaapi_rtparam_t kaapi_default_param;
 /** Private status of request
     \ingroup WS
 */
-enum kaapi_reply_status_t {
-  KAAPI_REQUEST_S_POSTED = 0,
-  KAAPI_REPLY_S_NOK      = 1,
-  KAAPI_REPLY_S_TASK     = 2,
-  KAAPI_REPLY_S_TASK_FMT = 3,
-  KAAPI_REPLY_S_THREAD   = 4,
-  KAAPI_REPLY_S_ERROR    = 5
-};
+typedef enum kaapi_reply_status_t {
+  KAAPI_REQUEST_S_POSTED   = 0,
+  KAAPI_REQUEST_S_NOK      = 1,
+  KAAPI_REQUEST_S_OK       = 2,
+  KAAPI_REQUEST_S_ERROR    = 3
+} kaapi_reply_status_t;
 
+/** \ingroup TASK
+    Reply to a steal request.
+    Return !=0 if the request cannot be replied.
+*/
+static inline int kaapi_request_replytask( 
+  kaapi_request_t*      request, 
+  kaapi_reply_status_t	status
+)
+{
+  if (status == KAAPI_REQUEST_S_OK)
+  {
+    kaapi_writemem_barrier();
+    if (kaapi_task_casstate(request->thief_task, KAAPI_TASK_STATE_ALLOCATED, KAAPI_TASK_STATE_INIT))
+      request->status = KAAPI_REQUEST_S_OK;
+    else {
+      /* else task was preempted */
+      kaapi_assert_debug( request->thief_task->state == KAAPI_TASK_STATE_PREEMPTED );
+      request->status = KAAPI_REQUEST_S_NOK;
+    }
+  }
+  else
+    /* failed to steal: avoid unnecessary memory barrier */
+    request->status = KAAPI_REQUEST_S_NOK;
+  return 0;
+}
 
 
 /* ============================= Simple C API for network ============================ */
@@ -718,43 +741,39 @@ extern void kaapi_synchronize_steal(kaapi_stealcontext_t*);
 #define kaapi_request_destroy( kpsr ) 
 
 static inline kaapi_processor_id_t kaapi_request_getthiefid(kaapi_request_t* r)
-{ return (kaapi_processor_id_t) r->kid; }
-
-static inline kaapi_reply_t* kaapi_request_getreply(kaapi_request_t* r)
-{ return r->reply; }
+{ return (kaapi_processor_id_t) r->ident; }
 
 /** Return the request status
-  \param pksr kaapi_reply_t
-  \retval KAAPI_REQUEST_S_SUCCESS sucessfull steal operation
-  \retval KAAPI_REQUEST_S_FAIL steal request has failed
-  \retval KAAPI_REQUEST_S_QUIT process should terminate
+  \param pksr kaapi_request_t
+  \retval KAAPI_REQUEST_S_OK sucessfull steal operation
+  \retval KAAPI_REQUEST_S_NOK steal request has failed
+  \retval KAAPI_REQUEST_S_ERROR error during steal request processing
 */
-static inline uint64_t kaapi_reply_status( kaapi_reply_t* ksr ) 
-{ return ksr->status; }
+static inline uint64_t kaapi_request_status( kaapi_request_t* kr ) 
+{ return kr->status; }
 
 /** Return true iff the request has been posted
-  \param pksr kaapi_reply_t
-  \retval KAAPI_REQUEST_S_SUCCESS sucessfull steal operation
-  \retval KAAPI_REQUEST_S_FAIL steal request has failed
-  \retval KAAPI_REPLY_S_ERROR steal request has failed to be posted because the victim refused request
-  \retval KAAPI_REQUEST_S_QUIT process should terminate
+  \param kr kaapi_request_t
+  \retval KAAPI_REQUEST_S_OK sucessfull steal operation
+  \retval KAAPI_REQUEST_S_NOK steal request has failed
+  \retval KAAPI_REQUEST_S_ERROR steal request has failed to be posted because the victim refused request
 */
-static inline int kaapi_reply_test( kaapi_reply_t* ksr )
-{ return kaapi_reply_status(ksr) != KAAPI_REQUEST_S_POSTED; }
+static inline int kaapi_request_test( kaapi_request_t* kr )
+{ return kaapi_request_status(kr) != KAAPI_REQUEST_S_POSTED; }
 
 /** Return true iff the request is a success steal
-  \param pksr kaapi_reply_t
+  \param kr kaapi_request_t
 */
-static inline int kaapi_reply_ok( kaapi_reply_t* ksr )
-{ return kaapi_reply_status(ksr) != KAAPI_REPLY_S_NOK; }
+static inline int kaapi_request_ok( kaapi_request_t* kr )
+{ return kaapi_request_status(kr) != KAAPI_REQUEST_S_NOK; }
 
 /** Return the data associated with the reply
-  \param pksr kaapi_reply_t
+  \param kr kaapi_request_t
 */
-static inline kaapi_reply_t* kaapi_replysync_data( kaapi_reply_t* reply ) 
+static inline kaapi_task_t* kaapi_request_syncdata( kaapi_request_t* kr ) 
 { 
   kaapi_readmem_barrier();
-  return reply;
+  return kr->thief_task;
 }
 
 

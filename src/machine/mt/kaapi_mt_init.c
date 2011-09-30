@@ -219,7 +219,8 @@ int kaapi_mt_init(void)
   /* push dummy task in exec mode */
   thread = kaapi_self_thread_context();
   task = kaapi_thread_toptask(kaapi_threadcontext2thread(thread));
-  kaapi_task_init( task, kaapi_exec_body, 0);
+  kaapi_task_init( task, kaapi_taskstartup_body, 0);
+  kaapi_task_setstate(task, KAAPI_TASK_STATE_EXEC);
   kaapi_thread_pushtask(kaapi_threadcontext2thread(thread));
 
   /* push the current frame that correspond to the execution of the startup task */

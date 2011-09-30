@@ -80,7 +80,7 @@ static void kaapi_getstatename( kaapi_task_t* task, state_type_t char_state )
 {
   uintptr_t state = (uintptr_t)task->state;
   char_state[0] = (state & KAAPI_TASK_STATE_TERM ? 'T' : '_');
-  char_state[1] = (state & KAAPI_TASK_STATE_AFTER ? 'A' : '_');
+  char_state[1] = (state & KAAPI_TASK_STATE_MERGE ? 'A' : '_');
   char_state[2] = (state & KAAPI_TASK_STATE_EXEC ? 'E' : '_');
   char_state[3] = (state & KAAPI_TASK_STATE_STEAL ? 'S' : '_');
 }
@@ -227,8 +227,6 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
           fname = "exec";
         else if ( body == kaapi_taskmain_body) 
           fname = "maintask";
-        else if (body == kaapi_suspend_body) 
-          fname = "suspend";
         else if (body == kaapi_tasksteal_body) 
           fname = "steal";
         else if (body == (kaapi_task_body_t)kaapi_aftersteal_body) 
@@ -256,11 +254,6 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
         else if (body == (kaapi_task_body_t)kaapi_aftersteal_body)
         {
           fprintf(file, ", steal/term task:" );
-          kaapi_task_print(file, task_bot, body );
-        }
-        else if (body == kaapi_suspend_body)
-        {
-          fprintf(file, ", steal/under task:" );
           kaapi_task_print(file, task_bot, body );
         }
         fputc('\n', file);

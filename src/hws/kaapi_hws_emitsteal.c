@@ -73,7 +73,7 @@ static void fail_requests
   req = kaapi_listrequest_iterator_get(lr, lri);
   while (req != NULL)
   {
-    _kaapi_request_reply(req, KAAPI_REPLY_S_NOK);
+    kaapi_request_replytask( req, KAAPI_REQUEST_S_NOK);
     req = kaapi_listrequest_iterator_next(lr, lri);
   }
 }
@@ -83,7 +83,7 @@ static kaapi_thread_context_t* steal_block
 (
  kaapi_ws_block_t* block,
  kaapi_processor_t* kproc,
- kaapi_reply_t* reply,
+ kaapi_request_t* reply,
  kaapi_listrequest_t* lr,
  kaapi_listrequest_iterator_t* lri
 )
