@@ -138,7 +138,7 @@ extern kaapi_listrequest_t hws_requests;
 /* internal exported functions */
 extern const char* kaapi_hws_levelid_to_str(kaapi_hws_levelid_t);
 
-static inline const unsigned int
+static inline unsigned int
 kaapi_hws_is_levelid_set(kaapi_hws_levelid_t levelid)
 {
   return hws_levelmask & (1 << levelid);

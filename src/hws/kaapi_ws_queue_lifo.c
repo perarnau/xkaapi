@@ -104,7 +104,6 @@ static kaapi_ws_error_t steal
   while ((req != NULL) && top)
   {
     kaapi_task_t* const task = &q->tasks[--top];
-    kaapi_reply_t* const rep = kaapi_request_getreply(req);
     kaapi_task_body_t task_body = kaapi_task_getbody(task);
     
     if (task_body == kaapi_hws_adapt_body)
@@ -166,21 +165,20 @@ static kaapi_ws_error_t steal
       format = kaapi_format_resolvebybody(task_body);
       kaapi_assert_debug(format);
 
-      argsteal = (kaapi_tasksteal_arg_t*)rep->udata;
+      argsteal = (kaapi_tasksteal_arg_t*)req->thief_sp;
       
 #if CONFIG_HWS_COUNTERS
-      kaapi_hws_inc_steal_counter(p, req->kid);
+      kaapi_hws_inc_steal_counter(p, req->ident);
 #endif
       
-      argsteal->origin_thread = thread;
-      argsteal->origin_task = task;
-      argsteal->origin_body = task_body;
-      argsteal->origin_fmt = format;
-      argsteal->war_param = 0;
-      argsteal->cw_param = 0;
-      rep->u.s_task.body = kaapi_tasksteal_body;
-      
-      _kaapi_request_reply(req, KAAPI_REPLY_S_TASK);
+      argsteal->origin_thread   = thread;
+      argsteal->origin_task     = task;
+      argsteal->origin_body     = task_body;
+      argsteal->origin_fmt      = format;
+      argsteal->war_param       = 0;
+      argsteal->cw_param        = 0;
+      req->thief_task->body     = kaapi_tasksteal_body; /* TODO MUST be always this task no write */
+      kaapi_request_replytask( req, KAAPI_REQUEST_S_OK); /* success of steal */
       
       req = kaapi_listrequest_iterator_next(lr, lri);
     }
