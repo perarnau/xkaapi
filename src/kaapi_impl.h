@@ -341,6 +341,7 @@ static inline int kaapi_request_replytask
       KAAPI_ATOMIC_WRITE_BARRIER(request->status, KAAPI_REQUEST_S_OK);
     else {
       /* else task was preempted */
+      printf("I was preempted/replytask\n"); fflush(stdout);
       kaapi_assert_debug( request->thief_task->state == KAAPI_TASK_STATE_PREEMPTED );
       KAAPI_ATOMIC_WRITE_BARRIER(request->status, KAAPI_REQUEST_S_NOK);
     }

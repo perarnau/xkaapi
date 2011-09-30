@@ -415,10 +415,10 @@ typedef struct kaapi_task_binding
     The body field is the pointer to the function to execute. The special value 0 correspond to a nop instruction.
 */
 typedef struct kaapi_task_t {
-  uintptr_t             state;     /** state of the task */
-  kaapi_task_body_t     body;      /** task body  */
-  void*                 sp;        /** data stack pointer of the data frame for the task  */
-  struct kaapi_task_t*  reserved;  /** reserved field for internal usage */
+  uintptr_t                     state;     /** state of the task */
+  kaapi_task_body_t             body;      /** task body  */
+  void*                         sp;        /** data stack pointer of the data frame for the task  */
+  struct kaapi_task_t* volatile reserved;  /** reserved field for internal usage */
 //TO ADD AFTER  kaapi_task_binding_t  binding;   /** binding information or 0  */
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
@@ -845,6 +845,9 @@ static inline void kaapi_task_initdfg
   task->body  = body;
   task->sp    = arg;
   task->state = 0;
+#if !defined(KAAPI_NDEBUG)
+  task->reserved = 0;
+#endif
 //  task->binding.type = KAAPI_BINDING_ANY;
 }
 

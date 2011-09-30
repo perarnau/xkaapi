@@ -150,9 +150,14 @@ void kaapi_taskwrite_body(
   }
 #endif
 
-  kaapi_mem_barrier();
+  kaapi_writemem_barrier();
+  while (kaapi_task_getstate(arg->origin_task) != KAAPI_TASK_STATE_STEAL)
+  {
+    uintptr_t state = kaapi_task_getstate(arg->origin_task);
+    kaapi_assert( (state == KAAPI_TASK_STATE_PREEMPTED) || (state == KAAPI_TASK_STATE_STEAL) );
+    kaapi_slowdown_cpu();
+  }
 
-//printf("Signal end of: %p\n", arg->origin_task); fflush(stdout);
   /* signal the task : mark it as executed, the old returned body should have steal flag */
   if ((war_param ==0) && (cw_param ==0))
     kaapi_task_markterm( arg->origin_task );

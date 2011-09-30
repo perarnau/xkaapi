@@ -171,6 +171,9 @@ redo_select:
      Fill & Post the request to the victim processor 
   */
   self_request = kaapi_request_post( kproc->kid, &status, thief_task, thief_sp, victim.kproc );
+
+usleep( random() % 1000 );
+
   
   victim_hlr = &victim.kproc->hlrequests;
 
@@ -270,6 +273,7 @@ return_value:
   switch (kaapi_request_status_get(&status))
   {
     case KAAPI_REQUEST_S_OK:
+
       /* push the task into the thread (only allocated) */
       kaapi_thread_pushtask(self_thread);
 

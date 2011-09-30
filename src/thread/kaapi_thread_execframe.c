@@ -155,7 +155,8 @@ push_frame: /* here assume fp current frame where to execute task */
   for (; pc != sp; --pc)
   {
     kaapi_assert_debug( pc > sp );
-//    body = (kaapi_task_body_internal_t)kaapi_task_markexec( pc );
+
+redo_exec:
     state = kaapi_task_markexec( pc );
 
 #if !defined(KAAPI_USE_JMP)
@@ -165,22 +166,25 @@ push_frame: /* here assume fp current frame where to execute task */
 #if !defined(KAAPI_USE_JMP)
     else {
       if (state == KAAPI_TASK_STATE_MERGE)
-      {
         kaapi_aftersteal_body(pc->sp, fp, pc);
-      }
-      /* if preempted -> do nothing, the victim get it back... */
+      /* try to preempted the task 0:do nothing, EINTR: the victim get it back... */
       else if (state == KAAPI_TASK_STATE_STEAL)
       {
-        fp[-1].pc = pc;  
-        stack->sfp = fp-1;
-        return EWOULDBLOCK;
-      }
-      else if (state == KAAPI_TASK_STATE_MARK_STEAL)
-      {
-        fp[-1].pc = pc;  
-        stack->sfp = fp-1;
-        if (__kaapi_try_preempt(stack,pc)) 
+        int retval = __kaapi_try_preempt(stack,pc);
+        if (retval == EWOULDBLOCK) 
+        {
+          fp[-1].pc = pc;  
+          stack->sfp = fp-1;
           return EWOULDBLOCK;
+        }
+        if (retval == EINTR) goto redo_exec;
+        /* else: terminated, to nothing */
+      }
+      /* if I have been preempted, then continue to the next task */
+      if (state & KAAPI_TASK_STATE_PREEMPTED)
+      {
+        printf("I was preempted\n"); fflush(stdout);
+        continue;
       }
     }
 #endif
@@ -203,8 +207,6 @@ push_frame: /* here assume fp current frame where to execute task */
     }
 #endif
 
-    /* next task to execute, store pc in memory */
-//    --pc;    
   } /* end of the loop */
   kaapi_assert_debug( pc == sp );
 
@@ -257,13 +259,23 @@ push_frame: /* here assume fp current frame where to execute task */
 
 int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
 {
-  printf("In __kaapi_try_preempt\n"); fflush(stdout);
-  while (kaapi_task_getstate(pc) == KAAPI_TASK_STATE_MARK_STEAL)
-    kaapi_slowdown_cpu();
-S
-  do {
-    uintptr_t state = kaapi_task_getstate(pc);
-    if ((state != KAAPI_TASK_STATE_MARK_STEAL) || (state 
-  } while (1);
+//  printf("In __kaapi_try_preempt\n"); fflush(stdout);
+  if (!kaapi_task_casstate(pc, KAAPI_TASK_STATE_STEAL, KAAPI_TASK_STATE_PREEMPTED))
+  {
+    /* do not suspend because it is terminated */
+    kaapi_assert( kaapi_task_getstate(pc) == KAAPI_TASK_STATE_TERM );
+    return 0;
+  }
+  kaapi_assert( pc->reserved !=0 );
+
+  /* try to preempt it: mark the state with PREEMPTED bit */
+  if (kaapi_task_orstate(pc->reserved, KAAPI_TASK_STATE_PREEMPTED) == KAAPI_TASK_STATE_INIT)
+  {
+    /* else get back the task for myself : restore state to init */
+    kaapi_task_setstate(pc, KAAPI_TASK_STATE_INIT);
+    return EINTR;  
+  }
+  /* restore STEAL state and return EWOULDBLOCK */
+  kaapi_task_setstate(pc, KAAPI_TASK_STATE_STEAL);
   return EWOULDBLOCK;
 }
