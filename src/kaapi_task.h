@@ -111,7 +111,6 @@ struct kaapi_listrequest_t;
 #define KAAPI_TASK_STATE_INIT       0x0
 #define KAAPI_TASK_STATE_EXEC       0x1
 #define KAAPI_TASK_STATE_STEAL      0x2
-#define KAAPI_TASK_STATE_MARK_STEAL 0x80
 #define KAAPI_TASK_STATE_TERM       0x4
 #define KAAPI_TASK_STATE_MERGE      0x8
 #define KAAPI_TASK_STATE_ALLOCATED  0x10
@@ -313,9 +312,6 @@ static inline unsigned int kaapi_task_state_isstealable(uintptr_t state)
 #endif
 
 
-
-
-
 inline static void kaapi_task_lock_adaptive_steal(kaapi_stealcontext_t* sc)
 {
 #if 0
@@ -474,31 +470,48 @@ extern int kaapi_sched_stealstack  (
 
 
 /** \ingroup WS
-    Splitter for DFG task
+    Compute if the task is ready using the history of accessed stored in map.
+    On return the bitset of paramaters with war dependencies or cw accesses are
+    returned.
+    \retval the number of non ready parameters
 */
-extern int kaapi_task_splitter_dfg(
+extern size_t kaapi_task_computeready( 
+  kaapi_task_t*         task,
+  void*                 sp, 
+  const kaapi_format_t* task_fmt, 
+  unsigned int*         war_param, 
+  unsigned int*         cw_param, 
+  kaapi_hashmap_t*      map 
+);
+
+/** \ingroup TASK
+    Try to steal a DFG task using the history of access stored in map.
+    If map 0 then the dependencies are not computed, this is used to
+    steal tasks from queues in hws because these tasks are assumed to
+    be always ready.
+*/
+extern void kaapi_task_steal_dfg
+(
+  kaapi_hashmap_t*                     map, 
   struct kaapi_thread_context_t*       thread, 
-  kaapi_task_body_t                    body, 
-  kaapi_task_t*                        task, 
-  const kaapi_format_t*                task_fmt,
-  unsigned int                         war_param, 
-  unsigned int                         cw_param, 
+  kaapi_task_t*                        task,
   struct kaapi_listrequest_t*          lrequests, 
   struct kaapi_listrequest_iterator_t* lrrange
 );
 
+
 /** \ingroup TASK
-    Splitter for a single DFG
+    Try to steal an adaptive task.
+HACK: callback_empty is used for hws strategy where adaptive task may be put
+    into queue without control flow that execute them.... see kaapi_hws_queue_fifo for instance.
 */
-extern void kaapi_task_splitter_dfg_single
+extern void kaapi_task_steal_adapt
 (
   struct kaapi_thread_context_t*       thread, 
-  kaapi_task_body_t                    body, 
-  kaapi_task_t*                        task, 
-  const kaapi_format_t*                task_fmt,
-  unsigned int                         war_param, 
-  unsigned int                         cw_param, 
-  kaapi_request_t*		               request
+  kaapi_task_t*                        task,
+  struct kaapi_listrequest_t*          lrequests, 
+  struct kaapi_listrequest_iterator_t* lrrange,
+  void                                 (*callback_empty)(kaapi_task_t*)
 );
 
 /** \ingroup WS
@@ -506,9 +519,9 @@ extern void kaapi_task_splitter_dfg_single
 */
 extern int kaapi_task_splitter_adapt( 
     struct kaapi_thread_context_t*       thread, 
-    kaapi_task_t*                 task,
-    kaapi_task_splitter_t         splitter,
-    void*                         argsplitter,
+    kaapi_task_t*                        task,
+    kaapi_task_splitter_t                splitter,
+    void*                                argsplitter,
     struct kaapi_listrequest_t*          lrequests, 
     struct kaapi_listrequest_iterator_t* lrrange
 );
