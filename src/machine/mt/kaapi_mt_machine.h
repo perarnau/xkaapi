@@ -712,7 +712,9 @@ static inline void kaapi_listrequest_iterator_init
 
 /* clear bitmap and init iterator */
 static inline void kaapi_listrequest_iterator_prepare
-(kaapi_listrequest_iterator_t* lrrange)
+(
+  kaapi_listrequest_iterator_t* lrrange
+)
 { 
   lrrange->idcurr = -1;
   kaapi_bitmap_value_clear(&lrrange->bitmap);
@@ -764,7 +766,7 @@ static inline void kaapi_listrequest_iterator_update
 
 /* clear the iterator internal bitmap */
 static inline void kaapi_listrequest_iterator_clear
-(kaapi_listrequest_iterator_t* lrrange)
+  (kaapi_listrequest_iterator_t* lrrange)
 {
   kaapi_bitmap_value_clear(&lrrange->bitmap);
 }
