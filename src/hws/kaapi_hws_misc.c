@@ -49,6 +49,11 @@
 #include "kaapi_hws.h"
 
 
+void kaapi_ws_queue_unimpl_destroy(void* fu)
+{
+}
+
+
 unsigned int kaapi_hws_get_request_nodeid(const kaapi_request_t* req)
 {
   return (unsigned int)req->ident;

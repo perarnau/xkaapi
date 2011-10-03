@@ -55,7 +55,7 @@
 
 static inline unsigned int is_kid_used(kaapi_processor_id_t kid)
 {
-  return (kaapi_default_param.kid2cpu[kid] != -1);
+  return (kaapi_default_param.kid2cpu[kid] != -1U);
 }
 
 static inline unsigned int kid_to_cpu(kaapi_processor_id_t kid)
@@ -75,7 +75,7 @@ void kaapi_hws_print_counters(void)
 
   printf("= HWS_STEAL_COUNTERS\n");
 
-  for (levelid = 0; levelid < hws_level_count; ++levelid)
+  for (levelid = 0; levelid < (int)hws_level_count; ++levelid)
   {
     level = &hws_levels[levelid];
 
