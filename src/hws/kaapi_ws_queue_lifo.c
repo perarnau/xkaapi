@@ -6,7 +6,6 @@
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
- **
  ** thierry.gautier@inrialpes.fr
  ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
  ** 
@@ -43,8 +42,6 @@
  ** terms.
  ** 
  */
-
-
 #include <stdint.h>
 #include "kaapi_impl.h"
 
@@ -53,44 +50,54 @@
 
 #include "kaapi_ws_queue.h"
 
-
+/* Current implementation is a bounded queue manage.
+*/
 typedef struct lifo_queue
 {
-  kaapi_ws_lock_t lock; /* toremove, use block lock */
+  kaapi_ws_lock_t lock;                      /* toremove, use block lock */
   __attribute__((aligned)) unsigned int top; /* first avail */
 #define CONFIG_QUEUE_SIZE 128
-  kaapi_task_t tasks[CONFIG_QUEUE_SIZE];
+  kaapi_task_t* tasks[CONFIG_QUEUE_SIZE];
 } lifo_queue_t;
 
 
-static kaapi_ws_error_t push(void* p, kaapi_task_body_t body, void* arg)
+static kaapi_ws_error_t push(
+    kaapi_ws_block_t* ws_bloc __attribute__((unused)),
+    void* p, 
+    kaapi_task_t* task
+)
 {
   /* assume q->top < sizeof(q->tasks) */
-  
   lifo_queue_t* const q = (lifo_queue_t*)p;
-  kaapi_task_t* task;
   
   kaapi_ws_lock_lock(&q->lock);
-  task = &q->tasks[q->top++];
-  kaapi_task_initdfg(task, body, arg);
+  q->tasks[q->top++] = task;
   kaapi_ws_lock_unlock(&q->lock);
   
   return KAAPI_WS_ERROR_SUCCESS;
 }
 
+static void callback_empty( kaapi_task_t* task)
+{
+  kaapi_stealcontext_t* const sc = kaapi_task_getargst(task, kaapi_stealcontext_t);
+  KAAPI_ATOMIC_DECR(&sc->header.msc->thieves.count);
+  /* deallocate the stealcontext */
+  free(sc);
+  task->sp = NULL;
+}
+
 
 static kaapi_ws_error_t steal
 (
- void* p,
- kaapi_thread_context_t* thread,
- kaapi_listrequest_t* lr,
- kaapi_listrequest_iterator_t* lri
- )
+    kaapi_ws_block_t* ws_bloc __attribute__((unused)),
+    void* p,
+    kaapi_listrequest_t* lr,
+    kaapi_listrequest_iterator_t* lri
+)
 {
   lifo_queue_t* const q = (lifo_queue_t*)p;
   kaapi_request_t* req;
   unsigned int top;
-  uintptr_t state;
   
   /* avoid to take the lock */
   if (q->top == 0) return KAAPI_WS_ERROR_EMPTY;
@@ -103,84 +110,24 @@ static kaapi_ws_error_t steal
   req = kaapi_listrequest_iterator_get(lr, lri);
   while ((req != NULL) && top)
   {
-    kaapi_task_t* const task = &q->tasks[--top];
+    kaapi_task_t* const task = q->tasks[--top];
     kaapi_task_body_t task_body = kaapi_task_getbody(task);
     
     if (task_body == kaapi_hws_adapt_body)
     {
-      /* adaptive task. refer to kaapi_sched_stealstack.c */
-      
-      kaapi_stealcontext_t* const sc = kaapi_task_getargst(task, kaapi_stealcontext_t);
-      if (sc == NULL) continue ;
-      
-      if (sc->header.flag & KAAPI_SC_INIT)
-      {
-        if (sc->splitter != NULL)
-        {
-          //	  state = kaapi_task_orstate(task, KAAPI_MASK_BODY_STEAL);
-          //	  if (!kaapi_task_state_isterm(state))
-          uintptr_t orig_state = kaapi_task_getstate(task);
-          /* do not steal if terminated */
-          if (    (orig_state == KAAPI_TASK_STATE_INIT) && (orig_state == KAAPI_TASK_STATE_EXEC)
-               && likely(kaapi_task_casstate(task, orig_state, KAAPI_TASK_STATE_STEAL))
-             )
-          {
-            kaapi_task_splitter_t splitter = sc->splitter;
-            void* const argsplitter = sc->argsplitter;
-            
-            if (splitter != NULL)
-            {
-              const kaapi_ws_error_t err = kaapi_task_splitter_adapt(thread, task, splitter, argsplitter, lr, lri);
-              if (err == KAAPI_WS_ERROR_EMPTY)
-              {
-                KAAPI_ATOMIC_DECR(&sc->header.msc->thieves.count);
-                
-                /* deallocate the stealcontext */
-                free(sc);
-                task->sp = NULL;
-              }
-              
-              /* update request */
-              req = kaapi_listrequest_iterator_get(lr, lri);
-            }
-            /* reset initial state of the task */
-            kaapi_task_setstate(task, orig_state);
-          }
-        }
-      }
+      kaapi_task_steal_adapt(
+        0, 
+        task,
+        lr, lri,
+        &callback_empty
+      );
     }
     else
     {
-      /* dfg task, refer to kaapi_task_splitter_dfg_single */
-      
-      /* todo: kaapi_sched_stealstack.c */
-      
-      kaapi_tasksteal_arg_t* argsteal;
-      const kaapi_format_t* format;      
-      
-      
-      task_body = kaapi_task_marksteal(task);
-      if (!state) continue ;
-      
-      format = kaapi_format_resolvebybody(task_body);
-      kaapi_assert_debug(format);
-
-      argsteal = (kaapi_tasksteal_arg_t*)req->thief_sp;
-      
+      kaapi_task_steal_dfg( 0, 0, task, lr, lri );
 #if CONFIG_HWS_COUNTERS
       kaapi_hws_inc_steal_counter(p, req->ident);
 #endif
-      
-      argsteal->origin_thread   = thread;
-      argsteal->origin_task     = task;
-      argsteal->origin_body     = task_body;
-      argsteal->origin_fmt      = format;
-      argsteal->war_param       = 0;
-      argsteal->cw_param        = 0;
-      req->thief_task->body     = kaapi_tasksteal_body; /* TODO MUST be always this task no write */
-      kaapi_request_replytask( req, KAAPI_REQUEST_S_OK); /* success of steal */
-      
-      req = kaapi_listrequest_iterator_next(lr, lri);
     }
   }
   
@@ -192,10 +139,10 @@ static kaapi_ws_error_t steal
 
 static kaapi_ws_error_t pop
 (
- void* p,
- kaapi_thread_context_t* thread,
- kaapi_request_t* req
- )
+    kaapi_ws_block_t* ws_bloc,
+    void* p,
+    kaapi_request_t* req
+)
 {
   /* currently fallback to steal */
   
@@ -214,17 +161,15 @@ static kaapi_ws_error_t pop
   memcpy(&lr.requests[kid], req, sizeof(kaapi_request_t));
   kaapi_listrequest_iterator_init(&lr, &lri);
   
-  return steal(p, thread, &lr, &lri);
+  return steal(ws_bloc, p, &lr, &lri);
 }
 
 
 /* exported
  */
-
 kaapi_ws_queue_t* kaapi_ws_queue_create_lifo(void)
 {
-  kaapi_ws_queue_t* const wsq =
-  kaapi_ws_queue_create(sizeof(lifo_queue_t));
+  kaapi_ws_queue_t* const wsq = kaapi_ws_queue_alloc(sizeof(lifo_queue_t));
   
   lifo_queue_t* const q = (lifo_queue_t*)wsq->data;
   

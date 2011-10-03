@@ -46,14 +46,15 @@
 
 /* todo: kaapi_hws_level_iterator_t
  */
-
 #include "kaapi_impl.h"
 #include "kaapi_hws.h"
 #include "kaapi_ws_queue.h"
 
 
-static inline kaapi_ws_block_t* get_self_ws_block
-(kaapi_processor_t* self, kaapi_hws_levelid_t levelid)
+static inline kaapi_ws_block_t* get_self_ws_block(
+  kaapi_processor_t* self, 
+  kaapi_hws_levelid_t levelid
+)
 {
   /* return the ws block for the kproc at given level */
   /* assume self, level dont overflow */
@@ -64,9 +65,9 @@ static inline kaapi_ws_block_t* get_self_ws_block
 
 static void fail_requests
 (
- kaapi_listrequest_t* lr,
- kaapi_listrequest_iterator_t* lri
- )
+  kaapi_listrequest_t* lr,
+  kaapi_listrequest_iterator_t* lri
+)
 {
   kaapi_request_t* req;
   
@@ -79,71 +80,67 @@ static void fail_requests
 }
 
 
-static kaapi_thread_context_t* steal_block
+/* Steal a bloc of the hierarchy using the aggregation protocol.
+   (1) request was already posted
+   (2) acquire the lock and return if some body has replied
+   (3) steal work inside the internal queue
+   (3) release the lock
+*/
+static kaapi_request_status_t steal_block
 (
- kaapi_ws_block_t* block,
- kaapi_processor_t* kproc,
- kaapi_request_t* request,
- kaapi_listrequest_t* lr,
- kaapi_listrequest_iterator_t* lri
- )
+  kaapi_ws_block_t* block,
+  kaapi_processor_t* kproc,
+  kaapi_request_t* request,
+  kaapi_listrequest_t* lr,
+  kaapi_listrequest_iterator_t* lri
+)
 {
+ /* try lock and return if reply */
   while (!kaapi_ws_lock_trylock(&block->lock))
   {
     if (kaapi_request_test(request))
+    {
+      /* need to do memory barrier here before reading the data */
+      kaapi_request_syncdata(request);
       goto on_request_replied;
+    }
   }
   
   /* got the lock: reply and unlock */
-  
   kaapi_listrequest_iterator_update(lr, lri, &block->kid_mask);
   
   if (!kaapi_listrequest_iterator_empty(lri))
-    kaapi_ws_queue_steal(block->queue, kproc->thread, lr, lri);
+    kaapi_ws_queue_steal(block, block->queue, lr, lri);
   
+  /* do not need: kaapi_request_syncdata(request); it is myself that replied
+  */
   kaapi_ws_lock_unlock(&block->lock);
   
 on_request_replied:
-  kaapi_request_syncdata(request);
-  
-  switch (kaapi_request_status(request))
-  {
-    case KAAPI_REQUEST_S_OK:
-    {
-      kaapi_thread_t* const self_thread =
-          kaapi_threadcontext2thread(kproc->thread);
-      kaapi_thread_pushtask(self_thread);
-      
-#if defined(KAAPI_USE_PERFCOUNTER)
-      ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
-#endif
-      return kproc->thread;
-      
-    } /* KAAPI_REPLY_S_TASK */
-      
-    default: break ;
-  }
-  
-  return NULL;
+  return kaapi_request_status(request);
 }
 
 
-static kaapi_thread_context_t* steal_block_leaves
+
+/* This is the flat random steal:
+   - select a random WS block into the leave and steal it.
+*/
+static kaapi_request_status_t steal_block_leaves
 (
- kaapi_ws_block_t* block,
- kaapi_processor_t* kproc,
- kaapi_request_t* request,
- kaapi_listrequest_t* lr,
- kaapi_listrequest_iterator_t* lri
- )
+  kaapi_ws_block_t* block,
+  kaapi_processor_t* kproc,
+  kaapi_request_t* request,
+  kaapi_listrequest_t* lr,
+  kaapi_listrequest_iterator_t* lri
+)
 {
   /* steal randomly amongst the block leaves */
-  
   kaapi_processor_id_t kid;
   kaapi_ws_block_t* leaf_block;
   
   /* actually block->kid_count == 1 */
-  if (block->kid_count <= 1) return NULL;
+  if (block->kid_count <= 1) 
+    return KAAPI_REQUEST_S_NOK;
   
 redo_rand:
   kid = block->kids[rand() % block->kid_count];
@@ -156,34 +153,36 @@ redo_rand:
 }
 
 
-static kaapi_thread_context_t* steal_level
+/* Try to steal on each WS block at a given level.
+   Stop until somebody (or may self) has replied successfully.
+*/
+static kaapi_request_status_t steal_level
 (
- kaapi_hws_level_t* level,
- kaapi_processor_t* kproc,
- kaapi_request_t* request,
- kaapi_listrequest_t* lr,
- kaapi_listrequest_iterator_t* lri
- )
+  kaapi_hws_level_t*            level,
+  kaapi_processor_t*            kproc,
+  kaapi_request_t*              request,
+  kaapi_listrequest_t*          lr,
+  kaapi_listrequest_iterator_t* lri
+)
 {
-  kaapi_thread_context_t* thread = NULL;
   unsigned int i;
   
   for (i = 0; i < level->block_count; ++i)
   {
-    thread = steal_block(&level->blocks[i], kproc, request, lr, lri);
-    if (thread != NULL) break ;
+    if (KAAPI_REQUEST_S_OK == steal_block(&level->blocks[i], kproc, request, lr, lri))
+      return KAAPI_REQUEST_S_OK;
   }
   
-  return thread;
+  return KAAPI_REQUEST_S_NOK;
 }
 
 
 __attribute__((unused))
 static kaapi_thread_context_t* pop_block
 (
- kaapi_ws_block_t* block,
- kaapi_processor_t* kproc
- )
+  kaapi_ws_block_t* block,
+  kaapi_processor_t* kproc
+)
 {
   /* not a real steal operation, dont actually post */
   kaapi_request_t* const req = &hws_requests.requests[kproc->kid];
@@ -205,7 +204,7 @@ static kaapi_thread_context_t* pop_block
   thief_task->state = KAAPI_TASK_STATE_ALLOCATED;
   req->thief_sp     = thief_sp;
   
-  err = kaapi_ws_queue_pop(block->queue, kproc->thread, req);
+  err = kaapi_ws_queue_pop(block, block->queue, req);
   if (err != KAAPI_WS_ERROR_SUCCESS) return NULL;
   
   switch (kaapi_request_status(req))
@@ -237,10 +236,14 @@ static kaapi_request_t* post_request(kaapi_processor_t* kproc)
   kaapi_thread_t* const self_thread =
       kaapi_threadcontext2thread(kproc->thread);
   thief_task = kaapi_thread_toptask( self_thread );
-  thief_sp = kaapi_thread_pushdata(self_thread, sizeof(kaapi_tasksteal_arg_t));
-  kaapi_task_init(  thief_task, 
-                    kaapi_tasksteal_body, 
-                    thief_sp
+  thief_sp = kaapi_thread_pushdata(
+      self_thread, 
+      sizeof(kaapi_tasksteal_arg_t)
+  );
+  kaapi_task_init(  
+      thief_task, 
+      kaapi_tasksteal_body, 
+      thief_sp
   );
 
   /* from kaapi_mt_machine.h/kaapi_request_post */
@@ -254,15 +257,22 @@ static kaapi_request_t* post_request(kaapi_processor_t* kproc)
   return req;
 }
 
-kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
+
+/* Hierarchical work stealing strategy
+*/
+kaapi_thread_context_t* kaapi_hws_emitsteal( kaapi_processor_t* kproc )
 {
-  kaapi_thread_context_t* thread = NULL;
   kaapi_ws_block_t* block;
   kaapi_hws_levelid_t child_levelid;
   kaapi_hws_levelid_t levelid = 0;
   kaapi_request_t* request;
   kaapi_listrequest_iterator_t lri;
+
+  kaapi_thread_t*	           self_thread;  
   
+  /* reset thief stack before posting request to steal */
+  kaapi_stack_reset( &kproc->thread->stack );
+
 #if 0 /* already done by the caller */
   /* pop locally without emitting request */
   /* todo: kaapi_ws_queue_pop should fit the steal interface */
@@ -270,17 +280,16 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
   thread = pop_block(block, kproc);
   if (thread != NULL) return thread;
 #endif /* already done by the caller */
-  
+
   /* dont fail_request with an uninitialized bitmap */
   kaapi_listrequest_iterator_prepare(&lri);
   
   /* post the stealing request */
   kproc->issteal = 1;
   request = post_request(kproc);
-  kaapi_stack_reset(&kproc->thread->stack);
   
   /* foreach parent level, pop. if pop failed, steal in level children. */
-  for (levelid = KAAPI_HWS_LEVELID_FIRST; levelid < hws_level_count; ++levelid)
+  for (levelid = KAAPI_HWS_LEVELID_FIRST; levelid < (int)hws_level_count; ++levelid)
   {
     if (!(kaapi_hws_is_levelid_set(levelid))) continue ;
     
@@ -291,36 +300,42 @@ kaapi_thread_context_t* kaapi_hws_emitsteal(kaapi_processor_t* kproc)
     {
       /* todo: this is a pop, not a steal */
       /* todo: dont rely upon thread for termination condition */
-      thread = steal_block(block, kproc, request, &hws_requests, &lri);
-      if (thread != NULL)
-      {
-        /* something replied, we are done */
-        goto on_done;
-      }
+      if (KAAPI_REQUEST_S_OK == steal_block(block, kproc, request, &hws_requests, &lri))
+        goto on_request_success;
       
       /* popping failed at this level, steal in level children */
       for (child_levelid = levelid - 1; child_levelid >= 0; --child_levelid)
       {
         kaapi_hws_level_t* const child_level = &hws_levels[child_levelid];
-        if (!kaapi_hws_is_levelid_set(child_levelid)) continue ;
+        if (!kaapi_hws_is_levelid_set(child_levelid)) 
+          continue;
         
-        thread = steal_level(child_level, kproc, request, &hws_requests, &lri);
-        if (thread != NULL) goto on_done;
+        if (KAAPI_REQUEST_S_OK == steal_level(child_level, kproc, request, &hws_requests, &lri))
+          goto on_request_success;
       }
       
     } /* levelid != KAAPI_HWS_LEVELID_FLAT */
     
     /* child level stealing failed, steal in block leaf local queues */
-    thread = steal_block_leaves(block, kproc, request, &hws_requests, &lri);
-    if (thread != NULL) goto on_done;
-    
+    if (KAAPI_REQUEST_S_OK == steal_block_leaves(block, kproc, request, &hws_requests, &lri))
+      goto on_request_success;
+          
     /* next level */
   }
   
-on_done:
   fail_requests(&hws_requests, &lri);
-  
   kproc->issteal = 0;
+  return 0;
+
+on_request_success:
+  fail_requests(&hws_requests, &lri);
+  kproc->issteal = 0;
+  self_thread = kaapi_threadcontext2thread(kproc->thread);
+  kaapi_thread_pushtask(self_thread);
+      
+#if defined(KAAPI_USE_PERFCOUNTER)
+  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
+#endif
   
-  return thread;
+  return kproc->thread;
 }

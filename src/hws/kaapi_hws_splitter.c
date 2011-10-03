@@ -107,11 +107,13 @@ int kaapi_hws_splitter
     kaapi_request_t* const req = &reqs[i];
     kaapi_reply_t* const rep = &reps[i];
     kaapi_ws_queue_t* queue;
+    kaapi_ws_block_t* ws_block;
     
     if (rep->status == KAAPI_REQUEST_S_POSTED) continue ;
     
     /* extract the task and push in the correct queue */
-    queue = hws_levels[levelid].blocks[req->ident].queue;
+    ws_block = &hws_levels[levelid].blocks[req->ident];
+    queue    = ws_block->queue;
     
     switch (kaapi_request_status(req))
     {
@@ -121,7 +123,7 @@ int kaapi_hws_splitter
         /* data is stored in the first word of udata */
         void* const dont_break_aliasing = (void*)rep->udata;
         void* const data = *(void**)dont_break_aliasing;
-        kaapi_ws_queue_push(queue, req->thief_task->body, req->thief_task->sp);
+        kaapi_ws_queue_push(ws_block, queue, req->thief_task);
         break ;
         
       } /* KAAPI_REPLY_S_TASK */
