@@ -46,67 +46,6 @@
 #include <unistd.h>
 #endif
 
-/* Compute if the task with arguments pointed by sp and with format task_fmt is ready
- Return the number of non ready data
- */
-static size_t kaapi_task_computeready( 
-  kaapi_task_t*         task __attribute__((unused)),
-  void*                 sp, 
-  const kaapi_format_t* task_fmt, 
-  unsigned int*         war_param, 
-  unsigned int*         cw_param, 
-  kaapi_hashmap_t*      map 
-)
-{
-  size_t count_params;
-  size_t wc;
-  unsigned int i;
-  
-  count_params = wc = kaapi_format_get_count_params(task_fmt, sp); 
-  
-  for (i=0; i<count_params; ++i)
-  {
-    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(  kaapi_format_get_mode_param(task_fmt, i, sp) );
-    if (m == KAAPI_ACCESS_MODE_V) 
-    {
-      --wc;
-      continue;
-    }
-    kaapi_access_t access = kaapi_format_get_access_param(task_fmt, i, sp);
-    
-    /* */
-    kaapi_gd_t* gd = &kaapi_hashmap_findinsert( map, access.data )->u.value;
-    
-    /* compute readyness of access */
-    if (   KAAPI_ACCESS_IS_ONLYWRITE(m)
-        || (gd->last_mode == KAAPI_ACCESS_MODE_VOID)
-        || (KAAPI_ACCESS_IS_CONCURRENT(m, gd->last_mode))
-        )
-    {
-      --wc;
-      if (  (KAAPI_ACCESS_IS_ONLYWRITE(m) && KAAPI_ACCESS_IS_READ(gd->last_mode))
-         || (KAAPI_ACCESS_IS_CUMULWRITE(m) && KAAPI_ACCESS_IS_CONCURRENT(m,gd->last_mode)) )
-      {
-        *war_param |= 1<<i;
-      }
-      if (KAAPI_ACCESS_IS_CUMULWRITE(m))
-        *cw_param |= 1<<i;
-    }
-    /* optimization: break from enclosest loop here */
-    
-    /* update map information for next access if no set */
-    if (gd->last_mode == KAAPI_ACCESS_MODE_VOID)
-      gd->last_mode = m;
-    
-    /* Datum produced by aftersteal_task may be made visible to thief in order to augment
-       the parallelism by breaking chain of versions (W->R -> W->R ), the second W->R may
-       be used (the middle R->W is splitted -renaming is also used in other context-).
-       But we do not take into account of this extra parallelism.
-     */
-  }
-  return wc;
-}
-
 static inline void _kaapi_bitmapkid2cpuset( kaapi_cpuset_t* cpusetrequest, kaapi_bitmap_value_t* bitmap )
 {
   int kid;
@@ -120,6 +59,7 @@ static inline void _kaapi_bitmapkid2cpuset( kaapi_cpuset_t* cpusetrequest, kaapi
 
 /* find and clear the first request whose emiter matches the numaid
  */
+__attribute__((unused)) 
 static kaapi_request_t* _kaapi_matching_request 
 (
  kaapi_listrequest_t*          lr,
@@ -155,20 +95,16 @@ static kaapi_request_t* _kaapi_matching_request
  */
 static int kaapi_sched_stealframe
 (
- kaapi_thread_context_t*       thread, 
- kaapi_frame_t*                frame, 
- kaapi_hashmap_t*              map, 
- kaapi_listrequest_t*          lrequests, 
- kaapi_listrequest_iterator_t* lrrange
- )
+  kaapi_thread_context_t*       thread, 
+  kaapi_frame_t*                frame, 
+  kaapi_hashmap_t*              map, 
+  kaapi_listrequest_t*          lrequests, 
+  kaapi_listrequest_iterator_t* lrrange
+)
 {
-  const kaapi_format_t* task_fmt;
   kaapi_task_body_t     task_body;
   kaapi_task_t*         task_top;
   kaapi_task_t*         task_sp;
-  kaapi_request_t*      request;
-  kaapi_task_splitter_t splitter; 
-  void*                 argsplitter;
   
   /* suppress history of the previous frame ! */
   kaapi_hashmap_clear( map );
@@ -182,91 +118,28 @@ static int kaapi_sched_stealframe
    */
   while ( !kaapi_listrequest_iterator_empty(lrrange) && (task_top > task_sp))
   {
-    request = kaapi_listrequest_iterator_get( lrequests, lrrange );
     task_body = kaapi_task_getbody(task_top);
     
 #warning TODO HERE
     /* its an adaptive task !!! */
     if (task_body == kaapi_adapt_body || task_body == kaapi_hws_adapt_body)
     {
-      /* only steal into an correctly initialized steal context */
-      kaapi_stealcontext_t* const sc = kaapi_task_getargst(task_top, kaapi_stealcontext_t);
-      if (sc->header.flag & KAAPI_SC_INIT) 
-      {
-        splitter = sc->splitter;
-        argsplitter = sc->argsplitter;
-        
-        if ( (splitter !=0) && (argsplitter !=0) )
-        {
-          uintptr_t orig_state = kaapi_task_getstate(task_top);
-          /* do not steal if terminated */
-          if (    (orig_state == KAAPI_TASK_STATE_INIT) && (orig_state == KAAPI_TASK_STATE_EXEC)
-               && likely(kaapi_task_casstate(task_top, orig_state, KAAPI_TASK_STATE_STEAL))
-             )
-          {
-            /* steal may sucess: possible race, reread the splitter */
-            splitter = sc->splitter;
-            argsplitter = sc->argsplitter;
-            if ((splitter != 0) && (argsplitter != 0))
-              kaapi_task_splitter_adapt(thread, task_top, splitter, argsplitter, lrequests, lrrange );
-            
-            /* reset initial state of the task */
-            kaapi_task_setstate(task_top, orig_state);
-          }
-        }
-      } /* end if init */
+      kaapi_task_steal_adapt(
+        thread, 
+        task_top,
+        lrequests,
+        lrrange,
+        0     /* no callback if the adaptive task was into a queue of a thread */
+      );
+      
       --task_top;
       continue;
     }
 
-
-    /* * weak symbol may also be used ? 
-     * not that recv body is an empty function to serve as a mark. It could
-     be put into the nonpartitioning code...
-     */
-    {
-      task_fmt = kaapi_format_resolvebybody( task_body );
-      if (task_fmt !=0)
-      {
-        unsigned int war_param = 0;
-        unsigned int cw_param = 0;
-        size_t wc = kaapi_task_computeready( 
-              task_top, kaapi_task_getargs(task_top), 
-              task_fmt, 
-              &war_param, 
-              &cw_param, map );
-        if ((wc ==0) && kaapi_task_isstealable(task_top))
-        {
-          kaapi_task_body_t body = kaapi_task_marksteal( task_top );
-          if (likely( body ) ) /* success */
-          {
-            ((kaapi_task_t* volatile)task_top)->reserved = request->thief_task;
-            kaapi_writemem_barrier();
-            kaapi_task_setstate( task_top, KAAPI_TASK_STATE_STEAL);
-            
-            /* - create the task steal that will execute the stolen task
-               The task stealtask stores:
-                 - the original thread
-                 - the original task pointer
-                 - the pointer to shared data with R / RW access data
-                 - and at the end it reserve enough space to store original task arguments
-            */
-            kaapi_tasksteal_arg_t* argsteal = request->thief_sp;
-            argsteal->origin_thread         = thread;
-            argsteal->origin_task           = task_top;
-            argsteal->origin_body           = body;
-            argsteal->origin_fmt            = task_fmt;
-            argsteal->war_param             = war_param;  
-            argsteal->cw_param              = cw_param;
-            request->thief_task->body       = kaapi_tasksteal_body; /* TODO MUST be always this task no write */
-            kaapi_request_replytask( request, KAAPI_REQUEST_S_OK);  /* success of steal */
-            
-            /* advance to the next request */
-            kaapi_listrequest_iterator_next( lrequests, lrrange );
-          }
-        }
-      } /* if fmt != 0 */
-    } 
+    /* else try to steal a DFG task using history of accesses stored in map 
+       On return the request iterator has been advanced to the next request if steal successed
+    */
+    kaapi_task_steal_dfg( map, thread, task_top, lrequests, lrrange );
     --task_top;
   }
   
