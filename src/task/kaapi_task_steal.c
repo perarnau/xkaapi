@@ -82,9 +82,6 @@ void kaapi_taskwrite_body(
   war_param                  = arg->war_param;
   cw_param                   = arg->cw_param;
   
-  if (arg->origin_fmt == 0)
-    arg->origin_fmt = kaapi_format_resolvebybody(arg->origin_body);
-  
   if (copy_task_args !=0)
   {
     /* for each parameter of the copy of the theft' task on mode:
@@ -191,7 +188,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   kaapi_task_t*          task;
   kaapi_tasksteal_arg_t* arg;
   kaapi_task_body_t      body;          /* format of the stolen task */
-  kaapi_format_t*        fmt;
+  const kaapi_format_t*        fmt;
   unsigned int           war_param;     /* */
   unsigned int           cw_param;      /* */
 
@@ -211,7 +208,9 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
  
   /* format of the original stolen task */  
   body            = arg->origin_body;
-  fmt             = kaapi_format_resolvebybody( body );
+  fmt             = arg->origin_fmt;
+  if (fmt == 0)
+    arg->origin_fmt = fmt = kaapi_format_resolvebybody(body);
   kaapi_assert_debug( fmt !=0 );
 //printf("Steal task: %p\n", arg->origin_task); fflush(stdout);
 
