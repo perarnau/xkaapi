@@ -213,7 +213,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   body            = arg->origin_body;
   fmt             = kaapi_format_resolvebybody( body );
   kaapi_assert_debug( fmt !=0 );
-//printf("Steal task: %p\n", arg->origin_task); fflush(stdout);
+printf("Steal task: %p\n", arg->origin_task); fflush(stdout);
 
   /* the original task arguments */
   orig_task_args  = kaapi_task_getargs(arg->origin_task);
