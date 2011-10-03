@@ -75,7 +75,6 @@ void kaapi_task_steal_dfg
         kaapi_request_t* request = kaapi_listrequest_iterator_get( lrequests, lrrange );
         ((kaapi_task_t* volatile)task)->reserved = request->thief_task;
         kaapi_writemem_barrier();
-        kaapi_task_setstate( task, KAAPI_TASK_STATE_STEAL);
         
         /* - create the task steal that will execute the stolen task
            The task stealtask stores:

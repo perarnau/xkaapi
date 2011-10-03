@@ -120,7 +120,6 @@ static int kaapi_sched_stealframe
   {
     task_body = kaapi_task_getbody(task_top);
     
-#warning TODO HERE
     /* its an adaptive task !!! */
     if (task_body == kaapi_adapt_body || task_body == kaapi_hws_adapt_body)
     {

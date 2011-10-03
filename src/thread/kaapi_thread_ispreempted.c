@@ -1,5 +1,4 @@
 /*
-** kaapi_hws_pushtask.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:14 2009
@@ -8,7 +7,6 @@
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -43,29 +41,16 @@
 ** terms.
 ** 
 */
-
 #include "kaapi_impl.h"
-#include "kaapi_hws.h"
-#include "kaapi_ws_queue.h"
 
-/* push a task at a given hierarchy level
- */
-int kaapi_thread_pushtask_atlevel (
-  kaapi_task_t* task,
-  kaapi_hws_levelid_t levelid
-)
+/**
+*/
+int kaapi_thread_is_preempted(void)
 {
-  /* kaapi_assert(kaapi_hws_is_levelid_set(levelid)); */
-
-  kaapi_processor_t* const kproc = kaapi_get_current_processor();
-  kaapi_ws_block_t* const ws_block = hws_levels[levelid].kid_to_block[kproc->kid];
-  kaapi_ws_queue_t* const queue = ws_block->queue;
-
-  /* toremove */
-///  kaapi_hws_sched_inc_sync();
-  /* toremove */
-
-  kaapi_ws_queue_push(ws_block, queue, task);
-
-  return 0;
+  kaapi_thread_context_t* thread = kaapi_self_thread_context();
+  kaapi_task_t* toptask = thread->stack.stackframe->pc;
+  if (toptask->state & KAAPI_TASK_STATE_PREEMPTED) 
+    return 1;
+  else
+    return 0;
 }

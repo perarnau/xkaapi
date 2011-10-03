@@ -82,6 +82,9 @@ void kaapi_taskwrite_body(
   war_param                  = arg->war_param;
   cw_param                   = arg->cw_param;
   
+  if (arg->origin_fmt == 0)
+    arg->origin_fmt = kaapi_format_resolvebybody(arg->origin_body);
+  
   if (copy_task_args !=0)
   {
     /* for each parameter of the copy of the theft' task on mode:

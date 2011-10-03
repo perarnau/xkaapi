@@ -95,7 +95,6 @@ libkaapi_la_SOURCES=\
   hws/kaapi_hws_adaptive.c \
   hws/kaapi_hws_misc.c \
   hws/kaapi_hws_sched_sync.c \
-  hws/kaapi_hws_globals.c \
   hws/kaapi_hws_counters.c \
   hws/kaapi_ws_queue_lifo.c \
   hws/kaapi_ws_queue_kproc.c
@@ -125,6 +124,7 @@ libkaapi_la_SOURCES+=\
   task/kaapi_task_standard.c \
   task/kaapi_task_aftersteal.c \
   task/kaapi_task_steal.c \
+  task/kaapi_task_steal_dfg.c \
   task/kaapi_task_stealready_body.c \
   task/kaapi_task_splitter_adapt.c \
   task/kaapi_task_splitter_readylist.c \
@@ -139,6 +139,9 @@ libkaapi_la_SOURCES+=\
   task/kaapi_task_preempt_thief.c \
   task/kaapi_task_preemptpoint.c \
   task/kaapi_task_finalize.c \
+  task/kaapi_task_steal_adapt.c \
+  task/kaapi_task_computeready.c \
+  task/kaapi_task_pushtaskdfg_queue.c \
   static/kaapi_stsched_tasksetstatic.c \
   static/kaapi_threadgroup_nothgrp.c\
   static/kaapi_stsched_taskrecv.c\

@@ -209,6 +209,51 @@ static inline void* _kaapi_align_ptr_for_alloca(void* ptr, uintptr_t align)
 
 
 /* ========================================================================== */
+/** \ingroup HWS
+    hierarchy level identifiers and masks
+ */
+
+/** TG: to describe here
+*/
+typedef enum kaapi_hws_levelid
+{
+  KAAPI_HWS_LEVELID_LO = -1,
+
+  KAAPI_HWS_LEVELID_L3 = 0,
+  KAAPI_HWS_LEVELID_NUMA,
+  KAAPI_HWS_LEVELID_SOCKET,
+  KAAPI_HWS_LEVELID_MACHINE,
+  KAAPI_HWS_LEVELID_FLAT,
+  KAAPI_HWS_LEVELID_MAX,
+
+  KAAPI_HWS_LEVELID_FIRST = 0
+
+} kaapi_hws_levelid_t;
+
+
+/** TG: to describe here
+*/
+typedef enum kaapi_hws_levelmask
+{
+  KAAPI_HWS_LEVELMASK_L3      = 1 << KAAPI_HWS_LEVELID_L3,
+  KAAPI_HWS_LEVELMASK_NUMA    = 1 << KAAPI_HWS_LEVELID_NUMA,
+  KAAPI_HWS_LEVELMASK_SOCKET  = 1 << KAAPI_HWS_LEVELID_SOCKET,
+  KAAPI_HWS_LEVELMASK_MACHINE = 1 << KAAPI_HWS_LEVELID_MACHINE,
+  KAAPI_HWS_LEVELMASK_FLAT    = 1 << KAAPI_HWS_LEVELID_FLAT,
+
+  KAAPI_HWS_LEVELMASK_ALL     =
+      KAAPI_HWS_LEVELMASK_L3 |
+      KAAPI_HWS_LEVELMASK_NUMA |
+      KAAPI_HWS_LEVELMASK_SOCKET |
+      KAAPI_HWS_LEVELMASK_MACHINE |
+      KAAPI_HWS_LEVELMASK_FLAT,
+
+  KAAPI_HWS_LEVELMASK_INVALID = 0
+
+} kaapi_hws_levelmask_t;
+
+
+/* ========================================================================== */
 /** \ingroup WS
     Get the workstealing concurrency number, i.e. the number of kernel
     activities to execute the user level thread. 
@@ -804,7 +849,6 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
   return 0;
 }
 
-
 /** \ingroup TASK
     The function kaapi_thread_pushtask_withpartitionid() pushes the top task into a stack
     attached to the partitionid pid.
@@ -835,6 +879,22 @@ static inline int kaapi_thread_pushtask_withocr(kaapi_thread_t* thread, const vo
   return 0;
 }
 
+/*
+*/
+extern int kaapi_thread_pushtask_atlevel(kaapi_task_t*, kaapi_hws_levelid_t);
+
+/** \ingroup TASK
+    The function kaapi_thread_distribute_task() pushes the top task into the stack
+    and into a hierarchical queue specify by levelid.
+    If successful, the kaapi_thread_distribute_task() function will return zero.
+    Otherwise, an error number will be returned to indicate the error.
+    \param stack INOUT a pointer to the kaapi_stack_t data structure.
+    \retval EINVAL invalid argument: bad stack pointer.
+*/
+extern int kaapi_thread_distribute_task (
+  kaapi_thread_t* thread,
+  kaapi_hws_levelid_t levelid
+);
 
 /** \ingroup TASK
     Task initialization routines
@@ -845,6 +905,21 @@ static inline void kaapi_task_initdfg
   task->body  = body;
   task->sp    = arg;
   task->state = 0;
+#if !defined(KAAPI_NDEBUG)
+  task->reserved = 0;
+#endif
+//  task->binding.type = KAAPI_BINDING_ANY;
+}
+
+/** \ingroup TASK
+    Task initialization routines
+*/
+static inline void kaapi_task_init_withstate
+  (kaapi_task_t* task, kaapi_task_body_t body, void* arg, uintptr_t state)
+{
+  task->body  = body;
+  task->sp    = arg;
+  task->state = state;
 #if !defined(KAAPI_NDEBUG)
   task->reserved = 0;
 #endif
@@ -2137,70 +2212,29 @@ extern int kaapi_hws_fini_global(void);
 extern int kaapi_hws_init_perproc(struct kaapi_processor_t*);
 extern int kaapi_hws_fini_perproc(struct kaapi_processor_t*);
 
-/* ========================================================================== */
-/** \ingroup HWS
-    hierarchy level identifiers and masks
- */
-
-/** TG: to describe here
-*/
-typedef enum kaapi_hws_levelid
-{
-  KAAPI_HWS_LEVELID_LO = -1,
-
-  KAAPI_HWS_LEVELID_L3 = 0,
-  KAAPI_HWS_LEVELID_NUMA,
-  KAAPI_HWS_LEVELID_SOCKET,
-  KAAPI_HWS_LEVELID_MACHINE,
-  KAAPI_HWS_LEVELID_FLAT,
-  KAAPI_HWS_LEVELID_MAX,
-
-  KAAPI_HWS_LEVELID_FIRST = 0
-
-} kaapi_hws_levelid_t;
-
-
-/** TG: to describe here
-*/
-typedef enum kaapi_hws_levelmask
-{
-  KAAPI_HWS_LEVELMASK_L3      = 1 << KAAPI_HWS_LEVELID_L3,
-  KAAPI_HWS_LEVELMASK_NUMA    = 1 << KAAPI_HWS_LEVELID_NUMA,
-  KAAPI_HWS_LEVELMASK_SOCKET  = 1 << KAAPI_HWS_LEVELID_SOCKET,
-  KAAPI_HWS_LEVELMASK_MACHINE = 1 << KAAPI_HWS_LEVELID_MACHINE,
-  KAAPI_HWS_LEVELMASK_FLAT    = 1 << KAAPI_HWS_LEVELID_FLAT,
-
-  KAAPI_HWS_LEVELMASK_ALL     =
-      KAAPI_HWS_LEVELMASK_L3 |
-      KAAPI_HWS_LEVELMASK_NUMA |
-      KAAPI_HWS_LEVELMASK_SOCKET |
-      KAAPI_HWS_LEVELMASK_MACHINE |
-      KAAPI_HWS_LEVELMASK_FLAT,
-
-  KAAPI_HWS_LEVELMASK_INVALID = 0
-
-} kaapi_hws_levelmask_t;
 
 /* ========================================================================== */
 /** \ingroup HWS
     push a task at a given hierarchy level
     \retval -1 on error, 0 on success
  */
-extern int kaapi_hws_pushtask(kaapi_task_t*, kaapi_hws_levelid_t);
+/* DEPRECATED: move to kaapi_thread_pushtask_atlevel */
+static inline int kaapi_hws_pushtask(kaapi_task_t* task, kaapi_hws_levelid_t lid)
+{ return kaapi_thread_pushtask_atlevel(task, lid); }
 
-static inline int kaapi_hws_pushtask_flat(kaapi_task_t* task, void* data)
+static inline int kaapi_hws_pushtask_flat(kaapi_task_t* task)
 {
-  return kaapi_hws_pushtask(task, KAAPI_HWS_LEVELID_FLAT);
+  return kaapi_thread_pushtask_atlevel(task, KAAPI_HWS_LEVELID_FLAT);
 }
 
-static inline int kaapi_hws_pushtask_machine(kaapi_task_t* task, void* data)
+static inline int kaapi_hws_pushtask_machine(kaapi_task_t* task)
 {
-  return kaapi_hws_pushtask(task, KAAPI_HWS_LEVELID_MACHINE);
+  return kaapi_thread_pushtask_atlevel(task, KAAPI_HWS_LEVELID_MACHINE);
 }
 
-static inline int kaapi_hws_pushtask_numa(kaapi_task_t* task, void* data)
+static inline int kaapi_hws_pushtask_numa(kaapi_task_t* task)
 {
-  return kaapi_hws_pushtask(task, KAAPI_HWS_LEVELID_NUMA);
+  return kaapi_thread_pushtask_atlevel(task, KAAPI_HWS_LEVELID_NUMA);
 }
 /* ========================================================================== */
 /** \ingroup HWS

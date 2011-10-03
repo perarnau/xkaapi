@@ -45,27 +45,40 @@
 */
 
 #include "kaapi_impl.h"
-#include "kaapi_hws.h"
-#include "kaapi_ws_queue.h"
 
-/* push a task at a given hierarchy level
+/* push the task thread->pc at a given hierarchy level
  */
-int kaapi_thread_pushtask_atlevel (
-  kaapi_task_t* task,
+int kaapi_thread_distribute_task (
+  kaapi_thread_t* thread,
   kaapi_hws_levelid_t levelid
 )
 {
-  /* kaapi_assert(kaapi_hws_is_levelid_set(levelid)); */
-
-  kaapi_processor_t* const kproc = kaapi_get_current_processor();
-  kaapi_ws_block_t* const ws_block = hws_levels[levelid].kid_to_block[kproc->kid];
-  kaapi_ws_queue_t* const queue = ws_block->queue;
-
-  /* toremove */
-///  kaapi_hws_sched_inc_sync();
-  /* toremove */
-
-  kaapi_ws_queue_push(ws_block, queue, task);
-
-  return 0;
+  /* the task is in the own queue of the thread but not yet visible to other threads */
+  kaapi_task_t* task = thread->sp;
+  
+  /* create a new steal_body task */
+  kaapi_task_t*          dtask    = (kaapi_task_t*)kaapi_alloca(thread, sizeof(kaapi_task_t));
+  
+  kaapi_tasksteal_arg_t* argsteal = (kaapi_tasksteal_arg_t*)kaapi_alloca(thread, sizeof(kaapi_tasksteal_arg_t));
+  argsteal->origin_thread         = kaapi_self_thread_context();
+  argsteal->origin_task           = task;
+  argsteal->origin_body           = task->body;
+  argsteal->origin_fmt            = 0;    /* should be computed by a thief */
+  argsteal->war_param             = 0;    /* assume no war */
+  argsteal->cw_param              = 0;    /* assume no cw mode */
+  kaapi_task_init_withstate(  dtask, 
+                    kaapi_tasksteal_body, 
+                    argsteal,
+                    KAAPI_TASK_STATE_ALLOCATED
+  );
+  task->reserved                  = dtask;
+  argsteal->origin_body = kaapi_task_marksteal( task );
+  kaapi_assert_debug( argsteal->origin_body != 0);
+  
+  /* ok here initial task is marked as steal and distributed task correspond to a stealbody 
+     - push dtask to a hierarchical queue
+     - push task into the own thread queue
+  */
+  kaapi_thread_pushtask_atlevel(dtask, levelid);
+  return kaapi_thread_pushtask(thread);
 }
