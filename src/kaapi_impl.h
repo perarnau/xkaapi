@@ -318,12 +318,12 @@ extern kaapi_rtparam_t kaapi_default_param;
     task. The pre-allocated arguments for the task is currently of size 
     sizeof(kaapi_tasksteal_arg_t).
 */
-typedef enum kaapi_reply_status_t {
+typedef enum kaapi_request_status_t {
   KAAPI_REQUEST_S_POSTED   = 0,
   KAAPI_REQUEST_S_NOK      = 1,
   KAAPI_REQUEST_S_OK       = 2,
   KAAPI_REQUEST_S_ERROR    = 3
-} kaapi_reply_status_t;
+} kaapi_request_status_t;
 
 /** \ingroup TASK
     Reply to a steal request.
@@ -332,7 +332,7 @@ typedef enum kaapi_reply_status_t {
 static inline int kaapi_request_replytask
 ( 
   kaapi_request_t*      request, 
-  kaapi_reply_status_t	status
+  kaapi_request_status_t	status
 )
 {
   if (status == KAAPI_REQUEST_S_OK)
@@ -701,6 +701,16 @@ extern kaapi_thread_context_t* kaapi_sched_wakeup (
     \retval a pointer to a stack that is the result of one workstealing operation.
 */
 extern kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc );
+
+/** TODO: DESCRIPTION !!!
+*/
+typedef enum kaapi_ws_error
+{
+  KAAPI_WS_ERROR_SUCCESS = 0,
+  KAAPI_WS_ERROR_EMPTY,
+  KAAPI_WS_ERROR_FAILURE
+} kaapi_ws_error_t;
+
 
 /** \ingroup HWS
     Hierarchical workstealing routine

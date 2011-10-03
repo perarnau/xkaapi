@@ -572,7 +572,7 @@ static inline void* kaapi_adaptive_result_data(kaapi_stealcontext_t* sc)
     Depending on the work stealing protocol, more data may be available.
     
     After the data has been write to memory, the status is set to one of
-    the kaapi_reply_status_t value indicating the success in stealing, the
+    the kaapi_request_status_t value indicating the success in stealing, the
     failure or an error.
 
     Thread kinds of objects may be pass in the reply data structure:
@@ -1248,6 +1248,14 @@ static inline int kaapi_preemptpoint_isactive(const kaapi_stealcontext_t* ksc)
   kaapi_assert_debug(ksc->preempt != 0);
   return *ksc->preempt == 1;
 }
+
+
+/** \ingroup ADAPTIVE
+    Test if the current execution is preempted.
+    \retval !=0 if it exists a prending preempt request(s) on the current thread
+    \retval 0 else
+*/
+extern int kaapi_thread_is_preempted(void);
 
 
 /** \ingroup ADAPTIVE
@@ -2134,6 +2142,8 @@ extern int kaapi_hws_fini_perproc(struct kaapi_processor_t*);
     hierarchy level identifiers and masks
  */
 
+/** TG: to describe here
+*/
 typedef enum kaapi_hws_levelid
 {
   KAAPI_HWS_LEVELID_LO = -1,
@@ -2149,20 +2159,23 @@ typedef enum kaapi_hws_levelid
 
 } kaapi_hws_levelid_t;
 
+
+/** TG: to describe here
+*/
 typedef enum kaapi_hws_levelmask
 {
-  KAAPI_HWS_LEVELMASK_L3 = 1 << KAAPI_HWS_LEVELID_L3,
-  KAAPI_HWS_LEVELMASK_NUMA = 1 << KAAPI_HWS_LEVELID_NUMA,
-  KAAPI_HWS_LEVELMASK_SOCKET = 1 << KAAPI_HWS_LEVELID_SOCKET,
+  KAAPI_HWS_LEVELMASK_L3      = 1 << KAAPI_HWS_LEVELID_L3,
+  KAAPI_HWS_LEVELMASK_NUMA    = 1 << KAAPI_HWS_LEVELID_NUMA,
+  KAAPI_HWS_LEVELMASK_SOCKET  = 1 << KAAPI_HWS_LEVELID_SOCKET,
   KAAPI_HWS_LEVELMASK_MACHINE = 1 << KAAPI_HWS_LEVELID_MACHINE,
-  KAAPI_HWS_LEVELMASK_FLAT = 1 << KAAPI_HWS_LEVELID_FLAT,
+  KAAPI_HWS_LEVELMASK_FLAT    = 1 << KAAPI_HWS_LEVELID_FLAT,
 
-  KAAPI_HWS_LEVELMASK_ALL =
-  KAAPI_HWS_LEVELMASK_L3 |
-  KAAPI_HWS_LEVELMASK_NUMA |
-  KAAPI_HWS_LEVELMASK_SOCKET |
-  KAAPI_HWS_LEVELMASK_MACHINE |
-  KAAPI_HWS_LEVELMASK_FLAT,
+  KAAPI_HWS_LEVELMASK_ALL     =
+      KAAPI_HWS_LEVELMASK_L3 |
+      KAAPI_HWS_LEVELMASK_NUMA |
+      KAAPI_HWS_LEVELMASK_SOCKET |
+      KAAPI_HWS_LEVELMASK_MACHINE |
+      KAAPI_HWS_LEVELMASK_FLAT,
 
   KAAPI_HWS_LEVELMASK_INVALID = 0
 
@@ -2173,21 +2186,21 @@ typedef enum kaapi_hws_levelmask
     push a task at a given hierarchy level
     \retval -1 on error, 0 on success
  */
-extern int kaapi_hws_pushtask(kaapi_task_body_t, void*, kaapi_hws_levelid_t);
+extern int kaapi_hws_pushtask(kaapi_task_t*, kaapi_hws_levelid_t);
 
-static inline int kaapi_hws_pushtask_flat(kaapi_task_body_t body, void* data)
+static inline int kaapi_hws_pushtask_flat(kaapi_task_t* task, void* data)
 {
-  return kaapi_hws_pushtask(body, data, KAAPI_HWS_LEVELID_FLAT);
+  return kaapi_hws_pushtask(task, KAAPI_HWS_LEVELID_FLAT);
 }
 
-static inline int kaapi_hws_pushtask_machine(kaapi_task_body_t body, void* data)
+static inline int kaapi_hws_pushtask_machine(kaapi_task_t* task, void* data)
 {
-  return kaapi_hws_pushtask(body, data, KAAPI_HWS_LEVELID_MACHINE);
+  return kaapi_hws_pushtask(task, KAAPI_HWS_LEVELID_MACHINE);
 }
 
-static inline int kaapi_hws_pushtask_numa(kaapi_task_body_t body, void* data)
+static inline int kaapi_hws_pushtask_numa(kaapi_task_t* task, void* data)
 {
-  return kaapi_hws_pushtask(body, data, KAAPI_HWS_LEVELID_NUMA);
+  return kaapi_hws_pushtask(task, KAAPI_HWS_LEVELID_NUMA);
 }
 /* ========================================================================== */
 /** \ingroup HWS
@@ -2236,12 +2249,6 @@ extern void kaapi_hws_reply_adaptive_task
 
 extern void kaapi_hws_end_adaptive(kaapi_stealcontext_t* sc);
 
-/* ========================================================================== */
-/** \ingroup HWS
-    wait until all the tasks pushed in the hierarchy queues are done
- */
-extern void kaapi_hws_sched_sync(void);
-extern void kaapi_hws_sched_sync_once(void);
 
 /* ========================================================================== */
 /** \ingroup HWS
