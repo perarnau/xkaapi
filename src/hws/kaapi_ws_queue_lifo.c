@@ -106,7 +106,7 @@ static kaapi_ws_error_t steal
   
   /* work on a local copy of top, never updated */
   top = q->top;
-  
+
   req = kaapi_listrequest_iterator_get(lr, lri);
   while ((req != NULL) && top)
   {
@@ -129,6 +129,9 @@ static kaapi_ws_error_t steal
       kaapi_hws_inc_steal_counter(p, req->ident);
 #endif
     }
+
+    /* the request may have been updated. reread it. */
+    req = kaapi_listrequest_iterator_get(lr, lri);
   }
   
   kaapi_ws_lock_unlock(&q->lock);
