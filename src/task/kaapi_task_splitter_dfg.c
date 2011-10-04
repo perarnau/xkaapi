@@ -68,7 +68,17 @@ void kaapi_task_splitter_dfg_single
        - and at the end it reserve enough space to store original task arguments
      The original body is saved as the extra body of the original task data structure.
   */
+#if 0
   argsteal = (kaapi_tasksteal_arg_t*)stealreply->udata;
+#else
+  {
+    /* todo: use reply request allocator */
+    void* const dont_break_aliasing = (void*)stealreply->udata;
+    argsteal = (kaapi_tasksteal_arg_t*)stealreply->udata + sizeof(void*);
+    /* assume there is enough space for kaapi_tasksteal_arg_t */
+    *(void**)dont_break_aliasing = (void*)argsteal;
+  }
+#endif
   argsteal->origin_thread         = thread;
   argsteal->origin_task           = task;
   argsteal->origin_fmt            = task_fmt;
