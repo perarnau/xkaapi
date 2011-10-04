@@ -79,9 +79,10 @@ int main(int ac, char** av)
   {
     kaapi_thread_t* const thread = kaapi_self_thread();
     kaapi_task_t* const task = kaapi_thread_toptask(thread);
+    wrapped_uint_t* wui;
 
     /* push for flat stealing */
-    wrapped_uint_t* wui = kaapi_thread_pushdata_align
+    wui = kaapi_thread_pushdata_align
       (thread, sizeof(wrapped_uint_t), sizeof(void*));
     kaapi_thread_allocateshareddata
       (&wui->val, thread, sizeof(unsigned int));
@@ -89,7 +90,7 @@ int main(int ac, char** av)
     kaapi_task_initdfg(task, flat_body, wui);
     kaapi_thread_pushtask(thread);
 
-#if 0
+#if 1
     /* push for numa stealing */
     /* todo: should be an allocator per ws_block, ie.
        ws->allocate(). export hws_alloc on top of that.
