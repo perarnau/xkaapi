@@ -18,7 +18,7 @@ static void flat_body(void* p, kaapi_thread_t* t)
   const unsigned int val = *kaapi_data(unsigned int, &wui->val);
 
   printf("xx [%u] %s %u\n", kaapi_get_self_kid(), __FUNCTION__, val);
-  usleep(1000000);
+  usleep(100000);
 
   *kaapi_data(unsigned int, &wui->val) = 3;
 }
@@ -31,7 +31,7 @@ static void numa_body(void* p, kaapi_thread_t* t)
   const unsigned int val = *kaapi_data(unsigned int, &wui->val);
 
   printf("xx [%u] %s %u\n", kaapi_get_self_kid(), __FUNCTION__, val);
-  usleep(1000000);
+  usleep(100000);
 
   *kaapi_data(unsigned int, &wui->val) = 3;
 }
@@ -78,28 +78,33 @@ int main(int ac, char** av)
   for (j = 0; j < 4; ++j)
   {
     kaapi_thread_t* const thread = kaapi_self_thread();
-    kaapi_task_t* const task = kaapi_thread_toptask(thread);
+    kaapi_task_t* task;
     wrapped_uint_t* wui;
 
     /* push for flat stealing */
+    task = kaapi_thread_toptask(thread);
     wui = kaapi_thread_pushdata_align
       (thread, sizeof(wrapped_uint_t), sizeof(void*));
     kaapi_thread_allocateshareddata
       (&wui->val, thread, sizeof(unsigned int));
-    *kaapi_data(unsigned int, &wui->val) = 42;
+    *kaapi_data(unsigned int, &wui->val) = j;
     kaapi_task_initdfg(task, flat_body, wui);
     kaapi_thread_pushtask(thread);
 
-#if 1
     /* push for numa stealing */
+
     /* todo: should be an allocator per ws_block, ie.
        ws->allocate(). export hws_alloc on top of that.
      */
-    wui = malloc(sizeof(wrapped_uint_t) + sizeof(unsigned int));
-    wui->val.data = (void*)((uintptr_t)wui + sizeof(wrapped_uint_t));
-    *kaapi_data(unsigned int, &wui->val) = 42;
-    kaapi_hws_pushtask_numa(numa_body, wui);
-#endif
+
+    task = kaapi_thread_toptask(thread);
+    wui = kaapi_thread_pushdata_align
+      (thread, sizeof(wrapped_uint_t), sizeof(void*));
+    kaapi_thread_allocateshareddata
+      (&wui->val, thread, sizeof(unsigned int));
+    *kaapi_data(unsigned int, &wui->val) = j;
+    kaapi_task_initdfg(task, numa_body, wui);
+    kaapi_hws_pushtask_numa(task);
   }
 
   kaapi_sched_sync();
