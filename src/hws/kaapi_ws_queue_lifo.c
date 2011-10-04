@@ -164,7 +164,17 @@ static kaapi_ws_error_t steal
       if (kaapi_task_isstealable(task) == 0) continue ;
       if (kaapi_task_state_isstealable(state) == 0) continue ;
 
+#if 0
       argsteal = (kaapi_tasksteal_arg_t*)rep->udata;
+#else
+  {
+    /* todo: use reply request allocator */
+    void* const dont_break_aliasing = (void*)rep->udata;
+    argsteal = (kaapi_tasksteal_arg_t*)rep->udata + sizeof(void*);
+    /* assume there is enough space for kaapi_tasksteal_arg_t */
+    *(void**)dont_break_aliasing = (void*)argsteal;
+  }
+#endif
 
 #if CONFIG_HWS_COUNTERS
       kaapi_hws_inc_steal_counter(p, req->kid);
