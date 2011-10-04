@@ -27,8 +27,8 @@ static kaapi_ws_error_t steal
   const int saved_count = kaapi_listrequest_iterator_count(lri);
   kaapi_sched_stealprocessor(kproc, lr, lri);
   if (kaapi_listrequest_iterator_count(lri) == saved_count)
-    return KAAPI_WS_ERROR_SUCCESS;
-  return KAAPI_WS_ERROR_EMPTY;
+    return KAAPI_WS_ERROR_EMPTY;
+  return KAAPI_WS_ERROR_SUCCESS;
 }
 
 
