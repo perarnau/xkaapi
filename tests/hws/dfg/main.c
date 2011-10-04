@@ -8,7 +8,6 @@
 typedef struct wrapped_uint
 {
   kaapi_access_t val;
-  unsigned int stor;
 } wrapped_uint_t;
 
 
@@ -43,7 +42,6 @@ KAAPI_REGISTER_TASKFORMAT
 
 int main(int ac, char** av)
 {
-  wrapped_uint_t flat_wui;
   unsigned int j;
 
   kaapi_init(1, &ac, &av);
@@ -52,16 +50,21 @@ int main(int ac, char** av)
   {
     kaapi_thread_t* const thread = kaapi_self_thread();
     kaapi_task_t* const task = kaapi_thread_toptask(thread);
+    wrapped_uint_t* const flat_wui = kaapi_thread_pushdata_align
+      (thread, sizeof(wrapped_uint_t), sizeof(void*));
 
-    flat_wui.stor = 42;
-    kaapi_access_init(&flat_wui.val, &flat_wui.stor);
-    kaapi_task_initdfg(task, flat_body, &flat_wui);
+    kaapi_thread_allocateshareddata
+      (&flat_wui->val, thread, sizeof(unsigned int));
+    *kaapi_data(unsigned int, &flat_wui->val) = 42;
+
+    kaapi_task_initdfg(task, flat_body, flat_wui);
+
     kaapi_thread_pushtask(thread);
   }
 
   kaapi_sched_sync();
 
-  printf("done: %u\n", flat_wui.stor);
+  printf("done\n");
 
   kaapi_finalize();
 
