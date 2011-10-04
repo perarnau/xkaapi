@@ -104,6 +104,7 @@ int main(int ac, char** av)
       (&wui->val, thread, sizeof(unsigned int));
     *kaapi_data(unsigned int, &wui->val) = j;
     kaapi_task_initdfg(task, numa_body, wui);
+    kaapi_thread_pushtask(thread);
     kaapi_hws_pushtask_numa(task);
   }
 
