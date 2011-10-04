@@ -1,14 +1,11 @@
 /*
-** kaapi_hws_globals.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
-** Copyright 2009 INRIA.
+** Copyright 2011 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -43,10 +40,49 @@
 ** terms.
 ** 
 */
+#include <stdlib.h>
+#include <math.h>
 
-#include "kaapi_impl.h"
-#include "kaapi_hws.h"
+#define THRESHOLD 8
 
-kaapi_hws_level_t* hws_levels;
-kaapi_hws_levelmask_t hws_levelmask;
-kaapi_listrequest_t hws_requests;
+#pragma kaapi task write([begin:end)) value (op)
+void for_each( double* begin, double* end, void (*op)(double*) )
+{
+   size_t size = (end-begin);
+  if (size <THRESHOLD)
+  {
+    while (begin != end)
+      op(begin++);
+  }
+  else {
+    /* simple recursive for_each */
+    size_t med = size/2;
+    for_each( begin, begin+med, op);
+    for_each( begin+med, end, op);
+  }
+}
+
+
+/**
+ */
+static void apply_cos( double* v )
+{
+  *v += cos(*v);
+}
+
+/**
+ */
+int main(int ac, char** av)
+{
+  double sum = 0.f;
+  size_t i;
+  size_t iter;
+  
+#define ITEM_COUNT 100000
+  static double array[ITEM_COUNT];
+  
+#pragma kaapi parallel  
+  for_each( array, array+ITEM_COUNT, apply_cos );
+
+  return 0;
+}

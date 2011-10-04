@@ -70,10 +70,10 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
 
   /* Execute the orinal body function with the original args */
   frame = (kaapi_frame_t*)uthread;
-  kaapi_assert_debug( frame == thread->sfp );
+  kaapi_assert_debug( frame == thread->stack.sfp );
 
-  thread->sfp[1] = *frame;
-  frame = ++thread->sfp;
+  thread->stack.sfp[1] = *frame;
+  frame = ++thread->stack.sfp;
 
   /* link tasklist together for terminaison */
   tasklist->master    = arg->origin_tasklist;
@@ -105,13 +105,13 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
   kaapi_sched_sync_(thread);
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&tasklist->count_thief) == 0);
 
-  kaapi_sched_lock(&thread->proc->lock);
+  kaapi_sched_lock(&thread->stack.proc->lock);
   frame->tasklist = 0;
   /* one thief less */
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&tasklist->master->count_thief) >0 );
   KAAPI_ATOMIC_DECR( &tasklist->master->count_thief );
-  kaapi_sched_unlock( &thread->proc->lock );
+  kaapi_sched_unlock( &thread->stack.proc->lock );
   
   kaapi_tasklist_destroy( tasklist );
-  --thread->sfp;
+  --thread->stack.sfp;
 }

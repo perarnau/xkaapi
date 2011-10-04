@@ -46,6 +46,8 @@
 #include "kaapi_network.h"
 #include "kaapi_compiler.h"
 
+
+#if 1//ndef KAAPI_USE_NETWORK
 /* Weak symbols that will be overloaded by libkanet when
  * linked with it
  */
@@ -97,3 +99,19 @@ __KA_COMPILER_WEAK int kaapi_network_get_seginfo(kaapi_address_space_t* retval,
   retval->segsize = (size_t)-1;
   return 0;
 }
+
+__KA_COMPILER_WEAK int kaapi_network_rdma(
+  kaapi_globalid_t gid_dest, 
+  kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+  const void* src, const kaapi_memory_view_t* view_src 
+)
+{
+  return 0;
+}
+
+__KA_COMPILER_WEAK void* kaapi_network_allocate_rdma(size_t size)
+{
+  return 0;
+}
+
+#endif

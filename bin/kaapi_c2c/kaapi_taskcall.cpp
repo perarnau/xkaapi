@@ -139,7 +139,7 @@ void KaapiTaskCallTraversal::visit(SgNode* node)
 	      << std::endl;
 #endif // CONFIG_ENABLE_DEBUG
 
-#if 0
+#if 1
     if (exprstatement->getAttribute("kaapinotask") !=0) 
       return;
 #endif
@@ -198,7 +198,7 @@ void KaapiTaskCallTraversal::visit(SgNode* node)
 #endif // CONFIG_ENABLE_DEBUG
 
 #if 0 // TG no important here: see below in the main: when TemplateInstance are processed
-	  {            SgTemplateInstantiationFunctionDecl* sg_tmpldecl = isSgTemplateInstantiationFunctionDecl( fdecl );
+	  { SgTemplateInstantiationFunctionDecl* sg_tmpldecl = isSgTemplateInstantiationFunctionDecl( fdecl );
 	    if (sg_tmpldecl !=0)
 	      {
 #if CONFIG_ENABLE_DEBUG

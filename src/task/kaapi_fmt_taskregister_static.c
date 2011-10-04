@@ -84,7 +84,7 @@ static void kaapi_format_default_redinit_param
 { (*f->_redinit_params[i])(value); }
 
 static void kaapi_format_default_get_task_binding 
-  (const struct kaapi_format_t* f, const kaapi_task_t* task, kaapi_task_binding_t* b)
+  (const struct kaapi_format_t* f, const void* task, kaapi_task_binding_t* b)
 { b->type = KAAPI_BINDING_ANY; }
 
 /**

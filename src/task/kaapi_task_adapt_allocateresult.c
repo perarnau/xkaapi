@@ -77,9 +77,12 @@ kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
   result->prev            = 0;
   result->next            = 0;
   result->addr_tofree	  = addr_tofree;
+#warning TODO HERE
+#if 0 //TODO
   result->status	  = &kreq->reply->status;
   result->preempt	  = &kreq->reply->preempt;
-  kaapi_task_setstate(&result->state, 0);
+  kaapi_task_initdfg(&result->state, 0, 0);
+#endif
 
   return result;
 }

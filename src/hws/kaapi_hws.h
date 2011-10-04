@@ -43,14 +43,11 @@
 ** terms.
 ** 
 */
-
-
 #ifndef KAAPI_HWS_H_INCLUDED
 # define KAAPI_HWS_H_INCLUDED
 
 
 /* internal to hws */
-
 
 #define CONFIG_HWS_COUNTERS 1
 
@@ -61,46 +58,43 @@
 
 /* workstealing lock, cas implementation only */
 /* todo: replace with kaapi_sched_lock */
+/* TG: base lock on top of kaapi_atomic_lock_XX subroutines */
 
 typedef kaapi_atomic_t kaapi_ws_lock_t;
 
-static inline void kaapi_ws_lock_init(kaapi_ws_lock_t* lock)
+static inline int kaapi_ws_lock_init(kaapi_ws_lock_t* lock)
 {
-  KAAPI_ATOMIC_WRITE(lock, 0);
+  return kaapi_atomic_initlock(lock);
 }
 
-static inline int kaapi_ws_lock_trylock
-(kaapi_ws_lock_t* lock)
+static inline int kaapi_ws_lock_trylock(kaapi_ws_lock_t* lock)
 {
-  if (KAAPI_ATOMIC_READ(lock) == 0)
-    if (KAAPI_ATOMIC_CAS(lock, 0, 1))
-      return 1; /* locked */
-  return 0;
+  return kaapi_atomic_trylock(lock);
 }
 
-static inline void kaapi_ws_lock_lock(kaapi_ws_lock_t* lock)
+static inline int kaapi_ws_lock_lock(kaapi_ws_lock_t* lock)
 {
-  while (1)
-  {
-    if (KAAPI_ATOMIC_READ(lock) == 0)
-      if (KAAPI_ATOMIC_CAS(lock, 0, 1))
-	return ;
-
-    kaapi_slowdown_cpu();
-  }
+  return kaapi_atomic_lock(lock);
 }
 
-static inline void kaapi_ws_lock_unlock(kaapi_ws_lock_t* lock)
+static inline int kaapi_ws_lock_unlock(kaapi_ws_lock_t* lock)
 {
-  KAAPI_ATOMIC_WRITE_BARRIER(lock, 0);
+  return kaapi_atomic_unlock(lock);
 }
 
 
-/* workstealing block */
-
+/* Workstealing block.
+   A workstealing block is a node in the hierarchy used to aggregate
+   requestion from sub-nodes. It contains :
+   - a lock used to aggregate work stealing requests
+   - a kid_mask to iterate over the right set of bit in the bitmap of posted requests.
+   - a queue where to push/pop or steal work
+   - and the list of participating k-processors.
+*/
 typedef struct kaapi_ws_block
 {
   /* concurrent workstealing sync */
+  
   /* todo: cache aligned, alone in the line */
   kaapi_ws_lock_t lock;
 
@@ -117,6 +111,9 @@ typedef struct kaapi_ws_block
 } kaapi_ws_block_t;
 
 
+/* TG: to define here
+   kid_to_block[kid] = bloc for the k-processor kid ?
+*/
 typedef struct kaapi_hws_level
 {
   kaapi_ws_block_t** kid_to_block;
@@ -138,8 +135,10 @@ extern kaapi_listrequest_t hws_requests;
 /* internal exported functions */
 extern const char* kaapi_hws_levelid_to_str(kaapi_hws_levelid_t);
 
-static inline const unsigned int
-kaapi_hws_is_levelid_set(kaapi_hws_levelid_t levelid)
+static inline 
+unsigned int kaapi_hws_is_levelid_set(
+    kaapi_hws_levelid_t levelid
+)
 {
   return hws_levelmask & (1 << levelid);
 }

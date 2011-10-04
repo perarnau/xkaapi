@@ -1,7 +1,8 @@
 /*
 ** xkaapi
 ** 
-** Copyright 2011 INRIA.
+** Created on Tue Mar 31 15:19:14 2009
+** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
@@ -40,28 +41,16 @@
 ** terms.
 ** 
 */
-#include <stdio.h>
+#include "kaapi_impl.h"
 
-#pragma kaapi task write(buffer) value(size) read(msg)
-void write_msg(int size, char* buffer, const char* msg)
+/**
+*/
+int kaapi_thread_is_preempted(void)
 {
-  snprintf(buffer, size, "%s", msg);
-}
-
-#pragma kaapi task read(msg)
-void print_msg(const char* msg)
-{
-  printf("%s\n", msg);
-}
-
-int main(int argc, char** argv)
-{
-  char buffer[32];
-#pragma kaapi parallel 
-  {
-    write_msg(32,buffer, "This is may be a too long message for the buffer.");
-    print_msg(buffer);
-  }
-
-  return 0;
+  kaapi_thread_context_t* thread = kaapi_self_thread_context();
+  kaapi_task_t* toptask = thread->stack.stackframe->pc;
+  if (toptask->state & KAAPI_TASK_STATE_PREEMPTED) 
+    return 1;
+  else
+    return 0;
 }

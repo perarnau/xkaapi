@@ -125,8 +125,11 @@ struct TaskBodyCPU<TaskFibo>
       return;
     }
     else {
-      ka::pointer<long> ptr1 = new long;
-      ka::pointer<long> ptr2 = new long;
+      long* otr1 = new long;
+      long* otr2 = new long;
+      ka::pointer<long> ptr1 = otr1;
+      ka::pointer<long> ptr2 = otr2;
+//printf("New @:%p\n", (long*)otr1); printf("New @:%p\n", (long*)otr2); fflush(stdout);
 
       /* the Spawn keyword is used to spawn new task
        * new tasks are executed in parallel as long as dependencies are respected

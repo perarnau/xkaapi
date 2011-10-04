@@ -107,8 +107,11 @@ static void do_initial_split(kaapi_processor_t* kproc)
     kaapi_request_t* kreq = kaapi_listrequest_iterator_get(klr, &kli);
     while (kreq != 0)
     {
+#warning TODO HERE
+#if 0
       _kaapi_request_reply(kreq, KAAPI_REPLY_S_NOK);
       kreq = kaapi_listrequest_iterator_next(klr, &kli);
+#endif
     }
   }
 }
@@ -185,7 +188,7 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
      this is needed for the assumptions made by the
      kaapi_task_lock_steal rouines, see for comments.
    */
-  kaapi_task_init_with_state(task, kaapi_adapt_body, KAAPI_MASK_BODY_EXEC, sc);
+  kaapi_task_init(task, kaapi_adapt_body, sc);
 
   /* barrier done by kaapi_thread_pushtask */
   kaapi_thread_pushtask(thread);

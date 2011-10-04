@@ -62,7 +62,10 @@ void* kaapi_reply_init_adaptive_task
   kaapi_taskadaptive_user_taskarg_t* adata;
   kaapi_stealheader_t* sc_header;
 
+#warning TODO HERE
+#if 0
   krep = kreq->reply;
+#endif
 
   /* take into account extra body in udata + user data arg */
   size += sizeof(kaapi_adaptive_thief_body_t);

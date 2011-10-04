@@ -148,7 +148,7 @@ void _kaapi_signal_dump_state(int sig)
         {
           printf("Suspended thread:%p -> @task condition:%p\n",
             (void*)cell->thread, 
-            (void*)cell->thread->sfp->pc
+            (void*)cell->thread->stack.sfp->pc
           );
           kaapi_thread_print(stdout, cell->thread);
         }

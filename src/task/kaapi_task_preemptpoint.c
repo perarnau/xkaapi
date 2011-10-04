@@ -90,7 +90,8 @@ int kaapi_preemptpoint_after_reducer_call(
 )
 {
   kaapi_taskadaptive_result_t* const ktr = stc->header.ktr;
-  uintptr_t state;
+  kaapi_task_body_t body;
+  int retval;
 
   kaapi_assert_debug( ktr != 0 );
 
@@ -98,13 +99,23 @@ int kaapi_preemptpoint_after_reducer_call(
   kaapi_writemem_barrier();
 
   /* signal termination */
-  state = kaapi_task_orstate(&ktr->state, KAAPI_MASK_BODY_TERM);
-  if (kaapi_task_state_ispreempted(state))
+#warning TODO HERE
+redo:
+#if 0
+  body = kaapi_task_getbody(&ktr->state);
+  retval = kaapi_task_casbody(&ktr->state, body, kaapi_term_body);
+  if (retval)
   {
-    /* @see comment in kaapi_task_adap_body */
-    while (*stc->preempt == 0)
-      kaapi_slowdown_cpu();
+    if (body == kaapi_preempt_body)
+    {
+      /* @see comment in kaapi_task_adap_body */
+      while (*stc->preempt == 0)
+        kaapi_slowdown_cpu();
+    }
   }
+  else 
+    goto redo;
+#endif
 
   /* adapt_body needs to know about preemption */
   stc->header.ktr = 0;

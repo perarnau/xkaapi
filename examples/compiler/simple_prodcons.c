@@ -40,85 +40,28 @@
 ** terms.
 ** 
 */
-#include <stdlib.h>
-#include <math.h>
-#include <sys/time.h>
+#include <stdio.h>
 
-/**
-*/
-double get_elapsedtime(void)
+#pragma kaapi task write(buffer[size]) value(size) read(msg)
+void write_msg(int size, char* buffer, const char* msg)
 {
-  struct timeval tv;
-  int err = gettimeofday( &tv, 0);
-  if (err  !=0) return 0;
-  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
+  snprintf(buffer, size, "%s", msg);
 }
 
-#pragma kaapi task write([begin:end)) value (op)
-/*value(op)*/
-void for_each( double* begin, double* end, void (*op)(double*) )
+#pragma kaapi task read(msg)
+void print_msg(const char* msg)
 {
-   size_t size = (end-begin);
-  if (size <2)
+  printf("%s\n", msg);
+}
+
+int main(int argc, char** argv)
+{
+  char buffer[32];
+#pragma kaapi parallel 
   {
-    while (begin != end)
-      op(begin++);
-  }
-  else {
-    /* simple recursive for_each */
-    size_t med = size/2;
-    for_each( begin, begin+med, op);
-    for_each( begin+med, end, op);
-  }
-}
-
-
-/**
- */
-static void apply_cos( double* v )
-{
-  *v += cos(*v);
-}
-
-/**
- */
-int main(int ac, char** av)
-{
-  double t0,t1;
-  double sum = 0.f;
-  size_t i;
-  size_t iter;
-  
-#define ITEM_COUNT 100000
-  static double array[ITEM_COUNT];
-  
-#pragma kaapi parallel  
-  /* initialize the runtime */
-  for (iter = 0; iter < 100; ++iter)
-  {
-    /* initialize, apply, check */
-    for (i = 0; i < ITEM_COUNT; ++i)
-      array[i] = 0.f;
-
-#pragma kaapi barrier
-    t0 = get_elapsedtime();
-    for_each( array, array+ITEM_COUNT, apply_cos );
-#pragma kaapi barrier
-    t1 = get_elapsedtime();
-    sum += (t1-t0)*1000; /* ms */
-
-    for (i = 0; i < ITEM_COUNT; ++i)
-      if (array[i] != 1.f)
-      {
-        printf("invalid @%lu == %lf\n", i, array[i]);
-        break ;
-      }
+    write_msg(32,buffer, "This is may be a too long message for the buffer.");
+    print_msg(buffer);
   }
 
-  printf("done: %lf (ms)\n", sum / 100);
-
-  /* finalize the runtime */
-#pragma kaapi finish
-  
   return 0;
 }

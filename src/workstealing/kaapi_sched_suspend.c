@@ -75,10 +75,10 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 
   /* here is the reason of suspension */
   thread_condition = kproc->thread;
-  kaapi_assert_debug( kproc == thread_condition->proc);
+  kaapi_assert_debug( kproc == thread_condition->stack.proc);
 
   /* first look if tasklist is built on this frame */
-  tasklist = thread_condition->sfp->tasklist;
+  tasklist = thread_condition->stack.sfp->tasklist;
   if (tasklist !=0) 
   {
     task_condition =0;
@@ -92,8 +92,8 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     }
   } 
   else {
-    task_condition = thread_condition->sfp->pc;
-    if (kaapi_task_state_isready( kaapi_task_getstate(task_condition) )) 
+    task_condition = thread_condition->stack.sfp->pc;
+    if (kaapi_task_isready( task_condition )) 
     {
 #if defined(KAAPI_USE_PERFCOUNTER)
       kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
@@ -137,7 +137,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 
     if (kproc->thread == thread_condition) 
     {
-      kaapi_assert((tasklist !=0) || (kproc->thread->sfp->pc == task_condition));
+      kaapi_assert((tasklist !=0) || (kproc->thread->stack.sfp->pc == task_condition));
 #if defined(KAAPI_USE_PERFCOUNTER)
       kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
       kaapi_event_push0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
@@ -191,7 +191,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       /* on return, either a new thread has been stolen, either a task as been put into ctxt or thread ==0 */
       thread = kaapi_sched_emitsteal( kproc );
 
-      if (kaapi_frame_isempty(ctxt->sfp))
+      if (kaapi_frame_isempty(ctxt->stack.sfp))
       {
         /* push it into the free list */
         kaapi_setcontext( kproc , 0);
@@ -225,8 +225,8 @@ redo_execution:
     }
     else
 #endif /* KAAPI_USE_CUDA */
-    if (kproc->thread->sfp->tasklist ==0)
-      err = kaapi_thread_execframe(kproc->thread);
+    if (kproc->thread->stack.sfp->tasklist ==0)
+      err = kaapi_stack_execframe(&kproc->thread->stack);
     else
       err = kaapi_thread_execframe_tasklist(kproc->thread);
 

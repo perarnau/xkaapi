@@ -1,11 +1,14 @@
 /*
+** kaapi_hws_pushtask.c
 ** xkaapi
 ** 
-** Copyright 2011 INRIA.
+** Created on Tue Mar 31 15:19:14 2009
+** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -40,42 +43,42 @@
 ** terms.
 ** 
 */
-#include <stdio.h>
 
-#pragma kaapi task write(result) read(r1,r2)
-void sum( long* result, const long* r1, const long* r2)
-{
-  *result = *r1 + *r2;
-}
+#include "kaapi_impl.h"
 
-#pragma kaapi task write(result) value(n)
-void fibonacci(long* result, const long n)
+/* push the task thread->pc at a given hierarchy level
+ */
+int kaapi_thread_distribute_task (
+  kaapi_thread_t* thread,
+  kaapi_hws_levelid_t levelid
+)
 {
-  if (n<2)
-    *result = n;
-  else 
-  {
-#pragma kaapi data alloca(r1,r2)
-    long r1,r2;
-    fibonacci( &r1, n-1 );
-    fibonacci( &r2, n-2 );
-    sum( result, &r1, &r2);
-  }
-}
-
-#pragma kaapi task read(result) 
-void print_result( const long* result )
-{
-  printf("Fibonacci(30)=%li\n", *result);
-}
-
-int main()
-{
-  long result;
-#pragma kaapi parallel
-  {
-    fibonacci(&result, 30);
-    print_result(&result);
-  }
-  return 0;
+  /* the task is in the own queue of the thread but not yet visible to other threads */
+  kaapi_task_t* task = thread->sp;
+  
+  /* create a new steal_body task */
+  kaapi_task_t*          dtask    = (kaapi_task_t*)kaapi_alloca(thread, sizeof(kaapi_task_t));
+  
+  kaapi_tasksteal_arg_t* argsteal = (kaapi_tasksteal_arg_t*)kaapi_alloca(thread, sizeof(kaapi_tasksteal_arg_t));
+  argsteal->origin_thread         = kaapi_self_thread_context();
+  argsteal->origin_task           = task;
+  argsteal->origin_body           = task->body;
+  argsteal->origin_fmt            = 0;    /* should be computed by a thief */
+  argsteal->war_param             = 0;    /* assume no war */
+  argsteal->cw_param              = 0;    /* assume no cw mode */
+  kaapi_task_init_withstate(  dtask, 
+                    kaapi_tasksteal_body, 
+                    argsteal,
+                    KAAPI_TASK_STATE_ALLOCATED
+  );
+  task->reserved                  = dtask;
+  argsteal->origin_body = kaapi_task_marksteal( task );
+  kaapi_assert_debug( argsteal->origin_body != 0);
+  
+  /* ok here initial task is marked as steal and distributed task correspond to a stealbody 
+     - push dtask to a hierarchical queue
+     - push task into the own thread queue
+  */
+  kaapi_thread_pushtask_atlevel(dtask, levelid);
+  return kaapi_thread_pushtask(thread);
 }

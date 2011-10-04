@@ -122,8 +122,8 @@ static void kaapi_hw_standardinit(void)
   kaapi_assert_debug(kaapi_default_param.cpu2kid);
   for (size_t i=0; i<kaapi_default_param.cpucount; ++i)
   {
-    kaapi_default_param.kid2cpu[i]= -1;
-    kaapi_default_param.cpu2kid[i]= -1;
+    kaapi_default_param.kid2cpu[i]= -1U;
+    kaapi_default_param.cpu2kid[i]= -1U;
   }
 
   kaapi_procinfo_list_init(kaapi_default_param.kproc_list);

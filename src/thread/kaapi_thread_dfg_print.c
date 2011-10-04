@@ -48,7 +48,7 @@
 
 /** Bits are SEAT
 */
-static const char* tab_bit[] = {
+static const char* tab_bit[] __attribute__((unused)) = {
   "0000",
   "0001",
   "0010",
@@ -78,11 +78,11 @@ static const char* tab_bit[] = {
 typedef char state_type_t[4];
 static void kaapi_getstatename( kaapi_task_t* task, state_type_t char_state )
 {
-  uintptr_t state = kaapi_task_getstate(task);
-  char_state[0] = (kaapi_task_state_isterm(state) ? 'T' : '_');
-  char_state[1] = (kaapi_task_state_isaftersteal(state) ? 'A' : '_');
-  char_state[2] = (kaapi_task_state_isexec(state) ? 'E' : '_');
-  char_state[3] = (kaapi_task_state_issteal(state) ? 'S' : '_');
+  uintptr_t state = (uintptr_t)task->state;
+  char_state[0] = (state & KAAPI_TASK_STATE_TERM ? 'T' : '_');
+  char_state[1] = (state & KAAPI_TASK_STATE_MERGE ? 'A' : '_');
+  char_state[2] = (state & KAAPI_TASK_STATE_EXEC ? 'E' : '_');
+  char_state[3] = (state & KAAPI_TASK_STATE_STEAL ? 'S' : '_');
 }
 
 static char kaapi_getmodename( kaapi_access_mode_t m )
@@ -102,17 +102,16 @@ static char kaapi_getmodename( kaapi_access_mode_t m )
 */
 int kaapi_task_print( 
   FILE* file,
-  kaapi_task_t* task
+  kaapi_task_t* task,
+  kaapi_task_body_t body
 )
 {
   const kaapi_format_t* fmt;
   unsigned int i;
-  kaapi_task_body_t body;
   size_t count_params;
   state_type_t state;
 
-  body = kaapi_task_getbody(task);
-  fmt = kaapi_format_resolvebybody( body );
+  fmt = kaapi_format_resolvebybody(body);
   
   char* sp;
   sp = task->sp;
@@ -121,12 +120,13 @@ int kaapi_task_print(
   count_params = kaapi_format_get_count_params(fmt, sp );
   kaapi_getstatename(task, state);
 
-  int st = kaapi_task_state2int( kaapi_task_getstate(task) );
-  fprintf( file, "@%p |%c%c%c%c|, name:%-20.20s, bit:%-4.4s, sp:%p, #p:%u\n", 
+//  int st = kaapi_task_state2int( kaapi_task_getstate(task) );
+//  fprintf( file, "@%p |%c%c%c%c|, name:%-20.20s, bit:%-4.4s, sp:%p, #p:%u\n", 
+  fprintf( file, "@%p |%c%c%c%c|, name:%-20.20s, sp:%p, #p:%u\n", 
         (void*)task, 
         state[3], state[2], state[1], state[0],
         fmt->name, 
-        ( ((st>=0) && (st<16)) ? tab_bit[st] : "<OB>" ),
+  //      ( ((st>=0) && (st<16)) ? tab_bit[st] : "<OB>" ),
         sp,
 	(unsigned int)count_params );
         
@@ -199,10 +199,10 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
 
   count = 0;
 
-  frame    = thread->stackframe;
+  frame    = kaapi_stack_topframe(&thread->stack);
   if (frame ==0) return 0;
   iframe   = 0;
-  task_bot = kaapi_thread_bottomtask(thread);
+  task_bot = kaapi_stack_bottomtask(&thread->stack);
 
   do 
   {
@@ -227,11 +227,9 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
           fname = "exec";
         else if ( body == kaapi_taskmain_body) 
           fname = "maintask";
-        else if (body == kaapi_suspend_body) 
-          fname = "suspend";
         else if (body == kaapi_tasksteal_body) 
           fname = "steal";
-        else if (body == kaapi_aftersteal_body) 
+        else if (body == (kaapi_task_body_t)kaapi_aftersteal_body) 
           fname = "aftersteal";
         else if (body == kaapi_taskmove_body) 
           fname = "move";
@@ -251,17 +249,12 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
         {
           kaapi_tasksteal_arg_t* arg = kaapi_task_getargst( task_bot, kaapi_tasksteal_arg_t );
           fprintf(file, ", thief task:" );
-          kaapi_task_print(file, arg->origin_task );
+          kaapi_task_print(file, arg->origin_task, body );
         }
-        else if (body == kaapi_aftersteal_body)
+        else if (body == (kaapi_task_body_t)kaapi_aftersteal_body)
         {
           fprintf(file, ", steal/term task:" );
-          kaapi_task_print(file, task_bot );
-        }
-        else if (body == kaapi_suspend_body)
-        {
-          fprintf(file, ", steal/under task:" );
-          kaapi_task_print(file, task_bot );
+          kaapi_task_print(file, task_bot, body );
         }
         fputc('\n', file);
         
@@ -281,7 +274,7 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
 
       /* print the task */
       fprintf( file, "  [%04i]: ", count );
-      kaapi_task_print(file, task_bot );
+      kaapi_task_print(file, task_bot, body );
 
       ++count;
       --task_bot;
@@ -292,7 +285,7 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
 
     ++frame;
     ++iframe;
-  } while (frame <= thread->sfp);
+  } while (frame <= thread->stack.sfp);
 
   fflush(file);
   return 0;

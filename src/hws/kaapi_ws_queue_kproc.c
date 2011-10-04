@@ -4,9 +4,9 @@
 
 static kaapi_ws_error_t pop
 (
- void* p,
- kaapi_thread_context_t* thread,
- kaapi_request_t* req
+    kaapi_ws_block_t* ws_bloc __attribute__((unused)),
+    void* p,
+    kaapi_request_t* req
 )
 {
   /* todo, kaapi_sched_idle.c, local wakeup first */
@@ -17,10 +17,10 @@ static kaapi_ws_error_t pop
 
 static kaapi_ws_error_t steal
 (
- void* p,
- kaapi_thread_context_t* thread,
- kaapi_listrequest_t* lr,
- kaapi_listrequest_iterator_t* lri
+    kaapi_ws_block_t* ws_bloc __attribute__((unused)),
+    void* p,
+    kaapi_listrequest_t* lr,
+    kaapi_listrequest_iterator_t* lri
 )
 {
   kaapi_processor_t* const kproc = *(kaapi_processor_t**)p;
@@ -34,9 +34,9 @@ static kaapi_ws_error_t steal
 
 static kaapi_ws_error_t push
 (
- void* p,
- kaapi_task_body_t body,
- void* arg
+    kaapi_ws_block_t* ws_bloc __attribute__((unused)),
+    void* p,
+    kaapi_task_t* task
 )
 {
   /* pushing in a non local queue is not allowed */
@@ -53,7 +53,7 @@ kaapi_ws_queue_t* kaapi_ws_queue_create_kproc(kaapi_processor_t* kproc)
   /* points to the given kproc and use local function to steal, pop */
 
   kaapi_ws_queue_t* const wsq =
-    kaapi_ws_queue_create(sizeof(kaapi_processor_t*));
+    kaapi_ws_queue_alloc(sizeof(kaapi_processor_t*));
 
   void* const aliasing_fix = (void*)wsq->data;
   *(void**)aliasing_fix = (void*)kproc;

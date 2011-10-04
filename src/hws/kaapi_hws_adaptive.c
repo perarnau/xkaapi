@@ -115,15 +115,16 @@ void* kaapi_hws_init_adaptive_task
 
   adata->ubody = (kaapi_adaptive_thief_body_t)body;
 
-  rep = req->reply;
-  rep->u.s_task.body = kaapi_hws_adapt_body;
-
+  req->thief_task->body = kaapi_hws_adapt_body;
+  return req->thief_sp;
+#if 0
   {
     void* const dont_break_aliasing = (void*)rep->udata;
     *(void**)dont_break_aliasing = (void*)sc;
   }
 
   return (void*)adata->udata;
+#endif
 }
 
 
@@ -170,20 +171,28 @@ void kaapi_hws_adapt_body(void* arg, kaapi_thread_t* thread)
   /* otherwise, SC_PREEMPTION but not preempted */
   else if (sc->header.ktr != 0)
   {
+    kaapi_task_body_t body;
+    int retval;
+
     /* preemptive algorithms need to inform
      they are done so they can be reduced.
      */
-    
     kaapi_taskadaptive_result_t* const ktr = sc->header.ktr;
-    uintptr_t state;
 
     /* prevent ktr insertion race by steal syncing */
     kaapi_synchronize_steal(sc);
     ktr->rhead = sc->thieves.list.head;
     ktr->rtail = sc->thieves.list.tail;
-    
-    state = kaapi_task_orstate(&ktr->state, KAAPI_MASK_BODY_TERM);
-    if (state & KAAPI_MASK_BODY_PREEMPT)
+
+#warning TODO HERE
+#if 0
+//    state = kaapi_task_orstate(&ktr->state, KAAPI_MASK_BODY_TERM);
+//    if (state & KAAPI_MASK_BODY_PREEMPT)
+    do {
+      body = kaapi_task_getbody(&ktr->state);
+      retval = kaapi_task_casstate(&ktr->state, body, kaapi_term_body);
+    } while (!retval);
+    if (body == kaapi_preempt_body)
     {
       /* wait for the preemption status to be seen, otherwise we
        have a race where this thread leaves this code, emits a
@@ -193,6 +202,7 @@ void kaapi_hws_adapt_body(void* arg, kaapi_thread_t* thread)
       while (*ktr->preempt == 0)
         kaapi_slowdown_cpu();
     }
+#endif
   }
 
   kaapi_thread_restore_frame(thread, &sc->frame);

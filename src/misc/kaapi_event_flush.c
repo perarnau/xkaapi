@@ -42,7 +42,6 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include "kaapi_event.h"
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>

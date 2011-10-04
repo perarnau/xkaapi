@@ -43,8 +43,6 @@
 ** terms.
 ** 
 */
-
-
 #ifndef KAAPI_WS_QUEUE_H_INCLUDED
 # define KAAPI_WS_QUEUE_H_INCLUDED
 
@@ -60,23 +58,21 @@
 # error "kaapi_hws_h_not_included"
 #endif
 
-
-typedef enum kaapi_ws_error
-{
-  KAAPI_WS_ERROR_SUCCESS = 0,
-  KAAPI_WS_ERROR_EMPTY,
-  KAAPI_WS_ERROR_FAILURE
-} kaapi_ws_error_t;
+/* fwd declaration */
+struct kaapi_ws_block;
 
 
+/** TG HERE: TO COMMENT A DESCRIPTION of the structure
+    and especially how to use it with a new kind of queue
+*/
 typedef struct kaapi_ws_queue
 {
   /* TODO: use an union to isolate the ops in cache */
   /* TODO: allocation should be cache aligned */
 
-  kaapi_ws_error_t (*push)(void*, kaapi_task_body_t, void*);
-  kaapi_ws_error_t (*steal)(void*, kaapi_thread_context_t*, kaapi_listrequest_t*, kaapi_listrequest_iterator_t*);
-  kaapi_ws_error_t (*pop)(void*, kaapi_thread_context_t*, kaapi_request_t*);
+  kaapi_ws_error_t (*push)(struct kaapi_ws_block*, void*, kaapi_task_t* );
+  kaapi_ws_error_t (*steal)(struct kaapi_ws_block*, void*, kaapi_listrequest_t*, kaapi_listrequest_iterator_t*);
+  kaapi_ws_error_t (*pop)(struct kaapi_ws_block*, void*, kaapi_request_t*);
   void (*destroy)(void*);
 
 #if CONFIG_HWS_COUNTERS
@@ -91,16 +87,29 @@ typedef struct kaapi_ws_queue
 } kaapi_ws_queue_t;
 
 
+/** Create a LIFO queue of task
+  \retval 0 in case of failure
+  \retval a new lifo queue that manage tasks.
+*/
 kaapi_ws_queue_t* kaapi_ws_queue_create_lifo(void);
+
+/** Create a queue attached to a given k-proc.
+  The behavior of this queue is to steal task inside a K-processors,
+  iterating through all possible locations where tasks are stored into k-processor.
+  \retval 0 in case of failure
+  \retval a new lifo queue that manage tasks.
+*/
 kaapi_ws_queue_t* kaapi_ws_queue_create_kproc(struct kaapi_processor_t*);
 
-static void kaapi_ws_queue_unimpl_destroy(void* fu)
-{
-  /* destroy may be unimplemented */
-  fu = fu;
-}
+/** Default empty destroy function
+*/
+extern void kaapi_ws_queue_unimpl_destroy(void*);
 
-static inline kaapi_ws_queue_t* kaapi_ws_queue_create(size_t size)
+/** Allocate a queue data structure that stores up to size byte.
+    This function must be called in order to attach data with the kaapi_ws_queue_t
+    data structure.
+*/
+static inline kaapi_ws_queue_t* kaapi_ws_queue_alloc(size_t size)
 {
   const size_t total_size = offsetof(kaapi_ws_queue_t, data) + size;
 
@@ -108,9 +117,9 @@ static inline kaapi_ws_queue_t* kaapi_ws_queue_create(size_t size)
   const int err = posix_memalign((void**)&q, sizeof(void*), total_size);
   kaapi_assert(err == 0);
 
-  q->push = NULL;
-  q->steal = NULL;
-  q->pop = NULL;
+  q->push    = NULL;
+  q->steal   = NULL;
+  q->pop     = NULL;
   q->destroy = kaapi_ws_queue_unimpl_destroy;
 
 #if CONFIG_HWS_COUNTERS
@@ -121,33 +130,57 @@ static inline kaapi_ws_queue_t* kaapi_ws_queue_create(size_t size)
   return q;
 }
 
-static inline kaapi_ws_error_t kaapi_ws_queue_push
-(kaapi_ws_queue_t* q, kaapi_task_body_t body, void* arg)
-{
-  return q->push((void*)q->data, body, arg);
-}
 
-static inline kaapi_ws_error_t kaapi_ws_queue_steal
-(
- kaapi_ws_queue_t* q,
- kaapi_thread_context_t* t,
- kaapi_listrequest_t* r,
- kaapi_listrequest_iterator_t* i
+/** Push a task into the queue
+    The queue does not make copies of pushed tasks.
+    \param queue [IN/OUT] the queue that will store the newly pushed task
+    \param task [IN] the task to push into the queue
+*/
+static inline kaapi_ws_error_t kaapi_ws_queue_push(
+  struct kaapi_ws_block* ws_bloc,
+  kaapi_ws_queue_t* queue, 
+  kaapi_task_t* task
 )
 {
-  return q->steal((void*)q->data, t, r, i);
+  return queue->push(ws_bloc, (void*)queue->data, task);
 }
 
+
+/** Push a task into the queue
+    \param queue [IN/OUT] the queue where to pop task
+    \param request [IN/OUT] where to store result of the pop operation
+*/
 static inline kaapi_ws_error_t kaapi_ws_queue_pop
 (
- kaapi_ws_queue_t* q,
- kaapi_thread_context_t* t,
- kaapi_request_t* r
+  struct kaapi_ws_block* ws_bloc,
+  kaapi_ws_queue_t* queue, 
+  kaapi_request_t* request
 )
 {
-  return q->pop((void*)q->data, t, r);
+  return queue->pop(ws_bloc, (void*)queue->data, request);
 }
 
+
+/** Steal a task into the queue.
+    \param queue [IN/OUT] the queue to steal
+    \param lrequests [IN/OUT] the list of requests
+    \param iter_requests [IN/OUT] the iterator over the list of requests
+*/
+static inline kaapi_ws_error_t kaapi_ws_queue_steal
+(
+  struct kaapi_ws_block* ws_bloc,
+  kaapi_ws_queue_t* queue,
+  kaapi_listrequest_t* lrequests,
+  kaapi_listrequest_iterator_t* iter_requests
+)
+{
+  return queue->steal(ws_bloc, (void*)queue->data, lrequests, iter_requests);
+}
+
+
+/** Destroy a queue
+    Depend on the trampoline function set at queue creation time.
+*/
 static inline void kaapi_ws_queue_destroy(kaapi_ws_queue_t* q)
 {
   q->destroy((void*)q->data);

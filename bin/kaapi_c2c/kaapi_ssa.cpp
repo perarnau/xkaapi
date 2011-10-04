@@ -46,7 +46,7 @@
 
 #include <iostream>
 #include "rose_headers.h"
-#include "kaapi_task.h"
+#include "kaapi_c2c_task.h"
 #include "kaapi_ssa.h"
 #include "globals.h"
 

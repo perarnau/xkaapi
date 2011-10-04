@@ -72,95 +72,6 @@ kaapi_rtparam_t kaapi_default_param = {
 };
 
 
-/**
-*/
-#define KAAPI_DECL_BASICTYPEFORMAT( formatobject, type, fmt ) \
-  kaapi_format_t formatobject##_object;\
-  kaapi_format_t* formatobject= &formatobject##_object;\
-  static void formatobject##_cstor(void* dest)  { *(type*)dest = 0; }\
-  static void formatobject##_dstor(void* dest) { *(type*)dest = 0; }\
-  static void formatobject##_cstorcopy( void* dest, const void* src) { *(type*)dest = *(type*)src; } \
-  static void formatobject##_copy( void* dest, const void* src) { *(type*)dest = *(type*)src; } \
-  static void formatobject##_assign( void* dest, const kaapi_memory_view_t* dview, const void* src, const kaapi_memory_view_t* sview) { *(type*)dest = *(type*)src; } \
-  static void formatobject##_print( FILE* file, const void* src) { fprintf(file, fmt, *(type*)src); } \
-  static kaapi_format_t* fnc_##formatobject(void) \
-  {\
-    return &formatobject##_object;\
-  }
-
-#define KAAPI_REGISTER_BASICTYPEFORMAT( formatobject, type, fmt ) \
-  kaapi_format_structregister( &fnc_##formatobject, \
-                               #type, sizeof(type), \
-                               &formatobject##_cstor, &formatobject##_dstor, &formatobject##_cstorcopy, \
-                               &formatobject##_copy, &formatobject##_assign, &formatobject##_print ); \
-
-
-
-/** Predefined format
-*/
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_char_format, char, "%hhi")
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_short_format, short, "%hi")
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_int_format, int, "%i")
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_long_format, long, "%li")
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_longlong_format, long long, "%lli")
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_uchar_format, unsigned char, "%hhu")
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_ushort_format, unsigned short, "%hu")
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_uint_format, unsigned int, "%u")
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_ulong_format, unsigned long, "%lu")
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_ulonglong_format, unsigned long long, "%llu")
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_float_format, float, "%e")
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_double_format, double, "%e")  
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_longdouble_format, long double, "%Le")  
-
-/* void pointer format */
-static void voidp_type_cstor(void* addr)
-{
-  /* printf("%s\n", __FUNCTION__); */
-  *(void**)addr = 0;
-}
-
-static void voidp_type_dstor(void* addr)
-{
-  /* printf("%s\n", __FUNCTION__); */
-  *(void**)addr = 0;
-}
-
-static void voidp_type_cstorcopy(void* daddr, const void* saddr)
-{
-  /* TODO: missing views */
-  /* printf("%s\n", __FUNCTION__); */
-}
-
-static void voidp_type_copy(void* daddr, const void* saddr)
-{
-  /* TODO: missing views */
-  /* printf("%s\n", __FUNCTION__); */
-}
-
-static void voidp_type_assign
-(
- void* daddr, const kaapi_memory_view_t* dview,
- const void* saddr, const kaapi_memory_view_t* sview
-)
-{
-  memcpy(daddr, saddr, kaapi_memory_view_size(dview));
-}
-
-static void voidp_type_printf(FILE* fil, const void* addr)
-{
-  fprintf(fil, "0x%lx", (uintptr_t)addr);
-}
-
-static kaapi_format_t kaapi_voidp_object;
-static kaapi_format_t* voidp_type_fnc(void)
-{
-  /* printf("%s\n", __FUNCTION__); */
-  return &kaapi_voidp_object;
-}
-
-kaapi_format_t* kaapi_voidp_format = &kaapi_voidp_object;
-
-
 /** \ingroup WS
     Initialize from xkaapi runtime parameters from command line
     \param argc [IN] command line argument count
@@ -238,38 +149,6 @@ static int kaapi_setup_param()
 }
 
 
-/**
-*/
-void kaapi_init_basicformat(void)
-{
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_char_format, char, "%hhi")
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_short_format, short, "%hi")
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_int_format, int, "%i")
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_long_format, long, "%li")
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_longlong_format, long long, "%lli")
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_uchar_format, unsigned char, "%hhu")
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ushort_format, unsigned short, "%hu")
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_uint_format, unsigned int, "%u")
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ulong_format, unsigned long, "%lu")
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ulonglong_format, unsigned long long, "%llu")
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_float_format, float, "%e")
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_double_format, double, "%e")  
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_longdouble_format, long double, "%le")  
-
-  kaapi_format_structregister
-  ( 
-   voidp_type_fnc,
-   "kaapi_voidp_format",
-   sizeof(void*),
-   voidp_type_cstor,
-   voidp_type_dstor,
-   voidp_type_cstorcopy,
-   voidp_type_copy,
-   voidp_type_assign,
-   voidp_type_printf
-  );
-}
-
 
 /**
 */
@@ -291,7 +170,7 @@ int kaapi_init(int flag, int* argc, char*** argv)
   int err = kaapi_mt_init();
 
   if (flag)
-    kaapi_begin_parallel();
+    kaapi_begin_parallel(KAAPI_SCHEDFLAG_DEFAULT);
   return err;
 }
 
@@ -326,9 +205,14 @@ static kaapi_atomic_t kaapi_parallel_stack = {0};
     - after that serveral threads may declare parallel region that
     will implies concurrency
 */
-void kaapi_begin_parallel(void)
+void kaapi_begin_parallel( int schedflag )
 {
-  if (KAAPI_ATOMIC_INCR(&kaapi_parallel_stack) == 1)
+  if (schedflag & KAAPI_SCHEDFLAG_STATIC)
+  {
+    kaapi_thread_set_unstealable(1);
+  }
+  /* if not static then wakeup thread here */
+  else if (KAAPI_ATOMIC_INCR(&kaapi_parallel_stack) == 1)
   {
     kaapi_mt_resume_threads();
   }
@@ -339,7 +223,18 @@ void kaapi_begin_parallel(void)
 */
 void kaapi_end_parallel(int flag)
 {
-  if (!flag) kaapi_sched_sync();
+  if (flag & KAAPI_SCHEDFLAG_STATIC) 
+  { /* end of the static parallel region: compute readylist + 
+       set thread stealable + resume thread if 1rst // region*/
+    kaapi_sched_computereadylist();
+    kaapi_thread_set_unstealable(0);
+    if (KAAPI_ATOMIC_INCR(&kaapi_parallel_stack) == 1)
+      kaapi_mt_resume_threads();
+  }
+  
+  if ((flag & KAAPI_SCHEDFLAG_NOWAIT) ==0) 
+    kaapi_sched_sync();
+
   if (KAAPI_ATOMIC_DECR(&kaapi_parallel_stack) == 0)
   {
     kaapi_mt_suspend_threads();
