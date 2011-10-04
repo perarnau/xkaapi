@@ -147,7 +147,7 @@ static kaapi_ws_error_t steal
 	}
       }
     }
-    else
+    else /* != kaapi_hws_adapt_body */
     {
       /* dfg task, refer to kaapi_task_splitter_dfg_single */
 
@@ -161,7 +161,6 @@ static kaapi_ws_error_t steal
       kaapi_assert_debug(format);
 
       state = kaapi_task_orstate(task, KAAPI_MASK_BODY_STEAL);
-      if (kaapi_task_isstealable(task) == 0) continue ;
       if (kaapi_task_state_isstealable(state) == 0) continue ;
 
 #if 0
