@@ -57,9 +57,9 @@ int kaapi_thread_distribute_task (
   kaapi_task_t* task = thread->sp;
   
   /* create a new steal_body task */
-  kaapi_task_t*          dtask    = (kaapi_task_t*)kaapi_alloca(thread, sizeof(kaapi_task_t));
+  kaapi_task_t*          dtask    = (kaapi_task_t*)kaapi_thread_pushdata_align(thread, sizeof(kaapi_task_t), sizeof(void*));
   
-  kaapi_tasksteal_arg_t* argsteal = (kaapi_tasksteal_arg_t*)kaapi_alloca(thread, sizeof(kaapi_tasksteal_arg_t));
+  kaapi_tasksteal_arg_t* argsteal = (kaapi_tasksteal_arg_t*)kaapi_thread_pushdata_align(thread, sizeof(kaapi_tasksteal_arg_t), sizeof(void*));
   argsteal->origin_thread         = kaapi_self_thread_context();
   argsteal->origin_task           = task;
   argsteal->origin_body           = task->body;
@@ -69,7 +69,7 @@ int kaapi_thread_distribute_task (
   kaapi_task_init_withstate(  dtask, 
                     kaapi_tasksteal_body, 
                     argsteal,
-                    KAAPI_TASK_STATE_INIT
+                    KAAPI_TASK_STATE_ALLOCATED
   );
   task->reserved                  = dtask;
   argsteal->origin_body = kaapi_task_marksteal( task );

@@ -267,8 +267,7 @@ static inline uintptr_t kaapi_task_markexec( kaapi_task_t* task )
   return task->state;
 }
 
-/* return the body iff the task can change to state 'steal'
-*/
+
 static inline kaapi_task_body_t kaapi_task_marksteal( kaapi_task_t* task )
 {
   if (likely(KAAPI_ATOMIC_CASPTR( &task->state, KAAPI_TASK_STATE_INIT, KAAPI_TASK_STATE_STEAL)))

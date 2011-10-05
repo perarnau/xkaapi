@@ -347,8 +347,10 @@ static inline int kaapi_request_replytask
     }
   }
   else
+    {
     /* failed to steal: avoid unnecessary memory barrier */
     KAAPI_ATOMIC_WRITE(request->status, KAAPI_REQUEST_S_NOK);
+    }
   return 0;
 }
 

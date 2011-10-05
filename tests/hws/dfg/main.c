@@ -73,6 +73,7 @@ int main(int ac, char** av)
     kaapi_task_t* task;
     wrapped_uint_t* wui;
 
+#if 0
     /* push for flat stealing */
     task = kaapi_thread_toptask(thread);
     wui = kaapi_thread_pushdata_align
@@ -82,6 +83,7 @@ int main(int ac, char** av)
     *kaapi_data(unsigned int, &wui->val) = j;
     kaapi_task_initdfg(task, flat_body, wui);
     kaapi_thread_pushtask(thread);
+#endif
 
     /* push for numa stealing */
 

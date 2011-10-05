@@ -905,9 +905,7 @@ static inline void kaapi_task_initdfg
   task->body  = body;
   task->sp    = arg;
   task->state = 0;
-#if !defined(KAAPI_NDEBUG)
   task->reserved = 0;
-#endif
 //  task->binding.type = KAAPI_BINDING_ANY;
 }
 
@@ -920,9 +918,7 @@ static inline void kaapi_task_init_withstate
   task->body  = body;
   task->sp    = arg;
   task->state = state;
-#if !defined(KAAPI_NDEBUG)
   task->reserved = 0;
-#endif
 //  task->binding.type = KAAPI_BINDING_ANY;
 }
 
