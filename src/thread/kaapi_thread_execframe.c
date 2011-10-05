@@ -275,6 +275,7 @@ int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
   while ( ((volatile kaapi_task_t*)pc)->reserved ==0 )
     kaapi_slowdown_cpu();
 
+#if 0
   /* try to preempt it: mark the state with PREEMPTED bit */
   uintptr_t oldstate = kaapi_task_orstate(pc->reserved, KAAPI_TASK_STATE_PREEMPTED);
   if ((oldstate == KAAPI_TASK_STATE_INIT) || (oldstate == KAAPI_TASK_STATE_ALLOCATED))
@@ -284,6 +285,8 @@ int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
     kaapi_task_setstate(pc, KAAPI_TASK_STATE_INIT);
     return EINTR;  
   }
+#endif
+
   /* restore STEAL state and return EWOULDBLOCK */
   printf("Task is under execution, suspended thread\n"); fflush(stdout);
   kaapi_task_setstate(pc, KAAPI_TASK_STATE_STEAL);

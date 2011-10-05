@@ -55,7 +55,7 @@
 typedef struct lifo_queue
 {
   kaapi_ws_lock_t lock;                      /* toremove, use block lock */
-  __attribute__((aligned)) unsigned int top; /* first avail */
+  __attribute__((aligned)) volatile unsigned int top; /* first avail */
 #define CONFIG_QUEUE_SIZE 128
   kaapi_task_t* tasks[CONFIG_QUEUE_SIZE];
 } lifo_queue_t;
@@ -107,9 +107,9 @@ static kaapi_ws_error_t steal
   while ((req != NULL) && q->top)
   {
     kaapi_task_t* const task = q->tasks[--q->top];
-    kaapi_task_body_t task_body = kaapi_task_getbody(task);
     
 #if 0 /* todo */
+    kaapi_task_body_t task_body = kaapi_task_getbody(task);
     if (task_body == kaapi_hws_adapt_body)
     {
       /* todo */
@@ -122,8 +122,6 @@ static kaapi_ws_error_t steal
 #endif /* todo */
     {
       /* special case of kaapi_task_steal_dfg */
-      /* kaapi_task_body_t body = kaapi_task_marksteal(task); */
-      /* kaapi_task_body_t body = kaapi_task_getbody(task); */
       req->thief_sp = task->sp;
       req->thief_task = task;
       kaapi_writemem_barrier();
@@ -133,7 +131,10 @@ static kaapi_ws_error_t steal
       req = kaapi_listrequest_iterator_next(lr, lri);
     }
   }
-  
+
+  /* for q->top consistency */
+  kaapi_writemem_barrier();
+
   kaapi_ws_lock_unlock(&q->lock);
   
   return KAAPI_WS_ERROR_SUCCESS;
