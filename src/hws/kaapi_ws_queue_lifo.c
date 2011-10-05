@@ -128,10 +128,9 @@ static kaapi_ws_error_t steal
       if (likely(body)) /* success */
       {
 	((kaapi_task_t* volatile)task)->reserved = req->thief_task;
-	kaapi_writemem_barrier();
-
 	req->thief_sp = task->sp;
 	req->thief_task = task;
+	kaapi_writemem_barrier();
 	
 	kaapi_request_replytask(req, KAAPI_REQUEST_S_OK);
 
