@@ -234,6 +234,19 @@ KAAPI_FEATURE([api-kaapixx], [compile Kaapi++ API],
 
 
 dnl -----------------------------------------------------------------------
+dnl The "--enable-api-quark"
+dnl -----------------------------------------------------------------------
+KAAPI_FEATURE([api-quark], [compile Quark API used by PLASMA library],
+  [Quark API compiled], [yes],
+  [],
+  [],
+  [KAAPI_API_QUARK],
+  [
+    FEATURE_ENABLE
+  ])
+
+
+dnl -----------------------------------------------------------------------
 dnl The "--enable-api-atha"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([api-atha], [compile Athapascan-1 API],
@@ -841,6 +854,7 @@ AC_CONFIG_FILES([
 	api/kaapi/Makefile
 	api/kaapixx/Makefile
 	api/kastl/Makefile
+	api/quark/Makefile
 	examples/Makefile
 	network/Makefile
 	network/gasnet/Makefile
