@@ -205,7 +205,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 
   /* get information of the task to execute */
   arg = (kaapi_tasksteal_arg_t*)taskarg;
- 
+
   /* format of the original stolen task */  
   body            = arg->origin_body;
   fmt             = arg->origin_fmt;

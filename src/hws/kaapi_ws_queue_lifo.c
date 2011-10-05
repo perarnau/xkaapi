@@ -131,8 +131,11 @@ static kaapi_ws_error_t steal
 	req->thief_sp = task->sp;
 	req->thief_task = task;
 	kaapi_writemem_barrier();
-	
+#if 0 /* todo */
 	kaapi_request_replytask(req, KAAPI_REQUEST_S_OK);
+#else
+	KAAPI_ATOMIC_WRITE_BARRIER(req->status, KAAPI_REQUEST_S_OK);
+#endif
 
 	/* next request */
 	req = kaapi_listrequest_iterator_next(lr, lri);

@@ -248,7 +248,7 @@ static kaapi_request_t* post_request
   /* from kaapi_mt_machine.h/kaapi_request_post */
   req->ident        = kproc->kid;
   req->thief_task   = thief_task;
-  thief_task->state = KAAPI_TASK_STATE_ALLOCATED;
+  thief_task->state = KAAPI_TASK_STATE_INIT;
   req->thief_sp     = thief_sp;
   req->status       = status;
   KAAPI_ATOMIC_WRITE_BARRIER(status, KAAPI_REQUEST_S_POSTED);
@@ -332,8 +332,16 @@ on_request_success:
   kproc->issteal = 0;
   self_thread = kaapi_threadcontext2thread(kproc->thread);
   request->thief_task->sp = (void*)request->thief_sp;
+
+#if 0 /* todo */
+  {
+    kaapi_task_t* const task = kaapi_thread_toptask(self_thread);
+    task->sp = request->thief_sp;
+  }
+#endif
+
   kaapi_thread_pushtask(self_thread);
-      
+
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
