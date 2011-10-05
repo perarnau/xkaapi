@@ -233,7 +233,7 @@ static void generate_matrix(double* A, size_t m)
 
 /*
 */
-#define DIM 16
+#define DIM 32
 static void convert_to_blocks(long NB, long N, double *Alin, double* A[DIM][DIM] )
 {
   for (long i = 0; i < N; i++)
@@ -371,7 +371,6 @@ struct doit {
 
       gflops = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / (t1-t0);
       if (gflops > gflops_max) gflops_max = gflops;
-
       sumt += double(t1-t0);
       sumgf += gflops;
       sumgf2 += gflops*gflops;
@@ -395,7 +394,15 @@ struct doit {
       sd_exec = sqrt((sumgf2_exec - (sumgf_exec*sumgf_exec)/niter)/niter);
     }
     
-    printf("%9.3f %9.3f %9.3f %9.3f %9.3f %9.3f %9.3f %9.3f\n", sumt/niter, gflops, sd, sumt_exec/niter, gflops_exec, sd_exec, gflops_max, gflops_exec_max );
+    printf("%9.3f %9.3f %9.3f %9.3f %9.3f %9.3f %9.3f %9.3f\n", 
+        sumt/niter, 
+        gflops, 
+        sd, 
+        sumt_exec/niter, 
+        gflops_exec, 
+        sd_exec, 
+        gflops_max, 
+        gflops_exec_max );
 
     free(dA);
   }

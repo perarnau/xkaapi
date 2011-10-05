@@ -45,7 +45,7 @@ USER_MAKEFILES=\
 	find/Makefile \
 	for_each/Makefile \
 	jacobi2D/Makefile \
-  linearwork/Makefile \
+    linearwork/Makefile \
 	listranking/Makefile \
 	hello/Makefile \
 	matrix/Makefile \

@@ -330,7 +330,7 @@ struct doit {
 
       _cholesky_global_time = 0;
       t0 = kaapi_get_elapsedtime();
-      ka::Spawn<TaskCholesky>( ka::SetStaticSched() )(A);
+      ka::Spawn<TaskCholesky>( /*ka::SetStaticSched()*/ )(A);
       ka::Sync();
       t1 = kaapi_get_elapsedtime();
 
