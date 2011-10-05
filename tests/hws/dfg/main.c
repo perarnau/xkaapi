@@ -73,6 +73,7 @@ int main(int ac, char** av)
     kaapi_task_t* task;
     wrapped_uint_t* wui;
 
+#if 0
     /* push for flat stealing */
     task = kaapi_thread_toptask(thread);
     wui = kaapi_thread_pushdata_align
@@ -82,6 +83,7 @@ int main(int ac, char** av)
     *kaapi_data(unsigned int, &wui->val) = j;
     kaapi_task_initdfg(task, flat_body, wui);
     kaapi_thread_pushtask(thread);
+#endif
 
     /* push for numa stealing */
 
@@ -89,15 +91,14 @@ int main(int ac, char** av)
        ws->allocate(). export hws_alloc on top of that.
      */
 
-    task = kaapi_thread_toptask(thread);
     wui = kaapi_thread_pushdata_align
       (thread, sizeof(wrapped_uint_t), sizeof(void*));
     kaapi_thread_allocateshareddata
       (&wui->val, thread, sizeof(unsigned int));
     *kaapi_data(unsigned int, &wui->val) = j;
+    task = kaapi_thread_toptask(thread);
     kaapi_task_initdfg(task, numa_body, wui);
-    kaapi_thread_pushtask(thread);
-    kaapi_hws_pushtask_numa(task);
+    kaapi_thread_distribute_task(thread, KAAPI_HWS_LEVELID_NUMA);
   }
 
   kaapi_sched_sync();

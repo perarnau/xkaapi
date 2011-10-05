@@ -98,7 +98,7 @@ static kaapi_ws_error_t steal
   lifo_queue_t* const q = (lifo_queue_t*)p;
   kaapi_request_t* req;
   unsigned int top;
-  
+
   /* avoid to take the lock */
   if (q->top == 0) return KAAPI_WS_ERROR_EMPTY;
   
