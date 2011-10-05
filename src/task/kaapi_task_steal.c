@@ -236,7 +236,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     {
       /* todo_remove */
       if (fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0)
-        body(orig_task_args, thread);
+        body(orig_task_args, thread, );
       else
         /* todo_remove */
         kaapi_cuda_exectask(self_thread, orig_task_args, fmt);
@@ -251,7 +251,8 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     arg->copy_task_args  = copy_task_args;
     arg->origin_fmt      = fmt;
 
-    /* there are possibly non formated params */
+    /* WARNING there are possibly non formated params */
+    /* ERROR: do not work is tasks are variable sized */
     memcpy(copy_task_args, orig_task_args, fmt->size);
 
     for (i=0; i<count_params; ++i)
@@ -299,14 +300,6 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
       }
     }
 
-#if 0 // DEPRECATED
-    /* Execute the orinal body function with the copy of args: do not push it... ?
-       WHY to push a nop ?
-    */
-    task = kaapi_thread_toptask( thread );
-    kaapi_task_init( task, kaapi_nop_body, copy_task_args);
-    kaapi_thread_pushtask( thread );
-#endif
 
     /* call directly the stolen body function */
 #if defined(KAAPI_USE_CUDA)

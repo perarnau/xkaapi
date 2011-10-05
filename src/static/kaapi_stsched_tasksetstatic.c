@@ -80,6 +80,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   /* push the frame for the next task to execute */
   save_fp = *fp;
   thread->stack.sfp[1] = *fp;
+  kaapi_writemem_barrier();
   ++thread->stack.sfp;
   
   /* unset steal capability and wait no more thief 

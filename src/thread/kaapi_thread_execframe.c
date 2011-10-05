@@ -200,12 +200,9 @@ redo_exec:
       fp[-1].pc = pc;
       goto push_frame;
     }
-#if defined(KAAPI_DEBUG)
-    else if (unlikely(sp < fp->sp))
-    {
-      kaapi_assert_debug_m( 0, "Should not appear: a task was popping stack ????" );
+    else {
+      fp[-1].pc = pc;
     }
-#endif
 
   } /* end of the loop */
   kaapi_assert_debug( pc == sp );
@@ -267,7 +264,9 @@ int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
     kaapi_assert( kaapi_task_getstate(pc) == KAAPI_TASK_STATE_TERM );
     return 0;
   }
-  kaapi_assert( pc->reserved !=0 );
+
+  while ( ((volatile kaapi_task_t*)pc)->reserved ==0 )
+    kaapi_slowdown_cpu();
 
   /* try to preempt it: mark the state with PREEMPTED bit */
   if (kaapi_task_orstate(pc->reserved, KAAPI_TASK_STATE_PREEMPTED) == KAAPI_TASK_STATE_INIT)
