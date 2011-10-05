@@ -95,7 +95,7 @@ static kaapi_request_status_t steal_block
   kaapi_listrequest_iterator_t* lri
 )
 {
- /* try lock and return if reply */
+  /* try lock and return if reply */
   while (!kaapi_ws_lock_trylock(&block->lock))
   {
     if (kaapi_request_test(request))
@@ -331,6 +331,7 @@ on_request_success:
   fail_requests(&hws_requests, &lri);
   kproc->issteal = 0;
   self_thread = kaapi_threadcontext2thread(kproc->thread);
+  request->thief_task->sp = (void*)request->thief_sp;
   kaapi_thread_pushtask(self_thread);
       
 #if defined(KAAPI_USE_PERFCOUNTER)
