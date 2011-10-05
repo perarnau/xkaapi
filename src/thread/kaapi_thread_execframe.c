@@ -268,6 +268,9 @@ int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
     return 0;
   }
 
+  /* number of cycles = number of cycles of the thief between marksteal 
+     and set reserved to the thief task 
+  */
   while ( ((volatile kaapi_task_t*)pc)->reserved ==0 )
     kaapi_slowdown_cpu();
 
