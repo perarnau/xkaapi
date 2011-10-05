@@ -276,7 +276,8 @@ int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
     kaapi_slowdown_cpu();
 
   /* try to preempt it: mark the state with PREEMPTED bit */
-  if (kaapi_task_orstate(pc->reserved, KAAPI_TASK_STATE_PREEMPTED) == KAAPI_TASK_STATE_INIT)
+  uintptr_t oldstate = kaapi_task_orstate(pc->reserved, KAAPI_TASK_STATE_PREEMPTED);
+  if ((oldstate == KAAPI_TASK_STATE_INIT) || (oldstate == KAAPI_TASK_STATE_ALLOCATED))
   {
     printf("In __kaapi_try_preempt: task successfully preempted\n"); fflush(stdout);
     /* else get back the task for myself : restore state to init */
