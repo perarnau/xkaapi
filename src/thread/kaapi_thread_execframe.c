@@ -262,7 +262,7 @@ int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
 //  printf("In __kaapi_try_preempt\n"); fflush(stdout);
   if (!kaapi_task_casstate(pc, KAAPI_TASK_STATE_STEAL, KAAPI_TASK_STATE_PREEMPTED))
   {
-    //printf("In __kaapi_try_preempt: task terminated/or aftersteal\n"); fflush(stdout);
+    printf("In __kaapi_try_preempt: task terminated/or aftersteal\n"); fflush(stdout);
     /* do not suspend because it is terminated */
     kaapi_assert( kaapi_task_getstate(pc) == KAAPI_TASK_STATE_TERM );
     return 0;
@@ -278,13 +278,13 @@ int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
   /* try to preempt it: mark the state with PREEMPTED bit */
   if (kaapi_task_orstate(pc->reserved, KAAPI_TASK_STATE_PREEMPTED) == KAAPI_TASK_STATE_INIT)
   {
-    //printf("In __kaapi_try_preempt: task successfully preempted\n"); fflush(stdout);
+    printf("In __kaapi_try_preempt: task successfully preempted\n"); fflush(stdout);
     /* else get back the task for myself : restore state to init */
     kaapi_task_setstate(pc, KAAPI_TASK_STATE_INIT);
     return EINTR;  
   }
   /* restore STEAL state and return EWOULDBLOCK */
-  //printf("Task is under execution, suspended thread\n"); fflush(stdout);
+  printf("Task is under execution, suspended thread\n"); fflush(stdout);
   kaapi_task_setstate(pc, KAAPI_TASK_STATE_STEAL);
   return EWOULDBLOCK;
 }
