@@ -189,7 +189,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       kaapi_setcontext(kproc, ctxt);
 
       /* on return, either a new thread has been stolen, either a task as been put into ctxt or thread ==0 */
-      thread = kaapi_sched_emitsteal( kproc );
+      thread = kproc->emitsteal( kproc );
 
       if (kaapi_frame_isempty(ctxt->stack.sfp))
       {
