@@ -69,7 +69,7 @@ int kaapi_thread_distribute_task (
   kaapi_task_init_withstate(  dtask, 
                     kaapi_tasksteal_body, 
                     argsteal,
-                    KAAPI_TASK_STATE_ALLOCATED
+                    KAAPI_TASK_STATE_INIT
   );
   task->reserved                  = dtask;
   argsteal->origin_body = kaapi_task_marksteal( task );

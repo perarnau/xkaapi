@@ -81,7 +81,7 @@ int kaapi_thread_computedep_task(
   kaapi_task_binding_t    binding;
 
   /* assume task list  */
-  kaapi_assert( tasklist != 0);
+  kaapi_assert( tasklist != 0 );
   
   task_body = kaapi_task_getbody(task);
   if (task_body!=0)
@@ -111,6 +111,8 @@ int kaapi_thread_computedep_task(
   for (unsigned int i=0; i < count_params; i++) 
   {
     kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(task_fmt, i, sp) );
+    kaapi_assert_debug( m != KAAPI_ACCESS_MODE_VOID );
+    
     if (m == KAAPI_ACCESS_MODE_V) 
       continue;
     

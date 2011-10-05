@@ -331,8 +331,8 @@ typedef enum kaapi_request_status_t {
 */
 static inline int kaapi_request_replytask
 ( 
-  kaapi_request_t*      request, 
-  kaapi_request_status_t	status
+  kaapi_request_t*        request, 
+  kaapi_request_status_t  status
 )
 {
   if (status == KAAPI_REQUEST_S_OK)
@@ -342,7 +342,7 @@ static inline int kaapi_request_replytask
     else {
       /* else task was preempted */
       printf("I was preempted/replytask\n"); fflush(stdout);
-      kaapi_assert_debug( request->thief_task->state == KAAPI_TASK_STATE_PREEMPTED );
+      kaapi_assert_debug( request->thief_task->state & KAAPI_TASK_STATE_PREEMPTED );
       KAAPI_ATOMIC_WRITE_BARRIER(request->status, KAAPI_REQUEST_S_NOK);
     }
   }

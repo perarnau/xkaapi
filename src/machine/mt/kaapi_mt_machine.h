@@ -741,8 +741,6 @@ static inline void kaapi_listrequest_iterator_update
   kaapi_bitmap_value_t neg_mask;
   kaapi_bitmap_value_t orig_bitmap;
 
-  lrrange->idcurr = -1;
-
   /* todo: optimize, mask can be stored neged, and can be ored */
   kaapi_bitmap_value_neg(&neg_mask, mask);
 

@@ -905,9 +905,7 @@ static inline void kaapi_task_initdfg
   task->body  = body;
   task->sp    = arg;
   task->state = 0;
-#if !defined(KAAPI_NDEBUG)
   task->reserved = 0;
-#endif
 //  task->binding.type = KAAPI_BINDING_ANY;
 }
 
@@ -920,9 +918,7 @@ static inline void kaapi_task_init_withstate
   task->body  = body;
   task->sp    = arg;
   task->state = state;
-#if !defined(KAAPI_NDEBUG)
   task->reserved = 0;
-#endif
 //  task->binding.type = KAAPI_BINDING_ANY;
 }
 
@@ -2088,6 +2084,7 @@ extern kaapi_format_id_t kaapi_format_taskregister_func(
     size_t                        size,
     size_t                      (*get_count_params)(const struct kaapi_format_t*, const void*),
     kaapi_access_mode_t         (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
+//DEPRECATED
     void*                       (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
     kaapi_access_t              (*get_access_param)(const struct kaapi_format_t*, unsigned int, const void*),
     void                        (*set_access_param)(const struct kaapi_format_t*, unsigned int, void*, const kaapi_access_t*),
@@ -2113,6 +2110,7 @@ extern void kaapi_fmt_set_access_param
 
 /** \ingroup TASK
     format accessor
+DEPRECATED
 */
 extern void* kaapi_fmt_get_off_param
 (const struct kaapi_format_t* f, size_t i, const void* p);

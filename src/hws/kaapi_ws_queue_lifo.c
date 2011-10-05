@@ -98,7 +98,7 @@ static kaapi_ws_error_t steal
   lifo_queue_t* const q = (lifo_queue_t*)p;
   kaapi_request_t* req;
   unsigned int top;
-  
+
   /* avoid to take the lock */
   if (q->top == 0) return KAAPI_WS_ERROR_EMPTY;
   
@@ -106,7 +106,7 @@ static kaapi_ws_error_t steal
   
   /* work on a local copy of top, never updated */
   top = q->top;
-  
+
   req = kaapi_listrequest_iterator_get(lr, lri);
   while ((req != NULL) && top)
   {
@@ -115,19 +115,28 @@ static kaapi_ws_error_t steal
     
     if (task_body == kaapi_hws_adapt_body)
     {
-      kaapi_task_steal_adapt(
-        0, 
-        task,
-        lr, lri,
-        &callback_empty
-      );
+      /* todo */
+      kaapi_task_steal_adapt(0, task, lr, lri, &callback_empty);
+
+      /* the request may have been updated. reread it. */
+      req = kaapi_listrequest_iterator_get(lr, lri);
     }
-    else
+    else /* != kaapi_hws_adapt_body */
     {
-      kaapi_task_steal_dfg( 0, 0, task, lr, lri );
-#if CONFIG_HWS_COUNTERS
-      kaapi_hws_inc_steal_counter(p, req->ident);
-#endif
+      /* special case of kaapi_task_steal_dfg */
+      kaapi_task_body_t body = kaapi_task_marksteal(task);
+      if (likely(body)) /* success */
+      {
+	((kaapi_task_t* volatile)task)->reserved = req->thief_task;
+	req->thief_sp = task->sp;
+	req->thief_task = task;
+	kaapi_writemem_barrier();
+	
+	kaapi_request_replytask(req, KAAPI_REQUEST_S_OK);
+
+	/* next request */
+	req = kaapi_listrequest_iterator_next(lr, lri);
+      }
     }
   }
   
