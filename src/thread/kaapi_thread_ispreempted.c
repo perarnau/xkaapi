@@ -47,9 +47,9 @@
 */
 int kaapi_thread_is_preempted(void)
 {
-  kaapi_thread_context_t* thread = kaapi_self_thread_context();
-  kaapi_task_t* toptask = thread->stack.stackframe->pc;
-  if (toptask->state & KAAPI_TASK_STATE_PREEMPTED) 
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  if (kproc->thief_task ==0) return 0;
+  if (kproc->thief_task->state & KAAPI_TASK_STATE_SIGNALED) 
     return 1;
   else
     return 0;

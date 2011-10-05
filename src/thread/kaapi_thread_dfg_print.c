@@ -221,10 +221,8 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
         const char* fname = "<empty format>";
         if (body == kaapi_nop_body) 
           fname = "nop";
-        else if (body == kaapi_taskstartup_body) 
+        else if (body == (kaapi_task_body_t)kaapi_taskstartup_body) 
           fname = "startup";
-        else if (body == kaapi_taskstartup_body) 
-          fname = "exec";
         else if ( body == kaapi_taskmain_body) 
           fname = "maintask";
         else if (body == kaapi_tasksteal_body) 

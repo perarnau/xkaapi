@@ -58,56 +58,52 @@ void kaapi_task_steal_dfg
   unsigned int cw_param = 0;
   size_t wc = 0;
 
+  if (task_fmt == 0) return;
+
   if (map !=0)
   {
-    if (task_fmt != 0)
-    {
-      wc = kaapi_task_computeready
-      ( 
-       task,
-       kaapi_task_getargs(task), 
-       task_fmt, 
-       &war_param, 
-       &cw_param,
-       map
-      );
-    }
+    wc = kaapi_task_computeready( 
+      task,
+      kaapi_task_getargs(task), 
+      task_fmt, 
+      &war_param, 
+      &cw_param,
+      map
+    );
   }
 
-  if ((wc ==0) && kaapi_task_isstealable(task))
-  {
-    kaapi_task_body_t body = kaapi_task_marksteal( task );
-    if (likely( body ) ) /* success */
-    {
+  if ((wc !=0) || !kaapi_task_isstealable(task)) return;
+
+  kaapi_task_body_t body = kaapi_task_marksteal( task );
+  if (unlikely( !body ) ) return;
+  
 //printf("Steal task: %p, name:'%s' WC=%i\n", (void*)task, task_fmt->name, wc); fflush(stdout);
-      kaapi_request_t* request =
+  kaapi_request_t* request =
 	kaapi_listrequest_iterator_get( lrequests, lrrange );
       ((kaapi_task_t* volatile)task)->reserved = request->thief_task;
-      /* barrier not necessary here: the victim will only try to access to task'state (already committed) 
-         and reserved field */
-        
-      /* - create the task steal that will execute the stolen task
-	 The task stealtask stores:
-	 - the original thread
-	 - the original task pointer
-	 - the pointer to shared data with R / RW access data
-	 - and at the end it reserve enough space to store original task arguments
-      */
-      kaapi_tasksteal_arg_t* argsteal = request->thief_sp;
-      argsteal->origin_thread         = thread;
-      argsteal->origin_task           = task;
-      argsteal->origin_body           = body;
-      argsteal->origin_fmt            = task_fmt;
-      argsteal->war_param             = war_param;  
-      argsteal->cw_param              = cw_param;
-      /* TODO MUST be always this task no write */
-      request->thief_task->body       = kaapi_tasksteal_body;
+  /* barrier not necessary here: the victim will only try to access to task'state (already committed) 
+     and reserved field */
+    
+  /* - create the task steal that will execute the stolen task
+ The task stealtask stores:
+ - the original thread
+ - the original task pointer
+ - the pointer to shared data with R / RW access data
+ - and at the end it reserve enough space to store original task arguments
+  */
+  kaapi_tasksteal_arg_t* argsteal = request->thief_sp;
+  argsteal->origin_thread         = thread;
+  argsteal->origin_task           = task;
+  argsteal->origin_body           = body;
+  argsteal->origin_fmt            = task_fmt;
+  argsteal->war_param             = war_param;  
+  argsteal->cw_param              = cw_param;
+  /* TODO MUST be always this task no write */
+  request->thief_task->body       = kaapi_tasksteal_body;
 
-      /* success of steal */
-      kaapi_request_replytask( request, KAAPI_REQUEST_S_OK);
-        
-      /* advance to the next request */
-      kaapi_listrequest_iterator_next( lrequests, lrrange );
-    }
-  }
+  /* success of steal */
+  kaapi_request_replytask( request, KAAPI_REQUEST_S_OK);
+    
+  /* advance to the next request */
+  kaapi_listrequest_iterator_next( lrequests, lrrange );
 }

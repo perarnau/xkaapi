@@ -231,26 +231,14 @@ static kaapi_request_t* post_request
 (kaapi_processor_t* kproc, kaapi_atomic_t* status)
 {
   kaapi_request_t* const req = &hws_requests.requests[kproc->kid];
-  kaapi_task_t*          thief_task;
-  kaapi_tasksteal_arg_t* thief_sp;
-
-  kaapi_thread_t* const self_thread =
-    kaapi_threadcontext2thread(kproc->thread);
-
-  thief_task = kaapi_thread_toptask( self_thread );
-
-  thief_sp = kaapi_thread_pushdata
-    (self_thread, sizeof(kaapi_tasksteal_arg_t));
-
-  kaapi_task_init
-    (thief_task, kaapi_tasksteal_body, thief_sp);
 
   /* from kaapi_mt_machine.h/kaapi_request_post */
-  req->ident        = kproc->kid;
-  req->thief_task   = thief_task;
-  thief_task->state = KAAPI_TASK_STATE_ALLOCATED;
-  req->thief_sp     = thief_sp;
-  req->status       = status;
+  req->ident             = kproc->kid;
+  req->thief_task        = &kproc->thread->stealreserved_task;
+  kproc->thread->stealreserved_task.state = KAAPI_TASK_STATE_ALLOCATED;
+  kproc->thread->stealreserved_task.body  = kaapi_tasksteal_body;
+  req->thief_sp          = &kproc->thread->stealreserved_arg;
+  req->status            = status;
   KAAPI_ATOMIC_WRITE_BARRIER(status, KAAPI_REQUEST_S_POSTED);
   kaapi_writemem_barrier();
   kaapi_bitmap_set(&hws_requests.bitmap, kproc->kid);
@@ -260,7 +248,7 @@ static kaapi_request_t* post_request
 
 /* Hierarchical work stealing strategy
 */
-kaapi_thread_context_t* kaapi_hws_emitsteal( kaapi_processor_t* kproc )
+kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
 {
   kaapi_ws_block_t* block;
   kaapi_hws_levelid_t child_levelid;
@@ -268,7 +256,6 @@ kaapi_thread_context_t* kaapi_hws_emitsteal( kaapi_processor_t* kproc )
   kaapi_request_t* request;
   kaapi_listrequest_iterator_t lri;
   kaapi_atomic_t status;
-  kaapi_thread_t* self_thread;  
 
   /* reset thief stack before posting request to steal */
   kaapi_stack_reset( &kproc->thread->stack );
@@ -325,33 +312,19 @@ kaapi_thread_context_t* kaapi_hws_emitsteal( kaapi_processor_t* kproc )
   
   fail_requests(&hws_requests, &lri);
   kproc->issteal = 0;
-  return 0;
+  kproc->thief_task = 0;
+  return KAAPI_REQUEST_S_NOK;
 
 on_request_success:
   fail_requests(&hws_requests, &lri);
   kproc->issteal = 0;
-  self_thread = kaapi_threadcontext2thread(kproc->thread);
-  request->thief_task->sp = (void*)request->thief_sp;
 
-#if 1 /* todo : change the bootstrap of the execution 
-         of the first task received after a steal request:
-         - push a frame
-         - execute the task
-         - if non empty frame, call execframe on it
-        This code must be call in the caller of emitsteal
-      */
-  {
-    /* update task arguments */
-    kaapi_task_t* const task = kaapi_thread_toptask(self_thread);
-    task->sp = request->thief_sp;
-  }
-#endif
-
-  kaapi_thread_pushtask(self_thread);
+  /* update task to execute */
+  kproc->thief_task = request->thief_task;
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
   
-  return kproc->thread;
+  return KAAPI_REQUEST_S_OK;
 }

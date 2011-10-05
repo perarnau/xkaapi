@@ -56,12 +56,16 @@
  */
 void kaapi_sched_idle ( kaapi_processor_t* kproc )
 {
-  kaapi_thread_context_t* ctxt;
+  kaapi_request_status_t  ws_status;
+  kaapi_task_t*           startup_task;
   kaapi_thread_context_t* thread;
+  kaapi_thread_t*         self_thread;
   int err;
   
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
+  
+  /* currently kprocessor are created with an attached thread */
   kaapi_assert_debug( kproc->thread !=0 );
   
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -69,7 +73,8 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   kaapi_event_push0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
 #endif
 
-  do {
+  do 
+  {
 #if defined(KAAPI_USE_NETWORK)
     kaapi_network_poll();
 #endif
@@ -83,49 +88,66 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       return;
     }
     
-    ctxt = 0;
-
-    /* local wake up first, inline test to avoid function call */
+    /* try to wake up suspended thread first, inline test to avoid function call */
     if (!kaapi_sched_readyempty(kproc) || !kaapi_wsqueuectxt_empty(kproc) )
     {
-      ctxt = kaapi_sched_wakeup(kproc, kproc->kid, 0, 0); 
+      thread = kaapi_sched_wakeup(kproc, kproc->kid, 0, 0); 
       
-      if (ctxt !=0) /* push kproc->thread to free and set ctxt as new ctxt */
+      if (thread !=0) /* push kproc->thread to freelist and set thread as the new ctxt */
       {
         /* push kproc context into free list */
-        kaapi_sched_lock(&kproc->lock);
-        if (kproc->thread) kaapi_lfree_push( kproc, kproc->thread );
-        kaapi_sched_unlock(&kproc->lock);
+        if (kproc->thread) 
+          kaapi_lfree_push( kproc, kproc->thread );
         
         /* set new context to the kprocessor */
-        kaapi_setcontext(kproc, ctxt);
+        kaapi_setcontext(kproc, thread);
+#if defined(HUGEDEBUG)
+  printf("%i:: SchedIdle: wakeup thread:%p\n", 
+      kaapi_get_self_kid(),
+      (void*)thread
+  );
+  fflush(stdout);
+#endif
         goto redo_execute;
       }
     }
 
-    /* TODO: thread is detached */
-    if (kproc->thread == 0) continue ;
-    
-    /* steal request */
-    kaapi_assert_debug( kproc->thread !=0 );
-    ctxt = kproc->thread;
-    thread = kproc->emitsteal(kproc);
-    if (thread ==0) 
-      continue;
-    
-    if (thread != ctxt)
+    /* always allocate a thread before emitting a steal request */
+    if (kproc->thread ==0)
     {
-      /* also means ctxt is empty, so push ctxt into the free list */
-      kaapi_setcontext( kproc , 0);
-      /* wait end of thieves before releasing a thread */
-      kaapi_sched_lock(&kproc->lock);
-      kaapi_lfree_push( kproc, ctxt );
-      kaapi_sched_unlock(&kproc->lock);
+      thread = kaapi_context_alloc(kproc);
+      kaapi_assert_debug( thread != 0 );
+      
+      kaapi_setcontext(kproc, thread);
     }
-    kaapi_setcontext(kproc, thread);
-    
-  redo_execute:
-    //  kaapi_thread_print( stdout, kproc->thread );
+
+    /* steal request */
+    ws_status = kproc->emitsteal(kproc);
+    if (ws_status != KAAPI_REQUEST_S_OK)
+      continue;
+
+#if defined(HUGEDEBUG)
+    printf("%i:: SchedIdle: steal task, thieftask:%p, original task:%p\n", 
+        kaapi_get_self_kid(),
+        (void*)kproc->thief_task,
+        (void*)((kaapi_tasksteal_arg_t*)kproc->thief_task->sp)->origin_task
+    );
+    fflush(stdout);
+#endif
+        
+    /* push startup task ? */
+    self_thread = kaapi_threadcontext2thread(kproc->thread);
+    startup_task = kaapi_thread_toptask( self_thread );
+    kaapi_task_init(startup_task, (kaapi_task_body_t)kaapi_taskstartup_body, kproc);
+    kaapi_thread_pushtask(self_thread);
+
+redo_execute:
+#if defined(HUGEDEBUG)
+  printf("%i:: SchedIdle: begin execframe\n", 
+      kaapi_get_self_kid()
+  );
+  fflush(stdout);
+#endif
     
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
@@ -151,36 +173,24 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     kaapi_event_push0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
 #endif
+#if defined(HUGEDEBUG)
+  printf("%i:: SchedIdle: end execframe, errorcode = %i\n", 
+      kaapi_get_self_kid(),
+      err
+  );
+  fflush(stdout);
+#endif
     
     if (err == EWOULDBLOCK) 
     {
-#if defined(KAAPI_USE_NETWORK)
-      kaapi_network_poll();
-#endif
-      
+      /* push it: suspended because top task is not ready */
+      thread = kproc->thread;
+      kaapi_setcontext(kproc, 0);
+      kaapi_wsqueuectxt_push( kproc, thread );
+
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_SUSPEND);
-#endif
-      ctxt = kproc->thread;
-      /* update */
-      kaapi_setcontext(kproc, 0);
-      
-      /* push it: suspended because top task is not ready */
-      kaapi_wsqueuectxt_push( kproc, ctxt );
-      
-      ctxt = kaapi_sched_wakeup(kproc, kproc->kid, 0, 0);
-      if (ctxt !=0)
-      {
-        kaapi_setcontext(kproc, ctxt ); 
-        goto redo_execute;
-      }
-      
-      /* else reallocate a context */
-      ctxt = kaapi_context_alloc(kproc);
-      kaapi_assert_debug( ctxt != 0 );
-      
-      /* set new context to the kprocessor */
-      kaapi_setcontext(kproc, ctxt);
+#endif      
     }
     
     /* WARNING: this case is used by static scheduling in order to detach a thread context 
@@ -189,13 +199,16 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
      */
     else if ((err == ECHILD) || (err == EINTR))
     {
-      /* used to detach the thread of the processor in order to reuse it ... */
-      ctxt = kaapi_context_alloc(kproc);
-      kaapi_assert_debug( ctxt != 0 );
-      
-      /* set new context to the kprocessor */
-      kaapi_setcontext(kproc, ctxt);
+      /* detach thread */
+      kaapi_setcontext(kproc, 0);
     }
+#if defined(KAAPI_DEBUG)
+    else 
+    {
+      kaapi_assert( kaapi_frame_isempty( kproc->thread->stack.sfp ) );
+      kaapi_assert( kproc->thread->stack.sfp == kproc->thread->stack.stackframe );
+    }
+#endif
   } while (1);
   
 }

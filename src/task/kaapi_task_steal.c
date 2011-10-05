@@ -56,8 +56,9 @@ extern void kaapi_hws_sched_dec_sync(void);
 /**
 */
 void kaapi_taskwrite_body( 
-  void* taskarg, 
-  kaapi_thread_t* thread  __attribute__((unused))
+  void*           taskarg, 
+  kaapi_thread_t* thread  __attribute__((unused)),
+  kaapi_task_t*   task
 )
 {
   unsigned int i;
@@ -160,16 +161,28 @@ void kaapi_taskwrite_body(
   }
 #endif
 
+#if defined(HUGEDEBUG)
+  printf("%i::[IN] TaskWrite:%p  signal term of victim task:%p, state:0x%X\n", 
+      kaapi_get_self_kid(),
+      (void*)task,
+      arg->origin_task, 
+      (unsigned int)arg->origin_task->state); 
+  fflush(stdout);
+#endif
+
   /* signal the task : mark it as executed, the old returned body should have steal flag */
   if ((war_param ==0) && (cw_param ==0))
     kaapi_task_markterm( arg->origin_task );
   else 
     kaapi_task_markaftersteal( arg->origin_task );
 
-#if 0
-  /* toremove */
-  kaapi_hws_sched_dec_sync();
-  /* toremove */
+#if defined(HUGEDEBUG)
+  printf("%i::[OUT] TaskWrite:%p  signal term of victim task:%p, state:0x%X\n", 
+      kaapi_get_self_kid(),
+      (void*)task,
+      (void*)arg->origin_task, 
+      (unsigned int)arg->origin_task->state); 
+  fflush(stdout);
 #endif
 }
 
@@ -213,7 +226,12 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     arg->origin_fmt = fmt = kaapi_format_resolvebybody(body);
   kaapi_assert_debug( fmt !=0 );
 
-printf("Steal task: %p, name:'%s'\n", (void*)arg->origin_task, fmt->name); fflush(stdout);
+#if defined(HUGEDEBUG)
+printf("%i::[IN] Steal task: %p, name:'%s'\n", 
+      kaapi_get_self_kid(),
+      (void*)arg->origin_task, fmt->name); 
+fflush(stdout);
+#endif
 
   /* the original task arguments */
   orig_task_args  = kaapi_task_getargs(arg->origin_task);
@@ -320,7 +338,12 @@ printf("Steal task: %p, name:'%s'\n", (void*)arg->origin_task, fmt->name); fflus
 
   /* push task that will be executed after all created task by the user task */
   task = kaapi_thread_toptask( thread );
-  kaapi_task_init( task, kaapi_taskwrite_body, arg );
+  kaapi_task_init( task, (kaapi_task_body_t)kaapi_taskwrite_body, arg );
   kaapi_thread_pushtask( thread );
-
+#if defined(HUGEDEBUG)
+printf("%i::[OUT] Steal task: %p, name:'%s'\n", 
+      kaapi_get_self_kid(),
+      (void*)arg->origin_task, fmt->name); 
+fflush(stdout);
+#endif
 }

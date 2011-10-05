@@ -110,6 +110,7 @@ libkaapi_la_SOURCES+=\
   thread/kaapi_thread_saveframe.c \
   thread/kaapi_thread_pushpopframe.c \
   thread/kaapi_thread_clear.c \
+  thread/kaapi_thread_startup.c \
   thread/kaapi_thread_execframe.c \
   thread/kaapi_thread_execframe_tasklist.c \
   thread/kaapi_thread_readylist_generic_execframe.c \

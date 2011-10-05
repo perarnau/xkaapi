@@ -79,7 +79,8 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
  
   /* retrieve the adaptive reply data */
   sc = (kaapi_stealcontext_t*)arg;
-  adata = (kaapi_taskadaptive_user_taskarg_t*)self_thread->static_reply.udata;
+#warning TODO HERE
+//  adata = (kaapi_taskadaptive_user_taskarg_t*)self_thread->static_reply.udata;
   
   
   /* this is the master task, return */
@@ -93,7 +94,8 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
      * header flag, msc, ktr init by remote write 
      * remains to initialize other field
   */
-  sc->preempt          = &self_thread->static_reply.preempt;
+#warning TODO HERE
+//  sc->preempt          = &self_thread->static_reply.preempt;
   sc->splitter		= 0;
   sc->argsplitter	= 0;
   sc->ownertask	       = kaapi_thread_toptask(thread) + 1;

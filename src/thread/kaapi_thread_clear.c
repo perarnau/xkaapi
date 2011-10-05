@@ -54,6 +54,14 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
 
   thread->stack.data = (char*)&thread->data;
   kaapi_stack_clear( &thread->stack );
+
+  kaapi_task_init_withstate(
+    &thread->stealreserved_task, 
+    kaapi_tasksteal_body, 
+    &thread->stealreserved_arg, 
+    KAAPI_TASK_STATE_ALLOCATED
+  );
+
   thread->the_thgrp  = 0;
   thread->unstealable= 0;
   thread->partid     = -10; /* out of bound value */
@@ -65,9 +73,6 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   thread->affinity[1]= ~0UL;
 
   thread->wcs        = 0;
-
-  /* zero all bytes from static_reply until end of sc_data */
-  bzero(&thread->static_reply, (ptrdiff_t)(&thread->sc_data+1)-(ptrdiff_t)&thread->static_reply );
 
 #if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   thread->thgrp      = 0;

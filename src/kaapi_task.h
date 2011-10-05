@@ -114,8 +114,8 @@ struct kaapi_listrequest_t;
 #define KAAPI_TASK_STATE_TERM       0x4
 #define KAAPI_TASK_STATE_MERGE      0x8
 #define KAAPI_TASK_STATE_ALLOCATED  0x10
-#define KAAPI_TASK_STATE_PREEMPTED  0x20
-#define KAAPI_TASK_STATE_SIGNALED   0x40
+#define KAAPI_TASK_STATE_SIGNALED   0x20   /* mask: extra flag to set the task as signaled for preemption */
+#define KAAPI_TASK_STATE_LOCKED     0x40   /* mask: lock the state of the task */
 
 typedef void (*kaapi_task_body_internal_t)(void* /*task arg*/, kaapi_thread_t* /* thread or stream */, kaapi_task_t*);
 
@@ -166,7 +166,7 @@ extern void kaapi_execthread_body( void*, kaapi_thread_t*);
     results to merge. Else the thief set the task' steal body to kaapi_term_body
     \ingroup TASK
 */
-extern void kaapi_aftersteal_body( void*, kaapi_thread_t*, kaapi_task_t* task );
+extern void kaapi_aftersteal_body( void*, kaapi_thread_t*, kaapi_task_t* );
 
 /** Body of the nop task that do nothing
     \ingroup TASK
@@ -176,7 +176,7 @@ extern void kaapi_nop_body( void*, kaapi_thread_t*);
 /** Body of the startup task 
     \ingroup TASK
 */
-extern void kaapi_taskstartup_body( void*, kaapi_thread_t*);
+extern void kaapi_taskstartup_body( void*, kaapi_thread_t*, kaapi_task_t*);
 
 /** Body of task steal created on thief stack to execute a task
     \ingroup TASK
@@ -192,7 +192,7 @@ extern void kaapi_taskstealready_body( void*, kaapi_thread_t* );
 /** Write result after a steal 
     \ingroup TASK
 */
-extern void kaapi_taskwrite_body( void*, kaapi_thread_t* );
+extern void kaapi_taskwrite_body( void*, kaapi_thread_t*, kaapi_task_t* );
 
 
 /** Body of the task in charge of finalize of adaptive task
@@ -260,11 +260,9 @@ static inline uintptr_t kaapi_task_orstate(kaapi_task_t* task, uintptr_t newstat
 
 /* Return the state of the task
 */
-static inline uintptr_t kaapi_task_markexec( kaapi_task_t* task )
+static inline int kaapi_task_markexec( kaapi_task_t* task )
 {
-  if (likely(KAAPI_ATOMIC_CASPTR( &task->state, KAAPI_TASK_STATE_INIT, KAAPI_TASK_STATE_EXEC)))
-    return KAAPI_TASK_STATE_EXEC;
-  return task->state;
+  return KAAPI_ATOMIC_CASPTR( &task->state, KAAPI_TASK_STATE_INIT, KAAPI_TASK_STATE_EXEC);
 }
 
 
@@ -278,12 +276,24 @@ static inline kaapi_task_body_t kaapi_task_marksteal( kaapi_task_t* task )
 
 static inline void kaapi_task_markterm( kaapi_task_t* task )
 {
-  while (!KAAPI_ATOMIC_CASPTR( &task->state, KAAPI_TASK_STATE_STEAL, KAAPI_TASK_STATE_TERM)) ;
+#if defined(KAAPI_DEBUG)
+  uintptr_t state = kaapi_task_getstate(task);
+  kaapi_assert( state != KAAPI_TASK_STATE_TERM );
+  kaapi_assert( (state & ~KAAPI_TASK_STATE_LOCKED) == KAAPI_TASK_STATE_STEAL );
+#endif
+  while (!KAAPI_ATOMIC_CASPTR( &task->state, KAAPI_TASK_STATE_STEAL, KAAPI_TASK_STATE_TERM)) 
+    kaapi_slowdown_cpu();
 }
 
 static inline void kaapi_task_markaftersteal( kaapi_task_t* task )
 {
+#if defined(KAAPI_DEBUG)
+  uintptr_t state = kaapi_task_getstate(task);
+  kaapi_assert( state != KAAPI_TASK_STATE_TERM );
+  kaapi_assert( (state & ~KAAPI_TASK_STATE_LOCKED) == KAAPI_TASK_STATE_STEAL );
+#endif
   while (!KAAPI_ATOMIC_CASPTR( &task->state, KAAPI_TASK_STATE_STEAL, KAAPI_TASK_STATE_MERGE)) ;
+    kaapi_slowdown_cpu();
 }
 
 

@@ -805,11 +805,13 @@ typedef struct kaapi_cpuhierarchy_t {
 
 
 /** \ingroup WS
-    This data structure defines a work stealer processor thread.
+    This data structure defines a work stealer processor kernel thread.
+    A kprocessor is a container of tasks stored by stack.
     The kid is a system wide identifier. In the current version it only contains a local counter value
     from 0 to N-1.
 */
 typedef struct kaapi_processor_t {
+  kaapi_task_t*            thief_task;                    /* the first task executed */
   kaapi_thread_context_t*  thread;                        /* current thread under execution */
   kaapi_processor_id_t     kid;                           /* Kprocessor id */
 
@@ -965,36 +967,35 @@ static inline int kaapi_lfree_isempty(struct kaapi_processor_t* kproc)
   return kproc->sizelfree == 0;
 }
 
-static inline void kaapi_lfree_push(struct kaapi_processor_t* kproc, kaapi_thread_context_t* node)
+static inline void kaapi_lfree_push(struct kaapi_processor_t* kproc, kaapi_thread_context_t* ctxt)
 {
   kaapi_lfree_t* const list = &kproc->lfree;
 
   /* push the node */
-  node->_next = list->_front;
-  node->_prev = NULL;
+  ctxt->_next = list->_front;
+  ctxt->_prev = NULL;
   if (list->_front == NULL)
-    list->_back = node;
+    list->_back = ctxt;
   else
-    list->_front->_prev = node;
-  list->_front = node;
+    list->_front->_prev = ctxt;
+  list->_front = ctxt;
 
+  kaapi_atomic_lock( &kproc->lock );
   /* pop back if new size exceeds max */
 #  define KAAPI_MAXFREECTXT 4
   if (kproc->sizelfree >= KAAPI_MAXFREECTXT)
   {
     /* list size at least 2, no special case handling */
-    node = list->_back;
+    ctxt = list->_back;
     list->_back = list->_back->_prev;
     list->_back->_next = NULL;
 
-    /* free the popped context */
-    kaapi_context_free(node);
-
-    /* see increment after */
-    --kproc->sizelfree;
+    /* free the popped context: lock the kproc until to wait end of thief operation */
+    kaapi_context_free(ctxt);
   }
-
-  ++kproc->sizelfree;
+  else
+    ++kproc->sizelfree;
+  kaapi_atomic_unlock( &kproc->lock );
 }
 
 static inline kaapi_thread_context_t* kaapi_lfree_pop(struct kaapi_processor_t* kproc)
@@ -1145,6 +1146,7 @@ static inline kaapi_request_t* kaapi_request_post(
   req->ident        = thief_kid;
   req->thief_task   = thief_task;
   thief_task->state = KAAPI_TASK_STATE_ALLOCATED;
+  thief_task->body  = kaapi_tasksteal_body;
   req->thief_sp     = thief_sp;
   req->status       = status;
   KAAPI_ATOMIC_WRITE_BARRIER(status, KAAPI_REQUEST_S_POSTED);

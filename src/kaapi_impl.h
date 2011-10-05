@@ -185,7 +185,17 @@ extern int kaapi_cuda_register_procs(struct kaapi_procinfo_list_t*);
 extern void kaapi_procinfo_list_free(struct kaapi_procinfo_list_t*);
 
 
-/* ============================= A VICTIM ============================ */
+/* ========================== Work stealing protocol========================= */
+/* Request status 
+*/
+typedef enum kaapi_request_status_t {
+  KAAPI_REQUEST_S_POSTED   = 0,
+  KAAPI_REQUEST_S_NOK      = 1,
+  KAAPI_REQUEST_S_OK       = 2,
+  KAAPI_REQUEST_S_ERROR    = 3
+} kaapi_request_status_t;
+
+
 /** \ingroup WS
     This data structure should contains all necessary informations to post a request to a selected node.
     It should be extended in case of remote work stealing.
@@ -217,12 +227,13 @@ typedef enum kaapi_selecvictim_flag_t {
 */
 typedef int (*kaapi_selectvictim_fnc_t)( struct kaapi_processor_t*, struct kaapi_victim_t*, kaapi_selecvictim_flag_t flag );
 
+
 /** \ingroup WS
     Emit a steal request
     \param kproc [IN] the kaapi_processor_t that want to emit a request
     \retval the stolen thread
 */
-typedef struct kaapi_thread_context_t* (*kaapi_emitsteal_fnc_t)(struct kaapi_processor_t*);
+typedef kaapi_request_status_t (*kaapi_emitsteal_fnc_t)(struct kaapi_processor_t*);
 
 
 /* =======vvvvvvvvvvvvvvvvvv===================== Memory type ============================ */
@@ -318,12 +329,6 @@ extern kaapi_rtparam_t kaapi_default_param;
     task. The pre-allocated arguments for the task is currently of size 
     sizeof(kaapi_tasksteal_arg_t).
 */
-typedef enum kaapi_request_status_t {
-  KAAPI_REQUEST_S_POSTED   = 0,
-  KAAPI_REQUEST_S_NOK      = 1,
-  KAAPI_REQUEST_S_OK       = 2,
-  KAAPI_REQUEST_S_ERROR    = 3
-} kaapi_request_status_t;
 
 /** \ingroup TASK
     Reply to a steal request.
@@ -341,8 +346,8 @@ static inline int kaapi_request_replytask
       KAAPI_ATOMIC_WRITE_BARRIER(request->status, KAAPI_REQUEST_S_OK);
     else {
       /* else task was preempted */
-      printf("I was preempted/replytask\n"); fflush(stdout);
-      kaapi_assert_debug( request->thief_task->state & KAAPI_TASK_STATE_PREEMPTED );
+      printf("Task: %p was preempted before end of replytask\n", request->thief_task); fflush(stdout);
+      kaapi_assert_debug( request->thief_task->state & KAAPI_TASK_STATE_SIGNALED );
       KAAPI_ATOMIC_WRITE_BARRIER(request->status, KAAPI_REQUEST_S_NOK);
     }
   }
@@ -378,7 +383,9 @@ struct kaapi_wsqueuectxt_cell_t;
 */
 typedef struct kaapi_thread_context_t {
   kaapi_stack_t                  stack;
-  
+  kaapi_task_t                   stealreserved_task;  /* placeholder to store a thief's task */
+  kaapi_tasksteal_arg_t          stealreserved_arg;   /* the arg  stealreserved_task */
+
 #if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   kaapi_threadgroup_t            thgrp;          /** the current thread group, used to push task */
 #endif
@@ -403,8 +410,6 @@ typedef struct kaapi_thread_context_t {
 
   struct kaapi_wsqueuectxt_cell_t* wcs;          /** point to the cell in the suspended list, iff thread is suspended */
 
-  /* statically allocated reply */
-  kaapi_reply_t			         static_reply;
   /* enough space to store a stealcontext that begins at static_reply->udata+static_reply->offset */
   char	                         sc_data[sizeof(kaapi_stealcontext_t)-sizeof(kaapi_stealheader_t)];
 
@@ -702,7 +707,7 @@ extern kaapi_thread_context_t* kaapi_sched_wakeup (
     \retval 0 in case failure of stealing something
     \retval a pointer to a stack that is the result of one workstealing operation.
 */
-extern kaapi_thread_context_t* kaapi_sched_emitsteal ( kaapi_processor_t* kproc );
+extern kaapi_request_status_t kaapi_sched_emitsteal ( kaapi_processor_t* kproc );
 
 /** TODO: DESCRIPTION !!!
 */
@@ -719,7 +724,7 @@ typedef enum kaapi_ws_error
     \retval 0 in case failure of stealing something
     \retval a pointer to a stack that is the result of one workstealing operation.
 */
-extern kaapi_thread_context_t* kaapi_hws_emitsteal ( kaapi_processor_t* kproc );
+extern kaapi_request_status_t kaapi_hws_emitsteal ( kaapi_processor_t* kproc );
 
 /** \ingroup HWS
     Split the task among the given level leaves

@@ -159,7 +159,7 @@ static void _kaapi_print_task(
       fname = fmt->name;
   }
   /* specialize shape / name for some well knowns tasks */
-  if (body == kaapi_taskstartup_body)
+  if (body == (kaapi_task_body_t)kaapi_taskstartup_body)
   {
       fname = "startup";
       shape = "tripleoctagon";

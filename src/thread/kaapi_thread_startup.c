@@ -1,5 +1,4 @@
 /*
-** kaapi_task_standard.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:14 2009
@@ -45,80 +44,30 @@
 #include "kaapi_impl.h"
 #include <stdio.h>
 
-/**
-*/
-void kaapi_nop_body( 
-  void* taskarg __attribute__((unused)), 
-  kaapi_thread_t* thread __attribute__((unused))
-)
-{
-}
 
-/*
+/** Task to bootstrap the execution onto a kprocessor after a successful steal
 */
-void kaapi_execthread_body( 
-  void* taskarg __attribute__((unused)), 
-  kaapi_thread_t* thread __attribute__((unused))
-)
-{
-  /* do not allow rexecuting already executed task */
-  kaapi_assert_debug( 0 );
-}
-
-
-/*
-*/
-void kaapi_anormal_body( 
+void kaapi_taskstartup_body( 
   void*           taskarg,
   kaapi_thread_t* fp,
-  kaapi_task_t*   task 
+  kaapi_task_t*   task
 )
 {
-  if (task->state == KAAPI_TASK_STATE_MERGE)
-  {
-//    printf("This is AN AFTERSTEAL task\n"); fflush(stdout);
-    kaapi_aftersteal_body(taskarg, fp, task);
-    return;
-  }
-  if (task->state == KAAPI_TASK_STATE_TERM)
-  {
-    return; // avoid to re jump to execute term task
-//    _longjmp(*ctxt->stack.jbuf, EINTR);
-  }
-  
-  /* do not allow rexecuting already executed task */
-  /* It is a special task: it means that before atomic or update, the body
-     has already one of the special body.
-     Test the following case with THIS (!) order :
-     - kaapi_steal_body: return with EWOULDBLOCK value
-  */
-#if 0
-  printf("Wait task %p becomes ready...\n", task);
-  while (((uintptr_t)task->state & KAAPI_TASK_STATE_TERM) == 0)
-    kaapi_slowdown_cpu();
-  printf("Task %p is ready\n",task);
-#else
-#if defined(KAAPI_USE_JMP)
-  kaapi_thread_context_t* ctxt = kaapi_self_thread_context();  
-  fp[-1].pc = task;  
-  kaapi_assert_debug(ctxt->stack.sfp - fp == 0);
-  ctxt->stack.sfp = fp-1;
-//  printf("Task %p, fp: %p  Do jump...\n", (void*)task, (void*)thread); fflush(stdout);
-  _longjmp(*ctxt->stack.jbuf, EWOULDBLOCK);
+  kaapi_processor_t* kproc = (kaapi_processor_t*)taskarg;
+
+#if defined(HUGEDEBUG)
+printf("%i::[IN] StartUp Task, thieftask: %p\n", 
+      kaapi_get_self_kid(),
+      (void*)kproc->thief_task); 
+fflush(stdout);
 #endif
+
+  ((kaapi_task_body_internal_t)kproc->thief_task->body)( kproc->thief_task->sp, fp, kproc->thief_task );
+
+#if defined(HUGEDEBUG)
+printf("%i::[OUT] StartUp Task, thieftask: %p\n", 
+      kaapi_get_self_kid(),
+      (void*)kproc->thief_task); 
+fflush(stdout);
 #endif
-}
-
-
-
-/*
-*/
-void kaapi_taskmain_body( 
-  void* taskarg __attribute__((unused)), 
-  kaapi_thread_t* thread __attribute__((unused))
-)
-
-{
-  kaapi_taskmain_arg_t* arg = (kaapi_taskmain_arg_t*)taskarg;
-  arg->mainentry( arg->argc, arg->argv );
 }
