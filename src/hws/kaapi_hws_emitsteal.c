@@ -333,8 +333,9 @@ on_request_success:
   self_thread = kaapi_threadcontext2thread(kproc->thread);
   request->thief_task->sp = (void*)request->thief_sp;
 
-#if 0 /* todo */
+#if 1 /* todo */
   {
+    /* update task arguments */
     kaapi_task_t* const task = kaapi_thread_toptask(self_thread);
     task->sp = request->thief_sp;
   }
