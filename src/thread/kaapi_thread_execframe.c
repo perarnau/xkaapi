@@ -200,12 +200,12 @@ redo_exec:
       fp[-1].pc = pc;
       goto push_frame;
     }
-#if defined(KAAPI_DEBUG)
-    else if (unlikely(sp < fp->sp))
-    {
-      kaapi_assert_debug_m( 0, "Should not appear: a task was popping stack ????" );
+    else {
+      /* else task has been executed: delete it from the queue in order
+         stealer may detected ready tasks
+      */
+      fp[-1].pc = pc;
     }
-#endif
 
   } /* end of the loop */
   kaapi_assert_debug( pc == sp );

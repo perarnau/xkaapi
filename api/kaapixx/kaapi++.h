@@ -2646,7 +2646,7 @@ namespace ka {
     SetStaticSchedAttribut( )
      : _nress(-1), _ncpu(-1), _ngpu(-1)
     {}
-    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    void* operator()( kaapi_thread_t* thread ) const
     { 
       /* push a task that will encapsulated the execution of the top task */
       kaapi_task_t* task = kaapi_thread_toptask(thread);
