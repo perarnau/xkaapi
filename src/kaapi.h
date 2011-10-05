@@ -213,7 +213,8 @@ static inline void* _kaapi_align_ptr_for_alloca(void* ptr, uintptr_t align)
     hierarchy level identifiers and masks
  */
 
-/** TG: to describe here
+/** TG: to describe here.
+    - what about the order / value ? Do they impact the implementation ?
 */
 typedef enum kaapi_hws_levelid
 {

@@ -248,7 +248,7 @@ static kaapi_request_t* post_request
   /* from kaapi_mt_machine.h/kaapi_request_post */
   req->ident        = kproc->kid;
   req->thief_task   = thief_task;
-  thief_task->state = KAAPI_TASK_STATE_INIT;
+  thief_task->state = KAAPI_TASK_STATE_ALLOCATED;
   req->thief_sp     = thief_sp;
   req->status       = status;
   KAAPI_ATOMIC_WRITE_BARRIER(status, KAAPI_REQUEST_S_POSTED);

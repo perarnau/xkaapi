@@ -201,6 +201,9 @@ redo_exec:
       goto push_frame;
     }
     else {
+      /* else task has been executed: delete it from the queue in order
+         stealer may detected ready tasks
+      */
       fp[-1].pc = pc;
     }
 

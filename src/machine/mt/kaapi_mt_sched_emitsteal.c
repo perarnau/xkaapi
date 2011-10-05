@@ -173,7 +173,6 @@ redo_select:
   self_request = kaapi_request_post( kproc->kid, &status, thief_task, thief_sp, victim.kproc );
 
 //usleep( random() % 1000 );
-
   
   victim_hlr = &victim.kproc->hlrequests;
 

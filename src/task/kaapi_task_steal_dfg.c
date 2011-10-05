@@ -79,10 +79,12 @@ void kaapi_task_steal_dfg
     kaapi_task_body_t body = kaapi_task_marksteal( task );
     if (likely( body ) ) /* success */
     {
+//printf("Steal task: %p, name:'%s' WC=%i\n", (void*)task, task_fmt->name, wc); fflush(stdout);
       kaapi_request_t* request =
 	kaapi_listrequest_iterator_get( lrequests, lrrange );
       ((kaapi_task_t* volatile)task)->reserved = request->thief_task;
-      kaapi_writemem_barrier();
+      /* barrier not necessary here: the victim will only try to access to task'state (already committed) 
+         and reserved field */
         
       /* - create the task steal that will execute the stolen task
 	 The task stealtask stores:
