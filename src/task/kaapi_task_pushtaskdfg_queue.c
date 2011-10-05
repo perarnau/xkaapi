@@ -60,7 +60,8 @@ int kaapi_thread_distribute_task (
   kaapi_task_t*          remote_task    = 
       (kaapi_task_t*)kaapi_thread_pushdata_align(thread, sizeof(kaapi_task_t), sizeof(uintptr_t));
   
-  kaapi_tasksteal_arg_t* argsteal = (kaapi_tasksteal_arg_t*)kaapi_alloca(thread, sizeof(kaapi_tasksteal_arg_t));
+  kaapi_tasksteal_arg_t* argsteal = 
+      (kaapi_tasksteal_arg_t*)kaapi_thread_pushdata_align(thread, sizeof(kaapi_tasksteal_arg_t), sizeof(void*));
   argsteal->origin_thread         = kaapi_self_thread_context();
   argsteal->origin_task           = local_task;
   argsteal->origin_body           = local_task->body;
@@ -70,9 +71,9 @@ int kaapi_thread_distribute_task (
   kaapi_task_init_withstate(  remote_task, 
                     kaapi_tasksteal_body, 
                     argsteal,
-                    KAAPI_TASK_STATE_INIT
+                    KAAPI_TASK_STATE_ALLOCATED
   );
-  local_task->reserved                  = remote_task;
+  local_task->reserved             = remote_task;
   argsteal->origin_body = kaapi_task_marksteal( local_task );
   kaapi_assert_debug( argsteal->origin_body != 0);
   
