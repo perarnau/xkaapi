@@ -163,7 +163,6 @@ redo_exec:
 #endif
       ((kaapi_task_body_internal_t)pc->body)( pc->sp, fp, pc );
 #if !defined(KAAPI_USE_JMP)
-#if 0
     else {
       state = pc->state;
       if (state == KAAPI_TASK_STATE_MERGE)
@@ -198,7 +197,6 @@ redo_exec:
         continue;
       }
     }
-#endif // if 0
 #endif
 
 #if defined(KAAPI_USE_PERFCOUNTER)
