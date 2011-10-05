@@ -188,7 +188,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   kaapi_task_t*          task;
   kaapi_tasksteal_arg_t* arg;
   kaapi_task_body_t      body;          /* format of the stolen task */
-  const kaapi_format_t*        fmt;
+  const kaapi_format_t*  fmt;
   unsigned int           war_param;     /* */
   unsigned int           cw_param;      /* */
 
