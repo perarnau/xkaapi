@@ -54,32 +54,32 @@ int kaapi_thread_distribute_task (
 )
 {
   /* the task is in the own queue of the thread but not yet visible to other threads */
-  kaapi_task_t* task = thread->sp;
+  kaapi_task_t* local_task = thread->sp;
   
   /* create a new steal_body task */
-  kaapi_task_t*          dtask    = 
+  kaapi_task_t*          remote_task    = 
       (kaapi_task_t*)kaapi_thread_pushdata_align(thread, sizeof(kaapi_task_t), sizeof(uintptr_t));
   
   kaapi_tasksteal_arg_t* argsteal = (kaapi_tasksteal_arg_t*)kaapi_alloca(thread, sizeof(kaapi_tasksteal_arg_t));
   argsteal->origin_thread         = kaapi_self_thread_context();
-  argsteal->origin_task           = task;
-  argsteal->origin_body           = task->body;
+  argsteal->origin_task           = local_task;
+  argsteal->origin_body           = local_task->body;
   argsteal->origin_fmt            = 0;    /* should be computed by a thief */
   argsteal->war_param             = 0;    /* assume no war */
   argsteal->cw_param              = 0;    /* assume no cw mode */
-  kaapi_task_init_withstate(  dtask, 
+  kaapi_task_init_withstate(  remote_task, 
                     kaapi_tasksteal_body, 
                     argsteal,
                     KAAPI_TASK_STATE_INIT
   );
-  task->reserved                  = dtask;
-  argsteal->origin_body = kaapi_task_marksteal( task );
+  local_task->reserved                  = remote_task;
+  argsteal->origin_body = kaapi_task_marksteal( local_task );
   kaapi_assert_debug( argsteal->origin_body != 0);
   
-  /* ok here initial task is marked as steal and distributed task correspond to a stealbody 
-     - push dtask to a hierarchical queue
-     - push task into the own thread queue
+  /* ok here initial local_task is marked as steal and distributed task correspond to a stealbody 
+     - push remote_task to a hierarchical queue
+     - push local_task into the own thread queue
   */
-  kaapi_thread_pushtask_atlevel(dtask, levelid);
+  kaapi_thread_pushtask_atlevel(remote_task, levelid);
   return kaapi_thread_pushtask(thread);
 }
