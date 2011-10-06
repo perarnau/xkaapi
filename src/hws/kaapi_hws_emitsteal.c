@@ -354,10 +354,12 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
   leave();
 
   {
-    const kaapi_request_status_t status = kaapi_request_status(request);
-    if (status == KAAPI_REQUEST_S_OK)
+    kaapi_assert(request->status == &status);
+
+    const kaapi_request_status_t fu = kaapi_request_status(request);
+    if (fu == KAAPI_REQUEST_S_OK)
       goto on_request_success;
-    else if (status != KAAPI_REQUEST_S_NOK)
+    else if (fu != KAAPI_REQUEST_S_NOK)
       goto redo_levels;
     /* else fail */
   }
@@ -374,6 +376,7 @@ on_request_success:
 
   leave();
 
+  kaapi_assert(request->status == &status);
   kaapi_assert(kaapi_request_status(request) != KAAPI_REQUEST_S_POSTED);
 
   fail_requests(&hws_requests, &lri);
