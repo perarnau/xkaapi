@@ -124,18 +124,25 @@ static int kaapi_setup_param()
   /* workstealing selection function */
   wsselect = getenv("KAAPI_WSSELECT");
   kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand;
-  if ((wsselect != 0) && (strcmp(wsselect, "rand") ==0))
-    kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand;
-  else if ((wsselect != 0) && (strcmp(wsselect, "workload") ==0))
-    kaapi_default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
-  else if ((wsselect != 0) && (strcmp(wsselect, "first0") ==0))
-    kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand_first0;
-  else if ((wsselect != 0) && (strcmp(wsselect, "hierarchical") ==0))
-    kaapi_default_param.wsselect = &kaapi_sched_select_victim_hierarchy;
-#if 0
-  else if ((wsselect != 0) && (strcmp(wsselect, "pws") ==0))
-    kaapi_default_param.wsselect = &kaapi_sched_select_victim_pws;
-#endif
+  if (wsselect !=0)
+  {
+    if (strcmp(wsselect, "rand") ==0)
+      kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand;
+    else if (strcmp(wsselect, "workload") ==0)
+      kaapi_default_param.wsselect = &kaapi_sched_select_victim_workload_rand;
+    else if (strcmp(wsselect, "first0") ==0)
+      kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand_first0;
+    else if (strcmp(wsselect, "hierarchical") ==0)
+      kaapi_default_param.wsselect = &kaapi_sched_select_victim_hierarchy;
+  #if 0
+    else if (strcmp(wsselect, "pws") ==0)
+      kaapi_default_param.wsselect = &kaapi_sched_select_victim_pws;
+  #endif
+    else {
+      fprintf(stderr, "***Kaapi: bad value for variable KAAPI_WSSELECT\n");
+      return EINVAL;
+    }
+  }
 
   kaapi_default_param.emitsteal = kaapi_sched_emitsteal;
   emitsteal = getenv("KAAPI_EMITSTEAL");
@@ -143,6 +150,12 @@ static int kaapi_setup_param()
   {
     if (strcmp(emitsteal, "hws") == 0)
       kaapi_default_param.emitsteal = kaapi_hws_emitsteal;
+    else if (strcmp(emitsteal, "flat") == 0)
+      kaapi_default_param.emitsteal = kaapi_sched_emitsteal;
+    else {
+      fprintf(stderr, "***Kaapi: bad value for variable KAAPI_EMITSTEAL\n");
+      return EINVAL;
+    }
   }
   
   return 0;

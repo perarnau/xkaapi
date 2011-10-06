@@ -267,6 +267,7 @@ redo_exec:
 }
 
 
+#define HUGEDEBUG
 
 /* try to preempt to stolen task:
    - lock the current state: add LOCKED flag to the state, if old value is not yet STEAL
@@ -284,8 +285,8 @@ int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
     return 0;
   }
 
-  /* number of cycles = number of cycles of the thief between marksteal 
-     and set reserved to the thief task 
+  /* number of cycles = number of cycles of the thief requires between marksteal 
+     and set reserved to the thief task
   */
   /* while ((void* volatile)(pc->reserved) == 0) */
   while ( ((volatile kaapi_task_t*)pc)->reserved ==0 )
@@ -319,11 +320,13 @@ int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
 
   /* restore STEAL state and return EWOULDBLOCK */
 #if defined(HUGEDEBUG)
-  printf("%i::Task %p, state: 0x%X is under execution by thief task: %p, suspended thread\n", 
+  printf("%i::Task %p, state: 0x%X is under execution by thief task: %p, state: 0x%X. Suspended thread\n", 
     kaapi_get_self_kid(),
     (void*)pc, 
     (unsigned int)pc->state, 
-    (void*)pc->reserved); 
+    (void*)pc->reserved,
+    (void*)pc->reserved->state
+  ); 
   fflush(stdout);
 #endif
 

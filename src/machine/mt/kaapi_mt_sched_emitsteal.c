@@ -186,27 +186,8 @@ return_value:
   {
     case KAAPI_REQUEST_S_OK:
       kproc->thief_task = self_request->thief_task;
-      /* last step: acquire the task for execution:
-         - because this task will be embedded into kaapi_taskstartup_body,
-         its state does not move to EXEC (as kaapi_thread_execframe does).
-         Thus we mark it as execution to avoid preemption from the victim.
-      */
-      if (kaapi_task_markexec(kproc->thief_task))
-      {
-#if defined(KAAPI_USE_PERFCOUNTER)
-        ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
-#endif
-        (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_SUCCESS );
-#if defined(HUGEDEBUG)
-  printf("%i::[RetOK] emitsteal, thieftask:%p\n", 
-      kproc->kid,
-      (void*)kproc->thief_task
-  );
-  fflush(stdout);
-#endif
-        return KAAPI_REQUEST_S_OK;
-      }
-      /* else next case */
+      (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_SUCCESS );
+      return KAAPI_REQUEST_S_OK;
 
     case KAAPI_REQUEST_S_NOK:
       (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_FAILED );

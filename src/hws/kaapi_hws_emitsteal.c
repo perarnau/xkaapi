@@ -62,7 +62,8 @@ static inline kaapi_ws_block_t* get_self_ws_block(
   return hws_levels[levelid].kid_to_block[self->kid];
 }
 
-
+/*
+*/
 static void fail_requests
 (
   kaapi_listrequest_t* lr,
@@ -101,7 +102,6 @@ static kaapi_request_status_t steal_block
     if (kaapi_request_test(request))
     {
       /* need to do memory barrier here before reading the data */
-      kaapi_request_syncdata(request);
       goto on_request_replied;
     }
   }
@@ -184,6 +184,10 @@ static kaapi_thread_context_t* pop_block
   kaapi_processor_t* kproc
 )
 {
+
+//DEBUG:
+kaapi_assert(0);
+
   /* not a real steal operation, dont actually post */
   kaapi_request_t* const req = &hws_requests.requests[kproc->kid];
   kaapi_task_t*          thief_task;
@@ -235,12 +239,11 @@ static kaapi_request_t* post_request
   /* from kaapi_mt_machine.h/kaapi_request_post */
   req->ident             = kproc->kid;
   req->thief_task        = &kproc->thread->stealreserved_task;
-  kproc->thread->stealreserved_task.state = KAAPI_TASK_STATE_ALLOCATED;
-  kproc->thread->stealreserved_task.body  = kaapi_tasksteal_body;
+  req->thief_task->state = KAAPI_TASK_STATE_ALLOCATED;
+  req->thief_task->body  = kaapi_tasksteal_body;
   req->thief_sp          = &kproc->thread->stealreserved_arg;
   req->status            = status;
   KAAPI_ATOMIC_WRITE_BARRIER(status, KAAPI_REQUEST_S_POSTED);
-  kaapi_writemem_barrier();
   kaapi_bitmap_set(&hws_requests.bitmap, kproc->kid);
   return req;
 }
@@ -274,7 +277,8 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
   /* post the stealing request */
   kproc->issteal = 1;
   request = post_request(kproc, &status);
-  
+  kaapi_assert( request->thief_task->state == KAAPI_TASK_STATE_ALLOCATED );
+
   /* foreach parent level, pop. if pop failed, steal in level children. */
   for (levelid = KAAPI_HWS_LEVELID_FIRST; levelid < (int)hws_level_count; ++levelid)
   {
@@ -320,11 +324,12 @@ on_request_success:
   kproc->issteal = 0;
 
   /* update task to execute */
+  kaapi_request_syncdata(request);
   kproc->thief_task = request->thief_task;
-
+  request->status = (void*)-1UL;
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
-  
+  printf("%i::OUT Emitsteal request replied: %p\n", kproc->kid, request ); fflush(stdout);
   return KAAPI_REQUEST_S_OK;
 }

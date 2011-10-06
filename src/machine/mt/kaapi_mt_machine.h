@@ -744,8 +744,10 @@ static inline void kaapi_listrequest_iterator_update
   /* todo: optimize, mask can be stored neged, and can be ored */
   kaapi_bitmap_value_neg(&neg_mask, mask);
 
+kaapi_mem_barrier();
   /* atomic read and clear only the masked bits */
   kaapi_bitmap_and(&orig_bitmap, &lrequests->bitmap, &neg_mask);
+kaapi_mem_barrier();
 
   /* keep only the masked bits */
   kaapi_bitmap_value_and(&orig_bitmap, mask);
@@ -1150,7 +1152,6 @@ static inline kaapi_request_t* kaapi_request_post(
   req->thief_sp     = thief_sp;
   req->status       = status;
   KAAPI_ATOMIC_WRITE_BARRIER(status, KAAPI_REQUEST_S_POSTED);
-  kaapi_writemem_barrier();
   kaapi_bitmap_set( &victim->hlrequests.bitmap, thief_kid );
   return req;
 #elif defined(KAAPI_USE_CIRBUF_REQUEST)
