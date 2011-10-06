@@ -357,7 +357,7 @@ int kaapi_hws_init_global(void)
     
   } /* foreach level in topo */
   
-#if 0 /* debug */
+#if 1 /* debug */
   print_hws_levels();
 #endif /* debug */
   

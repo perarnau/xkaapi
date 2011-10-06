@@ -342,20 +342,29 @@ static inline int kaapi_request_replytask
 {
   if (status == KAAPI_REQUEST_S_OK)
   {
+    uintptr_t state = request->thief_task->state;
     if (kaapi_task_casstate(request->thief_task, KAAPI_TASK_STATE_ALLOCATED, KAAPI_TASK_STATE_INIT))
+    {
       KAAPI_ATOMIC_WRITE_BARRIER(request->status, KAAPI_REQUEST_S_OK);
-    else {
+    }
+    else 
+    {
       /* else task was preempted */
-      printf("Task: %p was preempted before end of replytask\n", (void*)request->thief_task); fflush(stdout);
+      printf("Task: %p state: 0x%X, victim: %p was preempted before replytask\n", 
+        (void*)request->thief_task,
+        (unsigned int)request->thief_task->state,
+        (void*)((kaapi_tasksteal_arg_t*)request->thief_task->sp)->origin_task
+      ); 
+      fflush(stdout);
       kaapi_assert_debug( request->thief_task->state & KAAPI_TASK_STATE_SIGNALED );
       KAAPI_ATOMIC_WRITE_BARRIER(request->status, KAAPI_REQUEST_S_NOK);
     }
   }
   else
-    {
+  {
     /* failed to steal: avoid unnecessary memory barrier */
     KAAPI_ATOMIC_WRITE(request->status, KAAPI_REQUEST_S_NOK);
-    }
+  }
   return 0;
 }
 
@@ -795,7 +804,7 @@ static inline int kaapi_request_status_get( kaapi_atomic_t* status )
 static inline int kaapi_request_status( kaapi_request_t* kr ) 
 { return kaapi_request_status_get(kr->status); }
 
-/** Return true iff the request has been posted
+/** Return true iff the request has a reply
   \param kr kaapi_request_t
   \retval KAAPI_REQUEST_S_OK sucessfull steal operation
   \retval KAAPI_REQUEST_S_NOK steal request has failed

@@ -315,7 +315,7 @@ static inline void kaapi_mem_barrier()
   OSMemoryBarrier();
 #  elif defined(__x86_64) || defined(__i386__)
   /* not need lfence on X86 archi: read are ordered */
-  __asm__ __volatile__ ("mfence":::"memory");
+__sync_synchronize();//  __asm__ __volatile__ ("mfence":::"memory");
 #  else
 #    error "bad configuration"
 #  endif
