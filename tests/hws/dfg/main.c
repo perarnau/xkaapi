@@ -101,7 +101,6 @@ int main(int ac, char** av)
     task = kaapi_thread_toptask(thread);
     kaapi_task_initdfg(task, numa_body, wui);
     kaapi_thread_distribute_task(thread, KAAPI_HWS_LEVELID_NUMA);
-    usleep(100000);
   }
 
   kaapi_sched_sync();
