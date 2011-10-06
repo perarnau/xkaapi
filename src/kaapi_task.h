@@ -222,28 +222,28 @@ extern void kaapi_taskfinalizer_body( void*, kaapi_thread_t* );
 /**@{ */
 static inline kaapi_task_body_t kaapi_task_getbody(const kaapi_task_t* task)
 {
-  return ((kaapi_task_t*volatile)task)->body;
+  return ((volatile kaapi_task_t*)task)->body;
 }
 
 static inline void kaapi_task_setbody(kaapi_task_t* task, kaapi_task_body_t body)
 {
-  ((kaapi_task_t*volatile)task)->body = body;
+  ((volatile kaapi_task_t*)task)->body = body;
 }
 
 static inline uintptr_t kaapi_task_getstate(const kaapi_task_t* task)
 {
-  return ((kaapi_task_t*volatile)task)->state;
+  return ((volatile kaapi_task_t*)task)->state;
 }
 
 static inline void kaapi_task_setstate(kaapi_task_t* task, uintptr_t state)
 {
-  ((kaapi_task_t*volatile)task)->state = state;
+  ((volatile kaapi_task_t*)task)->state = state;
 }
 
 static inline void kaapi_task_setbody_barrier(kaapi_task_t* task, kaapi_task_body_t body)
 {
   kaapi_mem_barrier();
-  ((kaapi_task_t*volatile)task)->body = body;
+  ((volatile kaapi_task_t*)task)->body = body;
 }
 
 static inline uintptr_t kaapi_task_casstate(kaapi_task_t* task, uintptr_t oldstate, uintptr_t newstate)

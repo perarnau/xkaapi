@@ -102,24 +102,29 @@ static kaapi_ws_error_t steal
   if (q->top == 0) return KAAPI_WS_ERROR_EMPTY;
   
   kaapi_ws_lock_lock(&q->lock);
-  
+
   req = kaapi_listrequest_iterator_get(lr, lri);
   while ((req != NULL) && q->top)
   {
     kaapi_task_t* const task = q->tasks[--q->top];
     
-#if 0 /* todo */
     kaapi_task_body_t task_body = kaapi_task_getbody(task);
     if (task_body == kaapi_hws_adapt_body)
     {
       /* todo */
       kaapi_task_steal_adapt(0, task, lr, lri, &callback_empty);
 
+      /* task is not empty */
+      if (task->sp != NULL)
+      {
+	++q->top;
+	break ;
+      }
+
       /* the request may have been updated. reread it. */
       req = kaapi_listrequest_iterator_get(lr, lri);
     }
     else /* != kaapi_hws_adapt_body */
-#endif /* todo */
     {
       /* special case of kaapi_task_steal_dfg */
       req->thief_sp = task->sp;
@@ -132,7 +137,7 @@ static kaapi_ws_error_t steal
     }
   }
 
-  /* for q->top consistency */
+  /* q->top consistency */
   kaapi_writemem_barrier();
 
   kaapi_ws_lock_unlock(&q->lock);
