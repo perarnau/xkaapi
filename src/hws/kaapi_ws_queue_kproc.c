@@ -25,7 +25,25 @@ static kaapi_ws_error_t steal
 {
   kaapi_processor_t* const kproc = *(kaapi_processor_t**)p;
   const int saved_count = kaapi_listrequest_iterator_count(lri);
+
+  /* synchronize with flat workstealing */
+#if defined(KAAPI_SCHED_LOCK_CAS)
+  while (!kaapi_sched_trylock(kproc))
+    kaapi_slowdown_cpu();
+#else
+ acquire:
+  if (KAAPI_ATOMIC_DECR(&kproc->lock))
+  {
+    while (KAAPI_ATOMIC_READ(&kproc->lock) <= 0)
+      kaapi_slowdown_cpu();
+  }
+  goto acquire;
+#endif /* KAAPI_SCHED_LOCK_CAS */
+
   kaapi_sched_stealprocessor(kproc, lr, lri);
+
+  kaapi_sched_unlock(&kproc->lock);
+
   if (kaapi_listrequest_iterator_count(lri) == saved_count)
     return KAAPI_WS_ERROR_EMPTY;
   return KAAPI_WS_ERROR_SUCCESS;
