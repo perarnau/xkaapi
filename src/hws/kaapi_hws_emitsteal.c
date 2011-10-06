@@ -51,6 +51,23 @@
 #include "kaapi_ws_queue.h"
 
 
+__attribute__((aligned))
+static volatile unsigned long isin = 0;
+
+
+static inline void enter(void)
+{
+  isin |= 1 << kaapi_get_self_kid();
+}
+
+
+static inline void leave(void)
+{
+  __sync_synchronize();
+  isin &= ~(1 << kaapi_get_self_kid());
+}
+
+
 static inline kaapi_ws_block_t* get_self_ws_block(
   kaapi_processor_t* self, 
   kaapi_hws_levelid_t levelid
@@ -108,6 +125,23 @@ static kaapi_request_status_t steal_block
   
   /* got the lock: reply and unlock */
   kaapi_listrequest_iterator_update(lr, lri, &block->kid_mask);
+
+  /* check bits consistency */
+#if 0
+  {
+    unsigned int i = 0;
+    for (i =0 ; i < 64; ++i)
+    {
+      if (!(lri->bitmap.proc32 & (1 << i))) continue ;
+      if (!(isin & (1 << i)))
+      {
+	printf("INVALID\n");
+	fflush(stdout);
+	while (1);
+      }
+    }
+  }
+#endif
   
   if (!kaapi_listrequest_iterator_empty(lri))
     kaapi_ws_queue_steal(block, block->queue, lr, lri);
@@ -143,6 +177,7 @@ static kaapi_request_status_t steal_block_leaves
     return KAAPI_REQUEST_S_NOK;
   
 redo_rand:
+#warning "USE rand_r"
   kid = block->kids[rand() % block->kid_count];
   if (kid == kproc->kid) goto redo_rand;
   
@@ -273,13 +308,15 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
 
   /* dont fail_request with an uninitialized bitmap */
   kaapi_listrequest_iterator_prepare(&lri);
+
+  enter();
   
   /* post the stealing request */
   kproc->issteal = 1;
   request = post_request(kproc, &status);
-  kaapi_assert( request->thief_task->state == KAAPI_TASK_STATE_ALLOCATED );
 
   /* foreach parent level, pop. if pop failed, steal in level children. */
+ redo_levels:
   for (levelid = KAAPI_HWS_LEVELID_FIRST; levelid < (int)hws_level_count; ++levelid)
   {
     if (!(kaapi_hws_is_levelid_set(levelid))) continue ;
@@ -313,13 +350,32 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
           
     /* next level */
   }
+
+  leave();
+
+  {
+    const kaapi_request_status_t status = kaapi_request_status(request);
+    if (status == KAAPI_REQUEST_S_OK)
+      goto on_request_success;
+    else if (status != KAAPI_REQUEST_S_NOK)
+      goto redo_levels;
+    /* else fail */
+  }
   
   fail_requests(&hws_requests, &lri);
   kproc->issteal = 0;
   kproc->thief_task = 0;
+
+  kaapi_assert(kaapi_request_status(request) != KAAPI_REQUEST_S_POSTED);
+
   return KAAPI_REQUEST_S_NOK;
 
 on_request_success:
+
+  leave();
+
+  kaapi_assert(kaapi_request_status(request) != KAAPI_REQUEST_S_POSTED);
+
   fail_requests(&hws_requests, &lri);
   kproc->issteal = 0;
 

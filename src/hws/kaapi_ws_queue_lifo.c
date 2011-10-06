@@ -56,7 +56,7 @@ typedef struct lifo_queue
 {
   kaapi_ws_lock_t lock;                      /* toremove, use block lock */
   __attribute__((aligned)) volatile unsigned int top; /* first avail */
-#define CONFIG_QUEUE_SIZE 128
+#define CONFIG_QUEUE_SIZE (4096 * 10)
   kaapi_task_t* tasks[CONFIG_QUEUE_SIZE];
 } lifo_queue_t;
 
