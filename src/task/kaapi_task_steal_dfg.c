@@ -81,7 +81,7 @@ void kaapi_task_steal_dfg
   kaapi_request_t* request =
 	kaapi_listrequest_iterator_get( lrequests, lrrange );
   ((kaapi_task_t* volatile)task)->reserved = request->thief_task;
-  printf("%i::Steal DFG from: %i request:%p\n", kaapi_get_self_kid(), request->ident, request ); fflush(stdout);
+  printf("%i::Steal DFG from: %i request:%p version:%i \n", kaapi_get_self_kid(), request->ident, request, request->version ); fflush(stdout);
 
   kaapi_assert( (request->thief_task->state & ~KAAPI_TASK_STATE_SIGNALED) == KAAPI_TASK_STATE_ALLOCATED );
   

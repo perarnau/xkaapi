@@ -824,6 +824,12 @@ typedef struct kaapi_processor_t {
   /* cache align */
   kaapi_listrequest_t      hlrequests;                    /* all requests attached to each kprocessor ordered by increasing level */
 
+#if defined(KAAPI_DEBUG)
+  volatile uintptr_t       req_version;
+  volatile uintptr_t       reply_version;
+  volatile uintptr_t       compute_version;
+#endif
+  
   kaapi_wsqueuectxt_t      lsuspend;                      /* list of suspended context */
   kaapi_lready_t	       lready;                        /* list of ready context, concurrent access locked by 'lock' */
 

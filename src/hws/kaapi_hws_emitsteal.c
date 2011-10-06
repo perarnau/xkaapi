@@ -236,6 +236,10 @@ static kaapi_request_t* post_request
 {
   kaapi_request_t* const req = &hws_requests.requests[kproc->kid];
 
+#if defined(KAAPI_DEBUG)
+  req->version = ++kproc->req_version;
+#endif
+  
   /* from kaapi_mt_machine.h/kaapi_request_post */
   req->ident             = kproc->kid;
   req->thief_task        = &kproc->thread->stealreserved_task;
@@ -259,9 +263,6 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
   kaapi_request_t* request;
   kaapi_listrequest_iterator_t lri;
   kaapi_atomic_t status;
-
-  /* reset thief stack before posting request to steal */
-  kaapi_stack_reset( &kproc->thread->stack );
 
 #if 0 /* already done by the caller */
   /* pop locally without emitting request */
@@ -317,11 +318,13 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
   fail_requests(&hws_requests, &lri);
   kproc->issteal = 0;
   kproc->thief_task = 0;
+  ++kproc->reply_version;
   return KAAPI_REQUEST_S_NOK;
 
 on_request_success:
   fail_requests(&hws_requests, &lri);
   kproc->issteal = 0;
+  ++kproc->reply_version;
 
   /* update task to execute */
   kaapi_request_syncdata(request);
@@ -331,5 +334,8 @@ on_request_success:
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
   printf("%i::OUT Emitsteal request replied: %p\n", kproc->kid, request ); fflush(stdout);
+#if defined(KAAPI_DEBUG)
+  kproc->compute_version = kproc->req_version;
+#endif
   return KAAPI_REQUEST_S_OK;
 }
