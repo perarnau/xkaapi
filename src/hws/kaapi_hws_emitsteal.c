@@ -343,14 +343,13 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
 
     if (fu == KAAPI_REQUEST_S_OK)
       goto on_request_success;
-    goto redo_levels;
+
+    /* failed requests */
   }
   
   fail_requests(&hws_requests, &lri);
   kproc->issteal = 0;
   kproc->thief_task = 0;
-
-  kaapi_assert(kaapi_request_status(request) != KAAPI_REQUEST_S_POSTED);
 
   return KAAPI_REQUEST_S_NOK;
 
