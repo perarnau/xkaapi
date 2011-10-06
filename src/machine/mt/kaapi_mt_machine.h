@@ -648,10 +648,12 @@ typedef struct kaapi_listrequest_t {
 */
 typedef struct kaapi_listrequest_iterator_t {
   kaapi_bitmap_value_t bitmap;
+  int idcurr;
 #if defined(KAAPI_DEBUG)
   kaapi_bitmap_value_t bitmap_t0;
+  uintptr_t            count_in;  // count bit captured
+  uintptr_t            count_out; // count bit out (iterator_next )
 #endif  
-  int idcurr;
 } kaapi_listrequest_iterator_t;
 
 /* return !=0 iff the range is empty
@@ -672,7 +674,9 @@ static inline int kaapi_listrequest_iterator_count(kaapi_listrequest_iterator_t*
 
 /* get the first request of the range. range iterator should have been initialized by kaapi_listrequest_iterator_init 
 */
-static inline kaapi_request_t* kaapi_listrequest_iterator_get( kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange )
+static inline kaapi_request_t* kaapi_listrequest_iterator_get( 
+  kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange 
+)
 { return (lrrange->idcurr == -1 ? 0 : &lrequests->requests[lrrange->idcurr]); }
 
 /* get the first request of the range. range iterator should have been initialized by kaapi_listrequest_iterator_init 
@@ -691,35 +695,44 @@ static inline kaapi_request_t* kaapi_listrequest_iterator_getkid_andnext(
 
 /* return the next entry in the request. return 0 if the range is empty.
 */
-static inline kaapi_request_t* kaapi_listrequest_iterator_next
-( kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange )
+static inline kaapi_request_t* kaapi_listrequest_iterator_next( 
+  kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange 
+)
 {
   lrrange->idcurr = kaapi_bitmap_first1_and_zero( &lrrange->bitmap )-1;
-  return (lrrange->idcurr == -1 ? 0 : &lrequests->requests[lrrange->idcurr]);
+  kaapi_request_t* retval = (lrrange->idcurr == -1 ? 0 : &lrequests->requests[lrrange->idcurr]);
+#if defined(KAAPI_DEBUG)
+  lrrange->count_out += (retval == 0 ? 0 : 1);
+#endif
+  return retval;
 } 
 
 /* atomically read the bitmap of the list of requests clear readed bits */
-static inline void kaapi_listrequest_iterator_init
-(kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange)
+static inline void kaapi_listrequest_iterator_init(
+  kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange
+)
 { 
   lrrange->idcurr = -1;
   kaapi_bitmap_swap0( &lrequests->bitmap, &lrrange->bitmap );
 #if defined(KAAPI_DEBUG)
   kaapi_bitmap_value_copy( &lrrange->bitmap_t0, &lrrange->bitmap );
+  lrrange->count_in  = kaapi_bitmap_count(lrrange->bitmap);
+  lrrange->count_out = 0;
 #endif
   kaapi_listrequest_iterator_next( lrequests, lrrange );
 }
 
 /* clear bitmap and init iterator */
-static inline void kaapi_listrequest_iterator_prepare
-(
+static inline void kaapi_listrequest_iterator_prepare(
   kaapi_listrequest_iterator_t* lrrange
 )
 { 
   lrrange->idcurr = -1;
   kaapi_bitmap_value_clear(&lrrange->bitmap);
 #if defined(KAAPI_DEBUG)
-  kaapi_bitmap_value_copy( &lrrange->bitmap_t0, &lrrange->bitmap );
+  kaapi_bitmap_value_clear(&lrrange->bitmap_t0);
+  lrrange->count_in  = 0;
+  lrrange->count_out = 0;
 #endif
 }
 
@@ -737,17 +750,16 @@ static inline void kaapi_listrequest_iterator_update
   /* orig_bitmap = lrequest->bitmap & ~mask;
      lrrange->bitmap |= orig_bitmap & mask;
    */
-
   kaapi_bitmap_value_t neg_mask;
   kaapi_bitmap_value_t orig_bitmap;
 
   /* todo: optimize, mask can be stored neged, and can be ored */
   kaapi_bitmap_value_neg(&neg_mask, mask);
 
-kaapi_mem_barrier();
+//kaapi_mem_barrier();
   /* atomic read and clear only the masked bits */
   kaapi_bitmap_and(&orig_bitmap, &lrequests->bitmap, &neg_mask);
-kaapi_mem_barrier();
+//kaapi_mem_barrier();
 
   /* keep only the masked bits */
   kaapi_bitmap_value_and(&orig_bitmap, mask);
@@ -756,7 +768,8 @@ kaapi_mem_barrier();
   kaapi_bitmap_value_or(&lrrange->bitmap, &orig_bitmap);
 
 #if defined(KAAPI_DEBUG)
-  kaapi_bitmap_value_copy( &lrrange->bitmap_t0, &lrrange->bitmap );
+  lrrange->count_in += kaapi_bitmap_count(orig_bitmap);
+  kaapi_bitmap_value_or( &lrrange->bitmap_t0, &lrrange->bitmap );
 #endif
 
   /* check if empty before nexting */

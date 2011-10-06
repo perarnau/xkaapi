@@ -267,7 +267,7 @@ redo_exec:
 }
 
 
-#define HUGEDEBUG
+//#define HUGEDEBUG
 
 /* try to preempt to stolen task:
    - lock the current state: add LOCKED flag to the state, if old value is not yet STEAL
@@ -325,7 +325,7 @@ int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
     (void*)pc, 
     (unsigned int)pc->state, 
     (void*)pc->reserved,
-    (void*)pc->reserved->state
+    (unsigned int)pc->reserved->state
   ); 
   fflush(stdout);
 #endif
