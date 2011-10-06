@@ -51,23 +51,6 @@
 #include "kaapi_ws_queue.h"
 
 
-__attribute__((aligned))
-static volatile unsigned long isin = 0;
-
-
-static inline void enter(void)
-{
-  isin |= 1 << kaapi_get_self_kid();
-}
-
-
-static inline void leave(void)
-{
-  __sync_synchronize();
-  isin &= ~(1 << kaapi_get_self_kid());
-}
-
-
 static inline kaapi_ws_block_t* get_self_ws_block(
   kaapi_processor_t* self, 
   kaapi_hws_levelid_t levelid
@@ -309,8 +292,6 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
   /* dont fail_request with an uninitialized bitmap */
   kaapi_listrequest_iterator_prepare(&lri);
 
-  enter();
-  
   /* post the stealing request */
   kproc->issteal = 1;
   request = post_request(kproc, &status);
@@ -351,17 +332,18 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
     /* next level */
   }
 
-  leave();
-
   {
     kaapi_assert(request->status == &status);
 
+    const unsigned int bar = hws_requests.bitmap.proc32._counter;
     const kaapi_request_status_t fu = kaapi_request_status(request);
+    if (fu == KAAPI_REQUEST_S_POSTED) goto redo_levels;
+
+    kaapi_assert(!(bar & (1 << kaapi_get_self_kid())));
+
     if (fu == KAAPI_REQUEST_S_OK)
       goto on_request_success;
-    else if (fu != KAAPI_REQUEST_S_NOK)
-      goto redo_levels;
-    /* else fail */
+    goto redo_levels;
   }
   
   fail_requests(&hws_requests, &lri);
@@ -374,7 +356,7 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
 
 on_request_success:
 
-  leave();
+  kaapi_assert(!(hws_requests.bitmap.proc32._counter & (1 << kaapi_get_self_kid())));
 
   kaapi_assert(request->status == &status);
   kaapi_assert(kaapi_request_status(request) != KAAPI_REQUEST_S_POSTED);

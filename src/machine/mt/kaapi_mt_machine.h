@@ -744,10 +744,8 @@ static inline void kaapi_listrequest_iterator_update
   /* todo: optimize, mask can be stored neged, and can be ored */
   kaapi_bitmap_value_neg(&neg_mask, mask);
 
-kaapi_mem_barrier();
   /* atomic read and clear only the masked bits */
   kaapi_bitmap_and(&orig_bitmap, &lrequests->bitmap, &neg_mask);
-kaapi_mem_barrier();
 
   /* keep only the masked bits */
   kaapi_bitmap_value_and(&orig_bitmap, mask);
