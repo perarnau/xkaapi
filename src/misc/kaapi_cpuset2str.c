@@ -58,3 +58,4 @@ const char* kaapi_cpuset2string( int nproc, kaapi_cpuset_t* cupset )
   string[nproc] = 0;
   return string;
 }
+

@@ -15,9 +15,7 @@ static void flat_body(void* p, kaapi_thread_t* t)
 {
   wrapped_uint_t* wui = (wrapped_uint_t*)p;
   const unsigned int val = *kaapi_data(unsigned int, &wui->val);
-  printf("IN xx [%u] %s %u\n", kaapi_get_self_kid(), __FUNCTION__, val);
-  usleep(100000);
-  printf("OUT xx [%u] %s %u\n", kaapi_get_self_kid(), __FUNCTION__, val);
+  printf("[%u] %s %u\n", kaapi_get_self_kid(), __FUNCTION__, val);
 }
 
 
@@ -25,9 +23,7 @@ static void numa_body(void* p, kaapi_thread_t* t)
 {
   wrapped_uint_t* wui = (wrapped_uint_t*)p;
   const unsigned int val = *kaapi_data(unsigned int, &wui->val);
-  printf("IN xx [%u] %s %u\n", kaapi_get_self_kid(), __FUNCTION__, val);
-  usleep(100000);
-  printf("OUT xx [%u] %s %u\n", kaapi_get_self_kid(), __FUNCTION__, val);
+  printf("[%u] %s %u\n", kaapi_get_self_kid(), __FUNCTION__, val);
 }
 
 
@@ -69,13 +65,13 @@ int main(int ac, char** av)
 
   kaapi_init(1, &ac, &av);
 
-  for (j = 0; j < 4; ++j)
+  for (j = 0; j < (4096 * 10); ++j)
   {
     kaapi_thread_t* const thread = kaapi_self_thread();
     kaapi_task_t* task;
     wrapped_uint_t* wui;
 
-#if 0
+#if 1
     /* push for flat stealing */
     task = kaapi_thread_toptask(thread);
     wui = kaapi_thread_pushdata_align
@@ -93,6 +89,7 @@ int main(int ac, char** av)
        ws->allocate(). export hws_alloc on top of that.
      */
 
+#if 0
     wui = kaapi_thread_pushdata_align
       (thread, sizeof(wrapped_uint_t), sizeof(void*));
     kaapi_thread_allocateshareddata
@@ -101,7 +98,7 @@ int main(int ac, char** av)
     task = kaapi_thread_toptask(thread);
     kaapi_task_initdfg(task, numa_body, wui);
     kaapi_thread_distribute_task(thread, KAAPI_HWS_LEVELID_NUMA);
-    usleep(100000);
+#endif
   }
 
   kaapi_sched_sync();

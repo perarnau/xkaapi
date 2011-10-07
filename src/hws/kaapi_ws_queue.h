@@ -62,13 +62,26 @@
 struct kaapi_ws_block;
 
 
-/** TG HERE: TO COMMENT A DESCRIPTION of the structure
-    and especially how to use it with a new kind of queue
-*/
 typedef struct kaapi_ws_queue
 {
   /* TODO: use an union to isolate the ops in cache */
   /* TODO: allocation should be cache aligned */
+
+  /* interface required to implement workstealing queues.
+     the queue must be created with kaapi_ws_queue_alloc,
+     which takes care of initializing default fields with
+     correct values.
+     the concrete queue size must be passed as an argument
+     to kaapi_ws_queue_alloc, which takes care of allocating
+     a buffer large enough for the concrete implementation.
+     this buffer is then retrieved by casting the data field
+     with the concrete implementation type.
+     push, steal, and pop methods must points to the
+     corresponding concrete implementations.
+     destroy method is optionnal.
+     refer to kaapi_ws_queue_create_lifo for a complete
+     example of queue creation.
+  */
 
   kaapi_ws_error_t (*push)(struct kaapi_ws_block*, void*, kaapi_task_t* );
   kaapi_ws_error_t (*steal)(struct kaapi_ws_block*, void*, kaapi_listrequest_t*, kaapi_listrequest_iterator_t*);

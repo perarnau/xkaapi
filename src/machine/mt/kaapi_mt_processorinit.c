@@ -89,6 +89,12 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
   
   kaapi_listrequest_init( kproc, &kproc->hlrequests );
 
+#if defined(KAAPI_DEBUG)
+  kproc->req_version = 0;
+  kproc->reply_version = 0;
+  kproc->compute_version =0;
+#endif
+
   kaapi_wsqueuectxt_init( &kproc->lsuspend );
   kaapi_sched_initready(kproc);
 

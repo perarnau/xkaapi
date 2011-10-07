@@ -110,12 +110,13 @@ typedef struct kaapi_ws_block
 
 } kaapi_ws_block_t;
 
-
-/* TG: to define here
-   kid_to_block[kid] = bloc for the k-processor kid ?
+/*TODO: A préciser:
+   - info structure
+   - level == noeuds freres (un pere commun ?) ou tous les noeuds d'un meme niveau
 */
 typedef struct kaapi_hws_level
 {
+  /* block for a given kid at this level */
   kaapi_ws_block_t** kid_to_block;
 
   kaapi_ws_block_t* blocks;

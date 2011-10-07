@@ -677,6 +677,9 @@ typedef struct kaapi_request_t {
   kaapi_task_t*                 thief_task;     /* placeholder to store the solen task */
   struct kaapi_tasksteal_arg_t* thief_sp;       /* placeholder to store thief task sp  */
   kaapi_taskadaptive_result_t*  ktr;            /* only used in adaptive interface to avoid  */
+#if defined(KAAPI_DEBUG)
+  volatile uintptr_t            version;
+#endif
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_request_t;
 
 

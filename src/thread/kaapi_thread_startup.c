@@ -49,25 +49,49 @@
 */
 void kaapi_taskstartup_body( 
   void*           taskarg,
-  kaapi_thread_t* fp,
+  kaapi_frame_t*  fp,
   kaapi_task_t*   task
 )
 {
   kaapi_processor_t* kproc = (kaapi_processor_t*)taskarg;
 
+  kaapi_assert( kaapi_frame_isempty(fp) );
+  kaapi_assert( fp == kproc->thread->stack.stackframe + 1 );
+  kaapi_assert( task == kproc->thread->stack.stackframe->pc );
+  
+
+  /* last step: acquire the task for execution:
+     - because this task will be embedded into kaapi_taskstartup_body,
+     its state does not move to EXEC (as kaapi_thread_execframe does).
+     Thus dot it manually here to avoid concurrency with preemption from the victim.
+  */
+  if (kaapi_task_markexec(kproc->thief_task))
+  {
 #if defined(HUGEDEBUG)
-printf("%i::[IN] StartUp Task, thieftask: %p\n", 
-      kaapi_get_self_kid(),
-      (void*)kproc->thief_task); 
-fflush(stdout);
+    printf("%i::[StarUp Thread] BEGIN to execute thieftask:%p, original task:%p\n", 
+        kproc->kid,
+        (void*)kproc->thief_task,
+        (void*)((kaapi_tasksteal_arg_t*)kproc->thief_task->sp)->origin_task
+    );
+    fflush(stdout);
 #endif
-
-  ((kaapi_task_body_internal_t)kproc->thief_task->body)( kproc->thief_task->sp, fp, kproc->thief_task );
-
+    ((kaapi_task_body_internal_t)kproc->thief_task->body)( kproc->thief_task->sp, fp, kproc->thief_task );
 #if defined(HUGEDEBUG)
-printf("%i::[OUT] StartUp Task, thieftask: %p\n", 
-      kaapi_get_self_kid(),
-      (void*)kproc->thief_task); 
-fflush(stdout);
+    printf("%i::[StarUp Thread] END to execute thieftask:%p\n", 
+      kproc->kid,
+      (void*)kproc->thief_task
+    );
+    fflush(stdout);
+#endif
+  }
+#if defined(HUGEDEBUG)
+  else {
+    printf("%i::[StarUp Thread] ABORT: thieftask: %p, origin task:%p was preempted by victim\n", 
+        kproc->kid,
+        (void*)kproc->thief_task,
+        (void*)((kaapi_tasksteal_arg_t*)kproc->thief_task->sp)->origin_task
+    ); 
+    fflush(stdout);
+  }
 #endif
 }
