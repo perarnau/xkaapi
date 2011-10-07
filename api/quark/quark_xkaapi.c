@@ -41,13 +41,11 @@
 ** terms.
 ** 
 */
-
 #include "kaapi_impl.h"
 #include <stdarg.h>
 #include "quark_unpack_args.h"
 
-
-#define TRACE 1
+//#define TRACE 1
 #define STATIC 1
 
 typedef struct quark_one_param_t {
@@ -62,6 +60,7 @@ typedef struct quark_one_param_t {
 /* XKaapi interface for Quark task with variable number of parameters */
 typedef struct quark_task_s {
   void                 (*function) (Quark *);
+  int                   callitwith_handle;  
   uintptr_t             nparam;    /* number of parameters */
   quark_one_param_t     param[MAX_PARAMQUARK];
 } kaapi_quark_task_t;
@@ -69,6 +68,9 @@ typedef struct quark_task_s {
 
 /* format for the kaapi' quark task */
 static kaapi_format_t* kaapi_quark_task_format = 0;
+
+/* dump dot representation */
+static int quark_dump_dot = 0;
 
 
 /* init format */
@@ -103,6 +105,20 @@ void kaapi_wrapper_quark_function( void* a, kaapi_thread_t* thread, kaapi_task_t
   XKaapi_Quark* myquark    = &default_Quark[kproc->kid];
   myquark->thread          = kproc->thread; 
   myquark->task            = arg; 
+  arg->callitwith_handle   = 0;
+  arg->function( myquark );
+}
+
+/* trampoline to call Quark function */
+void kaapi_wrapper_wh_quark_function( void* a, kaapi_thread_t* thread, kaapi_task_t* task )
+{
+//printf("%s\n", __PRETTY_FUNCTION__);  
+  kaapi_quark_task_t* arg  = (kaapi_quark_task_t*)a;
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  XKaapi_Quark* myquark    = &default_Quark[kproc->kid];
+  myquark->thread          = kproc->thread; 
+  myquark->task            = arg; 
+  arg->callitwith_handle   = 1;
   arg->function( myquark );
 }
 
@@ -122,6 +138,15 @@ Quark *QUARK_Setup(int num_threads)
 printf("IN %s\n", __PRETTY_FUNCTION__);  
   fflush(stdout);
 #endif
+  char* e = getenv("QUARK_DOT_DAG_ENABLE");
+  if (e !=0)
+  {
+    if (strcmp(e, "0") ==0)
+      quark_dump_dot = 0;
+    else 
+      quark_dump_dot = 1;
+  }
+  
   memset( &default_Quark, 0, sizeof(default_Quark) );
   kaapi_init(0, 0, 0);
   kaapi_quark_task_format_constructor();
@@ -235,7 +260,7 @@ unsigned long long QUARK_Insert_Task(
   arg->function = function;
   memcpy( arg->param, onearg, nparam * sizeof(quark_one_param_t) );
 
-printf("#param: %i\n", nparam); fflush(stdout);
+//printf("#param: %i\n", nparam); fflush(stdout);
 
   kaapi_task_t* task = kaapi_thread_toptask(thread);
   kaapi_task_init(task, (kaapi_task_body_t)kaapi_wrapper_quark_function, (void*)arg);
@@ -289,14 +314,17 @@ printf("OUT %s\n", __PRETTY_FUNCTION__);
  * scheduler.  The workers return from their loops.*/
 void QUARK_Waitall(Quark * quark)
 {
+//  kaapi_assert_debug( quark->thread == kaapi_self_thread_context() );
 #if defined(TRACE)
 printf("IN %s\n", __PRETTY_FUNCTION__);  
   fflush(stdout);
 #endif
   if (quark->sequence !=0)
     QUARK_Sequence_Wait(quark, quark->sequence);
-  else
+  else {
     kaapi_sched_sync();
+//    kaapi_assert_debug( quark->thread == kaapi_self_thread_context() );
+  }
 #if defined(TRACE)
 printf("OUT %s\n", __PRETTY_FUNCTION__);  
   fflush(stdout);
@@ -350,24 +378,27 @@ int QUARK_Get_RankInTask(Quark *quark)
    last_arg to get the the next argument. */
 void *QUARK_Args_Pop( void *args_list, void **last_arg)
 {
-  kaapi_quark_task_t* true_args = (kaapi_quark_task_t*)args_list;
+  kaapi_quark_task_t* taskarg = (kaapi_quark_task_t*)args_list;
+  quark_one_param_t* arg2pop = (quark_one_param_t*)*last_arg;
   void* retval;
-  if (*last_arg ==0) 
+
+  if (arg2pop ==0) 
+    arg2pop = taskarg->param;
+
+  if (arg2pop->mode != KAAPI_ACCESS_MODE_V)
   {
-    if (true_args->param->mode != KAAPI_ACCESS_MODE_V)
-      retval = &true_args->param->addr.data;
+    if (taskarg->callitwith_handle)
+    {
+      kaapi_data_t* gd = (kaapi_data_t*)arg2pop->addr.data;
+      retval = &gd->ptr.ptr;
+    }
     else
-      retval = true_args->param->addr.data;
-    *last_arg = true_args->param+1;
+      retval = &arg2pop->addr.data;
   }
-  else {
-    quark_one_param_t* true_last_arg = (quark_one_param_t*)*last_arg;
-    if (true_last_arg->mode != KAAPI_ACCESS_MODE_V)
-      retval = &true_last_arg->addr.data;
-    else
-      retval = true_last_arg->addr.data;
-    *last_arg = true_last_arg+1;
-  }
+  else
+    retval = &arg2pop->addr.data;
+  *last_arg = arg2pop+1;
+
   return retval;
 }
 
@@ -455,29 +486,32 @@ Quark_Sequence *QUARK_Sequence_Create( Quark *quark )
 #if defined(TRACE)
 printf("IN %s\n", __PRETTY_FUNCTION__);  fflush(stdout);
 #endif
-  kaapi_assert( quark->thread == kaapi_self_thread_context() );
-
+//  kaapi_assert( quark->thread == kaapi_self_thread_context() );
+  kaapi_thread_context_t* thread = kaapi_self_thread_context();
+  
   /* activate static schedule */
   kaapi_quark_sequence_t* qs = (kaapi_quark_sequence_t*)malloc( sizeof(kaapi_quark_sequence_t) );
-  kaapi_tasklist_init(&qs->tasklist, quark->thread);
+#if defined(STATIC)
+  kaapi_tasklist_init( &qs->tasklist, thread );
 
   /* set state of thread to unstealable */
-  qs->save_state = quark->thread->unstealable;
+  qs->save_state = thread->unstealable;
   kaapi_thread_set_unstealable(1);
+#endif
 
   /* push new frame for task */
-  qs->save_fp = *(kaapi_frame_t*)quark->thread->stack.sfp;
-  quark->thread->stack.sfp[1] = qs->save_fp;
+  qs->save_fp = *(kaapi_frame_t*)thread->stack.sfp;
+  thread->stack.sfp[1] = qs->save_fp;
   kaapi_writemem_barrier();
-  ++quark->thread->stack.sfp;
+  ++thread->stack.sfp;
 
-#if 1//defined(TRACE)
+#if defined(TRACE)
   printf("Push Frame, in static sched: thread:%p, sfp:%p = {pc:%p, sp:%p, spdata:%p}\n", 
-      quark->thread, 
-      quark->thread->stack.sfp,
-      quark->thread->stack.sfp->pc,
-      quark->thread->stack.sfp->sp,
-      quark->thread->stack.sfp->sp_data
+      thread, 
+      thread->stack.sfp,
+      thread->stack.sfp->pc,
+      thread->stack.sfp->sp,
+      thread->stack.sfp->sp_data
   );
   fflush(stdout);
 #endif
@@ -519,10 +553,12 @@ int QUARK_Sequence_Wait( Quark *quark, Quark_Sequence *sequence )
 #if defined(TRACE)
 printf("IN %s\n", __PRETTY_FUNCTION__);  fflush(stdout);
 #endif
-  kaapi_assert_debug( quark->thread == kaapi_self_thread_context() );
+//  kaapi_assert_debug( quark->thread == kaapi_self_thread_context() );
+
+  kaapi_thread_context_t* thread = kaapi_self_thread_context();
 
 #if defined(STATIC)
-  kaapi_thread_computereadylist(quark->thread, &sequence->tasklist);
+  kaapi_thread_computereadylist( thread, &sequence->tasklist );
 
   /* see kaapi_stsched_tasksetstatic.c */
   /* populate tasklist with initial ready tasks */
@@ -530,30 +566,51 @@ printf("IN %s\n", __PRETTY_FUNCTION__);  fflush(stdout);
   kaapi_thread_tasklist_commit_ready( &sequence->tasklist );
   sequence->tasklist.context.chkpt = 0;
 
-  quark->thread->stack.sfp->tasklist = &sequence->tasklist;
+  thread->stack.sfp->tasklist = &sequence->tasklist;
+
+  if (quark_dump_dot)
+  {
+    static uint32_t counter = 0;
+    char filename[128]; 
+    if (getenv("USER") !=0)
+      sprintf(filename,"graph.%s.%i.dot", getenv("USER"), counter++ );
+    else
+      sprintf(filename,"graph.%i.dot",counter++);
+    FILE* filedot = fopen(filename, "w");
+    kaapi_thread_tasklist_print_dot( filedot,  &sequence->tasklist, 0 );
+    fclose(filedot);
+  }
+
   kaapi_writemem_barrier();
-#endif
   kaapi_thread_set_unstealable(sequence->save_state);
+#endif
 
   /* synchronize and execute tasks */
-  kaapi_sched_sync_(quark->thread);
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&sequence->tasklist.count_thief) == 0);
-printf("%s sync!!\n", __PRETTY_FUNCTION__);  fflush(stdout);
+  {
+//    kaapi_assert_debug( quark->thread == kaapi_self_thread_context() );
+//    kaapi_processor_t* save_kproc = kaapi_get_current_processor();
+    kaapi_sched_sync_(thread);
+//    kaapi_processor_t* kproc = kaapi_get_current_processor();
+//    kaapi_assert_debug( quark->thread == kaapi_self_thread_context() );
+    kaapi_assert_debug( KAAPI_ATOMIC_READ(&sequence->tasklist.count_thief) == 0);
+  }
+//printf("%s sync!!\n", __PRETTY_FUNCTION__);  fflush(stdout);
 
   /* Pop & restore the frame: should use popframe */
-  kaapi_sched_lock(&quark->thread->stack.lock);
-  quark->thread->stack.sfp->tasklist = 0;
-  --quark->thread->stack.sfp;
-  *quark->thread->stack.sfp = sequence->save_fp;
-  kaapi_sched_unlock(&quark->thread->stack.lock);
+  kaapi_sched_lock(&thread->stack.lock);
+  thread->stack.sfp->tasklist = 0;
   
-#if 1//defined(TRACE)
+  --thread->stack.sfp;
+  *thread->stack.sfp = sequence->save_fp;
+  kaapi_sched_unlock(&thread->stack.lock);
+  
+#if defined(TRACE)
   printf("Pop Frame, in static sched: thread:%p, sfp:%p = {pc:%p, sp:%p, spdata:%p}\n", 
-      quark->thread, 
-      quark->thread->stack.sfp,
-      quark->thread->stack.sfp->pc,
-      quark->thread->stack.sfp->sp,
-      quark->thread->stack.sfp->sp_data
+      thread, 
+      thread->stack.sfp,
+      thread->stack.sfp->pc,
+      thread->stack.sfp->sp,
+      thread->stack.sfp->sp_data
   );
   fflush(stdout);
 #endif
@@ -617,6 +674,7 @@ void* kaapi_quark_task_format_get_off_param(
 )
 {
 //DEPRECATED
+abort();
   return 0;
 }
 
@@ -666,6 +724,7 @@ void kaapi_quark_task_format_set_view_param(
 )
 {
   kaapi_quark_task_t* arg __attribute__((unused))= (kaapi_quark_task_t*)sp;
+abort();
 }
 
 static
@@ -700,7 +759,7 @@ static void kaapi_quark_task_format_constructor(void)
   kaapi_format_taskregister_func(
     kaapi_quark_task_format,
     (kaapi_task_body_t)kaapi_wrapper_quark_function,
-    0,
+    (kaapi_task_body_t)kaapi_wrapper_wh_quark_function,
     "kaapi_quark_task_format",
     sizeof(kaapi_quark_task_t),
     kaapi_quark_task_format_get_count_params,
