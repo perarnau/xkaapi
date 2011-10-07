@@ -303,7 +303,7 @@ int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
 
   /* Uncomment these lines in order to activate preemption between DFG task
   */
-#if 1
+#if 0
   /* try to preempt it: mark the thief task' state with SIGNALED bit */
   uintptr_t oldstate = kaapi_task_orstate(pc->reserved, KAAPI_TASK_STATE_SIGNALED);
   if ((oldstate == KAAPI_TASK_STATE_INIT) || (oldstate == KAAPI_TASK_STATE_ALLOCATED))

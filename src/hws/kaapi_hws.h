@@ -110,7 +110,10 @@ typedef struct kaapi_ws_block
 
 } kaapi_ws_block_t;
 
-
+/*TODO: A préciser:
+   - info structure
+   - level == noeuds freres (un pere commun ?) ou tous les noeuds d'un meme niveau
+*/
 typedef struct kaapi_hws_level
 {
   /* block for a given kid at this level */

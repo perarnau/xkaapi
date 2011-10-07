@@ -277,6 +277,12 @@ static inline void kaapi_bitmap_value_set_32( kaapi_bitmap_value32_t* b, int i )
   (b->proc32) |= ((uint32_t)1)<< i; 
 }
 
+static inline int kaapi_bitmap_value_get_32( const kaapi_bitmap_value32_t* b, int i ) 
+{ 
+  kaapi_assert_debug( (i<32) && (i>=0) );
+  return ((b->proc32) & ((uint32_t)1)<< i) !=0; 
+}
+
 static inline void kaapi_bitmap_value_unset_32( kaapi_bitmap_value32_t* b, int i ) 
 { 
   kaapi_assert_debug( (i<32) && (i>=0) );
@@ -375,6 +381,12 @@ static inline void kaapi_bitmap_value_set_64( kaapi_bitmap_value64_t* b, int i )
 { 
   kaapi_assert_debug( (i<64) && (i>=0) );
   (b->proc64) |= ((uint64_t)1)<< i; 
+}
+
+static inline int kaapi_bitmap_value_get_64( const kaapi_bitmap_value64_t* b, int i ) 
+{ 
+  kaapi_assert_debug( (i<64) && (i>=0) );
+  return ((b->proc64) & ((uint64_t)1)<< i) !=0; 
 }
 
 static inline void kaapi_bitmap_value_unset_64( kaapi_bitmap_value64_t* b, int i ) 
@@ -479,6 +491,15 @@ static inline void kaapi_bitmap_value_set_128( kaapi_bitmap_value128_t* b, int i
     (b->proc128)[0] |= ((uint64_t)1)<< i; 
   else
     (b->proc128)[1] |= ((uint64_t)1)<< (i-64); 
+}
+
+static inline int kaapi_bitmap_value_get_128( const kaapi_bitmap_value128_t* b, int i ) 
+{ 
+  kaapi_assert_debug( (i<128) && (i>=0) );
+  if (i<64)
+    return ((b->proc128)[0] & ((uint64_t)1)<< i) !=0; 
+  else
+    return ((b->proc128)[1] & ((uint64_t)1)<< (i-64)) !=0; 
 }
 
 static inline void kaapi_bitmap_value_unset_128( kaapi_bitmap_value128_t* b, int i ) 
@@ -587,6 +608,7 @@ extern void (*kaapi_bitmap_clear)( kaapi_bitmap_t* b );
 extern int (*kaapi_bitmap_empty)( kaapi_bitmap_t* b );
 extern int (*kaapi_bitmap_value_empty)( kaapi_bitmap_value_t* b );
 extern void (*kaapi_bitmap_value_set)( kaapi_bitmap_value_t* b, int i );
+extern void (*kaapi_bitmap_value_get)( const kaapi_bitmap_value_t* b, int i );
 extern void (*kaapi_bitmap_value_unset)( kaapi_bitmap_value_t* b, int i );
 extern void (*kaapi_bitmap_value_copy)( kaapi_bitmap_value_t* retval, kaapi_bitmap_value_t* b);
 extern void (*kaapi_bitmap_swap0)( kaapi_bitmap_t* b, kaapi_bitmap_value_t* v );
@@ -621,6 +643,7 @@ typedef kaapi_bitmap_value128_t kaapi_bitmap_value_t;
 #    define kaapi_bitmap_value_clear(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_clear)(b)
 #    define kaapi_bitmap_value_empty(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_empty)(b)
 #    define kaapi_bitmap_value_set(b,i) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_set)((b),(i))
+#    define kaapi_bitmap_value_get(b,i) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_get)((b),(i))
 #    define kaapi_bitmap_value_unset(b,i) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_unset)((b),(i))
 #    define kaapi_bitmap_value_copy(r,b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_copy)((r),(b))
 #    define kaapi_bitmap_swap0(b,v) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_swap0)((b),(v))
@@ -756,10 +779,8 @@ static inline void kaapi_listrequest_iterator_update
   /* todo: optimize, mask can be stored neged, and can be ored */
   kaapi_bitmap_value_neg(&neg_mask, mask);
 
-//kaapi_mem_barrier();
   /* atomic read and clear only the masked bits */
   kaapi_bitmap_and(&orig_bitmap, &lrequests->bitmap, &neg_mask);
-//kaapi_mem_barrier();
 
   /* keep only the masked bits */
   kaapi_bitmap_value_and(&orig_bitmap, mask);

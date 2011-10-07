@@ -5,4 +5,4 @@ KAAPI_EMITSTEAL=hws \
 KAAPI_CPUSET=0,1 \
 KAAPI_STACKSIZE=536870912 \
 LD_LIBRARY_PATH=$HOME/install/xkaapi_hws/lib \
-gdb ./a.out
+./a.out

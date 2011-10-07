@@ -157,10 +157,29 @@ static void print_selftopo_levels(kaapi_processor_t* kproc)
   printf("\n");
 }
 
+/*
+*/
+static char* _kaapi_int2bin( char* string, unsigned int len, kaapi_bitmap_value_t value )
+{
+  unsigned int i;
+  for ( i=0; (i<len-1); ++i)
+  {
+    if ( kaapi_bitmap_value_get(&value,i) !=0)
+      string[i] = '1';
+    else
+      string[i] = '0';
+    kaapi_bitmap_value_unset(&value,i);
+    if (kaapi_bitmap_value_empty(&value)) break;
+  }
+  string[i] = 0;
+  return string;
+}
+
 __attribute__((unused))
 static void print_hws_levels(void)
 {
   kaapi_hws_levelid_t levelid;
+  char string[128];
   
   for (levelid = 0; levelid < (int)hws_level_count; ++levelid)
   {
@@ -184,7 +203,7 @@ static void print_hws_levels(void)
       printf("  -- block[%u, phys=%u] #%u: ", i, i, block->kid_count);
       for (j = 0; j < block->kid_count; ++j)
         printf(" %u", kaapi_default_param.kid2cpu[block->kids[j]]);
-      printf("\n");
+      printf("  mask:%s\n", _kaapi_int2bin(string, 128, block->kid_mask));
     }
   }
 }
