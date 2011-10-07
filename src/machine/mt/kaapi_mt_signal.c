@@ -71,7 +71,6 @@ void _kaapi_signal_dump_state(int sig)
     printf("Proc type       : %s\n", (kproc->proc_type == KAAPI_PROC_TYPE_CPU ? "CPU" : "GPU") );
     printf("Kprocessor cpuid: %i\n", kproc->cpuid);
     printf("Current thread  : %p\n", (void*)kproc->thread);
-    printf("Understealing   : %s\n", (kproc->issteal ? "yes" : "no") );
     printf("ReadyList       : %s", (kaapi_sched_readyempty(kproc) ? "no" : "yes") );
     fflush(stdout);
 

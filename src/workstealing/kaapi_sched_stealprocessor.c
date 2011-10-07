@@ -98,11 +98,10 @@ int kaapi_sched_stealprocessor(
     }
   }
 
-  /* 3/ steal current thread */
-  if ((kproc->thread !=0) && (kproc->issteal ==0))
+  /* 3/ steal current thread; make local copy because it can disappear */
+  thread = kproc->thread;
+  if (thread !=0)
   {
-    thread = kproc->thread;
-
     /* signal that count thefts are waiting */
     kaapi_sched_stealstack( thread, lrequests, lrrange );
 

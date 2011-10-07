@@ -55,13 +55,10 @@ int kaapi_sched_select_victim_rand(
   
   if (flag != KAAPI_SELECT_VICTIM) return 0;
   
-  if (kproc->fnc_selecarg ==0) 
-    kproc->fnc_selecarg[0] = (void*)(long)rand();
-
 redo_select:
   nbproc = kaapi_count_kprocessors;
   if (nbproc <=1) return EINVAL;
-  victimid = rand_r( (unsigned int*)&kproc->fnc_selecarg ) % nbproc;
+  victimid = rand_r( (unsigned int*)&kproc->seed ) % nbproc;
 
   /* Get the k-processor */    
   victim->kproc = kaapi_all_kprocessors[ victimid ];

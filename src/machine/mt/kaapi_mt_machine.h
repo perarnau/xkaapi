@@ -189,6 +189,7 @@ extern int kaapi_makecontext( struct kaapi_processor_t* proc, kaapi_thread_conte
 */
 extern int kaapi_setcontext( struct kaapi_processor_t* proc, kaapi_thread_context_t* thread );
 
+
 /** \ingroup WS
     Higher level context manipulation.
     Get the context of the running processor proc.
@@ -402,11 +403,10 @@ typedef struct kaapi_processor_t {
   /* free list */
   kaapi_lfree_t		       lfree;                         /* queue of free context */
   int                      sizelfree;                     /* size of the queue */
-
-  uint32_t                 issteal;                       /* */
   
+  unsigned int             seed;                          /* for the kproc own random generator */
   kaapi_selectvictim_fnc_t fnc_select;                    /* function to select a victim */
-  void*                    fnc_selecarg[4];               /* arguments for select victim function, 0 at initialization */
+  uintptr_t                fnc_selecarg[4];               /* arguments for select victim function, 0 at initialization */
 
   kaapi_emitsteal_fnc_t	   emitsteal;                     /* virtualization of the WS algorithm */
   void*                    emitsteal_ctxt;                /* specific to the WS algorithm */

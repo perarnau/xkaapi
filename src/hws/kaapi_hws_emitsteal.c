@@ -169,8 +169,8 @@ static kaapi_request_status_t steal_block_leaves
 //    return KAAPI_REQUEST_S_NOK;
   
 redo_rand:
-#warning "USE rand_r"
-  kid = block->kids[rand() % block->kid_count];
+
+  kid = block->kids[rand_r(&kproc->seed) % block->kid_count];
 //  if (kid == kproc->kid) goto redo_rand;
   
   /* get the leaf block (ie. block at flat level) */
@@ -303,8 +303,6 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
   kaapi_listrequest_iterator_prepare(&lri);
 
   /* post the stealing request */
-  kproc->issteal = 1;
-
   kaapi_request_post(
     &hws_requests,
     &kaapi_requests_list[kproc->kid],
@@ -390,8 +388,6 @@ redo_levels:
   kaapi_assert(request->status == &status);
   kaapi_assert(kaapi_request_status(request) == KAAPI_REQUEST_S_NOK);
   
-  kproc->issteal = 0;
-
 #if defined(KAAPI_DEBUG) 
   kproc->thief_task = 0;
   ++kproc->reply_version;
@@ -419,7 +415,6 @@ on_request_success:
   kaapi_assert( lri.count_in == lri.count_out );
 #endif
 
-  kproc->issteal = 0;
 #if defined(KAAPI_DEBUG) 
   ++kproc->reply_version;
 #endif

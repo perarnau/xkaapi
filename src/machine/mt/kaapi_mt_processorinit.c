@@ -72,7 +72,6 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
   kproc->kid          = kpi->kid;
   kproc->proc_type    = kpi->proc_type;
   kproc->kpi          = kpi;
-  kproc->issteal      = 0;
  
   /* init hierarchy information */
   kproc->numa_nodeid = ~0;
@@ -98,6 +97,7 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
 
   kaapi_lfree_clear( kproc );
 
+  kproc->seed = kproc->kid;
   kproc->fnc_selecarg[0] = 0;
   kproc->fnc_selecarg[1] = 0;
   kproc->fnc_selecarg[2] = 0;

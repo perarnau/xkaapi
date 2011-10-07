@@ -87,8 +87,6 @@ redo_select:
   if (kproc == victim.kproc) return KAAPI_REQUEST_S_NOK;
   kaapi_assert_debug( (victim.kproc->kid >=0) && (victim.kproc->kid <kaapi_count_kprocessors));
 
-  /* mark current processor as stealing */
-  kproc->issteal = 1;
 
   /* (1) 
      Fill & Post the request to the victim processor 
@@ -188,12 +186,10 @@ enter:
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
 #endif
 
-  kproc->issteal = 0;
   return KAAPI_REQUEST_S_NOK;
   
 return_value:
   /* mark current processor as no stealing anymore */
-  kproc->issteal = 0;
   kaapi_assert_debug( (kaapi_request_status_get(&status) != KAAPI_REQUEST_S_POSTED) ); 
 
   /* test if my request is ok */
