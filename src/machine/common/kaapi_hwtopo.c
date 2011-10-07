@@ -40,6 +40,8 @@
 ** terms.
 ** 
 */
+
+#include <string.h>
 #include "kaapi_impl.h"
 #include "kaapi_procinfo.h"
 #if defined(KAAPI_USE_HWLOC)
@@ -120,8 +122,8 @@ static void kaapi_hw_standardinit(void)
   kaapi_assert_debug(kaapi_default_param.cpu2kid);
   for (size_t i=0; i<kaapi_default_param.cpucount; ++i)
   {
-    kaapi_default_param.kid2cpu[i]= -1;
-    kaapi_default_param.cpu2kid[i]= -1;
+    kaapi_default_param.kid2cpu[i]= -1U;
+    kaapi_default_param.cpu2kid[i]= -1U;
   }
 
   kaapi_procinfo_list_init(kaapi_default_param.kproc_list);
@@ -185,6 +187,10 @@ int kaapi_hw_init(void)
     {
       if (obj->arity >1) { ++memdepth; }
     }
+    else if (obj->type == HWLOC_OBJ_SOCKET)
+    {
+      ++memdepth;
+    }
     else if (obj->type == HWLOC_OBJ_NODE)
     {
       ++memdepth;
@@ -221,13 +227,26 @@ int kaapi_hw_init(void)
             obj->cpuset 
         );
       }
+
+      kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_MACHINE;
     }
-    else if ((obj->type == HWLOC_OBJ_NODE) || (obj->type == HWLOC_OBJ_CACHE))
+    else if ((obj->type == HWLOC_OBJ_NODE) || (obj->type == HWLOC_OBJ_CACHE) || (obj->type == HWLOC_OBJ_SOCKET))
     {
       --memdepth;
       ncousin = (int)kaapi_hw_countcousin( obj );
       kaapi_default_param.memory.levels[memdepth].count = ncousin;
       kaapi_default_param.memory.levels[memdepth].affinity = (kaapi_affinityset_t*)calloc(ncousin, sizeof(kaapi_affinityset_t) );
+      if (obj->type == HWLOC_OBJ_NODE)
+	kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_NUMA;
+      else if (obj->type == HWLOC_OBJ_SOCKET)
+	kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_SOCKET;
+      else if (obj->type == HWLOC_OBJ_CACHE)
+      {
+	if (obj->attr && (obj->attr->cache.depth == 3))
+	  kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_L3;
+	else
+	  kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_MAX;
+      }
 
       /* iterator over all cousins */
       idx = 0;
@@ -261,7 +280,7 @@ int kaapi_hw_init(void)
           obj = obj->next_cousin;
         }
       }
-    } 
+    }
   }
   /* end of detection of memory hierarchy */
   

@@ -58,13 +58,16 @@
 int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 {
   int err;
+  kaapi_request_status_t  ws_status;
+  kaapi_task_t*           startup_task;
+  kaapi_thread_t*         self_thread;
   kaapi_thread_context_t* thread;
   kaapi_thread_context_t* thread_condition;
   kaapi_task_t*           task_condition;
   kaapi_tasklist_t*       tasklist;
-  kaapi_thread_context_t* ctxt;
 
   kaapi_assert_debug( kproc !=0 );
+  kaapi_assert_debug( kproc->thread !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -75,10 +78,10 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 
   /* here is the reason of suspension */
   thread_condition = kproc->thread;
-  kaapi_assert_debug( kproc == thread_condition->proc);
+  kaapi_assert_debug( kproc == thread_condition->stack.proc);
 
   /* first look if tasklist is built on this frame */
-  tasklist = thread_condition->sfp->tasklist;
+  tasklist = thread_condition->stack.sfp->tasklist;
   if (tasklist !=0) 
   {
     task_condition =0;
@@ -92,8 +95,8 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     }
   } 
   else {
-    task_condition = thread_condition->sfp->pc;
-    if (kaapi_task_state_isready( kaapi_task_getstate(task_condition) )) 
+    task_condition = thread_condition->stack.sfp->pc;
+    if (kaapi_task_isready( task_condition )) 
     {
 #if defined(KAAPI_USE_PERFCOUNTER)
       kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
@@ -103,9 +106,10 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     }
   }
 
-  /* such threads are sticky: the control flow is on return to this call and
-     without thread user context switch, only this activation frame could wakeup
-     the thread
+  /* such threads are sticky: the control flow will return to this call 
+     with the same thread as active thread on the kproc.
+     Without thread user's context switch, only this control flow could wakeup
+     the thread.
   */
   kaapi_assert_debug( kaapi_cpuset_empty( &thread_condition->affinity ) );
 
@@ -113,103 +117,107 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   kaapi_setcontext(kproc, 0);
   kaapi_wsqueuectxt_push( kproc, thread_condition );
 
+#if defined(HUGEDEBUG)
+  printf("%i::[IN] SchedSuspend: wakeup condition/thread:%p return!\n", 
+      kaapi_get_self_kid(),
+      (void*)thread_condition
+  );
+  fflush(stdout);
+#endif
+
   do {
 #if defined(KAAPI_USE_NETWORK)
     kaapi_network_poll();
 #endif
 
+    /* end of a parallel region ? */
     if (kaapi_suspendflag)
       kaapi_mt_suspend_self(kproc);
 
     /* wakeup a context: either a ready thread (first) or a suspended thread.
        Precise the suspended thread 'thread_condition' in order to wakeup it first and task_condition.
     */
-    ctxt = kaapi_sched_wakeup(kproc, kproc->kid, thread_condition, task_condition);
-    if (ctxt ==0)
+    thread = kaapi_sched_wakeup(kproc, kproc->kid, thread_condition, task_condition);
+    if (thread !=0)
     {
-      kaapi_assert_debug(kproc->thread == 0);
-      kproc->thread = 0;
-    }
-    else {
-      kaapi_setcontext( kproc, ctxt );
-      kaapi_assert_debug(kproc->thread == ctxt );
-    }
-
-    if (kproc->thread == thread_condition) 
-    {
-      kaapi_assert((tasklist !=0) || (kproc->thread->sfp->pc == task_condition));
-#if defined(KAAPI_USE_PERFCOUNTER)
-      kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
-      kaapi_event_push0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
-#endif
-      return 0;
-    }
-#if defined(KAAPI_DEBUG)
-    {
-      kaapi_sched_lock( &kproc->lock );
-      kaapi_wsqueuectxt_cell_t* cell;
-      kaapi_thread_context_t* curr;
-      int found = 0;
-      /* search iff ctxt_condition is ready list */
-      curr = kproc->lready._front;
-      while (curr !=0) 
+      if (thread == thread_condition)
       {
-        if (curr == thread_condition) { found = 1; break; }
-        curr = curr->_next;
-      }
+        /* push kproc context into free list */
+        if (kproc->thread !=0)
+          kaapi_lfree_push( kproc, kproc->thread );
+
+        kaapi_setcontext( kproc, thread_condition );
         
-      /* else search iff ctxt_condition is yet in suspend list, else it should be in it! */
-      if (!found)
-      {
-        cell = kproc->lsuspend.head;
-        while (cell !=0)
-        {
-          if (cell->thread == thread_condition) { found=1; break; }
-          kaapi_wsqueuectxt_cell_t* nextcell = cell->next;
-          cell = nextcell;
-        }
+        /* ok suspended thread is ready for execution */
+        kaapi_assert((tasklist !=0) || (thread->stack.sfp->pc == task_condition));
+#if defined(KAAPI_USE_PERFCOUNTER)
+        kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
+        kaapi_event_push0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
+#endif
+#if defined(HUGEDEBUG)
+  printf("%i::[OUT] SchedSuspend: wakeup condition/thread:%p return!\n", 
+      kaapi_get_self_kid(),
+      (void*)thread
+  );
+  fflush(stdout);
+#endif
+        return 0;
       }
-      kaapi_assert_m(found !=0, "cannot find ctxt_condition in lists");
-      kaapi_sched_unlock( &kproc->lock );
-    }
-#endif    
 
-    if (kproc->thread !=0)
+      /* push kproc context into free list */
+      if (kproc->thread !=0)
+        kaapi_lfree_push( kproc, kproc->thread );
+
+      kaapi_setcontext( kproc, thread );
+
+#if defined(HUGEDEBUG)
+  printf("%i::SchedSuspend: wakeup thread:%p\n", 
+      kaapi_get_self_kid(),
+      (void*)thread
+  );
+  fflush(stdout);
+#endif
+
       goto redo_execution;
+    }
 
-/* warning: to avoid steal of processor ! */
-//continue;    
-
-    /* else steal a task */
+    /* always allocate a thread before emitting a steal request */
     if (kproc->thread ==0)
     {
-      ctxt = kaapi_context_alloc(kproc);
-      kaapi_assert_debug( ctxt != 0 );
-
-      kaapi_setcontext(kproc, ctxt);
-
-      /* on return, either a new thread has been stolen, either a task as been put into ctxt or thread ==0 */
-      thread = kaapi_sched_emitsteal( kproc );
-
-      if (kaapi_frame_isempty(ctxt->sfp))
-      {
-        /* push it into the free list */
-        kaapi_setcontext( kproc , 0);
-
-        /* wait end of thieves before releasing a thread */
-        kaapi_sched_lock(&kproc->lock);
-        kaapi_lfree_push( kproc, ctxt );
-        kaapi_sched_unlock(&kproc->lock);
-      }
-      if (thread ==0) {
-        //kaapi_sched_advance(kproc);
-        continue;
-      }
-
+      thread = kaapi_context_alloc(kproc);
+      kaapi_assert_debug( thread != 0 );
+      
       kaapi_setcontext(kproc, thread);
     }
 
+    /* steal request */
+    ws_status = kproc->emitsteal(kproc);
+    if (ws_status != KAAPI_REQUEST_S_OK)
+      continue;
+
+#if defined(HUGEDEBUG)
+    printf("%i:: SchedSuspend: steal something: thief task:%p, original task:%p\n", 
+        kaapi_get_self_kid(),
+        (void*)kproc->thief_task,
+        (void*)((kaapi_tasksteal_arg_t*)kproc->thief_task->sp)->origin_task
+    );
+    fflush(stdout);
+#endif
+
+    /* push startup task ? */
+    self_thread = kaapi_threadcontext2thread(kproc->thread);
+    startup_task = kaapi_thread_toptask( self_thread );
+    kaapi_task_init(startup_task, (kaapi_task_body_t)kaapi_taskstartup_body, kproc);
+    kaapi_thread_pushtask(self_thread);
+
 redo_execution:
+#if defined(HUGEDEBUG)
+  printf("%i:: SchedSuspend: begin execframe\n", 
+      kaapi_get_self_kid()
+  );
+  fflush(stdout);
+#endif
+
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
     kaapi_event_push0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
@@ -225,8 +233,8 @@ redo_execution:
     }
     else
 #endif /* KAAPI_USE_CUDA */
-    if (kproc->thread->sfp->tasklist ==0)
-      err = kaapi_thread_execframe(kproc->thread);
+    if (kproc->thread->stack.sfp->tasklist ==0)
+      err = kaapi_stack_execframe(&kproc->thread->stack);
     else
       err = kaapi_thread_execframe_tasklist(kproc->thread);
 
@@ -236,30 +244,42 @@ redo_execution:
 #endif
     kaapi_assert( err != EINVAL);
 
-    ctxt = kproc->thread;
-
-    /* update */
-    kaapi_setcontext(kproc, 0);
+#if defined(HUGEDEBUG)
+    printf("%i:: SchedSuspend: end execframe, errorcode = %i\n", 
+        kaapi_get_self_kid(),
+        err
+    );
+    fflush(stdout);
+#endif
 
     if (err == EWOULDBLOCK) 
     {
+      /* push it: suspended because top task is not ready */
+      thread = kproc->thread;
+      kaapi_setcontext(kproc, 0);
+      kaapi_wsqueuectxt_push( kproc, thread );
+
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_SUSPEND);
 #endif
-      /* push it: suspended because top task is not ready */
-      kaapi_wsqueuectxt_push( kproc, ctxt );
     } 
     /* WARNING: this case is used by static scheduling in order to detach a thread context 
        from a thread at the end of an iteration. See kaapi_thread_execframe, kaapi_tasksignalend_body.
        Previous code: without the if
     */
-    else if (ctxt !=0) //(err == EINTR) 
+    else if ((err == ECHILD) || (err == EINTR))
     {
-      /* wait end of thieves before releasing a thread */
-      kaapi_sched_lock(&kproc->lock);
-      kaapi_lfree_push( kproc, ctxt );
-      kaapi_sched_unlock(&kproc->lock);
+      /* detach thread */
+      kaapi_setcontext(kproc, 0);
     }
+#if defined(KAAPI_DEBUG)
+    else 
+    {
+      kaapi_assert( kaapi_frame_isempty( kproc->thread->stack.sfp ) );
+      kaapi_assert( kproc->thread->stack.sfp == kproc->thread->stack.stackframe );
+    }
+#endif
+
   } while (1);
   
   return EINTR;

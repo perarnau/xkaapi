@@ -42,6 +42,14 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
+double kaapi_get_elapsedtime(void)
+{
+  struct timeval tv;
+  int err = gettimeofday( &tv, 0);
+  if (err  !=0) return 0;
+  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
+}
 
 #pragma kaapi task write(result) read(r1,r2)
 void sum( long* result, const long* r1, const long* r2)
@@ -59,27 +67,31 @@ void fibonacci(long* result, const long n)
 #pragma kaapi data alloca(r1,r2)
     long r1,r2;
     fibonacci( &r1, n-1 );
+#pragma kaapi notask    
     fibonacci( &r2, n-2 );
     sum( result, &r1, &r2);
   }
 }
 
-#pragma kaapi task read(result) 
-void print_result( const long* result )
+void print_result( double delay, long n, const long* result )
 {
-  printf("Fibonacci(30)=%li\n", *result);
+  printf("Fibonacci(%li)=%li\n", n, *result);
+  printf("Time (s)=%lf\n", delay);
 }
 
 int main( int argc, char** argv)
 {
   long result;
+  double t0, t1;
   int n;
   if (argc >1) n = atoi(argv[1]);
   else n = 30;
+  t0 = kaapi_get_elapsedtime();
 #pragma kaapi parallel
   {
     fibonacci(&result, n);
-    print_result(&result);
   }
+  t1 = kaapi_get_elapsedtime();
+  print_result(t1-t0, n, &result);
   return 0;
 }

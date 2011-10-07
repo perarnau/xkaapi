@@ -52,11 +52,15 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
 {
   kaapi_assert_debug( thread != 0);
 
-  thread->sfp        = thread->stackframe;
-  thread->esfp       = thread->stackframe;
-  thread->sfp->sp    = thread->sfp->pc  = thread->task; /* empty frame */
-  thread->sfp->sp_data = (char*)&thread->data; /* empty frame */
-  thread->sfp->tasklist= 0;
+  thread->stack.data = (char*)&thread->data;
+  kaapi_stack_clear( &thread->stack );
+
+  kaapi_task_init_withstate(
+    &thread->stealreserved_task, 
+    kaapi_tasksteal_body, 
+    &thread->stealreserved_arg, 
+    KAAPI_TASK_STATE_ALLOCATED
+  );
 
   thread->the_thgrp  = 0;
   thread->unstealable= 0;
@@ -70,9 +74,6 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
 
   thread->wcs        = 0;
 
-  /* zero all bytes from static_reply until end of sc_data */
-  bzero(&thread->static_reply, (ptrdiff_t)(&thread->sc_data+1)-(ptrdiff_t)&thread->static_reply );
-
 #if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
   thread->thgrp      = 0;
 #endif
@@ -85,7 +86,7 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
 void kaapi_thread_set_unstealable(unsigned int fu)
 {
   kaapi_thread_context_t* const thread = kaapi_self_thread_context();
-  kaapi_sched_lock(&thread->proc->lock);
+  kaapi_sched_lock(&thread->stack.proc->lock);
   thread->unstealable = fu;
-  kaapi_sched_unlock(&thread->proc->lock);
+  kaapi_sched_unlock(&thread->stack.proc->lock);
 }

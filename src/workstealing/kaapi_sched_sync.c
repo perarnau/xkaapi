@@ -87,7 +87,7 @@ int kaapi_sched_sync_(kaapi_thread_context_t* thread)
 #endif
 
   /* If pure DFG frame and empty return */
-  if ((thread->sfp->tasklist == 0) && kaapi_frame_isempty( thread->sfp ) ) 
+  if ((thread->stack.sfp->tasklist == 0) && kaapi_frame_isempty( thread->stack.sfp ) ) 
     return 0;
 
   /* here affinity should be deleted (not scalable concept) 
@@ -97,12 +97,12 @@ int kaapi_sched_sync_(kaapi_thread_context_t* thread)
   kaapi_cpuset_copy(&save_affinity, &thread->affinity);
   kaapi_cpuset_clear(&thread->affinity);
 
-  savepc = thread->sfp->pc;
+  savepc = thread->stack.sfp->pc;
 #if defined(KAAPI_DEBUG)
-  save_fp = (kaapi_frame_t*)thread->sfp;
+  save_fp = (kaapi_frame_t*)thread->stack.sfp;
 #endif
-  save_esfp = thread->esfp;
-  thread->esfp = (kaapi_frame_t*)thread->sfp;
+  save_esfp = thread->stack.esfp;
+  thread->stack.esfp = (kaapi_frame_t*)thread->stack.sfp;
 
   /* write barrier in order to commit update */
   kaapi_mem_barrier();
@@ -118,8 +118,8 @@ redo:
   }
   else
 #endif /* KAAPI_USE_CUDA */
-  if (thread->sfp->tasklist == 0) 
-    err = kaapi_thread_execframe(thread);
+  if (thread->stack.sfp->tasklist == 0) 
+    err = kaapi_stack_execframe(&thread->stack);
   else
     err = kaapi_thread_execframe_tasklist(thread);
 
@@ -127,7 +127,7 @@ redo:
   {
     kaapi_sched_suspend( kaapi_get_current_processor() );
     kaapi_assert_debug( kaapi_self_thread_context() == thread );
-    kaapi_assert_debug( thread->proc == kaapi_get_current_processor() );
+    kaapi_assert_debug( thread->stack.proc == kaapi_get_current_processor() );
     goto redo;
   }
 
@@ -138,11 +138,11 @@ redo:
     return err;
 
 #if defined(KAAPI_DEBUG)
-  kaapi_assert_debug(save_fp == thread->sfp);
+  kaapi_assert_debug(save_fp == thread->stack.sfp);
 #endif
   /* flush the stack of task */
-  thread->sfp->pc = thread->sfp->sp = savepc;
-  thread->esfp = save_esfp;
+  thread->stack.sfp->pc = thread->stack.sfp->sp = savepc;
+  thread->stack.esfp = save_esfp;
 
   return err;
 }

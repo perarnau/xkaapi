@@ -38,6 +38,7 @@ libkaapi_la_SOURCES=\
   misc/kaapi_default_netapi.c\
   misc/kaapi_event_flush.c\
   misc/kaapi_splitter.c\
+  task/kaapi_fmt_initbasic.c \
   task/kaapi_fmt_accessors.c \
   task/kaapi_fmt_register.c \
   task/kaapi_fmt_taskregister.c \
@@ -50,10 +51,16 @@ libkaapi_la_SOURCES=\
   kaapi_error.h \
   kaapi_machine.h \
   kaapi.h \
+  kaapi_atomic.h \
   kaapi_impl.h \
+  kaapi_format.h \
+  kaapi_hashmap.h \
+  kaapi_allocator.h \
+  kaapi_task.h \
   kaapi_network.h \
   kaapi_compiler.h \
   kaapi_event.h\
+  kaapi_event_record.h\
   machine/common/kaapi_procinfo.c \
   machine/common/kaapi_procinfo.h \
   machine/common/kaapi_hwtopo.c \
@@ -82,7 +89,15 @@ libkaapi_la_SOURCES=\
   workstealing/kaapi_sched_wsqueue.c \
   workstealing/kaapi_sched_affinity_queue.c \
   hws/kaapi_hws_initialize.c \
-  hws/kaapi_ws_queue_lifo.c
+  hws/kaapi_hws_emitsteal.c \
+  hws/kaapi_hws_pushtask.c \
+  hws/kaapi_hws_splitter.c \
+  hws/kaapi_hws_adaptive.c \
+  hws/kaapi_hws_misc.c \
+  hws/kaapi_hws_sched_sync.c \
+  hws/kaapi_hws_counters.c \
+  hws/kaapi_ws_queue_lifo.c \
+  hws/kaapi_ws_queue_kproc.c
 
 #Libtask
 libkaapi_la_SOURCES+=\
@@ -95,6 +110,7 @@ libkaapi_la_SOURCES+=\
   thread/kaapi_thread_saveframe.c \
   thread/kaapi_thread_pushpopframe.c \
   thread/kaapi_thread_clear.c \
+  thread/kaapi_thread_startup.c \
   thread/kaapi_thread_execframe.c \
   thread/kaapi_thread_execframe_tasklist.c \
   thread/kaapi_thread_readylist_generic_execframe.c \
@@ -109,8 +125,8 @@ libkaapi_la_SOURCES+=\
   task/kaapi_task_standard.c \
   task/kaapi_task_aftersteal.c \
   task/kaapi_task_steal.c \
+  task/kaapi_task_steal_dfg.c \
   task/kaapi_task_stealready_body.c \
-  task/kaapi_task_splitter_dfg.c \
   task/kaapi_task_splitter_adapt.c \
   task/kaapi_task_splitter_readylist.c \
   task/kaapi_task_pushstealcontext.c \
@@ -124,6 +140,9 @@ libkaapi_la_SOURCES+=\
   task/kaapi_task_preempt_thief.c \
   task/kaapi_task_preemptpoint.c \
   task/kaapi_task_finalize.c \
+  task/kaapi_task_steal_adapt.c \
+  task/kaapi_task_computeready.c \
+  task/kaapi_task_pushtaskdfg_queue.c \
   static/kaapi_stsched_tasksetstatic.c \
   static/kaapi_threadgroup_nothgrp.c\
   static/kaapi_stsched_taskrecv.c\
@@ -192,6 +211,7 @@ endif
 
 include_HEADERS=\
   kaapi.h \
+  kaapi_atomic.h\
   kaapi_error.h
 
 if KAAPI_TARGET_CUDA

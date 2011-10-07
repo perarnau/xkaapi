@@ -53,14 +53,9 @@ int kaapi_sched_select_victim_rand_first0(
 {
   int nbproc, victimid;
 
-  if (flag == KAAPI_STEAL_SUCCESS)
-  {
-    kproc->fnc_selecarg[1] = (void*)1; /* ok */
-  }
-  
   if (flag != KAAPI_SELECT_VICTIM) return 0;
   
-  if (kproc->fnc_selecarg[0] ==0) 
+  if (kproc->fnc_selecarg ==0) 
   {
     kproc->fnc_selecarg[0] = (void*)(long)rand();
     victim->kproc = kaapi_all_kprocessors[ 0 ];
@@ -68,15 +63,11 @@ int kaapi_sched_select_victim_rand_first0(
   }
 
 redo_select:
-  /* will have not steal some thing, steal kproc 0 */
-  if ((kproc->kid !=0) && (kproc->fnc_selecarg[1] == 0))
-  {
-    victim->kproc = kaapi_all_kprocessors[0];
-    return 0;
-  }
   nbproc = kaapi_count_kprocessors;
   if (nbproc <=1) return EINVAL;
-  victimid = rand_r( (unsigned int*)&kproc->fnc_selecarg[0] ) % nbproc;
+  victimid = rand_r( (unsigned int*)&kproc->fnc_selecarg ) % (nbproc/2);
+  if (victimid) 
+    victimid = rand_r( (unsigned int*)&kproc->fnc_selecarg ) % nbproc;
 
   /* Get the k-processor */    
   victim->kproc = kaapi_all_kprocessors[ victimid ];

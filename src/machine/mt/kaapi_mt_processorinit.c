@@ -64,6 +64,10 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
   int i;
   kaapi_thread_context_t* ctxt;
 
+  kproc->thief_task   = 0;  
+
+  kproc->thread       = 0;  
+  kproc->thread       = 0;  
   kproc->thread       = 0;  
   kproc->kid          = kpi->kid;
   kproc->proc_type    = kpi->proc_type;
@@ -85,8 +89,15 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
   
   kaapi_listrequest_init( kproc, &kproc->hlrequests );
 
+#if defined(KAAPI_DEBUG)
+  kproc->req_version = 0;
+  kproc->reply_version = 0;
+  kproc->compute_version =0;
+#endif
+
   kaapi_wsqueuectxt_init( &kproc->lsuspend );
   kaapi_sched_initready(kproc);
+
   kaapi_lfree_clear( kproc );
 
   kproc->fnc_selecarg[0] = 0;

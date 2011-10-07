@@ -70,17 +70,18 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)sp;
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
 
-  kaapi_assert( thread->sfp == (kaapi_frame_t*)uthread );
+  kaapi_assert( thread->stack.sfp == (kaapi_frame_t*)uthread );
 
   /* here... begin execute frame tasklist*/
-  kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_BEG );
+  kaapi_event_push0(thread->stack.proc, thread, KAAPI_EVT_STATIC_BEG );
   
   /* Push a new frame */
-  fp = (kaapi_frame_t*)thread->sfp;
+  fp = (kaapi_frame_t*)thread->stack.sfp;
   /* push the frame for the next task to execute */
   save_fp = *fp;
-  thread->sfp[1] = *fp;
-  ++thread->sfp;
+  thread->stack.sfp[1] = *fp;
+  kaapi_writemem_barrier();
+  ++thread->stack.sfp;
   
   /* unset steal capability and wait no more thief 
      lock the kproc: it ensure that no more thief has reference on it 
@@ -88,8 +89,8 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   save_state = thread->unstealable;
   kaapi_thread_set_unstealable(1);
 
-  /* kaapi_sched_lock(&thread->proc->lock); */
-  /* kaapi_sched_unlock(&thread->proc->lock); */
+  /* kaapi_sched_lock(&thread->stack.proc->lock); */
+  /* kaapi_sched_unlock(&thread->stack.proc->lock); */
 
   /* some information to pass to the task : TODO */
   arg->schedinfo.nkproc[KAAPI_PROC_TYPE_MPSOC] = 0;
@@ -143,12 +144,12 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
         + arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU];
   }
 
-  kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
+  kaapi_event_push0(thread->stack.proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
 
   /* the embedded task cannot be steal because it was not visible to thieves */
   arg->sub_body( arg->sub_sp, uthread, &arg->schedinfo );
 
-  kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_TASK_END );
+  kaapi_event_push0(thread->stack.proc, thread, KAAPI_EVT_STATIC_TASK_END );
 
   /* allocate the tasklist for this task
   */
@@ -164,7 +165,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   t1 = kaapi_get_elapsedtime();
 #endif
   KAAPI_ATOMIC_WRITE(&tasklist->count_thief, 0);
-  kaapi_event_push0(thread->proc, thread, KAAPI_EVT_STATIC_END );
+  kaapi_event_push0(thread->stack.proc, thread, KAAPI_EVT_STATIC_END );
 
   /* populate tasklist with initial ready tasks */
   kaapi_thread_tasklistready_push_init( &tasklist->rtl, &tasklist->readylist );
@@ -192,7 +193,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   
   /* restore state */
   kaapi_thread_set_unstealable(save_state);
-  thread->sfp->tasklist = tasklist;
+  thread->stack.sfp->tasklist = tasklist;
   
 //  kaapi_print_state_tasklist( tasklist );
 //  printf("----------->>> before execution\n\n");
@@ -222,11 +223,11 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
 #endif
 
   /* Pop & restore the frame */
-  kaapi_sched_lock(&thread->proc->lock);
-  thread->sfp->tasklist = 0;
-  --thread->sfp;
-  *thread->sfp = save_fp;
-  kaapi_sched_unlock(&thread->proc->lock);
+  kaapi_sched_lock(&thread->stack.proc->lock);
+  thread->stack.sfp->tasklist = 0;
+  --thread->stack.sfp;
+  *thread->stack.sfp = save_fp;
+  kaapi_sched_unlock(&thread->stack.proc->lock);
 
 #if 1 /* TODO: do not allocate if multiple uses of tasklist */
   kaapi_tasklist_destroy( tasklist );

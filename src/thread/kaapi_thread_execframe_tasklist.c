@@ -59,6 +59,7 @@
 */
 int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 {
+  kaapi_stack_t* const stack = &thread->stack;
   kaapi_task_t*              pc;         /* cache */
   kaapi_tasklist_t*          tasklist;
   kaapi_taskdescr_t*         td;
@@ -68,16 +69,16 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   int                        err =0;
   uint32_t                   cnt_exec = 0; /* executed tasks during one call of execframe_tasklist */
 
-  kaapi_assert_debug( thread->sfp >= thread->stackframe );
-  kaapi_assert_debug( thread->sfp < thread->stackframe+KAAPI_MAX_RECCALL );
-  tasklist = thread->sfp->tasklist;
+  kaapi_assert_debug( stack->sfp >= stack->stackframe );
+  kaapi_assert_debug( stack->sfp < stack->stackframe+KAAPI_MAX_RECCALL );
+  tasklist = stack->sfp->tasklist;
   kaapi_assert_debug( tasklist != 0 );
 
   /* here... begin execute frame tasklist*/
-  kaapi_event_push0(thread->proc, thread, KAAPI_EVT_FRAME_TL_BEG );
+  kaapi_event_push0(stack->proc, thread, KAAPI_EVT_FRAME_TL_BEG );
 
   /* get the processor type to select correct entry point */
-  proc_type = thread->proc->proc_type;
+  proc_type = stack->proc->proc_type;
   
   /* jump to previous state if return from suspend 
      (if previous return from EWOULDBLOCK)
@@ -112,7 +113,7 @@ execute_first:
         /* get the correct body for the proc type */
         if (td->fmt ==0)
         { /* currently some internal tasks do not have format */
-          body = kaapi_task_getuserbody( pc );
+          body = kaapi_task_getbody( pc );
         }
         else 
         {
@@ -121,30 +122,30 @@ execute_first:
         kaapi_assert_debug(body != 0);
 
         /* push the frame for the running task: pc/sp = one before td (which is in the stack)à */
-        fp = (kaapi_frame_t*)thread->sfp;
-        thread->sfp[1].sp = kaapi_thread_tasklist_getsp(tasklist); 
-        thread->sfp[1].pc = thread->sfp[1].sp;
-        thread->sfp[1].sp_data = fp->sp_data;
+        fp = (kaapi_frame_t*)stack->sfp;
+        stack->sfp[1].sp = kaapi_thread_tasklist_getsp(tasklist); 
+        stack->sfp[1].pc = stack->sfp[1].sp;
+        stack->sfp[1].sp_data = fp->sp_data;
 
         /* kaapi_writemem_barrier(); */
 
-        fp = ++thread->sfp;
+        fp = ++stack->sfp;
         kaapi_assert_debug((char*)fp->sp > (char*)fp->sp_data);
-        kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
+        kaapi_assert_debug( stack->sfp - stack->stackframe <KAAPI_MAX_RECCALL);
         
         /* start execution of the user body of the task */
         KAAPI_DEBUG_INST(kaapi_assert( td->u.acl.exec_date == 0 ));
-        kaapi_event_push1(thread->proc, thread, KAAPI_EVT_TASK_BEG, pc );
-        body( pc->sp, (kaapi_thread_t*)thread->sfp );
-        kaapi_event_push1(thread->proc, thread, KAAPI_EVT_TASK_END, pc );  
+        kaapi_event_push1(stack->proc, thread, KAAPI_EVT_TASK_BEG, pc );
+        body( pc->sp, (kaapi_thread_t*)stack->sfp );
+        kaapi_event_push1(stack->proc, thread, KAAPI_EVT_TASK_END, pc );  
         KAAPI_DEBUG_INST( td->u.acl.exec_date = kaapi_get_elapsedns() );
         ++cnt_exec;
 
         /* new tasks created ? */
-        if (unlikely(fp->sp > thread->sfp->sp))
+        if (unlikely(fp->sp > stack->sfp->sp))
         {
 redo_frameexecution:
-          err = kaapi_thread_execframe( thread );
+          err = kaapi_stack_execframe( &thread->stack );
           if (err == EWOULDBLOCK)
           {
             tasklist->context.chkpt     = 1;
@@ -156,7 +157,7 @@ redo_frameexecution:
         }
         
         /* pop the frame, even if not used */
-        fp = --thread->sfp;
+        fp = --stack->sfp;
       }
 
       /* push in the front the activated tasks */
@@ -183,7 +184,7 @@ redo_frameexecution:
   } /* while */
 
   /* here... end execute frame tasklist*/
-  kaapi_event_push0(thread->proc, thread, KAAPI_EVT_FRAME_TL_END );
+  kaapi_event_push0(stack->proc, thread, KAAPI_EVT_FRAME_TL_END );
 
   /* signal the end of the step for the thread
      - if no more recv (and then no ready task activated)
@@ -201,9 +202,9 @@ redo_frameexecution:
     for (int i=0; (KAAPI_ATOMIC_READ(&tasklist->count_thief) != 0) && (i<100); ++i)
       kaapi_slowdown_cpu();
 
-    kaapi_sched_lock(&thread->proc->lock);
+    kaapi_sched_lock(&stack->proc->lock);
     retval = KAAPI_ATOMIC_READ(&tasklist->count_thief);
-    kaapi_sched_unlock(&thread->proc->lock);
+    kaapi_sched_unlock(&stack->proc->lock);
 
     if (retval ==0)
       return 0;

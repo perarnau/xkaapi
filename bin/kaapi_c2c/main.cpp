@@ -198,7 +198,11 @@ int main(int argc, char **argv)
           = SageBuilder::buildNondefiningFunctionDeclaration(
                   name_beginparallel, 
                   SageBuilder::buildVoidType(), 
-                  SageBuilder::buildFunctionParameterList(),
+                  SageBuilder::buildFunctionParameterList(
+                    SageBuilder::buildFunctionParameterTypeList(
+                      SageBuilder::buildIntType()
+                    )
+                  ),
                   gscope
         );
         ((decl_kaapi_beginparallel->get_declarationModifier()).get_storageModifier()).setExtern();

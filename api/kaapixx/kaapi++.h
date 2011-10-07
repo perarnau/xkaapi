@@ -2551,13 +2551,9 @@ namespace ka {
   */
   class DefaultAttribut {
   public:
-    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    void operator()( kaapi_thread_t* thread ) const
     { 
-      if (thread->tasklist ==0)
-        kaapi_thread_pushtask(thread); 
-      else
-        kaapi_thread_pushtask_withpartitionid(thread, -1);
-      return 0; 
+      kaapi_thread_pushtask(thread); 
     }
   };
   extern DefaultAttribut SetDefault;
@@ -2569,10 +2565,9 @@ namespace ka {
     int   _partition;   // logical partition id
   public:
     AttributSchedTask( int s ) : _partition(s) {}
-    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    void operator()( kaapi_thread_t* thread ) const
     { 
       kaapi_thread_pushtask_withpartitionid(thread, _partition);
-      return 0;
     }
   };
 
@@ -2651,14 +2646,14 @@ namespace ka {
     SetStaticSchedAttribut( )
      : _nress(-1), _ncpu(-1), _ngpu(-1)
     {}
-    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    void* operator()( kaapi_thread_t* thread ) const
     { 
       /* push a task that will encapsulated the execution of the top task */
       kaapi_task_t* task = kaapi_thread_toptask(thread);
       kaapi_staticschedtask_arg_t* arg 
         = (kaapi_staticschedtask_arg_t*)kaapi_thread_pushdata( thread, sizeof(kaapi_staticschedtask_arg_t) );
       arg->sub_sp   = task->sp;
-      arg->sub_body = (kaapi_task_vararg_body_t)kaapi_task_getuserbody(task);
+      arg->sub_body = (kaapi_task_vararg_body_t)task->body;
       arg->schedinfo.nkproc[0]                   = (uint32_t)_nress;
       arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU] = (uint32_t)_ngpu;
       arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU] = (uint32_t)_ngpu;
@@ -2795,10 +2790,9 @@ namespace ka {
   template<typename T>  
   struct OCRAttribut<T,false> { /* not a ka::pointer type, do nothing */
     OCRAttribut<T,false>(const T* a) {}
-    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    void operator()( kaapi_thread_t* thread ) const
     { 
       kaapi_thread_pushtask(thread); 
-      return 0;
     }
   };
 
@@ -2809,10 +2803,9 @@ namespace ka {
      : _ptr( (a == 0 ? 0 : a->ptr()) )
     { 
     }
-    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    void operator()( kaapi_thread_t* thread ) const
     { 
       kaapi_thread_pushtask_withocr(thread, _ptr); 
-      return 0;
     }
   };
 
@@ -2822,10 +2815,9 @@ namespace ka {
     OCRAttribut<T*,false>(const T* const* a)
      : _ptr( (const void*)a )
     { }    
-    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    void operator()( kaapi_thread_t* thread ) const
     { 
       kaapi_thread_pushtask_withocr(thread, _ptr); 
-      return 0;
     }
   };
   template<typename T>  
@@ -2834,10 +2826,9 @@ namespace ka {
     OCRAttribut<const T*,false>(const T* const* a)
      : _ptr( (const void*)a )
     { }    
-    void* operator()( kaapi_thread_t* thread, kaapi_task_t* clo) const
+    void operator()( kaapi_thread_t* thread ) const
     { 
       kaapi_thread_pushtask_withocr(thread, _ptr); 
-      return 0;
     }
   };
   
@@ -3112,13 +3103,13 @@ namespace ka {
 
       /**
       **/      
-      void* operator()()
+      void operator()()
       { 
         typedef FormatClosure0<TASK> KaapiFormatTask_t;
         kaapi_task_t* clo = kaapi_thread_toptask( _thread );
         kaapi_task_initdfg( clo, KaapiFormatTask_t::default_bodies.cpu_body, 0 );
         /* attribut is reponsible for pushing task into the thread */
-        return _attr(_thread, clo);
+        _attr(_thread);
       }
 
 #include "ka_api_spawn.h"
@@ -3547,12 +3538,12 @@ namespace ka {
 
       /**
       **/      
-      void* operator()()
+      void operator()()
       { 
         kaapi_task_t* clo = kaapi_thread_toptask( _thread );
         kaapi_task_initdfg( clo, KaapiTask0<TASK>::body, 0 );
         /* attribut is reponsible for pushing */
-        return _attr(_thread, clo);
+        _attr(_thread);
       }
 
 #include "ka_api_spawn.h"
@@ -3806,7 +3797,7 @@ namespace ka {
       arg->argv = argv;
       arg->mainentry = &MainTaskBodyArgcv<TASK>::body;
       kaapi_task_initdfg( clo, (kaapi_task_body_t)kaapi_taskmain_body, arg );
-      _attr( _thread, clo );    
+      _attr( _thread );    
     }
 
     void operator()()
@@ -3818,7 +3809,7 @@ namespace ka {
       arg->argv = 0;
       arg->mainentry = &MainTaskBodyNoArgcv<TASK>::body;
       kaapi_task_initdfg( clo, (kaapi_task_body_t)kaapi_taskmain_body, arg );
-      _attr( _thread, clo );    
+      _attr( _thread );    
     }
 
     protected:

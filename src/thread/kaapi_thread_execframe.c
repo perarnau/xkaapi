@@ -1,5 +1,4 @@
 /*
-** kaapi_thread_execframe.c
 ** xkaapi
 ** 
 ** Created on Tue Mar 31 15:19:14 2009
@@ -44,8 +43,9 @@
 */
 #include "kaapi_impl.h"
 
+static int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc );
 
-/** kaapi_thread_execframe
+/** 
     Here the stack of task is organised like this, task1 is pointed by pc and
     it will be the first running task.
 
@@ -92,224 +92,244 @@ thread->pc=stack->sp | xxxxx  |< thread->sfp->pc = thread->sfp->sp
 
 /*
 */
-#if ((KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) || (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD))
-int kaapi_thread_execframe( kaapi_thread_context_t* thread )
+int kaapi_stack_execframe( kaapi_stack_t* stack )
 {
+  kaapi_task_t*              sp; /* cache */
   kaapi_task_t*              pc; /* cache */
-  kaapi_frame_t*             fp;
-  kaapi_task_body_t          body;
-  uintptr_t	                 state;
-  kaapi_frame_t*             eframe = thread->esfp;
+  kaapi_frame_t*             fp; /* cache for stack->sfp */
+
+//  kaapi_task_body_internal_t body;
+  uintptr_t                  state;
+  kaapi_frame_t*             eframe = stack->esfp;
+#if defined(KAAPI_USE_JMP)
+  jmp_buf jmpbuff;
+  int retval;
+#endif
+  
 #if defined(KAAPI_USE_PERFCOUNTER)
   uint32_t                   cnt_tasks = 0;
 #endif
 
-  kaapi_assert_debug(thread->sfp >= thread->stackframe);
-  kaapi_assert_debug(thread->sfp < thread->stackframe+KAAPI_MAX_RECCALL);
+  kaapi_assert_debug(stack->sfp >= stack->stackframe);
+  kaapi_assert_debug(stack->sfp < stack->stackframe+KAAPI_MAX_RECCALL);
 
-push_frame:
-  fp = (kaapi_frame_t*)thread->sfp;
-  /* push the frame for the next task to execute */
-  thread->sfp[1].sp_data   = fp->sp_data;
-  thread->sfp[1].pc        = fp->sp;
-  thread->sfp[1].sp        = fp->sp;
+#if defined(KAAPI_USE_JMP)
+  jmp_buf* save_buff = stack->jbuf;
+  stack->jbuf = &jmpbuff;
+  if ((retval = _setjmp(jmpbuff)) !=0) 
+  {
+    if (retval == EWOULDBLOCK)
+    {
+      /* here iff execute abnormal task: save pc, fp and return EWOULDBLOCK */
+      stack->jbuf = save_buff;
+      return EWOULDBLOCK;
+    }
+    else { // is EINTR: task is terminated
+      --fp; 
+      fp->pc = --pc;
+      goto push_frame;
+    }
+  }
+#endif
+  
+  fp = (kaapi_frame_t*)stack->sfp;
+
+push_frame: /* here assume fp current frame where to execute task */
+
+  sp = fp->sp;
+  pc = fp->pc;
+
+  /* init new frame for the next task to execute */
+  fp[1].pc        = sp;
+  fp[1].sp        = sp;
+  fp[1].sp_data   = fp->sp_data;
   
   /* force previous write before next write */
   kaapi_writemem_barrier();
 
-  /* update the current frame */
-  ++thread->sfp;
-  kaapi_assert_debug( thread->sfp - thread->stackframe <KAAPI_MAX_RECCALL);
-
-  pc = fp->pc;
+  /* push and update the current frame */
+  stack->sfp = ++fp;
+  kaapi_assert_debug( stack->sfp - stack->stackframe <KAAPI_MAX_RECCALL);
   
   /* stack of task growth down ! */
-  while (pc != fp->sp)
+  for (; pc != sp; --pc)
   {
-    kaapi_assert_debug( pc > fp->sp );
+    kaapi_assert_debug( pc > sp );
 
-#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD)
-    body = pc->body;
-
-#if (__SIZEOF_POINTER__ == 4)
-    state = pc->state;
-#else
-    state = kaapi_task_body2state(body);
+redo_exec:
+    
+#if !defined(KAAPI_USE_JMP)
+    if (likely(kaapi_task_markexec( pc )))
 #endif
-
-    kaapi_assert_debug( body != kaapi_exec_body);
-    pc->body = kaapi_exec_body;
-    /* task execution */
-    kaapi_assert_debug(pc == thread->sfp[-1].pc);
-    kaapi_assert_debug( kaapi_isvalid_body( body ) );
-
-    /* here... */
-    body( pc->sp, (kaapi_thread_t*)thread->sfp );      
-
-#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
-
-    state = kaapi_task_orstate( pc, KAAPI_MASK_BODY_EXEC );
-#if (__SIZEOF_POINTER__ == 4)
-    body = pc->u.body;
-#else
-    body = kaapi_task_state2body( state );
-#endif /* __SIZEOF_POINTER__ */
-
-
-#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
-
-#endif /* KAAPI_USE_EXECTASK_METHOD */
-
-    if (likely( kaapi_task_state_isnormal(state) ))
-    {
-      /* task execution */
-      kaapi_assert_debug(pc == thread->sfp[-1].pc);
-
-      /* here... */
-      body( pc->sp, (kaapi_thread_t*)thread->sfp );
-    }
-    else
-    { 
-      /* It is a special task: it means that before atomic or update, the body
-         has already one of the special flag set (either exec, either suspend).
-         Test the following case with THIS (!) order :
-         - kaapi_task_body_isaftersteal(body) -> call aftersteal body
-         - kaapi_task_body_issteal(body) -> error
-         - else it means that the task has been executed by a thief, but it 
-         does not require aftersteal body to merge results.
-      */
-      if ( kaapi_task_state_isaftersteal( state ) )
+      ((kaapi_task_body_internal_t)pc->body)( pc->sp, fp, pc );
+#if !defined(KAAPI_USE_JMP)
+    else {
+      state = pc->state;
+      if (state == KAAPI_TASK_STATE_MERGE)
       {
-        /* means that task has been steal & not yet terminated due
-           to some merge to do
-        */
-        kaapi_assert_debug( kaapi_task_state_issteal( state ) );
-        kaapi_aftersteal_body( pc->sp, (kaapi_thread_t*)thread->sfp );      
+        kaapi_aftersteal_body(pc->sp, fp, pc);
       }
-      else if ( kaapi_task_state_isterm( state ) )
+      else if (state == KAAPI_TASK_STATE_STEAL)
       {
-        /* means that task has been steal or set to term if no debug */
-        kaapi_assert_debug( kaapi_task_state_issteal( state ) );
+        /* try to preempted the task 0:do nothing, EINTR: the victim get it back... */
+        int retval = __kaapi_try_preempt(stack,pc);
+        if (retval == EWOULDBLOCK) 
+        {
+          fp[-1].pc = pc;  
+          stack->sfp = fp-1;
+#if defined(HUGEDEBUG)
+  printf("%i::[execframe] Task %p, state: 0x%X is under execution suspended thread\n", 
+    kaapi_get_self_kid(),
+    (void*)stack->sfp->pc, 
+    (unsigned int)stack->sfp->pc->state
+  ); 
+  fflush(stdout);
+#endif
+          return EWOULDBLOCK;
+        }
+        if (retval == EINTR) goto redo_exec;
+        /* else: terminated, to nothing */
       }
-      else if ( kaapi_task_state_issteal( state ) ) /* but not terminate ! so swap */
+      /* if I have been preempted, then continue to the next task */
+      if (state & KAAPI_TASK_STATE_SIGNALED)
       {
-//        printf("Suspend thread: %p on pc:%p\n", thread, pc );
-//        fflush(stdout);
-        goto error_swap_body;
-      }
-      else {
-        kaapi_assert_debug(0);
+        printf("I was preempted\n"); fflush(stdout);
+        continue;
       }
     }
-#if defined(KAAPI_DEBUG)
-    const uintptr_t debug_state = kaapi_task_orstate(pc, KAAPI_MASK_BODY_TERM );
-    kaapi_assert_debug( !kaapi_task_state_isterm(debug_state) || (kaapi_task_state_isterm(debug_state) && kaapi_task_state_issteal(debug_state))  );
-    kaapi_assert_debug( kaapi_task_state_isexec(debug_state) );
-#endif    
+#endif
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
 #endif
 
     /* post execution: new tasks created ??? */
-    if (unlikely(fp->sp > thread->sfp->sp))
+    if (unlikely(sp > fp->sp))
     {
+      /* same pc in fp */
+      fp[-1].pc = pc;
       goto push_frame;
     }
-#if defined(KAAPI_DEBUG)
-    else if (unlikely(fp->sp < thread->sfp->sp))
-    {
-      kaapi_assert_debug_m( 0, "Should not appear: a task was popping stack ????" );
+    else {
+      /* else task has been executed: delete it from the queue in order
+         stealer may detected ready tasks
+      */
+      fp[-1].pc = pc;
     }
-#endif
 
-    /* next task to execute, store pc in memory */
-    fp->pc = --pc;
-    
-    kaapi_writemem_barrier();
   } /* end of the loop */
+  kaapi_assert_debug( pc == sp );
+
+  --fp;
+  fp->pc = pc;
 
   kaapi_assert_debug( fp >= eframe);
-  kaapi_assert_debug( fp->pc == fp->sp );
 
-  if (fp >= eframe)
+//  kaapi_sched_lock(&stack->proc->lock);
+  int tolock = 0;
+  if (fp > eframe)
   {
-#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD)
-    while (fp > eframe) 
-    {
-      --fp;
-      /* pop dummy frame */
-      --fp->pc;
-      if (fp->pc > fp->sp)
-      {
-        thread->sfp = fp;
-        goto push_frame; /* remains work do do */
-      }
-    } 
-    fp = eframe;
-    fp->sp = fp->pc;
-
-#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
     /* here it's a pop of frame: we lock the thread */
-    kaapi_sched_lock(&thread->proc->lock);
     while (fp > eframe) 
     {
       --fp;
 
-      /* pop dummy frame */
-      --fp->pc;
-      if (fp->pc > fp->sp)
+      tolock = tolock || (fp <= stack->thieffp);
+      if (tolock)
+        kaapi_sched_lock(&stack->lock);
+      /* finish to execute child tasks, pop current task of the frame */
+      if (--fp->pc > fp->sp)
       {
-        kaapi_sched_unlock(&thread->proc->lock);
-        thread->sfp = fp;
+        stack->sfp = fp;
+//        kaapi_sched_unlock(&stack->proc->lock);
+        if (tolock)
+          kaapi_sched_unlock(&stack->lock);
+//        printf("Pop framefp:%p, pc: %p, state (%i)\n", (void*)(fp), (void*)pc, (int)pc->state ); fflush(stdout);
         goto push_frame; /* remains work do do */
       }
     } 
-    fp = eframe;
     fp->sp = fp->pc;
-
-    kaapi_sched_unlock(&thread->proc->lock);
-#endif
   }
-  thread->sfp = fp;
-  
-  /* end of the pop: we have finish to execute all the task */
+  stack->sfp = fp;
+//  kaapi_sched_unlock(&stack->proc->lock);
+  if (tolock)
+    kaapi_sched_unlock(&stack->lock);
+
+  /* end of the pop: we have finish to execute all the tasks */
   kaapi_assert_debug( fp->pc == fp->sp );
-  kaapi_assert_debug( thread->sfp == eframe );
-
-  /* note: the stack data pointer is the same as saved on enter */
+  kaapi_assert_debug( stack->sfp == eframe );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-  KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+  KAAPI_PERF_REG(stack->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
   cnt_tasks = 0;
 #endif
-  return 0;
-
-
-#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) 
-error_swap_body:
-  kaapi_assert_debug(thread->sfp- fp == 1);
-  /* implicityly pop the dummy frame */
-  thread->sfp = fp;
-#if defined(KAAPI_USE_PERFCOUNTER)
-  KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
-  cnt_tasks = 0;
-#endif
-  return EWOULDBLOCK;
-#endif
-
-#if defined(KAAPI_USE_PERFCOUNTER)
-  KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
-  cnt_tasks = 0;
-#endif
-
-  /* here back track the kaapi_thread_execframe until go out */
   return 0;
 }
 
-#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
-int kaapi_thread_execframe( kaapi_thread_context_t* thread )
+
+//#define HUGEDEBUG
+
+/* try to preempt to stolen task:
+   - lock the current state: add LOCKED flag to the state, if old value is not yet STEAL
+    then the thief task has been terminated
+*/
+int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
 {
-  return 0;
-}
+  if ((kaapi_task_orstate(pc, KAAPI_TASK_STATE_LOCKED) & ~KAAPI_TASK_STATE_LOCKED) != KAAPI_TASK_STATE_STEAL)
+  {
+#if defined(HUGEDEBUG)
+    printf("In __kaapi_try_preempt: task %p terminated/or aftersteal\n", pc); fflush(stdout);
 #endif
+    /* do not suspend because it is terminated */
+    kaapi_assert( kaapi_task_getstate(pc) == (KAAPI_TASK_STATE_TERM | KAAPI_TASK_STATE_LOCKED) );
+    return 0;
+  }
+
+  /* number of cycles = number of cycles of the thief requires between marksteal 
+     and set reserved to the thief task
+  */
+  /* while ((void* volatile)(pc->reserved) == 0) */
+  while ( ((volatile kaapi_task_t*)pc)->reserved ==0 )
+  {
+    if ((kaapi_task_getstate(pc) & ~KAAPI_TASK_STATE_LOCKED) == KAAPI_TASK_STATE_TERM) 
+    {
+#if defined(HUGEDEBUG)
+      printf("In __kaapi_try_preempt: task %p terminated/or aftersteal\n", pc); fflush(stdout);
+#endif
+      return 0;
+    } 
+    kaapi_slowdown_cpu();
+  }
+
+  /* Uncomment these lines in order to activate preemption between DFG task
+  */
+#if 0
+  /* try to preempt it: mark the thief task' state with SIGNALED bit */
+  uintptr_t oldstate = kaapi_task_orstate(pc->reserved, KAAPI_TASK_STATE_SIGNALED);
+  if ((oldstate == KAAPI_TASK_STATE_INIT) || (oldstate == KAAPI_TASK_STATE_ALLOCATED))
+  {
+#if defined(HUGEDEBUG)
+    printf("In __kaapi_try_preempt: task: %p successfully preempts thief; %p\n", pc, pc->reserved); 
+    fflush(stdout);
+#endif
+    /* else get back the task for myself : restore state to init */
+    kaapi_task_setstate(pc, KAAPI_TASK_STATE_INIT);
+    return EINTR;  
+  }
+#endif
+
+  /* restore STEAL state and return EWOULDBLOCK */
+#if defined(HUGEDEBUG)
+  printf("%i::Task %p, state: 0x%X is under execution by thief task: %p, state: 0x%X. Suspended thread\n", 
+    kaapi_get_self_kid(),
+    (void*)pc, 
+    (unsigned int)pc->state, 
+    (void*)pc->reserved,
+    (unsigned int)pc->reserved->state
+  ); 
+  fflush(stdout);
+#endif
+
+  kaapi_task_setstate(pc, KAAPI_TASK_STATE_STEAL);
+  return EWOULDBLOCK;
+}

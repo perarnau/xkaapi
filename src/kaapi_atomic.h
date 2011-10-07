@@ -1,7 +1,7 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:09 2009
+** Created on Tue Mar 31 15:19:14 2009
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -42,15 +42,31 @@
 ** terms.
 ** 
 */
-#ifndef _KAAPI_ATOMIC_H_
-#define _KAAPI_ATOMIC_H_ 1
+#ifndef _KAAPI_ATOMIC_H
+#define _KAAPI_ATOMIC_H 1
+
+#if !defined(__SIZEOF_POINTER__)
+#  if defined(__LP64__) || defined(__x86_64__)
+#    define __SIZEOF_POINTER__ 8
+#  elif defined(__i386__) || defined(__ppc__)
+#    define __SIZEOF_POINTER__ 4
+#  else
+#    error KAAPI needs __SIZEOF_* macros. Use a recent version of gcc
+#  endif
+#endif
+
+#if ((__SIZEOF_POINTER__ != 4) && (__SIZEOF_POINTER__ != 8)) 
+#  error KAAPI cannot be compiled on this architecture due to strange size for __SIZEOF_POINTER__
+#endif
+
+#include "kaapi_error.h"
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-#include <stdint.h>
-
+  
+/* ========================= Atomic type ============================= */
 /** Atomic type
 */
 typedef struct kaapi_atomic32_t {
@@ -93,7 +109,7 @@ static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
   __KAAPI_ISALIGNED_ATOMIC(a, (a)->_counter = value)
 
 #define KAAPI_ATOMIC_WRITE_BARRIER(a, value) \
-    __KAAPI_ISALIGNED_ATOMIC(a, (kaapi_mem_barrier(), (a)->_counter = value))
+    __KAAPI_ISALIGNED_ATOMIC(a, (kaapi_writemem_barrier(), (a)->_counter = value))
 
 //BEFORE:    __KAAPI_ISALIGNED_ATOMIC(a, (kaapi_writemem_barrier(), (a)->_counter = value))
 
@@ -299,7 +315,7 @@ static inline void kaapi_mem_barrier()
   OSMemoryBarrier();
 #  elif defined(__x86_64) || defined(__i386__)
   /* not need lfence on X86 archi: read are ordered */
-  __asm__ __volatile__ ("mfence":::"memory");
+__sync_synchronize();//  __asm__ __volatile__ ("mfence":::"memory");
 #  else
 #    error "bad configuration"
 #  endif
@@ -366,7 +382,6 @@ static inline void kaapi_mem_barrier()
 #else
 #  error "Undefined barrier"
 #endif
-
 
 
 /** Note on scheduler lock:
@@ -488,8 +503,35 @@ static inline int kaapi_atomic_islocked( kaapi_atomic_t* lock )
 #endif
 }
 
-#if defined(__cplusplus)
+
+
+#if (__SIZEOF_POINTER__ == 4)
+#  define KAAPI_ATOMIC_CASPTR(a, o, n) \
+    KAAPI_ATOMIC_CAS( (kaapi_atomic_t*)a, (uint32_t)o, (uint32_t)n )
+#  define KAAPI_ATOMIC_ORPTR_ORIG(a, v) \
+    KAAPI_ATOMIC_OR_ORIG( (kaapi_atomic_t*)a, (uint32_t)v)
+#  define KAAPI_ATOMIC_ANDPTR_ORIG(a, v) \
+    KAAPI_ATOMIC_AND_ORIG( (kaapi_atomic_t*)a, (uint32_t)v)
+#  define KAAPI_ATOMIC_WRITEPTR_BARRIER(a, v) \
+    KAAPI_ATOMIC_WRITE_BARRIER( (kaapi_atomic_t*)a, (uint32_t)v)
+
+#elif (__SIZEOF_POINTER__ == 8)
+#  define KAAPI_ATOMIC_CASPTR(a, o, n) \
+    KAAPI_ATOMIC_CAS64( (kaapi_atomic64_t*)(a), (uint64_t)o, (uint64_t)n )
+#  define KAAPI_ATOMIC_ORPTR_ORIG(a, v) \
+    KAAPI_ATOMIC_OR64_ORIG( (kaapi_atomic64_t*)(a), (uint64_t)v)
+#  define KAAPI_ATOMIC_ANDPTR_ORIG(a, v) \
+    KAAPI_ATOMIC_AND64_ORIG( (kaapi_atomic64_t*)(a), (uint64_t)v)
+#  define KAAPI_ATOMIC_WRITEPTR_BARRIER(a, v) \
+    KAAPI_ATOMIC_WRITE_BARRIER( (kaapi_atomic64_t*)a, (uint64_t)v)
+
+#else
+#  error "No implementation for pointer to function with size greather than 8 bytes. Please contact the authors."
+#endif
+
+
+#ifdef __cplusplus
 }
 #endif
 
-#endif /* */
+#endif

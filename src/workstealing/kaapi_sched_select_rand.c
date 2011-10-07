@@ -55,7 +55,7 @@ int kaapi_sched_select_victim_rand(
   
   if (flag != KAAPI_SELECT_VICTIM) return 0;
   
-  if (kproc->fnc_selecarg[0] ==0) 
+  if (kproc->fnc_selecarg ==0) 
     kproc->fnc_selecarg[0] = (void*)(long)rand();
 
 redo_select:

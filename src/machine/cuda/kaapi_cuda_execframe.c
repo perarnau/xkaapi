@@ -720,7 +720,7 @@ static const char* get_body_name(kaapi_task_body_t body)
 #endif /* todo, remove */
 
 /* exported */
-#if ((KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) || (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD))
+
 int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
 {
   kaapi_processor_t* const proc = thread->proc;
@@ -758,28 +758,6 @@ push_frame:
   {
     kaapi_assert_debug( pc > fp->sp );
 
-#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD)
-
-#if 0 /* unimplemented */
-    body = pc->body;
-
-#if (__SIZEOF_POINTER__ == 4)
-    state = pc->state;
-#else
-    state = kaapi_task_body2state(body);
-#endif
-
-    kaapi_assert_debug( body != kaapi_exec_body);
-    pc->body = kaapi_exec_body;
-    /* task execution */
-    kaapi_assert_debug(pc == thread->sfp[-1].pc);
-    kaapi_assert_debug( kaapi_isvalid_body( body ) );
-
-    /* here... */
-    body( pc->sp, (kaapi_thread_t*)thread->sfp );      
-#endif /* unimplemented */
-
-#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
 
     state = kaapi_task_orstate( pc, KAAPI_MASK_BODY_EXEC );
 
@@ -788,8 +766,6 @@ push_frame:
 #else
     body = kaapi_task_state2body( state );
 #endif /* __SIZEOF_POINTER__ */
-
-#endif /* KAAPI_USE_EXECTASK_METHOD */
 
     if (likely( kaapi_task_state_isnormal(state) ))
     {
@@ -906,22 +882,6 @@ push_frame:
 
   if (fp >= eframe)
   {
-#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_SEQ_METHOD)
-    while (fp > eframe) 
-    {
-      --fp;
-      /* pop dummy frame */
-      --fp->pc;
-      if (fp->pc > fp->sp)
-      {
-        thread->sfp = fp;
-        goto push_frame; /* remains work do do */
-      }
-    } 
-    fp = eframe;
-    fp->sp = fp->pc;
-
-#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD)
     /* here it's a pop of frame: we lock the thread */
     kaapi_sched_lock(&thread->proc->lock);
     while (fp > eframe) 
@@ -941,7 +901,6 @@ push_frame:
     fp->sp = fp->pc;
 
     kaapi_sched_unlock(&thread->proc->lock);
-#endif
   }
   thread->sfp = fp;
   
@@ -958,7 +917,6 @@ push_frame:
   return 0;
 
 
-#if (KAAPI_USE_EXECTASK_METHOD == KAAPI_CAS_METHOD) 
 error_swap_body:
   kaapi_assert_debug(thread->sfp- fp == 1);
   /* implicityly pop the dummy frame */
@@ -968,7 +926,6 @@ error_swap_body:
   cnt_tasks = 0;
 #endif
   return EWOULDBLOCK;
-#endif
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_PERF_REG(thread->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
@@ -978,12 +935,6 @@ error_swap_body:
   /* here back track the kaapi_thread_execframe until go out */
   return 0;
 }
-#elif (KAAPI_USE_EXECTASK_METHOD == KAAPI_THE_METHOD)
-int kaapi_thread_execframe( kaapi_thread_context_t* thread )
-{
-  return 0;
-}
-#endif /* KAAPI_EXEC_METHOD */
 
 
 #if 0 /* OLD_UNUSED */

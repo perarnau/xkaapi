@@ -52,11 +52,7 @@
 
 /** weak symbols */
 #ifdef __GNUC__
-#  if defined(__APPLE__)
-#    define __KA_COMPILER_WEAK __attribute__((weak_import))
-#  else
-#    define __KA_COMPILER_WEAK __attribute__((weak))
-#  endif
+#  define __KA_COMPILER_WEAK __attribute__((weak))
 #else
 #  error No weak symbols defined for this compiler
 #endif

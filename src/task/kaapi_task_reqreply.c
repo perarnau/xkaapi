@@ -61,11 +61,14 @@ int kaapi_request_reply(
   {
     kaapi_taskadaptive_result_t* const ktr = req->ktr;
 #if defined(KAAPI_DEBUG)
+#warning TODO HERE
+#if 0
     kaapi_assert_debug( ktr != 0 );
     {
       kaapi_stealheader_t* stch = (kaapi_stealheader_t*)(req->reply->udata+req->reply->offset);
       kaapi_assert_debug( stch->ktr == ktr );
     }
+#endif
 #endif
 
     kaapi_task_lock_adaptive_steal(sc);
@@ -97,12 +100,14 @@ int kaapi_request_reply(
     KAAPI_ATOMIC_INCR(&sc->header.msc->thieves.count);
   }
 
-  return _kaapi_request_reply(req, KAAPI_REPLY_S_TASK);
+#warning TODO HERE
+//  _kaapi_request_reply(req, KAAPI_REPLY_S_TASK);
+  return 0; 
 }
 
 
 void kaapi_request_reply_failed(kaapi_request_t* req)
 {
   /* sc the stolen stealcontext */
-  _kaapi_request_reply(req, KAAPI_REPLY_S_NOK);
+  kaapi_request_replytask(req, KAAPI_REQUEST_S_NOK);
 }

@@ -947,7 +947,7 @@ void DoKaapiGenerateFormat( std::ostream& fout, KaapiTaskAttribute* kta)
 
 
   /* format::get_task_binding */
-  fout << "void " << kta->name_format << "_get_task_binding(const struct kaapi_format_t* fmt, const kaapi_task_t* t, kaapi_task_binding_t* tb)\n"
+  fout << "void " << kta->name_format << "_get_task_binding(const struct kaapi_format_t* fmt, const void* t, kaapi_task_binding_t* tb)\n"
        << "{ return; }\n"
        << std::endl;
 

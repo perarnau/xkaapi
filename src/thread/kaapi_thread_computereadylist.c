@@ -52,7 +52,7 @@ int kaapi_sched_computereadylist( void )
   int err;
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
   if (thread ==0) return EINVAL;
-  if (kaapi_frame_isempty(thread->sfp)) return ENOENT;
+  if (kaapi_frame_isempty(thread->stack.sfp)) return ENOENT;
   tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
   kaapi_tasklist_init( tasklist, thread );
   err= kaapi_thread_computereadylist( thread, tasklist  );
@@ -60,7 +60,7 @@ int kaapi_sched_computereadylist( void )
   kaapi_thread_tasklist_commit_ready( tasklist );
   /* NO */ /*keep the first task to execute outside the workqueue */
   tasklist->context.chkpt = 0;
-  thread->sfp->tasklist = tasklist;
+  thread->stack.sfp->tasklist = tasklist;
   return err;
 }
 
@@ -72,13 +72,13 @@ int kaapi_sched_clearreadylist( void )
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
   if (thread ==0) return EINVAL;
 
-  kaapi_tasklist_t* tasklist = thread->sfp->tasklist;
+  kaapi_tasklist_t* tasklist = thread->stack.sfp->tasklist;
 
   if (tasklist != 0)
   {
-    kaapi_sched_lock(&thread->proc->lock);
-    thread->sfp->tasklist = 0;
-    kaapi_sched_unlock(&thread->proc->lock);
+    kaapi_sched_lock(&thread->stack.proc->lock);
+    thread->stack.sfp->tasklist = 0;
+    kaapi_sched_unlock(&thread->stack.proc->lock);
     kaapi_tasklist_destroy(tasklist);
     free( tasklist );
   }
@@ -103,7 +103,7 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_tasklis
   kaapi_task_t*           task_bottom;
   
   /* assume no task list or task list is empty */
-  frame    = thread->sfp;
+  frame    = thread->stack.sfp;
   
   /* initialize hashmap for version */
   if (thread->kversion_hm ==0)

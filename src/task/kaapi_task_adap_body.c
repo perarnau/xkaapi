@@ -79,7 +79,8 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
  
   /* retrieve the adaptive reply data */
   sc = (kaapi_stealcontext_t*)arg;
-  adata = (kaapi_taskadaptive_user_taskarg_t*)self_thread->static_reply.udata;
+#warning TODO HERE
+//  adata = (kaapi_taskadaptive_user_taskarg_t*)self_thread->static_reply.udata;
   
   
   /* this is the master task, return */
@@ -93,9 +94,10 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
      * header flag, msc, ktr init by remote write 
      * remains to initialize other field
   */
-  sc->preempt          = &self_thread->static_reply.preempt;
-  sc->save_splitter    = 0;
-  sc->save_argsplitter = 0;
+#warning TODO HERE
+//  sc->preempt          = &self_thread->static_reply.preempt;
+  sc->splitter		= 0;
+  sc->argsplitter	= 0;
   sc->ownertask	       = kaapi_thread_toptask(thread) + 1;
 
   if (sc->header.flag & KAAPI_SC_PREEMPTION)
@@ -136,9 +138,9 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
   }
   else
   {
-    execute_ubody:
+  execute_ubody:
 #endif /* KAAPI_USE_CUDA */
-    adata->ubody((void*)adata->udata, thread, sc);
+  adata->ubody((void*)adata->udata, thread, sc);
 #if defined(KAAPI_USE_CUDA)
   }
 #endif
@@ -156,37 +158,40 @@ void kaapi_adapt_body(void* arg, kaapi_thread_t* thread)
   /* otherwise, SC_PREEMPTION but not preempted */
   else if (sc->header.ktr != 0)
   {
+    kaapi_task_body_t body;
+    int retval;
+    
     /* preemptive algorithms need to inform
      they are done so they can be reduced.
      */
-    
     kaapi_taskadaptive_result_t* const ktr = sc->header.ktr;
-    uintptr_t state;
 
     /* prevent ktr insertion race by steal syncing */
     kaapi_synchronize_steal(sc);
     ktr->rhead = sc->thieves.list.head;
     ktr->rtail = sc->thieves.list.tail;
     
-    state = kaapi_task_orstate(&ktr->state, KAAPI_MASK_BODY_TERM);
-    if (state & KAAPI_MASK_BODY_PREEMPT)
+#warning TODO HERE
+#if 0
+//    state = kaapi_task_orstate(&ktr->state, KAAPI_MASK_BODY_TERM);
+//    if (state & KAAPI_MASK_BODY_PREEMPT)
+    do {
+      body = kaapi_task_getbody(&ktr->state);
+      retval = kaapi_task_casbody(&ktr->state, body, kaapi_term_body);
+    } while (!retval);
+    if (body == kaapi_preempt_body)
     {
       /* wait for the preemption status to be seen, otherwise we
        have a race where this thread leaves this code, emits a
        request and see the KAAPI_TASK_S_PREEMPTED reply.
        */
-      
       while (*ktr->preempt == 0)
         kaapi_slowdown_cpu();
     }
+#endif
   }
 
   kaapi_thread_restore_frame(thread, &sc->frame);
   
   kaapi_writemem_barrier();
-}
-
-void kaapi_adapt_body_but_not_splittable(void* arg, kaapi_thread_t* thread)
-{
-  kaapi_adapt_body(arg, thread);
 }

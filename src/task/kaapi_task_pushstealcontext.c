@@ -107,8 +107,11 @@ static void do_initial_split(kaapi_processor_t* kproc)
     kaapi_request_t* kreq = kaapi_listrequest_iterator_get(klr, &kli);
     while (kreq != 0)
     {
+#warning TODO HERE
+#if 0
       _kaapi_request_reply(kreq, KAAPI_REPLY_S_NOK);
       kreq = kaapi_listrequest_iterator_next(klr, &kli);
+#endif
     }
   }
 }
@@ -139,12 +142,13 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
     (thread, sizeof(kaapi_stealcontext_t), sizeof(void*));
   kaapi_assert_debug(sc != 0);
 
-  sc->preempt           = &self_thread->static_reply.preempt;
+#warning "TO DO HERE"
+//  sc->preempt           = &self_thread->static_reply.preempt;
   sc->splitter          = splitter;
   sc->argsplitter       = argsplitter;
   sc->header.flag       = flag;
-  sc->header.msc	      = sc; /* self pointer to detect master */
-  sc->header.ktr	      = 0;
+  sc->header.msc        = sc; /* self pointer to detect master */
+  sc->header.ktr	    = 0;
 
   if (flag & KAAPI_SC_PREEMPTION)
   {
@@ -169,6 +173,15 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
   /* ok is initialized */
   sc->header.flag       |= KAAPI_SC_INIT;
 
+  /* split before publishing the task */
+  if (flag & KAAPI_SC_HWS_SPLITTER)
+  {
+    /* todo: levelid should be an argument */
+    static const kaapi_hws_levelid_t levelid = KAAPI_HWS_LEVELID_NUMA;
+    kaapi_assert_debug(!(flag & KAAPI_SC_AGGREGATE));
+    kaapi_hws_splitter(sc, splitter, argsplitter, levelid);
+  }
+
   if (flag & KAAPI_SC_AGGREGATE)
     acquire_kproc_lock(kproc);
 
@@ -176,7 +189,7 @@ kaapi_stealcontext_t* kaapi_task_begin_adaptive
      this is needed for the assumptions made by the
      kaapi_task_lock_steal rouines, see for comments.
    */
-  kaapi_task_init_with_state(task, kaapi_adapt_body, KAAPI_MASK_BODY_EXEC, sc);
+  kaapi_task_init(task, kaapi_adapt_body, sc);
 
   /* barrier done by kaapi_thread_pushtask */
   kaapi_thread_pushtask(thread);

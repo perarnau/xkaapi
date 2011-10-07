@@ -46,11 +46,6 @@
 #ifndef _KAAPI_DEFS_H
 #define _KAAPI_DEFS_H 1
 
-
-#define KAAPI_BLOCENTRIES_SIZE 2048
-#define KAAPI_BLOCALLOCATOR_SIZE 8*4096
-
-
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -80,6 +75,54 @@ extern "C" {
 	 defined(__ppc__) || defined(__PPC__) || defined(__PPC64__) || defined(__arm__))
 #  error "Unsupported Architecture"
 #endif
+
+
+/** Highest level, more trace generated */
+#define KAAPI_LOG_LEVEL 10
+
+#if defined(KAAPI_DEBUG)
+#  define kaapi_assert_debug_m(cond, msg) \
+      { int __kaapi_cond = cond; \
+        if (!__kaapi_cond) \
+        { \
+          printf("[%s]: LINE: %u FILE: %s, ", msg, __LINE__, __FILE__);\
+          abort();\
+        }\
+      }
+#  define KAAPI_LOG(l, fmt, ...) \
+      do { if (l<= KAAPI_LOG_LEVEL) { printf("%i:"fmt, kaapi_get_current_processor()->kid, ##__VA_ARGS__); fflush(0); } } while (0)
+
+#  define KAAPI_DEBUG_INST(inst) inst
+#else
+#  define kaapi_assert_debug_m(cond, msg)
+#  define KAAPI_LOG(l, fmt, ...) 
+#  define KAAPI_DEBUG_INST(inst)
+#endif /* defined(KAAPI_DEBUG)*/
+
+#define kaapi_assert_m(cond, msg) \
+      { \
+        if (!(cond)) \
+        { \
+          printf("[%s]: \n\tLINE: %u FILE: %s, ", msg, __LINE__, __FILE__);\
+          abort();\
+        }\
+      }
+
+
+#ifdef __GNU__
+#  define likely(x)      __builtin_expect(!!(x), 1)
+#  define unlikely(x)    __builtin_expect(!!(x), 0)
+#else
+#  define likely(x)      (x)
+#  define unlikely(x)    (x)
+#endif
+
+#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
+#  ifndef EWOULDBLOCK
+#    define EWOULDBLOCK     EAGAIN
+#  endif 
+#endif 
+
 
 #if defined(__cplusplus)
 }

@@ -49,11 +49,16 @@
 # include "../machine/cuda/kaapi_cuda_execframe.h"
 #endif
 
+/* toremove */
+extern void kaapi_hws_sched_dec_sync(void);
+/* toremove */
+
 /**
 */
 void kaapi_taskwrite_body( 
-  void* taskarg, 
-  kaapi_thread_t* thread  __attribute__((unused))
+  void*           taskarg, 
+  kaapi_thread_t* thread  __attribute__((unused)),
+  kaapi_task_t*   task
 )
 {
   unsigned int i;
@@ -110,12 +115,13 @@ void kaapi_taskwrite_body(
     }
   }
 
+#if 0 // TG TO TEST IMPACT OF THIS OPTIMISATION
   /* if signaled thread was suspended, move it to the local queue */
   kaapi_wsqueuectxt_cell_t* wcs = arg->origin_thread->wcs;
-  if ((wcs != 0) && (arg->origin_thread->sfp->pc == arg->origin_task)) /* means thread has been suspended on this task */
+  if ((wcs != 0) && (arg->origin_thread->stack.sfp->pc == arg->origin_task)) /* means thread has been suspended on this task */
   { 
     kaapi_readmem_barrier();
-    kaapi_processor_t* kproc = arg->origin_thread->proc;
+    kaapi_processor_t* kproc = arg->origin_thread->stack.proc;
     kaapi_assert_debug( kproc != 0);
 
     if (kaapi_cpuset_has( &wcs->affinity, kproc->kid))
@@ -143,14 +149,41 @@ void kaapi_taskwrite_body(
       }
     }
   }
+#endif
+
+  kaapi_writemem_barrier();
+#if 0
+  while (kaapi_task_getstate(arg->origin_task) != KAAPI_TASK_STATE_STEAL)
+  {
+    uintptr_t state = kaapi_task_getstate(arg->origin_task);
+    kaapi_assert( (state == KAAPI_TASK_STATE_PREEMPTED) || (state == KAAPI_TASK_STATE_STEAL) );
+    kaapi_slowdown_cpu();
+  }
+#endif
+
+#if defined(HUGEDEBUG)
+  printf("%i::[IN] TaskWrite:%p  signal term of victim task:%p, state:0x%X\n", 
+      kaapi_get_self_kid(),
+      (void*)task,
+      arg->origin_task, 
+      (unsigned int)arg->origin_task->state); 
+  fflush(stdout);
+#endif
 
   /* signal the task : mark it as executed, the old returned body should have steal flag */
-  kaapi_assert_debug( kaapi_task_state_issteal( kaapi_task_getstate( arg->origin_task) ) );
-  uintptr_t oldstate __attribute__((unused));
   if ((war_param ==0) && (cw_param ==0))
-    oldstate = kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
+    kaapi_task_markterm( arg->origin_task );
   else 
-    oldstate = kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
+    kaapi_task_markaftersteal( arg->origin_task );
+
+#if defined(HUGEDEBUG)
+  printf("%i::[OUT] TaskWrite:%p  signal term of victim task:%p, state:0x%X\n", 
+      kaapi_get_self_kid(),
+      (void*)task,
+      (void*)arg->origin_task, 
+      (unsigned int)arg->origin_task->state); 
+  fflush(stdout);
+#endif
 }
 
 
@@ -168,7 +201,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   kaapi_task_t*          task;
   kaapi_tasksteal_arg_t* arg;
   kaapi_task_body_t      body;          /* format of the stolen task */
-  kaapi_format_t*        fmt;
+  const kaapi_format_t*  fmt;
   unsigned int           war_param;     /* */
   unsigned int           cw_param;      /* */
 
@@ -185,19 +218,25 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 
   /* get information of the task to execute */
   arg = (kaapi_tasksteal_arg_t*)taskarg;
- 
-  /* format of the original stolen task */  
-  body            = kaapi_task_getbody(arg->origin_task);
-  kaapi_assert_debug( kaapi_isvalid_body( body ) );
 
-  fmt             = kaapi_format_resolvebybody( body );
+  /* format of the original stolen task */  
+  body            = arg->origin_body;
+  fmt             = arg->origin_fmt;
+  if (fmt == 0)
+    arg->origin_fmt = fmt = kaapi_format_resolvebybody(body);
   kaapi_assert_debug( fmt !=0 );
 
-  /* the the original task arguments */
+#if defined(HUGEDEBUG)
+printf("%i::[IN] Steal task: %p, name:'%s'\n", 
+      kaapi_get_self_kid(),
+      (void*)arg->origin_task, fmt->name); 
+fflush(stdout);
+#endif
+
+  /* the original task arguments */
   orig_task_args  = kaapi_task_getargs(arg->origin_task);
 
-  kaapi_assert_debug
-    ( kaapi_task_state_issteal( kaapi_task_getstate(arg->origin_task) ) );
+  kaapi_assert_debug( kaapi_task_getbody(arg->origin_task) == body );
 
   /* not a bound task */
   count_params    = kaapi_format_get_count_params(fmt, orig_task_args); 
@@ -216,7 +255,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     {
       /* todo_remove */
       if (fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0)
-        body(orig_task_args, thread);
+        body(orig_task_args, thread, );
       else
         /* todo_remove */
         kaapi_cuda_exectask(self_thread, orig_task_args, fmt);
@@ -224,11 +263,6 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     else
 #endif
     body(orig_task_args, thread);
-
-    /* push task that will be executed after all created task by the user task */
-    task = kaapi_thread_toptask( thread );
-    kaapi_task_init( task, kaapi_taskwrite_body, arg );
-    kaapi_thread_pushtask( thread );
   }
   else /* it exists at least one w parameter with war dependency or a cw_param: recopies the arguments */
   {
@@ -236,7 +270,8 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     arg->copy_task_args  = copy_task_args;
     arg->origin_fmt      = fmt;
 
-    /* there are possibly non formated params */
+    /* WARNING there are possibly non formated params */
+    /* ERROR: do not work is tasks are variable sized */
     memcpy(copy_task_args, orig_task_args, fmt->size);
 
     for (i=0; i<count_params; ++i)
@@ -284,12 +319,6 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
       }
     }
 
-    /* Execute the orinal body function with the copy of args: do not push it... ?
-       WHY to push a nop ?
-    */
-    task = kaapi_thread_toptask( thread );
-    kaapi_task_init( task, kaapi_nop_body, copy_task_args);
-    kaapi_thread_pushtask( thread );
 
     /* call directly the stolen body function */
 #if defined(KAAPI_USE_CUDA)
@@ -305,10 +334,16 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     else
 #endif
     body( copy_task_args, thread);
-
-    /* push task that will be executed after all created task by the user task */
-    task = kaapi_thread_toptask( thread );
-    kaapi_task_init( task, kaapi_taskwrite_body, arg );
-    kaapi_thread_pushtask( thread );
   }
+
+  /* push task that will be executed after all created task by the user task */
+  task = kaapi_thread_toptask( thread );
+  kaapi_task_init( task, (kaapi_task_body_t)kaapi_taskwrite_body, arg );
+  kaapi_thread_pushtask( thread );
+#if defined(HUGEDEBUG)
+printf("%i::[OUT] Steal task: %p, name:'%s'\n", 
+      kaapi_get_self_kid(),
+      (void*)arg->origin_task, fmt->name); 
+fflush(stdout);
+#endif
 }

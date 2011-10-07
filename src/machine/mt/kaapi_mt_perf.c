@@ -4,7 +4,7 @@
 #include <papi.h>
 #endif
 #include "kaapi_impl.h"
-#include "kaapi_event.h"
+#include "kaapi_event_recorder.h"
 
 /* internal */
 #if defined(KAAPI_USE_PAPIPERFCOUNTER)

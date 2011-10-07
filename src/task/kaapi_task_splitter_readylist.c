@@ -58,7 +58,6 @@ int kaapi_task_splitter_readylist(
 {
   kaapi_request_t*            request    = 0;
   kaapi_taskstealready_arg_t* argsteal;
-  kaapi_reply_t*              stealreply;
 
   kaapi_assert_debug( taskdescr_beg != taskdescr_end );
 #if defined(KAAPI_SCHED_LOCK_CAS)
@@ -76,8 +75,6 @@ int kaapi_task_splitter_readylist(
     request = kaapi_listrequest_iterator_get( lrequests, lrrange );
     kaapi_assert(request !=0);
 
-    stealreply = kaapi_request_getreply(request);
-  
     /* - create the task steal that will execute the stolen task
       The task stealtask stores:
          - the original thread
@@ -86,7 +83,7 @@ int kaapi_task_splitter_readylist(
          - and at the end it reserve enough space to store original task arguments
       The original body is saved as the extra body of the original task data structure.
     */
-    argsteal = (kaapi_taskstealready_arg_t*)stealreply->udata;
+    argsteal = (kaapi_taskstealready_arg_t*)request->thief_sp;
     argsteal->origin_tasklist       = tasklist;
     argsteal->origin_td_beg         = taskdescr_beg;
     taskdescr_beg += blocsize;
@@ -94,13 +91,14 @@ int kaapi_task_splitter_readylist(
     {
       argsteal->origin_td_end       = taskdescr_end;
       taskdescr_beg                 = taskdescr_end;
-    } else
+    } 
+    else
       argsteal->origin_td_end       = taskdescr_beg;
 
-    stealreply->u.s_task.body       = kaapi_taskstealready_body;
+    request->thief_task->body       = kaapi_taskstealready_body;
     
-    _kaapi_request_reply( request, KAAPI_REPLY_S_TASK); /* success of steal */
-  
+    kaapi_request_replytask( request, KAAPI_REQUEST_S_OK); /* success of steal */
+
     /* update next request to process */
     kaapi_listrequest_iterator_next( lrequests, lrrange );    
   }

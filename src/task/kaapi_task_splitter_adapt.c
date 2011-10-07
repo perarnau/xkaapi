@@ -71,8 +71,11 @@ int kaapi_task_splitter_adapt(
   curr = kaapi_listrequest_iterator_get( lrequests, lrrange );
   for (i=0; i<count; ++i)
   {
+#warning TODO HERE
+#if 0
     requests[i].kid   = curr->kid;
     requests[i].reply = curr->reply;
+#endif
     curr = kaapi_listrequest_iterator_next( lrequests, lrrange );
   }
 #else
@@ -80,7 +83,5 @@ int kaapi_task_splitter_adapt(
 /* here do not need copy */
 #endif
   /* call the splitter */
-  splitter( stc, count, requests, argsplitter);
-
-  return count;
+  return splitter( stc, count, requests, argsplitter);
 }
