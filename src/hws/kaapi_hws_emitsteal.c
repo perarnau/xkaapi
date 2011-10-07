@@ -389,7 +389,9 @@ redo_levels:
 
 on_request_success:
 //  leave();
+#if 0
   kaapi_assert(!(hws_requests.bitmap.proc32._counter & (1 << kaapi_get_self_kid())));
+#endif
 
   fail_requests(&hws_requests, &lri);
   kaapi_assert( kaapi_listrequest_iterator_empty( &lri ) );
