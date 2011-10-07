@@ -87,8 +87,6 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
   
   kaapi_sched_initlock( &kproc->lock );
   
-  kaapi_listrequest_init( kproc, &kproc->hlrequests );
-
 #if defined(KAAPI_DEBUG)
   kproc->req_version = 0;
   kproc->reply_version = 0;
@@ -106,7 +104,11 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
   kproc->fnc_selecarg[3] = 0;
   kproc->fnc_select      = kaapi_default_param.wsselect;
 
-  kproc->emitsteal = kaapi_default_param.emitsteal;
+  /* not that, as all other fields, the processor_init is called
+     before threads start to execute.
+  */
+  kproc->emitsteal       = kaapi_default_param.emitsteal;
+  kaapi_assert( 0 == kaapi_default_param.emitsteal_initctxt(kproc) );
   
   kaapi_assert(0 == pthread_mutex_init(&kproc->suspend_lock, 0) );
   /* */

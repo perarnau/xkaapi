@@ -56,6 +56,11 @@
 
 /*
 */
+kaapi_request_t kaapi_requests_list[KAAPI_MAX_PROCESSOR+1];
+
+
+/*
+*/
 uint32_t volatile kaapi_count_kprocessors = 0;
 
 
@@ -108,6 +113,17 @@ int (*kaapi_bitmap_count)( kaapi_bitmap_value_t b );
 int (*kaapi_bitmap_first1_and_zero)( kaapi_bitmap_value_t* b );
 #endif
 
+
+/** Initialize a request
+    \param kpsr a pointer to a kaapi_steal_request_t
+*/
+static inline void kaapi_request_init( struct kaapi_request_t* pkr, uintptr_t ident )
+{
+  *(uintptr_t*)&pkr->ident    = ident;
+  pkr->status   = 0;
+}
+
+
 /**
 */
 int kaapi_mt_init(void)
@@ -122,6 +138,12 @@ int kaapi_mt_init(void)
   
   kaapi_isterm = 0;
   version = get_kaapi_version();
+
+  /* It should be the only location where request are initialized */
+  for (int i=0; i<KAAPI_MAX_PROCESSOR+1; ++i)
+  {  
+    kaapi_request_init(&kaapi_requests_list[i], i);
+  }
   
   /* build the memory hierarchy
      update kaapi_default_param data structure fields:
@@ -133,6 +155,8 @@ int kaapi_mt_init(void)
   
   /* Build global scheduling queue on the hierarchy */
   kaapi_sched_affinity_initialize();  
+
+
 
 #ifdef KAAPI_MAX_PROCESSOR_GENERIC
   /* Choosing an implementation depending on the available ones */ 

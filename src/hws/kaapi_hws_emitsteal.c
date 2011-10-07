@@ -51,6 +51,15 @@
 #include "kaapi_ws_queue.h"
 
 
+int kaapi_hws_emitsteal_init(kaapi_processor_t* kproc)
+{
+  /* all the works are done in hws_initialize:
+     - the ws_block for kproc was already set
+  */
+  return 0; 
+}
+
+
 static inline kaapi_ws_block_t* get_self_ws_block(
   kaapi_processor_t* self, 
   kaapi_hws_levelid_t levelid
@@ -202,12 +211,12 @@ static kaapi_thread_context_t* pop_block
   kaapi_processor_t* kproc
 )
 {
-
+#if 0 
 //DEBUG:
 kaapi_assert(0);
 
   /* not a real steal operation, dont actually post */
-  kaapi_request_t* const req = &hws_requests.requests[kproc->kid];
+  kaapi_request_t* const req = &kaapi_requests_list[kproc->kid];
   kaapi_task_t*          thief_task;
   kaapi_tasksteal_arg_t* thief_sp;
   kaapi_ws_error_t err;
@@ -244,22 +253,22 @@ kaapi_assert(0);
 
     default: break ;
   }
-  
+#endif
   return NULL;
 }
 
 
+#if 0 // NOW USE KAAPI_REQUEST_POST
 static kaapi_request_t* post_request
 (kaapi_processor_t* kproc, kaapi_atomic_t* status)
 {
-  kaapi_request_t* const req = &hws_requests.requests[kproc->kid];
+  kaapi_request_t* const req = &kaapi_requests_list[kproc->kid];
 
 #if defined(KAAPI_DEBUG)
   req->version = ++kproc->req_version;
 #endif
   
   /* from kaapi_mt_machine.h/kaapi_request_post */
-  req->ident             = kproc->kid;
   req->thief_task        = &kproc->thread->stealreserved_task;
   req->thief_task->state = KAAPI_TASK_STATE_ALLOCATED;
   req->thief_task->body  = kaapi_tasksteal_body;
@@ -269,7 +278,7 @@ static kaapi_request_t* post_request
   kaapi_bitmap_set(&hws_requests.bitmap, kproc->kid);
   return req;
 }
-
+#endif
 
 /* Hierarchical work stealing strategy
 */
@@ -295,7 +304,17 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
 
   /* post the stealing request */
   kproc->issteal = 1;
-  request = post_request(kproc, &status);
+
+  kaapi_request_post(
+    &hws_requests,
+    &kaapi_requests_list[kproc->kid],
+    &status, 
+    &kproc->thread->stealreserved_task,
+    &kproc->thread->stealreserved_arg
+  );
+  
+//OLD===  request = post_request(kproc, &status);
+
   /* from here anybody else may reply to the request */
 
   /* foreach parent level, pop. if pop failed, steal in level children. */

@@ -235,6 +235,13 @@ typedef int (*kaapi_selectvictim_fnc_t)( struct kaapi_processor_t*, struct kaapi
 */
 typedef kaapi_request_status_t (*kaapi_emitsteal_fnc_t)(struct kaapi_processor_t*);
 
+/** \ingroup WS
+    Called to initialize the emit a steal context
+    \param kproc [IN] the kaapi_processor_t that want to emit a request
+    \retval the stolen thread
+*/
+typedef int (*kaapi_emitsteal_init_t)(struct kaapi_processor_t*);
+
 
 /* =======vvvvvvvvvvvvvvvvvv===================== Memory type ============================ */
 
@@ -294,6 +301,7 @@ typedef struct kaapi_rtparam_t {
   unsigned int             cpucount;                        /* number of physical cpu used for execution */
   kaapi_selectvictim_fnc_t wsselect;                        /* default method to select a victim */
   kaapi_emitsteal_fnc_t	   emitsteal;
+  kaapi_emitsteal_init_t   emitsteal_initctxt;              /* call to initialize the emitsteal ctxt */
   unsigned int		       use_affinity;                    /* use cpu affinity */
   int                      display_perfcounter;             /* set to 1 iff KAAPI_DISPLAY_PERF */
   uint64_t                 startuptime;                     /* time at the end of kaapi_init */
@@ -706,10 +714,17 @@ extern kaapi_thread_context_t* kaapi_sched_wakeup (
     be different. In the first case, some work has been insert on the top of the stack. On the
     second case, a whole stack has been stolen. It is to the responsability of the caller
     to treat the both case.
-    \retval 0 in case failure of stealing something
-    \retval a pointer to a stack that is the result of one workstealing operation.
+    \retval KAAPI_REQUEST_S_NOK in case of failure of stealing something
+    \retval KAAPI_REQUEST_S_OK in case of success of the steal operation
 */
-extern kaapi_request_status_t kaapi_sched_emitsteal ( kaapi_processor_t* kproc );
+extern kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc );
+
+/** \ingroup WS
+    The method initialize the information required for the flat emitsteal function.
+    \retval 0 in case success
+    \retval an error code
+*/
+extern int kaapi_sched_flat_emitsteal_init(kaapi_processor_t*);
 
 /** TODO: DESCRIPTION !!!
 */
@@ -723,10 +738,17 @@ typedef enum kaapi_ws_error
 
 /** \ingroup HWS
     Hierarchical workstealing routine
-    \retval 0 in case failure of stealing something
-    \retval a pointer to a stack that is the result of one workstealing operation.
+    \retval KAAPI_REQUEST_S_NOK in case of failure of stealing something
+    \retval KAAPI_REQUEST_S_OK in case of success of the steal operation
 */
 extern kaapi_request_status_t kaapi_hws_emitsteal ( kaapi_processor_t* kproc );
+
+/** \ingroup WS
+    The method initialize the information required for the hierarchical emitsteal function.
+    \retval 0 in case success
+    \retval an error code
+*/
+extern int kaapi_hws_emitsteal_init(kaapi_processor_t*);
 
 /** \ingroup HWS
     Split the task among the given level leaves

@@ -144,14 +144,21 @@ static int kaapi_setup_param()
     }
   }
 
-  kaapi_default_param.emitsteal = kaapi_sched_emitsteal;
+  kaapi_default_param.emitsteal          = kaapi_sched_flat_emitsteal;
+  kaapi_default_param.emitsteal_initctxt = kaapi_sched_flat_emitsteal_init;
   emitsteal = getenv("KAAPI_EMITSTEAL");
   if (emitsteal != NULL)
   {
     if (strcmp(emitsteal, "hws") == 0)
-      kaapi_default_param.emitsteal = kaapi_hws_emitsteal;
+    {
+      kaapi_default_param.emitsteal          = kaapi_hws_emitsteal;
+      kaapi_default_param.emitsteal_initctxt = kaapi_hws_emitsteal_init;
+    }
     else if (strcmp(emitsteal, "flat") == 0)
-      kaapi_default_param.emitsteal = kaapi_sched_emitsteal;
+    {
+      kaapi_default_param.emitsteal          = kaapi_sched_flat_emitsteal;
+      kaapi_default_param.emitsteal_initctxt = kaapi_sched_flat_emitsteal_init;
+    }
     else {
       fprintf(stderr, "***Kaapi: bad value for variable KAAPI_EMITSTEAL\n");
       return EINVAL;

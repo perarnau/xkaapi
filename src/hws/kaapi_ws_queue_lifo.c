@@ -155,8 +155,7 @@ static kaapi_ws_error_t pop
 {
   /* currently fallback to steal */
   
-  const kaapi_processor_id_t kid =
-  kaapi_get_current_processor()->kid;
+  const kaapi_processor_id_t kid = kaapi_get_current_processor()->kid;
   
   kaapi_listrequest_t lr;
   kaapi_listrequest_iterator_t lri;
@@ -167,7 +166,8 @@ static kaapi_ws_error_t pop
   
   kaapi_bitmap_clear(&lr.bitmap);
   kaapi_bitmap_set(&lr.bitmap, kid);
-  memcpy(&lr.requests[kid], req, sizeof(kaapi_request_t));
+// NO NEEDED here: kid is emitting a dummy request with its own bitmap
+//  memcpy(&lr.requests[kid], req, sizeof(kaapi_request_t));
   kaapi_listrequest_iterator_init(&lr, &lri);
   
   return steal(ws_bloc, p, &lr, &lri);

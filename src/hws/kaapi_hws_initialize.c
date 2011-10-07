@@ -237,7 +237,6 @@ int kaapi_hws_init_global(void)
   
   kaapi_procinfo_t* pos;
   kaapi_hws_level_t* hws_level;
-  kaapi_processor_id_t kid;
   int depth;
   unsigned int i;
   kaapi_hierarchy_one_level_t flat_level;
@@ -250,12 +249,15 @@ int kaapi_hws_init_global(void)
   
   /* initialize the request list */
   kaapi_bitmap_clear(&hws_requests.bitmap);
+  
+  /* these lines are already done in kaapi_mt_init.c 
   for (kid = 0; kid < KAAPI_MAX_PROCESSOR; ++kid)
-    hws_requests.requests[kid].ident = kid;
+    kaapi_requests_list[kid].ident = kid;
+  */
   
   hws_levelmask = levelmask_from_env();
   
-  hws_levels = malloc(hws_level_count * sizeof(kaapi_hws_level_t));
+  hws_levels = calloc(hws_level_count, sizeof(kaapi_hws_level_t) );
   kaapi_assert(hws_levels);
   
   /* create the flat level even if not masked, since a local queue

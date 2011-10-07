@@ -72,7 +72,7 @@ static void wait_for_aggregation(kaapi_processor_t* kproc)
   /* assuming nearly all processors take part to the algorithm */
   const int concurrency = kaapi_getconcurrency();
 
-  kaapi_listrequest_t* const klr = &kproc->hlrequests;
+  kaapi_listrequest_t* const klr = &kaapi_requests_list;
 
   int prev_count;
   int iter;
@@ -95,7 +95,7 @@ static void wait_for_aggregation(kaapi_processor_t* kproc)
 
 static void do_initial_split(kaapi_processor_t* kproc)
 {
-  kaapi_listrequest_t* const klr = &kproc->hlrequests;
+  kaapi_listrequest_t* const klr = &kaapi_requests_list;
   kaapi_listrequest_iterator_t kli;
 
   kaapi_listrequest_iterator_init(klr, &kli);

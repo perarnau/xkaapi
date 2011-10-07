@@ -64,7 +64,6 @@ int kaapi_task_splitter_adapt(
   /* call the user splitter */
   stc = kaapi_task_getargst(task, kaapi_stealcontext_t);
 
-#if defined(KAAPI_USE_BITMAP_REQUEST)
   /* recopy requests into an array */
   int count = kaapi_listrequest_iterator_count(lrrange);
   requests = (kaapi_request_t*)alloca(sizeof(kaapi_request_t)*count);
@@ -78,10 +77,7 @@ int kaapi_task_splitter_adapt(
 #endif
     curr = kaapi_listrequest_iterator_next( lrequests, lrrange );
   }
-#else
-#warning "To be implemented"
-/* here do not need copy */
-#endif
+
   /* call the splitter */
   return splitter( stc, count, requests, argsplitter);
 }

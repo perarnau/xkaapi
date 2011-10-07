@@ -673,7 +673,7 @@ typedef struct kaapi_reply_t {
 */
 typedef struct kaapi_request_t {
   kaapi_atomic_t*               status;         /* request status */
-  kaapi_processor_id_t          ident;          /* system wide id of the remote queue */
+  const uintptr_t               ident;          /* system wide id of the remote queue */
   kaapi_task_t*                 thief_task;     /* placeholder to store the solen task */
   struct kaapi_tasksteal_arg_t* thief_sp;       /* placeholder to store thief task sp  */
   kaapi_taskadaptive_result_t*  ktr;            /* only used in adaptive interface to avoid  */

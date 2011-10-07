@@ -45,15 +45,28 @@
 */
 #include "kaapi_impl.h"
 
+typedef struct kaapi_flatemitsteal_context {
+  kaapi_listrequest_t lr;   /* bit map used to post request */
+} kaapi_flatemitsteal_context;
+
+/* no concurrency here: always called before starting threads */
+int kaapi_sched_flat_emitsteal_init(kaapi_processor_t* kproc)
+{
+  kaapi_flatemitsteal_context* ctxt;
+  kproc->emitsteal_ctxt = ctxt = malloc(sizeof(kaapi_flatemitsteal_context));
+  if (kproc->emitsteal_ctxt ==0) return ENOMEM;
+  kaapi_listrequest_init( &ctxt->lr );
+  return 0;
+}
+
 
 /*
 */
-kaapi_request_status_t kaapi_sched_emitsteal ( kaapi_processor_t* kproc )
+kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
 {
   kaapi_atomic_t               status __attribute__((aligned(8)));
   kaapi_victim_t               victim;
   kaapi_request_t*             self_request;
-  kaapi_listrequest_t*         victim_hlr;
   int                          err;
   kaapi_listrequest_iterator_t lri;
   
@@ -80,15 +93,19 @@ redo_select:
   /* (1) 
      Fill & Post the request to the victim processor 
   */
-  self_request = kaapi_request_post( kproc->kid, 
+  kaapi_flatemitsteal_context* victim_stealctxt 
+    = (kaapi_flatemitsteal_context*)victim.kproc->emitsteal_ctxt;
+    
+  self_request = &kaapi_requests_list[kproc->kid];
+  kaapi_assert_debug( self_request->ident == kproc->kid );
+  kaapi_request_post( 
+    &victim_stealctxt->lr,
+    self_request,
     &status, 
     &kproc->thread->stealreserved_task, 
-    &kproc->thread->stealreserved_arg, 
-    victim.kproc 
+    &kproc->thread->stealreserved_arg
   );
   
-  victim_hlr = &victim.kproc->hlrequests;
-
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
 #endif
@@ -128,7 +145,7 @@ enter:
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
 #endif
   /* here becomes an aggregator... the trylock has synchronized memory */
-  kaapi_listrequest_iterator_init(victim_hlr, &lri);
+  kaapi_listrequest_iterator_init(&victim_stealctxt->lr, &lri);
 #if defined(KAAPI_SCHED_LOCK_CAS)
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
 #endif
@@ -144,19 +161,19 @@ enter:
 #if defined(KAAPI_SCHED_LOCK_CAS)
     kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
 #endif
-    kaapi_sched_stealprocessor( victim.kproc, victim_hlr, &lri );
+    kaapi_sched_stealprocessor( victim.kproc, &victim_stealctxt->lr, &lri );
 #if defined(KAAPI_SCHED_LOCK_CAS)
     kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
 #endif
 
     /* reply failed for all others requests */
-    request = kaapi_listrequest_iterator_get( victim_hlr, &lri );
+    request = kaapi_listrequest_iterator_get( &victim_stealctxt->lr, &lri );
     kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
     
     while (request !=0)
     {
       kaapi_request_replytask(request, KAAPI_REQUEST_S_NOK);
-      request = kaapi_listrequest_iterator_next( victim_hlr, &lri );
+      request = kaapi_listrequest_iterator_next( &victim_stealctxt->lr, &lri );
       kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
     }
   }
