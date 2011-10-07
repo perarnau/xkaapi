@@ -312,7 +312,7 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
   
   fail_requests(&hws_requests, &lri);
   kproc->issteal = 0;
-  kproc->thief_task = 0;
+  //kproc->thief_task = 0;
   return KAAPI_REQUEST_S_NOK;
 
 on_request_success:

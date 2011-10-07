@@ -91,7 +91,6 @@ static kaapi_ws_error_t steal
 {
   fifo_queue_t* const q = (fifo_queue_t*)p;
   kaapi_request_t* req;
-  unsigned int top;
   uintptr_t state;
   
   /* avoid to take the lock */
@@ -103,9 +102,9 @@ static kaapi_ws_error_t steal
   nreq = kaapi_listrequest_iterator_count( lri );
   req = kaapi_listrequest_iterator_get(lr, lri);
 
-  while ((req != NULL) && top)
+  while ((req != NULL) && q->top)
   {
-    kaapi_task_t* const task = q->tasks[--top];
+    kaapi_task_t* const task = q->tasks[--q->top];
     kaapi_task_body_t task_body = kaapi_task_getbody(task);
     
     if (task_body == kaapi_hws_adapt_body)
@@ -153,33 +152,10 @@ static kaapi_ws_error_t steal
     }
     else
     {
-      /* dfg task, refer to kaapi_task_splitter_dfg_single */
-      
-      /* todo: kaapi_sched_stealstack.c */
-      
-      kaapi_tasksteal_arg_t* argsteal;
-      const kaapi_format_t* format;      
-      
-      
-      task_body = kaapi_task_marksteal(task);
-      if (!state) continue ;
-      
-      format = kaapi_format_resolvebybody(task_body);
-      kaapi_assert_debug(format);
-
-      argsteal = (kaapi_tasksteal_arg_t*)req->thief_sp;
-      
 #if CONFIG_HWS_COUNTERS
       kaapi_hws_inc_steal_counter(p, req->ident);
 #endif
-      
-      argsteal->origin_thread   = 0;
-      argsteal->origin_task     = task;
-      argsteal->origin_body     = task_body;
-      argsteal->origin_fmt      = format;
-      argsteal->war_param       = 0;
-      argsteal->cw_param        = 0;
-      req->thief_task->body     = kaapi_tasksteal_body; /* TODO MUST be always this task no write */
+      req->thief_task = task;
       kaapi_request_replytask( req, KAAPI_REQUEST_S_OK); /* success of steal */
       
       req = kaapi_listrequest_iterator_next(lr, lri);
