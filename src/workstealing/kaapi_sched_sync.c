@@ -84,6 +84,7 @@ int kaapi_sched_sync_(kaapi_thread_context_t* thread)
   kaapi_frame_t*          save_esfp;
 #if defined(KAAPI_DEBUG)
   kaapi_frame_t*          save_fp;
+  kaapi_thread_context_t* save_thread;
 #endif
 
   /* If pure DFG frame and empty return */
@@ -99,6 +100,7 @@ int kaapi_sched_sync_(kaapi_thread_context_t* thread)
 
   savepc = thread->stack.sfp->pc;
 #if defined(KAAPI_DEBUG)
+  save_thread = thread;
   save_fp = (kaapi_frame_t*)thread->stack.sfp;
 #endif
   save_esfp = thread->stack.esfp;
@@ -119,13 +121,19 @@ redo:
   else
 #endif /* KAAPI_USE_CUDA */
   if (thread->stack.sfp->tasklist == 0) 
+  {
     err = kaapi_stack_execframe(&thread->stack);
+  } 
   else
+  {
     err = kaapi_thread_execframe_tasklist(thread);
+  }
+  kaapi_assert_debug( kaapi_self_thread_context() == thread );
 
   if (err == EWOULDBLOCK)
   {
     kaapi_sched_suspend( kaapi_get_current_processor() );
+    kaapi_assert_debug( kaapi_self_thread_context() == save_thread );
     kaapi_assert_debug( kaapi_self_thread_context() == thread );
     kaapi_assert_debug( thread->stack.proc == kaapi_get_current_processor() );
     goto redo;

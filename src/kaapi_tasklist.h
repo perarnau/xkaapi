@@ -687,7 +687,10 @@ static inline int kaapi_readylist_pop( kaapi_readytasklist_t* rtl, kaapi_taskdes
   kaapi_workqueue_index_t local_end;
   kaapi_workqueue_index_t local_beg;
   int err = kaapi_workqueue_pop(&rtl->wq, &local_beg, &local_end, 1);
-  if (err ==0) *td = rtl->base[local_beg];
+  if (err ==0) {
+    *td = rtl->base[local_beg];
+    rtl->next = local_beg;
+  }
   return err;
 }
 

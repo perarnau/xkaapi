@@ -53,7 +53,8 @@ int kaapi_thread_tasklistready_pushactivated(
 )
 {
   kaapi_taskdescr_t** base = rtl->base;
-  kaapi_workqueue_index_t local_beg = rtl->next; /* reuse the position of the previous executed task */
+  kaapi_workqueue_index_t local_beg =  rtl->next; /* reuse the position of the previous executed task */
+
   kaapi_taskdescr_t* td;
   int task_pushed = 0;
   while (head !=0)
