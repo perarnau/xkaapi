@@ -149,15 +149,18 @@ printf("IN %s\n", __PRETTY_FUNCTION__);
   }
   
 #if 0
-  /* It seems that PLASMA creates threads in place of quark.
-     Each parallel section in PLASMA must correspond to 
+  /* It seems that PLASMA creates threads in place of quark (...).
+    A BETTER UNDERSTANDING OF THREAD MANAGEMENT WITH QUARK IS REQUIRED !
+
+    At first glance, each parallel section in PLASMA must correspond to 
       - thread creation (lazy)
       - execution
       - termination
     This does not correspond to the natural execution model of
     Kaapi where only the main thread is view from the programmer....
+
     In order to run XKaapi with quark -> 
-      --nthreads=1 + KAAPI_CPUCOUNT or KAAPI_CPUSET defined.
+      --nthreads=1 within KAAPI_CPUCOUNT or KAAPI_CPUSET defined.
   */
   if ((num_threads <1) || (num_threads > KAAPI_MAX_PROCESSOR)) 
     return 0;
