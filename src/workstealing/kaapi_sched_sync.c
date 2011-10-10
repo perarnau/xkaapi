@@ -100,6 +100,9 @@ int kaapi_sched_sync_(kaapi_thread_context_t* thread)
   savepc = thread->stack.sfp->pc;
   save_esfp = thread->stack.esfp;
   thread->stack.esfp = (kaapi_frame_t*)thread->stack.sfp;
+#if defined(KAAPI_DEBUG)
+  save_fp = thread->stack.sfp;
+#endif
 
   /* write barrier in order to commit update */
   kaapi_mem_barrier();
