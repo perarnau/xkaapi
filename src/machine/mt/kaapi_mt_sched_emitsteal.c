@@ -172,6 +172,7 @@ enter:
     {
       kaapi_request_replytask(request, KAAPI_REQUEST_S_NOK);
       request = kaapi_listrequest_iterator_next( &victim_stealctxt->lr, &lri );
+      KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( &lri ) );
       kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
     }
   }

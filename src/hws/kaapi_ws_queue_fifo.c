@@ -157,7 +157,7 @@ static kaapi_ws_error_t steal
 #endif
       req->thief_task = task;
       kaapi_request_replytask( req, KAAPI_REQUEST_S_OK); /* success of steal */
-      
+      KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( lri ) );
       req = kaapi_listrequest_iterator_next(lr, lri);
     }
   }

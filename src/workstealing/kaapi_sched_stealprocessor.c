@@ -77,6 +77,7 @@ int kaapi_sched_stealprocessor(
       request->thief_task->body = kaapi_execthread_body;
       request->thief_task->sp   = thread;      
       kaapi_request_replytask(request, KAAPI_REQUEST_S_OK);
+      KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( lrrange ) );
       request = kaapi_listrequest_iterator_next( lrequests, lrrange );
     }
   }

@@ -115,6 +115,7 @@ void kaapi_task_steal_dfg
 
   /* success of steal */
   kaapi_request_replytask( request, KAAPI_REQUEST_S_OK);
+  KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( lrrange ) );
     
   /* advance to the next request */
   kaapi_listrequest_iterator_next( lrequests, lrrange );

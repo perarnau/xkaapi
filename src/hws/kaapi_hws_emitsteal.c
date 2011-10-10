@@ -85,6 +85,7 @@ static void fail_requests
   while (req != NULL)
   {
     kaapi_request_replytask( req, KAAPI_REQUEST_S_NOK);
+    KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( lri ) );
     req = kaapi_listrequest_iterator_next(lr, lri);
   }
 }
@@ -287,7 +288,7 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
   kaapi_ws_block_t* block;
   kaapi_hws_levelid_t child_levelid;
   kaapi_hws_levelid_t levelid = 0;
-  kaapi_request_t* request;
+  kaapi_request_t* request = 0;
   kaapi_listrequest_iterator_t lri;
   kaapi_atomic_t status;
 
@@ -303,7 +304,7 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
   kaapi_listrequest_iterator_prepare(&lri);
 
   /* post the stealing request */
-  kaapi_request_post(
+  request = kaapi_request_post(
     &hws_requests,
     &kaapi_requests_list[kproc->kid],
     &status, 

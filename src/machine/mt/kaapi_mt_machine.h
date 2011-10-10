@@ -273,9 +273,6 @@ static inline kaapi_request_t* kaapi_listrequest_iterator_next(
 {
   lrrange->idcurr = kaapi_bitmap_first1_and_zero( &lrrange->bitmap )-1;
   kaapi_request_t* retval = (lrrange->idcurr == -1 ? 0 : &kaapi_requests_list[lrrange->idcurr]);
-#if defined(KAAPI_DEBUG)
-  lrrange->count_out += (retval == 0 ? 0 : 1);
-#endif
   return retval;
 } 
 
@@ -353,6 +350,14 @@ static inline void kaapi_listrequest_iterator_clear
 {
   kaapi_bitmap_value_clear(&lrrange->bitmap);
 }
+
+#if defined(KAAPI_DEBUG)
+static inline void kaapi_listrequest_iterator_countreply
+  (kaapi_listrequest_iterator_t* lrrange)
+{
+  ++lrrange->count_out;
+}
+#endif
 
 
 /** CPU Memory hierarchy of the local machine
