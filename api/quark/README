@@ -1,2 +1,5 @@
 This is a minimal implementation of the QUARK library used in PLASMA (http://icl.cs.utk.edu/plasma).
 Task and sequence of tasks are supported.
+Cancelation is not yet supported.
+
+Once created, libquark.a can be interchanged with plasma-2.4.2 libquark before linking binary.

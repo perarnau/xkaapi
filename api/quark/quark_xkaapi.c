@@ -131,6 +131,7 @@ Quark *QUARK_Setup(int num_threads)
   
   if (KAAPI_ATOMIC_INCR(&isinit) > 1) 
   {
+    /* already initialized */
     kaapi_processor_t* kproc = kaapi_get_current_processor();
     return &default_Quark[kproc->kid];
   }
@@ -146,6 +147,12 @@ printf("IN %s\n", __PRETTY_FUNCTION__);
     else 
       quark_dump_dot = 1;
   }
+  
+  if ((num_threads <1) || (num_threads > KAAPI_MAX_PROCESSOR)) 
+    return 0;
+  char tmp[32];
+  snprintf(tmp, 32,"%i", num_threads);
+  setenv("KAAPI_CPUCOUNT",tmp, 1);
   
   memset( &default_Quark, 0, sizeof(default_Quark) );
   kaapi_init(0, 0, 0);
