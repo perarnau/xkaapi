@@ -148,11 +148,23 @@ printf("IN %s\n", __PRETTY_FUNCTION__);
       quark_dump_dot = 1;
   }
   
+#if 0
+  /* It seems that PLASMA creates threads in place of quark.
+     Each parallel section in PLASMA must correspond to 
+      - thread creation (lazy)
+      - execution
+      - termination
+    This does not correspond to the natural execution model of
+    Kaapi where only the main thread is view from the programmer....
+    In order to run XKaapi with quark -> 
+      --nthreads=1 + KAAPI_CPUCOUNT or KAAPI_CPUSET defined.
+  */
   if ((num_threads <1) || (num_threads > KAAPI_MAX_PROCESSOR)) 
     return 0;
   char tmp[32];
   snprintf(tmp, 32,"%i", num_threads);
   setenv("KAAPI_CPUCOUNT",tmp, 1);
+#endif
   
   memset( &default_Quark, 0, sizeof(default_Quark) );
   kaapi_init(0, 0, 0);
@@ -293,6 +305,7 @@ unsigned long long QUARK_Insert_Task(
 //printf("End task\n");
   return (uintptr_t)task;
 }
+
 
 /* Main work loop, called externally by everyone but the master
  * (master manages this internally to the insert_task and waitall
