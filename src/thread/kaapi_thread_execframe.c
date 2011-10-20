@@ -181,14 +181,6 @@ redo_exec:
         {
           fp[-1].pc = pc;  
           stack->sfp = fp-1;
-#if defined(HUGEDEBUG)
-  printf("%i::[execframe] Task %p, state: 0x%X is under execution suspended thread\n", 
-    kaapi_get_self_kid(),
-    (void*)stack->sfp->pc, 
-    (unsigned int)stack->sfp->pc->state
-  ); 
-  fflush(stdout);
-#endif
           return EWOULDBLOCK;
         }
         if (retval == EINTR) goto redo_exec;
@@ -271,8 +263,6 @@ redo_exec:
 }
 
 
-//#define HUGEDEBUG
-
 /* try to preempt to stolen task:
    - lock the current state: add LOCKED flag to the state, if old value is not yet STEAL
     then the thief task has been terminated
@@ -281,41 +271,29 @@ int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
 {
   if ((kaapi_task_orstate(pc, KAAPI_TASK_STATE_LOCKED) & ~KAAPI_TASK_STATE_LOCKED) != KAAPI_TASK_STATE_STEAL)
   {
-#if defined(HUGEDEBUG)
-    printf("In __kaapi_try_preempt: task %p terminated/or aftersteal\n", pc); fflush(stdout);
-#endif
     /* do not suspend because it is terminated */
-    kaapi_assert( kaapi_task_getstate(pc) == (KAAPI_TASK_STATE_TERM | KAAPI_TASK_STATE_LOCKED) );
+    kaapi_assert_debug( kaapi_task_getstate(pc) == (KAAPI_TASK_STATE_TERM | KAAPI_TASK_STATE_LOCKED) );
     return 0;
   }
 
   /* number of cycles = number of cycles of the thief requires between marksteal 
-     and set reserved to the thief task
+     and set reserved to the thief task.
   */
   /* while ((void* volatile)(pc->reserved) == 0) */
   while ( ((volatile kaapi_task_t*)pc)->reserved ==0 )
   {
     if ((kaapi_task_getstate(pc) & ~KAAPI_TASK_STATE_LOCKED) == KAAPI_TASK_STATE_TERM) 
-    {
-#if defined(HUGEDEBUG)
-      printf("In __kaapi_try_preempt: task %p terminated/or aftersteal\n", pc); fflush(stdout);
-#endif
       return 0;
-    } 
     kaapi_slowdown_cpu();
   }
 
   /* Uncomment these lines in order to activate preemption between DFG task
   */
-#if 0
+#if 1
   /* try to preempt it: mark the thief task' state with SIGNALED bit */
   uintptr_t oldstate = kaapi_task_orstate(pc->reserved, KAAPI_TASK_STATE_SIGNALED);
   if ((oldstate == KAAPI_TASK_STATE_INIT) || (oldstate == KAAPI_TASK_STATE_ALLOCATED))
   {
-#if defined(HUGEDEBUG)
-    printf("In __kaapi_try_preempt: task: %p successfully preempts thief; %p\n", pc, pc->reserved); 
-    fflush(stdout);
-#endif
     /* else get back the task for myself : restore state to init */
     kaapi_task_setstate(pc, KAAPI_TASK_STATE_INIT);
     return EINTR;  
@@ -323,17 +301,6 @@ int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
 #endif
 
   /* restore STEAL state and return EWOULDBLOCK */
-#if defined(HUGEDEBUG)
-  printf("%i::Task %p, state: 0x%X is under execution by thief task: %p, state: 0x%X. Suspended thread\n", 
-    kaapi_get_self_kid(),
-    (void*)pc, 
-    (unsigned int)pc->state, 
-    (void*)pc->reserved,
-    (unsigned int)pc->reserved->state
-  ); 
-  fflush(stdout);
-#endif
-
   kaapi_task_setstate(pc, KAAPI_TASK_STATE_STEAL);
   return EWOULDBLOCK;
 }
