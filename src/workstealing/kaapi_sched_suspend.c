@@ -184,7 +184,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     /* always allocate a thread before emitting a steal request */
     if (kproc->thread ==0)
     {
-      thread = kaapi_context_alloc(kproc);
+      thread = kaapi_context_alloc(kproc,(size_t)-1);
       kaapi_assert_debug( thread != 0 );
       
       kaapi_setcontext(kproc, thread);

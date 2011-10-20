@@ -93,6 +93,7 @@ static char kaapi_getmodename( kaapi_access_mode_t m )
     case KAAPI_ACCESS_MODE_W:  return 'w';
     case KAAPI_ACCESS_MODE_CW: return 'c';
     case KAAPI_ACCESS_MODE_RW: return 'x';
+    case KAAPI_ACCESS_MODE_SCRATCH: return 't';
     default: return '!';
   }
 }

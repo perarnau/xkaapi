@@ -61,7 +61,11 @@ static int kaapi_task_descriptor_print( FILE* file, int pad, kaapi_taskdescr_t* 
   const kaapi_format_t* fmt;
   kaapi_task_body_t body;
 
+#if defined(KAAPI_TASKLIST_POINTER_TASK)
+  body = kaapi_task_getbody(td->task);
+#else
   body = kaapi_task_getbody(&td->task);
+#endif
   fmt = kaapi_format_resolvebybody( body );
   if (fmt !=0) 
     name = fmt->name;

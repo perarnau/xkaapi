@@ -59,7 +59,10 @@ extern int kaapi_sched_select_victim_with_cuda_tasks
 
 /*
 */
-int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_t* kpi)
+int kaapi_processor_init( kaapi_processor_t* kproc, 
+                          const struct kaapi_procinfo_t* kpi,
+                          size_t stacksize
+                        )
 {
   int i;
   kaapi_thread_context_t* ctxt;
@@ -129,7 +132,7 @@ int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_
   kaapi_processor_computetopo( kproc );  
   kaapi_hws_init_perproc(kproc);
 
-  ctxt = (kaapi_thread_context_t*)kaapi_context_alloc( kproc );
+  ctxt = (kaapi_thread_context_t*)kaapi_context_alloc( kproc, stacksize );
   kaapi_assert(ctxt !=0);
 
   /* set new context to the kprocessor */

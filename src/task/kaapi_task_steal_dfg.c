@@ -80,6 +80,7 @@ void kaapi_task_steal_dfg
 //printf("Steal task: %p, name:'%s' WC=%i\n", (void*)task, task_fmt->name, wc); fflush(stdout);
   kaapi_request_t* request =
 	kaapi_listrequest_iterator_get( lrequests, lrrange );
+  kaapi_assert_debug( request != 0 );
   ((kaapi_task_t* volatile)task)->reserved = request->thief_task;
 
 #if 0
@@ -91,7 +92,7 @@ void kaapi_task_steal_dfg
   fflush(stdout);
 #endif
 
-  kaapi_assert( (request->thief_task->state & ~KAAPI_TASK_STATE_SIGNALED) == KAAPI_TASK_STATE_ALLOCATED );
+  kaapi_assert_debug( (request->thief_task->state & ~KAAPI_TASK_STATE_SIGNALED) == KAAPI_TASK_STATE_ALLOCATED );
   
   /* barrier not necessary here: the victim will only try to access to task'state (already committed) 
      and reserved field */

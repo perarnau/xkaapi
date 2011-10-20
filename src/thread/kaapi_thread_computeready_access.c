@@ -58,34 +58,46 @@ kaapi_data_t* kaapi_thread_computeready_access(
 
   if (KAAPI_ACCESS_IS_READWRITE(m))
   {
-    kaapi_tasklist_push_successor( tl, version->writer_task, task );
-    version->writer_task = task;
+    if (version->writer_task != task )
+    {
+      kaapi_tasklist_push_successor( tl, version->writer_task, task );
+      version->writer_task = task;
+    }
     version->last_mode   = m;
     return version->handle;
   } 
   else if (KAAPI_ACCESS_IS_READ(m)) 
   {
-    kaapi_tasklist_push_successor( tl, version->writer_task, task );
+    if (version->writer_task != task )
+    {
+      kaapi_tasklist_push_successor( tl, version->writer_task, task );
+    }
     return version->handle;
   }
   else if (KAAPI_ACCESS_IS_WRITE(m)) /* w or rw */
   {
     /* look if it is a WAR or WAW dependencies (do not consider initial access) */
+#if defined(KAAPI_TASKLIST_POINTER_TASK)
+    if (kaapi_task_getbody(version->writer_task->task) == kaapi_taskalloc_body)
+#else
     if (kaapi_task_getbody(&version->writer_task->task) == kaapi_taskalloc_body)
+#endif
     {
       kaapi_tasklist_push_successor( tl, version->writer_task, task );
       version->writer_task = task;
       version->last_mode   = m;
       return version->handle;
     }
-    
-    /* else we have a true WAR or WAW dependencies: currently we serialize standard execution 
-       The idea would be to:
-        - either rename variable at low cost (i.e: fast memory allocation / liberation)
-        - either rename variable when stealing the task
-    */
-    kaapi_tasklist_push_successor( tl, version->writer_task, task );
-    version->writer_task = task;
+    if (version->writer_task != task )
+    {    
+      /* else we have a true WAR or WAW dependencies: currently we serialize standard execution 
+         The idea would be to:
+          - either rename variable at low cost (i.e: fast memory allocation / liberation)
+          - either rename variable when stealing the task
+      */
+      kaapi_tasklist_push_successor( tl, version->writer_task, task );
+      version->writer_task = task;
+    }
     version->last_mode   = m;
     return version->handle;
   }

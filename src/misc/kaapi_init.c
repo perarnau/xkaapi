@@ -65,6 +65,7 @@ static kaapi_atomic_t kaapi_count_init = {0};
 kaapi_rtparam_t kaapi_default_param = {
    .startuptime = 0,
    .stacksize   = 64*4096, /**/
+   .stacksize_master = 64*4096, /**/
    .cpucount    = 0,
    .kproc_list  = 0,
    .kid2cpu     = 0,
@@ -121,6 +122,11 @@ static int kaapi_setup_param()
   if (getenv("KAAPI_STACKSIZE") !=0)
     kaapi_default_param.stacksize = atoll(getenv("KAAPI_STACKSIZE"));
 
+  if (getenv("KAAPI_STACKSIZE_MASTER") !=0)
+    kaapi_default_param.stacksize_master = atoll(getenv("KAAPI_STACKSIZE_MASTER"));
+  else
+    kaapi_default_param.stacksize_master = kaapi_default_param.stacksize;
+
   /* workstealing selection function */
   wsselect = getenv("KAAPI_WSSELECT");
   kaapi_default_param.wsselect = &kaapi_sched_select_victim_rand;
@@ -149,12 +155,15 @@ static int kaapi_setup_param()
   emitsteal = getenv("KAAPI_EMITSTEAL");
   if (emitsteal != NULL)
   {
+#if KAAPI_USE_HWLOC
     if (strcmp(emitsteal, "hws") == 0)
     {
       kaapi_default_param.emitsteal          = kaapi_hws_emitsteal;
       kaapi_default_param.emitsteal_initctxt = kaapi_hws_emitsteal_init;
     }
-    else if (strcmp(emitsteal, "flat") == 0)
+    else
+#endif /* KAAPI_USE_HWLOC */
+    if (strcmp(emitsteal, "flat") == 0)
     {
       kaapi_default_param.emitsteal          = kaapi_sched_flat_emitsteal;
       kaapi_default_param.emitsteal_initctxt = kaapi_sched_flat_emitsteal_init;

@@ -166,9 +166,14 @@ typedef enum {
 extern void kaapi_end_parallel(int flag);
 
 /* Get the current processor kid. 
-   \retval the current processor id
+   \retval the current processor kid
 */
 extern unsigned int kaapi_get_self_kid(void);
+
+/* Get the current processor id. 
+   \retval the current processor id
+*/
+extern unsigned int kaapi_get_self_cpu_id(void);
 
 /* Abort 
 */
@@ -317,7 +322,9 @@ typedef enum kaapi_access_mode_t {
   KAAPI_ACCESS_MODE_CW  = 8,        /* 0000 1000 : */
   KAAPI_ACCESS_MODE_P   = 16,       /* 0001 0000 : */
   KAAPI_ACCESS_MODE_F   = 32,       /* 0010 0000 : only valid with _W or _R */
-  KAAPI_ACCESS_MODE_RW  = KAAPI_ACCESS_MODE_R|KAAPI_ACCESS_MODE_W
+  KAAPI_ACCESS_MODE_S   = 64,       /* 0100 0000 : for Quark support: scratch mode */
+  KAAPI_ACCESS_MODE_RW  = KAAPI_ACCESS_MODE_R|KAAPI_ACCESS_MODE_W,
+  KAAPI_ACCESS_MODE_SCRATCH = KAAPI_ACCESS_MODE_S|KAAPI_ACCESS_MODE_V
 } kaapi_access_mode_t;
 /*@}*/
 
@@ -465,6 +472,7 @@ typedef struct kaapi_task_t {
   kaapi_task_body_t             body;      /** task body  */
   void*                         sp;        /** data stack pointer of the data frame for the task  */
   struct kaapi_task_t* volatile reserved;  /** reserved field for internal usage */
+  uintptr_t                     schedinfo; /** scheduling information */
 //TO ADD AFTER  kaapi_task_binding_t  binding;   /** binding information or 0  */
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
@@ -886,6 +894,7 @@ static inline int kaapi_thread_pushtask_withocr(kaapi_thread_t* thread, const vo
 /*
 */
 extern int kaapi_thread_pushtask_atlevel(kaapi_task_t*, kaapi_hws_levelid_t);
+extern int kaapi_thread_pushtask_atlevel_with_nodeid(kaapi_task_t*, kaapi_hws_levelid_t, unsigned int);
 
 /** \ingroup TASK
     The function kaapi_thread_distribute_task() pushes the top task into the stack
@@ -900,6 +909,9 @@ extern int kaapi_thread_distribute_task (
   kaapi_hws_levelid_t levelid
 );
 
+extern int kaapi_thread_distribute_task_with_nodeid
+(kaapi_thread_t*, kaapi_hws_levelid_t, unsigned int);
+
 /** \ingroup TASK
     Task initialization routines
 */
@@ -910,6 +922,7 @@ static inline void kaapi_task_initdfg
   task->sp    = arg;
   task->state = 0;
   task->reserved = 0;
+  task->schedinfo = 0;
 //  task->binding.type = KAAPI_BINDING_ANY;
 }
 
@@ -923,6 +936,7 @@ static inline void kaapi_task_init_withstate
   task->sp    = arg;
   task->state = state;
   task->reserved = 0;
+  task->schedinfo = 0;
 //  task->binding.type = KAAPI_BINDING_ANY;
 }
 
@@ -1752,7 +1766,7 @@ static inline kaapi_workqueue_index_t kaapi_workqueue_size( kaapi_workqueue_t* k
 
 /**
 */
-static inline unsigned int kaapi_workqueue_isempty( kaapi_workqueue_t* kwq )
+static inline unsigned int kaapi_workqueue_isempty( const kaapi_workqueue_t* kwq )
 {
   kaapi_workqueue_index_t size = kwq->end - kwq->beg;
   return size <= 0;
@@ -1892,7 +1906,7 @@ int kaapi_splitter_default
 #define KAAPI_PERF_ID_USER_POS (31)
 #define KAAPI_PERF_ID_USER_MASK (1 << KAAPI_PERF_ID_USER_POS)
 
-#define KAAPI_PERF_ID(U, I) (KAAPI_PERF_ID_ ## I | (U) << KAAPI_PERF_ID_USER_POS)
+#define KAAPI_PERF_ID(U, I)  (KAAPI_PERF_ID_ ## I | (U) << KAAPI_PERF_ID_USER_POS)
 #define KAAPI_PERF_ID_USER(I) KAAPI_PERF_ID(1, I)
 #define KAAPI_PERF_ID_PRIV(I) KAAPI_PERF_ID(0, I)
 
@@ -1907,8 +1921,9 @@ int kaapi_splitter_default
 #define KAAPI_PERF_ID_ALLOCTHREAD   8  /* count number of allocated thread */
 #define KAAPI_PERF_ID_FREETHREAD    9  /* count number of free thread */
 #define KAAPI_PERF_ID_QUEUETHREAD   10 /* count the maximal number of thread in queue */
+#define KAAPI_PERF_ID_TASKLISTCALC  11 /* tick to compute task lists in ns */
 
-#define KAAPI_PERF_ID_ENDSOFTWARE   11 /* mark end of software counters */
+#define KAAPI_PERF_ID_ENDSOFTWARE   14 /* mark end of software counters */
 
 #define KAAPI_PERF_ID_PAPI_BASE    (KAAPI_PERF_ID_ENDSOFTWARE)
 #define KAAPI_PERF_ID_PAPI_0       (KAAPI_PERF_ID_PAPI_BASE + 0)
@@ -1959,6 +1974,7 @@ extern void _kaapi_perf_read_counters(const kaapi_perf_idset_t* idset, int isuse
 static inline void kaapi_perf_accum_counters(const kaapi_perf_idset_t* idset, kaapi_perf_counter_t* counter)
 { _kaapi_perf_accum_counters(idset, KAAPI_PERF_USR_COUNTER, counter); }
 
+/* */
 static inline void kaapi_perf_read_counters(const kaapi_perf_idset_t* idset, kaapi_perf_counter_t* counter)
 { _kaapi_perf_read_counters(idset, KAAPI_PERF_USR_COUNTER, counter); }
 
@@ -2016,8 +2032,8 @@ static inline kaapi_memory_view_t kaapi_memory_view_make1d(size_t size, size_t w
   retval.type     = KAAPI_MEMORY_VIEW_1D;
   retval.size[0]  = size;
   retval.wordsize = wordsize;
-  retval.size[1] = 0;
-  retval.lda = 0;
+  retval.size[1]  = 0;
+  retval.lda      = 0;
   return retval;
 }
 
@@ -2031,7 +2047,6 @@ static inline kaapi_memory_view_t kaapi_memory_view_make2d(size_t n, size_t m, s
   retval.wordsize = wordsize;
   return retval;
 }
-
 
 /** \ingroup TASK
     Allocate a new format data

@@ -104,7 +104,7 @@ void kaapi_hws_sched_sync(void)
     /* allocate new thread is necessary */
     if (kproc->thread ==0)
     {
-      thread = kaapi_context_alloc(kproc);
+      thread = kaapi_context_alloc(kproc, (size_t)-1);
       kaapi_assert_debug( thread != 0 );
       
       kaapi_setcontext(kproc, thread);
@@ -136,7 +136,6 @@ void kaapi_hws_sched_sync_once(void)
   /* todo: q->push must push in local stack too,
    so that syncing is equivalent to sched_sync
    */
-  
   kaapi_processor_t* const kproc = kaapi_get_current_processor();
   kaapi_request_status_t  ws_status;
   kaapi_thread_context_t* thread;
@@ -152,7 +151,7 @@ void kaapi_hws_sched_sync_once(void)
   /* allocate new thread is necessary */
   if (kproc->thread ==0)
   {
-    thread = kaapi_context_alloc(kproc);
+    thread = kaapi_context_alloc(kproc, (size_t)-1);
     kaapi_assert_debug( thread != 0 );
     
     kaapi_setcontext(kproc, thread);

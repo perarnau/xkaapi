@@ -46,13 +46,19 @@
 #ifndef KAAPI_HWS_H_INCLUDED
 # define KAAPI_HWS_H_INCLUDED
 
-
 /* internal to hws */
 
 #define CONFIG_HWS_COUNTERS 1
 
+/** TODO: DESCRIPTION !!!
+*/
+typedef enum kaapi_ws_error
+{
+  KAAPI_WS_ERROR_SUCCESS = 0,
+  KAAPI_WS_ERROR_EMPTY,
+  KAAPI_WS_ERROR_FAILURE
+} kaapi_ws_error_t;
 
-#include "kaapi_impl.h"
 #include "kaapi_ws_queue.h"
 
 
@@ -110,15 +116,14 @@ typedef struct kaapi_ws_block
 
 } kaapi_ws_block_t;
 
-/*TODO: A préciser:
-   - info structure
-   - level == noeuds freres (un pere commun ?) ou tous les noeuds d'un meme niveau
-*/
 typedef struct kaapi_hws_level
 {
+  /* a hws_level contains all the node at a same level */
+
   /* block for a given kid at this level */
   kaapi_ws_block_t** kid_to_block;
 
+  /* one block per node */
   kaapi_ws_block_t* blocks;
   unsigned int block_count;
 
@@ -127,7 +132,7 @@ typedef struct kaapi_hws_level
 
 /* globals */
 
-static const unsigned int hws_level_count = KAAPI_HWS_LEVELID_MAX;
+static const int hws_level_count = (int)KAAPI_HWS_LEVELID_MAX;
 extern kaapi_hws_level_t* hws_levels;
 extern kaapi_hws_levelmask_t hws_levelmask;
 extern kaapi_listrequest_t hws_requests;

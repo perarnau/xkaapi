@@ -335,12 +335,12 @@ static inline void kaapi_listrequest_iterator_update
   kaapi_bitmap_value_or(&lrrange->bitmap, &orig_bitmap);
 
 #if defined(KAAPI_DEBUG)
-  lrrange->count_in += kaapi_bitmap_count(orig_bitmap);
-  kaapi_bitmap_value_or( &lrrange->bitmap_t0, &lrrange->bitmap );
+  kaapi_bitmap_value_or( &lrrange->bitmap_t0, &orig_bitmap );
+  lrrange->count_in  += kaapi_bitmap_count(orig_bitmap);
 #endif
 
   /* check if empty before nexting */
-  if (kaapi_bitmap_value_empty(&lrrange->bitmap) == 0)
+  if ((lrrange->idcurr ==-1) && !kaapi_bitmap_value_empty(&lrrange->bitmap))
     kaapi_listrequest_iterator_next( lrequests, lrrange );
 }
 
@@ -417,9 +417,7 @@ typedef struct kaapi_processor_t {
   void*                    emitsteal_ctxt;                /* specific to the WS algorithm */
 
   pthread_mutex_t          suspend_lock;                  /* lock used to suspend / resume the threads */
-  
-  void*                    dfgconstraint;                 /* TODO: for DFG constraints evaluation */
-  
+    
   /* hierachical information of other kprocessor */
   int                      cpuid;                         /* os index of the bounded physical cpu */
   int                      numa_nodeid;                   /* os index of the bounded physical memory ressource. See  kaapi_memory_id_t */
@@ -463,7 +461,11 @@ typedef struct kaapi_processor_t {
 /*
 */
 struct kaapi_procinfo;
-extern int kaapi_processor_init( kaapi_processor_t* kproc, const struct kaapi_procinfo_t*);
+extern int kaapi_processor_init( 
+    kaapi_processor_t* kproc, 
+    const struct kaapi_procinfo_t*,
+    size_t stacksize
+);
 
 
 /** Initialize the topology information from each thread
@@ -514,11 +516,11 @@ static inline void kaapi_processor_free(kaapi_processor_t* kproc)
     Otherwise, an error number will be returned to indicate the error.
     This function is machine dependent.
     \param kproc IN/OUT the kprocessor that make allocation
-    \param size_data IN the amount of stack data.
+    \param stacksize IN the amount of stack data. If -1 use kaapi_default_param.stacksize 
     \retval pointer to the stack 
     \retval 0 if allocation failed
 */
-extern kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc );
+extern kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc, size_t stacksize );
 
 
 /** \ingroup TASK

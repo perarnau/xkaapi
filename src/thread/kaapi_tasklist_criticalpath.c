@@ -43,53 +43,72 @@
 */
 #include "kaapi_impl.h"
 
-/** Activate and push ready tasks of an activation link.
-    Return 1 if at least one ready task has been pushed into ready queue.
-    Else return 0.
+
+static inline uint64_t _kaapi_max(uint64_t d1, uint64_t d2)
+{ return (d1 < d2 ? d2 : d1); }
+
+
+
+/* explore successor in recursive maner 
 */
-int kaapi_thread_tasklistready_pushactivated( 
-    kaapi_readytasklist_t*  rtl, 
-    kaapi_activationlink_t* head 
+static void kaapi_explore_successor( 
+  kaapi_taskdescr_t*      td
 )
 {
-  kaapi_taskdescr_t** base = rtl->base;
-  kaapi_workqueue_index_t local_beg =  rtl->next; /* reuse the position of the previous executed task */
+  uint64_t                maxdatesucc = 0;
+  kaapi_activationlink_t* curr;
 
-  kaapi_taskdescr_t* td;
-  int task_pushed = 0;
-  while (head !=0)
+  /* if already visited, return */
+  if (td->mark) 
+    return ;
+    
+  curr = td->u.acl.list.front;
+  if (curr == 0) 
   {
-    td = head->td;
-    if (kaapi_taskdescr_activated(td))
-    {
-      /* if non local -> push on remote queue ? */
-      if ( kaapi_cpuset_empty(&td->u.acl.mapping) )
-      {
-        /* push on local queue */
-        kaapi_assert_debug((char*)&base[local_beg] > (char*)(kaapi_self_thread()->sp_data));
-        base[local_beg--] = head->td;
-        task_pushed = 1;
-      }
-      else 
-      {
-        /* push on a remote queue */
-        kaapi_affinity_queue_t* queue = kaapi_sched_affinity_lookup_queue(&td->u.acl.mapping);
-        if (queue == 0)
-        {
-          kaapi_assert_debug((char*)&base[local_beg] > (char*)(kaapi_self_thread()->sp_data));
-          base[local_beg--] = head->td;
-          task_pushed = 1;
-        }
-        else {
-          /* push the task in the bounded queue */
-          KAAPI_ATOMIC_INCR(&td->tl->count_thief);
-          kaapi_sched_affinity_thief_pushtask(queue, td );
-        }
-      }
-    }
-    head = head->next;
+    /* terminal case: */
+    td->mark = 1;
+    td->u.acl.date = 0;
+    return ;
   }
-  rtl->next = local_beg+1;   /* position of the last pushed task (next to execute) */
-  rtl->task_pushed = task_pushed;
-  return task_pushed;
+
+  /* iterate of all successor and get the maximum value */
+  while (curr !=0)
+  {
+    if (curr->td->mark ==0) 
+      kaapi_explore_successor(curr->td);
+    maxdatesucc = _kaapi_max(maxdatesucc, curr->td->u.acl.date);
+
+    curr = curr->next;
+  }
+  td->mark = 1;
+  td->u.acl.date = maxdatesucc+1;
+}
+
+
+/* compute the critical path of each task : length to the final execution execution
+*/
+int kaapi_tasklist_critical_path( kaapi_tasklist_t* tasklist )
+{
+  kaapi_taskdescr_t*         td;         
+
+  if (tasklist == 0)
+    return EINVAL;
+
+  /* iterate over all tasks and:
+     - associated a td in task2task_khm were list points to the list of predecessors
+     - populate initial tasks with no sucessor 
+  */
+  kaapi_activationlink_t* curr = tasklist->readylist.front;
+  while (curr !=0)
+  {
+    td = curr->td;
+    /* mark and explore all successors of td: on return td->date was computed */
+    kaapi_explore_successor( td );
+    
+    /* */
+    tasklist->t_infinity = _kaapi_max( tasklist->t_infinity, td->u.acl.date);
+    curr = curr->next;
+  }
+
+  return 0;  
 }

@@ -67,7 +67,7 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   kaapi_frame_t*             fp;
   unsigned int               proc_type;
   int                        err =0;
-  uint32_t                   cnt_exec = 0; /* executed tasks during one call of execframe_tasklist */
+  uint32_t                   cnt_exec; /* executed tasks during one call of execframe_tasklist */
 
   kaapi_assert_debug( stack->sfp >= stack->stackframe );
   kaapi_assert_debug( stack->sfp < stack->stackframe+KAAPI_MAX_RECCALL );
@@ -79,6 +79,9 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 
   /* get the processor type to select correct entry point */
   proc_type = stack->proc->proc_type;
+  
+  /* */
+  cnt_exec = 0;
   
   /* jump to previous state if return from suspend 
      (if previous return from EWOULDBLOCK)
@@ -100,16 +103,23 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   
   /* force previous write before next write */
   //kaapi_writemem_barrier();
+KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist = *tasklist; )
 
+redo_while:
   while (!kaapi_tasklist_isempty( tasklist ))
   {
     err = kaapi_readylist_pop( &tasklist->rtl, &td );
     if (err ==0)
     {
 execute_first:
+#if defined(KAAPI_TASKLIST_POINTER_TASK)
+      pc = td->task;
+#else
       pc = &td->task;
+#endif
       if (pc !=0)
       {
+//printf("%i:: Exec td:%p, date:%lu\n", kaapi_get_self_kid(), td, td->u.acl.date );
         /* get the correct body for the proc type */
         if (td->fmt ==0)
         { /* currently some internal tasks do not have format */
@@ -117,19 +127,17 @@ execute_first:
         }
         else 
         {
-          body = td->fmt->entrypoint_wh[proc_type];
+          body = td->fmt->entrypoint_wh[proc_type];          
         }
+//printf("Execute td:%p, name=%s\n", td, (td->fmt == 0 ? "<no name>" : td->fmt->name) );
         kaapi_assert_debug(body != 0);
 
         /* push the frame for the running task: pc/sp = one before td (which is in the stack)à */
         fp = (kaapi_frame_t*)stack->sfp;
-        stack->sfp[1].sp = kaapi_thread_tasklist_getsp(tasklist); 
-        stack->sfp[1].pc = stack->sfp[1].sp;
-        stack->sfp[1].sp_data = fp->sp_data;
+        stack->sfp[1] = *fp;
 
         /* kaapi_writemem_barrier(); */
-
-        fp = ++stack->sfp;
+        stack->sfp = ++fp;
         kaapi_assert_debug((char*)fp->sp > (char*)fp->sp_data);
         kaapi_assert_debug( stack->sfp - stack->stackframe <KAAPI_MAX_RECCALL);
         
@@ -148,25 +156,27 @@ redo_frameexecution:
           err = kaapi_stack_execframe( &thread->stack );
           if (err == EWOULDBLOCK)
           {
+printf("EWOULDBLOCK case 1\n");
             tasklist->context.chkpt     = 1;
             tasklist->context.td        = td;
             tasklist->context.fp        = fp;
+            KAAPI_ATOMIC_ADD(&tasklist->cnt_exec, cnt_exec);
             return EWOULDBLOCK;
           }
           kaapi_assert_debug( err == 0 );
         }
         
         /* pop the frame, even if not used */
-        fp = --stack->sfp;
+        stack->sfp = --fp;
       }
 
       /* push in the front the activated tasks */
       if (!kaapi_activationlist_isempty(&td->u.acl.list))
-        kaapi_thread_tasklistready_pushactivated( &tasklist->rtl, td->u.acl.list.front );
+        kaapi_thread_tasklistready_pushactivated( tasklist, td->u.acl.list.front );
 
       /* do bcast after child execution (they can produce output data) */
       if (td->u.acl.bcast !=0) 
-        kaapi_thread_tasklistready_pushactivated( &tasklist->rtl, td->u.acl.bcast->front );
+        kaapi_thread_tasklistready_pushactivated( tasklist, td->u.acl.bcast->front );
     }
     
     /* recv incomming synchronisation 
@@ -180,46 +190,82 @@ redo_frameexecution:
     /* ok, now push pushed task into the wq and restore the next td to execute */
     if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0)
       goto execute_first;
+    //kaapi_thread_tasklist_commit_ready( tasklist );
             
+    KAAPI_DEBUG_INST(save_tasklist = *tasklist;)
+
   } /* while */
 
   /* here... end execute frame tasklist*/
   kaapi_event_push0(stack->proc, thread, KAAPI_EVT_FRAME_TL_END );
+  
+  KAAPI_ATOMIC_ADD(&tasklist->cnt_exec, cnt_exec);
+
+//KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist = *tasklist; )
+#if 0
+#if !defined(TASKLIST_ONEGLOBAL_MASTER)
+  if (!kaapi_tasklist_isempty(tasklist))
+  {
+    goto redo_while;
+  }
+#endif
+#endif
+
+  kaapi_assert(kaapi_tasklist_isempty(tasklist));
 
   /* signal the end of the step for the thread
      - if no more recv (and then no ready task activated)
   */
-  if (kaapi_tasklist_isempty(tasklist))
+#if defined(TASKLIST_ONEGLOBAL_MASTER)  
+  if (tasklist->master ==0)
   {
-    int retval;
+    /* this is the master thread */
+    for (int i=0; (KAAPI_ATOMIC_READ(&tasklist->cnt_exec) != tasklist->total_tasks) && (i<100); ++i)
+      kaapi_slowdown_cpu();
+      
+    int isterm = KAAPI_ATOMIC_READ(&tasklist->cnt_exec) == tasklist->total_tasks;
+    if (isterm) return 0;
+
     tasklist->context.chkpt = 0;
 #if defined(KAAPI_DEBUG)
     tasklist->context.td = 0;
     tasklist->context.fp = 0;
 #endif 
-
-    /* else: main tasklist, wait a little before return EWOULDBLOCK */
-    for (int i=0; (KAAPI_ATOMIC_READ(&tasklist->count_thief) != 0) && (i<100); ++i)
-      kaapi_slowdown_cpu();
-
-    kaapi_sched_lock(&stack->proc->lock);
-    retval = KAAPI_ATOMIC_READ(&tasklist->count_thief);
-    kaapi_sched_unlock(&stack->proc->lock);
-
-    if (retval ==0)
-      return 0;
-    
-    /* they are no more ready task, 
-       the tasklist is not completed, 
-       then return EWOULDBLOCK 
-    */
     return EWOULDBLOCK;
   }
+  return 0;
+
+#else // #if defined(TASKLIST_ONEGLOBAL_MASTER)  
   
-  /* should only occurs with partitioning: incomming recv task ! */
-  kaapi_assert(0);
-  tasklist->context.chkpt = 2;
+  int retval;
+  tasklist->context.chkpt = 0;
+#if defined(KAAPI_DEBUG)
   tasklist->context.td = 0;
   tasklist->context.fp = 0;
+#endif 
+
+  /* else: wait a little until count_thief becomes 0 */
+  for (int i=0; (KAAPI_ATOMIC_READ(&tasklist->count_thief) != 0) && (i<100); ++i)
+    kaapi_slowdown_cpu();
+
+  /* lock thief under stealing before reading counter:
+     - there is no work to steal, but need to synchronize with currentl thieves
+  */
+//  kaapi_sched_lock(&stack->lock);
+//  kaapi_sched_unlock(&stack->lock);
+  retval = KAAPI_ATOMIC_READ(&tasklist->count_thief);
+
+  if (retval ==0) 
+  {
+    return 0;
+  }
+  
+  /* they are no more ready task, 
+     the tasklist is not completed, 
+     then return EWOULDBLOCK 
+  */
+//printf("EWOULDBLOCK case 2: master:%i\n", tasklist->master ? 0 : 1);
   return EWOULDBLOCK;
+#endif // #if !defined(TASKLIST_ONEGLOBAL_MASTER)  
+
 }

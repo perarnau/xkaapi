@@ -55,9 +55,30 @@ extern "C" {
 */
 #define KAAPI_COMPILE_SOURCE 1
 
+/* Define if ready list is used
+   This flag activates :
+   - the use of readythread during work stealing: a thread that signal 
+   a task to becomes ready while the associated thread is suspended move
+   the thread to a readylist. The ready thread is never stolen and should
+   only be used in order to reduce latency to retreive work (typically
+   at the end of a steal operation).
+   - if a task activates a suspended thread (e.g. bcast tasks) then activated
+   thread is put into the readylist of the processor that executes the task.
+   The threads in ready list may be stolen by other processors.
+*/
+#define KAAPI_USE_READYLIST 1
+#define KAAPI_TASKLIST_POINTER_TASK 1
+#define TASKLIST_ONEGLOBAL_MASTER   1
+#define TASKLIST_REPLY_ONETD        1
+#define KAAPI_TASKLIST_NUM_PRIORITY 8
+#define KAAPI_TASKLIST_MAX_PRIORITY 0
+#define KAAPI_TASKLIST_MIN_PRIORITY (KAAPI_TASKLIST_NUM_PRIORITY-1)
+
+
 #include "config.h"
 #include "kaapi.h"
 #include "kaapi_error.h"
+#include "kaapi_defs.h"
 #include "kaapi_atomic.h"
 #include "kaapi_cpuset.h"
 #include "kaapi_allocator.h"
@@ -71,18 +92,6 @@ extern "C" {
 #include "kaapi_defs.h"
 
 
-/* Define if ready list is used
-   This flag activates :
-   - the use of readythread during work stealing: a thread that signal 
-   a task to becomes ready while the associated thread is suspended move
-   the thread to a readylist. The ready thread is never stolen and should
-   only be used in order to reduce latency to retreive work (typically
-   at the end of a steal operation).
-   - if a task activates a suspended thread (e.g. bcast tasks) then activated
-   thread is put into the readylist of the processor that executes the task.
-   The threads in ready list may be stolen by other processors.
-*/
-#define KAAPI_USE_READYLIST 1
 
 /** Current implementation relies on isoaddress allocation to avoid
     communication during synchronization at the end of partitionning.
@@ -140,6 +149,7 @@ extern void kaapi_mt_suspendresume_init(void);
 */
 extern int kaapi_hw_init(void);
 
+#if 0 // DEPRECATED_ATTRIBUTE
 /** Initialization of the NUMA affinity workqueue
 */
 extern int kaapi_sched_affinity_initialize(void);
@@ -147,6 +157,7 @@ extern int kaapi_sched_affinity_initialize(void);
 /** Destroy
 */
 extern void kaapi_sched_affinity_destroy(void);
+#endif
 
 /* Fwd declaration 
 */
@@ -297,6 +308,7 @@ typedef struct kaapi_hierarchy_t {
 */
 typedef struct kaapi_rtparam_t {
   size_t                   stacksize;                       /* default stack size */
+  size_t                   stacksize_master;                /* stack size for the master thread */
   unsigned int             syscpucount;                     /* number of physical cpus of the system */
   unsigned int             cpucount;                        /* number of physical cpu used for execution */
   kaapi_selectvictim_fnc_t wsselect;                        /* default method to select a victim */
@@ -393,6 +405,7 @@ struct kaapi_wsqueuectxt_cell_t;
 */
 typedef struct kaapi_thread_context_t {
   kaapi_stack_t                  stack;
+  kaapi_frame_t                  stackframe[KAAPI_MAX_RECCALL] __attribute__((aligned (KAAPI_CACHE_LINE)));
   kaapi_task_t                   stealreserved_task;  /* placeholder to store a thief's task */
   kaapi_tasksteal_arg_t          stealreserved_arg;   /* the arg  stealreserved_task */
 
@@ -410,6 +423,7 @@ typedef struct kaapi_thread_context_t {
   struct kaapi_thread_context_t* _prev;          /** to be linkable either in proc->lfree or proc->lready */
 
 #if defined(KAAPI_USE_CUDA)
+#warning "lock already defined in stack or in kproc"
   kaapi_atomic_t                 lock;           /** */ 
 #endif
   kaapi_address_space_id_t       asid;           /* the address where is the thread */
@@ -417,16 +431,14 @@ typedef struct kaapi_thread_context_t {
 
   void*                          alloc_ptr;      /** pointer really allocated */
   uint32_t                       size;           /** size of the data structure allocated */
+  uint32_t                       stack_size;     /** The stack size attribut */
 
   struct kaapi_wsqueuectxt_cell_t* wcs;          /** point to the cell in the suspended list, iff thread is suspended */
 
   /* enough space to store a stealcontext that begins at static_reply->udata+static_reply->offset */
   char	                         sc_data[sizeof(kaapi_stealcontext_t)-sizeof(kaapi_stealheader_t)];
 
-  /* warning: reply is variable sized
-     so do not add members from here
-   */
-  uint64_t                       data[1];        /** begin of stack of data */ 
+  char                           data[1] __attribute__((aligned (KAAPI_CACHE_LINE)));  /** begin of stack of data */ 
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_thread_context_t;
 
 /* helper function */
@@ -445,6 +457,8 @@ extern uint64_t kaapi_perf_thread_delayinstate(struct kaapi_processor_t* kproc);
 */
 #include "kaapi_machine.h"
 /* ========== MACHINE DEPEND DATA STRUCTURE =========== */
+
+#include "kaapi_hws.h"
 
 
 #include "kaapi_tasklist.h"
@@ -527,8 +541,14 @@ static inline int kaapi_sched_readyempty(kaapi_processor_t* kproc)
   return kproc->lready._front == NULL;
 }
 
+/* Return the hws queueblock at level levelid
+*/
+extern kaapi_ws_queue_t* kaapi_hws_queue_atlevel (
+  kaapi_hws_levelid_t levelid
+);
 
 
+#if 0 // DEPRECATED_ATTRIBUTE
 /** Affinity queue:
     - the affinity queues is attached to a certain level in the memory hierarchy, more
     generally it is attached to an identifier.
@@ -585,6 +605,7 @@ extern struct kaapi_taskdescr_t* kaapi_sched_affinity_allocate_td_dfg(
     unsigned int            war_param
 );
 
+
 /**
 */
 extern int kaapi_sched_affinity_owner_pushtask
@@ -615,6 +636,7 @@ extern struct kaapi_taskdescr_t* kaapi_sched_affinity_thief_poptask
   kaapi_affinity_queue_t* queue
 );
 
+#endif // #if 0 // DEPRECATED_ATTRIBUTE
 
 
 /**
@@ -725,16 +747,6 @@ extern kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kp
     \retval an error code
 */
 extern int kaapi_sched_flat_emitsteal_init(kaapi_processor_t*);
-
-/** TODO: DESCRIPTION !!!
-*/
-typedef enum kaapi_ws_error
-{
-  KAAPI_WS_ERROR_SUCCESS = 0,
-  KAAPI_WS_ERROR_EMPTY,
-  KAAPI_WS_ERROR_FAILURE
-} kaapi_ws_error_t;
-
 
 /** \ingroup HWS
     Hierarchical workstealing routine
@@ -918,9 +930,10 @@ static inline int kaapi_stack_isready( kaapi_stack_t* stack )
   struct kaapi_tasklist_t* tl = fp->tasklist;
   if (tl !=0)
   {
-    if ( kaapi_tasklist_isempty(tl) && (KAAPI_ATOMIC_READ(&tl->count_thief) == 0))
-      return 1; 
-    return 0;
+    if (tl->master ==0) 
+      return (KAAPI_ATOMIC_READ(&tl->cnt_exec) == tl->total_tasks);
+    kaapi_assert_debug(0); /* only master tasklist may suspend */
+    return (KAAPI_ATOMIC_READ(&tl->count_thief) == 0) && kaapi_tasklist_isempty(tl);
   }
 
   return kaapi_task_isready(fp->pc);

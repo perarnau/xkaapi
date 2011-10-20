@@ -59,10 +59,10 @@ kaapi_hws_levelmask_t hws_levelmask;
 kaapi_listrequest_t hws_requests;
 
 static const kaapi_hws_levelmask_t hws_default_levelmask =
-KAAPI_HWS_LEVELMASK_NUMA |
-KAAPI_HWS_LEVELMASK_SOCKET |
-KAAPI_HWS_LEVELMASK_MACHINE |
-KAAPI_HWS_LEVELMASK_FLAT;
+  KAAPI_HWS_LEVELMASK_NUMA |
+  KAAPI_HWS_LEVELMASK_SOCKET |
+  KAAPI_HWS_LEVELMASK_MACHINE |
+  KAAPI_HWS_LEVELMASK_FLAT;
 
 
 const char* kaapi_hws_levelid_to_str(kaapi_hws_levelid_t levelid)
@@ -75,7 +75,7 @@ const char* kaapi_hws_levelid_to_str(kaapi_hws_levelid_t levelid)
     "KAAPI_HWS_LEVELID_MACHINE",
     "KAAPI_HWS_LEVELID_FLAT"
   };
-  
+  kaapi_assert_debug( (0 <= levelid) && (levelid <= KAAPI_HWS_LEVELID_FLAT));
   return strs[(unsigned int)levelid];
 }
 
@@ -121,6 +121,8 @@ static kaapi_hws_levelmask_t levelmask_from_env(void)
         return 0;
       
       levelid = str_to_levelid(p, len);
+      kaapi_assert(levelid != KAAPI_HWS_LEVELID_MAX);
+
       levelmask |= 1 << levelid;
       p = s + 1;
     }
@@ -159,6 +161,7 @@ static void print_selftopo_levels(kaapi_processor_t* kproc)
 
 /*
 */
+__attribute__((unused))
 static char* _kaapi_int2bin( char* string, unsigned int len, kaapi_bitmap_value_t value )
 {
   unsigned int i;
@@ -250,16 +253,11 @@ int kaapi_hws_init_global(void)
   /* initialize the request list */
   kaapi_bitmap_clear(&hws_requests.bitmap);
   
-  /* these lines are already done in kaapi_mt_init.c 
-  for (kid = 0; kid < KAAPI_MAX_PROCESSOR; ++kid)
-    kaapi_requests_list[kid].ident = kid;
-  */
-  
   hws_levelmask = levelmask_from_env();
   
   hws_levels = calloc(hws_level_count, sizeof(kaapi_hws_level_t) );
   kaapi_assert(hws_levels);
-  
+
   /* create the flat level even if not masked, since a local queue
    is always required and stack no longer stored in the kproc.
    the flat level contains one block per kid. each kid belongs to
@@ -319,11 +317,12 @@ int kaapi_hws_init_global(void)
       kaapi_affinityset_t* const affin_set = &one_level->affinity[lnode];
       
       /* use the hwloc::PHYSICAL node as the hws index */
-      const unsigned int pnode = affin_set->os_index;
+      unsigned int pnode = affin_set->os_index;
+      if (pnode == (unsigned int)-1) pnode = lnode;
       
       kaapi_ws_block_t* const block = &hws_level->blocks[pnode];
       i = 0;
-      
+
       kaapi_assert(pnode < node_count);
       
       /* flat level special handling */

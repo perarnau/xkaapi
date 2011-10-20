@@ -69,7 +69,7 @@ void* kaapi_hws_init_adaptive_task
   size_t total_size;
   kaapi_stealcontext_t* sc;
   kaapi_taskadaptive_user_taskarg_t* adata;
-  kaapi_reply_t* rep;
+  kaapi_reply_t* rep __attribute__((unused));
 
   /* toremove */
   kaapi_assert(!(parent_sc->header.flag & KAAPI_SC_PREEMPTION));

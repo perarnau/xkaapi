@@ -289,8 +289,8 @@ int kaapi_perf_thread_state(kaapi_processor_t* kproc)
 */
 static const kaapi_perf_idset_t* get_perf_idset
 (
- const kaapi_perf_idset_t* param,
- kaapi_perf_idset_t* storage
+  const kaapi_perf_idset_t* param,
+  kaapi_perf_idset_t* storage
 )
 {
   const kaapi_perf_id_t casted_param =
@@ -298,17 +298,18 @@ static const kaapi_perf_idset_t* get_perf_idset
 
   switch (casted_param)
   {
-  case KAAPI_PERF_ID_TASKS:
-  case KAAPI_PERF_ID_STEALREQOK:
-  case KAAPI_PERF_ID_STEALREQ:
-  case KAAPI_PERF_ID_STEALOP:
-  case KAAPI_PERF_ID_SUSPEND:
-  case KAAPI_PERF_ID_T1:
-/*  case KAAPI_PERF_ID_TIDLE: */
-  case KAAPI_PERF_ID_TPREEMPT:
-  case KAAPI_PERF_ID_PAPI_0:
-  case KAAPI_PERF_ID_PAPI_1:
-  case KAAPI_PERF_ID_PAPI_2:
+    case KAAPI_PERF_ID_TASKS:
+    case KAAPI_PERF_ID_STEALREQOK:
+    case KAAPI_PERF_ID_STEALREQ:
+    case KAAPI_PERF_ID_STEALOP:
+    case KAAPI_PERF_ID_SUSPEND:
+    case KAAPI_PERF_ID_T1:
+  /*  case KAAPI_PERF_ID_TIDLE: */
+    case KAAPI_PERF_ID_TPREEMPT:
+    case KAAPI_PERF_ID_TASKLISTCALC:
+    case KAAPI_PERF_ID_PAPI_0:
+    case KAAPI_PERF_ID_PAPI_1:
+    case KAAPI_PERF_ID_PAPI_2:
     {
       storage->count = 1;
       storage->idmap[0] = casted_param;
@@ -334,9 +335,9 @@ void _kaapi_perf_accum_counters(const kaapi_perf_idset_t* idset, int isuser, kaa
   kaapi_perf_idset_t local_idset;
   kaapi_perf_counter_t accum[KAAPI_PERF_ID_MAX];
 
-  kaapi_assert( (isuser ==KAAPI_PERF_USR_COUNTER)||
-                (isuser==KAAPI_PERF_SYS_COUNTER)||
-                (isuser== (KAAPI_PERF_SYS_COUNTER|KAAPI_PERF_USR_COUNTER))
+  kaapi_assert( (isuser ==KAAPI_PERF_USR_COUNTER) ||
+                (isuser==KAAPI_PERF_SYS_COUNTER)  ||
+                (isuser== (KAAPI_PERF_SYS_COUNTER | KAAPI_PERF_USR_COUNTER) )
   );
 
   idset = get_perf_idset(idset, &local_idset);

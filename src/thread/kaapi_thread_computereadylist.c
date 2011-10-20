@@ -56,7 +56,7 @@ int kaapi_sched_computereadylist( void )
   tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
   kaapi_tasklist_init( tasklist, thread );
   err= kaapi_thread_computereadylist( thread, tasklist  );
-  kaapi_thread_tasklistready_push_init( &tasklist->rtl, &tasklist->readylist );
+  kaapi_thread_tasklistready_push_init( tasklist, &tasklist->readylist );
   kaapi_thread_tasklist_commit_ready( tasklist );
   /* NO */ /*keep the first task to execute outside the workqueue */
   tasklist->context.chkpt = 0;
@@ -96,12 +96,21 @@ int kaapi_sched_clearreadylist( void )
 /** task is the top task not yet pushed.
     This function is called is after all task has been pushed into a specific frame.
  */
+double _kaapi_time_tasklist;
 int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_tasklist_t* tasklist )
 {
   kaapi_frame_t*          frame;
   kaapi_task_t*           task_top;
   kaapi_task_t*           task_bottom;
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_perf_counter_t    t1,t0;
+#endif
   
+#if defined(KAAPI_USE_PERFCOUNTER)
+  t0 = kaapi_get_elapsedns();
+#endif
+
   /* assume no task list or task list is empty */
   frame    = thread->stack.sfp;
   
@@ -121,9 +130,27 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_tasklis
 
   /* */
 //  kaapi_thread_tasklist_print( stdout, tasklist );
+
+  /* Here compute the apriori minimal date of execution */
+//TEST WITH USER DEFINED PRIORITY  
+{
+  //double t0 = kaapi_get_elapsedtime();
+  //kaapi_tasklist_critical_path( tasklist );  
+  //double t1 = kaapi_get_elapsedtime();
+  //printf("Time criticalpath:%f\n", t1-t0);
+}
   
   kaapi_big_hashmap_destroy( thread->kversion_hm );
   free( thread->kversion_hm );
   thread->kversion_hm = 0;
+
+//printf("Tinf: %lu\n", tasklist->t_infinity );
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  t1 = kaapi_get_elapsedns();
+  _kaapi_time_tasklist = 1e-9 * (double)(t1-t0);
+  KAAPI_PERF_REG_SYS(thread->stack.proc, KAAPI_PERF_ID_TASKLISTCALC) += t1-t0;
+#endif
+
   return 0;
 }

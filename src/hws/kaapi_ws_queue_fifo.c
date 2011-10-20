@@ -45,11 +45,6 @@
 #include <stdint.h>
 #include "kaapi_impl.h"
 
-/* needed for config_hws_counters */
-#include "kaapi_hws.h"
-
-#include "kaapi_ws_queue.h"
-
 /* Current implementation is a bounded cicular queue manage
    with THE protocol using workqueue.
 */
@@ -63,7 +58,7 @@ typedef struct fifo_queue
 } fifo_queue_t;
 
 
-static kaapi_ws_error_t push(
+static kaapi_ws_error_t _kaapi_ws_queue_fifo_push(
     void* p, 
     kaapi_task_t* task
 )
@@ -82,7 +77,7 @@ static kaapi_ws_error_t push(
 
 /** Try to steal nreq works into the workqueue
 */
-static kaapi_ws_error_t steal
+static kaapi_ws_error_t _kaapi_ws_queue_fifo_steal
 (
     void* p,
     kaapi_listrequest_t* lr,
@@ -168,7 +163,7 @@ static kaapi_ws_error_t steal
 }
 
 
-static kaapi_ws_error_t pop
+static kaapi_ws_error_t _kaapi_ws_queue_fifo_pop
 (
  void* p,
  kaapi_thread_context_t* thread,
@@ -204,9 +199,9 @@ kaapi_ws_queue_t* kaapi_ws_queue_create_lifo(void)
   
   fifo_queue_t* const q = (fifo_queue_t*)wsq->data;
   
-  wsq->push = push;
-  wsq->steal = steal;
-  wsq->pop = pop;
+  wsq->push  = _kaapi_ws_queue_fifo_push;
+  wsq->steal = _kaapi_ws_queue_fifo_steal;
+  wsq->pop   = _kaapi_ws_queue_fifo_pop;
   
   kaapi_ws_lock_init(&q->lock);
   q->top = 0;

@@ -44,14 +44,66 @@
 */
 #include "kaapi_impl.h"
 
+#define KAAPI_ALLOCATED_BLOCSIZE 128*4096
+
+static kaapi_allocator_bloc_t* _kaapi_allocator_blocfreelist[64] = 
+{
+  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0
+};
+static int _kaapi_indexfreelist = 0;
+
+/**/
+int kaapi_allocator_destroy( kaapi_allocator_t* va )
+{
+  while (va->allocatedbloc !=0)
+  {
+    kaapi_allocator_bloc_t* curr = va->allocatedbloc;
+    va->allocatedbloc = curr->next;
+    if (_kaapi_indexfreelist == 64) 
+    {
+#if defined(KAAPI_USE_NUMA)
+      numa_free(curr, KAAPI_ALLOCATED_BLOCSIZE );
+#else
+      free (curr);
+#endif
+    }
+    else {
+      _kaapi_allocator_blocfreelist[_kaapi_indexfreelist++] = curr;
+    }
+  }
+  va->allocatedbloc = 0;
+  va->currentbloc = 0;
+  return 0;
+}
+
 /**/
 void* _kaapi_allocator_allocate_slowpart( kaapi_allocator_t* va, size_t size )
 {
   void* entry;
 
   /* round size to double size */
-  kaapi_assert_debug( sizeof(kaapi_allocator_bloc_t) > size );
-  va->currentbloc = (kaapi_allocator_bloc_t*)malloc( sizeof(kaapi_allocator_bloc_t) );
+  kaapi_assert_debug( KAAPI_ALLOCATED_BLOCSIZE > size );
+
+  if (_kaapi_indexfreelist ==0)
+  {
+#if defined(KAAPI_USE_NUMA)
+    va->currentbloc = (kaapi_allocator_bloc_t*)numa_alloc_local( KAAPI_ALLOCATED_BLOCSIZE );
+#else
+    va->currentbloc = (kaapi_allocator_bloc_t*)malloc( KAAPI_ALLOCATED_BLOCSIZE );
+#endif
+  }
+  else 
+  {
+    va->currentbloc = _kaapi_allocator_blocfreelist[--_kaapi_indexfreelist];
+  }
+
   va->currentbloc->next = va->allocatedbloc;
   va->allocatedbloc = va->currentbloc;
   va->currentbloc->pos = 0;

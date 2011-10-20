@@ -45,11 +45,6 @@
 #include <stdint.h>
 #include "kaapi_impl.h"
 
-/* needed for config_hws_counters */
-#include "kaapi_hws.h"
-
-#include "kaapi_ws_queue.h"
-
 /* Current implementation is a bounded queue manage.
 */
 typedef struct lifo_queue
@@ -61,7 +56,7 @@ typedef struct lifo_queue
 } lifo_queue_t;
 
 
-static kaapi_ws_error_t push(
+static kaapi_ws_error_t _kaapi_ws_queue_lifo_push(
     kaapi_ws_block_t* ws_bloc __attribute__((unused)),
     void* p, 
     kaapi_task_t* task
@@ -79,7 +74,9 @@ static kaapi_ws_error_t push(
 
 static void callback_empty( kaapi_task_t* task)
 {
-  kaapi_stealcontext_t* const sc = kaapi_task_getargst(task, kaapi_stealcontext_t);
+  kaapi_stealcontext_t* const sc =
+    kaapi_task_getargst(task, kaapi_stealcontext_t);
+
   KAAPI_ATOMIC_DECR(&sc->header.msc->thieves.count);
   /* deallocate the stealcontext */
   free(sc);
@@ -87,7 +84,7 @@ static void callback_empty( kaapi_task_t* task)
 }
 
 
-static kaapi_ws_error_t steal
+static kaapi_ws_error_t _kaapi_ws_queue_lifo_steal
 (
     kaapi_ws_block_t* ws_bloc __attribute__((unused)),
     void* p,
@@ -126,6 +123,10 @@ static kaapi_ws_error_t steal
     }
     else /* != kaapi_hws_adapt_body */
     {
+#if CONFIG_HWS_COUNTERS
+      kaapi_hws_inc_steal_counter(p, req->ident);
+#endif
+
       /* special case of kaapi_task_steal_dfg */
       req->thief_sp = task->sp;
       req->thief_task = task;
@@ -146,7 +147,7 @@ static kaapi_ws_error_t steal
 }
 
 
-static kaapi_ws_error_t pop
+static kaapi_ws_error_t _kaapi_ws_queue_lifo_pop
 (
     kaapi_ws_block_t* ws_bloc,
     void* p,
@@ -166,11 +167,9 @@ static kaapi_ws_error_t pop
   
   kaapi_bitmap_clear(&lr.bitmap);
   kaapi_bitmap_set(&lr.bitmap, kid);
-// NO NEEDED here: kid is emitting a dummy request with its own bitmap
-//  memcpy(&lr.requests[kid], req, sizeof(kaapi_request_t));
   kaapi_listrequest_iterator_init(&lr, &lri);
   
-  return steal(ws_bloc, p, &lr, &lri);
+  return _kaapi_ws_queue_lifo_steal(ws_bloc, p, &lr, &lri);
 }
 
 
@@ -182,9 +181,9 @@ kaapi_ws_queue_t* kaapi_ws_queue_create_lifo(void)
   
   lifo_queue_t* const q = (lifo_queue_t*)wsq->data;
   
-  wsq->push = push;
-  wsq->steal = steal;
-  wsq->pop = pop;
+  wsq->push  = _kaapi_ws_queue_lifo_push;
+  wsq->steal = _kaapi_ws_queue_lifo_steal;
+  wsq->pop   = _kaapi_ws_queue_lifo_pop;
   
   kaapi_ws_lock_init(&q->lock);
   q->top = 0;

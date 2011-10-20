@@ -53,7 +53,11 @@ typedef struct kaapi_flatemitsteal_context {
 int kaapi_sched_flat_emitsteal_init(kaapi_processor_t* kproc)
 {
   kaapi_flatemitsteal_context* ctxt;
+#if defined(KAAPI_USE_NUMA)
+  kproc->emitsteal_ctxt = ctxt = numa_alloc_local(sizeof(kaapi_flatemitsteal_context));
+#else
   kproc->emitsteal_ctxt = ctxt = malloc(sizeof(kaapi_flatemitsteal_context));
+#endif
   if (kproc->emitsteal_ctxt ==0) return ENOMEM;
   kaapi_listrequest_init( &ctxt->lr );
   return 0;
@@ -133,6 +137,7 @@ acquire:
 #if defined(KAAPI_USE_NETWORK)
     kaapi_network_poll();
 #endif
+//    pthread_yield();
     kaapi_slowdown_cpu();
   }
   goto acquire;
@@ -171,8 +176,8 @@ enter:
     while (request !=0)
     {
       kaapi_request_replytask(request, KAAPI_REQUEST_S_NOK);
-      request = kaapi_listrequest_iterator_next( &victim_stealctxt->lr, &lri );
       KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( &lri ) );
+      request = kaapi_listrequest_iterator_next( &victim_stealctxt->lr, &lri );
       kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
     }
   }

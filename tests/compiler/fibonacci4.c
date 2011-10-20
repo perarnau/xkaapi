@@ -1,9 +1,7 @@
 /*
-** kaapi_thread_clear.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:03 2009
-** Copyright 2009 INRIA.
+** Copyright 2011 INRIA.
 **
 ** Contributors :
 **
@@ -42,51 +40,42 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
-#include <strings.h>
-#include <stddef.h>
+#include <stdio.h>
 
-/**
-*/
-int kaapi_thread_clear( kaapi_thread_context_t* thread )
+void sum( long* result, const long* r1, const long* r2)
 {
-  kaapi_assert_debug( thread != 0);
-
-//Should never change !!!  thread->stack.data = (char*)&thread->data;
-  kaapi_stack_clear( &thread->stack );
-
-  kaapi_task_init_withstate(
-    &thread->stealreserved_task, 
-    kaapi_tasksteal_body, 
-    &thread->stealreserved_arg, 
-    KAAPI_TASK_STATE_ALLOCATED
-  );
-
-  thread->the_thgrp  = 0;
-  thread->unstealable= 0;
-  thread->partid     = -10; /* out of bound value */
-
-  thread->_next      = 0;
-  thread->_prev      = 0;
-  thread->asid       = 0;
-  thread->affinity[0]= ~0UL;
-  thread->affinity[1]= ~0UL;
-
-  thread->wcs        = 0;
-
-#if !defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
-  thread->thgrp      = 0;
-#endif
-  return 0;
+  *result = *r1 + *r2;
 }
 
-
-/*
-*/
-void kaapi_thread_set_unstealable(unsigned int fu)
+void fibonacci(long* result, const long n)
 {
-  kaapi_thread_context_t* const thread = kaapi_self_thread_context();
-  kaapi_sched_lock(&thread->stack.proc->lock);
-  thread->unstealable = fu;
-  kaapi_sched_unlock(&thread->stack.proc->lock);
+  if (n<2)
+    *result = n;
+  else 
+  {
+#pragma kaapi data alloca(r1)
+    long r1,r2;
+#pragma kaapi task write(r1)
+    fibonacci( &r1, n-1 );
+    fibonacci( &r2, n-2 );
+#pragma kaapi task write(result) read(&r1) value(&r2)
+    sum( result, &r1, &r2);
+  }
+}
+
+#pragma kaapi task read(result) 
+void print_result( const long* result )
+{
+  printf("Fibonacci(30)=%li\n", *result);
+}
+
+int main()
+{
+  long result;
+#pragma kaapi parallel
+  {
+    fibonacci(&result, 30);
+    print_result(&result);
+  }
+  return 0;
 }

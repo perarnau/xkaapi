@@ -414,7 +414,7 @@ static inline int kaapi_stack_reset(kaapi_stack_t* stack )
   stack->sfp        = fp;
   stack->esfp       = fp;
   fp->sp            = fp->pc  = stack->task; /* empty frame */
-  fp->sp_data       = stack->data;                /* empty frame */
+  fp->sp_data       = stack->data;
   return 0;
 }
 
@@ -536,21 +536,6 @@ extern int kaapi_task_splitter_adapt(
 );
 
 
-/** \ingroup WS
-    Splitter arround tasklist stealing
-*/
-extern int kaapi_task_splitter_readylist( 
-  struct kaapi_thread_context_t*       thread, 
-  struct kaapi_tasklist_t*             tasklist,
-  struct kaapi_taskdescr_t**           task_beg,
-  struct kaapi_taskdescr_t**           task_end,
-  struct kaapi_listrequest_t*          lrequests, 
-  struct kaapi_listrequest_iterator_t* lrrange,
-  size_t                               countreq
-);
-
-
-
 /** Args for tasksteal
 */
 typedef struct kaapi_tasksteal_arg_t {
@@ -566,9 +551,14 @@ typedef struct kaapi_tasksteal_arg_t {
 /** Args for taskstealready
 */
 typedef struct kaapi_taskstealready_arg_t {
-  struct kaapi_tasklist_t*   origin_tasklist; /* the original task list */
-  struct kaapi_taskdescr_t** origin_td_beg;   /* range of stolen task into origin_tasklist */
-  struct kaapi_taskdescr_t** origin_td_end;   /* range of stolen task into origin_tasklist */
+  struct kaapi_tasklist_t*   master_tasklist; /* the original task list */
+  struct kaapi_tasklist_t*   victim_tasklist; /* the victim task list or 0 if steal from the master */
+#if defined(TASKLIST_REPLY_ONETD)
+  struct kaapi_taskdescr_t*  td;              /* the stolen td */
+#else
+  struct kaapi_taskdescr_t** td_beg;          /* range of stolen task into origin_tasklist */
+  struct kaapi_taskdescr_t** td_end;          /* range of stolen task into origin_tasklist */
+#endif
 } kaapi_taskstealready_arg_t;
 
 /** User task + args for kaapi_adapt_body. 

@@ -51,3 +51,9 @@ unsigned int kaapi_get_self_kid(void)
 {
   return (unsigned int)kaapi_get_current_processor()->kid;
 }
+
+unsigned int kaapi_get_self_cpu_id(void)
+{
+  return kaapi_default_param.kid2cpu
+    [(unsigned int)kaapi_get_current_processor()->kid];
+}

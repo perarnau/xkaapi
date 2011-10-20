@@ -85,7 +85,7 @@ static void fail_requests
   while (req != NULL)
   {
     kaapi_request_replytask( req, KAAPI_REQUEST_S_NOK);
-    KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( lri ) );
+    KAAPI_DEBUG_INST(kaapi_listrequest_iterator_countreply( lri ));
     req = kaapi_listrequest_iterator_next(lr, lri);
   }
 }
@@ -119,31 +119,14 @@ static kaapi_request_status_t steal_block
   /* got the lock: reply and unlock */
   kaapi_listrequest_iterator_update(lr, lri, &block->kid_mask);
   
-  /* check bits consistency */
-#if 0
-  {
-    unsigned int i = 0;
-    for (i =0 ; i < 64; ++i)
-    {
-      if (!(lri->bitmap.proc32 & (1 << i))) continue ;
-      if (!(isin & (1 << i)))
-      {
-	printf("INVALID\n");
-	fflush(stdout);
-	while (1);
-      }
-    }
-  }
-#endif
-  
   if (!kaapi_listrequest_iterator_empty(lri))
     kaapi_ws_queue_steal(block, block->queue, lr, lri);
   
-  /* do not need: kaapi_request_syncdata(request); it is myself that replied
-  */
-//TGTG  kaapi_ws_lock_unlock(&block->lock);
+  kaapi_ws_lock_unlock(&block->lock);
   
 on_request_replied:
+  /* do not need: kaapi_request_syncdata(request); it is myself that replied
+  */
   return kaapi_request_status(request);
 }
 
@@ -164,20 +147,28 @@ static kaapi_request_status_t steal_block_leaves
   /* steal randomly amongst the block leaves */
   kaapi_processor_id_t kid;
   kaapi_ws_block_t* leaf_block;
-  
-  /* actually block->kid_count == 1 */
-//  if (block->kid_count <= 1) 
-//    return KAAPI_REQUEST_S_NOK;
-  
-redo_rand:
 
-  kid = block->kids[rand_r(&kproc->seed) % block->kid_count];
-//  if (kid == kproc->kid) goto redo_rand;
+#if 0 /* allow self stealing */
+  if (block->kid_count <= 1) 
+    return KAAPI_REQUEST_S_NOK;
+redo_rand:
+#endif
+
+  for (int i=0; i<4; ++i)
+  {
+    kid = block->kids[rand_r(&kproc->seed) % block->kid_count];
+
+#if 0 /* allow self stealing */
+  if (kid == kproc->kid) goto redo_rand;
+#endif
   
   /* get the leaf block (ie. block at flat level) */
-  leaf_block = hws_levels[KAAPI_HWS_LEVELID_FLAT].kid_to_block[kid];
+    leaf_block = hws_levels[KAAPI_HWS_LEVELID_FLAT].kid_to_block[kid];
   
-  return steal_block(leaf_block, kproc, request, lr, lri);
+    int status = steal_block(leaf_block, kproc, request, lr, lri);
+    if (status == KAAPI_REQUEST_S_OK) return KAAPI_REQUEST_S_OK;
+  }
+  return KAAPI_REQUEST_S_NOK;
 }
 
 
@@ -197,11 +188,13 @@ static kaapi_request_status_t steal_level
   
   for (i = 0; i < level->block_count; ++i)
   {
-    if (KAAPI_REQUEST_S_OK == steal_block(&level->blocks[i], kproc, request, lr, lri))
-      return KAAPI_REQUEST_S_OK;
+    const kaapi_request_status_t status =
+      steal_block(&level->blocks[i], kproc, request, lr, lri);
+    if (status != KAAPI_REQUEST_S_POSTED) return status;
   }
   
-  return KAAPI_REQUEST_S_NOK;
+  /* may differ from the actual status */
+  return KAAPI_REQUEST_S_POSTED;
 }
 
 
@@ -213,8 +206,7 @@ static kaapi_thread_context_t* pop_block
 )
 {
 #if 0 
-//DEBUG:
-kaapi_assert(0);
+  kaapi_assert(0);
 
   /* not a real steal operation, dont actually post */
   kaapi_request_t* const req = &kaapi_requests_list[kproc->kid];
@@ -258,29 +250,6 @@ kaapi_assert(0);
   return NULL;
 }
 
-
-#if 0 // NOW USE KAAPI_REQUEST_POST
-static kaapi_request_t* post_request
-(kaapi_processor_t* kproc, kaapi_atomic_t* status)
-{
-  kaapi_request_t* const req = &kaapi_requests_list[kproc->kid];
-
-#if defined(KAAPI_DEBUG)
-  req->version = ++kproc->req_version;
-#endif
-  
-  /* from kaapi_mt_machine.h/kaapi_request_post */
-  req->thief_task        = &kproc->thread->stealreserved_task;
-  req->thief_task->state = KAAPI_TASK_STATE_ALLOCATED;
-  req->thief_task->body  = kaapi_tasksteal_body;
-  req->thief_sp          = &kproc->thread->stealreserved_arg;
-  req->status            = status;
-  KAAPI_ATOMIC_WRITE_BARRIER(status, KAAPI_REQUEST_S_POSTED);
-  kaapi_bitmap_set(&hws_requests.bitmap, kproc->kid);
-  return req;
-}
-#endif
-
 /* Hierarchical work stealing strategy
 */
 kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
@@ -290,7 +259,8 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
   kaapi_hws_levelid_t levelid = 0;
   kaapi_request_t* request = 0;
   kaapi_listrequest_iterator_t lri;
-  kaapi_atomic_t status;
+  kaapi_atomic_t local_status;
+  kaapi_request_status_t status;
 
 #if 0 /* already done by the caller */
   /* pop locally without emitting request */
@@ -307,18 +277,16 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
   request = kaapi_request_post(
     &hws_requests,
     &kaapi_requests_list[kproc->kid],
-    &status, 
+    &local_status, 
     &kproc->thread->stealreserved_task,
     &kproc->thread->stealreserved_arg
   );
   
-//OLD===  request = post_request(kproc, &status);
-
   /* from here anybody else may reply to the request */
 
   /* foreach parent level, pop. if pop failed, steal in level children. */
-redo_levels:
-  for (levelid = KAAPI_HWS_LEVELID_FIRST; levelid < (int)hws_level_count; ++levelid)
+ redo_levels:
+  for (levelid = KAAPI_HWS_LEVELID_FIRST; levelid < hws_level_count; ++levelid)
   {
     if (!(kaapi_hws_is_levelid_set(levelid))) continue ;
     
@@ -329,112 +297,76 @@ redo_levels:
     {
       /* todo: this is a pop, not a steal */
       /* todo: dont rely upon thread for termination condition */
-      if (KAAPI_REQUEST_S_OK == steal_block(block, kproc, request, &hws_requests, &lri))
-        goto on_request_success;
+
+      status = steal_block(block, kproc, request, &hws_requests, &lri);
+      if (status != KAAPI_REQUEST_S_POSTED) goto on_request_replied;
       
       /* popping failed at this level, steal in level children */
       for (child_levelid = levelid - 1; child_levelid >= 0; --child_levelid)
       {
         kaapi_hws_level_t* const child_level = &hws_levels[child_levelid];
-        if (!kaapi_hws_is_levelid_set(child_levelid)) 
-          continue;
+        if (!kaapi_hws_is_levelid_set(child_levelid)) continue;
         
-        if (KAAPI_REQUEST_S_OK == steal_level(child_level, kproc, request, &hws_requests, &lri))
-          goto on_request_success;
+        status = steal_level(child_level, kproc, request, &hws_requests, &lri);
+	if (status != KAAPI_REQUEST_S_POSTED) goto on_request_replied;
       }
       
     } /* levelid != KAAPI_HWS_LEVELID_FLAT */
 
     /* child level stealing failed, steal in block leaf local queues */
-    if (KAAPI_REQUEST_S_OK == steal_block_leaves(block, kproc, request, &hws_requests, &lri))
-      goto on_request_success;
+    status = steal_block_leaves(block, kproc, request, &hws_requests, &lri);
+    if (status != KAAPI_REQUEST_S_POSTED) goto on_request_replied;
           
     /* next level */
   }
 
-//  leave();
-
+ on_request_replied:
   fail_requests(&hws_requests, &lri);
   kaapi_assert( kaapi_listrequest_iterator_empty( &lri ) );
-#if defined(KAAPI_DEBUG) 
-  kaapi_assert( lri.count_in == lri.count_out );
-#endif
-  kaapi_request_status_t fu;
-  {
-    kaapi_assert(request->status == &status);
-    if (fu == KAAPI_REQUEST_S_OK)
-      goto on_request_success;
-    else if (kaapi_isterminated()) 
-    {
-      fail_requests(&hws_requests, &lri);
-      kaapi_assert( kaapi_listrequest_iterator_empty( &lri ) );
-      
-      fu = kaapi_request_status(request);
-      if (fu == KAAPI_REQUEST_S_OK)
-        goto on_request_success;
-#if 0
-      while (fu == KAAPI_REQUEST_S_POSTED)
-      {
-        fu = kaapi_request_status(request);
-        kaapi_slowdown_cpu();
-      }
-#endif
-    }
-    else if (fu != KAAPI_REQUEST_S_NOK)
-      goto redo_levels;
-    /* terminaison ? */
-    /* else fail */
-  }
+  //SHOULD BE Ok: CURRENTLY DOES NOT PASS WITH QUARK kaapi_assert_debug( lri.count_in == lri.count_out );
+  kaapi_assert_debug(request->status == &local_status);
 
-  kaapi_assert(request->status == &status);
-  kaapi_assert(kaapi_request_status(request) == KAAPI_REQUEST_S_NOK);
-  
-#if defined(KAAPI_DEBUG) 
-  kproc->thief_task = 0;
-  ++kproc->reply_version;
-#endif
-  kaapi_assert(request->status == &status);
-  kaapi_assert(kaapi_request_status(request) == KAAPI_REQUEST_S_NOK);
-#if defined(KAAPI_DEBUG) 
-  request->status = 0;
-  kaapi_assert( lri.count_in == lri.count_out );
-#endif
+  status = kaapi_request_status(request);
+  if (status == KAAPI_REQUEST_S_POSTED)
+  {
+    if (kaapi_isterminated() == 0) goto redo_levels;
+
+    /* wait until self request failed */
+    while (!kaapi_request_test(request))
+      kaapi_slowdown_cpu();
+
+    if (kaapi_request_status(request) == KAAPI_REQUEST_S_OK)
+      goto on_request_success;
+    /* else status == KAAPI_REQUEST_S_NOK */
+  }
+  else if (status == KAAPI_REQUEST_S_OK)
+  {
+    goto on_request_success;
+  }
+  /* else KAAPI_REQUEST_S_NOK */
+
+  KAAPI_DEBUG_INST(kproc->thief_task = 0);
+  KAAPI_DEBUG_INST(++kproc->reply_version);
+  KAAPI_DEBUG_INST(request->status = 0);
 
   return KAAPI_REQUEST_S_NOK;
 
-
 on_request_success:
-//  leave();
-#if 0
-  kaapi_assert(!(hws_requests.bitmap.proc32._counter & (1 << kaapi_get_self_kid())));
-#endif
-
-  fail_requests(&hws_requests, &lri);
   kaapi_assert( kaapi_listrequest_iterator_empty( &lri ) );
-  kaapi_assert(kaapi_request_status(request) == KAAPI_REQUEST_S_OK);
-#if defined(KAAPI_DEBUG) 
-  kaapi_assert( lri.count_in == lri.count_out );
-#endif
+  kaapi_assert_debug( lri.count_in == lri.count_out );
+  KAAPI_DEBUG_INST(++kproc->reply_version);
 
-#if defined(KAAPI_DEBUG) 
-  ++kproc->reply_version;
-#endif
   /* update task to execute */
   kaapi_request_syncdata(request);
   kproc->thief_task = request->thief_task;
+
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
-#if 0
-  printf("%i::OUT Emitsteal request replied: %p\n", kproc->kid, request ); 
-  fflush(stdout);
-#endif
-#if defined(KAAPI_DEBUG)
-  kproc->compute_version = kproc->req_version;
-#endif
-#if defined(KAAPI_DEBUG) 
-  request->status = 0;
-  kaapi_assert( lri.count_in == lri.count_out );
-#endif
+
+  KAAPI_DEBUG_INST(kproc->compute_version = kproc->req_version);
+  KAAPI_DEBUG_INST(request->status = 0);
+  kaapi_assert_debug( lri.count_in == lri.count_out );
+
   return KAAPI_REQUEST_S_OK;
 }

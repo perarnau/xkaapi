@@ -342,6 +342,24 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
       }
     }
   }
+
+  /* TG. 10/11. Last step: compact the hierarchy if notself set is empty, except the machine level */
+  int final_depth = 0;
+  for (depth=0; depth < kproc->hlevel.depth; ++depth)
+  {
+    if ((kproc->hlevel.levels[depth].nnotself ==0) && (depth != kproc->hlevel.depth-1))
+    {
+      /* free kproc->hlevel.levels[depth] */
+      free( kproc->hlevel.levels[depth].kids );
+      kproc->hlevel.levels[depth].kids = 0;
+      free( kproc->hlevel.levels[depth].notself );
+      kproc->hlevel.levels[depth].notself = 0;
+      continue;
+    }
+    kproc->hlevel.levels[final_depth] = kproc->hlevel.levels[depth];
+    ++final_depth;
+  }
+  kproc->hlevel.depth = final_depth;
   
 #if 0 //defined(KAAPI_DEBUG)
   kaapi_sched_lock( &print_lock );

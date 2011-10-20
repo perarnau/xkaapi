@@ -67,7 +67,7 @@ size_t kaapi_task_computeready(
   for (i=0; i<count_params; ++i)
   {
     kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(  kaapi_format_get_mode_param(task_fmt, i, sp) );
-    if (m == KAAPI_ACCESS_MODE_V) 
+    if (m == KAAPI_ACCESS_MODE_V)
     {
       --wc;
       continue;

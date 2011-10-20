@@ -40,14 +40,19 @@ KAAPI_DUMP_GRAPH:
   Dump the graph after spawning task with SetStaticSched attribut
   is used. Only operational if XKaapi library is compiled with
   '--with-perfcounter=debug'.
+
+KAAPI_DOT_NODATA_LINK:
+  Do not dump data nodes in the DFG dot graph.
   
 KAAPI_DOT_NOACTIVATION_LINK:
   Do not print activation link between tasks when graph is dump into 
-  the dot format.
+  the dot output.
 
 KAAPI_DOT_NOVERSION_LINK:
-  Do not print link between version of data when graph is dump into 
-  the dot format.
+  Do not print link between version of data when graph is dump into the dot output.
+  
+KAAPI_DOT_NOLABEL:
+  Do not print information inside each task node or data node of the dot output.
 
 KAAPI_DUMP_PERIOD:
   Dump the internal state at given period (in second).

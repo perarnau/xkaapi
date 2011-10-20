@@ -146,67 +146,6 @@ static int kaapi_sched_stealframe
 }
 
 
-/** Steal ready task in tasklist 
- */
-static void kaapi_sched_steal_tasklist( 
-                                       kaapi_thread_context_t*       thread, 
-                                       kaapi_frame_t*                frame, 
-                                       kaapi_listrequest_t*          lrequests, 
-                                       kaapi_listrequest_iterator_t* lrrange
-                                       )
-{
-  int                     err;
-  kaapi_tasklist_t*       tasklist;
-  kaapi_taskdescr_t**     steal_td_beg;
-  kaapi_taskdescr_t**     steal_td_end;
-  size_t size_steal;
-  
-  tasklist= frame->tasklist;  
-  kaapi_workqueue_index_t count_req 
-  = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
-#if 0
-  kaapi_workqueue_index_t size_ws;
-  size_ws = kaapi_workqueue_size( &tasklist->wq_ready );
-  if (size_ws ==0) return;
-  //printf("%i::[steal] victim'queue size:%i, #req=%i\n", kaapi_get_self_kid(), (int)size_ws, (int)count_req );
-  /* try to steal ready one task for each stealers */
-  if (count_req+1 > size_ws) 
-    count_req = size_ws;
-  
-  size_steal = (count_req*size_ws) / (count_req + 1);
-  if (size_steal ==0) size_steal = 1;
-#else
-  
-  /* else try to steal count_req */
-  size_steal = count_req;
-#endif
-  
-  //#warning "Only for debug here"
-  while (size_steal >0)
-  {
-    kaapi_assert_debug( kaapi_sched_islocked( &thread->stack.proc->lock ) );
-    err = kaapi_thread_tasklistready_steal( &tasklist->rtl, &steal_td_beg, &steal_td_end, size_steal);
-    if (err ==0)
-    {
-      //printf("%i::[steal] steal size:%i\n", kaapi_get_self_kid(), (int)(steal_end - steal_beg) );
-      /* steal ok: reply */
-      kaapi_task_splitter_readylist( 
-                                    thread,
-                                    tasklist,
-                                    steal_td_beg,
-                                    steal_td_end,
-                                    lrequests, 
-                                    lrrange,
-                                    count_req
-                                    );
-      return;
-    }
-    
-    /* else try with half less requests */
-    size_steal /= 2;
-  }
-}
-
 
 /** Steal task in the stack from the bottom to the top.
      This signature MUST BE the same as a splitter function.
@@ -228,7 +167,7 @@ int kaapi_sched_stealstack
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &access_to_gd, &stackbloc );
   
-  kaapi_sched_lock(&thread->stack.lock);
+  kaapi_atomic_lock(&thread->stack.lock);
   
   /* try to steal in each frame */
   for (  top_frame =thread->stack.stackframe; 
@@ -239,15 +178,14 @@ int kaapi_sched_stealstack
     if (top_frame->tasklist == 0)
     {
       thread->stack.thieffp = top_frame;
-      /* classical steal */
       if (top_frame->pc == top_frame->sp) continue;
       kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );
     } else 
-    /* */
-      kaapi_sched_steal_tasklist( thread, top_frame, lrequests, lrrange );
+      /* */
+      kaapi_sched_stealtasklist( thread, top_frame->tasklist, lrequests, lrrange );
   }
   thread->stack.thieffp = 0;
-  kaapi_sched_unlock(&thread->stack.lock);
+  kaapi_atomic_unlock(&thread->stack.lock);
 
   kaapi_hashmap_destroy( &access_to_gd );
   

@@ -47,17 +47,27 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-
+/* TODO: the noprint_data flag does not work.
+   - the idea is to link together tasks without intermediate data node.
+   - nothing was done.... if set, a set of independant tasks are outputed, which
+   is not so convinient.
+*/
 static int noprint_activationlink = 0;
 static int noprint_versionlink = 0;
+static int noprint_label = 0;
 static int noprint_data = 0;
 
 /**/
 static inline void _kaapi_print_data( FILE* file, const void* ptr, unsigned long version)
 {
-  fprintf(file,"%lu00%lu [label=\"%p v%lu\", shape=box, style=filled, color=steelblue];\n", 
-      version, (uintptr_t)ptr, ptr,version-1 
-  );
+  if (noprint_label)
+    fprintf(file,"%lu00%lu [label=\"\", shape=box, style=filled, color=steelblue];\n", 
+        version, (uintptr_t)ptr
+    );
+  else
+    fprintf(file,"%lu00%lu [label=\"%p v%lu\", shape=box, style=filled, color=steelblue];\n", 
+        version, (uintptr_t)ptr, ptr,version-1 
+    );
 }
 
 /**/
@@ -68,7 +78,12 @@ static inline void _kaapi_print_activation_link(
 )
 {
   fprintf(file,"%lu -> %lu [arrowhead=halfopen, style=filled, color=red];\n", 
-    (uintptr_t)&td_src->task, (uintptr_t)&td_dest->task );
+#if defined(KAAPI_TASKLIST_POINTER_TASK)
+    (uintptr_t)td_src->task, (uintptr_t)td_dest->task
+#else
+    (uintptr_t)&td_src->task, (uintptr_t)&td_dest->task
+#endif
+  );
 }
 
 
@@ -151,6 +166,7 @@ static void _kaapi_print_task(
   {
     fmt = td->fmt;
     fname = fmt->name;
+    kaapi_assert_debug(task == td->task);    
   } 
   else 
   {
@@ -158,6 +174,7 @@ static void _kaapi_print_task(
     if (fmt !=0)
       fname = fmt->name;
   }
+  
   /* specialize shape / name for some well knowns tasks */
   if (body == (kaapi_task_body_t)kaapi_taskstartup_body)
   {
@@ -195,7 +212,13 @@ static void _kaapi_print_task(
       }
       if (body != kaapi_taskfinalizer_body)
       {
-        _kaapi_print_write_edge( file, &td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W );
+        _kaapi_print_write_edge( 
+            file, 
+            task, 
+            entry->key, 
+            entry->u.data.tag, 
+            KAAPI_ACCESS_MODE_W 
+        );
       }
       else {
         _kaapi_print_data( file, entry->key, (int)entry->u.data.tag+1 );
@@ -208,9 +231,21 @@ static void _kaapi_print_task(
                 (unsigned long)entry->u.data.tag+1, 
                 (uintptr_t)entry->key );
         }
-        _kaapi_print_read_edge( file, &td->task, entry->key, entry->u.data.tag+1, KAAPI_ACCESS_MODE_R );
+        _kaapi_print_read_edge( 
+            file, 
+            task, 
+            entry->key, 
+            entry->u.data.tag+1, 
+            KAAPI_ACCESS_MODE_R 
+        );
         entry->u.data.tag += 2;
-        _kaapi_print_write_edge( file, &td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W );
+        _kaapi_print_write_edge( 
+            file, 
+            task, 
+            entry->key, 
+            entry->u.data.tag, 
+            KAAPI_ACCESS_MODE_W 
+        );
         _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
       }
     }
@@ -229,7 +264,13 @@ static void _kaapi_print_task(
       entry->u.data.tag = 1;
       _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
     }
-    _kaapi_print_read_edge( file, &td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_R );
+    _kaapi_print_read_edge( 
+        file, 
+        task, 
+        entry->key, 
+        entry->u.data.tag, 
+        KAAPI_ACCESS_MODE_R 
+    );
 //    fprintf(file,"%lu -> tag_%lu  [style=bold, color=blue, label=\"tag:%lu\"];\n", 
 //      (uintptr_t)task, (uintptr_t)argtask->tag, (unsigned long)argtask->tag );
    if (sec_name !=0)
@@ -253,7 +294,13 @@ static void _kaapi_print_task(
       entry->u.data.tag = 1;
       _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
     }
-    _kaapi_print_write_edge( file, &td->task, entry->key, entry->u.data.tag, KAAPI_ACCESS_MODE_W );
+    _kaapi_print_write_edge( 
+        file, 
+        task, 
+        entry->key, 
+        entry->u.data.tag, 
+        KAAPI_ACCESS_MODE_W 
+    );
 //    fprintf(file,"tag_%lu -> %lu [style=bold, color=blue, label=\"tag:%lu\"];\n", 
 //      (uintptr_t)argtask->tag, (uintptr_t)task, (unsigned long)argtask->tag );
    if (sec_name !=0)
@@ -267,23 +314,36 @@ static void _kaapi_print_task(
 
   if (td ==0) 
   {
-    fprintf( file, "%lu [label=\"%s\\n task=%p\", shape=%s, style=filled, color=orange];\n", 
-      (uintptr_t)task, fname, (void*)task, shape
-    );
-    return;
+    if (noprint_label)
+      fprintf( file, "%lu [label=\"\", shape=%s, style=filled, color=orange];\n", 
+        (uintptr_t)task, shape
+      );
+    else
+      fprintf( file, "%lu [label=\"%s\\ntask=%p\\nsp=%p\", shape=%s, style=filled, color=orange];\n", 
+        (uintptr_t)task, fname, (void*)task, task->sp, shape
+      );
+  }
+  else
+  {
+    /* print the task */
+    if (noprint_label)
+      fprintf( file, "%lu [label=\"\", shape=%s, style=filled, color=orange];\n", 
+        (uintptr_t)task,
+        shape
+      );
+    else
+      fprintf( file, "%lu [label=\"%s\\ntask=%p\\nsp=%p\\ndate=%" PRIu64
+               "\\ntd=%p\\n wc=%i, counter=%i, \", shape=%s, style=filled, color=orange];\n", 
+        (uintptr_t)task, fname, (void*)task, task->sp,
+        td->u.acl.date, 
+        (void*)td,
+        (int)td->wc,
+        (int)KAAPI_ATOMIC_READ(&td->counter),
+        shape
+      );
   }
 
-  /* print the task */
-  fprintf( file, "%lu [label=\"%s\\n task=%p\\n date=%" PRIu64
-           "\\n wc=%i, counter=%i, \", shape=%s, style=filled, color=orange];\n", 
-    (uintptr_t)task, fname, (void*)task, 
-    td->u.acl.date, 
-    (int)td->wc,
-    (int)KAAPI_ATOMIC_READ(&td->counter),
-    shape
-  );
-
-  if (!noprint_activationlink)
+  if ((!noprint_activationlink) && (td !=0))
   {
     /* display activation link */
     lk = td->u.acl.list.front;
@@ -316,8 +376,9 @@ static void _kaapi_print_task(
 
     for (unsigned int i=0; i < count_params; i++) 
     {
-      kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(fmt, i, sp) );
-      if (m == KAAPI_ACCESS_MODE_V) 
+      kaapi_access_mode_t m = kaapi_format_get_mode_param(fmt, i, sp);
+      m = KAAPI_ACCESS_GET_MODE( m );
+      if (m == KAAPI_ACCESS_MODE_V)
         continue;
       
       /* its an access */
@@ -335,18 +396,36 @@ static void _kaapi_print_task(
       /* display arrow */
       if (KAAPI_ACCESS_IS_READ(m))
       {
-        _kaapi_print_read_edge( file, &td->task, entry->key, entry->u.data.tag, m  );
+        _kaapi_print_read_edge( 
+            file, 
+            task, 
+            entry->key, 
+            entry->u.data.tag, 
+            m  
+        );
       }
       if (KAAPI_ACCESS_IS_WRITE(m))
       {
         entry->u.data.tag++;
         /* display new version */
         _kaapi_print_data( file, entry->key, (int)entry->u.data.tag );
-        _kaapi_print_write_edge( file, &td->task, entry->key, entry->u.data.tag, m );
+        _kaapi_print_write_edge( 
+            file, 
+            task, 
+            entry->key, 
+            entry->u.data.tag, 
+            m 
+        );
       }
       if (KAAPI_ACCESS_IS_CUMULWRITE(m))
       {
-        _kaapi_print_write_edge( file, &td->task, entry->key, entry->u.data.tag, m );
+        _kaapi_print_write_edge( 
+            file, 
+            task, 
+            entry->key, 
+            entry->u.data.tag, 
+            m 
+        );
       }
     }
   }
@@ -367,7 +446,17 @@ typedef struct {
 static void _kaapi_print_task_executor( kaapi_taskdescr_t* td, void* arg )
 {
   _kaapi_print_context* ctxt = (_kaapi_print_context*)arg;
-  _kaapi_print_task( ctxt->file, &ctxt->data_khm, &td->task, td, ctxt->sec_name );
+  _kaapi_print_task( 
+    ctxt->file, 
+    &ctxt->data_khm, 
+#if defined(KAAPI_TASKLIST_POINTER_TASK)
+    td->task, 
+#else
+    &td->task, 
+#endif
+    td, 
+    ctxt->sec_name 
+  );
 }
 
 
@@ -383,6 +472,7 @@ int kaapi_thread_tasklist_print_dot  ( FILE* file, const kaapi_tasklist_t* taskl
   noprint_activationlink = (0 != getenv("KAAPI_DOT_NOACTIVATION_LINK"));
   noprint_versionlink    = (0 != getenv("KAAPI_DOT_NOVERSION_LINK"));
   noprint_data           = (0 != getenv("KAAPI_DOT_NODATA_LINK"));
+  noprint_label          = (0 != getenv("KAAPI_DOT_NOLABEL"));
 
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &the_hash_map.data_khm, 0 );
@@ -418,6 +508,11 @@ static int kaapi_frame_print_dot_notasklist  ( FILE* file, const kaapi_frame_t* 
   kaapi_hashmap_t data_khm;
   
   if (frame ==0) return 0;
+
+  noprint_activationlink = (0 != getenv("KAAPI_DOT_NOACTIVATION_LINK"));
+  noprint_versionlink    = (0 != getenv("KAAPI_DOT_NOVERSION_LINK"));
+  noprint_data           = (0 != getenv("KAAPI_DOT_NODATA_LINK"));
+  noprint_label          = (0 != getenv("KAAPI_DOT_NOLABEL"));
 
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &data_khm, 0 );

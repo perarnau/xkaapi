@@ -115,7 +115,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     /* always allocate a thread before emitting a steal request */
     if (kproc->thread ==0)
     {
-      thread = kaapi_context_alloc(kproc);
+      thread = kaapi_context_alloc(kproc, (size_t)-1);
       kaapi_assert_debug( thread != 0 );
       
       kaapi_setcontext(kproc, thread);
@@ -205,8 +205,14 @@ redo_execute:
 #if defined(KAAPI_DEBUG)
     else 
     {
+      kaapi_thread_clear(kproc->thread);
+#if 0
       kaapi_assert( kaapi_frame_isempty( kproc->thread->stack.sfp ) );
       kaapi_assert( kproc->thread->stack.sfp == kproc->thread->stack.stackframe );
+      kaapi_assert( kproc->thread->stack.sfp->pc == kproc->thread->stack.task );
+      kaapi_assert( kproc->thread->stack.sfp->sp == kproc->thread->stack.task );
+      kaapi_assert( kproc->thread->stack.sfp->sp_data == kproc->thread->stack.data );
+#endif
     }
 #endif
   } while (1);

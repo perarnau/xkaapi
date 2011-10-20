@@ -56,6 +56,8 @@ int kaapi_context_free( kaapi_thread_context_t* ctxt )
 //  if (ctxt->alloc_ptr !=0) free(ctxt->alloc_ptr);
 #if defined (_WIN32)
   VirtualFree(ctxt, ctxt->size,MEM_RELEASE);
+#elif defined(KAAPI_USE_NUMA)
+    numa_free(ctxt, ctxt->size );
 #else
   munmap( ctxt, ctxt->size );
 #endif

@@ -55,6 +55,10 @@ void kaapi_taskstartup_body(
 {
   kaapi_processor_t* kproc = (kaapi_processor_t*)taskarg;
 
+#if defined(KAAPI_DEBUG)
+  kaapi_frame_t           save_frame = *fp;
+#endif
+
   kaapi_assert( kaapi_frame_isempty(fp) );
   kaapi_assert( fp == kproc->thread->stack.stackframe + 1 );
   kaapi_assert( task == kproc->thread->stack.stackframe->pc );

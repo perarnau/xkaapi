@@ -316,7 +316,11 @@ Example:
 
 \begin{verbatim}
 ./configure --enable-mode=release --prefix=$HOME/install
-./configure  --prefix=$HOME/install --enable-mode=release --with-hwloc=/usr/local/hwloc --with-perfcounter --with-boost=/usr/local/boost --with-rose=/Users/thierry/Developpment/KAAPI/ROSE/install --enable-kacc --disable-api-atha --disable-api-kastl
+./configure  --prefix=$HOME/install --enable-mode=release \
+         --with-hwloc=/usr/local/hwloc --with-perfcounter \
+         --with-boost=/usr/local/boost \
+         --with-rose=$HOME/ROSE/install \
+         --enable-kacc
 \end{verbatim}
 If there are errors during the configuration process, you have to solve
 them before going further. If dependencies are missing on your

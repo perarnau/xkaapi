@@ -60,7 +60,9 @@ extern "C" {
 #  include <errno.h>
 #  include <stdio.h>
 #  define kaapi_assert( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); abort(); }
+#if !defined(kaapi_assert_debug) 
 #  define kaapi_assert_debug( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); abort(); }
+#endif
 #endif
 
 #if defined(__cplusplus)

@@ -74,7 +74,7 @@ printf("In AFTER STEAL \n");
   for (i=0; i<count_params; ++i)
   {
     kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(fmt, i, taskarg) );
-    if (m == KAAPI_ACCESS_MODE_V) 
+    if (m == KAAPI_ACCESS_MODE_V)
       continue;
 
     if (KAAPI_ACCESS_IS_ONLYWRITE(m) || KAAPI_ACCESS_IS_CUMULWRITE(m) )

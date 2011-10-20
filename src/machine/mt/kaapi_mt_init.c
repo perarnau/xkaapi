@@ -153,9 +153,10 @@ int kaapi_mt_init(void)
    */
   kaapi_hw_init();
   
+#if 0 // DEPRECATED_ATTRIBUTE
   /* Build global scheduling queue on the hierarchy */
   kaapi_sched_affinity_initialize();  
-
+#endif
 
 
 #ifdef KAAPI_MAX_PROCESSOR_GENERIC
@@ -232,7 +233,9 @@ int kaapi_mt_init(void)
   kaapi_assert_m( 0 == kaapi_setconcurrency(), "kaapi_setconcurrency" );
 
   /* initialize before destroying procinfo */
+#if KAAPI_USE_HWLOC
   kaapi_hws_init_global();
+#endif
 
   /* destroy the procinfo list, thread args no longer valid */
   kaapi_procinfo_list_free(kaapi_default_param.kproc_list);
@@ -323,13 +326,14 @@ int kaapi_mt_finalize(void)
   double t_sched;
   double t_preempt;
   double t_1;
+  double t_tasklist;
 #endif
 
-  static int iscalled = 0;
-  if (iscalled !=0) return EALREADY;
-  iscalled = 1;
+  static kaapi_atomic_t iscalled = {1};
+  if (KAAPI_ATOMIC_DECR(&iscalled) !=0) 
+    return EALREADY;
 
-  /* if thread suspended, then resume them
+  /* if thread suspended, then resume all threads
   */
   if (kaapi_suspendflag)
     kaapi_mt_resume_threads();
@@ -364,6 +368,7 @@ int kaapi_mt_finalize(void)
   t_sched         = 0;
   t_preempt       = 0;
   t_1             = 0;
+  t_tasklist      = 0;
 #endif
 
   for (i=0; i<kaapi_count_kprocessors; ++i)
@@ -379,9 +384,10 @@ int kaapi_mt_finalize(void)
     t_sched +=        1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_T1);
     t_preempt +=      1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TPREEMPT);
     t_1 +=            1e-9*(double)KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_T1); 
-      
+    t_tasklist +=     1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKLISTCALC); 
+
     /* */
-    if (kaapi_default_param.display_perfcounter)
+    if (kaapi_default_param.display_perfcounter && (kaapi_count_kprocessors <4))
     {
 
       printf("----- Performance counters, core   : %i\n", i);
@@ -404,6 +410,9 @@ int kaapi_mt_finalize(void)
       );
       printf("Total compute time                 : %e\n",
          1e-9*(double)KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_T1));
+
+      printf("Total compute time of dependencies : %e\n",
+         1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKLISTCALC));
 
       printf("Total idle time                    : %e\n",
          1e-9*(KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i],KAAPI_PERF_ID_T1)
@@ -433,7 +442,8 @@ int kaapi_mt_finalize(void)
     printf("Total number of steal BAD requests : %" PRIu64 "\n", cnt_stealreq-cnt_stealreqok);
     printf("Total number of steal operations   : %" PRIu64 "\n", cnt_stealop);
     printf("Total number of suspend operations : %" PRIu64 "\n", cnt_suspend);
-    printf("Total compute time                 : %e\n", t_1*1e-9);
+    printf("Total compute time                 : %e\n", t_1);
+    printf("Total compute time of dependencies : %e\n", t_tasklist);
     printf("Total idle time                    : %e\n", t_sched+t_preempt);
     printf("   sched idle time                 : %e\n", t_sched);
     printf("   preemption idle time            : %e\n", t_preempt);
@@ -441,8 +451,17 @@ int kaapi_mt_finalize(void)
   }
 #endif  
 
+#if KAAPI_USE_HWLOC
   kaapi_hws_fini_global();
+#endif
   
   /* TODO: destroy topology data structure */
   return 0;
 }
+
+
+__attribute__ ((destructor)) static void __kaapi_mt_finalize(void)
+{
+  kaapi_mt_finalize();
+}
+

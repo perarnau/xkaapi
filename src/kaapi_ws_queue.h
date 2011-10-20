@@ -51,7 +51,6 @@
 #include <stddef.h>
 #include <string.h>
 #include <sys/types.h>
-#include "kaapi_impl.h"
 
 
 #ifndef CONFIG_HWS_COUNTERS
@@ -84,8 +83,8 @@ typedef struct kaapi_ws_queue
   */
 
   kaapi_ws_error_t (*push)(struct kaapi_ws_block*, void*, kaapi_task_t* );
-  kaapi_ws_error_t (*steal)(struct kaapi_ws_block*, void*, kaapi_listrequest_t*, kaapi_listrequest_iterator_t*);
-  kaapi_ws_error_t (*pop)(struct kaapi_ws_block*, void*, kaapi_request_t*);
+  kaapi_ws_error_t (*steal)(struct kaapi_ws_block*, void*, struct kaapi_listrequest_t*, struct kaapi_listrequest_iterator_t*);
+  kaapi_ws_error_t (*pop)(struct kaapi_ws_block*, void*, struct kaapi_request_t*);
   void (*destroy)(void*);
 
 #if CONFIG_HWS_COUNTERS
@@ -183,8 +182,8 @@ static inline kaapi_ws_error_t kaapi_ws_queue_steal
 (
   struct kaapi_ws_block* ws_bloc,
   kaapi_ws_queue_t* queue,
-  kaapi_listrequest_t* lrequests,
-  kaapi_listrequest_iterator_t* iter_requests
+  struct kaapi_listrequest_t* lrequests,
+  struct kaapi_listrequest_iterator_t* iter_requests
 )
 {
   return queue->steal(ws_bloc, (void*)queue->data, lrequests, iter_requests);
@@ -198,6 +197,20 @@ static inline void kaapi_ws_queue_destroy(kaapi_ws_queue_t* q)
 {
   q->destroy((void*)q->data);
   free(q);
+}
+
+/** Allocate data with respect to a
+*/
+static inline void* kaapi_ws_queue_data_alloc(kaapi_ws_queue_t* q, size_t sz_alloc)
+{
+  return malloc(sz_alloc);
+}
+
+/** Deallocate data allocated with kaapi_ws_queue_alloc
+*/
+static inline void kaapi_ws_queue_data_free(kaapi_ws_queue_t* q, void* data, size_t sz_alloc)
+{
+  free(data);
 }
 
 

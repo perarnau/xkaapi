@@ -46,7 +46,6 @@
 #include <stdio.h> // debug 
 #include <inttypes.h>
 
-
 /**
 */
 void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
@@ -61,7 +60,10 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
   /* get information of the task to execute */
   arg = (kaapi_taskstealready_arg_t*)taskarg;
   
-  kaapi_assert(arg->origin_td_beg < arg->origin_td_end);
+#if !defined(TASKLIST_REPLY_ONETD)  
+  kaapi_assert_debug(arg->td_beg < arg->td_end);
+#else
+#endif
 
   /* create a new tasklist on the stack of the running thread
   */
@@ -73,45 +75,67 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
   kaapi_assert_debug( frame == thread->stack.sfp );
 
   thread->stack.sfp[1] = *frame;
-  frame = ++thread->stack.sfp;
+  thread->stack.sfp = ++frame;
 
-  /* link tasklist together for terminaison */
-  tasklist->master    = arg->origin_tasklist;
+  /* link tasklist with its master for terminaison on count_thief */
+  tasklist->master     = arg->master_tasklist;
+  tasklist->t_infinity = arg->master_tasklist->t_infinity;
+
 
   /* Fill the task list with ready stolen tasks.
-     Because we do not have cactus stack, we recopy
-     stolen tasks into the new stacks (only pointer to
-     tasks).
-     Not that from this task list execution entry,
-     we do not store ready tasks into linked list:
-     - they are directly pushed into the workqueue.
   */
-  kaapi_thread_tasklistready_push_init_fromsteal( &tasklist->rtl, arg->origin_td_beg, arg->origin_td_end);
+  kaapi_thread_tasklistready_push_init_fromsteal( 
+    tasklist, 
+#if defined(TASKLIST_REPLY_ONETD)  
+    &arg->td, 
+    &arg->td+1
+#else
+    arg->td_beg, 
+    arg->td_end
+#endif
+  );
+  
+#if defined(TASKLIST_ONEGLOBAL_MASTER) && !defined(TASKLIST_REPLY_ONETD)
+  /* to synchronize steal operation and the recopy of TD on the non master tasklist */
+  if (arg->victim_tasklist != 0)
+    KAAPI_ATOMIC_DECR( &arg->victim_tasklist->pending_stealop );
+#endif
 
   /* keep the first task to execute outside the workqueue */
   tasklist->context.chkpt = 2;
   tasklist->context.td    =  kaapi_thread_tasklist_commit_ready_and_steal( tasklist );
   
-
-#if 0//defined(KAAPI_DEBUG)
-  kaapi_sched_lock( &thread->proc->lock );
-#endif
+  kaapi_writemem_barrier();
   frame->tasklist = tasklist;
-#if 0//defined(KAAPI_DEBUG)
-  kaapi_sched_unlock( &thread->proc->lock );
-#endif
 
   /* start execution */
   kaapi_sched_sync_(thread);
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&tasklist->count_thief) == 0);
 
-  kaapi_sched_lock(&thread->stack.proc->lock);
+  kaapi_sched_lock(&thread->stack.lock);
   frame->tasklist = 0;
+  --thread->stack.sfp;
+#if 0
   /* one thief less */
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&tasklist->master->count_thief) >0 );
-  KAAPI_ATOMIC_DECR( &tasklist->master->count_thief );
-  kaapi_sched_unlock( &thread->stack.proc->lock );
+#endif
+  
+  /* report the number of executed task to the master tasklist */
+  KAAPI_ATOMIC_ADD( &tasklist->master->cnt_exec, KAAPI_ATOMIC_READ(&tasklist->cnt_exec) );
+
+#if !defined(TASKLIST_ONEGLOBAL_MASTER) 
+  /* decrement the number of reader on the tasklist */
+  KAAPI_ATOMIC_DECR( &tasklist->master->count_thief );  
+#endif
+
+  kaapi_sched_unlock( &thread->stack.lock );
+
+#if defined(TASKLIST_ONEGLOBAL_MASTER) && !defined(TASKLIST_REPLY_ONETD)
+  /* synchronize steal operation and the recopy of TD on the non master tasklist */
+  while (KAAPI_ATOMIC_READ( &tasklist->pending_stealop ) !=0)
+    kaapi_slowdown_cpu();
+#endif
   
   kaapi_tasklist_destroy( tasklist );
-  --thread->stack.sfp;
+
 }

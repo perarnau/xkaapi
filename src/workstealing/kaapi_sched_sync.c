@@ -84,6 +84,7 @@ int kaapi_sched_sync_(kaapi_thread_context_t* thread)
   kaapi_frame_t*          save_esfp;
 #if defined(KAAPI_DEBUG)
   kaapi_frame_t*          save_fp;
+  kaapi_frame_t           save_frame;
 #endif
 
   /* If pure DFG frame and empty return */
@@ -102,6 +103,7 @@ int kaapi_sched_sync_(kaapi_thread_context_t* thread)
   thread->stack.esfp = (kaapi_frame_t*)thread->stack.sfp;
 #if defined(KAAPI_DEBUG)
   save_fp = thread->stack.sfp;
+  save_frame = *save_fp;
 #endif
 
   /* write barrier in order to commit update */

@@ -74,7 +74,13 @@ int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_
   {
     /* success: try next to time on lower depth */
     level = &kproc->hlevel.levels[arg->depth];
-    if (++arg->index >= 2)//level->nkids/4)
+    ++arg->index;
+#if 1
+    if  (arg->index >= 1+12/level->nkids)
+#else
+    if  (   ((arg->index >= level->nkids/2) && (arg->depth <=1+arg->depth_min)) 
+         || ((arg->index >= 2) && (arg->depth >1+arg->depth_min)) )
+#endif
     {
       ++arg->depth;
       arg->index = 0;

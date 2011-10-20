@@ -65,11 +65,14 @@ int kaapi_version_add_initialaccess(
     kaapi_taskdescr_t* td_move;
     kaapi_move_arg_t*  argmove 
         = (kaapi_move_arg_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_move_arg_t) );
+    kaapi_task_t* task_move = kaapi_tasklist_allocate_task( tl, kaapi_taskmove_body, argmove );
     argmove->src_data.ptr    = kaapi_make_pointer(KAAPI_EMPTY_ADDRESS_SPACE_ID, data);
     argmove->src_data.view   = *view;
     argmove->dest            = version->handle;
-    td_move                  = kaapi_tasklist_allocate_td_withbody( tl, 0, kaapi_taskmove_body, argmove);
+    td_move                  = kaapi_tasklist_allocate_td( tl, task_move, 0);
+//    td_move                  = kaapi_tasklist_allocate_td_withbody( tl, 0, kaapi_taskmove_body, argmove);
     version->writer_task     = td_move;
+
     kaapi_tasklist_pushback_ready( tl, td_move);
   }
   else if (KAAPI_ACCESS_IS_WRITE(m))
@@ -77,10 +80,12 @@ int kaapi_version_add_initialaccess(
     kaapi_taskdescr_t* td_alloc;
     kaapi_move_arg_t*  argalloc 
         = (kaapi_move_arg_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_move_arg_t) );
+    kaapi_task_t* task_alloc = kaapi_tasklist_allocate_task( tl, kaapi_taskalloc_body, argalloc );
     argalloc->src_data.ptr   = kaapi_make_pointer(KAAPI_EMPTY_ADDRESS_SPACE_ID, data);
     argalloc->src_data.view  = *view;
     argalloc->dest           = version->handle;
-    td_alloc                 = kaapi_tasklist_allocate_td_withbody( tl, 0, kaapi_taskalloc_body, argalloc );
+    td_alloc                 = kaapi_tasklist_allocate_td( tl, task_alloc, 0);
+//    td_alloc                 = kaapi_tasklist_allocate_td_withbody( tl, 0, kaapi_taskalloc_body, argalloc );
     version->writer_task     = td_alloc;
     kaapi_tasklist_pushback_ready( tl, td_alloc);
   } else {

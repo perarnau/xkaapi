@@ -136,7 +136,7 @@ typedef struct kaapi_hashmap_t {
 /* Big hashmap_big
    Used for bulding readylist
 */
-#define KAAPI_HASHMAP_BIG_SIZE 32768
+#define KAAPI_HASHMAP_BIG_SIZE 65536
 
 /*
 */

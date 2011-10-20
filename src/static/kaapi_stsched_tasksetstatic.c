@@ -157,18 +157,12 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   kaapi_tasklist_init( tasklist, thread );
 
   /* currently: that all, do not compute other things */
-#if defined(KAAPI_USE_PERFCOUNTER)
-  t0 = kaapi_get_elapsedtime();
-#endif
   kaapi_thread_computereadylist(thread, tasklist);
-#if defined(KAAPI_USE_PERFCOUNTER)
-  t1 = kaapi_get_elapsedtime();
-#endif
   KAAPI_ATOMIC_WRITE(&tasklist->count_thief, 0);
   kaapi_event_push0(thread->stack.proc, thread, KAAPI_EVT_STATIC_END );
 
   /* populate tasklist with initial ready tasks */
-  kaapi_thread_tasklistready_push_init( &tasklist->rtl, &tasklist->readylist );
+  kaapi_thread_tasklistready_push_init( tasklist, &tasklist->readylist );
   kaapi_thread_tasklist_commit_ready( tasklist );
 
   /* keep the first task to execute outside the workqueue */
@@ -194,26 +188,18 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   /* restore state */
   kaapi_thread_set_unstealable(save_state);
   thread->stack.sfp->tasklist = tasklist;
-  
-//  kaapi_print_state_tasklist( tasklist );
-//  printf("----------->>> before execution\n\n");
 
   /* exec the spawned subtasks */
-#if defined(KAAPI_USE_PERFCOUNTER)
-  t0_exec = kaapi_get_elapsedtime();
-#endif
   kaapi_sched_sync_(thread);
-#if defined(KAAPI_USE_PERFCOUNTER)
-  t1_exec = kaapi_get_elapsedtime();
-#endif
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&tasklist->count_thief) == 0);
 
-#if defined(KAAPI_USE_PERFCOUNTER)
+#if 0//defined(KAAPI_USE_PERFCOUNTER)
   printf("[tasklist] T1                      : %" PRIu64 "\n", tasklist->cnt_tasks);
   printf("[tasklist] Tinf                    : %" PRIu64 "\n", tasklist->t_infinity);
   printf("[tasklist] dependency analysis time: %e (s)\n",t1-t0);
   printf("[tasklist] exec time               : %e (s)\n",t1_exec-t0_exec);
 #endif
+
 #if 0
   printf("%i::[tasklist] exec tasks: %llu\n", 
     kaapi_get_self_kid(),

@@ -78,7 +78,6 @@ int kaapi_thread_computedep_task(
   kaapi_handle_t          handle;
   kaapi_version_t*        version;
   int                     islocal;
-  kaapi_task_binding_t    binding;
 
   /* assume task list  */
   kaapi_assert( tasklist != 0 );
@@ -94,13 +93,6 @@ int kaapi_thread_computedep_task(
   /* new task descriptor in the task list */
   taskdescr = kaapi_tasklist_allocate_td( tasklist, task, task_fmt );
 
-  /* compute binding and ocr if required before renaming of task' parameters to kaapi_global_data*/
-  task_fmt->get_task_binding(task_fmt, task, &binding);
-  if ((binding.type == KAAPI_BINDING_OCR_ADDR) || (binding.type == KAAPI_BINDING_OCR_PARAM)) /* others: default */
-  { 
-    kaapi_sched_affinity_binding2mapping( &taskdescr->u.acl.mapping, &binding, task_fmt, task, 0 );
-  }
-
   /* Compute for each access i if it is ready or not.
      If all accesses of the task are ready then the taskdescr is pushed into readylist
      of the tasklist. Else it stay where allocated and it will be move to ready list during execution.
@@ -110,11 +102,23 @@ int kaapi_thread_computedep_task(
   
   for (unsigned int i=0; i < count_params; i++) 
   {
-    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(task_fmt, i, sp) );
+    kaapi_access_mode_t m = kaapi_format_get_mode_param(task_fmt, i, sp);
+    m = KAAPI_ACCESS_GET_MODE( m );
+    if (m == KAAPI_ACCESS_MODE_V)
+      continue;
     kaapi_assert_debug( m != KAAPI_ACCESS_MODE_VOID );
     
-    if (m == KAAPI_ACCESS_MODE_V) 
-      continue;
+    
+    /* this is an shared access candidate for ocr */
+    if (KAAPI_ACCESS_IS_WRITE(m))
+    {
+      kaapi_bitmap_value_clear_32(&taskdescr->ocr);
+      kaapi_bitmap_value_set_32(&taskdescr->ocr, i);
+    }
+    else if (kaapi_bitmap_value_empty_32(&taskdescr->ocr))
+    {
+      kaapi_bitmap_value_set_32(&taskdescr->ocr, i);
+    }
     
     /* it is an access */
     kaapi_access_t access = kaapi_format_get_access_param(task_fmt, i, sp);
@@ -164,9 +168,14 @@ int kaapi_thread_computedep_task(
 #endif
 
   } /* end for all arguments of the task */
+
+  /* call to reserved memory before execution without several memory allocation */
+  kaapi_tasklist_newpriority_task( tasklist, taskdescr->priority );
   
   /* store the format to avoid lookup */
   taskdescr->fmt = task_fmt;
+  
+  taskdescr->priority = (task->schedinfo == 1 ? KAAPI_TASKLIST_MAX_PRIORITY : KAAPI_TASKLIST_MIN_PRIORITY);
 
   /* if wc ==0, push the task into the ready list */
   if (taskdescr->wc == 0)

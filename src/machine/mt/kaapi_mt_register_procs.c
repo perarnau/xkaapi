@@ -63,6 +63,11 @@ static int make_identity_procinfo_list(kaapi_procinfo_list_t* kpl, unsigned int 
     kpi->proc_type = KAAPI_PROC_TYPE_CPU;
     kpi->proc_index = cpu_index;
     kpi->bound_cpu = cpu_index;
+    kpi->kid = cpu_index;
+
+    kaapi_cpuset_set(&kaapi_default_param.usedcpu, kpi->bound_cpu);
+    kaapi_default_param.kid2cpu[kpi->kid] = kpi->bound_cpu;
+    kaapi_default_param.cpu2kid[kpi->bound_cpu] = kpi->kid;
 
     kaapi_procinfo_list_add(kpl, kpi);
   }
@@ -99,6 +104,7 @@ int kaapi_mt_register_procs(kaapi_procinfo_list_t* kpl)
   {
     if (make_identity_procinfo_list(kpl, kaapi_default_param.cpucount))
       return -1;
+    kaapi_default_param.use_affinity = 1;
   }
 
   return 0;

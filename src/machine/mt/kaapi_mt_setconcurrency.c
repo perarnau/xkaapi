@@ -169,7 +169,7 @@ int kaapi_setconcurrency(void)
         kaapi_all_kprocessors = 0;
         return ENOMEM;
       }
-      kaapi_assert(0 == kaapi_processor_init(kproc, kpi));
+      kaapi_assert(0 == kaapi_processor_init(kproc, kpi, kaapi_default_param.stacksize_master));
 
 #if defined(KAAPI_USE_PERFCOUNTER)
       /*  */
@@ -236,7 +236,7 @@ void* kaapi_sched_run_processor( void* arg )
 #endif
 
   /* processor initialization */
-  kaapi_assert( 0 == kaapi_processor_init( kproc, kpi) );
+  kaapi_assert( 0 == kaapi_processor_init( kproc, kpi, kaapi_default_param.stacksize) );
   kaapi_assert( kproc->thread != 0 );
 
 #if defined(KAAPI_USE_PERFCOUNTER)

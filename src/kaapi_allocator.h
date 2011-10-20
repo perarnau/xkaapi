@@ -48,6 +48,9 @@
 #include "config.h"
 #include "kaapi_defs.h"
 #include <string.h>
+#if defined(KAAPI_USE_NUMA)
+#include <numa.h>
+#endif
 
 #if defined(__cplusplus)
 extern "C" {
@@ -55,16 +58,16 @@ extern "C" {
 
 /*
 */
-#define KAAPI_BLOCALLOCATOR_SIZE 8*4096
 
 /* Macro to define a generic bloc allocator of byte.
 */
 typedef struct kaapi_allocator_bloc_t {
-  double                           data[KAAPI_BLOCALLOCATOR_SIZE/sizeof(double)
-                                        - sizeof(uintptr_t) - sizeof(struct kaapi_allocator_bloc_t*)];
   uintptr_t                        pos;  /* next free in data */
   struct kaapi_allocator_bloc_t*   next; /* link list of bloc */
+  double                           data[1];
 } kaapi_allocator_bloc_t;
+
+#define KAAPI_BLOCALLOCATOR_SIZE (16*4096- offsetof(kaapi_allocator_bloc_t,data))
 
 typedef struct kaapi_allocator_t {
   kaapi_allocator_bloc_t* currentbloc;
@@ -82,19 +85,7 @@ static inline int kaapi_allocator_init( kaapi_allocator_t* va )
   return 0;
 }
 
-/**/
-static inline int kaapi_allocator_destroy( kaapi_allocator_t* va )
-{
-  while (va->allocatedbloc !=0)
-  {
-    kaapi_allocator_bloc_t* curr = va->allocatedbloc;
-    va->allocatedbloc = curr->next;
-    free (curr);
-  }
-  va->allocatedbloc = 0;
-  va->currentbloc = 0;
-  return 0;
-}
+extern int kaapi_allocator_destroy( kaapi_allocator_t* va );
 
 /* Here size is size in Bytes
 */
@@ -107,8 +98,7 @@ static inline void* kaapi_allocator_allocate( kaapi_allocator_t* va, size_t size
   void* retval;
   /* round size to double size */
   size = (size+sizeof(double)-1)/sizeof(double);
-  const size_t sz_max = KAAPI_BLOCALLOCATOR_SIZE/sizeof(double)-sizeof(uintptr_t)-sizeof(kaapi_allocator_bloc_t*);
-  if ((va->currentbloc != 0) && (va->currentbloc->pos + size < sz_max))
+  if ((va->currentbloc != 0) && (va->currentbloc->pos + size < KAAPI_BLOCALLOCATOR_SIZE))
   {
     retval = &va->currentbloc->data[va->currentbloc->pos];
     va->currentbloc->pos += size;

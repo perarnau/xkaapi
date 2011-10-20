@@ -87,7 +87,6 @@ libkaapi_la_SOURCES=\
   workstealing/kaapi_sched_criticalsteal.c \
   workstealing/kaapi_sched_lready.c \
   workstealing/kaapi_sched_wsqueue.c \
-  workstealing/kaapi_sched_affinity_queue.c \
   hws/kaapi_hws_initialize.c \
   hws/kaapi_hws_emitsteal.c \
   hws/kaapi_hws_pushtask.c \
@@ -103,7 +102,9 @@ libkaapi_la_SOURCES=\
 libkaapi_la_SOURCES+=\
   kaapi_tasklist.h\
   thread/kaapi_tasklist.c \
-  thread/kaapi_thread_tasklist_activate.c \
+  thread/kaapi_tasklist_criticalpath.c\
+  thread/kaapi_tasklist_activate.c \
+  thread/kaapi_tasklist_steal.c \
   thread/kaapi_thread_dfg_print.c \
   thread/kaapi_thread_rdl_print.c \
   thread/kaapi_thread_dfgdot_print.c \
@@ -118,7 +119,6 @@ libkaapi_la_SOURCES+=\
   thread/kaapi_thread_computereadylist.c \
   thread/kaapi_thread_computeready_access.c \
   thread/kaapi_thread_checkdeps.c \
-  thread/kaapi_thread_taskmovealloc.c \
   thread/kaapi_version_find.c \
   thread/kaapi_version_addaccess.c \
   thread/kaapi_version_replicat.c \
@@ -128,13 +128,13 @@ libkaapi_la_SOURCES+=\
   task/kaapi_task_steal_dfg.c \
   task/kaapi_task_stealready_body.c \
   task/kaapi_task_splitter_adapt.c \
-  task/kaapi_task_splitter_readylist.c \
   task/kaapi_task_pushstealcontext.c \
   task/kaapi_task_adapt_allocateresult.c \
   task/kaapi_task_adapt_deallocateresult.c \
   task/kaapi_task_adap_body.c \
   task/kaapi_task_initadap.c \
   task/kaapi_task_reqreply.c \
+  task/kaapi_task_movealloc.c \
   task/kaapi_task_preempt_head.c \
   task/kaapi_task_preempt_tail.c \
   task/kaapi_task_preempt_thief.c \
