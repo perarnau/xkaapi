@@ -16,6 +16,7 @@ static void flat_body(void* p, kaapi_thread_t* t)
   wrapped_uint_t* wui = (wrapped_uint_t*)p;
   const unsigned int val = *kaapi_data(unsigned int, &wui->val);
   printf("[%u] %s %u\n", kaapi_get_self_kid(), __FUNCTION__, val);
+  usleep(1000);
 }
 
 
@@ -24,6 +25,7 @@ static void numa_body(void* p, kaapi_thread_t* t)
   wrapped_uint_t* wui = (wrapped_uint_t*)p;
   const unsigned int val = *kaapi_data(unsigned int, &wui->val);
   printf("[%u] %s %u\n", kaapi_get_self_kid(), __FUNCTION__, val);
+  usleep(1000);
 }
 
 
@@ -65,7 +67,8 @@ int main(int ac, char** av)
 
   kaapi_init(1, &ac, &av);
 
-  for (j = 0; j < (4096 * 10); ++j)
+  /* for (j = 0; j < (4096 * 10); ++j) */
+  for (j = 0; j < 128; ++j)
   {
     kaapi_thread_t* const thread = kaapi_self_thread();
     kaapi_task_t* task;
@@ -89,7 +92,7 @@ int main(int ac, char** av)
        ws->allocate(). export hws_alloc on top of that.
      */
 
-#if 0
+#if 1
     wui = kaapi_thread_pushdata_align
       (thread, sizeof(wrapped_uint_t), sizeof(void*));
     kaapi_thread_allocateshareddata
