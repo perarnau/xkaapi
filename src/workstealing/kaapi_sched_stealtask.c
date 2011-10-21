@@ -44,7 +44,7 @@
 */
 #include "kaapi_impl.h"
 
-void kaapi_task_steal_dfg
+void kaapi_sched_steal_task
 (
   kaapi_hashmap_t*              map, 
   kaapi_thread_context_t*       thread, 

@@ -127,7 +127,7 @@ static kaapi_ws_error_t _kaapi_ws_queue_lifo_steal
       kaapi_hws_inc_steal_counter(p, req->ident);
 #endif
 
-      /* special case of kaapi_task_steal_dfg */
+      /* special case of kaapi_sched_steal_task */
       req->thief_sp = task->sp;
       req->thief_task = task;
       kaapi_writemem_barrier();

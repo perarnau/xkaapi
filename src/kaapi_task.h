@@ -525,13 +525,37 @@ extern size_t kaapi_task_computeready(
   kaapi_hashmap_t*      map 
 );
 
+
+/** \ingroup TASK
+    Try to steal some work from a frame that may contains tasks
+    
+    If map 0 then the dependencies are not computed, this is used to
+    steal tasks from queues in hws because these tasks are assumed to
+    be always ready.
+
+    \param thread the thread that stores the frame
+    \param frame the frame to steal
+    \param map the history of previous accesses stored in map.
+    \param lrequests the set of requests
+    \param lrrange the iterator over the requests
+*/
+extern int kaapi_sched_stealframe
+(
+  struct kaapi_thread_context_t*       thread, 
+  kaapi_frame_t*                       frame, 
+  kaapi_hashmap_t*                     map, 
+  struct kaapi_listrequest_t*          lrequests, 
+  struct kaapi_listrequest_iterator_t* lrrange
+);
+
+
 /** \ingroup TASK
     Try to steal a DFG task using the history of access stored in map.
     If map 0 then the dependencies are not computed, this is used to
     steal tasks from queues in hws because these tasks are assumed to
     be always ready.
 */
-extern void kaapi_task_steal_dfg
+extern void kaapi_sched_steal_task
 (
   kaapi_hashmap_t*                     map, 
   struct kaapi_thread_context_t*       thread, 

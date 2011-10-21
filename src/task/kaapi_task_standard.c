@@ -66,6 +66,7 @@ void kaapi_execthread_body(
 }
 
 
+#if 0 // THIS CODE IS KEEP HERE: it is a tentative to avoid test in execframe
 /*
 */
 void kaapi_anormal_body( 
@@ -109,7 +110,7 @@ void kaapi_anormal_body(
 #endif
 #endif
 }
-
+#endif
 
 
 /*

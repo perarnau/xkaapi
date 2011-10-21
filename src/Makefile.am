@@ -80,6 +80,9 @@ libkaapi_la_SOURCES=\
   workstealing/kaapi_sched_select_hierarchy.c\
   workstealing/kaapi_sched_stealprocessor.c \
   workstealing/kaapi_sched_stealstack.c \
+  workstealing/kaapi_sched_stealframe.c \
+  workstealing/kaapi_sched_stealtask.c \
+  workstealing/kaapi_sched_stealtasklist.c \
   workstealing/kaapi_sched_idle.c \
   workstealing/kaapi_sched_wakeup.c \
   workstealing/kaapi_sched_suspend.c \
@@ -125,7 +128,6 @@ libkaapi_la_SOURCES+=\
   task/kaapi_task_standard.c \
   task/kaapi_task_aftersteal.c \
   task/kaapi_task_steal_body.c \
-  task/kaapi_task_steal_dfg.c \
   task/kaapi_task_stealready_body.c \
   task/kaapi_task_splitter_adapt.c \
   task/kaapi_task_pushstealcontext.c \

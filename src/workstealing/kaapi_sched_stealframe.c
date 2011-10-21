@@ -44,47 +44,56 @@
 #include "kaapi_impl.h"
 
 
-/** Steal task in the stack from the bottom to the top.
-     This signature MUST BE the same as a splitter function.
+/** Steal task in the frame [frame->pc:frame->sp)
  */
-int kaapi_sched_stealstack  
-( 
+int kaapi_sched_stealframe
+(
   kaapi_thread_context_t*       thread, 
+  kaapi_frame_t*                frame, 
+  kaapi_hashmap_t*              map, 
   kaapi_listrequest_t*          lrequests, 
   kaapi_listrequest_iterator_t* lrrange
 )
 {
-  kaapi_frame_t*           top_frame;  
-  kaapi_hashmap_t          access_to_gd;
-  kaapi_hashentries_bloc_t stackbloc;
+  kaapi_task_body_t     task_body;
+  kaapi_task_t*         task_top;
+  kaapi_task_t*         task_sp;
   
-  if ((thread ==0) || (thread->unstealable != 0)) 
-    return 0;
+  /* suppress history of the previous frame ! */
+  kaapi_hashmap_clear( map );
+  task_top   = frame->pc;
+  task_sp    = frame->sp;
   
-  /* be carrefull, the map should be clear before used */
-  kaapi_hashmap_init( &access_to_gd, &stackbloc );
-  
-  kaapi_atomic_lock(&thread->stack.lock);
-  
-  /* try to steal in each frame */
-  for (  top_frame =thread->stack.stackframe; 
-       (top_frame <= thread->stack.sfp) && !kaapi_listrequest_iterator_empty(lrrange); 
-       ++top_frame)
+  /** HERE TODO: if they are enough tasks in the frame (up to a threshold which may depend
+   of the number of requests (it not interesting to do it if #tasks == #request), then 
+   it is interesting to compute the tasklist viewed as a speeding data structure
+   for next steal requests. 
+   */
+  while ( !kaapi_listrequest_iterator_empty(lrrange) && (task_top > task_sp))
   {
-    /* void frame ? */
-    if (top_frame->tasklist == 0)
+    task_body = kaapi_task_getbody(task_top);
+    
+    /* its an adaptive task !!! */
+    if (task_body == kaapi_adapt_body || task_body == kaapi_hws_adapt_body)
     {
-      thread->stack.thieffp = top_frame;
-      if (top_frame->pc == top_frame->sp) continue;
-      kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );
-    } else 
-      /* */
-      kaapi_sched_stealtasklist( thread, top_frame->tasklist, lrequests, lrrange );
-  }
-  thread->stack.thieffp = 0;
-  kaapi_atomic_unlock(&thread->stack.lock);
+      kaapi_task_steal_adapt(
+        thread, 
+        task_top,
+        lrequests,
+        lrrange,
+        0     /* no callback if the adaptive task was into a queue of a thread */
+      );
+      
+      --task_top;
+      continue;
+    }
 
-  kaapi_hashmap_destroy( &access_to_gd );
+    /* else try to steal a DFG task using history of accesses stored in map 
+       On return the request iterator has been advanced to the next request if steal successed
+    */
+    kaapi_sched_steal_task( map, thread, task_top, lrequests, lrrange );
+    --task_top;
+  }
   
   return 0;
 }
