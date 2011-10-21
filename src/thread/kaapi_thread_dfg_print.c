@@ -78,7 +78,7 @@ static const char* tab_bit[] __attribute__((unused)) = {
 typedef char state_type_t[4];
 static void kaapi_getstatename( kaapi_task_t* task, state_type_t char_state )
 {
-  uintptr_t state = (uintptr_t)task->state;
+  uintptr_t state = kaapi_task_getstate(task);
   char_state[0] = (state & KAAPI_TASK_STATE_TERM ? 'T' : '_');
   char_state[1] = (state & KAAPI_TASK_STATE_MERGE ? 'A' : '_');
   char_state[2] = (state & KAAPI_TASK_STATE_EXEC ? 'E' : '_');

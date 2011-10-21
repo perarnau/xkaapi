@@ -427,8 +427,9 @@ fflush(stdout);
   arg->nparam        = nparam;
   kaapi_task_t* task = kaapi_thread_toptask(thread);
   kaapi_task_init(task, (kaapi_task_body_t)kaapi_wrapper_quark_function, (void*)arg);
+
   if (task_flags->task_priority)
-   task->schedinfo = 1;
+    kaapi_task_set_priority(task, KAAPI_TASK_MAX_PRIORITY);
 
   /* next parameters must follows in the stack */
   if (task_flags->task_sequence != 0)

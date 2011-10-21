@@ -703,7 +703,7 @@ static inline kaapi_request_t* kaapi_request_post(
 )
 {
   request->thief_task   = thief_task;
-  thief_task->state     = KAAPI_TASK_STATE_ALLOCATED;
+  kaapi_task_setstate(thief_task, KAAPI_TASK_STATE_ALLOCATED);
   thief_task->body      = kaapi_tasksteal_body;
   request->thief_sp     = thief_sp;
   request->status       = status;

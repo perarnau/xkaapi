@@ -60,6 +60,7 @@ void kaapi_task_steal_dfg
 
   if (task_fmt == 0) return;
 
+  /* if map == history of visited access, then compute readiness */
   if (map !=0)
   {
     wc = kaapi_task_computeready( 
@@ -92,7 +93,7 @@ void kaapi_task_steal_dfg
   fflush(stdout);
 #endif
 
-  kaapi_assert_debug( (request->thief_task->state & ~KAAPI_TASK_STATE_SIGNALED) == KAAPI_TASK_STATE_ALLOCATED );
+  kaapi_assert_debug( (kaapi_task_getstate(request->thief_task) & ~KAAPI_TASK_STATE_SIGNALED) == KAAPI_TASK_STATE_ALLOCATED );
   
   /* barrier not necessary here: the victim will only try to access to task'state (already committed) 
      and reserved field */

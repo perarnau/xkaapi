@@ -74,13 +74,14 @@ void kaapi_anormal_body(
   kaapi_task_t*   task 
 )
 {
-  if (task->state == KAAPI_TASK_STATE_MERGE)
+  int state = kaapi_task_getstate(task);
+  if (state == KAAPI_TASK_STATE_MERGE)
   {
 //    printf("This is AN AFTERSTEAL task\n"); fflush(stdout);
     kaapi_aftersteal_body(taskarg, fp, task);
     return;
   }
-  if (task->state == KAAPI_TASK_STATE_TERM)
+  if (state == KAAPI_TASK_STATE_TERM)
   {
     return; // avoid to re jump to execute term task
 //    _longjmp(*ctxt->stack.jbuf, EINTR);

@@ -70,9 +70,11 @@ extern "C" {
 #define KAAPI_TASKLIST_POINTER_TASK 1
 #define TASKLIST_ONEGLOBAL_MASTER   1
 #define TASKLIST_REPLY_ONETD        1
-#define KAAPI_TASKLIST_NUM_PRIORITY 8
-#define KAAPI_TASKLIST_MAX_PRIORITY 0
-#define KAAPI_TASKLIST_MIN_PRIORITY (KAAPI_TASKLIST_NUM_PRIORITY-1)
+
+/* Task list priority: used reverse order between min max */
+#define KAAPI_TASKLIST_NUM_PRIORITY (KAAPI_TASK_MAX_PRIORITY+1)
+#define KAAPI_TASKLIST_MAX_PRIORITY KAAPI_TASK_MIN_PRIORITY
+#define KAAPI_TASKLIST_MIN_PRIORITY (KAAPI_TASK_MAX_PRIORITY)
 
 
 #include "config.h"
@@ -369,7 +371,7 @@ static inline int kaapi_request_replytask
     else 
     {
       /* else task was preempted */
-      kaapi_assert_debug( request->thief_task->state & KAAPI_TASK_STATE_SIGNALED );
+      kaapi_assert_debug( kaapi_task_getstate(request->thief_task) & KAAPI_TASK_STATE_SIGNALED );
       KAAPI_ATOMIC_WRITE_BARRIER(request->status, KAAPI_REQUEST_S_NOK);
     }
   }

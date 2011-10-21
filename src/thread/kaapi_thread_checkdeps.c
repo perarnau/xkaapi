@@ -175,7 +175,14 @@ int kaapi_thread_computedep_task(
   /* store the format to avoid lookup */
   taskdescr->fmt = task_fmt;
   
-  taskdescr->priority = (task->schedinfo == 1 ? KAAPI_TASKLIST_MAX_PRIORITY : KAAPI_TASKLIST_MIN_PRIORITY);
+  /* Convert TASK priority to internal management of priority:
+     KAAPI_TASK_MAX_PRIORITY >0
+     KAAPI_TASK_MIN_PRIORITY ==0 (default value)
+     
+     KAAPI_TASKLIST_MAX_PRIORITY=0
+     KAAPI_TASKLIST_MIN_PRIORITY>0
+  */
+  taskdescr->priority = KAAPI_TASKLIST_MIN_PRIORITY-kaapi_task_get_priority(task);
 
   /* if wc ==0, push the task into the ready list */
   if (taskdescr->wc == 0)

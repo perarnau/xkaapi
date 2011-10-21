@@ -461,6 +461,28 @@ typedef struct kaapi_task_binding
 
 
 /* ========================================================================= */
+/** Scheduling information for the task:
+    It is a bit field with following definition:
+    - KAAPI_TASK_IS_UNSTEALABLE: defined iff the task is not stealable
+    - KAAPI_TASK_IS_SPLITTABLE : defined iff the task is splittable
+   
+   Values of each bits are defined such that initialization to 0 correspond
+   to the standard DFG task with:
+   - no OCR parameter
+   - no specified priority (TASK_MIN_PRIORITY)
+   - stealable flag: can be steal entirely
+   - no splittable: no work can be extracted from the task
+  
+*/
+#define KAAPI_TASK_UNSTEALABLE_MASK 0x01
+#define KAAPI_TASK_SPLITTABLE_MASK  0x02
+
+/** Task priority
+*/
+#define KAAPI_TASK_MAX_PRIORITY     15
+#define KAAPI_TASK_MIN_PRIORITY     0
+
+
 /** Kaapi task definition
     \ingroup TASK
     A Kaapi task is the basic unit of computation. It has a constant size including some task's specific values.
@@ -468,14 +490,58 @@ typedef struct kaapi_task_binding
     The body field is the pointer to the function to execute. The special value 0 correspond to a nop instruction.
 */
 typedef struct kaapi_task_t {
-  uintptr_t                     state;     /** state of the task */
   kaapi_task_body_t             body;      /** task body  */
   void*                         sp;        /** data stack pointer of the data frame for the task  */
+  union { /* should be of size of uintptr */
+    struct {
+      kaapi_atomic8_t           state;     /** state of the task */
+      uint8_t                   priority;  /** of the task */
+      uint8_t                   ocr;       /** of the task */
+      uint8_t                   schedinfo; /** scheduling information */
+      /* ... */                            /** some bits are available on 64bits machine */
+    } s;
+    uintptr_t                   dummy;     /* to clear previous fields in one write */
+  } u; 
   struct kaapi_task_t* volatile reserved;  /** reserved field for internal usage */
-  uintptr_t                     schedinfo; /** scheduling information */
 //TO ADD AFTER  kaapi_task_binding_t  binding;   /** binding information or 0  */
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
+
+static inline int kaapi_task_get_ocr_index(const kaapi_task_t* task)
+{ return task->u.s.ocr; }
+
+static inline void kaapi_task_set_ocr_index(kaapi_task_t* task, uint8_t ith)
+{ 
+  kaapi_assert_debug( ith <255 );
+  task->u.s.ocr = 1U+ith; 
+}
+
+static inline int kaapi_task_get_priority(const kaapi_task_t* task)
+{ return task->u.s.priority; }
+
+static inline void kaapi_task_set_priority(kaapi_task_t* task, uint8_t prio)
+{ 
+  kaapi_assert_debug( prio <= KAAPI_TASK_MAX_PRIORITY );
+  task->u.s.priority = prio; 
+}
+
+static inline int kaapi_task_is_unstealable(kaapi_task_t* task)
+{ return (task->u.s.schedinfo & KAAPI_TASK_UNSTEALABLE_MASK) !=0; }
+
+static inline void kaapi_task_set_unstealable(kaapi_task_t* task)
+{ task->u.s.schedinfo |= KAAPI_TASK_UNSTEALABLE_MASK; }
+
+static inline void kaapi_task_unset_unstealable(kaapi_task_t* task)
+{ task->u.s.schedinfo &= ~KAAPI_TASK_UNSTEALABLE_MASK; }
+
+static inline int kaapi_task_is_splittable(kaapi_task_t* task)
+{ return (task->u.s.schedinfo & KAAPI_TASK_SPLITTABLE_MASK) !=0; }
+
+static inline void kaapi_task_set_splittable(kaapi_task_t* task)
+{ task->u.s.schedinfo |= KAAPI_TASK_SPLITTABLE_MASK; }
+
+static inline void kaapi_task_unset_splittable(kaapi_task_t* task)
+{ task->u.s.schedinfo &= KAAPI_TASK_SPLITTABLE_MASK; }
 
 
 /* ========================================================================= */
@@ -918,12 +984,10 @@ extern int kaapi_thread_distribute_task_with_nodeid
 static inline void kaapi_task_initdfg
   (kaapi_task_t* task, kaapi_task_body_t body, void* arg)
 {
-  task->body  = body;
-  task->sp    = arg;
-  task->state = 0;
-  task->reserved = 0;
-  task->schedinfo = 0;
-//  task->binding.type = KAAPI_BINDING_ANY;
+  task->body      = body;
+  task->sp        = arg;
+  task->u.dummy   = 0;
+  task->reserved  = 0;
 }
 
 /** \ingroup TASK
@@ -932,12 +996,11 @@ static inline void kaapi_task_initdfg
 static inline void kaapi_task_init_withstate
   (kaapi_task_t* task, kaapi_task_body_t body, void* arg, uintptr_t state)
 {
-  task->body  = body;
-  task->sp    = arg;
-  task->state = state;
+  task->body      = body;
+  task->sp        = arg;
+  task->u.dummy   = 0;
+  KAAPI_ATOMIC_WRITE(&task->u.s.state, state);
   task->reserved = 0;
-  task->schedinfo = 0;
-//  task->binding.type = KAAPI_BINDING_ANY;
 }
 
 static inline int kaapi_task_init

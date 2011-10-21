@@ -49,7 +49,7 @@ int kaapi_thread_is_preempted(void)
 {
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   if (kproc->thief_task ==0) return 0;
-  if (kproc->thief_task->state & KAAPI_TASK_STATE_SIGNALED) 
+  if (kaapi_task_getstate(kproc->thief_task) & KAAPI_TASK_STATE_SIGNALED) 
     return 1;
   else
     return 0;

@@ -124,7 +124,7 @@ libkaapi_la_SOURCES+=\
   thread/kaapi_version_replicat.c \
   task/kaapi_task_standard.c \
   task/kaapi_task_aftersteal.c \
-  task/kaapi_task_steal.c \
+  task/kaapi_task_steal_body.c \
   task/kaapi_task_steal_dfg.c \
   task/kaapi_task_stealready_body.c \
   task/kaapi_task_splitter_adapt.c \
