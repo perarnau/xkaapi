@@ -91,6 +91,7 @@ typedef struct kaapi_atomic64_t {
 /** Implementation note
     - all functions or macros without _ORIG return the new value after apply the operation.
     - all functions or macros with ORIG return the old value before applying the operation.
+    - this macros are based on GCC bultin functions.
 */
 #if defined(KAAPI_DEBUG)
 static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
