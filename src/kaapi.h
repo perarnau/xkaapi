@@ -503,12 +503,8 @@ typedef struct kaapi_task_t {
     uintptr_t                   dummy;     /* to clear previous fields in one write */
   } u; 
   struct kaapi_task_t* volatile reserved;  /** reserved field for internal usage */
-//TO ADD AFTER  kaapi_task_binding_t  binding;   /** binding information or 0  */
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
-
-static inline int kaapi_task_get_ocr_index(const kaapi_task_t* task)
-{ return task->u.s.ocr; }
 
 static inline void kaapi_task_set_ocr_index(kaapi_task_t* task, uint8_t ith)
 { 
@@ -516,32 +512,17 @@ static inline void kaapi_task_set_ocr_index(kaapi_task_t* task, uint8_t ith)
   task->u.s.ocr = 1U+ith; 
 }
 
-static inline int kaapi_task_get_priority(const kaapi_task_t* task)
-{ return task->u.s.priority; }
-
 static inline void kaapi_task_set_priority(kaapi_task_t* task, uint8_t prio)
 { 
   kaapi_assert_debug( prio <= KAAPI_TASK_MAX_PRIORITY );
   task->u.s.priority = prio; 
 }
 
-static inline int kaapi_task_is_unstealable(kaapi_task_t* task)
-{ return (task->u.s.schedinfo & KAAPI_TASK_UNSTEALABLE_MASK) !=0; }
-
 static inline void kaapi_task_set_unstealable(kaapi_task_t* task)
 { task->u.s.schedinfo |= KAAPI_TASK_UNSTEALABLE_MASK; }
 
-static inline void kaapi_task_unset_unstealable(kaapi_task_t* task)
-{ task->u.s.schedinfo &= ~KAAPI_TASK_UNSTEALABLE_MASK; }
-
-static inline int kaapi_task_is_splittable(kaapi_task_t* task)
-{ return (task->u.s.schedinfo & KAAPI_TASK_SPLITTABLE_MASK) !=0; }
-
 static inline void kaapi_task_set_splittable(kaapi_task_t* task)
 { task->u.s.schedinfo |= KAAPI_TASK_SPLITTABLE_MASK; }
-
-static inline void kaapi_task_unset_splittable(kaapi_task_t* task)
-{ task->u.s.schedinfo &= KAAPI_TASK_SPLITTABLE_MASK; }
 
 
 /* ========================================================================= */

@@ -153,11 +153,6 @@ typedef struct kaapi_stack_t {
 
 /* ===================== Default internal task body ==================================== */
 
-/** Body of task used to mark a theft task into a victim stack
-    \ingroup TASK
-*/
-extern void kaapi_anormal_body( void*, kaapi_thread_t*, kaapi_task_t* );
-
 /** Body of the task used to mark a thread suspend in its execution
     \ingroup TASK
 */
@@ -222,6 +217,41 @@ extern void kaapi_taskfinalizer_body( void*, kaapi_thread_t* );
 /** \ingroup TASK
 */
 /**@{ */
+static inline int kaapi_task_get_ocr_index(const kaapi_task_t* task)
+{ 
+  return task->u.s.ocr; 
+}
+
+static inline int kaapi_task_get_priority(const kaapi_task_t* task)
+{ 
+  return task->u.s.priority; 
+}
+
+static inline int kaapi_task_is_unstealable(kaapi_task_t* task)
+{ 
+  return (task->u.s.schedinfo & KAAPI_TASK_UNSTEALABLE_MASK) !=0; 
+}
+
+static inline int kaapi_task_is_stealable(kaapi_task_t* task)
+{ 
+  return (task->u.s.schedinfo & KAAPI_TASK_UNSTEALABLE_MASK) ==0; 
+}
+
+static inline void kaapi_task_unset_unstealable(kaapi_task_t* task)
+{ 
+  task->u.s.schedinfo &= ~KAAPI_TASK_UNSTEALABLE_MASK; 
+}
+
+static inline int kaapi_task_is_splittable(kaapi_task_t* task)
+{ 
+  return (task->u.s.schedinfo & KAAPI_TASK_SPLITTABLE_MASK) !=0; 
+}
+
+static inline void kaapi_task_unset_splittable(kaapi_task_t* task)
+{ 
+  task->u.s.schedinfo &= KAAPI_TASK_SPLITTABLE_MASK; 
+}
+
 static inline kaapi_task_body_t kaapi_task_getbody(const kaapi_task_t* task)
 {
   return ((volatile kaapi_task_t*)task)->body;
