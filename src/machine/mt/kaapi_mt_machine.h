@@ -2,7 +2,7 @@
 ** kaapi_mt_machine.h
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:20:42 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -165,14 +165,6 @@ typedef struct kaapi_lfree
   kaapi_thread_context_t* _back;
 } kaapi_lfree_t;
 
-
-/** lready data structure
-*/
-typedef struct kaapi_lready
-{
-  kaapi_thread_context_t* _front;
-  kaapi_thread_context_t* _back;
-} kaapi_lready_t;
 
 /** \ingroup WS
     Higher level context manipulation.
@@ -388,7 +380,6 @@ typedef struct kaapi_cpuhierarchy_t {
     from 0 to N-1.
 */
 typedef struct kaapi_processor_t {
-  kaapi_task_t*            thief_task;                    /* the first task executed */
   kaapi_thread_context_t*  thread;                        /* current thread under execution */
   kaapi_processor_id_t     kid;                           /* Kprocessor id */
 
@@ -403,7 +394,6 @@ typedef struct kaapi_processor_t {
 #endif
   
   kaapi_wsqueuectxt_t      lsuspend;                      /* list of suspended context */
-  kaapi_lready_t	       lready;                        /* list of ready context, concurrent access locked by 'lock' */
 
   /* free list */
   kaapi_lfree_t		       lfree;                         /* queue of free context */
@@ -698,14 +688,10 @@ static inline kaapi_request_t* kaapi_request_post(
   kaapi_listrequest_t*   l_requests,
   kaapi_request_t*       request,
   kaapi_atomic_t*        status,
-  kaapi_task_t*          thief_task, 
-  kaapi_tasksteal_arg_t* thief_sp
+  const kaapi_frame_t*   frame 
 )
 {
-  request->thief_task   = thief_task;
-  kaapi_task_setstate(thief_task, KAAPI_TASK_STATE_ALLOCATED);
-  thief_task->body      = kaapi_tasksteal_body;
-  request->thief_sp     = thief_sp;
+  request->frame        = *frame;
   request->status       = status;
   KAAPI_ATOMIC_WRITE_BARRIER(status, KAAPI_REQUEST_S_POSTED);
   kaapi_bitmap_set( &l_requests->bitmap, request->ident );

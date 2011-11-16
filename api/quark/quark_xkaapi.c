@@ -1,7 +1,7 @@
 /*
 ** xkaapi
 ** 
-** Created on 10/01/2011
+**
 ** Copyright 2011 INRIA.
 **
 ** Contributors :
@@ -1034,6 +1034,7 @@ static void kaapi_quark_task_format_constructor(void)
     kaapi_quark_task_format_set_view_param,
     kaapi_quark_task_format_reducor,
     kaapi_quark_task_format_redinit,
-    kaapi_quark_task_format_get_task_binding
+    kaapi_quark_task_format_get_task_binding,
+    0
   );
 }

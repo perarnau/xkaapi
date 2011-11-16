@@ -1,7 +1,7 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:09 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -271,8 +271,8 @@ int main(int argc, char **argv)
         );
         ((decl_thread_toptask->get_declarationModifier()).get_storageModifier()).setExtern();
 
-        /* declare kaapi_task_initdfg function */
-        static SgName name_task_init("kaapi_task_initdfg");
+        /* declare kaapi_task_init function */
+        static SgName name_task_init("kaapi_task_init");
         SgFunctionDeclaration *decl_task_init = SageBuilder::buildNondefiningFunctionDeclaration(
             name_task_init, 
             SageBuilder::buildVoidType(), 

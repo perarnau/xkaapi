@@ -19,11 +19,17 @@
       ', `', `')
 #endif
 
-      TaskArg_t* arg = (TaskArg_t*)kaapi_reply_init_adaptive_task( _sc, _req, KaapiFormatTask_t::default_bodies.cpu_body, sizeof(TaskArg_t), 0 );
+      TaskArg_t* arg = (TaskArg_t*)kaapi_request_pushdata( _req, sizeof(TaskArg_t));
 
       // todo -> grep a type in UAMTYpe with Effective type in parameter in place of actual inclosure
       M4_PARAM(`new (&arg->f$1) inclosure$1_t(e$1);
       ', `', `')
+
+      kaapi_task_init( 
+        kaapi_request_toptask(_req), 
+        KaapiFormatTask_t::default_bodies.cpu_body,
+        arg
+      );
     }
 
     template<M4_PARAM(`class E$1', `', `,')>
@@ -32,5 +38,6 @@
       KAAPI_NAME(PushArg,KAAPI_NUMBER_PARAMS)(
          &TASK::dummy_method_to_have_formal_param_type, M4_PARAM(`e$1', `', `, ') 
       );
-      kaapi_request_reply(_sc, _req, _flag );
+      kaapi_request_pushtask(_req);
+      kaapi_request_pushtask_adaptive( _req, _adaptivetask, _flag );
     }

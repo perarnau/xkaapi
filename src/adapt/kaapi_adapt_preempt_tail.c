@@ -1,13 +1,12 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -44,47 +43,25 @@
 */
 #include "kaapi_impl.h"
 
+/** \ingroup ADAPTIVE
+*/
+struct kaapi_thief_iterator_t* kaapi_thiefiterator_tail( kaapi_task_t* task )
+{
+  kaapi_taskadaptive_arg_t* adapt_arg = kaapi_task_getargst(task, kaapi_taskadaptive_arg_t);
+  kaapi_assert_debug( kaapi_task_is_splittable(task) );
+  kaapi_assert_debug( task->body == (kaapi_task_body_t)kaapi_taskadapt_body );
+  kaapi_stealcontext_t* sc = (kaapi_stealcontext_t*)adapt_arg->shared_sc.data;
+  /* tail is always a valid pointer (if read was atomic) */
+  return (struct kaapi_thief_iterator_t*)sc->thieves.list.tail;
+}
 
 /** \ingroup ADAPTIVE
 */
-void kaapi_synchronize_steal(kaapi_stealcontext_t* sc)
+struct kaapi_thief_iterator_t* kaapi_thiefiterator_prev( struct kaapi_thief_iterator_t* pos )
 {
-  /* steal sync protocol. if the 2 conds hold:
-     . the work is empty, no steal is possible,
-     . we see a non BODY_STEAL, then every in
-     progress steal has passed.
-     then we cannot miss a thief that would
-     have incremented the thief count or add
-     itself into the thieves list.
-   */
-
-  kaapi_writemem_barrier();
-  while (kaapi_task_getstate(sc->ownertask) == KAAPI_TASK_STATE_STEAL)
-    kaapi_slowdown_cpu();
-  kaapi_readmem_barrier();
+  kaapi_thiefadaptcontext_t* arg = (kaapi_thiefadaptcontext_t*)pos;
+  /* prev is always a valid pointer (if read was atomic) */
+  return (struct kaapi_thief_iterator_t*)arg->prev;
+  return 0; 
 }
 
-
-/** \ingroup ADAPTIVE
-*/
-kaapi_taskadaptive_result_t* kaapi_get_thief_head( kaapi_stealcontext_t* sc )
-{
-  kaapi_synchronize_steal(sc);
-  return sc->thieves.list.head;
-}
-
-
-/** \ingroup ADAPTIVE
-*/
-kaapi_taskadaptive_result_t* kaapi_get_next_thief( kaapi_taskadaptive_result_t* pos )
-{
-  return pos->next;
-}
-
-
-/** \ingroup ADAPTIVE
-*/
-kaapi_taskadaptive_result_t* kaapi_get_prev_thief( kaapi_taskadaptive_result_t* pos )
-{
-  return pos->prev;
-}

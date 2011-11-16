@@ -2,7 +2,7 @@
 ** kaapi_init.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:03 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -253,6 +253,7 @@ int kaapi_mt_init(void)
     KAAPI_TASK_STATE_EXEC
   );
   kaapi_thread_pushtask(kaapi_threadcontext2thread(thread));
+  thread->stack.sfp->pc        = thread->stack.sfp->sp;
 
   /* push the current frame that correspond to the execution of the startup task */
   thread->stack.sfp[1].pc      = thread->stack.sfp->sp;

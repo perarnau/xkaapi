@@ -1,7 +1,7 @@
 /*
  ** xkaapi
  ** 
- ** Created on Tue Mar 31 15:18:04 2009
+ **
  ** Copyright 2009 INRIA.
  **
  ** Contributor :
@@ -44,6 +44,15 @@
 #include "kaapi_impl.h"
 
 
+/*
+*/
+void kaapi_synchronize_steal( kaapi_thread_context_t* thread )
+{
+  kaapi_atomic_waitlock(&thread->stack.lock);
+  kaapi_readmem_barrier();
+}
+
+
 /** Steal task in the stack from the bottom to the top.
      This signature MUST BE the same as a splitter function.
  */
@@ -64,6 +73,7 @@ int kaapi_sched_stealstack
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &access_to_gd, &stackbloc );
   
+  /* may be done by atomic write, see kaapi_thread_execframe */
   kaapi_atomic_lock(&thread->stack.lock);
   
   /* try to steal in each frame */
@@ -71,7 +81,7 @@ int kaapi_sched_stealstack
        (top_frame <= thread->stack.sfp) && !kaapi_listrequest_iterator_empty(lrrange); 
        ++top_frame)
   {
-    /* void frame ? */
+    /* TODO here: virtualization of the frame properties ? */
     if (top_frame->tasklist == 0)
     {
       thread->stack.thieffp = top_frame;

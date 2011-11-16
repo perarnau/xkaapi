@@ -2,7 +2,7 @@
  ** kaapi_task_preempt_next.c
  ** xkaapi
  ** 
- ** Created on Tue Mar 31 15:18:04 2009
+ **
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
@@ -44,6 +44,7 @@
  */
 #include "kaapi_impl.h"
 
+#if 0
 /*
  */
 int kaapi_remove_finishedthief( 
@@ -223,3 +224,5 @@ int kaapi_preemptasync_waitthief
   
   return 0;
 }
+
+#endif // #if 0

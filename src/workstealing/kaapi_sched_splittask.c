@@ -1,7 +1,7 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -44,58 +44,41 @@
 */
 #include "kaapi_impl.h"
 
-void kaapi_task_steal_adapt
+int kaapi_sched_splittask
 (
-  kaapi_thread_context_t*       thread, 
+  const kaapi_format_t*         task_fmt,
   kaapi_task_t*                 task,
   kaapi_listrequest_t*          lrequests, 
-  kaapi_listrequest_iterator_t* lrrange,
-  void                        (*callback_empty)(kaapi_task_t*)
+  kaapi_listrequest_iterator_t* lrrange
 )
 {
-  kaapi_task_splitter_t splitter; 
-  void*                 argsplitter;
-  kaapi_task_body_t     task_body = kaapi_task_getbody(task);
-#warning TODO HERE
-  /* its an adaptive task !!! */
-  if (task_body == kaapi_adapt_body || task_body == kaapi_hws_adapt_body)
+  kaapi_adaptivetask_splitter_t splitter; 
+
+  kaapi_assert_debug( kaapi_task_is_splittable( task ) );
+  
+  /* fast return */
+  splitter = kaapi_format_get_splitter( task_fmt, task->sp );
+  if (splitter ==0) 
+    return EPERM;
+
+  /* only steal into an correctly initialized steal context */
+  uintptr_t orig_state = kaapi_task_getstate(task);
+
+  /* Only split if task is INIT or EXEC.
+     The victim may synchronize with the end of thief on the lock of the current thread
+  */  
+  if ( (orig_state == KAAPI_TASK_STATE_INIT) && (orig_state == KAAPI_TASK_STATE_EXEC) )
   {
-    /* only steal into an correctly initialized steal context */
-    kaapi_stealcontext_t* const sc = kaapi_task_getargst(task, kaapi_stealcontext_t);
-    if (sc->header.flag & KAAPI_SC_INIT) 
+    splitter = kaapi_format_get_splitter( task_fmt, task->sp );
+    if (splitter !=0)
     {
-      splitter = sc->splitter;
-      argsplitter = sc->argsplitter;
-      
-      if (splitter !=0)
-      {
-        uintptr_t orig_state = kaapi_task_getstate(task);
-        /* do not steal if terminated */
-        if (    (orig_state == KAAPI_TASK_STATE_INIT) && (orig_state == KAAPI_TASK_STATE_EXEC)
-             && likely(kaapi_task_casstate(task, orig_state, KAAPI_TASK_STATE_STEAL))
-           )
-        {
-          splitter = sc->splitter;
-          if (splitter !=0)
-          {
-            /* steal may sucess: possible race, reread the splitter */
-            argsplitter = sc->argsplitter;
-            const kaapi_ws_error_t err = kaapi_task_splitter_adapt(
-                  thread, 
-                  task, 
-                  splitter, 
-                  argsplitter, 
-                  lrequests, 
-                  lrrange 
-            );
-            if ((err == KAAPI_WS_ERROR_EMPTY) && (callback_empty !=0))
-              callback_empty(task);
-          }
-          
-          /* reset initial state of the task */
-          kaapi_task_setstate(task, orig_state);
-        }
+      int err = splitter( task, task->sp, lrequests, lrrange );
+      if (err == ECHILD)
+      { /* mark the task as terminated: it is of the responsability of the splitter to ensure that */
+        kaapi_task_markterm(task); 
+        return 0;
       }
-    } /* end if init */
+    }    
   }
+  return 0;
 }

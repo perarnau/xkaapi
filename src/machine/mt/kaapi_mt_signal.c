@@ -2,7 +2,7 @@
 ** kaapi_init.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:03 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -71,20 +71,9 @@ void _kaapi_signal_dump_state(int sig)
     printf("Proc type       : %s\n", (kproc->proc_type == KAAPI_PROC_TYPE_CPU ? "CPU" : "GPU") );
     printf("Kprocessor cpuid: %i\n", kproc->cpuid);
     printf("Current thread  : %p\n", (void*)kproc->thread);
-    printf("ReadyList       : %s", (kaapi_sched_readyempty(kproc) ? "no" : "yes") );
+    printf("\n");
     fflush(stdout);
 
-    if (!kaapi_sched_readyempty( kproc ))
-    {
-      printf(", thread(s): ");
-      kaapi_thread_context_t* node = kproc->lready._front;
-      while (node !=0)
-      {
-        printf("%p  ", (void*)node);
-        node = node->_next;
-      }
-    }
-    printf("\n");
     fflush(stdout);
 
     printf("SuspendList     : %s", (kaapi_sched_suspendlist_empty(kproc) ? "no" : "yes") );
@@ -126,18 +115,7 @@ void _kaapi_signal_dump_state(int sig)
       kaapi_thread_print(stdout, kproc->thread);
       fflush(stdout);
     }
-    
-    if (!kaapi_sched_readyempty( kproc ))
-    {
-      kaapi_thread_context_t* node = kproc->lready._front;
-      while (node !=0)
-      {
-        kaapi_thread_print(stdout, node);
-        node = node->_next;
-      }
-      fflush(stdout);
-    }
-    
+        
     if (!kaapi_sched_suspendlist_empty( kproc ))
     {
       kaapi_wsqueuectxt_cell_t* cell = kproc->lsuspend.head;

@@ -2,7 +2,7 @@
  ** kaapi_hws_sched_sync.c
  ** xkaapi
  ** 
- ** Created on Tue Mar 31 15:19:14 2009
+ **
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
@@ -160,7 +160,7 @@ void kaapi_hws_sched_sync_once(void)
   /* push startup task ? */
   self_thread = kaapi_threadcontext2thread(kproc->thread);
   startup_task = kaapi_thread_toptask( self_thread );
-  kaapi_task_init(startup_task, kaapi_taskstartup_body, kproc);
+  kaapi_task_init(startup_task, (kaapi_task_body_t)kaapi_taskstartup_body, kproc);
   kaapi_thread_pushtask(self_thread);
   
   if (kproc->thread->stack.sfp->tasklist == 0)

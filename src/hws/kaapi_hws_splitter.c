@@ -2,7 +2,7 @@
  ** kaapi_hws_splitter.c
  ** xkaapi
  ** 
- ** Created on Tue Mar 31 15:19:14 2009
+ **
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
@@ -60,6 +60,7 @@ int kaapi_hws_splitter
  kaapi_hws_levelid_t levelid
  )
 {
+#if 0
   /* split equivalently among all the nodes of a given level */
   
   kaapi_processor_t* const kproc = kaapi_get_current_processor();
@@ -133,6 +134,7 @@ int kaapi_hws_splitter
   }
   
   return retval;
+#endif
 }
 
 

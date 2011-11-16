@@ -2,7 +2,7 @@
 ** kaapi_fmt_predef.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -67,7 +67,8 @@ kaapi_format_id_t kaapi_format_taskregister_func(
     void                        (*set_view_param)  (const struct kaapi_format_t*, unsigned int, void*, const kaapi_memory_view_t*),
     void                        (*reducor )        (const struct kaapi_format_t*, unsigned int, void*, const void*),
     void                        (*redinit )        (const struct kaapi_format_t*, unsigned int, const void*, void* ),
-    void			            (*get_task_binding)(const struct kaapi_format_t*, const void*, kaapi_task_binding_t*)
+    void			            (*get_task_binding)(const struct kaapi_format_t*, const void*, kaapi_task_binding_t*),
+  kaapi_adaptivetask_splitter_t	(*get_splitter)(const struct kaapi_format_t*, const void* )
 )
 {
 //  kaapi_format_t* fmt = (*fmt_fnc)();
@@ -90,6 +91,7 @@ kaapi_format_id_t kaapi_format_taskregister_func(
   fmt->get_task_binding	= get_task_binding;
   if (get_task_binding ==0)
     fmt->get_task_binding = kaapi_format_default_get_task_binding;
+  fmt->get_splitter	    = get_splitter;
   
   memset(fmt->entrypoint, 0, sizeof(fmt->entrypoint));
   

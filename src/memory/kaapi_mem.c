@@ -2,7 +2,7 @@
 ** kaapi_mem.h
 ** xkaapi
 ** 
-** Created on Jul 2010
+**
 ** Copyright 2010 INRIA.
 **
 ** Contributors :

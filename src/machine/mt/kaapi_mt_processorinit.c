@@ -2,7 +2,7 @@
 ** kaapi_mt_processorinit.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:03 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -67,8 +67,6 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   int i;
   kaapi_thread_context_t* ctxt;
 
-  kproc->thief_task   = 0;  
-
   kproc->thread       = 0;  
   kproc->thread       = 0;  
   kproc->thread       = 0;  
@@ -96,7 +94,6 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
 #endif
 
   kaapi_wsqueuectxt_init( &kproc->lsuspend );
-  kaapi_sched_initready(kproc);
 
   kaapi_lfree_clear( kproc );
 

@@ -1,7 +1,7 @@
 /*
 ** kaapi_cuda.h
 ** 
-** Created on Jun 23
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :

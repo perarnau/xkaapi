@@ -1,7 +1,7 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -185,7 +185,8 @@ FormatTask::FormatTask(
   /**/    set_view_param,
           reducor,
           redinit,
-          get_task_binding
+          get_task_binding,
+          0
     );
   }
 }

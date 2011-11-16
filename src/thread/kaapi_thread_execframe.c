@@ -1,7 +1,7 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -98,43 +98,15 @@ int kaapi_stack_execframe( kaapi_stack_t* stack )
   kaapi_task_t*              pc; /* cache */
   kaapi_frame_t*             fp; /* cache for stack->sfp */
 
-//  kaapi_task_body_internal_t body;
   uintptr_t                  state;
   kaapi_frame_t*             eframe = stack->esfp;
-#if defined(KAAPI_USE_JMP)
-  jmp_buf jmpbuff;
-  int retval;
-#endif
   
 #if defined(KAAPI_USE_PERFCOUNTER)
   uint32_t                   cnt_tasks = 0;
 #endif
 
-#if defined(KAAPI_DEBUG)
-  kaapi_frame_t           save_frame = *stack->sfp;
-#endif
-
   kaapi_assert_debug(stack->sfp >= stack->stackframe);
   kaapi_assert_debug(stack->sfp < stack->stackframe+KAAPI_MAX_RECCALL);
-
-#if defined(KAAPI_USE_JMP)
-  jmp_buf* save_buff = stack->jbuf;
-  stack->jbuf = &jmpbuff;
-  if ((retval = _setjmp(jmpbuff)) !=0) 
-  {
-    if (retval == EWOULDBLOCK)
-    {
-      /* here iff execute abnormal task: save pc, fp and return EWOULDBLOCK */
-      stack->jbuf = save_buff;
-      return EWOULDBLOCK;
-    }
-    else { // is EINTR: task is terminated
-      --fp; 
-      fp->pc = --pc;
-      goto push_frame;
-    }
-  }
-#endif
   
   fp = (kaapi_frame_t*)stack->sfp;
 
@@ -161,19 +133,19 @@ push_frame: /* here assume fp current frame where to execute task */
     kaapi_assert_debug( pc > sp );
 
 redo_exec:
-    
-#if !defined(KAAPI_USE_JMP)
-    if (likely(kaapi_task_markexec( pc )))
-#endif
+    state = kaapi_task_markexec( pc );
+    if (likely(state ==0))
+    {
       ((kaapi_task_body_internal_t)pc->body)( pc->sp, fp, pc );
-#if !defined(KAAPI_USE_JMP)
-    else {
-      state = KAAPI_ATOMIC_READ(&pc->u.s.state);
-      if (state == KAAPI_TASK_STATE_MERGE)
+    }
+    else 
+    {
+      if (state & KAAPI_TASK_STATE_TERM)
       {
-        kaapi_aftersteal_body(pc->sp, fp, pc);
       }
-      else if (state == KAAPI_TASK_STATE_STEAL)
+      else if (state == KAAPI_TASK_STATE_MERGE)
+        kaapi_aftersteal_body(pc->sp, fp, pc);
+      else if (state & KAAPI_TASK_STATE_STEAL)
       {
         /* try to preempted the task 0:do nothing, EINTR: the victim get it back... */
         int retval = __kaapi_try_preempt(stack,pc);
@@ -183,17 +155,20 @@ redo_exec:
           stack->sfp = fp-1;
           return EWOULDBLOCK;
         }
-        if (retval == EINTR) goto redo_exec;
+        if (retval == EINTR) 
+          goto redo_exec;
+        if (retval == ENOEXEC)
+          kaapi_aftersteal_body(pc->sp, fp, pc);
         /* else: terminated, to nothing */
       }
       /* if I have been preempted, then continue to the next task */
       if (state & KAAPI_TASK_STATE_SIGNALED)
       {
+#warning "TODO: suppress trace"
         printf("I was preempted\n"); fflush(stdout);
         continue;
       }
     }
-#endif
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++cnt_tasks;
@@ -221,35 +196,60 @@ redo_exec:
 
   kaapi_assert_debug( fp >= eframe);
 
-//  kaapi_sched_lock(&stack->proc->lock);
+  /* pop frame */
+#if 0
   int tolock = 0;
   if (fp > eframe)
   {
     /* here it's a pop of frame: we lock the thread */
     while (fp > eframe) 
     {
+      /* pop the frame */
       --fp;
 
       tolock = tolock || (fp <= stack->thieffp);
       if (tolock)
-        kaapi_sched_lock(&stack->lock);
+        kaapi_atomic_lock(&stack->lock);
+
       /* finish to execute child tasks, pop current task of the frame */
       if (--fp->pc > fp->sp)
       {
         stack->sfp = fp;
-//        kaapi_sched_unlock(&stack->proc->lock);
         if (tolock)
           kaapi_sched_unlock(&stack->lock);
-//        printf("Pop framefp:%p, pc: %p, state (%i)\n", (void*)(fp), (void*)pc, (int)pc->state ); fflush(stdout);
         goto push_frame; /* remains work do do */
       }
     } 
     fp->sp = fp->pc;
   }
   stack->sfp = fp;
-//  kaapi_sched_unlock(&stack->proc->lock);
   if (tolock)
     kaapi_sched_unlock(&stack->lock);
+
+#else //---------#if 0
+
+  if (fp > eframe)
+  {
+    /* here it's a pop of frame: we lock the thread */
+    while (fp > eframe) 
+    {
+      /* pop the frame */
+      stack->sfp = --fp;
+
+      if (fp <= stack->thieffp)
+        kaapi_atomic_waitlock(&stack->lock);
+      /* finish to execute child tasks, pop current task of the frame */
+      if (--fp->pc > fp->sp)
+      {
+//        stack->sfp = fp;
+        goto push_frame; /* remains work do do */
+      }
+    } 
+    fp->sp = fp->pc;
+  }
+//  stack->sfp = fp;
+#endif
+//----------
 
   /* end of the pop: we have finish to execute all the tasks */
   kaapi_assert_debug( fp->pc == fp->sp );
@@ -269,21 +269,24 @@ redo_exec:
 */
 int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
 {
-  if ((kaapi_task_orstate(pc, KAAPI_TASK_STATE_LOCKED) & ~KAAPI_TASK_STATE_LOCKED) != KAAPI_TASK_STATE_STEAL)
+  /* lock the state of the task. Used at terminaison to synchronize it with preemption */
+  while (!kaapi_task_trylock( pc ))
   {
-    /* do not suspend because it is terminated */
-    kaapi_assert_debug( kaapi_task_getstate(pc) == (KAAPI_TASK_STATE_TERM | KAAPI_TASK_STATE_LOCKED) );
-    return 0;
+    uintptr_t state = kaapi_task_getstate(pc);
+    if ((state & KAAPI_TASK_STATE_TERM) != 0) 
+      return 0;
+    /* if marked merge, do merge code: return ENOEXEC. */
+    if ((state & KAAPI_TASK_STATE_MERGE) != 0) 
+      return ENOEXEC;
+    kaapi_slowdown_cpu();
   }
-
-  /* number of cycles = number of cycles of the thief requires between marksteal 
+  
+  /* Lock on pc is set and state & STEAL => wait to see reserved field.
+     Here number of cycles = number of cycles of the thief requires between marksteal 
      and set reserved to the thief task.
   */
-  /* while ((void* volatile)(pc->reserved) == 0) */
-  while ( ((volatile kaapi_task_t*)pc)->reserved ==0 )
+  while (pc->reserved ==0)
   {
-    if ((kaapi_task_getstate(pc) & ~KAAPI_TASK_STATE_LOCKED) == KAAPI_TASK_STATE_TERM) 
-      return 0;
     kaapi_slowdown_cpu();
   }
 
@@ -292,15 +295,15 @@ int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
 #if 1
   /* try to preempt it: mark the thief task' state with SIGNALED bit */
   uintptr_t oldstate = kaapi_task_orstate(pc->reserved, KAAPI_TASK_STATE_SIGNALED);
-  if ((oldstate == KAAPI_TASK_STATE_INIT) || (oldstate == KAAPI_TASK_STATE_ALLOCATED))
+  if (oldstate == KAAPI_TASK_STATE_EXEC)
   {
-    /* else get back the task for myself : restore state to init */
-    kaapi_task_setstate(pc, KAAPI_TASK_STATE_INIT);
+    kaapi_task_unlock(pc);
+    /* pc was already set to STATE_EXEC, execute it by the current thread */
     return EINTR;  
   }
 #endif
 
-  /* restore STEAL state and return EWOULDBLOCK */
-  kaapi_task_setstate(pc, KAAPI_TASK_STATE_STEAL);
+  /* unlock the task state and return EWOULDBLOCK */
+  kaapi_task_unlock(pc);
   return EWOULDBLOCK;
 }

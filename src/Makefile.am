@@ -15,38 +15,6 @@ libkaapi_la_LIBADD = $(KAAPILIB_BUILD_LIBS)
 
 libkaapi_la_SOURCES=\
   misc/kaapi_version.c \
-  misc/kaapi_init.c \
-  misc/kaapi_abort.c \
-  misc/kaapi_time_elapse.c \
-  misc/kaapi_time_elapsedns.c \
-  misc/kaapi_hashvalue.c \
-  misc/kaapi_hashmap.c \
-  misc/kaapi_hashmap_insert.c \
-  misc/kaapi_hashmap_find.c \
-  misc/kaapi_hashmap_findinsert.c \
-  misc/kaapi_hashmap_big.c \
-  misc/kaapi_hashmap_big_find.c \
-  misc/kaapi_hashmap_big_findinsert.c \
-  misc/kaapi_hashmap_big_insert.c \
-  misc/kaapi_malloc_align.c \
-  misc/kaapi_allocator_allocate.c \
-  misc/kaapi_wq_slowpop.c\
-  misc/kaapi_wq_set.c\
-  misc/kaapi_wq_init.c\
-  misc/kaapi_cpuset2str.c\
-  misc/kaapi_get_self_kid.c\
-  misc/kaapi_default_netapi.c\
-  misc/kaapi_event_flush.c\
-  misc/kaapi_splitter.c\
-  task/kaapi_fmt_initbasic.c \
-  task/kaapi_fmt_accessors.c \
-  task/kaapi_fmt_register.c \
-  task/kaapi_fmt_taskregister.c \
-  task/kaapi_fmt_taskregister_static.c \
-  task/kaapi_fmt_taskregister_func.c \
-  task/kaapi_fmt_structregister.c \
-  task/kaapi_fmt_resolvebybody.c \
-  task/kaapi_fmt_resolvebyfmtid.c \
   kaapi_defs.h \
   kaapi_error.h \
   kaapi_machine.h \
@@ -57,15 +25,97 @@ libkaapi_la_SOURCES=\
   kaapi_hashmap.h \
   kaapi_allocator.h \
   kaapi_task.h \
+  kaapi_tasklist.h \
   kaapi_network.h \
   kaapi_compiler.h \
+  kaapi_trace.h\
   kaapi_event.h\
-  kaapi_event_record.h\
+  kaapi_event_recorder.h\
+  kaapi_memory.h \
+  kaapi_cpuset.h\
+  kaapi_hws.h\
+  kaapi_ws_queue.h\
+  misc/kaapi_abort.c \
+  misc/kaapi_allocator_allocate.c \
+  misc/kaapi_cpuset2str.c \
+  misc/kaapi_default_netapi.c \
+  misc/kaapi_event_flush.c \
+  misc/kaapi_get_self_kid.c \
+  misc/kaapi_hashmap.c \
+  misc/kaapi_hashmap_big.c \
+  misc/kaapi_hashmap_big_find.c \
+  misc/kaapi_hashmap_big_findinsert.c \
+  misc/kaapi_hashmap_big_insert.c \
+  misc/kaapi_hashmap_find.c \
+  misc/kaapi_hashmap_findinsert.c \
+  misc/kaapi_hashmap_insert.c \
+  misc/kaapi_hashvalue.c \
+  misc/kaapi_init.c \
+  misc/kaapi_malloc_align.c \
+  misc/kaapi_time_elapse.c \
+  misc/kaapi_time_elapsedns.c \
+  misc/kaapi_wq_init.c \
+  misc/kaapi_wq_set.c \
+  misc/kaapi_wq_slowpop.c \
+  task/kaapi_fmt_accessors.c \
+  task/kaapi_fmt_initbasic.c \
+  task/kaapi_fmt_register.c \
+  task/kaapi_fmt_resolvebybody.c \
+  task/kaapi_fmt_resolvebyfmtid.c \
+  task/kaapi_fmt_structregister.c \
+  task/kaapi_fmt_taskregister.c \
+  task/kaapi_fmt_taskregister_func.c \
+  task/kaapi_fmt_taskregister_static.c \
+  task/kaapi_task_aftersteal.c \
+  task/kaapi_task_computeready.c \
+  task/kaapi_task_initflag.c \
+  task/kaapi_task_movealloc.c \
+  task/kaapi_task_pushtaskdfg_queue.c \
+  task/kaapi_task_standard.c \
+  task/kaapi_task_startup_body.c \
+  task/kaapi_task_steal_body.c \
+  task/kaapi_task_stealready_body.c \
+  thread/kaapi_tasklist.c \
+  thread/kaapi_tasklist_activate.c \
+  thread/kaapi_tasklist_criticalpath.c \
+  thread/kaapi_thread_checkdeps.c \
+  thread/kaapi_thread_clear.c \
+  thread/kaapi_thread_computeready_access.c \
+  thread/kaapi_thread_computereadylist.c \
+  thread/kaapi_thread_dfg_print.c \
+  thread/kaapi_thread_dfgdot_print.c \
+  thread/kaapi_thread_execframe.c \
+  thread/kaapi_thread_execframe_tasklist.c \
+  thread/kaapi_thread_ispreempted.c \
+  thread/kaapi_thread_pushpopframe.c \
+  thread/kaapi_thread_rdl_print.c \
+  thread/kaapi_thread_readylist_generic_execframe.c \
+  thread/kaapi_thread_saveframe.c \
+  thread/kaapi_thread_signalend_exec.c \
+  thread/kaapi_version_addaccess.c \
+  thread/kaapi_version_find.c \
+  thread/kaapi_version_replicat.c \
+  adapt/kaapi_adapt_adaptfmt.c \
+  adapt/kaapi_adapt_begendadaptfmt.c \
+  adapt/kaapi_adapt_finalize.c \
+  adapt/kaapi_adapt_init.c \
+  adapt/kaapi_adapt_mergefmt.c \
+  adapt/kaapi_adapt_preempt_head.c \
+  adapt/kaapi_adapt_preempt_tail.c \
+  adapt/kaapi_adapt_preempt_thief.c \
+  adapt/kaapi_adapt_preemptpoint.c \
+  adapt/kaapi_adapt_pushstealcontext.c \
+  adapt/kaapi_adapt_pushtask.c \
+  adapt/kaapi_adapt_reqcommittask.c \
+  adapt/kaapi_adapt_reqpushtask.c \
+  adapt/kaapi_adapt_taskbegendbody.c \
+  adapt/kaapi_adapt_taskbody.c \
+  adapt/kaapi_adapt_taskmergebody.c \
+  adapt/kaapi_adapt_taskstealbody.c \
   machine/common/kaapi_procinfo.c \
   machine/common/kaapi_procinfo.h \
   machine/common/kaapi_hwtopo.c \
   machine/common/kaapi_hw_selftopo.c \
-  kaapi_memory.h \
   memory/kaapi_memory.c \
   memory/kaapi_memory_copy.c \
   memory/kaapi_memory_allocate.c \
@@ -82,73 +132,29 @@ libkaapi_la_SOURCES=\
   workstealing/kaapi_sched_stealstack.c \
   workstealing/kaapi_sched_stealframe.c \
   workstealing/kaapi_sched_stealtask.c \
+  workstealing/kaapi_sched_splittask.c \
   workstealing/kaapi_sched_stealtasklist.c \
   workstealing/kaapi_sched_idle.c \
   workstealing/kaapi_sched_wakeup.c \
   workstealing/kaapi_sched_suspend.c \
   workstealing/kaapi_sched_sync.c \
-  workstealing/kaapi_sched_criticalsteal.c \
-  workstealing/kaapi_sched_lready.c \
   workstealing/kaapi_sched_wsqueue.c \
   hws/kaapi_hws_initialize.c \
   hws/kaapi_hws_emitsteal.c \
   hws/kaapi_hws_pushtask.c \
-  hws/kaapi_hws_splitter.c \
-  hws/kaapi_hws_adaptive.c \
   hws/kaapi_hws_misc.c \
   hws/kaapi_hws_sched_sync.c \
   hws/kaapi_hws_counters.c \
   hws/kaapi_ws_queue_lifo.c \
-  hws/kaapi_ws_queue_kproc.c
-
-#Libtask
-libkaapi_la_SOURCES+=\
-  kaapi_tasklist.h\
-  thread/kaapi_tasklist.c \
-  thread/kaapi_tasklist_criticalpath.c\
-  thread/kaapi_tasklist_activate.c \
-  thread/kaapi_tasklist_steal.c \
-  thread/kaapi_thread_dfg_print.c \
-  thread/kaapi_thread_rdl_print.c \
-  thread/kaapi_thread_dfgdot_print.c \
-  thread/kaapi_thread_saveframe.c \
-  thread/kaapi_thread_pushpopframe.c \
-  thread/kaapi_thread_clear.c \
-  thread/kaapi_thread_startup.c \
-  thread/kaapi_thread_execframe.c \
-  thread/kaapi_thread_execframe_tasklist.c \
-  thread/kaapi_thread_readylist_generic_execframe.c \
-  thread/kaapi_thread_signalend_exec.c \
-  thread/kaapi_thread_computereadylist.c \
-  thread/kaapi_thread_computeready_access.c \
-  thread/kaapi_thread_checkdeps.c \
-  thread/kaapi_version_find.c \
-  thread/kaapi_version_addaccess.c \
-  thread/kaapi_version_replicat.c \
-  task/kaapi_task_standard.c \
-  task/kaapi_task_aftersteal.c \
-  task/kaapi_task_steal_body.c \
-  task/kaapi_task_stealready_body.c \
-  task/kaapi_task_splitter_adapt.c \
-  task/kaapi_task_pushstealcontext.c \
-  task/kaapi_task_adapt_allocateresult.c \
-  task/kaapi_task_adapt_deallocateresult.c \
-  task/kaapi_task_adap_body.c \
-  task/kaapi_task_initadap.c \
-  task/kaapi_task_reqreply.c \
-  task/kaapi_task_movealloc.c \
-  task/kaapi_task_preempt_head.c \
-  task/kaapi_task_preempt_tail.c \
-  task/kaapi_task_preempt_thief.c \
-  task/kaapi_task_preemptpoint.c \
-  task/kaapi_task_finalize.c \
-  task/kaapi_task_steal_adapt.c \
-  task/kaapi_task_computeready.c \
-  task/kaapi_task_pushtaskdfg_queue.c \
+  hws/kaapi_ws_queue_kproc.c \
   static/kaapi_stsched_tasksetstatic.c \
   static/kaapi_threadgroup_nothgrp.c\
   static/kaapi_stsched_taskrecv.c\
   static/kaapi_stsched_taskbcast.c
+
+#   misc/kaapi_splitter.c\
+   hws/kaapi_hws_splitter.c \
+  hws/kaapi_hws_adaptive.c 
 
 if KAAPI_TARGET_STATICSCHED
 #Partitionning

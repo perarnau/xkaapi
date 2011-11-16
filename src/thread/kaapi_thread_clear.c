@@ -2,7 +2,7 @@
 ** kaapi_thread_clear.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:03 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -54,13 +54,6 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
 
 //Should never change !!!  thread->stack.data = (char*)&thread->data;
   kaapi_stack_clear( &thread->stack );
-
-  kaapi_task_init_withstate(
-    &thread->stealreserved_task, 
-    kaapi_tasksteal_body, 
-    &thread->stealreserved_arg, 
-    KAAPI_TASK_STATE_ALLOCATED
-  );
 
   thread->the_thgrp  = 0;
   thread->unstealable= 0;

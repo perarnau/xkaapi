@@ -1,7 +1,8 @@
 /*
+** kaapi_task_standard.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -43,10 +44,41 @@
 */
 #include "kaapi_impl.h"
 
-/**
+/*
 */
-int kaapi_deallocate_thief_result( kaapi_taskadaptive_result_t* ktr )
+void kaapi_task_init_with_flag
+  (kaapi_task_t* task, kaapi_task_body_t body, void* arg, kaapi_task_flag_t flag)
 {
-  free(ktr->addr_tofree);
-  return 0;
+  uint8_t internal_flag = 0; /* this is the default value */
+  kaapi_task_init(task, body, arg );
+  
+  if (flag & KAAPI_TASK_UNSTEALABLE)
+  {
+    internal_flag |= KAAPI_TASK_UNSTEALABLE_MASK;
+  }
+
+  if (flag & KAAPI_TASK_SPLITTABLE)
+  {
+    internal_flag |= KAAPI_TASK_SPLITTABLE_MASK;
+  }
+    
+  if (flag & KAAPI_TASK_S_CONCURRENT)
+  {
+    kaapi_assert_debug( !(flag & KAAPI_TASK_S_COOPERATIVE) );
+  }
+  else if (flag & KAAPI_TASK_S_COOPERATIVE)
+  {
+    internal_flag |= KAAPI_TASK_COOPERATIVE_MASK;
+  }
+
+  if (flag & KAAPI_TASK_S_NOPREEMPTION)
+  {
+    kaapi_assert_debug( !(flag & KAAPI_TASK_S_PREEMPTION) );
+  }
+  else if (flag & KAAPI_TASK_S_PREEMPTION)
+  {
+    internal_flag |= KAAPI_TASK_PREEMPTION_MASK;
+  }
+  
+  task->u.s.flag = internal_flag;
 }

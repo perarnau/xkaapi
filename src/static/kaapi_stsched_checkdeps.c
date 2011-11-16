@@ -2,7 +2,7 @@
  ** kaapi_task_checkdenpendencies.c
  ** xkaapi
  ** 
- ** Created on Tue Feb 23 16:56:43 2010
+ **
  ** Copyright 2009 INRIA.
  **
  ** Contributors :

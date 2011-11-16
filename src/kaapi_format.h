@@ -1,7 +1,7 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:09 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -65,7 +65,6 @@ extern struct kaapi_format_t* kaapi_all_format_bybody[256];
 */
 extern struct kaapi_format_t* kaapi_all_format_byfmtid[256];
 
-
 /* ============================= Format for task/data structure ============================ */
 
 typedef enum kaapi_format_flag_t {
@@ -127,6 +126,7 @@ typedef struct kaapi_format_t {
   void                  (*reducor )        (const struct kaapi_format_t*, unsigned int, void* sp, const void* value);
   void                  (*redinit )        (const struct kaapi_format_t*, unsigned int, const void* sp, void* value );
   void			        (*get_task_binding)(const struct kaapi_format_t*, const void* sp, kaapi_task_binding_t*);
+  kaapi_adaptivetask_splitter_t	(*get_splitter)(const struct kaapi_format_t*, const void* sp);
 
   /* fields to link the format is the internal tables */
   struct kaapi_format_t      *next_bybody;                            /* link in hash table */
@@ -259,6 +259,14 @@ static inline void kaapi_format_get_task_binding
   }
 }
 
+
+static inline 
+kaapi_adaptivetask_splitter_t kaapi_format_get_splitter(const struct kaapi_format_t* fmt, const void* sp)
+{
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return 0;
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  return (*fmt->get_splitter)(fmt, sp);
+}
 
 /** Initialise default formats
 */

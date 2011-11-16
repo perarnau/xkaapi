@@ -1,7 +1,7 @@
 /*
  ** kaapi_procinfo.h
  ** 
- ** Created on Jun 23 2010
+ **
  ** Copyright 2009 INRIA.
  **
  ** Contributors :

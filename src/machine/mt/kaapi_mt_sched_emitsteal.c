@@ -2,7 +2,7 @@
 ** kaapi_mt_sched_idle.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -79,10 +79,7 @@ kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
   
   if (kaapi_count_kprocessors <2) return KAAPI_REQUEST_S_NOK;
-  
-  /* allocate thief task data on the stack */
-  kproc->thief_task = 0;
-  
+    
 redo_select:
   /* select the victim processor */
   err = (*kproc->fnc_select)( kproc, &victim, KAAPI_SELECT_VICTIM );
@@ -104,8 +101,7 @@ redo_select:
     &victim_stealctxt->lr,
     self_request,
     &status, 
-    &kproc->thread->stealreserved_task, 
-    &kproc->thread->stealreserved_arg
+    &kproc->thread->stack.stackframe[0] 
   );
   
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -187,6 +183,17 @@ enter:
 
   if (kaapi_request_status_test( &status ))
     goto return_value;
+
+  /* my request may not have been replied BUT have to leave this function
+     to test for runtime finalization, among other things. Thus, have to
+     wait for my own reply.
+   */
+  while (1)
+  {
+    if (kaapi_request_status_test(&status)) 
+      goto return_value ;
+    kaapi_slowdown_cpu();
+  }
   
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
@@ -204,7 +211,24 @@ return_value:
   switch (kaapi_request_status_get(&status))
   {
     case KAAPI_REQUEST_S_OK:
-      kproc->thief_task = self_request->thief_task;
+       /* Currently only verify that the returned pointer are into the area given by stackframe[0]
+          - Else it means that the result of the steal are tasks that lies outside the stackframe,
+          then the start up in that case should be different:
+            - first, execute the task between [req->frame.pc and req->frame.sp] in the context
+            of the current stack of frame (i.e. pushed task must be pushed locally).
+          This requires 1/ change the interface of execframe in order to add pc, sp in signature.
+          2/ change the callee to execframe 3/ suppress this comment.
+       */
+      kaapi_assert_debug( ((uintptr_t)self_request->frame.sp <= (uintptr_t)kproc->thread->stack.stackframe[0].pc)
+                       && ((uintptr_t)self_request->frame.sp >= (uintptr_t)kproc->thread->stack.stackframe[0].sp_data)
+                       && ((uintptr_t)self_request->frame.sp_data >= (uintptr_t)kproc->thread->stack.stackframe[0].sp_data)
+                       && ((uintptr_t)self_request->frame.sp_data <= (uintptr_t)kproc->thread->stack.stackframe[0].sp)
+      );
+      /* also assert that pc does not have changed (only used at runtime to execute task) */
+      kaapi_assert_debug( kproc->thread->stack.stackframe[0].pc == self_request->frame.pc);
+      kproc->thread->stack.stackframe[0].sp = self_request->frame.sp;
+      kproc->thread->stack.stackframe[0].sp_data = self_request->frame.sp_data;
+        
       (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_SUCCESS );
       return KAAPI_REQUEST_S_OK;
 

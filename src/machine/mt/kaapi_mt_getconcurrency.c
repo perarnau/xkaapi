@@ -1,7 +1,7 @@
 /*
 ** kaapi_mt_getconcurrency.c
 ** 
-** Created on Tue Mar 31 15:17:57 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :

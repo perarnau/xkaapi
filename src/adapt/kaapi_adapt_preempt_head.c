@@ -1,12 +1,13 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -43,46 +44,27 @@
 */
 #include "kaapi_impl.h"
 
-/*
+
+/** \ingroup ADAPTIVE
 */
-kaapi_taskadaptive_result_t* kaapi_allocate_thief_result(
-  kaapi_request_t* kreq, int size, void* data
-)
+struct kaapi_thief_iterator_t* kaapi_thiefiterator_head( kaapi_task_t* task )
 {
-  kaapi_taskadaptive_result_t* result;
-  void* addr_tofree;
-  size_t size_alloc;
-  
-  /* allocate space for futur result of size size
-     kaapi_taskadaptive_result_t has correct alignment
+  kaapi_taskadaptive_arg_t* adapt_arg = kaapi_task_getargst(task, kaapi_taskadaptive_arg_t);
+  kaapi_assert_debug( kaapi_task_is_splittable(task) );
+  kaapi_assert_debug( task->body == (kaapi_task_body_t)kaapi_taskadapt_body );
+  kaapi_stealcontext_t* sc = (kaapi_stealcontext_t*)adapt_arg->shared_sc.data;
+  /* only the owner can iterate through the list.
+     head is always a valid pointer (if read was atomic) 
   */
-  size_alloc = sizeof(kaapi_taskadaptive_result_t);
-  if ((size >0) && (data ==0)) size_alloc += size;
-  result = (kaapi_taskadaptive_result_t*)kaapi_malloc_align( KAAPI_CACHE_LINE, size_alloc, &addr_tofree );
-  if (result== 0) return 0;
-  
-  result->size_data = size;
-  if ((size >0) && (data ==0)) {
-    result->flag = KAAPI_RESULT_DATARTS;
-    result->data = (void*)((uintptr_t)result + sizeof(*result));
-  }
-  else {
-    result->flag = KAAPI_RESULT_DATAUSR;
-    result->data = data;
-  }
+  return (struct kaapi_thief_iterator_t*)sc->thieves.list.head;
+}
 
-  result->arg_from_victim = 0;
-  result->rhead           = 0;
-  result->rtail           = 0;
-  result->prev            = 0;
-  result->next            = 0;
-  result->addr_tofree	  = addr_tofree;
-#warning TODO HERE
-#if 0 //TODO
-  result->status	  = &kreq->reply->status;
-  result->preempt	  = &kreq->reply->preempt;
-  kaapi_task_initdfg(&result->state, 0, 0);
-#endif
 
-  return result;
+/** \ingroup ADAPTIVE
+*/
+struct kaapi_thief_iterator_t* kaapi_thiefiterator_next( struct kaapi_thief_iterator_t* pos )
+{
+  kaapi_thiefadaptcontext_t* arg = (kaapi_thiefadaptcontext_t*)pos;
+  /* next is always a valid pointer (if read was atomic) */
+  return (struct kaapi_thief_iterator_t*)arg->next;
 }

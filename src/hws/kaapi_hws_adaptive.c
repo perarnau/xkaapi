@@ -2,7 +2,7 @@
 ** kaapi_hws_adaptive.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -130,7 +130,7 @@ void* kaapi_hws_init_adaptive_task
 
 void kaapi_hws_adapt_body(void* arg, kaapi_thread_t* thread)
 {
-  /* from kaapi_adapt_body */
+  /* from kaapi_taskadapt_body */
 
   kaapi_stealcontext_t* sc;
   kaapi_taskadaptive_user_taskarg_t* adata;

@@ -1,7 +1,7 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -125,7 +125,6 @@ int kaapi_tasklist_pushready_td(
     kaapi_data_t* gd = (kaapi_data_t*)a.data;
     addr = gd->ptr.ptr;
   }
-#endif
 
   if (addr !=0)
   {
@@ -133,6 +132,7 @@ int kaapi_tasklist_pushready_td(
     if (nodeid != -1)
       queue = hws_levels[KAAPI_HWS_LEVELID_NUMA].blocks[ nodeid ].queue;
   }
+#endif
   
   if (queue == 0)
   {
@@ -146,9 +146,6 @@ int kaapi_tasklist_pushready_td(
     );
     return 0;
   }
-
-#warning "HERE"
-#if 0 // ============== TEST: deactivate it 
 
   /* push remote queue:
      - same code as kaapi_task_splitter_readylist except state ALLOCATED */
@@ -165,11 +162,10 @@ int kaapi_tasklist_pushready_td(
   td->tasksteal_arg.td_end                = tdref+1;
 #endif
 
-  kaapi_task_init_withstate(
+  kaapi_task_init(
       &td->tasksteal, 
       kaapi_taskstealready_body, 
-      &td->tasksteal_arg,
-      KAAPI_TASK_STATE_ALLOCATED            
+      &td->tasksteal_arg
   );
 
 #if defined(TASKLIST_ONEGLOBAL_MASTER)  
@@ -184,8 +180,6 @@ int kaapi_tasklist_pushready_td(
   /* push the task in the remote queue */
   //kaapi_thread_pushtask_atlevel(task, KAAPI_HWS_LEVELID_NUMA);
   kaapi_thread_pushtask_atlevel_with_nodeid( &td->tasksteal, KAAPI_HWS_LEVELID_NUMA, nodeid );
-
-#endif
 
   return 1;
 }

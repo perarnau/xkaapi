@@ -1,12 +1,13 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -43,12 +44,7 @@
 */
 #include "kaapi_impl.h"
 
-/** \ingroup ADAPTIVE
-*/
-kaapi_taskadaptive_result_t* kaapi_get_thief_tail( kaapi_stealcontext_t* sc )
+int kaapi_request_committask(kaapi_request_t* request)
 {
-  /* comments in kaapi_task_preempt_head.c */
-
-  kaapi_synchronize_steal(sc);
-  return sc->thieves.list.tail;
+  return kaapi_request_replytask(request, KAAPI_REQUEST_S_OK);
 }

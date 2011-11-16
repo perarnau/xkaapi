@@ -1,7 +1,7 @@
 /*
  ** xkaapi
  ** 
- ** Created on Tue Mar 31 15:18:04 2009
+ **
  ** Copyright 2009 INRIA.
  **
  ** Contributor :
@@ -43,9 +43,38 @@
  */
 #include "kaapi_impl.h"
 
+/*
+*/
+int kaapi_sched_steal_or_split_task
+(
+  kaapi_hashmap_t*                     map, 
+  const struct kaapi_format_t*         task_fmt,
+  kaapi_task_t*                        task,
+  struct kaapi_listrequest_t*          lrequests, 
+  struct kaapi_listrequest_iterator_t* lrrange,
+  void                                 (*callback_empty)(kaapi_task_t*)  /* TO REMOVE */
+)
+{
+  /* first try to steal the task */
+  int err = kaapi_sched_steal_task( map, task_fmt, task, lrequests, lrrange );
 
-/** Steal task in the frame [frame->pc:frame->sp)
- */
+  /* then try to split the task */
+  if (((err == EPERM) || (err == EBUSY)) && kaapi_task_is_splittable(task))
+  {
+    err = kaapi_sched_splittask( 
+      task_fmt,
+      task,
+      lrequests,
+      lrrange
+    );
+  }
+  /* else if err == ENOENT (no format) or err == EACCES (not ready) do nothing */
+  return err;
+}
+
+
+/*
+*/
 int kaapi_sched_stealframe
 (
   kaapi_thread_context_t*       thread, 
@@ -72,26 +101,26 @@ int kaapi_sched_stealframe
   while ( !kaapi_listrequest_iterator_empty(lrrange) && (task_top > task_sp))
   {
     task_body = kaapi_task_getbody(task_top);
-    
-    /* its an adaptive task !!! */
-    if (task_body == kaapi_adapt_body || task_body == kaapi_hws_adapt_body)
+
+    /* else try to steal the DFG task using history of accesses stored in map.
+       On return the request iterator has been advanced to the next request if steal successed
+       If steal fails because 1/ task is not stealable (err==EPERM) or 2/ because the task
+       was stolen or executed by somebody else, then we try to SPLIT the task (i.e. extract
+       some piece of work).
+    */
+    const kaapi_format_t* task_fmt = kaapi_format_resolvebybody( task_body );
+    if (task_fmt !=0) 
     {
-      kaapi_task_steal_adapt(
-        thread, 
+      kaapi_sched_steal_or_split_task(
+        map,
+        task_fmt,
         task_top,
         lrequests,
         lrrange,
         0     /* no callback if the adaptive task was into a queue of a thread */
       );
-      
-      --task_top;
-      continue;
     }
-
-    /* else try to steal a DFG task using history of accesses stored in map 
-       On return the request iterator has been advanced to the next request if steal successed
-    */
-    kaapi_sched_steal_task( map, thread, task_top, lrequests, lrrange );
+    
     --task_top;
   }
   

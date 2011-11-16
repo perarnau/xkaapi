@@ -2,7 +2,7 @@
 ** kaapi_impl.h
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:09 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :

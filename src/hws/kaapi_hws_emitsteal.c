@@ -2,7 +2,7 @@
  ** kaapi_hws_emitsteal.c
  ** xkaapi
  ** 
- ** Created on Tue Mar 31 15:19:14 2009
+ **
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
@@ -278,8 +278,7 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
     &hws_requests,
     &kaapi_requests_list[kproc->kid],
     &local_status, 
-    &kproc->thread->stealreserved_task,
-    &kproc->thread->stealreserved_arg
+    &kproc->thread->stackframe[0] /* where to store tasks */
   );
   
   /* from here anybody else may reply to the request */
@@ -345,7 +344,6 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
   }
   /* else KAAPI_REQUEST_S_NOK */
 
-  KAAPI_DEBUG_INST(kproc->thief_task = 0);
   KAAPI_DEBUG_INST(++kproc->reply_version);
   KAAPI_DEBUG_INST(request->status = 0);
 
@@ -358,7 +356,6 @@ on_request_success:
 
   /* update task to execute */
   kaapi_request_syncdata(request);
-  kproc->thief_task = request->thief_task;
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);

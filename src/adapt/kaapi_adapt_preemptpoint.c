@@ -1,7 +1,8 @@
 /*
+** kaapi_task_preemptpoint.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -42,60 +43,82 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include <stdio.h>
 
-
-/** Task to bootstrap the execution onto a kprocessor after a successful steal
+#if 0
+/**
 */
-void kaapi_taskstartup_body( 
-  void*           taskarg,
-  kaapi_frame_t*  fp,
-  kaapi_task_t*   task
+int kaapi_preemptpoint_before_reducer_call( 
+    kaapi_stealcontext_t* stc,
+    void* arg_for_victim, 
+    void* result_data, 
+    size_t result_size
 )
 {
-  kaapi_processor_t* kproc = (kaapi_processor_t*)taskarg;
+#warning TODO
+  kaapi_taskadaptive_result_t* const ktr = stc->header.ktr;
 
-#if defined(KAAPI_DEBUG)
-  kaapi_frame_t           save_frame = *fp;
-#endif
+  kaapi_assert_debug( ktr != 0 );
 
-  kaapi_assert( kaapi_frame_isempty(fp) );
-  kaapi_assert( fp == kproc->thread->stack.stackframe + 1 );
-  kaapi_assert( task == kproc->thread->stack.stackframe->pc );
-  
+  /* disable and wait no more thief on stc */
+  kaapi_steal_disable_sync( stc );
 
-  /* last step: acquire the task for execution:
-     - because this task will be embedded into kaapi_taskstartup_body,
-     its state does not move to EXEC (as kaapi_thread_execframe does).
-     Thus dot it manually here to avoid concurrency with preemption from the victim.
-  */
-  if (kaapi_task_markexec(kproc->thief_task))
+  /* recopy data iff its non null */
+  if (result_data !=0)
   {
-#if defined(HUGEDEBUG)
-    printf("%i::[StarUp Thread] BEGIN to execute thieftask:%p, original task:%p\n", 
-        kproc->kid,
-        (void*)kproc->thief_task,
-        (void*)((kaapi_tasksteal_arg_t*)kproc->thief_task->sp)->origin_task
-    );
-    fflush(stdout);
-#endif
-    ((kaapi_task_body_internal_t)kproc->thief_task->body)( kproc->thief_task->sp, fp, kproc->thief_task );
-#if defined(HUGEDEBUG)
-    printf("%i::[StarUp Thread] END to execute thieftask:%p\n", 
-      kproc->kid,
-      (void*)kproc->thief_task
-    );
-    fflush(stdout);
-#endif
+    if (result_size < ktr->size_data) 
+      ktr->size_data = result_size;
+
+    if (ktr->size_data >0)
+      memcpy(ktr->data, result_data, ktr->size_data);
   }
-#if defined(HUGEDEBUG)
-  else {
-    printf("%i::[StarUp Thread] ABORT: thieftask: %p, origin task:%p was preempted by victim\n", 
-        kproc->kid,
-        (void*)kproc->thief_task,
-        (void*)((kaapi_tasksteal_arg_t*)kproc->thief_task->sp)->origin_task
-    ); 
-    fflush(stdout);
-  }
-#endif
+  /* push data to the victim and list of thief */
+  ktr->arg_from_thief = arg_for_victim;
+
+  /* no lock needed since no more steal possible */
+  ktr->rhead = stc->thieves.list.head;
+  stc->thieves.list.head = 0;
+
+  ktr->rtail = stc->thieves.list.tail;
+  stc->thieves.list.tail = 0;
+
+  return 0;
 }
+
+
+/**
+*/
+int kaapi_preemptpoint_after_reducer_call( 
+    kaapi_stealcontext_t* stc
+)
+{
+  kaapi_taskadaptive_result_t* const ktr = stc->header.ktr;
+  kaapi_task_body_t body;
+  int retval;
+
+  kaapi_assert_debug( ktr != 0 );
+
+  /* serialize previous line with next line */
+  kaapi_writemem_barrier();
+
+  /* signal termination */
+redo:
+  body = kaapi_task_getbody(&ktr->state);
+  retval = kaapi_task_casbody(&ktr->state, body, kaapi_term_body);
+  if (retval)
+  {
+    if (body == kaapi_preempt_body)
+    {
+      /* @see comment in kaapi_task_adap_body */
+      while (*stc->preempt == 0)
+        kaapi_slowdown_cpu();
+    }
+  }
+  else 
+    goto redo;
+
+  /* adapt_body needs to know about preemption */
+  stc->header.ktr = 0;
+  return 1;
+}
+#endif
+

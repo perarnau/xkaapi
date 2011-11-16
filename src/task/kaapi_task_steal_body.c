@@ -2,7 +2,7 @@
 ** kaapi_task_steal.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -115,60 +115,11 @@ void kaapi_taskwrite_body(
     }
   }
 
-#if 0 // TG TO TEST IMPACT OF THIS OPTIMISATION
-  /* if signaled thread was suspended, move it to the local queue */
-  kaapi_wsqueuectxt_cell_t* wcs = arg->origin_thread->wcs;
-  if ((wcs != 0) && (arg->origin_thread->stack.sfp->pc == arg->origin_task)) /* means thread has been suspended on this task */
-  { 
-    kaapi_readmem_barrier();
-    kaapi_processor_t* kproc = arg->origin_thread->stack.proc;
-    kaapi_assert_debug( kproc != 0);
-
-    if (kaapi_cpuset_has( &wcs->affinity, kproc->kid))
-    //  /*kaapi_sched_readyempty(kproc) &&*/ kaapi_thread_hasaffinity(wcs->affinity, kproc->kid))
-    {
-      kaapi_thread_context_t* kthread = kaapi_wsqueuectxt_steal_cell( wcs );
-      if (kthread !=0)
-      {
-        kaapi_wsqueuectxt_finish_steal_cell(wcs);
-
-        /* Ok, here we have theft the thread and no body else can steal it
-           Signal the end of execution of forked task: 
-           -if no war && no cw => mark the task as terminated 
-           -if war or cw and due to copy => mark the task as aftersteal in order to merge value
-        */
-        if ((war_param ==0) && (cw_param ==0))
-          kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_TERM );
-        else
-          kaapi_task_orstate( arg->origin_task, KAAPI_MASK_BODY_AFTER );
-
-        kaapi_sched_lock(&kproc->lock);
-        kaapi_sched_pushready(kproc, kthread );
-        kaapi_sched_unlock(&kproc->lock);
-        return;
-      }
-    }
-  }
-#endif
-
+  /* order write to the memory before changing the origin task' state */
   kaapi_writemem_barrier();
-#if 0
-  while (kaapi_task_getstate(arg->origin_task) != KAAPI_TASK_STATE_STEAL)
-  {
-    uintptr_t state = kaapi_task_getstate(arg->origin_task);
-    kaapi_assert( (state == KAAPI_TASK_STATE_PREEMPTED) || (state == KAAPI_TASK_STATE_STEAL) );
-    kaapi_slowdown_cpu();
-  }
-#endif
 
-#if defined(HUGEDEBUG)
-  printf("%i::[IN] TaskWrite:%p  signal term of victim task:%p, state:0x%X\n", 
-      kaapi_get_self_kid(),
-      (void*)task,
-      arg->origin_task, 
-      (unsigned int)arg->origin_task->state); 
-  fflush(stdout);
-#endif
+  /* lock the task to ensure exclusive access between preemption & end of task */
+  kaapi_task_lock( arg->origin_task );
 
   /* signal the task : mark it as executed, the old returned body should have steal flag */
   if ((war_param ==0) && (cw_param ==0))
@@ -176,14 +127,7 @@ void kaapi_taskwrite_body(
   else 
     kaapi_task_markaftersteal( arg->origin_task );
 
-#if defined(HUGEDEBUG)
-  printf("%i::[OUT] TaskWrite:%p  signal term of victim task:%p, state:0x%X\n", 
-      kaapi_get_self_kid(),
-      (void*)task,
-      (void*)arg->origin_task, 
-      (unsigned int)arg->origin_task->state); 
-  fflush(stdout);
-#endif
+  kaapi_task_unlock( arg->origin_task );
 }
 
 
@@ -225,13 +169,6 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   if (fmt == 0)
     arg->origin_fmt = fmt = kaapi_format_resolvebybody(body);
   kaapi_assert_debug( fmt !=0 );
-
-#if defined(HUGEDEBUG)
-printf("%i::[IN] Steal task: %p, name:'%s'\n", 
-      kaapi_get_self_kid(),
-      (void*)arg->origin_task, fmt->name); 
-fflush(stdout);
-#endif
 
   /* the original task arguments */
   orig_task_args  = kaapi_task_getargs(arg->origin_task);
@@ -340,10 +277,4 @@ fflush(stdout);
   task = kaapi_thread_toptask( thread );
   kaapi_task_init( task, (kaapi_task_body_t)kaapi_taskwrite_body, arg );
   kaapi_thread_pushtask( thread );
-#if defined(HUGEDEBUG)
-printf("%i::[OUT] Steal task: %p, name:'%s'\n", 
-      kaapi_get_self_kid(),
-      (void*)arg->origin_task, fmt->name); 
-fflush(stdout);
-#endif
 }

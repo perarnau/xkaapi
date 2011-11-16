@@ -2,7 +2,7 @@
  ** kaapi_wakeup.c
  ** xkaapi
  ** 
- ** Created on Tue Mar 31 15:18:04 2009
+ **
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
@@ -89,27 +89,7 @@ kaapi_thread_context_t* kaapi_sched_wakeup (
     }
     /* the cell will be garbaged next times */
   }
-  
-  /* try to steal ready list */
-  if (!kaapi_sched_readyempty(kproc))
-  {
-    /* lock if self wakeup to protect lready against thieves
-       because in that case wakeup is called directly through
-       sched_suspend or sched_idle, not by passing through 
-       the emission of a request
-    */
-    kaapi_sched_lock( &kproc->lock );
-    thread = kaapi_sched_stealready( kproc, kproc_thiefid );
-    kaapi_sched_unlock( &kproc->lock );
     
-    if (thread != 0)
-    {
-      kaapi_assert_debug( kaapi_cpuset_has( &thread->affinity, kproc_thiefid)
-        || (kaapi_cpuset_empty( &thread->affinity) && (kproc->kid == kproc_thiefid)) );
-      return thread;
-    }
-  }
-  
   /* else... 
      - here only do garbage, because in the current version the 
      thread that becomes ready is pushed into an other queue.

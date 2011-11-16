@@ -392,7 +392,7 @@ static int extract_seq(work_t* w, double** pos, double** end)
 
 
 static void thief_entrypoint
-(void* args, kaapi_thread_t* thread, kaapi_stealcontext_t* sc)
+(void* args, kaapi_thread_t* thread, kaapi_task_t* thieftask)
 {
   kaapi_taskadaptive_result_t* ktr;
 
@@ -408,7 +408,7 @@ static void thief_entrypoint
     for (; beg != end; ++beg) thief_work->res += *beg;
 
   /* preempt reduce */
-  if ((ktr = kaapi_get_thief_head(sc)) != NULL)
+  if ((ktr = kaapi_get_thief_head(thieftask)) != NULL)
   {
     kaapi_preempt_thief(sc, ktr, NULL, reducer, (void*)thief_work);
     goto redo_work;

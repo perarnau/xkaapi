@@ -2,7 +2,7 @@
 ** kaapi_cuda_error.h
 ** xkaapi
 ** 
-** Created on Jul 2010
+**
 ** Copyright 2010 INRIA.
 **
 ** Contributors :

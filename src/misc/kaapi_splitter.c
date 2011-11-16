@@ -48,8 +48,12 @@
 #include <string.h>
 #include <sys/types.h>
 
-int kaapi_splitter_default
-(kaapi_stealcontext_t* sc, int nreq,  kaapi_request_t* req, void* p)
+int kaapi_splitter_default(
+  kaapi_stealcontext_t* sc, 
+  int nreq,  
+  kaapi_request_t* req, 
+  void* p
+)
 {
  /* default splitter */
 
@@ -101,7 +105,14 @@ redo_steal:
 
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
-    /* for reduction, a result is needed. take care of initializing it */
+#if 0 //DEBUG NEW VERSION    /* for reduction, a result is needed. take care of initializing it */
+    void* data = 0;
+    if (vw->ktr_size)
+    {
+      data = kaapi_request_taskarg(req, vw->ktr_size);
+      memset(data, 0, vw->ktr_size);
+    }
+#endif
     kaapi_taskadaptive_result_t* ktr = NULL;
     if (vw->ktr_size)
     {
@@ -120,8 +131,8 @@ redo_steal:
       (sc, req, vw->body, total_size, ktr);
 
     kaapi_workqueue_init(&tw->wq, j - unit_size, j);
-    tw->body = vw->body;
-    tw->ktr_size = vw->ktr_size;
+    tw->body      = vw->body;
+    tw->ktr_size  = vw->ktr_size;
     tw->data_size = vw->data_size;
     memcpy(tw->data, vw->data, vw->data_size);
 

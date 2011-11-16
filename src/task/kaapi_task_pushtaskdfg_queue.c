@@ -2,7 +2,7 @@
 ** kaapi_hws_pushtask.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -70,19 +70,18 @@ int kaapi_thread_distribute_task (
                           sizeof(kaapi_tasksteal_arg_t), 
                           sizeof(void*)
       );
-  argsteal->origin_thread         = kaapi_self_thread_context();
   argsteal->origin_task           = local_task;
   argsteal->origin_body           = local_task->body;
   argsteal->origin_fmt            = 0;    /* should be computed by a thief */
   argsteal->war_param             = 0;    /* assume no war */
   argsteal->cw_param              = 0;    /* assume no cw mode */
-  kaapi_task_init_withstate(  remote_task, 
-                    kaapi_tasksteal_body, 
-                    argsteal,
-                    KAAPI_TASK_STATE_ALLOCATED
+  kaapi_task_init(  
+      remote_task, 
+      kaapi_tasksteal_body, 
+      argsteal
   );
   local_task->reserved             = remote_task;
-  argsteal->origin_body = kaapi_task_marksteal( local_task );
+  argsteal->origin_body = kaapi_task_marksteal( local_task ) ? local_task->body : 0;
   kaapi_assert_debug( argsteal->origin_body != 0);
   
   /* ok here initial local_task is marked as steal and distributed 
@@ -110,19 +109,18 @@ int kaapi_thread_distribute_task_with_nodeid (
   
   kaapi_tasksteal_arg_t* argsteal = 
       (kaapi_tasksteal_arg_t*)kaapi_thread_pushdata_align(thread, sizeof(kaapi_tasksteal_arg_t), sizeof(void*));
-  argsteal->origin_thread         = kaapi_self_thread_context();
   argsteal->origin_task           = local_task;
   argsteal->origin_body           = local_task->body;
   argsteal->origin_fmt            = 0;    /* should be computed by a thief */
   argsteal->war_param             = 0;    /* assume no war */
   argsteal->cw_param              = 0;    /* assume no cw mode */
-  kaapi_task_init_withstate(  remote_task, 
-                    kaapi_tasksteal_body, 
-                    argsteal,
-                    KAAPI_TASK_STATE_ALLOCATED
+  kaapi_task_init(  
+      remote_task, 
+      kaapi_tasksteal_body, 
+      argsteal
   );
   local_task->reserved             = remote_task;
-  argsteal->origin_body = kaapi_task_marksteal( local_task );
+  argsteal->origin_body = kaapi_task_marksteal( local_task ) ? local_task->body : 0;
   kaapi_assert_debug( argsteal->origin_body != 0);
   
   /* ok here initial local_task is marked as steal and distributed task correspond to a stealbody 

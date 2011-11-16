@@ -1,7 +1,7 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -44,53 +44,9 @@
 */
 #include "kaapi_impl.h"
 
-/*
- */
-void* kaapi_reply_init_adaptive_task
-(
-  kaapi_stealcontext_t*        vsc,
-  kaapi_request_t*             kreq,
-  kaapi_task_body_t            body,
-  size_t                       size,
-  kaapi_taskadaptive_result_t* ktr
-)
+void kaapi_init_adaptive(void)
 {
-  /* vsc the victim stealcontext */
-  /* tsc the thief stealcontext */
-
-  kaapi_reply_t* krep;
-  kaapi_taskadaptive_user_taskarg_t* adata;
-  kaapi_stealheader_t* sc_header;
-
-#warning TODO HERE
-#if 0
-  krep = kreq->reply;
-#endif
-
-  /* take into account extra body in udata + user data arg */
-  size += sizeof(kaapi_adaptive_thief_body_t);
-
-  /* offset = size aligned on the next 8 bytes boundary: stealheader will also be ! */
-  krep->offset = ((size+7UL) & ~0x7UL);
-  kaapi_assert_debug((krep->offset + sizeof(kaapi_stealheader_t)) <= KAAPI_REPLY_DATA_SIZE_MAX);
-
-  adata = (kaapi_taskadaptive_user_taskarg_t*)&krep->udata;
-  sc_header = (kaapi_stealheader_t*)(krep->udata + krep->offset);
-  kaapi_assert_debug( (((unsigned long)sc_header) & 0x7UL) == 0 ); 
-
-  /* initialize here: used in adapt_body */
-  sc_header->msc = vsc->header.msc;
-  /* copy flag without init flag: steal cannot occurs */
-  sc_header->flag = vsc->header.flag & ~KAAPI_SC_INIT;
-  /* ktr is also stored in request data structure
-     in order to be linked in kaapi_request_reply */
-  sc_header->ktr = ktr;
-  kreq->ktr = ktr;
-
-  /* initialize user related */
-  adata->ubody = (kaapi_adaptive_thief_body_t)body;
-  krep->u.s_task.body = kaapi_adapt_body;
-
-  /* return this area to the user */
-  return (void*)adata->udata;
+  kaapi_init_adapfmt();
+  kaapi_init_adaptmergefmt();
+  kaapi_init_begendadapfmt();
 }

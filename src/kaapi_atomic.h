@@ -1,7 +1,7 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -196,7 +196,7 @@ static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
 
 
 #elif defined(__APPLE__) /* if gcc version on Apple is less than 4.1 */
-#  warning "ON THIS ARCHITECTURE, PLEASE USE MORE RECENT GCC COMPILER (>=4.1)é
+#  warning "ON THIS ARCHITECTURE, PLEASE USE MORE RECENT GCC COMPILER (>=4.1)"
 #else
 #  error "Please add support for atomic operations on this system/architecture"
 #endif /* GCC > 4.1 */
@@ -418,7 +418,7 @@ static inline void kaapi_atomic_waitlock(kaapi_atomic_t* lock)
 #if defined(KAAPI_SCHED_LOCK_CAS)
   while (KAAPI_ATOMIC_READ(lock))
 #else
-  while (KAAPI_ATOMIC_READ(lock) == 0)
+  while (KAAPI_ATOMIC_READ(lock) <= 0)
 #endif
     kaapi_slowdown_cpu();
 }

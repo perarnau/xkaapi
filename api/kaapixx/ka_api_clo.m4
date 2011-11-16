@@ -1,23 +1,4 @@
 // --------------------------------------------------------------------
-// KAAPI_NUMBER_PARAMS is the number of possible parameters
-template<>
-struct Task<KAAPI_NUMBER_PARAMS> {
-  ifelse(KAAPI_NUMBER_PARAMS,0,`',`template<M4_PARAM(`class F$1', `', `, ')>')
-  struct Signature { 
-    M4_PARAM(`typedef typename TraitFormalParam<F$1>::type_inclosure_t inclosure$1_t;
-    ', `', `')
-    M4_PARAM(`typedef typename TraitFormalParam<F$1>::mode_t mode$1_t;
-    ', `', `')
-    M4_PARAM(`typedef F$1 signature$1_t;
-    ', `', `')
-//    void operator() ( THIS_TYPE_IS_USED_ONLY_INTERNALLY dummy M4_PARAM(`, signature$1_t', `', `') ) {}
-    void operator() ( THIS_TYPE_IS_USED_ONLY_INTERNALLY dummy M4_PARAM(`, signature$1_t', `', `') ) {}
-    void dummy_method_to_have_formal_param_type ( Thread* thread M4_PARAM(`, signature$1_t f$1', `', `') ){}
-  };
-};
-
-
-// --------------------------------------------------------------------
 // Kaapi closure representation
 ifelse(KAAPI_NUMBER_PARAMS,0,`',`template<M4_PARAM(`typename TraitFormal$1', `', `, ')>')
 struct KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) { 
@@ -30,6 +11,27 @@ struct KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) {
  M4_PARAM(`inclosure$1_t f$1;
   ', ` ', `')
 };
+
+
+// --------------------------------------------------------------------
+// KAAPI_NUMBER_PARAMS is the number of possible parameters
+template<>
+struct Task<KAAPI_NUMBER_PARAMS> {
+  ifelse(KAAPI_NUMBER_PARAMS,0,`',`template<M4_PARAM(`class F$1', `', `, ')>')
+  struct Signature { 
+    M4_PARAM(`typedef typename TraitFormalParam<F$1>::type_inclosure_t inclosure$1_t;
+    ', `', `')
+    M4_PARAM(`typedef typename TraitFormalParam<F$1>::mode_t mode$1_t;
+    ', `', `')
+    M4_PARAM(`typedef F$1 signature$1_t;
+    ', `', `')
+    typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`TraitFormalParam<F$1>', `', `,') >') TaskArg_t;
+    
+    void operator() ( THIS_TYPE_IS_USED_ONLY_INTERNALLY dummy M4_PARAM(`, signature$1_t', `', `') ) {}
+    void dummy_method_to_have_formal_param_type ( Thread* thread M4_PARAM(`, signature$1_t f$1', `', `') ){}
+  };
+};
+
 
 
 // --------------------------------------------------------------------

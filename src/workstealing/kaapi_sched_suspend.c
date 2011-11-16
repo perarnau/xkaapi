@@ -2,7 +2,7 @@
 ** kaapi_sched_suspend.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:01 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -59,8 +59,6 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 {
   int err;
   kaapi_request_status_t  ws_status;
-  kaapi_task_t*           startup_task;
-  kaapi_thread_t*         self_thread;
   kaapi_thread_context_t* thread;
   kaapi_thread_context_t* thread_condition;
   kaapi_task_t*           task_condition;
@@ -117,14 +115,6 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   kaapi_setcontext(kproc, 0);
   kaapi_wsqueuectxt_push( kproc, thread_condition );
 
-#if defined(HUGEDEBUG)
-  printf("%i::[IN] SchedSuspend: wakeup condition/thread:%p return!\n", 
-      kaapi_get_self_kid(),
-      (void*)thread_condition
-  );
-  fflush(stdout);
-#endif
-
   do {
 #if defined(KAAPI_USE_NETWORK)
     kaapi_network_poll();
@@ -154,13 +144,6 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
         kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
         kaapi_event_push0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
 #endif
-#if defined(HUGEDEBUG)
-  printf("%i::[OUT] SchedSuspend: wakeup condition/thread:%p return!\n", 
-      kaapi_get_self_kid(),
-      (void*)thread
-  );
-  fflush(stdout);
-#endif
         return 0;
       }
 
@@ -169,14 +152,6 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
         kaapi_lfree_push( kproc, kproc->thread );
 
       kaapi_setcontext( kproc, thread );
-
-#if defined(HUGEDEBUG)
-  printf("%i::SchedSuspend: wakeup thread:%p\n", 
-      kaapi_get_self_kid(),
-      (void*)thread
-  );
-  fflush(stdout);
-#endif
 
       goto redo_execution;
     }
@@ -195,28 +170,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     if (ws_status != KAAPI_REQUEST_S_OK)
       continue;
 
-#if defined(HUGEDEBUG)
-    printf("%i:: SchedSuspend: steal something: thief task:%p, original task:%p\n", 
-        kaapi_get_self_kid(),
-        (void*)kproc->thief_task,
-        (void*)((kaapi_tasksteal_arg_t*)kproc->thief_task->sp)->origin_task
-    );
-    fflush(stdout);
-#endif
-
-    /* push startup task ? */
-    self_thread = kaapi_threadcontext2thread(kproc->thread);
-    startup_task = kaapi_thread_toptask( self_thread );
-    kaapi_task_init(startup_task, (kaapi_task_body_t)kaapi_taskstartup_body, kproc);
-    kaapi_thread_pushtask(self_thread);
-
 redo_execution:
-#if defined(HUGEDEBUG)
-  printf("%i:: SchedSuspend: begin execframe\n", 
-      kaapi_get_self_kid()
-  );
-  fflush(stdout);
-#endif
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
@@ -243,14 +197,6 @@ redo_execution:
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
 #endif
     kaapi_assert( err != EINVAL);
-
-#if defined(HUGEDEBUG)
-    printf("%i:: SchedSuspend: end execframe, errorcode = %i\n", 
-        kaapi_get_self_kid(),
-        err
-    );
-    fflush(stdout);
-#endif
 
     if (err == EWOULDBLOCK) 
     {

@@ -1,7 +1,7 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:09 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -549,7 +549,7 @@ void buildFunCall2TaskSpawn( OneCall* oc )
 
   SgStatement* init_task_statement = SageBuilder::buildExprStatement(
     SageBuilder::buildFunctionCallExp(
-      "kaapi_task_initdfg",
+      "kaapi_task_init",
       SageBuilder::buildVoidType(),
       SageBuilder::buildExprListExp(
         SageBuilder::buildVarRefExp (task_name.str(), oc->scope ),

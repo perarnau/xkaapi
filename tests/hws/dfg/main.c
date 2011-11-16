@@ -82,7 +82,7 @@ int main(int ac, char** av)
     kaapi_thread_allocateshareddata
       (&wui->val, thread, sizeof(unsigned int));
     *kaapi_data(unsigned int, &wui->val) = j;
-    kaapi_task_initdfg(task, flat_body, wui);
+    kaapi_task_init(task, flat_body, wui);
     kaapi_thread_pushtask(thread);
 #endif
 
@@ -99,7 +99,7 @@ int main(int ac, char** av)
       (&wui->val, thread, sizeof(unsigned int));
     *kaapi_data(unsigned int, &wui->val) = j;
     task = kaapi_thread_toptask(thread);
-    kaapi_task_initdfg(task, numa_body, wui);
+    kaapi_task_init(task, numa_body, wui);
     kaapi_thread_distribute_task(thread, KAAPI_HWS_LEVELID_NUMA);
 #endif
   }

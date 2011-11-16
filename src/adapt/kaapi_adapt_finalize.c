@@ -2,7 +2,7 @@
 ** kaapi_task_finalize.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -42,8 +42,6 @@
 ** terms.
 ** 
 */
-
-
 #include "kaapi_impl.h"
 
 
@@ -52,70 +50,77 @@
 void kaapi_taskfinalize_body( void* args, kaapi_thread_t* thread )
 {
   kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)args;
+  kaapi_assert_debug(!(sc->flag & KAAPI_SC_PREEMPTION));
 
-  kaapi_assert_debug(!(sc->header.flag & KAAPI_SC_PREEMPTION));
+  /* avoid read reordering */
+  kaapi_readmem_barrier();
 
   /* ensure all working thieves are done. the steal
      sync has been done in kaapi_task_end_adaptive
    */
   while (KAAPI_ATOMIC_READ(&sc->thieves.count))
     kaapi_slowdown_cpu();
-
-  /* avoid read reordering */
-  kaapi_readmem_barrier();
-
-  /* restore the upper frame */
-  kaapi_thread_restore_frame(thread - 1, &sc->frame);
 }
 
 
 /**
 */
-void kaapi_task_end_adaptive( kaapi_stealcontext_t* sc )
+int kaapi_task_end_adaptive( kaapi_task_t* mergetask )
 {
-  /* end with the adapt dummy task -> change body with nop */
+  kaapi_taskmerge_arg_t* merge_arg;
+  kaapi_stealcontext_t* sc;
+  kaapi_thread_t* thread;
+  kaapi_thread_context_t* self_thread;
 
-  kaapi_thread_t* const thread = kaapi_self_thread();
+  merge_arg = kaapi_task_getargst(mergetask, kaapi_taskmerge_arg_t);
+  sc = (kaapi_stealcontext_t*)merge_arg->shared_sc.data;
 
-  /* avoid to steal old instance of this task */
-  sc->splitter = 0;
-  sc->argsplitter = 0;
-  
-  /* if this is a preemptive algorithm, it is assumed the
-     user has preempted all the children (not doing so is
-     an error). we restore the frame and return without
-     waiting for anyting.
-   */
-  if (sc->header.flag & KAAPI_SC_PREEMPTION)
-  {
-    /* fixme: we assume that no steal can occur if the
-       workqueue is empty. but kaapi_thread_restore_frame
-       deallocates data, and the workqueue can now point
-       everywhere. a steal may thus occur. I doubt the
-       above call to kaapi_synchronize_steal is enough.
-     */
-    kaapi_synchronize_steal(sc);
-
-    kaapi_assert_debug(sc->thieves.list.head == 0);
-    kaapi_task_setbody(sc->ownertask, kaapi_nop_body);
-    kaapi_thread_restore_frame(thread, &sc->frame);
-    return ;
-  }
-
-  /* steal synchronization protocol. it is done
-     here since we need to access the ownertask
-     before the nop body is set.
-     see comments in kaapi_task_preempt_head.c
+  /* Synchronize with the theft on the current thread.
+     After the following instruction, we have:
+     - no more theft is under stealing and master counter or list of thief is
+     correctly setted.
   */
-  kaapi_synchronize_steal(sc);
+  self_thread = kaapi_self_thread_context();
+  thread = kaapi_threadcontext2thread( self_thread );
+  kaapi_synchronize_steal(self_thread);
 
-  kaapi_task_setbody(sc->ownertask, kaapi_nop_body);
+  if (sc->msc == sc)
+  {
+    /* if this is a preemptive algorithm, it is assumed the
+       user has preempted all the children (not doing so is
+       an error). we restore the frame and return without
+       waiting for anyting.
+     */
+    if (sc->flag & KAAPI_SC_PREEMPTION)
+    {
 
-  /* not a preemptive algorithm. push a finalization task
-     to wait for thieves and block until finalization done.
-   */
-  kaapi_task_init
-    (kaapi_thread_toptask(thread), kaapi_taskfinalize_body, sc);
-  kaapi_thread_pushtask(thread);
-  kaapi_sched_sync();
+      if (sc->thieves.list.head != 0) 
+        return EAGAIN;
+      kaapi_sched_sync_(self_thread);
+      kaapi_thread_restore_frame(thread, &merge_arg->saved_frame);
+      return 0;
+    }
+
+    /* not a preemptive algorithm. push a finalization task
+       to wait for thieves and block until finalization done.
+    */
+    kaapi_task_init(
+      kaapi_thread_toptask(thread), 
+      kaapi_taskfinalize_body, 
+      sc
+    );
+    kaapi_thread_pushtask(thread);
+
+    kaapi_sched_sync_(self_thread);
+    kaapi_thread_restore_frame(thread, &merge_arg->saved_frame);
+
+    return 0;
+  }
+  
+  /* else merge of a non master context 
+     - here no more thief
+     Then flush memory & signal master context
+  */
+  kaapi_writemem_barrier();
+  return 0;
 }

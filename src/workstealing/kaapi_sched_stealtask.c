@@ -1,7 +1,7 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -44,21 +44,26 @@
 */
 #include "kaapi_impl.h"
 
-void kaapi_sched_steal_task
+int kaapi_sched_steal_task
 (
   kaapi_hashmap_t*              map, 
-  kaapi_thread_context_t*       thread, 
+  const kaapi_format_t*         task_fmt,
   kaapi_task_t*                 task,
   kaapi_listrequest_t*          lrequests, 
   kaapi_listrequest_iterator_t* lrrange
 )
 {
-  const kaapi_format_t* task_fmt = kaapi_format_resolvebybody( task->body );
-  unsigned int war_param = 0;
-  unsigned int cw_param = 0;
-  size_t wc = 0;
+  kaapi_task_t* tasksteal;
+  unsigned int war_param;
+  unsigned int cw_param;
+  size_t wc;
 
-  if (task_fmt == 0) return;
+  if (task_fmt == 0) 
+    return ENOENT;
+
+  war_param = 0;
+  cw_param = 0;
+  wc = 0;
 
   /* if map == history of visited access, then compute readiness */
   if (map !=0)
@@ -73,47 +78,42 @@ void kaapi_sched_steal_task
     );
   }
 
-  if ((wc !=0) || !kaapi_task_isstealable(task)) return;
+  if (wc !=0)
+    return EACCES;
+    
+  if (!kaapi_task_isstealable(task))
+    return EPERM;
 
-  kaapi_task_body_t body = kaapi_task_marksteal( task );
-  if (unlikely( !body ) ) return;
+  int retval = kaapi_task_marksteal( task );
+  if (unlikely( !retval ) ) 
+    return EBUSY;
   
-//printf("Steal task: %p, name:'%s' WC=%i\n", (void*)task, task_fmt->name, wc); fflush(stdout);
   kaapi_request_t* request =
 	kaapi_listrequest_iterator_get( lrequests, lrrange );
   kaapi_assert_debug( request != 0 );
-  ((kaapi_task_t* volatile)task)->reserved = request->thief_task;
 
-#if 0
-  printf("%i::Steal DFG from: %i request:%p version:%i \n", 
-    kaapi_get_self_kid(),
-    (int)request->ident, 
-    request, 
-    (int)request->version ); 
-  fflush(stdout);
-#endif
-
-  kaapi_assert_debug( (kaapi_task_getstate(request->thief_task) & ~KAAPI_TASK_STATE_SIGNALED) == KAAPI_TASK_STATE_ALLOCATED );
-  
-  /* barrier not necessary here: the victim will only try to access to task'state (already committed) 
-     and reserved field */
-    
   /* - create the task steal that will execute the stolen task
- The task stealtask stores:
- - the original thread
- - the original task pointer
- - the pointer to shared data with R / RW access data
- - and at the end it reserve enough space to store original task arguments
+     The task stealtask stores:
+     - the original task pointer
+     - the pointer to shared data with R / RW access data
+     - and at the end it reserve enough space to store original task arguments
   */
-  kaapi_tasksteal_arg_t* argsteal = request->thief_sp;
-  argsteal->origin_thread         = thread;
+  kaapi_tasksteal_arg_t* argsteal 
+    = (kaapi_tasksteal_arg_t*)kaapi_request_pushdata(request, sizeof(kaapi_tasksteal_arg_t));
   argsteal->origin_task           = task;
-  argsteal->origin_body           = body;
+  argsteal->origin_body           = task->body;
   argsteal->origin_fmt            = task_fmt;
   argsteal->war_param             = war_param;  
   argsteal->cw_param              = cw_param;
-  /* TODO MUST be always this task no write */
-  request->thief_task->body       = kaapi_tasksteal_body;
+
+  tasksteal = kaapi_request_toptask(request);
+  kaapi_task_init( 
+    tasksteal,
+    kaapi_tasksteal_body,
+    argsteal
+  );
+  ((kaapi_task_t* volatile)task)->reserved = tasksteal;
+  kaapi_request_pushtask(request);
 
   /* success of steal */
   kaapi_request_replytask( request, KAAPI_REQUEST_S_OK);
@@ -121,4 +121,6 @@ void kaapi_sched_steal_task
     
   /* advance to the next request */
   kaapi_listrequest_iterator_next( lrequests, lrrange );
+
+  return 0;
 }

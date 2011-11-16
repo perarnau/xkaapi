@@ -3,7 +3,7 @@
 ** athapascan-1.h
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:14 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -695,7 +695,7 @@ namespace a1 {
       void operator()()
       { 
         kaapi_task_t* clo = kaapi_thread_toptask( _thread );
-        kaapi_task_initdfg( clo, KaapiTask0<TASK>::body, 0 );
+        kaapi_task_init( clo, KaapiTask0<TASK>::body, 0 );
         _attr(_thread, clo);
         kaapi_thread_pushtask( _thread );    
       }

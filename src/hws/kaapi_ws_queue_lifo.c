@@ -2,7 +2,7 @@
  ** kaapi_ws_queue_lifo.c
  ** xkaapi
  ** 
- ** Created on Tue Mar 31 15:19:14 2009
+ **
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
@@ -46,7 +46,7 @@
 #include "kaapi_impl.h"
 
 /* Current implementation is a bounded queue manage.
-*/
+ */
 typedef struct lifo_queue
 {
   kaapi_ws_lock_t lock;                      /* toremove, use block lock */
@@ -57,10 +57,10 @@ typedef struct lifo_queue
 
 
 static kaapi_ws_error_t _kaapi_ws_queue_lifo_push(
-    kaapi_ws_block_t* ws_bloc __attribute__((unused)),
-    void* p, 
-    kaapi_task_t* task
-)
+                                                  kaapi_ws_block_t* ws_bloc __attribute__((unused)),
+                                                  void* p, 
+                                                  kaapi_task_t* task
+                                                  )
 {
   /* assume q->top < sizeof(q->tasks) */
   lifo_queue_t* const q = (lifo_queue_t*)p;
@@ -75,9 +75,10 @@ static kaapi_ws_error_t _kaapi_ws_queue_lifo_push(
 static void callback_empty( kaapi_task_t* task)
 {
   kaapi_stealcontext_t* const sc =
-    kaapi_task_getargst(task, kaapi_stealcontext_t);
-
-  KAAPI_ATOMIC_DECR(&sc->header.msc->thieves.count);
+  kaapi_task_getargst(task, kaapi_stealcontext_t);
+  
+#warning "TODO"
+//  KAAPI_ATOMIC_DECR(&sc->header.msc->thieves.count);
   /* deallocate the stealcontext */
   free(sc);
   task->sp = NULL;
@@ -86,47 +87,49 @@ static void callback_empty( kaapi_task_t* task)
 
 static kaapi_ws_error_t _kaapi_ws_queue_lifo_steal
 (
-    kaapi_ws_block_t* ws_bloc __attribute__((unused)),
-    void* p,
-    kaapi_listrequest_t* lr,
-    kaapi_listrequest_iterator_t* lri
-)
+ kaapi_ws_block_t* ws_bloc __attribute__((unused)),
+ void* p,
+ kaapi_listrequest_t* lr,
+ kaapi_listrequest_iterator_t* lri
+ )
 {
   lifo_queue_t* const q = (lifo_queue_t*)p;
   kaapi_request_t* req;
-
+  
   /* avoid to take the lock */
   if (q->top == 0) return KAAPI_WS_ERROR_EMPTY;
   
   kaapi_ws_lock_lock(&q->lock);
-
+  
   req = kaapi_listrequest_iterator_get(lr, lri);
   while ((req != NULL) && q->top)
   {
     kaapi_task_t* const task = q->tasks[--q->top];
     
     kaapi_task_body_t task_body = kaapi_task_getbody(task);
-    if (task_body == kaapi_hws_adapt_body)
-    {
-      /* todo */
-      kaapi_task_steal_adapt(0, task, lr, lri, &callback_empty);
-
-      /* task is not empty */
-      if (task->sp != NULL)
-      {
-	++q->top;
-	break ;
-      }
-
-      /* the request may have been updated. reread it. */
-      req = kaapi_listrequest_iterator_get(lr, lri);
-    }
-    else /* != kaapi_hws_adapt_body */
-    {
-#if CONFIG_HWS_COUNTERS
-      kaapi_hws_inc_steal_counter(p, req->ident);
-#endif
-
+    const kaapi_format_t* task_fmt = kaapi_format_resolvebybody( task_body );
+#warning "TODO: get error code to call the callback here and avoid passing it"
+//      kaapi_task_steal_adapt(0, task, lr, lri, &callback_empty);
+    int err = kaapi_sched_steal_or_split_task(
+                                              0,
+                                              task_fmt,
+                                              task,
+                                              lr,
+                                              lri,
+                                              &callback_empty
+                                              );
+    if (err == 0)
+      callback_empty(task);
+      
+      
+    /* the request may have been updated. reread it. */
+    req = kaapi_listrequest_iterator_get(lr, lri);
+      
+#if 0
+{
+/* Ici a voir: la tâche dans la queue est deja dans un etat ou elle peut etre
+   volee sans la construction de la fonction trampoline stealbody_
+*/
       /* special case of kaapi_sched_steal_task */
       req->thief_sp = task->sp;
       req->thief_task = task;
@@ -136,11 +139,12 @@ static kaapi_ws_error_t _kaapi_ws_queue_lifo_steal
       /* next request */
       req = kaapi_listrequest_iterator_next(lr, lri);
     }
+#endif
   }
-
+  
   /* q->top consistency */
   kaapi_writemem_barrier();
-
+  
   kaapi_ws_lock_unlock(&q->lock);
   
   return KAAPI_WS_ERROR_SUCCESS;
@@ -149,10 +153,10 @@ static kaapi_ws_error_t _kaapi_ws_queue_lifo_steal
 
 static kaapi_ws_error_t _kaapi_ws_queue_lifo_pop
 (
-    kaapi_ws_block_t* ws_bloc,
-    void* p,
-    kaapi_request_t* req
-)
+ kaapi_ws_block_t* ws_bloc,
+ void* p,
+ kaapi_request_t* req
+ )
 {
   /* currently fallback to steal */
   

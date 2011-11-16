@@ -1,7 +1,7 @@
 /*
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:09 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -47,6 +47,7 @@
 
 #include "config.h"
 #include "kaapi_defs.h"
+#include <stddef.h>
 #include <string.h>
 #if defined(KAAPI_USE_NUMA)
 #include <numa.h>

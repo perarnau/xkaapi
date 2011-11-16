@@ -1,7 +1,7 @@
 /*
  ** xkaapi
  ** 
- ** Created on Tue Mar 31 15:18:04 2009
+ **
  ** Copyright 2009 INRIA.
  **
  ** Contributor :
@@ -56,6 +56,7 @@ static int kaapi_task_splitter_readylist(
   size_t                        countreq
 )
 {
+  kaapi_task_t*               tasksteal;
   kaapi_tasklist_t*           master_tasklist;
   kaapi_request_t*            request    = 0;
   kaapi_taskstealready_arg_t* argsteal;
@@ -63,7 +64,7 @@ static int kaapi_task_splitter_readylist(
   kaapi_assert_debug( taskdescr_beg != taskdescr_end );
   /* new assert in this version: only one task steal */
 
-  size_t blocsize = (taskdescr_end-taskdescr_beg+countreq-1)/countreq;
+//  size_t blocsize = (taskdescr_end-taskdescr_beg+countreq-1)/countreq;
 //if (blocsize >1) printf("Steal with blocize:%i\n", blocsize );  
 
   /* decrement with the number of thief: one single increment in place of several */
@@ -85,7 +86,7 @@ static int kaapi_task_splitter_readylist(
   KAAPI_ATOMIC_ADD(&master_tasklist->count_thief, (taskdescr_end-taskdescr_beg + blocsize-1)/blocsize);
 #endif
 
-  KAAPI_DEBUG_INST(int cnt_reply = 0;)
+  KAAPI_DEBUG_INST(int cnt_reply __attribute__((unused)) = 0;)
   
   while (taskdescr_beg != taskdescr_end)
   {
@@ -100,7 +101,8 @@ static int kaapi_task_splitter_readylist(
          - and at the end it reserve enough space to store original task arguments
       The original body is saved as the extra body of the original task data structure.
     */
-    argsteal = (kaapi_taskstealready_arg_t*)request->thief_sp;
+    argsteal
+      = (kaapi_taskstealready_arg_t*)kaapi_request_pushdata(request, sizeof(kaapi_taskstealready_arg_t));
     argsteal->master_tasklist       = master_tasklist;
     argsteal->victim_tasklist       = (tasklist == master_tasklist ? 0 : tasklist);
 #if defined(TASKLIST_REPLY_ONETD)
@@ -118,8 +120,14 @@ static int kaapi_task_splitter_readylist(
       argsteal->td_end              = taskdescr_beg;
     KAAPI_DEBUG_INST(++cnt_reply;)
 #endif
+    tasksteal = kaapi_request_toptask(request);
+    kaapi_task_init( 
+      tasksteal,
+      kaapi_taskstealready_body,
+      argsteal
+    );
+    kaapi_request_pushtask(request);
 
-    request->thief_task->body       = kaapi_taskstealready_body;    
     kaapi_request_replytask( request, KAAPI_REQUEST_S_OK); /* success of steal */
     KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( lrrange ) );
 

@@ -2,12 +2,11 @@
  ** kaapi_sched_idle.c
  ** xkaapi
  ** 
- ** Created on Tue Mar 31 15:18:04 2009
+ **
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
  **
- ** christophe.laferriere@imag.fr
  ** thierry.gautier@inrialpes.fr
  ** fabien.lementec@imag.fr
  **
@@ -57,9 +56,7 @@
 void kaapi_sched_idle ( kaapi_processor_t* kproc )
 {
   kaapi_request_status_t  ws_status;
-  kaapi_task_t*           startup_task;
   kaapi_thread_context_t* thread;
-  kaapi_thread_t*         self_thread;
   int err;
   
   kaapi_assert_debug( kproc !=0 );
@@ -89,7 +86,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     }
     
     /* try to wake up suspended thread first, inline test to avoid function call */
-    if (!kaapi_sched_readyempty(kproc) || !kaapi_wsqueuectxt_empty(kproc) )
+    if (!kaapi_wsqueuectxt_empty(kproc))
     {
       thread = kaapi_sched_wakeup(kproc, kproc->kid, 0, 0); 
       
@@ -101,13 +98,6 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
         
         /* set new context to the kprocessor */
         kaapi_setcontext(kproc, thread);
-#if defined(HUGEDEBUG)
-  printf("%i:: SchedIdle: wakeup thread:%p\n", 
-      kaapi_get_self_kid(),
-      (void*)thread
-  );
-  fflush(stdout);
-#endif
         goto redo_execute;
       }
     }
@@ -126,29 +116,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     if (ws_status != KAAPI_REQUEST_S_OK)
       continue;
 
-#if defined(HUGEDEBUG)
-    printf("%i:: SchedIdle: steal task, thieftask:%p, original task:%p\n", 
-        kaapi_get_self_kid(),
-        (void*)kproc->thief_task,
-        (void*)((kaapi_tasksteal_arg_t*)kproc->thief_task->sp)->origin_task
-    );
-    fflush(stdout);
-#endif
-        
-    /* push startup task ? */
-    self_thread = kaapi_threadcontext2thread(kproc->thread);
-    startup_task = kaapi_thread_toptask( self_thread );
-    kaapi_task_init(startup_task, (kaapi_task_body_t)kaapi_taskstartup_body, kproc);
-    kaapi_thread_pushtask(self_thread);
-
-redo_execute:
-#if defined(HUGEDEBUG)
-  printf("%i:: SchedIdle: begin execframe\n", 
-      kaapi_get_self_kid()
-  );
-  fflush(stdout);
-#endif
-    
+redo_execute:    
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
     kaapi_event_push0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
@@ -172,13 +140,6 @@ redo_execute:
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_event_push0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
-#endif
-#if defined(HUGEDEBUG)
-  printf("%i:: SchedIdle: end execframe, errorcode = %i\n", 
-      kaapi_get_self_kid(),
-      err
-  );
-  fflush(stdout);
 #endif
     
     if (err == EWOULDBLOCK) 

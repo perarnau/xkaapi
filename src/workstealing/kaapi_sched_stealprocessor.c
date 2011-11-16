@@ -2,7 +2,7 @@
 ** kaapi_sched_stealprocessor.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:18:04 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -67,20 +67,7 @@ int kaapi_sched_stealprocessor(
   /* first request */
   request = kaapi_listrequest_iterator_get( lrequests, lrrange );
 
-  /* 1/ steal in ready list */
-  while ((request !=0) && !kaapi_sched_readyempty(kproc))
-  {
-    thread = kaapi_sched_stealready( kproc, request->ident);
-    if (thread != 0)
-    {
-      /* reply a task to execute the thread */
-      request->thief_task->body = kaapi_execthread_body;
-      request->thief_task->sp   = thread;      
-      kaapi_request_replytask(request, KAAPI_REQUEST_S_OK);
-      KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( lrrange ) );
-      request = kaapi_listrequest_iterator_next( lrequests, lrrange );
-    }
-  }
+  /* 0/ steal in ready list : to add in the futur */
 
   /* 2/ steal in suspended threads */
   cell = kproc->lsuspend.tail;

@@ -2,7 +2,7 @@
 ** kaapi_init.c
 ** xkaapi
 ** 
-** Created on Tue Mar 31 15:19:03 2009
+**
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
@@ -187,6 +187,7 @@ int kaapi_init(int flag, int* argc, char*** argv)
     return EALREADY;
 
   kaapi_init_basicformat();
+  kaapi_init_adaptive();
   
   /* set up runtime parameters */
   kaapi_assert_m( 0 == kaapi_setup_param(), "kaapi_setup_param" );
