@@ -6,7 +6,7 @@
 ##  Copyright 2009 INRIA. All rights reserved.
 ##
 
-SUBDIRS=kaapi kaapixx atha fortran kastl quark
+SUBDIRS=kaapixx kaapic kaapif quark kastl atha
 
 DIST=check-headers.am
 

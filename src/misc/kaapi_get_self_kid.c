@@ -49,7 +49,9 @@
 
 unsigned int kaapi_get_self_kid(void)
 {
-  return (unsigned int)kaapi_get_current_processor()->kid;
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  if (kproc ==0) return -1;
+  return (unsigned int)kproc->kid;
 }
 
 unsigned int kaapi_get_self_cpu_id(void)

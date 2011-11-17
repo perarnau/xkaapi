@@ -615,7 +615,7 @@ typedef int (*kaapi_thief_reducer_t)(
 */
 typedef struct kaapi_request_t {
   kaapi_atomic_t*               status;         /* request status */
-  uintptr_t                     ident;          /* system wide id of the remote queue */
+  uintptr_t                     ident;          /* system wide id of the queue */
   kaapi_frame_t                 frame;          /* where to store theft tasks/data */
 #if defined(KAAPI_DEBUG)
   volatile uintptr_t            version;
@@ -824,7 +824,10 @@ static inline int kaapi_thread_pushtask(kaapi_thread_t* thread)
     \param thread INOUT a pointer to the kaapi_stack_t data structure.
     \retval EINVAL invalid argument: bad stack pointer.
 */
-extern int kaapi_thread_pushtask_adaptive(kaapi_thread_t* thread);
+extern int kaapi_thread_pushtask_adaptive(
+  kaapi_thread_t* thread,
+  kaapi_adaptivetask_splitter_t user_splitter
+);
 
 /** \ingroup TASK
     The function kaapi_thread_pushtask() pushes the top task into the stack.
@@ -1134,7 +1137,12 @@ static inline kaapi_task_t* kaapi_request_toptask( kaapi_request_t* request )
     \param headtail_flag IN either KAAPI_REQUEST_REPLY_HEAD or KAAPI_REQUEST_REPLY_TAIL
     \retval EINVAL invalid argument: bad request pointer.
 */
-extern int kaapi_request_pushtask_adaptive(kaapi_request_t* request, kaapi_task_t* victim_task, int headtail_flag);
+extern int kaapi_request_pushtask_adaptive(
+  kaapi_request_t* request, 
+  kaapi_task_t* victim_task, 
+  kaapi_adaptivetask_splitter_t user_splitter,
+  int headtail_flag
+);
 
 #define KAAPI_REQUEST_REPLY_HEAD 0x0
 #define KAAPI_REQUEST_REPLY_TAIL 0x1
@@ -1142,18 +1150,26 @@ extern int kaapi_request_pushtask_adaptive(kaapi_request_t* request, kaapi_task_
 /** \ingroup ADAPTIVE
     push the task associated with an adaptive request
 */
-static inline void kaapi_reply_pushtask_adaptive_tail(kaapi_request_t* request, kaapi_task_t* victim_task)
+static inline void kaapi_reply_pushtask_adaptive_tail(
+  kaapi_request_t* request, 
+  kaapi_task_t* victim_task,
+  kaapi_adaptivetask_splitter_t splitter
+)
 {
   /* sc the stolen stealcontext */
-  kaapi_request_pushtask_adaptive(request, victim_task, KAAPI_REQUEST_REPLY_TAIL);
+  kaapi_request_pushtask_adaptive(request, victim_task, splitter, KAAPI_REQUEST_REPLY_TAIL);
 }
 
 /** \ingroup ADAPTIVE
     push the task associated with an adaptive request
 */
-static inline void kaapi_reply_pushtask_adaptive_head(kaapi_request_t* request, kaapi_task_t* victim_task)
+static inline void kaapi_reply_pushtask_adaptive_head(
+  kaapi_request_t* request, 
+  kaapi_task_t* victim_task,
+  kaapi_adaptivetask_splitter_t splitter
+)
 {
-  kaapi_request_pushtask_adaptive(request, victim_task, KAAPI_REQUEST_REPLY_HEAD);
+  kaapi_request_pushtask_adaptive(request, victim_task, splitter, KAAPI_REQUEST_REPLY_HEAD);
 }
 
 /** \ingroup ADAPTIVE

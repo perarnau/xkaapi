@@ -128,7 +128,8 @@ _kaapi_adaptbody_set_view_param
 static kaapi_adaptivetask_splitter_t 
 _kaapi_adaptbody_get_splitter(const struct kaapi_format_t* fmt, const void* sp)
 { 
-  return kaapi_format_get_splitter(__resolve_format(sp), __constget_usersp(sp));
+  const kaapi_taskadaptive_arg_t* arg = (const kaapi_taskadaptive_arg_t*)sp;
+  return arg->user_splitter;
 }
 
 void kaapi_init_adapfmt(void)

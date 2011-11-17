@@ -39,5 +39,5 @@
          &TASK::dummy_method_to_have_formal_param_type, M4_PARAM(`e$1', `', `, ') 
       );
       kaapi_request_pushtask(_req);
-      kaapi_request_pushtask_adaptive( _req, _adaptivetask, _flag );
+      kaapi_request_pushtask_adaptive( _req, _adaptivetask, 0, _flag );
     }

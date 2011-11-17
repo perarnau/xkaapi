@@ -705,6 +705,7 @@ typedef struct kaapi_taskadaptive_arg_t {
   kaapi_access_t                shared_sc;
   kaapi_task_body_t             user_body;
   void*                         user_sp;
+  kaapi_adaptivetask_splitter_t user_splitter;
 } kaapi_taskadaptive_arg_t;
 
 /** Argument for the companion task kaapi_merge_body.

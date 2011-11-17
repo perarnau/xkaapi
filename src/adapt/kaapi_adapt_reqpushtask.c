@@ -54,7 +54,12 @@
       - it updates (using XX_body) the thief result with the list of thieves
     - link victim steal context and thief steal context using the direction encoded in headtail_flag
  */
-int kaapi_request_pushtask_adaptive(kaapi_request_t* request, kaapi_task_t* victim_task, int headtail_flag)
+int kaapi_request_pushtask_adaptive(
+  kaapi_request_t*              request, 
+  kaapi_task_t*                 victim_task, 
+  kaapi_adaptivetask_splitter_t user_splitter,
+  int                           headtail_flag
+)
 {
   kaapi_taskadaptive_arg_t* victim_adapt_arg;
   kaapi_taskadaptive_arg_t* adapt_arg;
@@ -66,7 +71,7 @@ int kaapi_request_pushtask_adaptive(kaapi_request_t* request, kaapi_task_t* vict
                   ||  (victim_task->body == (kaapi_task_body_t)kaapi_taskbegendadapt_body) );
   
   toptask = kaapi_thread_toptask(&request->frame);
-  kaapi_thread_pushtask_adaptive(&request->frame);  
+  kaapi_thread_pushtask_adaptive(&request->frame, user_splitter);  
 
   /* here toptask was replaced in pushtask_adaptive by a kaapi_taskadapt_body, 
      but flags remain equals.

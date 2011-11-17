@@ -3331,7 +3331,7 @@ namespace ka {
           KaapiTask0<TASK>::body,
           0
         );
-        kaapi_request_pushtask_adaptive( _req, _adaptivetask, _flag );
+        kaapi_request_pushtask_adaptive( _req, _adaptivetask, 0, _flag );
       }
 
 #include "ka_api_reqspawn.h"

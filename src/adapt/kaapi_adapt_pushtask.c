@@ -47,7 +47,10 @@
 
 /*
 */
-int kaapi_thread_pushtask_adaptive(kaapi_thread_t* thread)
+int kaapi_thread_pushtask_adaptive(
+  kaapi_thread_t* thread, 
+  kaapi_adaptivetask_splitter_t splitter
+)
 {
   kaapi_taskadaptive_arg_t* arg;
   kaapi_task_t* task_adapt;
@@ -59,7 +62,9 @@ int kaapi_thread_pushtask_adaptive(kaapi_thread_t* thread)
   kaapi_stealcontext_t* sc 
       = kaapi_thread_pushdata_align(thread, sizeof(kaapi_stealcontext_t),sizeof(void*));
 
-  arg = (kaapi_taskadaptive_arg_t*)kaapi_thread_pushdata(thread, sizeof(kaapi_taskadaptive_arg_t));
+  arg = (kaapi_taskadaptive_arg_t*)kaapi_thread_pushdata(
+    thread, sizeof(kaapi_taskadaptive_arg_t)
+  );
   kaapi_assert_debug((sc != 0) && (arg !=0));
 
   merge_arg = (kaapi_taskmerge_arg_t*)kaapi_thread_pushdata
@@ -85,9 +90,11 @@ int kaapi_thread_pushtask_adaptive(kaapi_thread_t* thread)
     KAAPI_ATOMIC_WRITE(&sc->thieves.count, 0);
   }
 
+  /* initialize the taskadapt_body args */
   kaapi_access_init(&arg->shared_sc, sc);
-  arg->user_body = task_adapt->body;
-  arg->user_sp   = task_adapt->sp;
+  arg->user_body     = task_adapt->body;
+  arg->user_sp       = task_adapt->sp;
+  arg->user_splitter = splitter;
   
   /* keep the same flag as the pushed task and add splittable attribut.
      Replace the body to the adaptive body
