@@ -67,7 +67,7 @@ int kaapi_sched_splittask
   /* Only split if task is INIT or EXEC.
      The victim may synchronize with the end of thief on the lock of the current thread
   */  
-  if ( (orig_state == KAAPI_TASK_STATE_INIT) && (orig_state == KAAPI_TASK_STATE_EXEC) )
+  if ( (orig_state == KAAPI_TASK_STATE_INIT) || (orig_state == KAAPI_TASK_STATE_EXEC) )
   {
     splitter = kaapi_format_get_splitter( task_fmt, task->sp );
     if (splitter !=0)

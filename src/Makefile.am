@@ -96,6 +96,7 @@ libkaapi_la_SOURCES=\
   thread/kaapi_version_find.c \
   thread/kaapi_version_replicat.c \
   adapt/kaapi_adapt_adaptfmt.c \
+  adapt/kaapi_adapt_api_lr.c \
   adapt/kaapi_adapt_begendadaptfmt.c \
   adapt/kaapi_adapt_finalize.c \
   adapt/kaapi_adapt_init.c \

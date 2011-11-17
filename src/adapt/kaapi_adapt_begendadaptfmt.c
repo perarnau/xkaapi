@@ -66,7 +66,7 @@ _kaapi_begendadaptbody_get_mode_param(const kaapi_format_t* fmt, unsigned int it
 static kaapi_access_t 
 _kaapi_begendadaptbody_get_access_param(const kaapi_format_t* fmt, unsigned int ith, const void* sp)
 {
-  kaapi_taskmerge_arg_t* arg = (kaapi_taskmerge_arg_t*)sp;
+  const kaapi_taskbegendadaptive_arg_t* arg = (const kaapi_taskbegendadaptive_arg_t*)sp;
   kaapi_assert_debug( ith == 0 );
   return arg->shared_sc;
 }
@@ -75,7 +75,7 @@ static void
 _kaapi_begendadaptbody_set_access_param
   (const kaapi_format_t* fmt, unsigned int ith, void* sp, const kaapi_access_t* a)
 {
-  kaapi_taskmerge_arg_t* arg = (kaapi_taskmerge_arg_t*)sp;
+  kaapi_taskbegendadaptive_arg_t* arg = (kaapi_taskbegendadaptive_arg_t*)sp;
   kaapi_assert_debug( ith == 0 );
   arg->shared_sc = *a;
 }
@@ -103,6 +103,13 @@ _kaapi_begendadaptbody_set_view_param
   /* else nothing to do: never reallocated because, 1D view ! */
 }
 
+static kaapi_adaptivetask_splitter_t 
+_kaapi_begendadaptbody_get_splitter(const struct kaapi_format_t* fmt, const void* sp)
+{ 
+  const kaapi_taskbegendadaptive_arg_t* arg = (const kaapi_taskbegendadaptive_arg_t*)sp;
+  return arg->splitter;
+}
+
 void kaapi_init_begendadapfmt(void)
 {
   kaapi_format_taskregister_func( 
@@ -122,6 +129,6 @@ void kaapi_init_begendadapfmt(void)
     0  /* (*reducor) */,
     0  /* (*redinit) */,
     0  /* (*get_task_binding) */,
-    0  /* (*get_splitter) */
+    _kaapi_begendadaptbody_get_splitter
   );
 }

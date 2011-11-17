@@ -62,14 +62,15 @@ int kaapi_request_pushtask_adaptive(kaapi_request_t* request, kaapi_task_t* vict
   kaapi_task_t* toptask;
   
   kaapi_assert_debug( kaapi_task_is_splittable(victim_task) );
-  kaapi_assert_debug( victim_task->body == (kaapi_task_body_t)kaapi_taskadapt_body );
+  kaapi_assert_debug( (victim_task->body == (kaapi_task_body_t)kaapi_taskadapt_body )
+                  ||  (victim_task->body == (kaapi_task_body_t)kaapi_taskbegendadapt_body) );
   
   toptask = kaapi_thread_toptask(&request->frame);
   kaapi_thread_pushtask_adaptive(&request->frame);  
 
   /* here toptask was replaced in pushtask_adaptive by a kaapi_taskadapt_body, 
-     but flags remains equal.
-     Link together the adaptive victim_task's steal context to the newlot created task stealcontext
+     but flags remain equals.
+     Link together the adaptive victim_task's steal context to the newly created task stealcontext
   */
   victim_adapt_arg = kaapi_task_getargst(victim_task, kaapi_taskadaptive_arg_t);
   adapt_arg = kaapi_task_getargst(toptask, kaapi_taskadaptive_arg_t);

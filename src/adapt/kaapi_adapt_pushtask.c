@@ -68,7 +68,7 @@ int kaapi_thread_pushtask_adaptive(kaapi_thread_t* thread)
 
   sc->msc        = sc; /* self pointer to detect master */
   sc->ktr        = 0;
-  if (task_adapt->u.s.flag & KAAPI_TASK_S_PREEMPTION)
+  if ( kaapi_task_is_withpreemption(task_adapt) & KAAPI_TASK_S_PREEMPTION)
   {
     kaapi_assert_debug( !(task_adapt->u.s.flag & KAAPI_TASK_S_NOPREEMPTION) );
     sc->flag = KAAPI_SC_PREEMPTION;
@@ -89,11 +89,12 @@ int kaapi_thread_pushtask_adaptive(kaapi_thread_t* thread)
   arg->user_body = task_adapt->body;
   arg->user_sp   = task_adapt->sp;
   
-  /* keep the same flag as the pushed task and replace the body 
+  /* keep the same flag as the pushed task and add splittable attribut.
+     Replace the body to the adaptive body
   */
-  kaapi_assert_debug(task_adapt->u.s.flag & KAAPI_TASK_SPLITTABLE);
   task_adapt->body = (kaapi_task_body_t)kaapi_taskadapt_body;
   task_adapt->sp   = arg;
+  kaapi_task_set_splittable( task_adapt );
   
   kaapi_access_init( &merge_arg->shared_sc, sc );
   kaapi_frame_clear( &merge_arg->saved_frame );

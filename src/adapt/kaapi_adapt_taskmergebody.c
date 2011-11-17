@@ -42,6 +42,25 @@
  */
 #include "kaapi_impl.h"
 
+/**
+*/
+void kaapi_taskfinalize_body( void* sp, kaapi_thread_t* thread )
+{
+  kaapi_taskmerge_arg_t* const merge_arg = (kaapi_taskmerge_arg_t*)sp;
+  kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)merge_arg->shared_sc.data;
+  kaapi_assert_debug(!(sc->flag & KAAPI_SC_PREEMPTION));
+
+  kaapi_thread_restore_frame(thread, &merge_arg->saved_frame);
+  /* avoid read reordering */
+  kaapi_readmem_barrier();
+
+  /* ensure all working thieves are done. the steal
+     sync has been done in kaapi_task_end_adaptive
+   */
+  while (KAAPI_ATOMIC_READ(&sc->thieves.count))
+    kaapi_slowdown_cpu();
+}
+
 
 /* Merge body task: arg is the steal context
 */
@@ -58,15 +77,35 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
   */
   kaapi_synchronize_steal(self_thread);
 
-  /* wait end of theives */
-  
-  /* prempt each a lived thieves and merge results */
-
+  /* If master thread */
   if (sc->msc == sc )
   {
+    /* if this is a preemptive algorithm, it is assumed the
+       user has preempted all the children (not doing so is
+       an error). we restore the frame and return without
+       waiting for anyting.
+     */
+    if (sc->flag & KAAPI_SC_PREEMPTION)
+    {
+
+      if (sc->thieves.list.head != 0) 
+        return /*EAGAIN*/;
+      return;
+    }
+
+    /* not a preemptive algorithm. push a finalization task
+       to wait for thieves and block until finalization done.
+    */
+    kaapi_task_init(
+      kaapi_thread_toptask(thread), 
+      kaapi_taskfinalize_body, 
+      sp
+    );
+    kaapi_thread_pushtask(thread);
+    return;
   }
 
-  /* signal the master */
+  /* Else finalization of a thief: signal the master */
   if ( sc->flag == KAAPI_SC_PREEMPTION)
   {
     kaapi_assert_debug( sc->ktr != 0);

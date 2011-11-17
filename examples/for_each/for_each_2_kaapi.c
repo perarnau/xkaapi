@@ -78,20 +78,21 @@ static void thief_entrypoint(void*, kaapi_thread_t*);
 
 /* parallel work splitter */
 static int splitter (
-                     kaapi_stealcontext_t* sc, 
-                     int nreq, kaapi_request_t* req, 
-                     void* args
-                     )
+  struct kaapi_task_t*                 task,
+  void*                                arg,
+  struct kaapi_listrequest_t*          lr,
+  struct kaapi_listrequest_iterator_t* lri
+)
 {
   /* victim work */
-  work_t* const vw = (work_t*)args;
+  work_t* const vw = (work_t*)arg;
   
   /* stolen range */
   kaapi_workqueue_index_t i, j;
   kaapi_workqueue_index_t range_size;
   
-  /* reply count */
-  int nrep = 0;
+  int nreq = kaapi_listrequest_iterator_count(lri);
+  kaapi_request_t* req;
   
   /* size per request */
   kaapi_workqueue_index_t unit_size;
@@ -117,19 +118,26 @@ redo_steal:
   if (kaapi_workqueue_steal(&vw->cr, &i, &j, nreq * unit_size))
     goto redo_steal;
   
-  for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
+  for (; !kaapi_listrequest_iterator_empty(lri); --nreq, j -= unit_size) 
   {
-    /* thief work: not adaptive result because no preemption is used here  */
-    thief_work_t* const tw = kaapi_reply_init_adaptive_task
-    ( sc, req, thief_entrypoint, sizeof(thief_work_t), 0 );
+    req = kaapi_listrequest_iterator_get(lr, lri);
+
+    /* thief work: not adaptive result because no preemption is used here, thus
+       argument of the thief entrypoint is allocated into the stack of the thief.
+    */
+    thief_work_t* const tw = kaapi_request_pushdata(req, sizeof(thief_work_t) );
     tw->op  = vw->op;
     tw->beg = vw->array+j-unit_size;
     tw->end = vw->array+j;
-    
-    kaapi_reply_push_adaptive_task(sc, req);
+   
+    kaapi_task_t* const thief_task = kaapi_request_toptask(req);
+    kaapi_task_init(thief_task, thief_entrypoint, tw);
+    kaapi_reply_pushtask_adaptive_tail(req, task);
+    kaapi_request_committask(req);
+    kaapi_listrequest_iterator_next(lr, lri);
   }
   
-  return nrep;
+  return 0;
 }
 
 
@@ -173,7 +181,7 @@ static void thief_entrypoint(void* args, kaapi_thread_t* thread)
 static void for_each( double* array, size_t size, void (*op)(double*) )
 {
   kaapi_thread_t* thread;
-  kaapi_stealcontext_t* sc;
+  void* sc;
   work_t  work;
   double* pos;
   double* end;
@@ -189,10 +197,10 @@ static void for_each( double* array, size_t size, void (*op)(double*) )
   /* push an adaptive task */
   sc = kaapi_task_begin_adaptive(
                                  thread, 
-                                 KAAPI_SC_AGGREGATE | KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION, 
+                                 KAAPI_SC_NOPREEMPTION, 
                                  splitter, 
                                  &work     /* arg for splitter = work to split */
-                                 );
+  );
   
   /* while there is sequential work to do*/
   while (!extract_seq(&work, &pos, &end))

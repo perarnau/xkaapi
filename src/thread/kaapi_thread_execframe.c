@@ -164,7 +164,6 @@ redo_exec:
       /* if I have been preempted, then continue to the next task */
       if (state & KAAPI_TASK_STATE_SIGNALED)
       {
-#warning "TODO: suppress trace"
         printf("I was preempted\n"); fflush(stdout);
         continue;
       }
@@ -234,20 +233,22 @@ redo_exec:
     while (fp > eframe) 
     {
       /* pop the frame */
-      stack->sfp = --fp;
+      --fp;
 
-      if (fp <= stack->thieffp)
-        kaapi_atomic_waitlock(&stack->lock);
       /* finish to execute child tasks, pop current task of the frame */
       if (--fp->pc > fp->sp)
       {
-//        stack->sfp = fp;
+        stack->sfp = fp;
+        if (fp <= stack->thieffp)
+          kaapi_atomic_waitlock(&stack->lock);
         goto push_frame; /* remains work do do */
       }
     } 
     fp->sp = fp->pc;
   }
-//  stack->sfp = fp;
+  stack->sfp = fp;
+  if (fp <= stack->thieffp)
+    kaapi_atomic_waitlock(&stack->lock);
 #endif
 //----------
 

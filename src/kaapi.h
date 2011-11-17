@@ -532,9 +532,10 @@ static inline void kaapi_task_set_priority(kaapi_task_t* task, uint8_t prio)
 struct kaapi_stealcontext_t;
 typedef int (*kaapi_task_splitter_t)(
   struct kaapi_stealcontext_t* /*stc */, 
-  int /*count*/, 
-  struct kaapi_request_t* /*array*/, 
-  void* /*userarg*/);
+  int                          /*count*/, 
+  struct kaapi_request_t*      /*array*/, 
+  void*                        /*userarg*/
+);
 
 /* New type for splitter:
    - called in order to split a running or init task
@@ -545,11 +546,46 @@ typedef int (*kaapi_task_splitter_t)(
 */
 typedef int (*kaapi_adaptivetask_splitter_t)(
   struct kaapi_task_t*                 /* task */,
-  void*                                /* task arg */,
+  void*                                /* user arg */,
   struct kaapi_listrequest_t*          /* list of requests */, 
   struct kaapi_listrequest_iterator_t* /* iterator over the list*/
 );
 
+
+extern int kaapi_api_listrequest_iterator_count(
+  struct kaapi_listrequest_iterator_t* lrrange
+);
+extern struct kaapi_request_t* kaapi_api_listrequest_iterator_get( 
+  struct kaapi_listrequest_t* lrequests, struct kaapi_listrequest_iterator_t* lrrange 
+);
+extern struct kaapi_request_t* kaapi_api_listrequest_iterator_next( 
+  struct kaapi_listrequest_t* lrequests, struct kaapi_listrequest_iterator_t* lrrange 
+);
+extern int kaapi_listrequest_api_iterator_empty( 
+  struct kaapi_listrequest_iterator_t* lrrange
+);
+
+#if !defined(KAAPI_COMPILE_SOURCE)
+static inline int kaapi_listrequest_iterator_count(
+  struct kaapi_listrequest_iterator_t* lrrange
+)
+{ return kaapi_api_listrequest_iterator_count(lrrange); }
+
+static inline struct kaapi_request_t* kaapi_listrequest_iterator_get( 
+  struct kaapi_listrequest_t* lrequests, struct kaapi_listrequest_iterator_t* lrrange 
+)
+{ return kaapi_api_listrequest_iterator_get(lrequests, lrrange); }
+
+static inline struct kaapi_request_t* kaapi_listrequest_iterator_next( 
+  struct kaapi_listrequest_t* lrequests, struct kaapi_listrequest_iterator_t* lrrange 
+)
+{ return kaapi_api_listrequest_iterator_next( lrequests, lrrange ); }
+
+static inline int kaapi_listrequest_iterator_empty( 
+  struct kaapi_listrequest_iterator_t* lrrange
+)
+{ return kaapi_listrequest_api_iterator_empty( lrrange ); }
+#endif
 
 /** Reducer called on the victim side
     \ingroup TASK
@@ -1024,22 +1060,23 @@ typedef enum kaapi_stealcontext_flag_t {
 
 /** Begin adaptive section of code
 */
-kaapi_task_t* kaapi_task_begin_adaptive( 
-  kaapi_thread_t*       thread,
-  int                   flag,
-  kaapi_task_splitter_t splitter,
-  void*                 argsplitter
+void* kaapi_task_begin_adaptive( 
+  kaapi_thread_t*               thread,
+  int                           flag,
+  kaapi_adaptivetask_splitter_t splitter,
+  void*                         argsplitter
 );
+
 
 /** \ingroup ADAPTIVE
     Mark the end of the adaptive section of code.
     After the call to this function, all thieves have finish to compute in parallel,
     and memory location produced in concurrency may be read by the calling thread.
-    \param task [IN] should be the task returned by kaapi_task_begin_adaptive
+    \param context [IN] should be the context returned by kaapi_task_begin_adaptive
     \retval EAGAIN iff at least one thief was not preempted.
     \retval 0 iff all the thieves haved finished.
 */
-extern int kaapi_task_end_adaptive( kaapi_task_t* task );
+extern int kaapi_task_end_adaptive( void* context );
 
 /** \ingroup ADAPTIVE
     The function kaapi_request_taskarg() return the pointer to the thief task arguments.

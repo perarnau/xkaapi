@@ -74,6 +74,7 @@ static const char* tab_bit[] __attribute__((unused)) = {
  * A -> after steal op
  * T -> term
  * X -> term after steal
+ * t -> scratch zone
  */
 typedef char state_type_t[4];
 static void kaapi_getstatename( kaapi_task_t* task, state_type_t char_state )

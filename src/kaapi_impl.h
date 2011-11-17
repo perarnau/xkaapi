@@ -356,20 +356,22 @@ extern kaapi_rtparam_t kaapi_default_param;
 static inline int kaapi_request_replytask
 ( 
   kaapi_request_t*        request, 
-  kaapi_request_status_t  status
+  kaapi_request_status_t  value
 )
 {
-  if (status == KAAPI_REQUEST_S_OK)
+  kaapi_atomic_t* const status = request->status;
+  request->status = 0;
+  if (value == KAAPI_REQUEST_S_OK)
   {
     /* even if tasks will be preempted, reply ok. On remote side, the processor will abort
        preempted tasks
     */
-    KAAPI_ATOMIC_WRITE_BARRIER(request->status, KAAPI_REQUEST_S_OK);
+    KAAPI_ATOMIC_WRITE_BARRIER(status, KAAPI_REQUEST_S_OK);
   }
   else
   {
     /* failed to steal: avoid unnecessary memory barrier */
-    KAAPI_ATOMIC_WRITE(request->status, KAAPI_REQUEST_S_NOK);
+    KAAPI_ATOMIC_WRITE(status, KAAPI_REQUEST_S_NOK);
   }
   return 0;
 }

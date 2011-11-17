@@ -723,7 +723,7 @@ typedef struct kaapi_taskmerge_arg_t {
 typedef struct kaapi_taskbegendadaptive_arg_t {
   kaapi_access_t                shared_sc;
   kaapi_adaptivetask_splitter_t splitter;
-  kaapi_task_splitter_t         oldsplitter;    /* a supprimer lorsque changementd d'interface */
+  kaapi_adaptivetask_splitter_t usersplitter;
   void*                         argsplitter;
 } kaapi_taskbegendadaptive_arg_t;
 
