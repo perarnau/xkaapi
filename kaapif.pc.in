@@ -1,0 +1,17 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: KAAPIF
+Description: C API on top of KAAPI
+Version: @VERSION@
+#URL: http://kaapi.gforge.inria.fr
+Requires: @KAAPIFLIB_PKGCONFIG_REQUIRES@
+Requires.private: @KAAPIFLIB_PKGCONFIG_REQUIRES_PRIVATE@
+#Conflicts: foobar <= 4.5
+# Libs: bibliothèques nécessaire pour linker dynamiquement une appli externe
+# Libs.private: bibliothèques à rajouter en cas de link statique
+Libs: @KAAPIFLIB_PKGCONFIG_LIBS@
+Libs.private: @KAAPIFLIB_PKGCONFIG_LIBS_PRIVATE@
+Cflags: @KAAPIFLIB_PKGCONFIG_CFLAGS@

@@ -162,15 +162,19 @@ ACX_LIB_ADD_PUBLIC_FLAGS([KASTLLIB], [-I\${includedir}])
 ACX_LIB_NEW_LIB([ATHALIB], [-L\${libdir} -latha], [atha])
 ACX_LIB_ADD_PUBLIC_FLAGS([ATHALIB], [-I\${includedir}])
 
-ACX_LIB_NEW_LIB([KFORTRANLIB], [-L\${libdir} -lkaapif], [kaapif])
-ACX_LIB_ADD_PUBLIC_FLAGS([KFORTRANLIB], [-I\${includedir}])
+ACX_LIB_NEW_LIB([KAAPICLIB], [-L\${libdir} -lkaapic], [kaapic])
+ACX_LIB_ADD_PUBLIC_FLAGS([KAAPICLIB], [-I\${includedir}])
+
+ACX_LIB_NEW_LIB([KAAPIFLIB], [-L\${libdir} -lkaapif], [kaapif])
+ACX_LIB_ADD_PUBLIC_FLAGS([KAAPIFLIB], [-I\${includedir}])
 
 ACX_LIB_NEW_PRG([KAAPIPROGS])
 ACX_LIB_NEW_PRG([KAAPIXXPROGS])
+ACX_LIB_NEW_PRG([KAAPICPROGS])
+ACX_LIB_NEW_PRG([KAAPIFPROGS])
+ACX_LIB_NEW_PRG([KANETPROGS])
 ACX_LIB_NEW_PRG([KASTLPROGS])
 ACX_LIB_NEW_PRG([ATHAPROGS])
-ACX_LIB_NEW_PRG([KFORTRANPROGS])
-ACX_LIB_NEW_PRG([KANETPROGS])
 
 default_experimental=no
 
@@ -191,29 +195,60 @@ dnl -----------------------------------------------------------------------
 dnl -----------------------------------------------------------------------
 
 dnl -----------------------------------------------------------------------
-dnl The "--enable-api-fortran"
+dnl The "--enable-api-kaapic"
 dnl -----------------------------------------------------------------------
-KAAPI_FEATURE([api-fortran], [compile fortran API [[experimental]]],
-  [fortran API compiled], [$default_experimental],
-  [ ],
-  [ 
-    ACX_LIB_NOLIB([FORTRAN])
-  ],
-  [KAAPI_API_FORTRAN],
+KAAPI_FEATURE([api-kaapic], [compile C API],
+  [C API compiled], [yes],
+  [],
+  [],
+  [KAAPI_API_KAAPIC],
   [
-    if test x"$F77" = x; then
+    if test "$have_cc" = no; then
+      AC_MSG_WARN([a C compiler is required for Kaapi C API])
       FEATURE_DISABLE
     else
-      ACX_LIB_CHECK_PLAIN([FORTRAN],[],[
-        AC_F77_LIBRARY_LDFLAGS
-        ACX_LIB_FOUND([Libs="$F77LIBS"])
-        FEATURE_ENABLE
-      ],[
-        FEATURE_DISABLE
-      ])
+      FEATURE_ENABLE
     fi
   ])
-ACX_LIB_LINK([KFORTRANLIB], [FORTRAN])
+
+dnl -----------------------------------------------------------------------
+dnl The "--enable-api-fortran"
+dnl -----------------------------------------------------------------------
+KAAPI_FEATURE([api-kaapif], [compile fortran API],
+  [Fortran API compiled], [yes],
+  [],
+  [],
+  [KAAPI_API_KAAPIF],
+  [
+    if test "$have_cc" = no; then
+      AC_MSG_WARN([a C compiler is required for Fortran API])
+      FEATURE_DISABLE
+    else
+      FEATURE_ENABLE
+    fi
+  ])
+
+dnl KAAPI_FEATURE([api-kaapif], [compile fortran API],
+dnl   [fortran API compiled], [$default_experimental],
+dnl   [ ],
+dnl   [ 
+dnl     ACX_LIB_NOLIB([FORTRAN])
+dnl   ],
+dnl   [KAAPI_API_KAAPIF],
+dnl   [
+dnl     if test x"$F77" = x; then
+dnl       FEATURE_DISABLE
+dnl     else
+dnl       ACX_LIB_CHECK_PLAIN([FORTRAN],[],[
+dnl         AC_F77_LIBRARY_LDFLAGS
+dnl         ACX_LIB_FOUND([Libs="$F77LIBS"])
+dnl         FEATURE_ENABLE
+dnl       ],[
+dnl         FEATURE_DISABLE
+dnl       ])
+dnl     fi
+dnl   ])
+dnl ACX_LIB_LINK([KAAPIFLIB], [FORTRAN])
 
 dnl -----------------------------------------------------------------------
 dnl The "--enable-api-kaapixx"
@@ -249,8 +284,8 @@ KAAPI_FEATURE([api-quark], [compile Quark API used by PLASMA library],
 dnl -----------------------------------------------------------------------
 dnl The "--enable-api-atha"
 dnl -----------------------------------------------------------------------
-KAAPI_FEATURE([api-atha], [compile Athapascan-1 API],
-  [Athapascan-1 API compiled], [yes],
+KAAPI_FEATURE([api-atha], [compile Athapascan-1 API, [[DEPRECATED]] ],
+  [Athapascan-1 API compiled], [no],
   [],
   [],
   [KAAPI_API_ATHA],
@@ -268,7 +303,7 @@ dnl -----------------------------------------------------------------------
 dnl The "--enable-api-kastl"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([api-kastl], [compile KaSTL API],
-  [KaSTL API compiled], [yes],
+  [KaSTL API compiled], [no],
   [],
   [],
   [KAAPI_API_KASTL],
@@ -770,22 +805,39 @@ dnl -----------------------------------------------------------------------
 ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [KAAPILIB])
 ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUDA])
 dnl ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [HWLOC])
+
 dnl ACX_LIB_LINK([KANETLIB], [PUBLIC], [KAAPIXXLIB])
 ACX_LIB_LINK([KANETLIB], [PRIVATE], [KAAPIXXLIB])
+
 ACX_LIB_LINK([ATHALIB], [PUBLIC], [KAAPIXXLIB])
 ACX_LIB_LINK([ATHALIB], [PRIVATE], [CUDA])
 dnl ACX_LIB_LINK([ATHALIB], [PRIVATE], [HWLOC])
+
 ACX_LIB_LINK([KASTLLIB], [PUBLIC], [KAAPIXXLIB])
 ACX_LIB_LINK([KASTLLIB], [PRIVATE], [CUDA])
 dnl ACX_LIB_LINK([KASTLLIB], [PRIVATE], [HWLOC])
-ACX_LIB_LINK([KFORTRANLIB], [PUBLIC], [KAAPILIB])
-ACX_LIB_LINK([KFORTRANLIB], [PRIVATE], [CUDA])
-dnl ACX_LIB_LINK([KFORTRANLIB], [PRIVATE], [HWLOC])
+
+ACX_LIB_LINK([KAAPICLIB], [PUBLIC], [KAAPILIB])
+ACX_LIB_LINK([KAAPICLIB], [PRIVATE], [CUDA])
+
+ACX_LIB_LINK([KAAPIFLIB], [PUBLIC], [KAAPICLIB])
+ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [CUDA])
+dnl ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [HWLOC])
 
 ACX_LIB_LINK([KAAPIPROGS], [KAAPILIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIPROGS],
 	[-I\$(top_srcdir)/src],[],[],
 	[\$(top_builddir)/src/libkaapi.la])
+
+ACX_LIB_LINK([KAAPICPROGS], [KAAPICLIB])
+ACX_LIB_ADD_BUILD_FLAGS([KAAPICPROGS],
+	[-I\$(top_srcdir)/api/kaapic -I\$(top_srcdir)/src],[],[],
+	[\$(top_builddir)/api/kaapic/libkaapic.la \$(top_builddir)/src/libkaapi.la])
+
+ACX_LIB_LINK([KAAPIFLIB], [KAAPIFLIB])
+ACX_LIB_ADD_BUILD_FLAGS([KAAPICPROGS],
+	[-I\$(top_srcdir)/api/kaapif -I\$(top_srcdir)/src],[],[],
+	[\$(top_builddir)/api/kaapif/libkaapif.la \$(top_builddir)/api/kaapic/libkaapic.la \$(top_builddir)/src/libkaapi.la])
 
 ACX_LIB_LINK([KAAPIXXPROGS], [KAAPIXXLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIXXPROGS],
@@ -808,11 +860,6 @@ ACX_LIB_ADD_BUILD_FLAGS([KASTLPROGS],
 	[\$(top_builddir)/api/kaapixx/libkaapi++.la \$(top_builddir)/src/libkaapi.la])
 dnl	libkastl.la should be added if libs will be created \$(top_builddir)/api/kastl/libkastl.la 
 
-ACX_LIB_LINK([KFORTRANPROGS], [KFORTRANLIB])
-ACX_LIB_ADD_BUILD_FLAGS([KFORTRANPROGS],
-	[-I\$(top_srcdir)/api/fortran -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/src/libkaapi.la])
-dnl	libkastl.la should be added if libs will be created \$(top_builddir)/api/kastl/libkastl.la 
 
 AC_SUBST(AM_CPPFLAGS)
 AC_SUBST(AM_CFLAGS)
@@ -826,12 +873,12 @@ dnl Then   alphabetic order of other files
 AC_CONFIG_FILES([
 	Makefile
 	api/Makefile
-	api/atha/Makefile
-	api/fortran/Makefile
-	api/kaapi/Makefile
 	api/kaapixx/Makefile
-	api/kastl/Makefile
+	api/kaapic/Makefile
+	api/kaapif/Makefile
 	api/quark/Makefile
+	api/kastl/Makefile
+	api/atha/Makefile
 	examples/Makefile
 	network/Makefile
 	network/gasnet/Makefile
@@ -845,11 +892,13 @@ AC_CONFIG_FILES([
 	bin/kacc/kacc.cpp
 	tests/static/Makefile
 
-	atha.pc
+	src/misc/kaapi_version.c
 	kaapi.pc
+	kaapic.pc
+	kaapif.pc
 	kaapi++.pc
 	kastl.pc
-	src/misc/kaapi_version.c
+	atha.pc
 ])
 AC_OUTPUT
 
