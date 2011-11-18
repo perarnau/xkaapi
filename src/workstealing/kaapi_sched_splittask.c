@@ -56,11 +56,6 @@ int kaapi_sched_splittask
 
   kaapi_assert_debug( kaapi_task_is_splittable( task ) );
   
-  /* fast return */
-  splitter = kaapi_format_get_splitter( task_fmt, task->sp );
-  if (splitter ==0) 
-    return EPERM;
-
   /* only steal into an correctly initialized steal context */
   uintptr_t orig_state = kaapi_task_getstate(task);
 
@@ -78,7 +73,9 @@ int kaapi_sched_splittask
         kaapi_task_markterm(task); 
         return 0;
       }
-    }    
+      return 0;
+    }
+    return EPERM;
   }
   return 0;
 }
