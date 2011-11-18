@@ -1,6 +1,7 @@
 /*
  ** xkaapi
  ** 
+ ** Created on Tue Mar 31 15:19:14 2009
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
@@ -40,179 +41,27 @@
  ** terms.
  ** 
  */
+
+#include "kaapi.h"
+#include "kaapif.h"
 #include "kaapic_impl.h"
-#include <stdarg.h>
 #include <string.h>
+#include <stdarg.h>
 
-
-static void kaapic_dfg_body(void* p, kaapi_thread_t* t)
+static void kaapif_dfg_body(void* p, kaapi_thread_t* t)
 {
   task_info_t* const ti = (task_info_t*)p;
 
-#include "kaapic_dfg_switch.h"
-  KAAPIC_DFG_SWITCH(ti);
-}
-
-/* format definition of C task */
-
-static size_t kaapic_taskformat_get_count_params(
- const struct kaapi_format_t* f,
- const void* p
-)
-{
-  const task_info_t* const ti = p;
-  return ti->nargs;
-}
-
-static kaapi_access_mode_t kaapic_taskformat_get_mode_param(
- const struct kaapi_format_t* f,
- unsigned int i,
- const void* p
-)
-{
-  const task_info_t* const ti = p;
-  const kaapi_access_mode_t m = ti->args[i].mode;
-  return m;
-}
-
-static void* kaapic_taskformat_get_off_param(
- const struct kaapi_format_t* f,
- unsigned int i,
- const void* p
-)
-{
-  const task_info_t* const ti = p;
-  void* off = ti->args[i].access.data;
-  return off;
-}
-
-static kaapi_access_t kaapic_taskformat_get_access_param(
- const struct kaapi_format_t* f,
- unsigned int i,
- const void* p
-)
-{
-  const task_info_t* const ti = p;
-  return ti->args[i].access;
-}
-
-static void kaapic_taskformat_set_access_param(
- const struct kaapi_format_t* f,
- unsigned int i,
- void* p,
- const kaapi_access_t* a
-)
-{
-  task_info_t* const ti = p;
-  ti->args[i].access = *a;
-}
-
-static const struct kaapi_format_t* kaapic_taskformat_get_fmt_param(
- const struct kaapi_format_t* f,
- unsigned int i,
- const void* p
-)
-{
-  const task_info_t* const ti = p;
-  const struct kaapi_format_t* const format = ti->args[i].format;
-  return format;
-}
-
-static kaapi_memory_view_t kaapic_taskformat_get_view_param(
- const struct kaapi_format_t* f,
- unsigned int i,
- const void* p
-)
-{
-  const task_info_t* const ti = p;
-  return ti->args[i].view;
-}
-
-static void kaapic_taskformat_set_view_param(
- const struct kaapi_format_t* f,
- unsigned int i,
- void* p,
- const kaapi_memory_view_t* v
-)
-{
-  /* do nothing here if only 1-D view */
-  task_info_t* const ti = p;
-  ti->args[i].view = *v;
-}
-
-__attribute__((unused)) 
-static void kaapic_taskformat_reducor
-(
- const struct kaapi_format_t* f,
- unsigned int i,
- void* p,
- const void* q
-)
-{
-  kaapi_abort();
-}
-
-__attribute__((unused)) 
-static void kaapic_taskformat_redinit
-(
- const struct kaapi_format_t* f,
- unsigned int i,
- const void* sp,
- void* p
-)
-{
-  kaapi_abort();
-}
-
-static void kaapic_taskformat_get_task_binding(
- const struct kaapi_format_t* f,
- const kaapi_task_t* t,
- kaapi_task_binding_t* b
-)
-{
-  b->type = KAAPI_BINDING_ANY;
-}
-
-
-void _kaapic_register_task_format(void)
-{
-  struct kaapi_format_t* format = kaapi_format_allocate();
-  kaapi_format_taskregister_func
-  (
-    format,
-    kaapic_dfg_body, 
-    0,
-    "kaapic_dfg_task",
-    sizeof(task_info_t),
-    kaapic_taskformat_get_count_params,
-    kaapic_taskformat_get_mode_param,
-    kaapic_taskformat_get_off_param,
-    kaapic_taskformat_get_access_param,
-    kaapic_taskformat_set_access_param,
-    kaapic_taskformat_get_fmt_param,
-    kaapic_taskformat_get_view_param,
-    kaapic_taskformat_set_view_param,
-    0, /* reducor */
-    0, /* redinit */
-    0, /* task binding */
-    0  /* get_splitter */
-  );
-}
-
-
-
-/* dataflow interface */
-int kaapic_spawn_ti(kaapi_thread_t* thread, kaapi_task_body_t body, task_info_t* ti)
-{
-  /* spawn the task */
-  kaapi_task_init(kaapi_thread_toptask(thread), body, ti);
-  kaapi_thread_pushtask(thread);
-  
-  return 0;
+#include "kaapif_dfg_switch.h"
+  KAAPIF_DFG_SWITCH(ti);
 }
 
 /* dataflow interface */
-int kaapic_spawn(kaapic_spawn_fn_t body, int32_t nargs, ...)
+int kaapif_spawn_(
+    int32_t* nargs,
+    void (*body)(), 
+    ...
+)
 {
   kaapi_thread_t* thread = kaapi_self_thread();
   task_info_t* ti;
@@ -220,19 +69,19 @@ int kaapic_spawn(kaapic_spawn_fn_t body, int32_t nargs, ...)
   size_t wordsize;
   unsigned int k;
 
-  if (nargs > KAAPIC_MAX_ARGS) 
+  if (*nargs > KAAPIF_MAX_ARGS) 
     return EINVAL;
     
   /* cast into task_info_t */
 
   ti = kaapi_thread_pushdata_align(
-    thread, sizeof(task_info_t)+nargs*sizeof(arg_info_t), sizeof(void*)
+    thread, sizeof(task_info_t)+ *nargs * sizeof(arg_info_t), sizeof(void*)
   );
-  ti->body = body;
-  ti->nargs = nargs;
+  ti->body  = body;
+  ti->nargs = *nargs;
 
-  va_start(va_args, nargs);
-  for (k = 0; k < nargs; ++k)
+  va_start(va_args, body);
+  for (k = 0; k < *nargs; ++k)
   {
     arg_info_t* const ai = &ti->args[k];
 
@@ -305,5 +154,5 @@ int kaapic_spawn(kaapic_spawn_fn_t body, int32_t nargs, ...)
   va_end(va_args);
 
   /* spawn the task */
-  return kaapic_spawn_ti( thread, kaapic_dfg_body, ti );
+  return kaapic_spawn_ti( thread, kaapif_dfg_body, ti );
 }

@@ -432,7 +432,7 @@ static void thief_entrypoint(
 
 
 /* exported foreach interface */
-void kaapic_foreach_common
+int kaapic_foreach_common
 (
   int32_t               first, 
   int32_t               last,
@@ -586,6 +586,9 @@ end_adaptive:
   /* wait for thieves */
   kaapi_task_end_adaptive(context);
 
+  /* restore frame */
+  kaapi_thread_restore_frame(thread, &frame);
+
 #if CONFIG_TERM_COUNTER
   /* wait for work counter */
   while (KAAPI_ATOMIC_READ(&counter)) ;
@@ -594,6 +597,8 @@ end_adaptive:
 #if CONFIG_FOREACH_STATS
   foreach_time += kaapif_get_time_() - time;
 #endif
+  
+  return 0;
 }
 
 

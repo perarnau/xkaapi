@@ -79,11 +79,11 @@ enum kaapic_mode
   The other threads are suspended waiting for a parallel 
   region to be entered (refer to KAAPIF BEGIN PARALLEL)
 */
-extern void kaapic_init(int32_t flags);
+extern int kaapic_init(int32_t flags);
 
 /** Finalizes the Kaapi runtime.
 */
-extern void kaapic_finalize(void);
+extern int kaapic_finalize(void);
 
 /** Returns the current time in micro-second.
 */

@@ -41,32 +41,94 @@
  ** terms.
  ** 
  */
+
+#include "kaapi.h"
+#include "kaapif.h"
 #include "kaapic_impl.h"
 #include <stdarg.h>
 
-/*
+
+#define FATAL()						\
+do {							\
+  printf("fatal error @ %s::%d\n", __FILE__, __LINE__);	\
+  kaapi_abort(); \
+} while(0)
+
+/* main entry point */
+void kaapif_foreach_body2user(int32_t first, int32_t last, int32_t tid, void* arg )
+{
+  kaapic_body_arg_t* call = (kaapic_body_arg_t*)arg;
+
+  /* change [first, last[ to [first,last-1] as assumed in fortran.
+  */
+  --last;
+#include "kaapif_adaptive_switch.h"
+  KAAPIF_ADAPTIVE_SWITCH(call, first, last, tid);
+}
+
+
+/**
 */
-void kaapic_foreach_with_format( 
-  int32_t first, 
-  int32_t last, 
-  int32_t nargs, 
-  void (*f)(int32_t, int32_t, int32_t, ...),
+int kaapif_foreach_(
+  int32_t* first, int32_t* last, 
+  int32_t* nargs, 
+  void (*f)(int32_t*, int32_t*, int32_t*, ...), 
   ...
 )
 {
   int32_t k;
-  kaapic_body_arg_t* body_arg = (kaapic_body_arg_t*)alloca(
-    offsetof(kaapic_body_arg_t, args) + nargs * sizeof(void*)
-  ); 
+  kaapic_body_arg_t* body_arg;
   va_list va_args;
+
+  if (*nargs >= KAAPIF_MAX_ARGS)
+    return EINVAL;
+
+  body_arg = (kaapic_body_arg_t*)alloca(
+    offsetof(kaapic_body_arg_t, args) + *nargs * sizeof(void*)
+  ); 
   va_start(va_args, f);
   
   /* format of each effective parameter is a list of tuple:
-       mode, @, count, type
+       @
   */
-  body_arg->u.f_c = f;
-  body_arg->nargs = nargs;
-  for (k = 0; k < nargs; ++k)
+  body_arg->u.f_f = f;
+  body_arg->nargs = *nargs;
+
+  for (k = 0; k < *nargs; ++k)
+    body_arg->args[k] = va_arg(va_args, void*);
+  va_end(va_args);
+  
+  return kaapic_foreach_common( *first, *last+1, kaapif_foreach_body2user, body_arg);
+}
+
+
+/**
+*/
+int kaapif_foreach_with_format_(
+  int32_t* first, int32_t* last, 
+  int32_t* nargs, 
+  void (*f)(int32_t*, int32_t*, int32_t*, ...), 
+  ...
+)
+{
+  int32_t k;
+  kaapic_body_arg_t* body_arg;
+  va_list va_args;
+
+  if (*nargs >= KAAPIF_MAX_ARGS)
+    return EINVAL;
+
+  body_arg = (kaapic_body_arg_t*)alloca(
+    offsetof(kaapic_body_arg_t, args) + *nargs * sizeof(void*)
+  ); 
+  va_start(va_args, f);
+  
+  /* format of each effective parameter is a list of tuple:
+       @
+  */
+  body_arg->u.f_f = f;
+  body_arg->nargs = *nargs;
+  for (k = 0; k < *nargs; ++k)
   {
     /* skip mode */
     va_arg(va_args, uintptr_t);
@@ -79,5 +141,5 @@ void kaapic_foreach_with_format(
   }
   va_end(va_args);
   
-  kaapic_foreach_common( first, last, kaapic_foreach_body2user, body_arg);
+  return kaapic_foreach_common( *first, *last+1, kaapif_foreach_body2user, body_arg);
 }

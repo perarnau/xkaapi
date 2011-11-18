@@ -1,6 +1,7 @@
 /*
  ** xkaapi
  ** 
+ ** Created on Tue Mar 31 15:19:14 2009
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
@@ -40,57 +41,64 @@
  ** terms.
  ** 
  */
-#include "kaapic_impl.h"
 
-static kaapi_atomic_t kaapic_initcalled = { 0 };
 
-int kaapic_init(int32_t flags)
-{
-  int err;
-  if (KAAPI_ATOMIC_INCR(&kaapic_initcalled) != 1)
-    return 0;
+#ifndef KAAPIF_H_INCLUDED
+# define KAAPIF_H_INCLUDED
 
-  err = kaapi_init(flags, 0, 0);
-  if (err !=0) return err;
-  
-  _kaapic_register_task_format();
-  return 0;
+
+#include <stdint.h>
+
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
+
+/* kaapi fortran interface */
+
+extern int kaapif_init_(int32_t*);
+extern int kaapif_finalize_(void);
+
+extern double kaapif_get_time_(void);
+
+extern int32_t kaapif_get_concurrency_(void);
+extern int32_t kaapif_get_thread_num_(void);
+
+extern void kaapif_set_max_tid_(int32_t*);
+extern int32_t kaapif_get_max_tid_(void);
+
+extern void kaapif_set_grains_(int32_t*, int32_t*);
+
+extern int kaapif_foreach_(
+  int32_t*, 
+  int32_t*, 
+  int32_t*,
+  void (*)(int32_t*, int32_t*, int32_t*, ...), 
+  ...  
+);
+extern int kaapif_foreach_with_format_(
+  int32_t*, 
+  int32_t*, 
+  int32_t*,
+  void (*)(int32_t*, int32_t*, int32_t*, ...), 
+  ...
+);
+
+extern int kaapif_spawn_(
+    int32_t*,
+    void (*f)(), 
+    ...
+);
+
+extern void kaapif_sched_sync_(void);
+extern int kaapif_begin_parallel_(void);
+extern int kaapif_end_parallel_(int32_t*);
+
+
+#if defined(__cplusplus)
 }
+#endif
 
-int kaapic_finalize(void)
-{
-  if (KAAPI_ATOMIC_DECR(&kaapic_initcalled) == 0)
-    return kaapi_finalize();
 
-  return 0;
-}
-
-double kaapic_get_time(void)
-{
-  return (double)(kaapi_get_elapsedns() / 1000);
-}
-
-int32_t kaapic_get_concurrency(void)
-{
-  return (int32_t)kaapi_getconcurrency();
-}
-
-int32_t kaapic_get_thread_num(void)
-{
-  return (int32_t)kaapi_get_self_kid();
-}
-
-void kaapic_sched_sync(void)
-{
-  kaapi_sched_sync();
-}
-
-void kaapic_begin_parallel(void)
-{
-  kaapi_begin_parallel(KAAPI_SCHEDFLAG_DEFAULT);
-}
-
-void kaapic_end_parallel(int32_t flags)
-{
-  kaapi_end_parallel(flags);
-}
+#endif /* ! KAAPIF_H_INCLUDED */

@@ -11,14 +11,14 @@ int main(int ac, char** av)
   printf("#define KAAPIF_ADAPTIVE_SWITCH_H_INCLUDED\n");
   printf("\n");
 
-  printf("#define KAAPIC_MAX_ARGS %u\n",MAX_CASE);
+  printf("#define KAAPIF_MAX_ARGS %u\n",MAX_CASE);
   printf("#define KAAPIF_ADAPTIVE_SWITCH(__w, __i, __j, __tid) \\\n");
   printf("switch((__w)->nargs)\\\n");
   printf("{\\\n");
 
   for (i = 0; i < MAX_CASE; ++i)
   {
-    printf("case %u: (__w)->u.f_c(__i, __j, __tid", i);
+    printf("case %u: (__w)->u.f_f(&__i, &__j, &__tid", i);
 
     for (j = 0; j < i; ++j)
       printf(", (__w)->args[%u]", j);

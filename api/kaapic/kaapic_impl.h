@@ -56,7 +56,10 @@ extern void _kaapic_register_task_format(void);
 
 /* closure for the body of the for each */
 typedef struct kaapic_body_arg_t {
-  void (*f)(int32_t, int32_t, int32_t, ...);
+  union {
+    void (*f_c)(int32_t, int32_t, int32_t, ...);
+    void (*f_f)(int32_t*, int32_t*, int32_t*, ...);
+  } u;
   unsigned int        nargs;
   void*               args[1];
 } kaapic_body_arg_t;
@@ -74,7 +77,7 @@ typedef void (*kaapic_foreach_body_t)(int32_t, int32_t, int32_t, void* );
    dependency with evaluation of body_f(k,l, body_args) if [i,j[ and [k,l[
    does not intersect.
 */
-extern void kaapic_foreach_common
+extern int kaapic_foreach_common
 (
   int32_t               first, 
   int32_t               last,
@@ -86,6 +89,39 @@ extern void kaapic_foreach_common
 */
 extern void kaapic_foreach_body2user(int32_t first, int32_t last, int32_t tid, void* arg );
 
+
+/*
+*/
+typedef struct arg_info_t
+{
+  kaapi_access_mode_t mode;
+  kaapi_memory_view_t view;
+  const struct kaapi_format_t* format;
+
+  /* kaapi versionning for shared pointer 
+     also used to store address of union 'value' 
+     for by-value argument.
+     Currenlty value are copied into the version field
+     of the access.
+  */
+  kaapi_access_t access;
+
+} arg_info_t;
+
+/*
+*/
+typedef struct task_info
+{
+  kaapic_spawn_fn_t body;
+  uintptr_t         nargs;
+  arg_info_t        args[1];
+} task_info_t;
+
+extern int kaapic_spawn_ti(
+  kaapi_thread_t* thread, 
+  kaapi_task_body_t body, 
+  task_info_t* ti
+);
 
 #if defined(__cplusplus)
 }

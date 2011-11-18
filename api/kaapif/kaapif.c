@@ -1,6 +1,7 @@
 /*
  ** xkaapi
  ** 
+ ** Created on Tue Mar 31 15:19:14 2009
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
@@ -40,57 +41,120 @@
  ** terms.
  ** 
  */
+#include "kaapi.h"
+#include "kaapif.h"
 #include "kaapic_impl.h"
 
-static kaapi_atomic_t kaapic_initcalled = { 0 };
 
-int kaapic_init(int32_t flags)
+extern void _kaapif_register_task_format(void);
+
+#if CONFIG_MAX_TID
+static int xxx_max_tid;
+#endif
+static int xxx_seq_grain;
+static int xxx_par_grain;
+
+#define FATAL()						\
+do {							\
+  printf("fatal error @ %s::%d\n", __FILE__, __LINE__);	\
+  kaapi_abort();						\
+} while(0)
+
+static kaapi_atomic_t kaapif_initcalled = { 0 };
+
+int kaapif_init_(int32_t* flags)
 {
-  int err;
-  if (KAAPI_ATOMIC_INCR(&kaapic_initcalled) != 1)
+  if (KAAPI_ATOMIC_INCR(&kaapif_initcalled) != 1)
     return 0;
 
-  err = kaapi_init(flags, 0, 0);
+  int err = kaapic_init(*flags);
   if (err !=0) return err;
-  
-  _kaapic_register_task_format();
+
+  /* default work info */
+#if CONFIG_MAX_TID
+  xxx_max_tid = (unsigned int)(kaapi_getconcurrency() - 1);
+#endif
+  xxx_seq_grain = 16;
+  xxx_par_grain = 2 * xxx_seq_grain;
+
   return 0;
 }
 
-int kaapic_finalize(void)
+
+int kaapif_finalize_(void)
 {
-  if (KAAPI_ATOMIC_DECR(&kaapic_initcalled) == 0)
-    return kaapi_finalize();
+  if (KAAPI_ATOMIC_DECR(&kaapif_initcalled) != 0)
+    return 0;
 
-  return 0;
+#if CONFIG_FOREACH_STATS
+  printf("foreach: %lf\n", foreach_time);
+#endif
+
+  return kaapic_finalize();
 }
 
-double kaapic_get_time(void)
+
+double kaapif_get_time_(void)
 {
   return (double)(kaapi_get_elapsedns() / 1000);
 }
 
-int32_t kaapic_get_concurrency(void)
+
+int32_t kaapif_get_concurrency_(void)
 {
   return (int32_t)kaapi_getconcurrency();
 }
 
-int32_t kaapic_get_thread_num(void)
+
+int32_t kaapif_get_thread_num_(void)
 {
   return (int32_t)kaapi_get_self_kid();
 }
 
-void kaapic_sched_sync(void)
+
+void kaapif_set_max_tid_(int32_t* tid)
+{
+#if CONFIG_MAX_TID
+  xxx_max_tid = *tid;
+#else
+  /* unused */
+  *tid = *tid;
+#endif
+}
+
+
+void kaapif_set_grains_(int32_t* par_grain, int32_t* seq_grain)
+{
+  xxx_par_grain = *par_grain;
+  xxx_seq_grain = *seq_grain;
+}
+
+
+int32_t kaapif_get_max_tid_(void)
+{
+#if CONFIG_MAX_TID
+  return xxx_max_tid;
+#else
+  return 0;
+#endif
+}
+
+
+void kaapif_sched_sync_(void)
 {
   kaapi_sched_sync();
 }
 
-void kaapic_begin_parallel(void)
+
+int kaapif_begin_parallel_(void)
 {
   kaapi_begin_parallel(KAAPI_SCHEDFLAG_DEFAULT);
+  return 0;
 }
 
-void kaapic_end_parallel(int32_t flags)
+
+int kaapif_end_parallel_(int32_t* flags)
 {
-  kaapi_end_parallel(flags);
+  kaapi_end_parallel(*flags);
+  return 0;
 }
