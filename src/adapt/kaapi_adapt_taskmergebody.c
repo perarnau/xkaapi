@@ -59,6 +59,7 @@ void kaapi_taskfinalize_body( void* sp, kaapi_thread_t* thread )
    */
   while (KAAPI_ATOMIC_READ(&sc->thieves.count))
     kaapi_slowdown_cpu();
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->thieves.count) == 0);
 }
 
 
