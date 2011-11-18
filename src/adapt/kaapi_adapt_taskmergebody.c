@@ -109,6 +109,9 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->thieves.count) == 0);
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->msc->thieves.count) >= 0);
 
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->thieves.count) == 0);
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->msc->thieves.count) >= 0);
+
   /* Else finalization of a thief: signal the master */
   if ( sc->flag == KAAPI_SC_PREEMPTION)
   {

@@ -192,6 +192,13 @@ enter:
   {
     if (kaapi_request_status_test(&status)) 
       goto return_value;
+#if defined(KAAPI_DEBUG)
+    if (kaapi_isterm) 
+    {
+      printf("Should not go out through this way?\n");
+      return KAAPI_REQUEST_S_NOK;
+    }
+#endif
     kaapi_slowdown_cpu();
   }
   
@@ -227,6 +234,7 @@ return_value:
       /* also assert that pc does not have changed (only used at runtime to execute task) */
       kaapi_assert_debug( kproc->thread->stack.stackframe[0].pc == self_request->frame.pc);
       kproc->thread->stack.stackframe[0].sp_data = self_request->frame.sp_data;
+      kaapi_writemem_barrier();
       kproc->thread->stack.stackframe[0].sp = self_request->frame.sp;
         
       (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_SUCCESS );
