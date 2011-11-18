@@ -70,7 +70,6 @@ typedef struct kaapic_body_arg_t {
 */
 typedef void (*kaapic_foreach_body_t)(int32_t, int32_t, int32_t, void* );
 
-
 /* exported foreach interface 
    evaluate body_f(first, last, body_args) in parallel, assuming
    that the evaluation of body_f(i, j, body_args) does not impose
@@ -113,7 +112,7 @@ typedef struct arg_info_t
 */
 typedef struct task_info
 {
-  kaapic_spawn_fn_t body;
+  void             (*body)();
   uintptr_t         nargs;
   arg_info_t        args[1];
 } task_info_t;

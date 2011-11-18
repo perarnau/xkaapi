@@ -212,7 +212,7 @@ int kaapic_spawn_ti(kaapi_thread_t* thread, kaapi_task_body_t body, task_info_t*
 }
 
 /* dataflow interface */
-int kaapic_spawn(kaapic_spawn_fn_t body, int32_t nargs, ...)
+int kaapic_spawn(int32_t nargs, ...)
 {
   kaapi_thread_t* thread = kaapi_self_thread();
   task_info_t* ti;
@@ -222,16 +222,15 @@ int kaapic_spawn(kaapic_spawn_fn_t body, int32_t nargs, ...)
 
   if (nargs > KAAPIC_MAX_ARGS) 
     return EINVAL;
-    
-  /* cast into task_info_t */
 
+  va_start(va_args, nargs);
+    
   ti = kaapi_thread_pushdata_align(
     thread, sizeof(task_info_t)+nargs*sizeof(arg_info_t), sizeof(void*)
   );
-  ti->body = body;
+  ti->body = va_arg(va_args, void (*)());
   ti->nargs = nargs;
 
-  va_start(va_args, nargs);
   for (k = 0; k < nargs; ++k)
   {
     arg_info_t* const ai = &ti->args[k];
