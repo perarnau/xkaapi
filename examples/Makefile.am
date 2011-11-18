@@ -24,6 +24,7 @@ include find.am
 include for_each.am
 include hello.am
 include jacobi2D.am
+include kaapic.am
 include linearwork.am
 include listranking.am
 include matrix.am
@@ -45,6 +46,7 @@ USER_MAKEFILES=\
 	find/Makefile \
 	for_each/Makefile \
 	jacobi2D/Makefile \
+	kaapic/Makefile \
     linearwork/Makefile \
 	listranking/Makefile \
 	hello/Makefile \
