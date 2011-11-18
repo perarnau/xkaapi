@@ -80,7 +80,7 @@ int kaapi_request_pushtask_adaptive(
   victim_adapt_arg = kaapi_task_getargst(victim_task, kaapi_taskadaptive_arg_t);
   adapt_arg = kaapi_task_getargst(toptask, kaapi_taskadaptive_arg_t);
   sc = (kaapi_stealcontext_t*)adapt_arg->shared_sc.data;
-  sc->msc  = (kaapi_stealcontext_t*)victim_adapt_arg->shared_sc.data;
+  sc->msc  = ((kaapi_stealcontext_t*)victim_adapt_arg->shared_sc.data)->msc;
 
   if (kaapi_task_is_withpreemption(victim_task) && !kaapi_task_is_withpreemption(toptask))
   {
