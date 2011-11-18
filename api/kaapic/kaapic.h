@@ -99,11 +99,26 @@ extern int32_t kaapic_get_concurrency(void);
 */
 extern int32_t kaapic_get_thread_num(void);
 
+typedef struct kaapic_foreach_attr_t {
+  uint32_t s_grain;
+  uint32_t p_grain;  
+} kaapic_foreach_attr_t;
+  
+extern int kaapic_foreach_attr_init(kaapic_foreach_attr_t* attr);
+extern int kaapic_foreach_attr_set_grains(
+  kaapic_foreach_attr_t* attr, 
+  uint32_t s_grain,
+  uint32_t p_grain
+);
+static inline int kaapic_foreach_attr_destroy(kaapic_foreach_attr_t* attr)
+{ return 0; }
+
 /* See documentation
 */
 extern void kaapic_foreach( 
   int32_t beg, 
   int32_t last, 
+  kaapic_foreach_attr_t* attr,
   int32_t nparam, 
   void (*body)(int32_t, int32_t, int32_t, ...),
   ...
@@ -115,6 +130,7 @@ extern void kaapic_foreach(
 extern void kaapic_foreach_with_format(
   int32_t beg, 
   int32_t last, 
+  kaapic_foreach_attr_t* attr,
   int32_t nparam, 
   void (*body)(int32_t, int32_t, int32_t, ...),
   ...

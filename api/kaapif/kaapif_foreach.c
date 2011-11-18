@@ -98,7 +98,7 @@ int kaapif_foreach_(
     body_arg->args[k] = va_arg(va_args, void*);
   va_end(va_args);
   
-  return kaapic_foreach_common( *first, *last+1, kaapif_foreach_body2user, body_arg);
+  return kaapic_foreach_common( *first, *last+1, 0,kaapif_foreach_body2user, body_arg);
 }
 
 
@@ -141,5 +141,5 @@ int kaapif_foreach_with_format_(
   }
   va_end(va_args);
   
-  return kaapic_foreach_common( *first, *last+1, kaapif_foreach_body2user, body_arg);
+  return kaapic_foreach_common( *first, *last+1, 0,kaapif_foreach_body2user, body_arg);
 }

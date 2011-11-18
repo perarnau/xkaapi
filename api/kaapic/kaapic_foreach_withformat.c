@@ -49,6 +49,7 @@
 void kaapic_foreach_with_format( 
   int32_t first, 
   int32_t last, 
+  kaapic_foreach_attr_t* attr,
   int32_t nargs, 
   void (*f)(int32_t, int32_t, int32_t, ...),
   ...
@@ -79,5 +80,5 @@ void kaapic_foreach_with_format(
   }
   va_end(va_args);
   
-  kaapic_foreach_common( first, last, kaapic_foreach_body2user, body_arg);
+  kaapic_foreach_common( first, last, attr, kaapic_foreach_body2user, body_arg);
 }

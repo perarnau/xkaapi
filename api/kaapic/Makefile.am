@@ -45,6 +45,7 @@ libkaapic_la_SOURCES=\
 	kaapic_spawn.c \
 	kaapic_work.c \
 	kaapic_foreach_docall.c \
+	kaapic_foreach_attr.c \
 	kaapic_foreach.c \
 	kaapic_foreach_withformat.c \
 	$(include_HEADERS)\

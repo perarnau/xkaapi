@@ -145,7 +145,7 @@ static inline long work_array_first(const work_array_t* wa)
 {
   /* return the first available task position */
   /* assume there is at least one bit set */
-  return kaapi_bitmap_first1(&wa->map);
+  return kaapi_bitmap_first1(&wa->map) -1;
 }
 
 
@@ -187,10 +187,10 @@ typedef work_t thief_work_t;
 
 
 /* fwd decl */
-static void thief_entrypoint(void*, kaapi_thread_t* );
+static void _kaapic_thief_entrypoint(void*, kaapi_thread_t* );
 
 
-static int split_common(
+static int _kaapic_split_common(
   struct kaapi_task_t*                 victim_task,
   void*                                args,
   struct kaapi_listrequest_t*          lr,
@@ -199,7 +199,7 @@ static int split_common(
 );
 
 
-static int split_leaf_task
+static int _kaapic_split_leaf_task
 (
   struct kaapi_task_t*                 task,
   void*                                arg,
@@ -207,12 +207,12 @@ static int split_leaf_task
   struct kaapi_listrequest_iterator_t* lri
 )
 {
-  return split_common(task, arg, lr, lri, 0);
+  return _kaapic_split_common(task, arg, lr, lri, 0);
 }
 
 
 /* main splitter */
-static int split_root_task
+static int _kaapic_split_root_task
 (
   struct kaapi_task_t*                 task,
   void*                                arg,
@@ -220,13 +220,13 @@ static int split_root_task
   struct kaapi_listrequest_iterator_t* lri
 )
 {
-  return split_common(task, arg, lr, lri, 1);
+  return _kaapic_split_common(task, arg, lr, lri, 1);
 }
 
 
 /* parallel work splitters */
 
-static int split_common(
+static int _kaapic_split_common(
   struct kaapi_task_t*                 victim_task,
   void*                                args,
   struct kaapi_listrequest_t*          lr,
@@ -278,6 +278,7 @@ static int split_common(
     kaapi_request_t* req = kaapi_listrequest_iterator_get(lr, &cpy_lri);
     if (work_array_is_set(wa, (long)req->ident))
       ++root_count;
+    kaapi_listrequest_iterator_next(lr, &cpy_lri);
   }
 
 skip_work_array:
@@ -383,8 +384,8 @@ skip_workqueue:
 #if CONFIG_TERM_COUNTER
     tw->counter = vw->counter;
 #endif
-    kaapi_task_init(kaapi_request_toptask(req), thief_entrypoint, tw);
-    kaapi_reply_pushtask_adaptive_tail( req, victim_task, split_leaf_task );
+    kaapi_task_init(kaapi_request_toptask(req), _kaapic_thief_entrypoint, tw);
+    kaapi_reply_pushtask_adaptive_tail( req, victim_task, _kaapic_split_leaf_task );
     kaapi_request_committask(req);
   }
 
@@ -393,7 +394,7 @@ skip_workqueue:
 
 
 /* thief entrypoint */
-static void thief_entrypoint(
+static void _kaapic_thief_entrypoint(
   void*                 args, 
   kaapi_thread_t*       thread
 )
@@ -434,10 +435,11 @@ static void thief_entrypoint(
 /* exported foreach interface */
 int kaapic_foreach_common
 (
-  int32_t               first, 
-  int32_t               last,
-  kaapic_foreach_body_t body_f,
-  void*                 body_args
+  int32_t                first, 
+  int32_t                last,
+  kaapic_foreach_attr_t* attr,
+  kaapic_foreach_body_t  body_f,
+  void*                  body_args
 )
 {
   /* is_format true if called from kaapif_foreach_with_format */
@@ -533,15 +535,15 @@ int kaapic_foreach_common
 #if CONFIG_MAX_TID
   wi.max_tid = xxx_max_tid;
 #endif
-  wi.par_grain = xxx_par_grain;
-  wi.seq_grain = xxx_seq_grain;
+  wi.par_grain = (attr ==0 ? 1 : attr->s_grain);
+  wi.seq_grain = (attr ==0 ? 1 : attr->p_grain);
   w.wi = &wi;
 
   /* start adaptive region */
   context = kaapi_task_begin_adaptive(
      thread, 
      KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION,
-     split_root_task,
+     _kaapic_split_root_task,
      &w
   );
 

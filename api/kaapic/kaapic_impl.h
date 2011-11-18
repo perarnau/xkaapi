@@ -79,10 +79,11 @@ typedef void (*kaapic_foreach_body_t)(int32_t, int32_t, int32_t, void* );
 */
 extern int kaapic_foreach_common
 (
-  int32_t               first, 
-  int32_t               last,
-  kaapic_foreach_body_t body_f,
-  void*                 body_args
+  int32_t                first, 
+  int32_t                last,
+  kaapic_foreach_attr_t* attr,
+  kaapic_foreach_body_t  body_f,
+  void*                  body_args
 );
 
 /* wrapper for kaapic_foreach(...) and kaapic_foreach_withformat(...)
