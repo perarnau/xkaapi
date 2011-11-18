@@ -1,0 +1,490 @@
+\documentclass[a4paper, 11pt]{article}
+
+\usepackage{graphicx}
+\usepackage{graphics}
+\usepackage{verbatim}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{RR,RRthemes}
+
+%%\usepackage[frenchb]{babel} % optionnel
+%%
+%% date de publication du rapport
+\RRdate{Juin 2011}
+%%
+%% Cas d'une version deux
+%% \RRversion{2}
+%% date de publication de la version 2
+%% \RRdater{Novembre  2006}
+\usepackage{listings}
+
+\usepackage{amssymb}
+\usepackage{xspace} 
+\usepackage{array} 
+\usepackage{multirow}
+\newcommand\hyph{\nobreak\hskip0pt-\nobreak\hskip0pt\relax}
+\newlength\savedwidth
+\newcommand\whline{\noalign{\global\savedwidth
+  \arrayrulewidth\global\arrayrulewidth 1.5pt}
+  \hline \noalign{\global\arrayrulewidth
+  \savedwidth}
+}
+\newcolumntype{I}{!{\vrule width 1.5pt}}
+\renewcommand{\arraystretch}{1.5}
+
+\newcommand{\kaapi}{\textsc{X-Kaapi}\xspace}
+
+%%% For all listing figures
+\definecolor{MyDarkBlue}{rgb}{0.254901960784314, 0.411764705882353, 0.882352941176471}
+
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\lstset{stringstyle=\ttfamily}
+\lstset{ classoffset=1
+           }
+\lstset{ classoffset=2 
+           }
+\lstset{ classoffset=3
+           }
+           
+\lstset{classoffset=0, showstringspaces=false}
+
+\RRdate{November 2011}
+
+%%
+\RRauthor{
+Thierry Gautier
+  \and
+Vincent Faucher
+  \and
+Bruno Raffin
+  \and
+Fabien Le Mentec
+}
+
+\authorhead{Gautier \& Faucher \& Raffin \& Le Mentec}
+\RRtitle{\kaapi FORTRAN programming interface}
+\RRetitle{\kaapi FORTRAN programming interface}
+\titlehead{\kaapi FORTRAN programming interface}
+
+\RRabstract{This report defines the \kaapi FORTRAN programming interface.}
+
+\RRmotcle{}
+\RRkeyword{parallel computing, \kaapi, FORTRAN}
+\RRprojets{MOAIS}
+\RRdomaine{3} % cas du domaine numero 1
+\RRthemeProj{moais} % theme du projet Apics
+\RCGrenoble % Grenoble - Rh\^one-Alpes
+
+\begin{document}
+
+% \makeRR % cas d'un rapport de recherche
+\makeRT % cas d'un rapport technique.
+
+\tableofcontents
+\addtocontents{toc}{\protect\setcounter{tocdepth}{1}}
+
+\newpage
+\section{Initialization and termination}
+
+\subsection{Synopsis}
+\begin{small}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+SUBROUTINE KAAPIF_INIT(INTEGER*4 FLAGS)
+SUBROUTINE KAAPIF_FINALIZE()
+\end{lstlisting}
+\end{small}
+
+\subsection{Description}
+\paragraph{}
+\textit{KAAPIF\_INIT} initializes the runtime. It must be called once per program
+before using any of the other routines. If successful, there must be a
+corresponding \textit{KAAPIF\_FINALIZE} at the end of the program.
+
+\subsection{Parameters}
+\begin{itemize}
+\item \textit{FLAGS}: if not zero, start only the main thread to avoid disturbing
+the execution until tasks are actually scheduled. The other threads are suspended
+waiting for a parallel region to be entered (refer to KAAPIF\_BEGIN\_PARALLEL).
+\end{itemize}
+
+\subsection{Return value}
+\paragraph{}
+None.
+
+\subsection{Example}
+\paragraph{}
+Refer to examples/kaapif/foreach\\
+\begin{small}
+\begin{lstlisting}[frame=tb]
+  PROGRAM MAIN
+    CALL KAAPIF_INIT(1)
+
+    ...
+
+    CALL KAAPIF_FINALIZE()
+  END PROGRAM MAIN
+\end{lstlisting}
+\end{small}
+
+
+\newpage
+\section{Concurrency}
+
+\subsection{Synopsis}
+\begin{small}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+INTEGER*4 FUNCTION KAAPIF_GET_CONCURRENCY()
+INTEGER*4 FUNCTION KAAPIF_GET_THREAD_NUM()
+\end{lstlisting}
+\end{small}
+
+\subsection{Description}
+\paragraph{}
+Concurrency related routines.
+
+\subsection{Return value}
+\paragraph{}
+\textit{KAAPIF\_GET\_CONCURRENCY} returns the number of parallel thread available
+to the \kaapi runtime.
+\paragraph{}
+\textit{KAAPIF\_GET\_THREAD\_NUM} returns the current thread identifier. Note it
+should only be called in the context of a \kaapi thread.
+
+\subsection{Example}
+\paragraph{}
+Refer to examples/kaapif/foreach
+
+
+\newpage
+\section{Performance}
+
+\subsection{Synopsis}
+\begin{small}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+REAL*8 FUNCTION KAAPIF_GET_TIME()
+\end{lstlisting}
+\end{small}
+
+\subsection{Description}
+\paragraph{}
+Capture the current time. Used to measure the time spent in a code region.
+
+\subsection{Parameters}
+\paragraph{}
+None.
+
+\subsection{Return value}
+\paragraph{}
+The current time, in microseconds.
+
+\subsection{Example}
+\paragraph{}
+Refer to examples/kaapif/foreach\\
+
+\begin{small}
+\begin{lstlisting}[frame=tb]
+  PROGRAM MAIN
+    REAL*8 START
+    REAL*8 STOP
+
+    CALL KAAPIF_INIT(1)
+    START = KAAPIF_GET_TIME()
+
+    ...
+
+    STOP = KAAPIF_GET_TIME()
+    CALL KAAPIF_FINALIZE()
+
+    WRITE(*, *) STOP - START
+
+  END PROGRAM MAIN
+\end{lstlisting}
+\end{small}
+
+
+\newpage
+\section{Independent loops}
+
+\subsection{Synopsis}
+\begin{small}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+SUBROUTINE KAAPIF_FOREACH
+(
+  BODY,
+  INTEGER*4 FIRST, INTEGER*4 LAST,
+  INTEGER*4 NARGS,
+  ...
+)
+
+SUBROUTINE KAAPIF_FOREACH_WITH_FORMAT
+(
+  BODY,
+  INTEGER*4 FIRST, INTEGER*4 LAST,
+  INTEGER*4 NARGS,
+  ...
+)
+\end{lstlisting}
+\end{small}
+
+\subsection{Description}
+\paragraph{}
+Those routines run a parallel loop over the range [\textit{FIRST}, \textit{LAST}]
+(note this is an \textbf{inclusive} interval).
+The loop body is defined by \textit{BODY} whose arguments are given
+in parameters. It must have the following prototype:\\
+\begin{small}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+SUBROUTINE BODY(I, J, TID, ...)
+\end{lstlisting}
+\end{small}
+\begin{itemize}
+\item $[I, J]$ the subrange to process (note that interval is inclusive)
+\item \textit{TID} the thread identifier
+\end{itemize}
+
+\subsection{Parameters}
+\begin{itemize}
+\item \textit{BODY}: the function body to be called at each iteration
+\item \textit{FIRST}, \textit{LAST}: the iteration range indices, inclusive.
+\item \textit{NARGS}: the argument count
+\item \textit{...}: the arguments passed to \textit{BODY}. For
+\textit{KAAPIF\_FOREACH\_WITH\_FORMAT}, refer to the \textit{KAAPIF\_SPAWN}
+documentation.
+\end{itemize}
+
+\subsection{Return value}
+\paragraph{}
+None.
+
+\subsection{Example}
+Refer to examples/kaapif/foreach\\
+Refer to examples/kaapif/foreach\_with\_format
+
+\begin{small}
+\begin{lstlisting}[frame=tb]
+  ! computation task entry point
+  SUBROUTINE OP(I, J, TID, ARRAY)
+    DO K = I, J
+      ! process ARRAY(K)
+      ...
+    END DO
+    RETURN
+  END
+
+  PROGRAM MAIN
+    ...
+    ! apply the OP routine on ARRAY[1:SIZE]
+    CALL KAAPIF_FOREACH(OP, 1, SIZE, 1, ARRAY)
+    ...
+  END PROGRAM MAIN
+\end{lstlisting}
+\end{small}
+
+
+\newpage
+\section{Dataflow programming}
+\subsection{Synopsis}
+\begin{small}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+SUBROUTINE KAAPIF_SPAWN
+(
+  BODY,
+  INTEGER*4 NARGS,
+  ...
+)
+\end{lstlisting}
+\end{small}
+
+\subsection{Description}
+\paragraph{}
+Create a new computation task implemented by the function \textit{BODY}.
+
+\paragraph{}
+\textit{BODY} is called with the user specified arguments, there is no
+argument added by XKAAPI:\\
+\begin{small}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+SUBROUTINE BODY(ARG0, ARG1, ...)
+\end{lstlisting}
+\end{small}
+
+\paragraph{}
+Each task parameter is described by 4 successive arguments including:
+\begin{itemize}
+\item the argument \textit{VALUE},
+\item the parameter \textit{TYPE},
+\item the element \textit{COUNT},
+\item the access \textit{MODE}.
+\end{itemize}
+
+\paragraph{}
+\textit{TYPE} is one of the following:
+\begin{itemize}
+\item KAAPIF\_TYPE\_CHAR=0,
+\item KAAPIF\_TYPE\_INT=1,
+\item KAPAIF\_TYPE\_REAL=2,
+\item KAPAIF\_TYPE\_DOUBLE=3.
+\end{itemize}
+
+\paragraph{}
+If a parameter is an array, \textit{COUNT} must be set to the array size.
+For a scalar value, it must be set to 1.
+
+\paragraph{}
+\textit{MODE} is one of the following:
+\begin{itemize}
+\item KAAPIF\_MODE\_R=0 for a read access,
+\item KAAPIF\_MODE\_W=1 for a write access,
+\item KAAPIF\_MODE\_RW=2 for a read write access,
+\item KAAPIF\_MODE\_V=3 for a parameter passed by value.
+\end{itemize}
+
+\subsection{Parameters}
+\begin{itemize}
+\item \textit{BODY}: the task body.
+\item \textit{NARGS}: the argument count.
+\item \textit{...}: the \textit{VALUE}, \textit{TYPE}, \textit{COUNT}, \textit{MODE} tuple list.
+\end{itemize}
+
+\subsection{Return value}
+\paragraph{}
+None.
+
+\subsection{Example}
+\paragraph{}
+Refer to examples/kaapif/dfg
+
+\begin{small}
+\begin{lstlisting}[frame=tb]
+  ! computation task entry point
+  SUBROUTINE OP(A, B)
+    ! task user specific code
+    ...
+    RETURN
+  END
+
+  PROGRAM MAIN
+    ...
+
+    ! spawn a task implemented by the OP routine
+    call kaapif_spawn(fu, 2,
+    ! argument[0]
+     &                42
+     &                KAAPIF_TYPE_DOUBLE,
+     &                1,
+     &                KAAPIF_MODE_V,
+    ! argument[1]
+     &                42,
+     &                KAAPIF_TYPE_DOUBLE,
+     &                1,
+     &                KAAPIF_MODE_V)
+
+    ...
+  END PROGRAM MAIN
+\end{lstlisting}
+\end{small}
+
+
+\newpage
+\section{Parallel regions}
+
+\subsection{Synopsis}
+\begin{small}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+SUBROUTINE KAAPIF_BEGIN_PARALLEL()
+SUBROUTINE KAAPIF_END_PARALLEL(INTEGER*4 FLAGS)
+\end{lstlisting}
+\end{small}
+
+\subsection{Description}
+\paragraph{}
+\textit{KAAPIF\_BEGIN\_PARALLEL} and \textit{KAAPIF\_END\_PARALLEL} mark the
+start and the end of a parallel region. Regions are used to wakeup and suspend
+the \kaapi system threads so they avoid disturbing the application when idle.
+This is important if another parallel library is being used. Wether threads
+are suspendable or not is controlled according by the KAAPIF\_INIT parameter.
+
+\subsection{Parameters}
+\begin{itemize}
+\item \textit{FLAGS}: if zero, an implicit synchronization is inserted before
+leaving the region.
+\end{itemize}
+
+\subsection{Return value}
+\paragraph{}
+None.
+
+\subsection{Example}
+\paragraph{}
+Refer to examples/kaapif/dfg\\
+\begin{small}
+\begin{lstlisting}[frame=tb]
+  PROGRAM MAIN
+    ...
+
+    CALL KAAPIF_BEGIN_PARALLEL()
+
+    ...
+
+    CALL KAAPIF_END_PARALLEL(1)
+
+    ...
+  END PROGRAM MAIN
+\end{lstlisting}
+\end{small}
+
+
+\newpage
+\section{Synchronization}
+
+\subsection{Synopsis}
+\begin{small}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+SUBROUTINE KAAPIF_SCHED_SYNC()
+\end{lstlisting}
+\end{small}
+
+\subsection{Description}
+\paragraph{}
+Synchronize the sequential with the parallel execution flow. When this routine
+returns, every computation task has been executed and memory is consistent for
+the processor executing the sequential flow.
+
+\subsection{Return value}
+\paragraph{}
+None.
+
+\subsection{Example}
+\paragraph{}
+Refer to examples/kaapif/dfg\\
+\begin{small}
+\begin{lstlisting}[frame=tb]
+  PROGRAM MAIN
+    ...
+
+    CALL KAAPIF_SYNC()
+
+    ...
+  END PROGRAM MAIN
+\end{lstlisting}
+\end{small}
+
+
+\end{document}
