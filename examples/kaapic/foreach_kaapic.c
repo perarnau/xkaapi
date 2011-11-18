@@ -13,8 +13,8 @@
  */
 
 
-#define CONFIG_TERM_BUG 1
-#define CONFIG_CHECK_RES 1
+#define CONFIG_TERM_BUG 0
+#define CONFIG_CHECK_RES 0
 #define CONFIG_BENCH 1
 
 

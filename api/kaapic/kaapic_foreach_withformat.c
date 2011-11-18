@@ -51,7 +51,6 @@ void kaapic_foreach_with_format(
   int32_t last, 
   kaapic_foreach_attr_t* attr,
   int32_t nargs, 
-  void (*f)(int32_t, int32_t, int32_t, ...),
   ...
 )
 {
@@ -60,12 +59,12 @@ void kaapic_foreach_with_format(
     offsetof(kaapic_body_arg_t, args) + nargs * sizeof(void*)
   ); 
   va_list va_args;
-  va_start(va_args, f);
+  va_start(va_args, nargs);
   
   /* format of each effective parameter is a list of tuple:
        mode, @, count, type
   */
-  body_arg->u.f_c = f;
+  body_arg->u.f_c = va_arg(va_args, void (*)(int32_t, int32_t, int32_t, ...));
   body_arg->nargs = nargs;
   for (k = 0; k < nargs; ++k)
   {

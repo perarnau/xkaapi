@@ -120,7 +120,7 @@ extern void kaapic_foreach(
   int32_t last, 
   kaapic_foreach_attr_t* attr,
   int32_t nparam, 
-  void (*body)(int32_t, int32_t, int32_t, ...),
+  /* void (*body)(int32_t, int32_t, int32_t, ...), */
   ...
 );
 
@@ -132,7 +132,7 @@ extern void kaapic_foreach_with_format(
   int32_t last, 
   kaapic_foreach_attr_t* attr,
   int32_t nparam, 
-  void (*body)(int32_t, int32_t, int32_t, ...),
+  /* void (*body)(int32_t, int32_t, int32_t, ...), */
   ...
 );
 
