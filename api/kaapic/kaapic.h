@@ -143,12 +143,11 @@ extern void kaapic_foreach_with_format(
   \param ...: a list of tuple { VALUE, COUNT, TYPE, MODE } tuple list.
   \retval 0 in case of success, else an error code
 */
-typedef void (*kaapic_spawn_fn_t)();
-extern int kaapic_spawn(kaapic_spawn_fn_t body, int32_t nargs, ...);
+extern int kaapic_spawn(int32_t nargs, ...);
 
 /*
 */
-extern void kaapic_sched_sync(void);
+extern void kaapic_sync(void);
 
 /*
 */

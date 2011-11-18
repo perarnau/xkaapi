@@ -80,7 +80,7 @@ int32_t kaapic_get_thread_num(void)
   return (int32_t)kaapi_get_self_kid();
 }
 
-void kaapic_sched_sync(void)
+void kaapic_sync(void)
 {
   kaapi_sched_sync();
 }
