@@ -6,6 +6,7 @@
 \usepackage{listings}
 \usepackage{color}
 \usepackage{RR,RRthemes}
+\usepackage{hyperref}
 
 %%\usepackage[frenchb]{babel} % optionnel
 %%
@@ -53,16 +54,16 @@
 
 %%
 \RRauthor{
-Thierry Gautier
+Fabien Le Mentec
+  \and
+Vincent Danjean
   \and
 Vincent Faucher
   \and
-Bruno Raffin
-  \and
-Fabien Le Mentec
+Thierry Gautier
 }
 
-\authorhead{Gautier \& Faucher \& Raffin \& Le Mentec}
+\authorhead{Gautier \& Faucher \& Le Mentec}
 \RRtitle{\kaapi FORTRAN programming interface}
 \RRetitle{\kaapi FORTRAN programming interface}
 \titlehead{\kaapi FORTRAN programming interface}
@@ -83,6 +84,38 @@ Fabien Le Mentec
 
 \tableofcontents
 \addtocontents{toc}{\protect\setcounter{tocdepth}{1}}
+
+\newpage
+\section{Software installation}\label{sec:userinstall}
+
+\kaapi is both a programming model and a runtime for high performance parallelism targeting multicore and distributed architectures. 
+It relies on the work stealing paradigm.
+\kaapi was developed in the MOAIS INRIA project by Thierry Gautier, Fabien Le Mentec, Vincent Danjean and Christophe Laferrière in the early stage of the library.
+
+In this report, only the programming model based on the C API is presented.
+The runtime library comes also with a full set of complementary programming interfaces: C, C++ and STL-like interfaces. The C++ and STL interfaces, at a higher level than the C interface, may be directly used for developing parallel programs or libraries.
+
+\subsubsection*{Supported Platforms}
+\kaapi targets essentially SMP and NUMA platforms. The runtime should run
+on any system providing:
+\begin{itemize}
+\item a GNU toolchain (4.3),
+\item the pthread library,
+\item Unix based environment.
+\end{itemize}
+It has been extensively tested on the following operating systems:
+\begin{itemize}
+\item GNU-Linux with x86\_64 architectures,
+\item MacOSX/Intel processor.
+\end{itemize}
+
+There is no version for Windows yet.
+
+\subsubsection*{\kaapi Contacts}
+If you wish to contact the XKaapi team, please visite the web site at:
+\begin{center}
+\url{http://kaapi.gforge.inria.fr}
+\end{center}
 
 \newpage
 \section{Initialization and termination}
