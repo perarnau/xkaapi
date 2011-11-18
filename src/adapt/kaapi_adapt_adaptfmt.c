@@ -71,7 +71,12 @@ static inline const void* __constget_usersp( const void* sp )
 
 static size_t 
 _kaapi_adaptbody_get_count_params(const kaapi_format_t* fmt, const void* sp)
-{ return 1 +kaapi_format_get_count_params( __resolve_format(sp), __constget_usersp(sp) ); }
+{ 
+  const kaapi_format_t* user_fmt = __resolve_format(sp);
+  return 1 
+       + (user_fmt == 0 ? 0 : 
+            kaapi_format_get_count_params( __resolve_format(sp), __constget_usersp(sp) ) ); 
+}
 
 static kaapi_access_mode_t 
 _kaapi_adaptbody_get_mode_param(const kaapi_format_t* fmt, unsigned int ith, const void* sp)
@@ -125,11 +130,36 @@ _kaapi_adaptbody_set_view_param
   /* else nothing to do: never reallocated because, 1D view ! */
 }
 
+/* good name ! 
+   Wrapper between the old splitter interface and the new one.
+*/
+static int kaapi_adaptivetask_wrapper_splitter( 
+    kaapi_task_t*                 pc, /* this is the adaptive task on which splitter is called */
+    void*                         sp,
+    kaapi_listrequest_t*          lrequests, 
+    kaapi_listrequest_iterator_t* lrrange
+)
+{
+  /* - pc is kaapi_taskadapt_body 
+  */
+  kaapi_taskadaptive_arg_t* arg = (kaapi_taskadaptive_arg_t*)sp;
+  kaapi_assert_debug( pc !=0 );
+
+  /* call the splitter */
+  return arg->user_splitter( 
+      pc,
+      arg->user_sp,
+      lrequests,
+      lrrange
+  );
+}
+
 static kaapi_adaptivetask_splitter_t 
 _kaapi_adaptbody_get_splitter(const struct kaapi_format_t* fmt, const void* sp)
 { 
-  const kaapi_taskadaptive_arg_t* arg = (const kaapi_taskadaptive_arg_t*)sp;
-  return arg->user_splitter;
+  return kaapi_adaptivetask_wrapper_splitter; 
+  //const kaapi_taskadaptive_arg_t* arg = (const kaapi_taskadaptive_arg_t*)sp;
+  //return arg->user_splitter;
 }
 
 void kaapi_init_adapfmt(void)
