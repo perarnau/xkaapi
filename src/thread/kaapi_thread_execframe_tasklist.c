@@ -105,7 +105,9 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   //kaapi_writemem_barrier();
 KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist = *tasklist; )
 
+#if 0
 redo_while:
+#endif
   while (!kaapi_tasklist_isempty( tasklist ))
   {
     err = kaapi_readylist_pop( &tasklist->rtl, &td );

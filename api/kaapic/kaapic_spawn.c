@@ -164,6 +164,7 @@ static void kaapic_taskformat_redinit
   kaapi_abort();
 }
 
+__attribute__((unused))
 static void kaapic_taskformat_get_task_binding(
  const struct kaapi_format_t* f,
  const kaapi_task_t* t,
