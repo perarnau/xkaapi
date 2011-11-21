@@ -71,23 +71,23 @@ extern int32_t kaapif_get_max_tid_(void);
 extern void kaapif_set_grains_(int32_t*, int32_t*);
 
 extern int kaapif_foreach_(
-  int32_t*, 
-  int32_t*, 
-  int32_t*,
+  int32_t*,  /* first */
+  int32_t*,  /* last */
+  int32_t*,  /* NARGS */
   void (*)(int32_t*, int32_t*, int32_t*, ...), 
   ...  
 );
 extern int kaapif_foreach_with_format_(
-  int32_t*, 
-  int32_t*, 
-  int32_t*,
+  int32_t*,  /* first */
+  int32_t*,  /* last */
+  int32_t*,  /* NARGS */
   void (*)(int32_t*, int32_t*, int32_t*, ...), 
   ...
 );
 
 extern int kaapif_spawn_(
-    int32_t*,
-    void (*f)(), 
+    int32_t*,    /* NARGS */
+    void (*f)(), /* F */
     ...
 );
 

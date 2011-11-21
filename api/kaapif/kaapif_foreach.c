@@ -41,7 +41,6 @@
  ** terms.
  ** 
  */
-
 #include "kaapi.h"
 #include "kaapif.h"
 #include "kaapic_impl.h"
@@ -55,10 +54,13 @@ do {							\
 } while(0)
 
 /* main entry point */
-void kaapif_foreach_body2user(int32_t first, int32_t last, int32_t tid, void* arg )
+void kaapif_foreach_body2user(
+  int32_t first, 
+  int32_t last, 
+  int32_t tid, 
+  kaapic_body_arg_t* call 
+)
 {
-  kaapic_body_arg_t* call = (kaapic_body_arg_t*)arg;
-
   /* change [first, last[ to [first,last-1] as assumed in fortran.
   */
   --last;
@@ -114,6 +116,7 @@ int kaapif_foreach_with_format_(
   int32_t k;
   kaapic_body_arg_t* body_arg;
   va_list va_args;
+  kaapic_foreach_attr_t attr;
 
   if (*nargs >= KAAPIF_MAX_ARGS)
     return EINVAL;
@@ -131,15 +134,18 @@ int kaapif_foreach_with_format_(
   for (k = 0; k < *nargs; ++k)
   {
     /* skip mode */
-    va_arg(va_args, uintptr_t);
+    /* int* mode = (int*)*/va_arg(va_args, uintptr_t);
 
     body_arg->args[k] = va_arg(va_args, void*);
 
     /* skip count, type */
-    va_arg(va_args, uintptr_t);
-    va_arg(va_args, uintptr_t);
+    /* int* count = (int*)*/va_arg(va_args, uintptr_t);
+    /* int* type  = (int*)*/va_arg(va_args, uintptr_t);
   }
   va_end(va_args);
+
+  kaapic_foreach_attr_init(&attr);
+  kaapic_foreach_attr_set_grains(&attr, 128, 128);  
   
-  return kaapic_foreach_common( *first, *last+1, 0,kaapif_foreach_body2user, body_arg);
+  return kaapic_foreach_common( *first, *last+1, &attr,kaapif_foreach_body2user, body_arg);
 }

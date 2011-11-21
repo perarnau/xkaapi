@@ -68,7 +68,7 @@ typedef struct kaapic_body_arg_t {
    Called with (first, last, tid, arg) in order to do
    computation over the range [first,last[.
 */
-typedef void (*kaapic_foreach_body_t)(int32_t, int32_t, int32_t, void* );
+typedef void (*kaapic_foreach_body_t)(int32_t, int32_t, int32_t, kaapic_body_arg_t* );
 
 /* exported foreach interface 
    evaluate body_f(first, last, body_args) in parallel, assuming
@@ -82,12 +82,17 @@ extern int kaapic_foreach_common
   int32_t                last,
   kaapic_foreach_attr_t* attr,
   kaapic_foreach_body_t  body_f,
-  void*                  body_args
+  kaapic_body_arg_t*     body_args
 );
 
 /* wrapper for kaapic_foreach(...) and kaapic_foreach_withformat(...)
 */
-extern void kaapic_foreach_body2user(int32_t first, int32_t last, int32_t tid, void* arg );
+extern void kaapic_foreach_body2user(
+  int32_t first, 
+  int32_t last, 
+  int32_t tid, 
+  kaapic_body_arg_t* arg 
+);
 
 
 /*

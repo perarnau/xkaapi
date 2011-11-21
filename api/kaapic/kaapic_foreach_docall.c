@@ -46,9 +46,8 @@
 
 
 /* main entry point */
-void kaapic_foreach_body2user(int32_t first, int32_t last, int32_t tid, void* arg )
+void kaapic_foreach_body2user(int32_t first, int32_t last, int32_t tid, kaapic_body_arg_t* call )
 {
-  kaapic_body_arg_t* call = (kaapic_body_arg_t*)arg;
 #include "kaapic_adaptive_switch.h"
   KAAPIC_ADAPTIVE_SWITCH(call, first, last, tid);
 }
