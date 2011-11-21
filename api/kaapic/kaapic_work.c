@@ -123,8 +123,8 @@ static void work_array_pop
   const long k = wa->off + pos * wa->scale;
 
   *i = k;
-  *j = k + wa->scale+1;
-
+  *j = k + wa->scale;
+  kaapi_assert_debug( pos >= 0 );
   kaapi_bitmap_value_unset(&wa->map, (unsigned int)pos);
 }
 
@@ -137,6 +137,7 @@ static inline unsigned int work_array_is_empty(const work_array_t* wa)
 
 static inline unsigned int work_array_is_set(const work_array_t* wa, long pos)
 {
+  kaapi_assert_debug( pos >= 0 );
   return kaapi_bitmap_value_get(&wa->map, (unsigned int)pos);
 }
 
@@ -180,7 +181,7 @@ typedef struct work
 
   /* work routine */
   kaapic_foreach_body_t body_f;
-  void*                 body_args;
+  kaapic_body_arg_t*    body_args;
 } work_t;
 
 typedef work_t thief_work_t;
@@ -324,6 +325,8 @@ redo_steal:
   /* perform the actual steal. if the range
      changed size in between, redo the steal
   */
+  kaapi_assert_debug( vw->cr.lock == &kaapi_get_current_processor()->victim_kproc->lock );
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(vw->cr.lock) <= 0 );
   if (kaapi_workqueue_steal(&vw->cr, &i, &j, leaf_count * unit_size))
   {
     if ((trials--) == 0)
@@ -334,6 +337,7 @@ redo_steal:
 
     goto redo_steal;
   }
+
 
 skip_workqueue:
   for ( /* void */; 
@@ -354,6 +358,7 @@ skip_workqueue:
       /* serve from work array */
       tw = kaapi_request_pushdata(req, sizeof(thief_work_t) );
       work_array_pop(wa, (long)req->ident, &p, &q);
+      kaapi_assert_debug( q-p > 0 );
       --root_count;
     }
     else if (leaf_count)
@@ -367,6 +372,8 @@ skip_workqueue:
 
       j -= unit_size;
 
+      kaapi_assert_debug( unit_size >= 1 );
+      kaapi_assert_debug( q-p > 0 );
       --leaf_count;
     }
     else
@@ -376,6 +383,8 @@ skip_workqueue:
     }
 
     /* finish work init and reply the request */
+    printf("%i:: WS/Steal [%i,%i[\n", req->ident, (int)p, (int)q);
+    fflush(stdout);
     kaapi_workqueue_init_with_lock
       (&tw->cr, p, q, &kaapi_all_kprocessors[req->ident]->lock);
     tw->body_f    = vw->body_f;
@@ -384,7 +393,12 @@ skip_workqueue:
 #if CONFIG_TERM_COUNTER
     tw->counter = vw->counter;
 #endif
-    kaapi_task_init(kaapi_request_toptask(req), _kaapic_thief_entrypoint, tw);
+    kaapi_task_init_with_flag(
+      kaapi_request_toptask(req), 
+      _kaapic_thief_entrypoint, 
+      tw,
+      KAAPI_TASK_UNSTEALABLE
+    );
     kaapi_reply_pushtask_adaptive_tail( req, victim_task, _kaapic_split_leaf_task );
     kaapi_request_committask(req);
   }
@@ -392,6 +406,9 @@ skip_workqueue:
   return 0;
 }
 
+static volatile int version = 0;
+static volatile int arraytid[1000 * 48];
+static volatile int arraytidversion[1000 * 48];
 
 /* thief entrypoint */
 static void _kaapic_thief_entrypoint(
@@ -416,15 +433,42 @@ static void _kaapic_thief_entrypoint(
   unsigned long counter = 0;
 #endif
 
+  kaapi_assert_debug( &kaapi_get_current_processor()->lock == thief_work->cr.lock );
+
   /* while there is sequential work to do */
+  kaapi_workqueue_index_t first_i = -1;
+  kaapi_workqueue_index_t last_j = -1;
+  kaapi_workqueue_t savewq = thief_work->cr;
   while (kaapi_workqueue_pop(&thief_work->cr, &i, &j, wi->seq_grain) ==0)
   {
+    if (first_i == -1) first_i = i;
+    last_j = j;
+    kaapi_assert_debug( &kaapi_get_current_processor()->lock == thief_work->cr.lock );
+    kaapi_assert_debug( i < j );
+//    printf("%i:: WS/S_pop [%i,%i[\n", kaapi_get_self_kid(), (int)i, (int)j);
+
+    /* shift -1 to match fortran definition... */
+    for (int k = i; k<j; ++k)
+    {
+      if (arraytid[k-1] !=0) 
+        kaapi_abort();
+      arraytid[k-1] = tid;
+      arraytidversion[k-1] = version;
+    }
     /* apply w->f on [i, j[ */
     thief_work->body_f((int)i, (int)j, (int)tid, thief_work->body_args);
+//    savewq = thief_work->cr;
 #if CONFIG_TERM_COUNTER
     counter += j - i;
 #endif
   }
+#if 1
+  if (last_j != -1)
+    printf("%i:: WS/S_pop [%i,%i[\n", kaapi_get_self_kid(), (int)first_i, (int)last_j);
+  else
+    printf("%i:: WS/S_pop [%i,%i[\n", kaapi_get_self_kid(), (int)first_i, (int)last_j);
+  fflush(stdout);
+#endif
 
 #if CONFIG_TERM_COUNTER
   KAAPI_ATOMIC_SUB(thief_work->counter, counter);
@@ -439,9 +483,18 @@ int kaapic_foreach_common
   int32_t                last,
   kaapic_foreach_attr_t* attr,
   kaapic_foreach_body_t  body_f,
-  void*                  body_args
+  kaapic_body_arg_t*     body_args
 )
 {
+  ++version;
+  for (int k = 0; k<1000*48; ++k)
+  {
+    arraytid[k] = 0;
+    arraytidversion[k] = 0;
+  }
+  kaapi_mem_barrier();
+  usleep(10000);
+
   /* is_format true if called from kaapif_foreach_with_format */
 
   const int tid = kaapi_get_self_kid();
@@ -525,8 +578,12 @@ int kaapic_foreach_common
   /* master has to adjust to include off. bypass first pop. */
   j = i + off + scale;
 
-  /* initialize the workqueu */
-  kaapi_workqueue_init(&w.cr, i, j);
+  /* initialize the workqueue */
+  kaapi_workqueue_init_with_lock(
+    &w.cr, 
+    i, j,
+    &kaapi_all_kprocessors[tid]->lock
+  );
   w.wa        = &wa;
   w.body_f    = body_f;
   w.body_args = body_args;
@@ -554,8 +611,12 @@ int kaapic_foreach_common
 
   /* process locally */
 continue_work:
+  kaapi_assert_debug( &kaapi_get_current_processor()->lock == w.cr.lock );
   while (kaapi_workqueue_pop(&w.cr, &i, &j, wi.seq_grain) == 0)
   {
+    kaapi_assert_debug( &kaapi_get_current_processor()->lock == w.cr.lock );
+    printf("WS/M_pop [%i,%i[\n", (int)i, (int) j);
+    fflush(stdout);
     /* apply w->f on [i, j[ */
     body_f((int)i, (int)j, (int)tid, body_args);
 
@@ -564,21 +625,24 @@ continue_work:
 #endif
   }
 
-  if (!work_array_is_empty(&wa))
+  kaapi_workqueue_lock( &w.cr );
+  if (work_array_is_empty(&wa))
   {
-    kaapi_atomic_lock( &kaapi_all_kprocessors[tid]->thread->stack.lock );
-
-    /* refill the workqueue from reseved task and continue */
-    pos = work_array_first(&wa);
-    work_array_pop(&wa, pos, &i, &j);
-
-    kaapi_workqueue_init
-      (&w.cr, (kaapi_workqueue_index_t)i, (kaapi_workqueue_index_t)j);
-
-    kaapi_atomic_unlock( &kaapi_all_kprocessors[tid]->thread->stack.lock );
-
-    goto continue_work;
+    kaapi_workqueue_unlock( &w.cr );
+    goto end_adaptive;
   }
+
+  /* refill the workqueue from reseved task and continue */
+  pos = work_array_first(&wa);
+  work_array_pop(&wa, pos, &i, &j);
+
+  kaapi_workqueue_init(
+    &w.cr, 
+    (kaapi_workqueue_index_t)i, (kaapi_workqueue_index_t)j
+  );
+  kaapi_workqueue_unlock( &w.cr );
+
+  goto continue_work;
 
 end_adaptive:
 #if CONFIG_TERM_COUNTER
