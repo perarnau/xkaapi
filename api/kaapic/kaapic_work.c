@@ -383,8 +383,10 @@ skip_workqueue:
     }
 
     /* finish work init and reply the request */
+#if defined(BYDEBUG_MACOSX)
     printf("%i:: WS/Steal [%i,%i[\n", req->ident, (int)p, (int)q);
     fflush(stdout);
+#endif
     kaapi_workqueue_init_with_lock
       (&tw->cr, p, q, &kaapi_all_kprocessors[req->ident]->lock);
     tw->body_f    = vw->body_f;
@@ -406,9 +408,11 @@ skip_workqueue:
   return 0;
 }
 
+#if defined(BYDEBUG_MACOSX)
 static volatile int version = 0;
 static volatile int arraytid[1000 * 48];
 static volatile int arraytidversion[1000 * 48];
+#endif
 
 /* thief entrypoint */
 static void _kaapic_thief_entrypoint(
@@ -436,17 +440,22 @@ static void _kaapic_thief_entrypoint(
   kaapi_assert_debug( &kaapi_get_current_processor()->lock == thief_work->cr.lock );
 
   /* while there is sequential work to do */
+#if defined(BYDEBUG_MACOSX)
   kaapi_workqueue_index_t first_i = -1;
   kaapi_workqueue_index_t last_j = -1;
   kaapi_workqueue_t savewq = thief_work->cr;
+#endif
   while (kaapi_workqueue_pop(&thief_work->cr, &i, &j, wi->seq_grain) ==0)
   {
+#if defined(BYDEBUG_MACOSX)
     if (first_i == -1) first_i = i;
     last_j = j;
+#endif
     kaapi_assert_debug( &kaapi_get_current_processor()->lock == thief_work->cr.lock );
     kaapi_assert_debug( i < j );
 //    printf("%i:: WS/S_pop [%i,%i[\n", kaapi_get_self_kid(), (int)i, (int)j);
 
+#if defined(BYDEBUG_MACOSX)
     /* shift -1 to match fortran definition... */
     for (int k = i; k<j; ++k)
     {
@@ -455,6 +464,7 @@ static void _kaapic_thief_entrypoint(
       arraytid[k-1] = tid;
       arraytidversion[k-1] = version;
     }
+#endif
     /* apply w->f on [i, j[ */
     thief_work->body_f((int)i, (int)j, (int)tid, thief_work->body_args);
 //    savewq = thief_work->cr;
@@ -462,7 +472,7 @@ static void _kaapic_thief_entrypoint(
     counter += j - i;
 #endif
   }
-#if 1
+#if defined(BYDEBUG_MACOSX)
   if (last_j != -1)
     printf("%i:: WS/S_pop [%i,%i[\n", kaapi_get_self_kid(), (int)first_i, (int)last_j);
   else
@@ -486,6 +496,7 @@ int kaapic_foreach_common
   kaapic_body_arg_t*     body_args
 )
 {
+#if defined(BYDEBUG_MACOSX)
   ++version;
   for (int k = 0; k<1000*48; ++k)
   {
@@ -494,6 +505,7 @@ int kaapic_foreach_common
   }
   kaapi_mem_barrier();
   usleep(10000);
+#endif
 
   /* is_format true if called from kaapif_foreach_with_format */
 
@@ -615,8 +627,10 @@ continue_work:
   while (kaapi_workqueue_pop(&w.cr, &i, &j, wi.seq_grain) == 0)
   {
     kaapi_assert_debug( &kaapi_get_current_processor()->lock == w.cr.lock );
+#if defined(BYDEBUG_MACOSX)
     printf("WS/M_pop [%i,%i[\n", (int)i, (int) j);
     fflush(stdout);
+#endif
     /* apply w->f on [i, j[ */
     body_f((int)i, (int)j, (int)tid, body_args);
 
