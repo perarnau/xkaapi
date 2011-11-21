@@ -1,5 +1,4 @@
 /*
-** kaapi_mt_sched_idle.c
 ** xkaapi
 ** 
 **
@@ -7,8 +6,8 @@
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com 
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -193,6 +192,7 @@ enter:
     if (kaapi_request_status_test(&status)) 
       goto return_value;
 #if defined(KAAPI_DEBUG)
+/* ici: pb si la victime repond alors que l'on quitte */
     if (kaapi_isterm) 
     {
       printf("Should not go out through this way?\n");
