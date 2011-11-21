@@ -204,7 +204,7 @@ KAAPI_FEATURE([api-kaapic], [compile C API],
   [KAAPI_API_KAAPIC],
   [
     if test "$have_cc" = no; then
-      AC_MSG_WARN([a C compiler is required for Kaapi C API])
+      AC_MSG_WARN([a C and Fortrand compiler is required for Kaapi C API])
       FEATURE_DISABLE
     else
       FEATURE_ENABLE
@@ -212,7 +212,7 @@ KAAPI_FEATURE([api-kaapic], [compile C API],
   ])
 
 dnl -----------------------------------------------------------------------
-dnl The "--enable-api-fortran"
+dnl The "--enable-api-kaapif"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([api-kaapif], [compile fortran API],
   [Fortran API compiled], [yes],
@@ -220,13 +220,20 @@ KAAPI_FEATURE([api-kaapif], [compile fortran API],
   [],
   [KAAPI_API_KAAPIF],
   [
-    if test "$have_cc" = no; then
+    if test "$have_cc" = no -o x"$F77" = x; then
       AC_MSG_WARN([a C compiler is required for Fortran API])
       FEATURE_DISABLE
     else
-      FEATURE_ENABLE
+dnl      ACX_LIB_CHECK_PLAIN([FORTRAN],[],[
+dnl        AC_F77_LIBRARY_LDFLAGS
+dnl        ACX_LIB_FOUND([Libs="$F77LIBS"])
+        FEATURE_ENABLE
+dnl      ],[
+dnl        FEATURE_DISABLE
+dnl      ])
     fi
   ])
+dnl ACX_LIB_LINK([KAAPIFLIB], [FORTRAN])
 
 dnl KAAPI_FEATURE([api-kaapif], [compile fortran API],
 dnl   [fortran API compiled], [$default_experimental],
