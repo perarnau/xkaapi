@@ -70,21 +70,21 @@ extern "C" {
 /** Atomic type
 */
 typedef struct kaapi_atomic8_t {
-  volatile uint8_t _counter;
+  volatile int8_t _counter;
 } kaapi_atomic8_t;
 
 typedef struct kaapi_atomic16_t {
-  volatile uint16_t _counter;
+  volatile int16_t _counter;
 } kaapi_atomic16_t;
 
 typedef struct kaapi_atomic32_t {
-  volatile uint32_t _counter;
+  volatile int32_t _counter;
 } kaapi_atomic32_t;
 typedef kaapi_atomic32_t kaapi_atomic_t;
 
 
 typedef struct kaapi_atomic64_t {
-  volatile uint64_t _counter;
+  volatile int64_t _counter;
 } kaapi_atomic64_t;
 
 /* ========================= Low level memory barrier, inline for perf... so ============================= */

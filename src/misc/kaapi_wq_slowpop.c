@@ -69,6 +69,7 @@ int kaapi_workqueue_slowpop(
   loc_beg += size;
   kwq->beg = loc_beg;
 
+  kaapi_mem_barrier();
   kaapi_sched_unlock( kwq->lock );
 
   *end = loc_beg;

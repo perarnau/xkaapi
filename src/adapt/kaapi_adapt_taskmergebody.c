@@ -51,6 +51,8 @@ void kaapi_taskfinalize_body( void* sp, kaapi_thread_t* thread )
   kaapi_assert_debug(!(sc->flag & KAAPI_SC_PREEMPTION));
 
   kaapi_thread_restore_frame(thread, &merge_arg->saved_frame);
+  kaapi_synchronize_steal(kaapi_self_thread_context());
+  
   /* avoid read reordering */
   kaapi_readmem_barrier();
 

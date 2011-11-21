@@ -151,16 +151,6 @@ extern void kaapi_mt_suspendresume_init(void);
 */
 extern int kaapi_hw_init(void);
 
-#if 0 // DEPRECATED_ATTRIBUTE
-/** Initialization of the NUMA affinity workqueue
-*/
-extern int kaapi_sched_affinity_initialize(void);
-
-/** Destroy
-*/
-extern void kaapi_sched_affinity_destroy(void);
-#endif
-
 /* Fwd declaration 
 */
 struct kaapi_listrequest_t;
@@ -677,6 +667,25 @@ static inline void kaapi_steal_disable_sync(kaapi_stealcontext_t* stc)
   /* synchronize on the kproc lock */
   kaapi_sched_waitlock(&kaapi_get_current_processor()->lock);
 #endif
+}
+
+
+
+static inline int _kaapi_workqueue_lock( 
+    kaapi_workqueue_t* kwq
+)
+{
+  return kaapi_atomic_lock(kwq->lock);
+}
+
+
+/** Unlock the workqueue
+*/
+static inline int _kaapi_workqueue_unlock( 
+    kaapi_workqueue_t* kwq
+)
+{
+  return kaapi_atomic_unlock(kwq->lock);
 }
 
 

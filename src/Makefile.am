@@ -57,6 +57,8 @@ libkaapi_la_SOURCES=\
   misc/kaapi_wq_init.c \
   misc/kaapi_wq_set.c \
   misc/kaapi_wq_slowpop.c \
+  misc/kaapi_wq_lock.c \
+  misc/kaapi_wq_unlock.c \
   task/kaapi_fmt_accessors.c \
   task/kaapi_fmt_initbasic.c \
   task/kaapi_fmt_register.c \

@@ -155,6 +155,7 @@ enter:
   if (!kaapi_listrequest_iterator_empty(&lri) ) 
   {
     kaapi_request_t* request;
+    kproc->victim_kproc = victim.kproc;
 
 #if defined(KAAPI_SCHED_LOCK_CAS)
     kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );

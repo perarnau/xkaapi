@@ -1,14 +1,14 @@
 /*
-** kaapi_error.h
+** kaapi_hashmap.c
 ** xkaapi
 ** 
-**
-** Copyright 2009 INRIA.
+** 
+** Copyright 2010 INRIA.
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -43,31 +43,13 @@
 ** terms.
 ** 
 */
-#ifndef _KAAPI_ERROR_H
-#define _KAAPI_ERROR_H 1
+#include "kaapi_impl.h"
 
-#include <stdlib.h> /* at least abort */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
-#if defined(NDEBUG)
-#  define kaapi_assert( cond ) if (!(cond)) abort();
-#  define kaapi_assert_debug( cond )
-#  define KAAPI_NDEBUG 1
-#else
-#  include <errno.h>
-#  include <stdio.h>
-extern void kaapi_abort(void);
-#  define kaapi_assert( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); kaapi_abort(); }
-#if !defined(kaapi_assert_debug) 
-#  define kaapi_assert_debug( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); kaapi_abort(); }
-#endif
-#endif
-
-#if defined(__cplusplus)
+/** 
+*/
+int kaapi_workqueue_lock( 
+    kaapi_workqueue_t* kwq
+)
+{
+  return _kaapi_workqueue_lock(kwq);
 }
-#endif
-
-#endif

@@ -1923,10 +1923,22 @@ static inline int kaapi_workqueue_steal(
   return 0; /* true */
 }  
 
+/** Lock the workqueue
+*/
+extern int kaapi_workqueue_lock( 
+    kaapi_workqueue_t* kwq
+);
+
+/** Unlock the workqueue
+*/
+extern int kaapi_workqueue_unlock( 
+    kaapi_workqueue_t* kwq
+);
+
+
 
 /** kaapi exported splitters
  */
-
 typedef struct kaapi_splitter_context
 {
   kaapi_workqueue_t wq;
