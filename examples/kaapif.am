@@ -1,0 +1,21 @@
+##
+##  xkaapi
+##
+##  Created by VD on 09/11/10.
+##  Copyright 2010 INRIA. All rights reserved.
+##
+
+if KAAPI_API_KAAPIF
+KAAPIF_PRGS=foreach_kaapif
+endif
+
+check_PROGRAMS+=$(KAAPIF_PRGS)
+all-kaapif: $(KAAPIF_PRGS)
+
+#For each using C API kaapif_foreach
+foreach_kaapif_SOURCES=kaapif/foreach/foreach_kaapif.f kaapif/foreach/fu.f
+
+foreach_kaapif_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
+foreach_kaapif_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
+foreach_kaapif_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
+foreach_kaapif_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm
