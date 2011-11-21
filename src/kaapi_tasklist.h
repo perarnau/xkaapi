@@ -245,7 +245,7 @@ typedef struct kaapi_tasklist_t {
   kaapi_recv_list_t       recvlist;   /* put by pushsignal into ready list to signal incomming data */
   kaapi_allocator_t       td_allocator;  /* where to push task descriptor */
   kaapi_allocator_t       allocator;  /* where to push other data structure */
-  uint64_t                cnt_tasks[KAAPI_TASKLIST_NUM_PRIORITY];  /* number of tasks in the tasklist */
+  int64_t                 cnt_tasks[KAAPI_TASKLIST_NUM_PRIORITY];  /* number of tasks in the tasklist */
   uint64_t                t_infinity; /* length path in the graph of tasks */
 #if defined(TASKLIST_ONEGLOBAL_MASTER) && !defined(TASKLIST_REPLY_ONETD)
   kaapi_atomic_t          pending_stealop;
