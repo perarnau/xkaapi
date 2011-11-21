@@ -123,7 +123,7 @@ static void work_array_pop
   const long k = wa->off + pos * wa->scale;
 
   *i = k;
-  *j = k + wa->scale;
+  *j = k + wa->scale+1;
 
   kaapi_bitmap_value_unset(&wa->map, (unsigned int)pos);
 }
@@ -566,7 +566,7 @@ continue_work:
 
   if (!work_array_is_empty(&wa))
   {
-    kaapi_atomic_lock( &kaapi_all_kprocessors[tid]->lock );
+    kaapi_atomic_lock( &kaapi_all_kprocessors[tid]->thread->stack.lock );
 
     /* refill the workqueue from reseved task and continue */
     pos = work_array_first(&wa);
@@ -575,7 +575,7 @@ continue_work:
     kaapi_workqueue_init
       (&w.cr, (kaapi_workqueue_index_t)i, (kaapi_workqueue_index_t)j);
 
-    kaapi_atomic_unlock( &kaapi_all_kprocessors[tid]->lock );
+    kaapi_atomic_unlock( &kaapi_all_kprocessors[tid]->thread->stack.lock );
 
     goto continue_work;
   }
