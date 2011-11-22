@@ -57,7 +57,7 @@
 
 /*
 */
-kaapi_request_t kaapi_requests_list[KAAPI_MAX_PROCESSOR+1];
+kaapi_request_t kaapi_global_requests_list[KAAPI_MAX_PROCESSOR+1];
 
 
 /*
@@ -143,7 +143,7 @@ int kaapi_mt_init(void)
   /* It should be the only location where request are initialized */
   for (int i=0; i<KAAPI_MAX_PROCESSOR+1; ++i)
   {  
-    kaapi_request_init(&kaapi_requests_list[i], i);
+    kaapi_request_init(&kaapi_global_requests_list[i], i);
   }
   
   /* build the memory hierarchy

@@ -44,6 +44,7 @@
 */
 #include "kaapi_impl.h"
 
+KAAPI_DEBUG_INST( static volatile int version =0; )
 /* good name ! 
    Wrapper between the old splitter interface and the new one.
 */
@@ -58,6 +59,9 @@ static int kaapi_adaptivetask_splitter_2_usersplitter(
   */
   kaapi_taskbegendadaptive_arg_t* arg = (kaapi_taskbegendadaptive_arg_t*)sp;
   kaapi_assert_debug( pc !=0 );
+  /* test only valid to debug one adaptive algorithm at time */
+#warning "SUPP"
+  kaapi_assert_debug( arg->version == version );
 
   /* call the splitter */
   return arg->usersplitter( 
@@ -77,7 +81,6 @@ static int kaapi_adaptivetask_splitter_2_usersplitter(
       * des dependances sur les donnes de la tache adaptative utilisateur pourraient etre aussi definis
    - tous les vols sur 
 */
-KAAPI_DEBUG_INST( static volatile int version =0; )
 void* kaapi_task_begin_adaptive
 (
    kaapi_thread_t*              thread,
@@ -139,6 +142,7 @@ void* kaapi_task_begin_adaptive
   /* create the adaptive task:
      - it is a dummy task that represents the current executing 
      bloc between begin/end_adaptive
+     - it is splittable but not stealable
   */
   task_adapt = kaapi_thread_toptask(thread);
   kaapi_task_init_with_flag(

@@ -1734,7 +1734,7 @@ extern void kaapi_staticschedtask_body( void*, kaapi_thread_t* );
 typedef long kaapi_workqueue_index_t;
 
 typedef struct {
-  volatile kaapi_workqueue_index_t beg __attribute__((aligned(64)));
+  volatile kaapi_workqueue_index_t beg __attribute__((aligned(64))); /* cache line */
   volatile kaapi_workqueue_index_t end __attribute__((aligned(64)));
   kaapi_lock_t*                    lock;
 } kaapi_workqueue_t;
@@ -1862,6 +1862,7 @@ static inline int kaapi_workqueue_pop(
 {
   kaapi_workqueue_index_t loc_beg;
   kaapi_assert_debug( max_size >0 );
+
   loc_beg = kwq->beg + max_size;
   kwq->beg = loc_beg;
   kaapi_mem_barrier();
@@ -1896,6 +1897,7 @@ static inline int kaapi_workqueue_steal(
   kaapi_workqueue_index_t loc_end;
 
   kaapi_assert_debug( 0 < size );
+  kaapi_assert_debug( kaapi_atomic_assertlocked(kwq->lock) );
 
   /* disable gcc warning */
   *beg = 0;

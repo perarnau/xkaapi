@@ -371,7 +371,7 @@ static inline int kaapi_request_replytask
 #include "kaapi_network.h"
 
 
-/* ============================= The structure for handling suspendended thread ============================ */
+/*============= The structure for handling suspendended thread ======================== */
 /** Forward reference to data structure are defined in kaapi_machine.h
 */
 struct kaapi_wsqueuectxt_cell_t;

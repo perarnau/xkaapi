@@ -209,7 +209,7 @@ static kaapi_thread_context_t* pop_block
   kaapi_assert(0);
 
   /* not a real steal operation, dont actually post */
-  kaapi_request_t* const req = &kaapi_requests_list[kproc->kid];
+  kaapi_request_t* const req = &kaapi_global_requests_list[kproc->kid];
   kaapi_task_t*          thief_task;
   kaapi_tasksteal_arg_t* thief_sp;
   kaapi_ws_error_t err;
@@ -276,7 +276,7 @@ kaapi_request_status_t kaapi_hws_emitsteal( kaapi_processor_t* kproc )
   /* post the stealing request */
   request = kaapi_request_post(
     &hws_requests,
-    &kaapi_requests_list[kproc->kid],
+    &kaapi_global_requests_list[kproc->kid],
     &local_status, 
     &kproc->thread->stackframe[0] /* where to store tasks */
   );

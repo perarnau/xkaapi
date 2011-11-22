@@ -202,7 +202,7 @@ typedef struct kaapi_listrequest_t {
 /** \ingroup WS
     The global variable that store the list of requests where to reply
 */
-extern  kaapi_request_t kaapi_requests_list[KAAPI_MAX_PROCESSOR+1];
+extern  kaapi_request_t kaapi_global_requests_list[KAAPI_MAX_PROCESSOR+1];
 
 
 /* to iterate over list of request: once an iterator has been captured, 
@@ -241,7 +241,7 @@ static inline int kaapi_listrequest_iterator_count(kaapi_listrequest_iterator_t*
 static inline kaapi_request_t* kaapi_listrequest_iterator_get( 
   kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange 
 )
-{ return (lrrange->idcurr == -1 ? 0 : &kaapi_requests_list[lrrange->idcurr]); }
+{ return (lrrange->idcurr == -1 ? 0 : &kaapi_global_requests_list[lrrange->idcurr]); }
 
 /* get the first request of the range. range iterator should have been initialized by kaapi_listrequest_iterator_init 
 */
@@ -254,7 +254,7 @@ static inline kaapi_request_t* kaapi_listrequest_iterator_getkid_andnext(
     lrrange->idcurr = kaapi_bitmap_first1_and_zero( &lrrange->bitmap )-1;
   else 
     kaapi_bitmap_value_unset( &lrrange->bitmap, kid );
-  return &kaapi_requests_list[kid]; 
+  return &kaapi_global_requests_list[kid]; 
 }
 
 /* return the next entry in the request. return 0 if the range is empty.
@@ -264,7 +264,7 @@ static inline kaapi_request_t* kaapi_listrequest_iterator_next(
 )
 {
   lrrange->idcurr = kaapi_bitmap_first1_and_zero( &lrrange->bitmap )-1;
-  kaapi_request_t* retval = (lrrange->idcurr == -1 ? 0 : &kaapi_requests_list[lrrange->idcurr]);
+  kaapi_request_t* retval = (lrrange->idcurr == -1 ? 0 : &kaapi_global_requests_list[lrrange->idcurr]);
   return retval;
 } 
 
@@ -693,8 +693,9 @@ static inline kaapi_request_t* kaapi_request_post(
 )
 {
   request->frame        = *frame;
+  KAAPI_ATOMIC_WRITE(status, KAAPI_REQUEST_S_POSTED);
   request->status       = status;
-  KAAPI_ATOMIC_WRITE_BARRIER(status, KAAPI_REQUEST_S_POSTED);
+  kaapi_writemem_barrier();
   kaapi_bitmap_set( &l_requests->bitmap, request->ident );
   return request;
 }

@@ -44,7 +44,7 @@
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
 
-//#define BIG_DEBUG_MACOSX 1
+#define BIG_DEBUG_MACOSX 1
 
 #define CONFIG_FOREACH_STATS 0
 #if CONFIG_FOREACH_STATS
@@ -338,6 +338,18 @@ redo_steal:
 
     goto redo_steal;
   }
+#if 1//defined(BIG_DEBUG_MACOSX)
+    printf("%i:: WS/#%i Steal @%p=[%i,%i[ usz:%i rsz:%i\n",//"|lock=%i\n", 
+      (int)kaapi_get_current_processor()->victim_kproc->kid,
+      (int)leaf_count, 
+      (void*)&vw->cr,
+      (int)i, (int)j,
+      (int)unit_size,
+      (int)range_size
+    );
+//      (int)KAAPI_ATOMIC_READ(vw->cr.lock)
+    fflush(stdout);
+#endif
 
 
 skip_workqueue:
@@ -385,7 +397,11 @@ skip_workqueue:
 
     /* finish work init and reply the request */
 #if 0//defined(BIG_DEBUG_MACOSX)
-    printf("%i:: WS/Steal [%i,%i[\n", req->ident, (int)p, (int)q);
+    printf("%i:: WS/ Steal %i @%p[%i,%i[\n", 
+      (int)req->ident, 
+      (int)kaapi_all_kprocessors[req->ident]->victim_kproc->kid,
+      (void*)&tw->cr,
+      (int)p, (int)q);
     fflush(stdout);
 #endif
     kaapi_workqueue_init_with_lock
@@ -452,11 +468,18 @@ static void _kaapic_thief_entrypoint(
 #endif
   while (kaapi_workqueue_pop(&thief_work->cr, &i, &j, wi->seq_grain) ==0)
   {
+#if 1//defined(BIG_DEBUG_MACOSX)
+    printf("%i:: WS/Pop @%p[%i,%i[\n", 
+      tid,
+      (void*)&thief_work->cr,
+      (int)i, (int)j);
+    fflush(stdout);
+#endif
     kaapi_assert_debug( &kproc->lock == thief_work->cr.lock );
 #if defined(BIG_DEBUG_MACOSX)
     if (first_i == -1) first_i = i;
     last_j = j;
-    beforewq = savewq;
+    beforewq = thief_work->cr;
 #endif
     kaapi_assert_debug( &kaapi_get_current_processor()->lock == thief_work->cr.lock );
     kaapi_assert_debug( i < j );

@@ -79,7 +79,7 @@ int kaapi_sched_stealstack
   kaapi_atomic_lock(&thread->stack.lock);
   
   /* try to steal in each frame */
-  for (  top_frame =thread->stack.stackframe; 
+  for (  top_frame = thread->stack.stackframe; 
        (top_frame <= thread->stack.sfp) && !kaapi_listrequest_iterator_empty(lrrange); 
        ++top_frame)
   {

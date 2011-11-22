@@ -96,8 +96,9 @@ redo_select:
     
   kaapi_stack_reset( &kproc->thread->stack );
 
-  self_request = &kaapi_requests_list[kproc->kid];
+  self_request = &kaapi_global_requests_list[kproc->kid];
   kaapi_assert_debug( self_request->ident == kproc->kid );
+  KAAPI_DEBUG_INST(kproc->victim_kproc = victim.kproc;)
   kaapi_request_post( 
     &victim_stealctxt->lr,
     self_request,
@@ -134,7 +135,6 @@ redo_select:
   if (!kaapi_listrequest_iterator_empty(&lri) ) 
   {
     kaapi_request_t* request;
-    kproc->victim_kproc = victim.kproc;
 
     kaapi_sched_stealprocessor( victim.kproc, &victim_stealctxt->lr, &lri );
 
@@ -150,6 +150,8 @@ redo_select:
       kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
     }
   }
+
+  KAAPI_DEBUG_INST(kproc->victim_kproc = 0;)
 
   /* unlock the victim kproc after processing the steal operation */
   kaapi_sched_unlock( &victim.kproc->lock );

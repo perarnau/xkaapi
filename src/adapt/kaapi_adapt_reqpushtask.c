@@ -86,6 +86,7 @@ int kaapi_request_pushtask_adaptive(
   toptask = kaapi_thread_toptask(&request->frame);
   /* this a reply to an adaptive task: set the task as unstealable */
   kaapi_task_set_unstealable(toptask);
+  kaapi_task_set_splittable(toptask);
   kaapi_thread_pushtask_adaptive(&request->frame, user_splitter);
 
   /* here toptask was replaced in pushtask_adaptive by a kaapi_taskadapt_body, 

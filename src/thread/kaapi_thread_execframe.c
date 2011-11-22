@@ -196,7 +196,7 @@ redo_exec:
   kaapi_assert_debug( fp >= eframe);
 
   /* pop frame */
-#if 0
+#if 1
   int tolock = 0;
   if (fp > eframe)
   {
