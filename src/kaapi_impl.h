@@ -458,48 +458,35 @@ static inline int kaapi_sched_suspendlist_empty(kaapi_processor_t* kproc)
 
 /**
 */
-static inline int kaapi_sched_initlock( kaapi_atomic_t* lock )
+static inline int kaapi_sched_initlock( kaapi_lock_t* lock )
 {
   return kaapi_atomic_initlock(lock);
 }
 
-static inline int kaapi_sched_trylock( kaapi_atomic_t* lock )
+static inline int kaapi_sched_trylock( kaapi_lock_t* lock )
 {
   return kaapi_atomic_trylock(lock);
 }
 
 /** 
 */
-static inline int kaapi_sched_lock( kaapi_atomic_t* lock )
+static inline int kaapi_sched_lock( kaapi_lock_t* lock )
 {
   return kaapi_atomic_lock(lock);
 }
 
-
 /**
 */
-static inline int kaapi_sched_lock_spin( kaapi_atomic_t* lock, int spincount )
-{
-  return kaapi_atomic_lock_spin(lock, spincount);
-}
-
-
-/**
-*/
-static inline int kaapi_sched_unlock( kaapi_atomic_t* lock )
+static inline int kaapi_sched_unlock( kaapi_lock_t* lock )
 {
   return kaapi_atomic_unlock(lock);
 }
 
-static inline void kaapi_sched_waitlock(kaapi_atomic_t* lock)
+static inline void kaapi_sched_waitlock( kaapi_lock_t* lock)
 {
   kaapi_atomic_waitlock(lock);
 }
 
-static inline int kaapi_sched_islocked( kaapi_atomic_t* lock )
-{
-  return kaapi_atomic_islocked(lock);
-}
 
 /* Return the hws queueblock at level levelid
 */

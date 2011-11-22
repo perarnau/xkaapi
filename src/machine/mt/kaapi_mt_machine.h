@@ -384,7 +384,7 @@ typedef struct kaapi_processor_t {
   kaapi_processor_id_t     kid;                           /* Kprocessor id */
 
   /* cache align */
-  kaapi_atomic_t           lock                           /* all requests attached to each kprocessor ordered by increasing level */
+  kaapi_lock_t             lock                           /* all requests attached to each kprocessor ordered by increasing level */
     __attribute__((aligned(KAAPI_CACHE_LINE)));
 
 #if defined(KAAPI_DEBUG)

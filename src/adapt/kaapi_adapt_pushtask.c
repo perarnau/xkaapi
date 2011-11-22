@@ -101,10 +101,8 @@ int kaapi_thread_pushtask_adaptive(
   */
   task_adapt->body = (kaapi_task_body_t)kaapi_taskadapt_body;
   task_adapt->sp   = arg;
-  kaapi_task_set_splittable( task_adapt );
   
   kaapi_access_init( &merge_arg->shared_sc, sc );
-  kaapi_frame_clear( &merge_arg->saved_frame );
 
   task_merge = kaapi_thread_nexttask(thread, task_adapt);
   kaapi_task_init_with_flag(

@@ -1107,13 +1107,7 @@ static inline void* kaapi_request_pushdata( kaapi_request_t* request, uint32_t s
     \param thread INOUT a pointer to the kaapi_stack_t data structure.
     \retval EINVAL invalid argument: bad stack pointer.
 */
-static inline int kaapi_request_pushtask(kaapi_request_t* request)
-{
-  kaapi_assert_debug( request !=0 );
-  --request->frame.sp;
-  /* do not use a barrier here: it exists on reply to the request */
-  return 0;
-}
+extern int kaapi_request_pushtask(kaapi_request_t* request);
 
 /** \ingroup ADAPTIVE
     The function kaapi_request_toptask() will return the task to reply.
@@ -1742,7 +1736,7 @@ typedef long kaapi_workqueue_index_t;
 typedef struct {
   volatile kaapi_workqueue_index_t beg __attribute__((aligned(64)));
   volatile kaapi_workqueue_index_t end __attribute__((aligned(64)));
-  kaapi_atomic_t*                  lock;
+  kaapi_lock_t*                    lock;
 } kaapi_workqueue_t;
 
 
@@ -1765,7 +1759,7 @@ extern int kaapi_workqueue_init_with_lock(
     kaapi_workqueue_t* kwq, 
     kaapi_workqueue_index_t b, 
     kaapi_workqueue_index_t e, 
-    kaapi_atomic_t* thelock 
+    kaapi_lock_t* thelock 
 );
 
 /** destroy 

@@ -47,7 +47,7 @@
 
       ! parallel loop
       start = kaapif_get_time()
-      do i = 1, 10000
+      do i = 1, 1000000
          call kaapif_foreach_with_format(1, size, 4, fu, 
 ! argument[0]
      &                                   KAAPIF_MODE_RW,
@@ -83,7 +83,7 @@
             end do
          end if
          ! end check
-         write(*, *) '-- OK --'
+!         write(*, *) '-- OK --'
       do l = 1, size
          arraytid(l) = 0
       enddo

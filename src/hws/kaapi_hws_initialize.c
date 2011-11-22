@@ -331,7 +331,7 @@ int kaapi_hws_init_global(void)
       
       /* initialize the block */
       /* todo: allocate on a page boundary pinned on the node */
-      kaapi_ws_lock_init(&block->lock);
+      kaapi_atomic_initlock(&block->lock);
       
       block->kids = malloc(affin_set->ncpu * sizeof(kaapi_processor_id_t));
       kaapi_assert(block->kids);

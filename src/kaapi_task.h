@@ -165,7 +165,7 @@ typedef struct kaapi_stack_t {
 
   /* execution state for stack of task */
   kaapi_frame_t*        volatile thieffp __attribute__((aligned (KAAPI_CACHE_LINE))); /** pointer to the thief frame where to steal */
-  kaapi_atomic_t                 lock;           // __attribute__((aligned(KAAPI_CACHE_LINE)));
+  kaapi_lock_t                   lock;           // __attribute__((aligned(KAAPI_CACHE_LINE)));
 
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_stack_t;
 
@@ -387,6 +387,7 @@ static inline void kaapi_task_markterm( kaapi_task_t* task )
 static inline void kaapi_task_markaftersteal( kaapi_task_t* task )
 {
   KAAPI_ATOMIC_OR( &task->u.s.state, KAAPI_TASK_STATE_MERGE);
+  kaapi_abort();
 }
 
 static inline void kaapi_task_lock( kaapi_task_t* task )
@@ -704,15 +705,15 @@ typedef struct kaapi_taskstealready_arg_t {
 typedef struct kaapi_taskadaptive_arg_t {
   kaapi_access_t                shared_sc;
   kaapi_task_body_t             user_body;
-  void*                         user_sp;
   kaapi_adaptivetask_splitter_t user_splitter;
+  void*                         user_sp;
+  KAAPI_DEBUG_INST( volatile int version; )
 } kaapi_taskadaptive_arg_t;
 
 /** Argument for the companion task kaapi_merge_body.
 */
 typedef struct kaapi_taskmerge_arg_t {
   kaapi_access_t                shared_sc;
-  kaapi_frame_t                 saved_frame;
 } kaapi_taskmerge_arg_t;
 
 
@@ -722,10 +723,11 @@ typedef struct kaapi_taskmerge_arg_t {
     accessors.
 */
 typedef struct kaapi_taskbegendadaptive_arg_t {
-  kaapi_access_t                shared_sc;
+  kaapi_access_t                shared_sc;      /* must be first as for kaapi_taskadaptive_arg_t */
   kaapi_adaptivetask_splitter_t splitter;
   kaapi_adaptivetask_splitter_t usersplitter;
   void*                         argsplitter;
+  KAAPI_DEBUG_INST( volatile int version; )
 } kaapi_taskbegendadaptive_arg_t;
 
 
@@ -733,7 +735,7 @@ typedef struct kaapi_taskbegendadaptive_arg_t {
     in the thief stack.
 */
 typedef struct kaapi_thiefadaptcontext_t {
-  kaapi_atomic_t                      lock;                    /* synchro between victim-thief */
+  kaapi_lock_t                        lock;                    /* synchro between victim-thief */
   struct kaapi_thiefadaptcontext_t*   next;                    /* link fields in the victim steal context list */
   struct kaapi_thiefadaptcontext_t*   prev;                    /* */
   kaapi_task_t*                       thief_task;              /* thief task, !=0 until completion or preemption */

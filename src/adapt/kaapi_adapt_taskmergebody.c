@@ -49,12 +49,9 @@ void kaapi_taskfinalize_body( void* sp, kaapi_thread_t* thread )
   kaapi_taskmerge_arg_t* const merge_arg = (kaapi_taskmerge_arg_t*)sp;
   kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)merge_arg->shared_sc.data;
   kaapi_assert_debug(!(sc->flag & KAAPI_SC_PREEMPTION));
-
-  kaapi_thread_restore_frame(thread, &merge_arg->saved_frame);
-  kaapi_synchronize_steal(kaapi_self_thread_context());
   
   /* avoid read reordering */
-  kaapi_readmem_barrier();
+  kaapi_writemem_barrier();
 
   /* ensure all working thieves are done. the steal
      sync has been done in kaapi_task_end_adaptive

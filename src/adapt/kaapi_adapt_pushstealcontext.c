@@ -77,6 +77,7 @@ static int kaapi_adaptivetask_splitter_2_usersplitter(
       * des dependances sur les donnes de la tache adaptative utilisateur pourraient etre aussi definis
    - tous les vols sur 
 */
+KAAPI_DEBUG_INST( static volatile int version =0; )
 void* kaapi_task_begin_adaptive
 (
    kaapi_thread_t*              thread,
@@ -87,22 +88,16 @@ void* kaapi_task_begin_adaptive
 {
   kaapi_stealcontext_t*   sc;
   kaapi_task_t*           task_adapt;
-  kaapi_frame_t           saved_frame;
+  
+  KAAPI_DEBUG_INST(++version);
   
   /* */
   kaapi_taskbegendadaptive_arg_t* adap_arg;
-  kaapi_taskmerge_arg_t* merge_arg;
-  
-  kaapi_thread_save_frame(thread, &saved_frame);
-  
+    
   /* allocated tasks' args */
   adap_arg = (kaapi_taskbegendadaptive_arg_t*)kaapi_thread_pushdata
     (thread, sizeof(kaapi_taskbegendadaptive_arg_t));
   kaapi_assert_debug(adap_arg != 0);
-
-  merge_arg = (kaapi_taskmerge_arg_t*)kaapi_thread_pushdata
-    (thread, sizeof(kaapi_taskmerge_arg_t));
-  kaapi_assert_debug(merge_arg != 0);
 
   sc = (kaapi_stealcontext_t*)kaapi_thread_pushdata_align
     (thread, sizeof(kaapi_stealcontext_t), sizeof(void*));
@@ -112,6 +107,7 @@ void* kaapi_task_begin_adaptive
   adap_arg->splitter    = kaapi_adaptivetask_splitter_2_usersplitter;
   adap_arg->usersplitter= splitter;
   adap_arg->argsplitter = argsplitter;
+  KAAPI_DEBUG_INST( adap_arg->version = version; )
   sc->msc               = sc; /* self pointer to detect master */
   sc->ktr               = 0;
   
@@ -153,15 +149,8 @@ void* kaapi_task_begin_adaptive
   );
   kaapi_task_setstate( task_adapt, KAAPI_TASK_STATE_EXEC );
 
-  /* create the merge task : avoid to push the task_adapt in order
-     to avoid its visibility before creation of the merge task.
-     - the merge task has the SC structure as parameter, not the task_adapt
-  */
-  kaapi_access_init(&merge_arg->shared_sc, sc);
-  merge_arg->saved_frame = saved_frame;
-
   /* memory barrier done by kaapi_thread_pushtask */
   kaapi_thread_pushtask(thread);
 
-  return merge_arg;
+  return task_adapt;
 }

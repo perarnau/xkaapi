@@ -44,6 +44,19 @@
 */
 #include "kaapi_impl.h"
 
+
+int kaapi_request_pushtask(kaapi_request_t* request)
+{
+  kaapi_assert_debug( request !=0 );
+  /* this a reply to a steal request: do not allow to steal first again the task */
+  kaapi_task_set_unstealable(request->frame.sp);
+  --request->frame.sp;
+  /* do not use a barrier here: it exists on reply 
+     to the request, see kaapi_request_committask */
+  return 0;
+}
+
+
 /* Here:
     - the user task is already pushed its task into the frame pointed by the request
     - acts as kaapi_thread_pushtask_adaptive in order to envelop the (adaptative) top task
@@ -71,7 +84,9 @@ int kaapi_request_pushtask_adaptive(
                   ||  (victim_task->body == (kaapi_task_body_t)kaapi_taskbegendadapt_body) );
   
   toptask = kaapi_thread_toptask(&request->frame);
-  kaapi_thread_pushtask_adaptive(&request->frame, user_splitter);  
+  /* this a reply to an adaptive task: set the task as unstealable */
+  kaapi_task_set_unstealable(toptask);
+  kaapi_thread_pushtask_adaptive(&request->frame, user_splitter);
 
   /* here toptask was replaced in pushtask_adaptive by a kaapi_taskadapt_body, 
      but flags remain equals.
@@ -81,13 +96,13 @@ int kaapi_request_pushtask_adaptive(
   adapt_arg = kaapi_task_getargst(toptask, kaapi_taskadaptive_arg_t);
   sc = (kaapi_stealcontext_t*)adapt_arg->shared_sc.data;
   sc->msc  = ((kaapi_stealcontext_t*)victim_adapt_arg->shared_sc.data)->msc;
+  KAAPI_DEBUG_INST( adapt_arg->version = victim_adapt_arg->version; )
 
   if (kaapi_task_is_withpreemption(victim_task) && !kaapi_task_is_withpreemption(toptask))
   {
     toptask->u.s.flag = KAAPI_TASK_S_PREEMPTION;
     sc->flag = KAAPI_SC_PREEMPTION;
   }
-    
 
   /* list insert is atomic with respect to the lock on the adaptive task */
   if (kaapi_task_is_withpreemption(toptask))

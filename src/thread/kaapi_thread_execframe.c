@@ -143,7 +143,7 @@ redo_exec:
       if (state & KAAPI_TASK_STATE_TERM)
       {
       }
-      else if (state == KAAPI_TASK_STATE_MERGE)
+      else if (state & KAAPI_TASK_STATE_MERGE)
         kaapi_aftersteal_body(pc->sp, fp, pc);
       else if (state & KAAPI_TASK_STATE_STEAL)
       {

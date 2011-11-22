@@ -107,7 +107,7 @@ static kaapi_request_status_t steal_block
 )
 {
   /* try lock and return if reply */
-  while (!kaapi_ws_lock_trylock(&block->lock))
+  while (!kaapi_atomic_trylock(&block->lock))
   {
     if (kaapi_request_test(request))
     {
@@ -122,7 +122,7 @@ static kaapi_request_status_t steal_block
   if (!kaapi_listrequest_iterator_empty(lri))
     kaapi_ws_queue_steal(block, block->queue, lr, lri);
   
-  kaapi_ws_lock_unlock(&block->lock);
+  kaapi_atomic_unlock(&block->lock);
   
 on_request_replied:
   /* do not need: kaapi_request_syncdata(request); it is myself that replied

@@ -277,7 +277,7 @@ protected:
     }
   };
   
-  kaapi_atomic_t     _lock;       ///
+  kaapi_lock_t       _lock;       ///
   FlipFlopBloc       _tosend;     /// cpy of data member of instruction to sent
   Instruction*       _start;      /// first instruction in the buffer
   Instruction*       _last;       /// past the last instruction in the buffer

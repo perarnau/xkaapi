@@ -44,6 +44,7 @@
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
 
+//#define BIG_DEBUG_MACOSX 1
 
 #define CONFIG_FOREACH_STATS 0
 #if CONFIG_FOREACH_STATS
@@ -166,7 +167,7 @@ typedef struct work_info
 
 typedef struct work
 {
-  kaapi_workqueue_t cr;
+  kaapi_workqueue_t cr __attribute__((aligned(sizeof(intptr_t))));
 
 #if CONFIG_TERM_COUNTER
   /* global work counter */
@@ -182,13 +183,13 @@ typedef struct work
   /* work routine */
   kaapic_foreach_body_t body_f;
   kaapic_body_arg_t*    body_args;
-} work_t;
+} kaapic_work_t;
 
-typedef work_t thief_work_t;
+typedef kaapic_work_t kaapic_thief_work_t;
 
 
 /* fwd decl */
-static void _kaapic_thief_entrypoint(void*, kaapi_thread_t* );
+static void _kaapic_thief_entrypoint(void*, kaapi_thread_t*,  kaapi_task_t* );
 
 
 static int _kaapic_split_common(
@@ -236,8 +237,8 @@ static int _kaapic_split_common(
 )
 {
   /* victim and thief works */
-  work_t* const vw = (work_t*)args;
-  thief_work_t* tw;
+  kaapic_work_t* const vw = (kaapic_work_t*)args;
+  kaapic_thief_work_t* tw;
 
   /* stolen range */
   kaapi_workqueue_index_t i;
@@ -326,7 +327,7 @@ redo_steal:
      changed size in between, redo the steal
   */
   kaapi_assert_debug( vw->cr.lock == &kaapi_get_current_processor()->victim_kproc->lock );
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(vw->cr.lock) <= 0 );
+  kaapi_assert_debug( kaapi_atomic_assertlocked(vw->cr.lock) );
   if (kaapi_workqueue_steal(&vw->cr, &i, &j, leaf_count * unit_size))
   {
     if ((trials--) == 0)
@@ -356,7 +357,7 @@ skip_workqueue:
     if (root_count && work_array_is_set(wa, (long)req->ident))
     {
       /* serve from work array */
-      tw = kaapi_request_pushdata(req, sizeof(thief_work_t) );
+      tw = kaapi_request_pushdata(req, sizeof(kaapic_thief_work_t) );
       work_array_pop(wa, (long)req->ident, &p, &q);
       kaapi_assert_debug( q-p > 0 );
       --root_count;
@@ -364,7 +365,7 @@ skip_workqueue:
     else if (leaf_count)
     {
       /* serve from the workqueue */
-      tw = kaapi_request_pushdata(req, sizeof(thief_work_t) );
+      tw = kaapi_request_pushdata(req, sizeof(kaapic_thief_work_t) );
 
       /* stolen indices */
       p = j - unit_size;
@@ -383,7 +384,7 @@ skip_workqueue:
     }
 
     /* finish work init and reply the request */
-#if defined(BYDEBUG_MACOSX)
+#if 0//defined(BIG_DEBUG_MACOSX)
     printf("%i:: WS/Steal [%i,%i[\n", req->ident, (int)p, (int)q);
     fflush(stdout);
 #endif
@@ -408,16 +409,17 @@ skip_workqueue:
   return 0;
 }
 
-#if defined(BYDEBUG_MACOSX)
+#if defined(BIG_DEBUG_MACOSX)
 static volatile int version = 0;
-static volatile int arraytid[1000 * 48];
-static volatile int arraytidversion[1000 * 48];
+static volatile int arraytid[1+1000 * 48];
+static volatile int arraytidmyself[4][1+1000 * 48];
 #endif
 
 /* thief entrypoint */
 static void _kaapic_thief_entrypoint(
   void*                 args, 
-  kaapi_thread_t*       thread
+  kaapi_thread_t*       thread,
+  kaapi_task_t*         pc
 )
 {
   /* range to process */
@@ -425,7 +427,7 @@ static void _kaapic_thief_entrypoint(
   kaapi_workqueue_index_t j;
 
   /* process the work */
-  thief_work_t* thief_work = (thief_work_t*)args;
+  kaapic_thief_work_t* thief_work = (kaapic_thief_work_t*)args;
 
   /* work info */
   const work_info_t* const wi = thief_work->wi;
@@ -437,32 +439,37 @@ static void _kaapic_thief_entrypoint(
   unsigned long counter = 0;
 #endif
 
-  kaapi_assert_debug( &kaapi_get_current_processor()->lock == thief_work->cr.lock );
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  kaapi_assert_debug( &kproc->lock == thief_work->cr.lock );
+  kaapi_assert_debug( kproc->kid == tid );
 
   /* while there is sequential work to do */
-#if defined(BYDEBUG_MACOSX)
+#if defined(BIG_DEBUG_MACOSX)
   kaapi_workqueue_index_t first_i = -1;
   kaapi_workqueue_index_t last_j = -1;
   kaapi_workqueue_t savewq = thief_work->cr;
+  kaapi_workqueue_t beforewq = savewq;
 #endif
   while (kaapi_workqueue_pop(&thief_work->cr, &i, &j, wi->seq_grain) ==0)
   {
-#if defined(BYDEBUG_MACOSX)
+    kaapi_assert_debug( &kproc->lock == thief_work->cr.lock );
+#if defined(BIG_DEBUG_MACOSX)
     if (first_i == -1) first_i = i;
     last_j = j;
+    beforewq = savewq;
 #endif
     kaapi_assert_debug( &kaapi_get_current_processor()->lock == thief_work->cr.lock );
     kaapi_assert_debug( i < j );
 //    printf("%i:: WS/S_pop [%i,%i[\n", kaapi_get_self_kid(), (int)i, (int)j);
 
-#if defined(BYDEBUG_MACOSX)
+#if defined(BIG_DEBUG_MACOSX)
     /* shift -1 to match fortran definition... */
     for (int k = i; k<j; ++k)
     {
-      if (arraytid[k-1] !=0) 
+      if (arraytid[k] !=0) 
         kaapi_abort();
-      arraytid[k-1] = tid;
-      arraytidversion[k-1] = version;
+      arraytid[k] = tid;
+      arraytidmyself[tid][k] = version;
     }
 #endif
     /* apply w->f on [i, j[ */
@@ -472,7 +479,7 @@ static void _kaapic_thief_entrypoint(
     counter += j - i;
 #endif
   }
-#if defined(BYDEBUG_MACOSX)
+#if 0//defined(BIG_DEBUG_MACOSX)
   if (last_j != -1)
     printf("%i:: WS/S_pop [%i,%i[\n", kaapi_get_self_kid(), (int)first_i, (int)last_j);
   else
@@ -496,15 +503,18 @@ int kaapic_foreach_common
   kaapic_body_arg_t*     body_args
 )
 {
-#if defined(BYDEBUG_MACOSX)
+#if defined(BIG_DEBUG_MACOSX)
   ++version;
-  for (int k = 0; k<1000*48; ++k)
+  for (int k = 0; k<1+1000*48; ++k)
   {
     arraytid[k] = 0;
-    arraytidversion[k] = 0;
+    arraytidmyself[0][k] = 0;
+    arraytidmyself[1][k] = 0;
+    arraytidmyself[2][k] = 0;
+    arraytidmyself[3][k] = 0;
   }
-  kaapi_mem_barrier();
-  usleep(10000);
+//  kaapi_mem_barrier();
+//  usleep(10000);
 #endif
 
   /* is_format true if called from kaapif_foreach_with_format */
@@ -520,8 +530,8 @@ int kaapic_foreach_common
   kaapi_workqueue_index_t i = first;
   kaapi_workqueue_index_t j = last;
 
-  /* work */
-  work_t w;
+  /* master work */
+  kaapic_work_t w;
   
   /* mapping */
   work_array_t wa;
@@ -622,12 +632,33 @@ int kaapic_foreach_common
 #endif
 
   /* process locally */
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  kaapi_assert_debug( kproc->kid == tid );
+
+#if defined(BIG_DEBUG_MACOSX)
+  kaapi_workqueue_t savewq;
+  kaapi_workqueue_t beforewq;
+  kaapi_workqueue_index_t last_refill_i;
+  kaapi_workqueue_index_t last_refill_j;
+#endif
+
 continue_work:
-  kaapi_assert_debug( &kaapi_get_current_processor()->lock == w.cr.lock );
+#if defined(BIG_DEBUG_MACOSX)
+  savewq   = w.cr;
+  beforewq = savewq;
+  last_refill_i  = -1;
+  last_refill_j  = -1;
+#endif
+
+  kaapi_assert_debug( &kproc->lock == w.cr.lock );
   while (kaapi_workqueue_pop(&w.cr, &i, &j, wi.seq_grain) == 0)
   {
-    kaapi_assert_debug( &kaapi_get_current_processor()->lock == w.cr.lock );
-#if defined(BYDEBUG_MACOSX)
+#if defined(BIG_DEBUG_MACOSX)
+    beforewq = savewq;
+#endif
+
+    kaapi_assert_debug( &kproc->lock == w.cr.lock );
+#if 0//defined(BIG_DEBUG_MACOSX)
     printf("WS/M_pop [%i,%i[\n", (int)i, (int) j);
     fflush(stdout);
 #endif
@@ -638,8 +669,9 @@ continue_work:
     local_counter += j - i;
 #endif
   }
+  kaapi_assert_debug( kaapi_workqueue_isempty(&w.cr) );
 
-  kaapi_workqueue_lock( &w.cr );
+  _kaapi_workqueue_lock( &w.cr );
   if (work_array_is_empty(&wa))
   {
     kaapi_workqueue_unlock( &w.cr );
@@ -648,13 +680,18 @@ continue_work:
 
   /* refill the workqueue from reseved task and continue */
   pos = work_array_first(&wa);
+  kaapi_assert_debug( pos >0 );
   work_array_pop(&wa, pos, &i, &j);
 
+#if defined(BIG_DEBUG_MACOSX)
+  last_refill_i  = i;
+  last_refill_j  = j;
+#endif
   kaapi_workqueue_init(
     &w.cr, 
     (kaapi_workqueue_index_t)i, (kaapi_workqueue_index_t)j
   );
-  kaapi_workqueue_unlock( &w.cr );
+  _kaapi_workqueue_unlock( &w.cr );
 
   goto continue_work;
 
@@ -667,8 +704,10 @@ end_adaptive:
   kaapi_task_end_adaptive(context);
 
   /* restore frame */
+  kaapi_thread_context_t* const self_thread = kaapi_all_kprocessors[tid]->thread;
+  kaapi_sched_lock( &self_thread->stack.lock );
   kaapi_thread_restore_frame(thread, &frame);
-
+  kaapi_sched_unlock( &self_thread->stack.lock );
 #if CONFIG_TERM_COUNTER
   /* wait for work counter */
   while (KAAPI_ATOMIC_READ(&counter)) ;

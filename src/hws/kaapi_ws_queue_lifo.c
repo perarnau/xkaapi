@@ -49,7 +49,7 @@
  */
 typedef struct lifo_queue
 {
-  kaapi_ws_lock_t lock;                      /* toremove, use block lock */
+  kaapi_lock_t lock;                      /* toremove, use block lock */
   __attribute__((aligned)) volatile unsigned int top; /* first avail */
 #define CONFIG_QUEUE_SIZE (4096 * 10)
   kaapi_task_t* tasks[CONFIG_QUEUE_SIZE];
@@ -65,9 +65,9 @@ static kaapi_ws_error_t _kaapi_ws_queue_lifo_push(
   /* assume q->top < sizeof(q->tasks) */
   lifo_queue_t* const q = (lifo_queue_t*)p;
   
-  kaapi_ws_lock_lock(&q->lock);
+  kaapi_atomic_lock(&q->lock);
   q->tasks[q->top++] = task;
-  kaapi_ws_lock_unlock(&q->lock);
+  kaapi_atomic_unlock(&q->lock);
   
   return KAAPI_WS_ERROR_SUCCESS;
 }
@@ -99,7 +99,7 @@ static kaapi_ws_error_t _kaapi_ws_queue_lifo_steal
   /* avoid to take the lock */
   if (q->top == 0) return KAAPI_WS_ERROR_EMPTY;
   
-  kaapi_ws_lock_lock(&q->lock);
+  kaapi_atomic_lock(&q->lock);
   
   req = kaapi_listrequest_iterator_get(lr, lri);
   while ((req != NULL) && q->top)
@@ -142,10 +142,8 @@ static kaapi_ws_error_t _kaapi_ws_queue_lifo_steal
 #endif
   }
   
-  /* q->top consistency */
-  kaapi_writemem_barrier();
-  
-  kaapi_ws_lock_unlock(&q->lock);
+  /* q->top consistency in the implicit write memory barrier*/
+  kaapi_atomic_unlock(&q->lock);
   
   return KAAPI_WS_ERROR_SUCCESS;
 }
@@ -189,7 +187,7 @@ kaapi_ws_queue_t* kaapi_ws_queue_create_lifo(void)
   wsq->steal = _kaapi_ws_queue_lifo_steal;
   wsq->pop   = _kaapi_ws_queue_lifo_pop;
   
-  kaapi_ws_lock_init(&q->lock);
+  kaapi_atomic_initlock(&q->lock);
   q->top = 0;
   
   return wsq;

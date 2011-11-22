@@ -217,7 +217,7 @@ typedef struct kaapi_readytasklist_t {
     The tasklist_t has an workqueue interface: push/pop and steal.
 */
 typedef struct kaapi_tasklist_t {
-  kaapi_atomic_t          lock;        /* protect recvlist */
+  kaapi_lock_t            lock;        /* protect recvlist */
   kaapi_atomic_t          count_thief; /* count the number of thiefs for terminaison */
 
   /* execution state for ready task using tasklist */
@@ -251,7 +251,7 @@ typedef struct kaapi_tasklist_t {
   kaapi_atomic_t          pending_stealop;
 #endif
   kaapi_atomic_t          cnt_exec;
-  uint32_t                total_tasks;/* valid on master. Terminaison: on the master cnt_task == cnt_exec */
+  intptr_t                total_tasks;/* valid on master. Terminaison: on the master cnt_task == cnt_exec */
 } kaapi_tasklist_t;
 
 
@@ -416,7 +416,7 @@ static inline int kaapi_taskdescr_activated( kaapi_taskdescr_t* td)
 */
 static inline int kaapi_readytasklist_init( 
   kaapi_readytasklist_t* rtl,
-  kaapi_atomic_t*        lock
+  kaapi_lock_t*          lock
 )
 {
   int i;

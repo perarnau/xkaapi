@@ -61,6 +61,7 @@ int kaapi_workqueue_init(
 #else
 #  error "May be alignment constraints exit to garantee atomic read write"
 #endif
+  kaapi_assert_debug( b <= e );
   kwq->beg  = b;
   kwq->end  = e;
   kwq->lock = &kproc->lock;
@@ -71,10 +72,10 @@ int kaapi_workqueue_init(
 /** 
 */
 int kaapi_workqueue_init_with_lock( 
-    kaapi_workqueue_t* kwq, 
+    kaapi_workqueue_t*      kwq, 
     kaapi_workqueue_index_t b, 
     kaapi_workqueue_index_t e, 
-    kaapi_atomic_t* thelock 
+    kaapi_lock_t*           thelock 
 )
 {
   kaapi_mem_barrier();
@@ -84,6 +85,7 @@ int kaapi_workqueue_init_with_lock(
 #else
 #  error "May be alignment constraints exit to garantee atomic read write"
 #endif
+  kaapi_assert_debug( b <= e );
   kaapi_assert_debug( thelock != 0 );
   kwq->beg  = b;
   kwq->end  = e;

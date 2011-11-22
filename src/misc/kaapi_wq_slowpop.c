@@ -60,10 +60,14 @@ int kaapi_workqueue_slowpop(
 
   kaapi_sched_lock( kwq->lock );
 
+  kaapi_assert_debug( kaapi_atomic_assertlocked(kwq->lock) );
+
   loc_beg = kwq->beg;
   size = kwq->end - loc_beg;
   if (size ==0) 
     goto empty_case;
+  kaapi_assert_debug( size >=0 );
+
   if (size > max_size)
     size = max_size;
   loc_beg += size;
@@ -74,6 +78,7 @@ int kaapi_workqueue_slowpop(
 
   *end = loc_beg;
   *beg = *end - size;
+  kaapi_assert_debug( *beg < *end );
   return 0;
 
 empty_case:

@@ -50,9 +50,29 @@
 int kaapi_task_end_adaptive( void* arg )
 {
   kaapi_task_t* task_merge;
-  kaapi_taskmerge_arg_t* const merge_arg = (kaapi_taskmerge_arg_t*)arg;
+  kaapi_task_t* task_adapt;
+  kaapi_taskbegendadaptive_arg_t* adap_arg;
+  kaapi_taskmerge_arg_t* merge_arg;
   kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
   kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
+
+  task_adapt = (kaapi_task_t*)arg;
+  adap_arg = kaapi_task_getargst(task_adapt, kaapi_taskbegendadaptive_arg_t);
+
+/* TODO: clear task stealable & splittable attribute first ? 
+*/
+  kaapi_task_set_unstealable( task_adapt );
+  kaapi_task_unset_splittable( task_adapt ); 
+  
+  /* create the merge task : avoid to push the task_adapt in order
+     to avoid its visibility before creation of the merge task.
+     - the merge task has the SC structure as parameter, not the task_adapt
+  */
+  merge_arg = (kaapi_taskmerge_arg_t*)kaapi_thread_pushdata
+    (thread, sizeof(kaapi_taskmerge_arg_t));
+  kaapi_assert_debug(merge_arg != 0);
+
+  kaapi_access_init(&merge_arg->shared_sc, adap_arg->shared_sc.data);
 
   task_merge = kaapi_thread_toptask(thread);
   kaapi_task_init_with_flag(
@@ -68,13 +88,7 @@ int kaapi_task_end_adaptive( void* arg )
   /* force execution of all previously pushed task of the frame */
   kaapi_sched_sync_(self_thread);
 
-  /* made visible old frame if not empty */
-  if (!kaapi_frame_isempty(&merge_arg->saved_frame))
-  {
-    kaapi_thread_restore_frame(thread, &merge_arg->saved_frame);
-  }
-  /* Synchronize with thief to avoid ABA probem if current thread
-     re-push tasks at the same address of the poped frame
+  /* Synchronize with thief 
   */
   kaapi_synchronize_steal(self_thread);
 

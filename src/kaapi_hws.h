@@ -62,33 +62,6 @@ typedef enum kaapi_ws_error
 #include "kaapi_ws_queue.h"
 
 
-/* workstealing lock, cas implementation only */
-/* todo: replace with kaapi_sched_lock */
-/* TG: base lock on top of kaapi_atomic_lock_XX subroutines */
-
-typedef kaapi_atomic_t kaapi_ws_lock_t;
-
-static inline int kaapi_ws_lock_init(kaapi_ws_lock_t* lock)
-{
-  return kaapi_atomic_initlock(lock);
-}
-
-static inline int kaapi_ws_lock_trylock(kaapi_ws_lock_t* lock)
-{
-  return kaapi_atomic_trylock(lock);
-}
-
-static inline int kaapi_ws_lock_lock(kaapi_ws_lock_t* lock)
-{
-  return kaapi_atomic_lock(lock);
-}
-
-static inline int kaapi_ws_lock_unlock(kaapi_ws_lock_t* lock)
-{
-  return kaapi_atomic_unlock(lock);
-}
-
-
 /* Workstealing block.
    A workstealing block is a node in the hierarchy used to aggregate
    requestion from sub-nodes. It contains :
@@ -102,7 +75,7 @@ typedef struct kaapi_ws_block
   /* concurrent workstealing sync */
   
   /* todo: cache aligned, alone in the line */
-  kaapi_ws_lock_t lock;
+  kaapi_lock_t lock;
 
   /* workstealing queue */
   struct kaapi_ws_queue* queue;

@@ -48,7 +48,9 @@
 */
 void kaapi_synchronize_steal( kaapi_thread_context_t* thread )
 {
-  kaapi_atomic_waitlock(&thread->stack.lock);
+  kaapi_writemem_barrier();
+//  kaapi_atomic_waitlock(&thread->stack.lock);
+  kaapi_atomic_waitlock(&thread->stack.proc->lock);
   kaapi_readmem_barrier();
 }
 

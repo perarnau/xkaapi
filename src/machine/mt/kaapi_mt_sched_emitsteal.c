@@ -94,6 +94,8 @@ redo_select:
   kaapi_flatemitsteal_context* victim_stealctxt 
     = (kaapi_flatemitsteal_context*)victim.kproc->emitsteal_ctxt;
     
+  kaapi_stack_reset( &kproc->thread->stack );
+
   self_request = &kaapi_requests_list[kproc->kid];
   kaapi_assert_debug( self_request->ident == kproc->kid );
   kaapi_request_post( 
@@ -111,42 +113,19 @@ redo_select:
      lock and re-test if they are yet posted requests on victim or not 
      if during tentaive of locking, a reply occurs, then return with reply
   */
-#if defined(KAAPI_SCHED_LOCK_CAS)
-  while (!kaapi_sched_trylock( victim.kproc ))
-  {
-    if (kaapi_reply_test( reply ) ) 
-      goto return_value;
-
-#if defined(KAAPI_USE_NETWORK)
-    kaapi_network_poll();
-#endif
-    kaapi_slowdown_cpu();
-  }
-#else /* cannot rely on kaapi_sched_trylock... */
-acquire:
-  if (KAAPI_ATOMIC_DECR(&victim.kproc->lock) ==0) goto enter;
-  while (KAAPI_ATOMIC_READ(&victim.kproc->lock) <=0)
+  while (!kaapi_sched_trylock( &victim.kproc->lock ))
   {
     if (kaapi_request_status_test( &status )) 
       goto return_value;
+
 #if defined(KAAPI_USE_NETWORK)
     kaapi_network_poll();
 #endif
-//    pthread_yield();
     kaapi_slowdown_cpu();
   }
-  goto acquire;
-enter:
-#endif
 
-#if defined(KAAPI_SCHED_LOCK_CAS)
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
-#endif
   /* here becomes an aggregator... the trylock has synchronized memory */
   kaapi_listrequest_iterator_init(&victim_stealctxt->lr, &lri);
-#if defined(KAAPI_SCHED_LOCK_CAS)
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
-#endif
 
   /* (3)
      process all requests on the victim kprocessor and reply failed to remaining requests
@@ -157,13 +136,7 @@ enter:
     kaapi_request_t* request;
     kproc->victim_kproc = victim.kproc;
 
-#if defined(KAAPI_SCHED_LOCK_CAS)
-    kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
-#endif
     kaapi_sched_stealprocessor( victim.kproc, &victim_stealctxt->lr, &lri );
-#if defined(KAAPI_SCHED_LOCK_CAS)
-    kaapi_assert_debug( KAAPI_ATOMIC_READ(&victim.kproc->lock) !=0 );
-#endif
 
     /* reply failed for all others requests */
     request = kaapi_listrequest_iterator_get( &victim_stealctxt->lr, &lri );

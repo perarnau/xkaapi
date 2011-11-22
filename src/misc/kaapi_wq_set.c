@@ -56,6 +56,7 @@ int kaapi_workqueue_set
 {
   if ( kwq->lock ==0 ) return ESRCH;
 
+  kaapi_assert_debug( beg <= end );
   kaapi_sched_lock( kwq->lock );
   kwq->beg = beg;
   kwq->end = end;
