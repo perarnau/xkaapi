@@ -548,10 +548,10 @@ int kaapic_foreach_common
 
   /* is_format true if called from kaapif_foreach_with_format */
 
+  kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
+  kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
   const int tid = kaapi_get_self_kid();
-  kaapi_thread_t* const thread = kaapi_threadcontext2thread(
-    kaapi_all_kprocessors[tid]->thread
-  );
+
   void* context;
   kaapi_frame_t frame;
 
@@ -733,10 +733,9 @@ end_adaptive:
   kaapi_task_end_adaptive(context);
 
   /* restore frame */
-  kaapi_thread_context_t* const self_thread = kaapi_all_kprocessors[tid]->thread;
-  kaapi_sched_lock( &self_thread->stack.lock );
   kaapi_thread_restore_frame(thread, &frame);
-  kaapi_sched_unlock( &self_thread->stack.lock );
+  kaapi_synchronize_steal_thread(self_thread);
+  
 #if CONFIG_TERM_COUNTER
   /* wait for work counter */
   while (KAAPI_ATOMIC_READ(&counter)) ;

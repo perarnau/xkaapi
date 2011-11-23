@@ -97,7 +97,7 @@ extern void kaapic_foreach_body2user(
 
 /*
 */
-typedef struct arg_info_t
+typedef struct kaapic_arg_info_t
 {
   kaapi_access_mode_t mode;
   kaapi_memory_view_t view;
@@ -111,21 +111,21 @@ typedef struct arg_info_t
   */
   kaapi_access_t access;
 
-} arg_info_t;
+} kaapic_arg_info_t;
 
 /*
 */
-typedef struct task_info
+typedef struct kaapic_task_info
 {
   void             (*body)();
   uintptr_t         nargs;
-  arg_info_t        args[1];
-} task_info_t;
+  kaapic_arg_info_t args[1];
+} kaapic_task_info_t;
 
 extern int kaapic_spawn_ti(
   kaapi_thread_t* thread, 
   kaapi_task_body_t body, 
-  task_info_t* ti
+  kaapic_task_info_t* ti
 );
 
 #if defined(__cplusplus)
