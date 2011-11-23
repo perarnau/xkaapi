@@ -196,7 +196,9 @@ redo_exec:
   kaapi_assert_debug( fp >= eframe);
 
   /* pop frame */
-#if 0
+
+#if defined(KAAPI_USE_LOCKTOPOP_FRAME)
+  /* lock based pop */
   int tolock = 0;
   if (fp > eframe)
   {
@@ -225,8 +227,8 @@ redo_exec:
   if (tolock)
     kaapi_sched_unlock(&stack->lock);
 
-#else //---------#if 0
-
+#else //---------#if defined(KAAPI_USE_LOCKTOPOP_FRAME)
+  /* THE based pop */
   if (fp > eframe)
   {
     /* here it's a pop of frame: we lock the thread */
