@@ -167,15 +167,30 @@ redo_select:
   {
     if (kaapi_request_status_test(&status)) 
       goto return_value;
-#if defined(KAAPI_DEBUG)
-/* ici: pb si la victime repond alors que l'on quitte */
-    if (kaapi_isterm) 
+
+    /* runtime may be finalizing. in this case,
+       cancel the request and leave. note that
+       some might be replying, in which case I
+       have to wait for the reply.
+     */
+    if (kaapi_isterm)
     {
-      printf("Should not go out through this way?\n");
+      const int err = kaapi_bitmap_unset
+	( &victim_stealctxt->lr.bitmap, self_request->ident );
+
+      /* bit unset by me, no one saw my request and leaving is safe */
+      if (err == 0) return KAAPI_REQUEST_S_NOK;
+
+      /* otherwise, wait for the reply */
+      /* note: could be optimized a bit, but finalization code */
+
+      /* FIXME
+	 should wait for the request but does not work. maybe
+	 the request bitmap is being destroyed.
+       */
       return KAAPI_REQUEST_S_NOK;
+      /* FIXME */
     }
-#endif
-    kaapi_slowdown_cpu();
   }
   
 #if defined(KAAPI_USE_PERFCOUNTER)
