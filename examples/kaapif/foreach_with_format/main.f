@@ -23,6 +23,8 @@
       PARAMETER (KAAPIF_TYPE_REAL=2)
       PARAMETER (KAAPIF_TYPE_DOUBLE=3)
 
+      REAL*8 kaapif_get_time
+
       real*8 array(1000 * 48)
       integer*4 arraytid(1000 * 48)
       integer*4 size
@@ -47,7 +49,7 @@
 
       ! parallel loop
       start = kaapif_get_time()
-      do i = 1, 1000000
+      do i = 1, 100000
          call kaapif_foreach_with_format(1, size, 4, fu, 
 ! argument[0]
      &                                   KAAPIF_MODE_RW,
@@ -97,6 +99,6 @@
       call kaapif_finalize()
 
       ! done
-      write(*, *) stop - start
+      write(*, *) (stop - start)
 
       end program main

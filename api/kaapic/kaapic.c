@@ -67,7 +67,7 @@ int kaapic_finalize(void)
 
 double kaapic_get_time(void)
 {
-  return (double)(kaapi_get_elapsedns() / 1000);
+  return kaapi_get_elapsedtime();
 }
 
 int32_t kaapic_get_concurrency(void)

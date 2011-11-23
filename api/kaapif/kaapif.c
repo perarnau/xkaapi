@@ -96,7 +96,7 @@ int kaapif_finalize_(void)
 
 double kaapif_get_time_(void)
 {
-  return (double)(kaapi_get_elapsedns() / 1000);
+  return kaapi_get_elapsedtime();
 }
 
 
