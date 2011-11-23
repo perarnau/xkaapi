@@ -701,7 +701,6 @@ typedef struct kaapi_taskadaptive_arg_t {
   kaapi_task_body_t             user_body; 
   void*                         user_sp;  
   kaapi_adaptivetask_splitter_t user_splitter;
-  KAAPI_DEBUG_INST(volatile int version; )
 } kaapi_taskadaptive_arg_t;
 
 
@@ -722,7 +721,6 @@ typedef struct kaapi_taskbegendadaptive_arg_t {
   kaapi_adaptivetask_splitter_t splitter;
   void*                         argsplitter;
   kaapi_adaptivetask_splitter_t usersplitter;
-  KAAPI_DEBUG_INST(volatile int version; )
 } kaapi_taskbegendadaptive_arg_t;
 
 
