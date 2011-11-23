@@ -193,6 +193,16 @@ static inline int kaapi_bitmap_set_32( kaapi_bitmap32_t* b, int i )
   return 0;
 }
 
+static inline int kaapi_bitmap_unset_32( kaapi_bitmap32_t* b, int i )
+{
+  uint32_t x;
+  kaapi_assert_debug( (i<32) && (i>=0) );
+  x = KAAPI_ATOMIC_AND_ORIG(&b->proc32, ~(1U<<i));
+  /* was not unset before, success */
+  if (x & (1 << i)) return 0;
+  return -1;
+}
+
 static inline int kaapi_bitmap_count_32( kaapi_bitmap_value32_t b ) 
 { return __builtin_popcount(b.proc32); }
 
@@ -317,6 +327,17 @@ static inline int kaapi_bitmap_set_64( kaapi_bitmap64_t* b, int i )
   kaapi_assert_debug( (i<64) && (i>=0) );
   KAAPI_ATOMIC_OR64(&b->proc64, ((uint64_t)1)<<i); 
   return 1;
+}
+
+static inline int kaapi_bitmap_unset_64( kaapi_bitmap64_t* b, int i ) 
+{ 
+  uint64_t x;
+
+  kaapi_assert_debug( (i<64) && (i>=0) );
+  x = KAAPI_ATOMIC_AND64_ORIG(&b->proc64, ~(((uint64_t)1)<<i)); 
+  /* was not unset before, success */
+  if (x & ((uint64_t)1 << i)) return 0;
+  return -1;
 }
 
 static inline int kaapi_bitmap_count_64( kaapi_bitmap_value64_t b ) 
@@ -462,6 +483,25 @@ static inline int kaapi_bitmap_set_128( kaapi_bitmap128_t* b, int i )
   return 1;
 }
 
+static inline int kaapi_bitmap_unset_128( kaapi_bitmap128_t* b, int i ) 
+{ 
+  uint64_t x;
+
+  kaapi_assert_debug( (i<128) && (i>=0) );
+  if (i<64)
+  {
+    x = KAAPI_ATOMIC_AND64_ORIG( &(b->proc128)[0], ~(((uint64_t)1)<< i)); 
+    if (x & ((uint64_t)1 << i)) return 0;
+  }
+  else
+  {
+    x = KAAPI_ATOMIC_AND64_ORIG( &(b->proc128)[1], ~(((uint64_t)1)<< (i-64))); 
+    if (x & ((uint64_t)1 << (i - 64))) return 0;
+  }
+
+  return -1;
+}
+
 static inline int kaapi_bitmap_count_128( kaapi_bitmap_value128_t b ) 
 { return __builtin_popcountl( b.proc128[0] ) + __builtin_popcountl( b.proc128[1] ) ; }
 
@@ -536,6 +576,7 @@ extern void (*kaapi_bitmap_value_or)( kaapi_bitmap_value_t* b, const kaapi_bitma
 extern void (*kaapi_bitmap_value_and)( kaapi_bitmap_value_t* b, const kaapi_bitmap_value_t* v ) ;
 extern void (*kaapi_bitmap_value_neg)( kaapi_bitmap_value_t* b, const kaapi_bitmap_value_t* v ) ;
 extern int (*kaapi_bitmap_set)( kaapi_bitmap_t* b, int i );
+extern int (*kaapi_bitmap_unset)( kaapi_bitmap_t* b, int i );
 extern int (*kaapi_bitmap_count)( kaapi_bitmap_value_t b );
 extern int (*kaapi_bitmap_first1_and_zero)( kaapi_bitmap_value_t* b );
 #  else
@@ -571,6 +612,7 @@ typedef kaapi_bitmap_value128_t kaapi_bitmap_value_t;
 #    define kaapi_bitmap_value_and(b,v) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_and)((b),(v))
 #    define kaapi_bitmap_value_neg(b,v) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_neg)((b),(v))
 #    define kaapi_bitmap_set(b, i) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_set)((b), (i))
+#    define kaapi_bitmap_unset(b, i) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_unset)((b), (i))
 #    define kaapi_bitmap_count(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_count)(b)
 #    define kaapi_bitmap_first1_and_zero(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_first1_and_zero)(b)
 #    define kaapi_bitmap_first1(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_first1)(b)
