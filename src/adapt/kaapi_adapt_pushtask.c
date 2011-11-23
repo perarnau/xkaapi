@@ -73,7 +73,7 @@ int kaapi_thread_pushtask_adaptive(
 
   sc->msc        = sc; /* self pointer to detect master */
   sc->ktr        = 0;
-  if ( kaapi_task_is_withpreemption(task_adapt) & KAAPI_TASK_S_PREEMPTION)
+  if ( kaapi_task_is_withpreemption(task_adapt))
   {
     kaapi_assert_debug( !(task_adapt->u.s.flag & KAAPI_TASK_S_NOPREEMPTION) );
     sc->flag = KAAPI_SC_PREEMPTION;

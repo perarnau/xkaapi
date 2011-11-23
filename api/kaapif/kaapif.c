@@ -85,11 +85,6 @@ int kaapif_finalize_(void)
 {
   if (KAAPI_ATOMIC_DECR(&kaapif_initcalled) != 0)
     return 0;
-
-#if CONFIG_FOREACH_STATS
-  printf("foreach: %lf\n", foreach_time);
-#endif
-
   return kaapic_finalize();
 }
 
