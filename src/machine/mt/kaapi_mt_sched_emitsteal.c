@@ -176,7 +176,7 @@ redo_select:
     if (kaapi_isterm)
     {
       const int err = kaapi_bitmap_unset
-	( &victim_stealctxt->lr.bitmap, self_request->ident );
+         ( &victim_stealctxt->lr.bitmap, self_request->ident );
 
       /* bit unset by me, no one saw my request and leaving is safe */
       if (err == 0) return KAAPI_REQUEST_S_NOK;
