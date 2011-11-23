@@ -498,9 +498,13 @@ static inline void kaapi_processor_free(kaapi_processor_t* kproc)
 
 #endif /* KAAPI_USE_NUMA */
 
-/**
+/** Wait until no more theft on the kprocessor
 */
 extern void kaapi_synchronize_steal( kaapi_processor_t* );
+
+/** Wait until no more theft on the thread
+*/
+extern void kaapi_synchronize_steal_thread( kaapi_thread_context_t* );
 
 
 /* ........................................ PRIVATE INTERFACE ........................................*/

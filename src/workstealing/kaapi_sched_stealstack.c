@@ -51,6 +51,11 @@ void kaapi_synchronize_steal( kaapi_processor_t* kproc )
   kaapi_atomic_waitlock(&kproc->lock);
 }
 
+void kaapi_synchronize_steal_thread( kaapi_thread_context_t* thread )
+{
+  kaapi_atomic_waitlock(&thread->stack.lock);
+}
+
 
 /** Steal task in the stack from the bottom to the top.
      This signature MUST BE the same as a splitter function.

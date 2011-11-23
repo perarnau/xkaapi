@@ -75,7 +75,11 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
      - no more theft is under stealing and master counter or list of thief is
      correctly setted.
   */
+#if 0
   kaapi_synchronize_steal(self_kproc);
+#else
+  kaapi_synchronize_steal_thread(self_kproc->thread);
+#endif
 
   /* If master thread */
   if (sc->msc == sc )
