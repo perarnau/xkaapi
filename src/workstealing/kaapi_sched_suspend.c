@@ -223,6 +223,8 @@ redo_execution:
     {
       kaapi_assert( kaapi_frame_isempty( kproc->thread->stack.sfp ) );
       kaapi_assert( kproc->thread->stack.sfp == kproc->thread->stack.stackframe );
+      kaapi_stack_reset(&kproc->thread->stack);
+      kaapi_synchronize_steal(kproc);
     }
 #endif
 

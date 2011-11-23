@@ -46,12 +46,9 @@
 
 /*
 */
-void kaapi_synchronize_steal( kaapi_thread_context_t* thread )
+void kaapi_synchronize_steal( kaapi_processor_t* kproc )
 {
-  kaapi_writemem_barrier();
-//  kaapi_atomic_waitlock(&thread->stack.lock);
-  kaapi_atomic_waitlock(&thread->stack.proc->lock);
-  kaapi_readmem_barrier();
+  kaapi_atomic_waitlock(&kproc->lock);
 }
 
 
@@ -94,6 +91,7 @@ int kaapi_sched_stealstack
       kaapi_sched_stealtasklist( thread, top_frame->tasklist, lrequests, lrrange );
   }
   thread->stack.thieffp = 0;
+
   kaapi_atomic_unlock(&thread->stack.lock);
 
   kaapi_hashmap_destroy( &access_to_gd );

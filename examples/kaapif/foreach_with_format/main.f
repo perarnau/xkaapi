@@ -83,7 +83,9 @@
             end do
          end if
          ! end check
-!         write(*, *) '-- OK --'
+      if ( mod( i, 1000) .eq. 0) then
+         write(*, *) i, ' -- OK --'
+      end if
       do l = 1, size
          arraytid(l) = 0
       enddo
