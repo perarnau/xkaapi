@@ -83,7 +83,7 @@
             end do
          end if
          ! end check
-         write(*, *) '-- OK --'
+!         write(*, *) '-- OK --'
       do l = 1, size
          arraytid(l) = 0
       enddo
