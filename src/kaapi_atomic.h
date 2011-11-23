@@ -499,7 +499,6 @@ typedef struct kaapi_lock_t {
 
 static inline int kaapi_atomic_initlock( kaapi_lock_t* lock )
 {
-  kaapi_assert_debug( lock->_magic != 123123123U);
   KAAPI_DEBUG_INST(lock->_magic = 123123123U;)
   KAAPI_DEBUG_INST(lock->_owner = -1U;)
   KAAPI_DEBUG_INST(lock->_unlocker = -1U;)
@@ -510,10 +509,9 @@ static inline int kaapi_atomic_initlock( kaapi_lock_t* lock )
 
 static inline int kaapi_atomic_destroylock( kaapi_lock_t* lock )
 {
-  kaapi_assert_debug( lock->_magic == 123123123U);
-  kaapi_assert_debug(lock->_owner == -1U);
-  kaapi_assert_debug(lock->_unlocker != -1U);
   kaapi_assert_debug( KAAPI_ATOMIC_READ(lock) == 1 );
+  kaapi_assert_debug( lock->_magic == 123123123U);
+  kaapi_assert_debug( lock->_owner == -1U);
   KAAPI_DEBUG_INST(lock->_magic = 0101010101U;)
   return 0;
 }
@@ -558,8 +556,10 @@ static inline int kaapi_atomic_unlock( kaapi_lock_t* lock )
   KAAPI_DEBUG_INST(lock->_unlocker = lock->_owner;)
   KAAPI_DEBUG_INST(lock->_owner = -1U;)
 
-  lock->_sync = 0;
-  KAAPI_ATOMIC_WRITE_BARRIER(lock, 1);
+  if (lock->_sync !=0) 
+    lock->_sync = 0;
+  kaapi_mem_barrier();
+  KAAPI_ATOMIC_WRITE(lock, 1);
   return 0;
 }
 

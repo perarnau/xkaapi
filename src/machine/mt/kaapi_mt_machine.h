@@ -563,9 +563,8 @@ static inline void kaapi_lfree_push(
     list->_front->_prev = ctxt;
   list->_front = ctxt;
 
+
   kaapi_synchronize_steal(kproc);
-  /* this is the only vital ressource to destroy properly */
-  kaapi_atomic_destroylock(&ctxt->stack.lock);
 
 //  kaapi_atomic_lock( &kproc->lock );
   /* pop back if new size exceeds max */
@@ -578,14 +577,18 @@ static inline void kaapi_lfree_push(
     list->_back = list->_back->_prev;
     list->_back->_next = NULL;
 
+    /* this is the only vital ressource to destroy properly */
+    kaapi_atomic_destroylock(&ctxt->stack.lock);
+
     /* free the popped context: lock the kproc until to wait end of thief operation */
     kaapi_context_free(ctxt);
   }
   else
     ++kproc->sizelfree;
-//  kaapi_atomic_unlock( &kproc->lock );
 }
 
+/* Re-design interface between context_free / context_alloc and lfree_push and lfree_pop
+*/
 static inline kaapi_thread_context_t* kaapi_lfree_pop(struct kaapi_processor_t* kproc)
 {
   kaapi_lfree_t* const list = &kproc->lfree;
