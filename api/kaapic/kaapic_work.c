@@ -643,8 +643,8 @@ int kaapic_foreach_common
 #if CONFIG_MAX_TID
   wi.max_tid = xxx_max_tid;
 #endif
-  wi.par_grain = (attr ==0 ? 1 : attr->s_grain);
-  wi.seq_grain = (attr ==0 ? 1 : attr->p_grain);
+  wi.par_grain = (attr ==0 ? 1 : attr->p_grain);
+  wi.seq_grain = (attr ==0 ? 1 : attr->s_grain);
   w.wi = &wi;
 
   /* start adaptive region */
