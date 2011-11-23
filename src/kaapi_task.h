@@ -473,11 +473,12 @@ static inline int kaapi_stack_init(
 
 static inline int kaapi_stack_reset(kaapi_stack_t* stack )
 {
-  kaapi_frame_t* fp = stack->stackframe;
-  stack->sfp        = fp;
-  stack->esfp       = fp;
-  fp->sp            = fp->pc  = stack->task; /* empty frame */
-  fp->sp_data       = stack->data;
+  kaapi_frame_t* fp   = stack->stackframe;
+  stack->sfp          = fp;
+  stack->esfp         = fp;
+  fp->sp              = fp->pc  = stack->task; /* empty frame */
+  fp->sp_data         = stack->data;
+  stack->sfp->tasklist= 0;
   return 0;
 }
 
@@ -488,7 +489,6 @@ static inline int kaapi_stack_clear(kaapi_stack_t* stack )
 {
   kaapi_stack_reset( stack );
   kaapi_atomic_initlock( &stack->lock );
-  stack->sfp->tasklist= 0;
   stack->thieffp      = 0;
   return 0;
 }

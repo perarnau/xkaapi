@@ -436,7 +436,6 @@ typedef struct kaapi_thread_context_t {
 extern uint64_t kaapi_perf_thread_delayinstate(struct kaapi_processor_t* kproc);
 
 
-
 /* ========== Here include machine specific function: only next definitions should depend on machine =========== */
 /** Here include all machine dependent functions and types
 */
@@ -675,10 +674,6 @@ static inline int _kaapi_workqueue_unlock(
   return kaapi_atomic_unlock(kwq->lock);
 }
 
-
-/**
-*/
-extern void kaapi_synchronize_steal( kaapi_thread_context_t* );
 
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/

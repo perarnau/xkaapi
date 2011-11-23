@@ -1861,9 +1861,12 @@ static inline int kaapi_workqueue_pop(
 )
 {
   kaapi_workqueue_index_t loc_beg;
+  kaapi_workqueue_index_t loc_init;
   kaapi_assert_debug( max_size >0 );
 
-  loc_beg = kwq->beg + max_size;
+  loc_beg = kwq->beg;
+  loc_init = loc_beg;
+  loc_beg += max_size;
   kwq->beg = loc_beg;
   kaapi_mem_barrier();
 
@@ -1876,8 +1879,7 @@ static inline int kaapi_workqueue_pop(
   }
 
   /* conflict */
-  loc_beg -= max_size;
-  kwq->beg = loc_beg;
+  kwq->beg = loc_init;
   return kaapi_workqueue_slowpop(kwq, beg, end, max_size);
 }
 
@@ -1895,6 +1897,7 @@ static inline int kaapi_workqueue_steal(
 )
 {
   kaapi_workqueue_index_t loc_end;
+  kaapi_workqueue_index_t loc_init;
 
   kaapi_assert_debug( 0 < size );
   kaapi_assert_debug( kaapi_atomic_assertlocked(kwq->lock) );
@@ -1903,13 +1906,15 @@ static inline int kaapi_workqueue_steal(
   *beg = 0;
   *end = 0;
 
-  loc_end = kwq->end - size;
+  loc_end  = kwq->end;
+  loc_init = loc_end;
+  loc_end -= size;
   kwq->end = loc_end;
   kaapi_mem_barrier();
 
   if (loc_end < kwq->beg)
   {
-    kwq->end = loc_end+size;
+    kwq->end = loc_init;
     return ERANGE; /* false */
   }
 

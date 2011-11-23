@@ -90,7 +90,7 @@ int kaapi_task_end_adaptive( void* arg )
 
   /* Synchronize with thief 
   */
-  kaapi_synchronize_steal(self_thread);
+  kaapi_synchronize_steal(self_thread->stack.proc);
 
 #if defined(KAAPI_DEBUG)
   kaapi_stealcontext_t* sc = (kaapi_stealcontext_t*)merge_arg->shared_sc.data;

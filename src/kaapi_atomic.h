@@ -60,6 +60,7 @@
 #endif
 
 #include "kaapi_error.h"
+#include "kaapi_defs.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -314,6 +315,9 @@ static inline void kaapi_mem_barrier()
 
 //#define KAAPI_SCHED_LOCK_PTHREAD 1
 //#define KAAPI_SCHED_LOCK_CAS 1
+#if defined(KAAPI_DEBUG)
+extern unsigned int kaapi_get_self_kid(void);
+#endif
 
 #if defined(KAAPI_SCHED_LOCK_PTHREAD)
 #include <pthread.h>
@@ -324,6 +328,11 @@ typedef struct kaapi_lock_t {
 static inline int kaapi_atomic_initlock( kaapi_lock_t* lock )
 {
   return pthread_mutex_init(&lock->_mutex,0);
+}
+
+static inline int kaapi_atomic_destroylock( kaapi_lock_t* lock )
+{
+  return pthread_mutex_destroy(&lock->_mutex);
 }
 
 static inline int kaapi_atomic_trylock( kaapi_lock_t* lock )
@@ -365,6 +374,12 @@ typedef struct kaapi_lock_t {
 static inline int kaapi_atomic_initlock( kaapi_lock_t* lock )
 {
   KAAPI_ATOMIC_WRITE_BARRIER(lock,0);
+  return 0;
+}
+
+static inline int kaapi_atomic_destroylock( kaapi_lock_t* lock )
+{
+  kaapi_assert_debug( kaapi_assert_debug( KAAPI_ATOMIC_READ(lock) == 0 ));
   return 0;
 }
 
@@ -426,21 +441,40 @@ static inline int kaapi_atomic_assertlocked( kaapi_lock_t* lock)
     DOI= http://doi.acm.org/10.1145/1785414.1785443
 */
 typedef struct kaapi_lock_t {
-  volatile int32_t _counter;
+  volatile int32_t  _counter;
+  volatile uint32_t _owner;
+  volatile uint32_t _unlocker;
+  volatile uint32_t _magic;
 } kaapi_lock_t;
 
 
 static inline int kaapi_atomic_initlock( kaapi_lock_t* lock )
 {
+  kaapi_assert_debug( lock->_magic != 123123123U);
+  KAAPI_DEBUG_INST(lock->_magic = 123123123U;)
+  KAAPI_DEBUG_INST(lock->_owner = -1U;)
+  KAAPI_DEBUG_INST(lock->_unlocker = -1U;)
   KAAPI_ATOMIC_WRITE_BARRIER(lock,1);
+  return 0;
+}
+
+static inline int kaapi_atomic_destroylock( kaapi_lock_t* lock )
+{
+  kaapi_assert_debug( lock->_magic == 123123123U);
+  kaapi_assert_debug(lock->_owner == -1U);
+  kaapi_assert_debug(lock->_unlocker != -1U);
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(lock) == 1 );
+  KAAPI_DEBUG_INST(lock->_magic = 0101010101U;)
   return 0;
 }
 
 static inline int kaapi_atomic_trylock( kaapi_lock_t* lock )
 {
+  kaapi_assert_debug( lock->_magic == 123123123U);
   if ((KAAPI_ATOMIC_READ(lock) ==1) && (KAAPI_ATOMIC_DECR(lock) ==0))
   {
-    kaapi_readmem_barrier();
+    KAAPI_DEBUG_INST(lock->_owner = kaapi_get_self_kid();)
+    KAAPI_DEBUG_INST(lock->_unlocker = -1U;)
     return 1;
   }
   return 0;
@@ -448,36 +482,47 @@ static inline int kaapi_atomic_trylock( kaapi_lock_t* lock )
 
 static inline int kaapi_atomic_lock( kaapi_lock_t* lock )
 {
+  kaapi_assert_debug( lock->_magic == 123123123U);
 acquire:
   if (KAAPI_ATOMIC_DECR(lock) ==0) 
   {
-    kaapi_readmem_barrier();
+    KAAPI_DEBUG_INST(lock->_owner = kaapi_get_self_kid();)
+    KAAPI_DEBUG_INST(lock->_unlocker = -1U;)
     return 1;
   }
   while (KAAPI_ATOMIC_READ(lock) <=0)
   {
+    kaapi_assert_debug( lock->_magic == 123123123U);
     kaapi_slowdown_cpu();
   }
   goto acquire;
 }
 
+
 static inline int kaapi_atomic_unlock( kaapi_lock_t* lock )
 {
+  kaapi_assert_debug( lock->_magic == 123123123U);
+  kaapi_assert_debug( lock->_unlocker == -1U);
+  kaapi_assert_debug( lock->_owner == kaapi_get_self_kid() );
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(lock) <= 0);
+  KAAPI_DEBUG_INST(lock->_unlocker = lock->_owner;)
+  KAAPI_DEBUG_INST(lock->_owner = -1U;)
   KAAPI_ATOMIC_WRITE_BARRIER(lock, 1);
   return 0;
 }
 
 static inline void kaapi_atomic_waitlock( kaapi_lock_t* lock)
 {
-  kaapi_writemem_barrier();
+  kaapi_assert_debug( lock->_magic == 123123123U);
   /* wait until reaches the unlocked state */
   while (KAAPI_ATOMIC_READ(lock) <=0)
     kaapi_slowdown_cpu();
-  kaapi_readmem_barrier();
+  kaapi_mem_barrier();
 }
 
 static inline int kaapi_atomic_assertlocked( kaapi_lock_t* lock)
 {
+  kaapi_assert_debug( lock->_magic == 123123123U);
   return KAAPI_ATOMIC_READ(lock) <=0;
 }
 

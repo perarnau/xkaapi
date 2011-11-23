@@ -68,14 +68,14 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
 {
   kaapi_taskmerge_arg_t* const arg = (kaapi_taskmerge_arg_t*)sp;
   kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)arg->shared_sc.data;
-  kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
+  kaapi_processor_t* const self_kproc = kaapi_get_current_processor();
 
   /* Synchronize with the theft on the current thread.
      After the following instruction, we have:
      - no more theft is under stealing and master counter or list of thief is
      correctly setted.
   */
-  kaapi_synchronize_steal(self_thread);
+  kaapi_synchronize_steal(self_kproc);
 
   /* If master thread */
   if (sc->msc == sc )

@@ -498,6 +498,10 @@ static inline void kaapi_processor_free(kaapi_processor_t* kproc)
 
 #endif /* KAAPI_USE_NUMA */
 
+/**
+*/
+extern void kaapi_synchronize_steal( kaapi_processor_t* );
+
 
 /* ........................................ PRIVATE INTERFACE ........................................*/
 /** \ingroup TASK
@@ -540,7 +544,9 @@ static inline int kaapi_lfree_isempty(struct kaapi_processor_t* kproc)
   return kproc->sizelfree == 0;
 }
 
-static inline void kaapi_lfree_push(struct kaapi_processor_t* kproc, kaapi_thread_context_t* ctxt)
+static inline void kaapi_lfree_push(
+  struct kaapi_processor_t* kproc, kaapi_thread_context_t* ctxt
+)
 {
   kaapi_lfree_t* const list = &kproc->lfree;
 
@@ -553,11 +559,16 @@ static inline void kaapi_lfree_push(struct kaapi_processor_t* kproc, kaapi_threa
     list->_front->_prev = ctxt;
   list->_front = ctxt;
 
-  kaapi_atomic_lock( &kproc->lock );
+  kaapi_synchronize_steal(kproc);
+  /* this is the only vital ressource to destroy properly */
+  kaapi_atomic_destroylock(&ctxt->stack.lock);
+
+//  kaapi_atomic_lock( &kproc->lock );
   /* pop back if new size exceeds max */
 #  define KAAPI_MAXFREECTXT 4
   if (kproc->sizelfree >= KAAPI_MAXFREECTXT)
   {
+
     /* list size at least 2, no special case handling */
     ctxt = list->_back;
     list->_back = list->_back->_prev;
@@ -568,7 +579,7 @@ static inline void kaapi_lfree_push(struct kaapi_processor_t* kproc, kaapi_threa
   }
   else
     ++kproc->sizelfree;
-  kaapi_atomic_unlock( &kproc->lock );
+//  kaapi_atomic_unlock( &kproc->lock );
 }
 
 static inline kaapi_thread_context_t* kaapi_lfree_pop(struct kaapi_processor_t* kproc)

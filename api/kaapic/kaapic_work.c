@@ -167,7 +167,7 @@ typedef struct work_info
 
 typedef struct work
 {
-  kaapi_workqueue_t cr __attribute__((aligned(sizeof(intptr_t))));
+  kaapi_workqueue_t cr __attribute__((aligned(64)));
 
 #if CONFIG_TERM_COUNTER
   /* global work counter */
@@ -338,12 +338,16 @@ redo_steal:
 
     goto redo_steal;
   }
-#if 1//defined(BIG_DEBUG_MACOSX)
-    printf("%i:: WS/#%i Steal @%p=[%i,%i[ usz:%i rsz:%i\n",//"|lock=%i\n", 
+#if 0//defined(BIG_DEBUG_MACOSX)
+    kaapi_workqueue_index_t beg,end;
+    beg = kaapi_workqueue_range_begin(&vw->cr);
+    end = kaapi_workqueue_range_end(&vw->cr);
+    printf("%i:: WS/#%i Steal @%p=[%i,%i[ remainder [%i,%i[ usz:%i rsz:%i\n",//"|lock=%i\n", 
       (int)kaapi_get_current_processor()->victim_kproc->kid,
       (int)leaf_count, 
       (void*)&vw->cr,
       (int)i, (int)j,
+      (int)beg, (int)end,
       (int)unit_size,
       (int)range_size
     );
@@ -466,9 +470,10 @@ static void _kaapic_thief_entrypoint(
   kaapi_workqueue_t savewq = thief_work->cr;
   kaapi_workqueue_t beforewq = savewq;
 #endif
+
   while (kaapi_workqueue_pop(&thief_work->cr, &i, &j, wi->seq_grain) ==0)
   {
-#if 1//defined(BIG_DEBUG_MACOSX)
+#if 0//defined(BIG_DEBUG_MACOSX)
     printf("%i:: WS/Pop @%p[%i,%i[\n", 
       tid,
       (void*)&thief_work->cr,
@@ -697,7 +702,7 @@ continue_work:
   _kaapi_workqueue_lock( &w.cr );
   if (work_array_is_empty(&wa))
   {
-    kaapi_workqueue_unlock( &w.cr );
+    _kaapi_workqueue_unlock( &w.cr );
     goto end_adaptive;
   }
 

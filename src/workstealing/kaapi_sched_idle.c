@@ -166,7 +166,8 @@ redo_execute:
 #if defined(KAAPI_DEBUG)
     else 
     {
-      kaapi_thread_clear(kproc->thread);
+      kaapi_stack_reset(&kproc->thread->stack);
+      kaapi_synchronize_steal(kproc);
 #if 0
       kaapi_assert( kaapi_frame_isempty( kproc->thread->stack.sfp ) );
       kaapi_assert( kproc->thread->stack.sfp == kproc->thread->stack.stackframe );
