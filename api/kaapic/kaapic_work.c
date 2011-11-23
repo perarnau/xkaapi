@@ -42,6 +42,8 @@
  ** 
  */
 #include "kaapi_impl.h"
+
+#warning "TODO: based dependencies on kaapi.h only"
 #include "kaapic_impl.h"
 
 //#define BIG_DEBUG_MACOSX 1
@@ -56,12 +58,6 @@ static double foreach_time = 0;
 
 /* for implm requiring bound tids */
 #define CONFIG_MAX_TID 0
-
-
-/* missing prototypes */
-extern void kaapi_lock_self_kproc(void);
-extern void kaapi_unlock_self_kproc(void);
-extern kaapi_atomic_t* kaapi_get_kproc_lock(kaapi_processor_id_t);
 
 
 #define FATAL()						\
@@ -326,7 +322,8 @@ redo_steal:
   /* perform the actual steal. if the range
      changed size in between, redo the steal
   */
-  kaapi_assert_debug( vw->cr.lock == &kaapi_get_current_processor()->victim_kproc->lock );
+  kaapi_assert_debug( vw->cr.lock 
+    == &kaapi_get_current_processor()->victim_kproc->lock );
   kaapi_assert_debug( kaapi_atomic_assertlocked(vw->cr.lock) );
   if (kaapi_workqueue_steal(&vw->cr, &i, &j, leaf_count * unit_size))
   {
@@ -418,11 +415,15 @@ skip_workqueue:
 #endif
     kaapi_task_init_with_flag(
       kaapi_request_toptask(req), 
-      _kaapic_thief_entrypoint, 
+      (kaapi_task_body_t)_kaapic_thief_entrypoint, 
       tw,
       KAAPI_TASK_UNSTEALABLE
     );
-    kaapi_reply_pushtask_adaptive_tail( req, victim_task, _kaapic_split_leaf_task );
+    kaapi_reply_pushtask_adaptive_tail( 
+      req, 
+      victim_task,
+      _kaapic_split_leaf_task 
+    );
     kaapi_request_committask(req);
   }
 
