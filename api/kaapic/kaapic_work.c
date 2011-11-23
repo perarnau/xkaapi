@@ -313,7 +313,7 @@ redo_steal:
 
   /* how much per non root req */
   unit_size = range_size / (leaf_count + 1);
-  if (unit_size == 0)
+  if (unit_size < wi->par_grain)
   {
     leaf_count = (range_size / wi->par_grain) - 1;
     unit_size = wi->par_grain;
@@ -460,7 +460,9 @@ static void _kaapic_thief_entrypoint(
   unsigned long counter = 0;
 #endif
 
+#if defined(KAAPI_DEBUG)
   kaapi_processor_t* kproc = kaapi_get_current_processor();
+#endif
   kaapi_assert_debug( &kproc->lock == thief_work->cr.lock );
   kaapi_assert_debug( kproc->kid == tid );
 
@@ -661,7 +663,9 @@ int kaapic_foreach_common
 #endif
 
   /* process locally */
+#if defined(KAAPI_DEBUG)
   kaapi_processor_t* kproc = kaapi_get_current_processor();
+#endif
   kaapi_assert_debug( kproc->kid == tid );
 
 #if defined(BIG_DEBUG_MACOSX)
