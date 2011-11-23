@@ -50,7 +50,7 @@
 
 static void kaapif_dfg_body(void* p, kaapi_thread_t* t)
 {
-  task_info_t* const ti = (task_info_t*)p;
+  kaapic_task_info_t* const ti = (kaapic_task_info_t*)p;
 
 #include "kaapif_dfg_switch.h"
   KAAPIF_DFG_SWITCH(ti);
@@ -64,7 +64,7 @@ int kaapif_spawn_(
 )
 {
   kaapi_thread_t* thread = kaapi_self_thread();
-  task_info_t* ti;
+  kaapic_task_info_t* ti;
   va_list va_args;
   size_t wordsize;
   unsigned int k;
@@ -74,8 +74,8 @@ int kaapif_spawn_(
     
   /* cast into task_info_t */
 
-  ti = kaapi_thread_pushdata_align(
-    thread, sizeof(task_info_t)+ *nargs * sizeof(arg_info_t), sizeof(void*)
+  ti = kaapi_thread_pushdata_align( thread, 
+    sizeof(kaapic_task_info_t)+ *nargs * sizeof(kaapic_arg_info_t), sizeof(void*)
   );
   ti->body  = body;
   ti->nargs = *nargs;
@@ -83,12 +83,12 @@ int kaapif_spawn_(
   va_start(va_args, body);
   for (k = 0; k < *nargs; ++k)
   {
-    arg_info_t* const ai = &ti->args[k];
+    kaapic_arg_info_t* const ai = &ti->args[k];
 
+    const uint32_t mode  = va_arg(va_args, int);
     void* const addr     = va_arg(va_args, void*);
     const uint32_t count = va_arg(va_args, int);
     const uint32_t type  = va_arg(va_args, int);
-    const uint32_t mode  = va_arg(va_args, int);
 
     switch (mode)
     {
