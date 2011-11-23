@@ -3139,12 +3139,19 @@ namespace ka {
   /* Stealcontext */
   class StealContext {
   public:
-    template<class OBJECT>
-    void set_splitter(
-          kaapi_task_splitter_t splitter,
-          OBJECT*               arg
-    )
-    { /* kaapi_steal_setsplitter(&_sc, splitter, arg); */ }
+
+    /* Marks the current steal context as not splittable.
+       On return to this method, the next thief will not try to steal 
+       the context.
+    */    
+    void unset_splittable();
+
+    /* Marks the current steal context as splittable.
+       On return to this method, the next thief will try to steal 
+       the context.
+    */    
+    void set_splittable();
+
 
     /* test preemption on the steal context */
     bool is_preempted() const
@@ -3296,7 +3303,7 @@ namespace ka {
       return thief_iterator( 0 );
     }
   protected:
-    kaapi_task_t _adaptivetask;
+    kaapi_task_t _adaptivetask; /* should be the object returned by begin_adaptive */
     friend class Request;
   };
   
@@ -3307,6 +3314,42 @@ namespace ka {
   extern FlagReplyHead ReplyHead;
   struct FlagReplyTail {};
   extern FlagReplyTail ReplyTail;
+
+  /* Dummy class that represent a container of requests
+  */
+  class ListRequest {
+  public:
+    /* forward iterator */
+    struct iterator {
+      Request* operator->()
+      { 
+        return (Request*)(kaapi_api_listrequest_iterator_get(_lr, _lri));
+      }
+
+      /* */
+      bool operator==(const iterator& i) const
+      { 
+        return (_lr == i._lr) 
+            && ( kaapi_api_listrequest_iterator_get( _lr, _lri) ==
+                 kaapi_api_listrequest_iterator_get( i._lr, i._lri) );
+      }
+
+      /* */
+      bool operator!=(const iterator& i) const
+      { return !( *this == i); }
+  
+      /* prefix op*/
+      iterator& operator++()
+      {
+        kaapi_api_listrequest_iterator_next(_lr, _lri);
+        return *this;
+      }
+
+    private:
+      kaapi_listrequest_t* _lr;
+      kaapi_listrequest_iterator_t* _lri;
+    };
+  };
 
   /* New API: request->Spawn<TASK>(sc)( args ) for adaptive tasks
   */
@@ -3337,9 +3380,9 @@ namespace ka {
 #include "ka_api_reqspawn.h"
 
     protected:
-      kaapi_request_t*  _req;
-      kaapi_task_t*     _adaptivetask;
-      int               _flag;
+      kaapi_request_t*  _req;           /* the request to reply */
+      kaapi_task_t*     _adaptivetask;  /* the victim task to pass on reply (terminaison/preemption)*/
+      int               _flag;          /* head or tail push */
       friend class Request;
     };
 
