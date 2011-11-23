@@ -60,10 +60,6 @@ extern "C" {
 #endif
 
 #ifdef __APPLE__
-#  include <libkern/OSAtomic.h>
-#endif
-
-#ifdef __APPLE__
 #  ifdef HAVE_SETJMP_H
 #    define KAAPI_USE_SETJMP
 #  elif HAVE_UCONTEXT_H

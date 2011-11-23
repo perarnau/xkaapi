@@ -213,13 +213,16 @@ static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
 
 
 #if defined(__APPLE__)
-#  include <libkern/OSAtomic.h>
+#  ifdef __ppc__
+#    include <libkern/OSAtomic.h>
+#  endif
 static inline void kaapi_writemem_barrier()  
 {
 #  ifdef __ppc__
   OSMemoryBarrier();
 #  elif defined(__x86_64) || defined(__i386__)
   /* not need sfence on X86 archi: write are ordered */
+  __asm__ __volatile__ ("":::"memory");
   __asm__ __volatile__ ("sfence":::"memory");
 #  else
 #    error "bad configuration"
@@ -231,8 +234,8 @@ static inline void kaapi_readmem_barrier()
 #  ifdef __ppc__
   OSMemoryBarrier();
 #  elif defined(__x86_64) || defined(__i386__)
-  /* not need lfence on X86 archi: read are ordered */
-  __asm__ __volatile__ ("lfence":::"memory");
+  __asm__ __volatile__ ("":::"memory");
+//  __asm__ __volatile__ ("lfence":::"memory");
 #  else
 #    error "bad configuration"
 #  endif
@@ -244,8 +247,10 @@ static inline void kaapi_mem_barrier()
 #  ifdef __ppc__
   OSMemoryBarrier();
 #  elif defined(__x86_64) || defined(__i386__)
-  /* not need lfence on X86 archi: read are ordered */
-  __sync_synchronize();//  __asm__ __volatile__ ("mfence":::"memory");
+  /** Mac OS 10.6.8 with gcc 4.2.1 has a buggy __sync_synchronize(); 
+      gcc-4.4.4 pass the test with sync_synchronize
+  */
+  __asm__ __volatile__ ("mfence":::"memory");
 #  else
 #    error "bad configuration"
 #  endif
@@ -271,15 +276,26 @@ static inline void kaapi_readmem_barrier()
 #  if defined(__x86_64) || defined(__i386__)
   /* not need lfence on X86 archi: read are ordered */
   __asm__ __volatile__ ("":::"memory");
-#  else
+#  elif defined(__GNUC__)
   __sync_synchronize();
+#  else
+#  error "Compiler not supported"
+/* xlC ->__lwsync() / bultin */  
 #  endif
 }
 
 /* should be both read & write barrier */
 static inline void kaapi_mem_barrier()  
 {
+#  if defined(__x86_64) || defined(__i386__)
+  /* not need lfence on X86 archi: read are ordered */
+  __asm__ __volatile__ ("mfence":::"memory");
+#  elif defined(__GNUC__)
   __sync_synchronize();
+#  else
+#  error "Compiler not supported"
+/* bultin ?? */  
+#  endif
 }
 
 #elif defined(_WIN32)
