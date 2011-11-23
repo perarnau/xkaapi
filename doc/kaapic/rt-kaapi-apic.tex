@@ -1,12 +1,19 @@
-\documentclass[a4paper, 11pt]{article}
+\documentclass[a4paper,11pt]{article}
 
 \usepackage{graphicx}
 \usepackage{graphics}
 \usepackage{verbatim}
 \usepackage{listings}
 \usepackage{color}
-\usepackage{RR,RRthemes}
+\usepackage{RR}
 \usepackage{hyperref}
+
+\usepackage[latin1]{inputenc} % ou \usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc} % ou \usepackage[OT1]{fontenc}
+
+%%% A METTRE
+%%%
+\RRNo{xxxx}
 
 %%\usepackage[frenchb]{babel} % optionnel
 %%
@@ -50,8 +57,6 @@
            
 \lstset{classoffset=0, showstringspaces=false}
 
-\RRdate{November 2011}
-
 %%
 \RRauthor{
 Fabien Le Mentec
@@ -66,16 +71,12 @@ Thierry Gautier
 \RRetitle{\kaapi C programming interface}
 \titlehead{\kaapi C programming interface}
 
-\RRabstract{This report defines the \kaapi C programming interface.
-}
-\RRresume{The rapport décrit l'interface de programmation C pour \kaapi
-}
+\RRabstract{This report defines the \kaapi C programming interface.}
+\RRresume{Ce rapport d\'ecrit l'interface de programmation C pour \kaapi}
 
-\RRmotcle{calcul parallel, \kaapi, C}
-\RRkeyword{parallel computing, \kaapi, C}
+\RRmotcle{calcul parall\`ele, flot de donn\'ees, \kaapi, C}
+\RRkeyword{parallel computing, data flow, \kaapi, C}
 \RRprojets{MOAIS}
-\RRdomaine{3} % cas du domaine numero 1
-\RRthemeProj{moais} % theme du projet Apics
 \RCGrenoble % Grenoble - Rh\^one-Alpes
 
 \begin{document}
@@ -128,6 +129,8 @@ If you wish to contact the XKaapi team, please visite the web site at:
 \lstset{commentstyle=\color{blue}}
 \lstset{language=C}
 \begin{lstlisting}[frame=tb]
+#include "kaapic.h"
+
 int kaapic_init(int flags)
 int kaapic_finalize(void)
 \end{lstlisting}
@@ -157,6 +160,8 @@ waiting for a parallel region to be entered (refer to kaapic\_begin\_parallel).
 \paragraph{}
 \begin{small}
 \begin{lstlisting}[frame=tb]
+  #include "kaapic.h"
+  
   int main()
   {
     int err = kaapic_init(1);
@@ -177,7 +182,9 @@ waiting for a parallel region to be entered (refer to kaapic\_begin\_parallel).
 \lstset{commentstyle=\color{blue}}
 \lstset{language=C}
 \begin{lstlisting}[frame=tb]
-int  kaapic_get_concurrency(void)
+#include "kaapic.h"
+
+int kaapic_get_concurrency(void)
 int kaapic_get_thread_num(void)
 \end{lstlisting}
 \end{small}
@@ -198,6 +205,8 @@ should only be called in the context of a \kaapi thread.
 \paragraph{}
 \begin{small}
 \begin{lstlisting}[frame=tb]
+  #include "kaapic.h"
+
   int main()
   {
     int err = kaapic_init(1);
@@ -222,6 +231,8 @@ should only be called in the context of a \kaapi thread.
 \lstset{commentstyle=\color{blue}}
 \lstset{language=C}
 \begin{lstlisting}[frame=tb]
+#include "kaapic.h"
+
 double kaapic_get_time(void)
 \end{lstlisting}
 \end{small}
@@ -242,13 +253,15 @@ Time in seconds since an arbitrary time in the past.
 \paragraph{}
 \begin{small}
 \begin{lstlisting}[frame=tb]
+  #include "kaapic.h"
+
   int main()
   {
     double start, stop;
     int err = kaapic_init(1);
-    start = kaapi_get_time(); 
+    start = kaapic_get_time(); 
     ...
-    stop = kaapi_get_time(); 
+    stop = kaapic_get_time(); 
 
 
     printf("Time : %f (us)\n", stop-start );
@@ -266,6 +279,8 @@ Time in seconds since an arbitrary time in the past.
 \lstset{commentstyle=\color{blue}}
 \lstset{language=C}
 \begin{lstlisting}[frame=tb]
+#include "kaapic.h"
+
 int kaapic_foreach( 
   int first, 
   int last,
@@ -338,6 +353,8 @@ Refer to examples/kaapic\\
 
 \begin{small}
 \begin{lstlisting}[frame=tb]
+  #include "kaapic.h"
+
   /* loop body */
   static void body(
     int i, int j, int tid, double* array, double* value
@@ -353,10 +370,10 @@ Refer to examples/kaapic\\
     double* array;
     double value;
     int err = kaapic_init(1);
-    start = kaapi_get_time(); 
+    start = kaapic_get_time(); 
     /* apply body on array[0..size-1] */
     kaapic_foreach( 0, size, 2, body, array, &value );
-    stop = kaapi_get_time(); 
+    stop = kaapic_get_time(); 
 
     printf("Time : %f (us)\n", stop-start );
     kaapic_finalize();
@@ -367,6 +384,8 @@ Refer to examples/kaapic\\
 The next example is equivalent to the previous:
 \begin{small}
 \begin{lstlisting}[frame=tb]
+  #include "kaapic.h"
+
   /* loop body */
   static void body(
     int i, int j, int tid, double* array, double* value
@@ -382,13 +401,13 @@ The next example is equivalent to the previous:
     double* array;
     double value;
     int err = kaapic_init(1);
-    start = kaapi_get_time(); 
+    start = kaapic_get_time(); 
     /* apply body on array[0..size-1] */
     kaapic_foreach_with_format( 0, size, 2, body, 
         KAAPIC_MODE_RW, array, size, KAAPIC_TYPE_DOUBLE
         KAAPIC_MODE_V, &value, 1,  KAAPIC_TYPE_DOUBLE
     );
-    stop = kaapi_get_time(); 
+    stop = kaapic_get_time(); 
 
     printf("Time : %f (us)\n", stop-start );
     kaapic_finalize();
@@ -405,18 +424,28 @@ The next example is equivalent to the previous:
 \lstset{commentstyle=\color{blue}}
 \lstset{language=C}
 \begin{lstlisting}[frame=tb]
+#include "kaapic.h"
+
 int kaapic_spawn(int32_t nargs, ... )
 \end{lstlisting}
 \end{small}
 
 \subsection{Description}
 \paragraph{}
-Create a new computation task implemented by a call to a function \textit{body} with effective parameters \textit{e$_i$}.
+A call to \verb+kaapic_spawn(n, entrypoint, e1, ..., en)+ creates a new computation task implemented by a call to a function \textit{entrypoint} with effective parameters \textit{e$_i$}.
 
-The function \textit{body} as well as its effective parameters are pass in the optional parameter list of \textit{kaapic\_spawn}.
+The function \textit{entrypoint} as well as its effective parameters are passed in the optional parameter list of \textit{kaapic\_spawn}.
 The format of the optional parameter list is:
 \begin{description}
-\item [body]: the function with signature\\
+\item [entrypoint]: a C function 
+\item [e$_1$]: the first effective parameter
+\item [..]
+\item [e$_{nargs}$]: the last effective parameter
+\end{description}
+
+\subsubsection{Format of the task entrypoint}
+\begin{description}
+\item [entrypoint]: the function with signature\\
 \hspace*{5ex}\textit{void (*)([type$_0$, .., type$_{nparam-1}$])}.\\
 Each type \textit{type$_i$} could be:
 \begin{itemize}
@@ -425,11 +454,11 @@ Each type \textit{type$_i$} could be:
 \end{itemize}
 \end{description}
 
-\textit{body} is called with the user specified arguments, there is no argument added by \kaapi:\\
+\textit{entrypoint} is called with the user specified arguments, there is no argument added by \kaapi:\\
 \begin{small}
 \lstset{language=C}
 \begin{lstlisting}[frame=tb]
-body(e0, e1, ..., )
+entrypoint(e0, e1, ..., )
 \end{lstlisting}
 \end{small}
 
@@ -484,6 +513,8 @@ Refer to examples/kaapif/dfg
 
 \begin{small}
 \begin{lstlisting}[frame=tb]
+  #include "kaapic.h"
+
   /* computation task entry point */
   void fibonacci(int n, int* result)
   {
@@ -494,11 +525,11 @@ Refer to examples/kaapif/dfg
      {
         int result1, result2;
         kaapic_spawn( 2, fibonacci, 
-          KAAPIC_MODE_V, n-1, 1, KAAPIC_TYPE_INT
+          KAAPIC_MODE_V, n-1, 1, KAAPIC_TYPE_INT,
           KAAPIC_MODE_W, &result1, 1,  KAAPIC_TYPE_INT
         );
         kaapic_spawn( 2, fibonacci, 
-          KAAPIC_MODE_V, n-2, 1, KAAPIC_TYPE_INT
+          KAAPIC_MODE_V, n-2, 1, KAAPIC_TYPE_INT,
           KAAPIC_MODE_W, &result2, 1,  KAAPIC_TYPE_INT
         );
         kaapic_sync();
@@ -512,13 +543,13 @@ Refer to examples/kaapif/dfg
     int result= 0;
     int err = kaapic_init(1);
 
-    start = kaapi_get_time(); 
+    start = kaapic_get_time(); 
     /* apply body on array[0..size-1] */
     kaapic_spawn( 2, fibonacci, 
-        KAAPIC_MODE_V, n, 1, KAAPIC_TYPE_INT
+        KAAPIC_MODE_V, n, 1, KAAPIC_TYPE_INT,
         KAAPIC_MODE_W, &result, 1,  KAAPIC_TYPE_INT
     );
-    stop = kaapi_get_time(); 
+    stop = kaapic_get_time(); 
 
     printf("Time : %f (us)\n", stop-start );
     kaapic_finalize();
@@ -535,6 +566,8 @@ Refer to examples/kaapif/dfg
 \lstset{commentstyle=\color{blue}}
 \lstset{language=C}
 \begin{lstlisting}[frame=tb]
+#include "kaapic.h"
+
 int kaapic_begin_parallel(void)
 int kaapic_end_parallel( int flag )
 \end{lstlisting}
@@ -561,6 +594,8 @@ None.
 \paragraph{}
 \begin{small}
 \begin{lstlisting}[frame=tb]
+  #include "kaapic.h"
+
   int main()
   {
     int err = kaapic_init(1);
@@ -583,6 +618,8 @@ None.
 \lstset{commentstyle=\color{blue}}
 \lstset{language=C}
 \begin{lstlisting}[frame=tb]
+#include "kaapic.h"
+
 void kaapic_sync(void)
 \end{lstlisting}
 \end{small}

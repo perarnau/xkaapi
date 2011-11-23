@@ -5,13 +5,19 @@
 \usepackage{verbatim}
 \usepackage{listings}
 \usepackage{color}
-\usepackage{RR,RRthemes}
+\usepackage{RR}
 \usepackage{hyperref}
 
-%%\usepackage[frenchb]{babel} % optionnel
+\usepackage[latin1]{inputenc} % ou \usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc} % ou \usepackage[OT1]{fontenc}
+
+%%% A METTRE
+%%%
+\RRNo{xxxx}
+
 %%
 %% date de publication du rapport
-\RRdate{Juin 2011}
+\RRdate{November 2011}
 %%
 %% Cas d'une version deux
 %% \RRversion{2}
@@ -54,15 +60,15 @@
 
 %%
 \RRauthor{
-Fabien Le Mentec
+Fabien Le Mentec\thanks[INRIA]{INRIA}
   \and
-Vincent Faucher
+Vincent Faucher\thanks{CEA}
   \and
-Thierry Gautier
+Thierry Gautier\thanksref{INRIA}
 }
 
 \authorhead{Gautier \& Faucher \& Le Mentec}
-\RRtitle{\kaapi FORTRAN programming interface}
+\RRtitle{Interface de programmation FORTRAN pour \kaapi}
 \RRetitle{\kaapi FORTRAN programming interface}
 \titlehead{\kaapi FORTRAN programming interface}
 
@@ -71,8 +77,6 @@ Thierry Gautier
 \RRmotcle{}
 \RRkeyword{parallel computing, \kaapi, FORTRAN}
 \RRprojets{MOAIS}
-\RRdomaine{3} % cas du domaine numero 1
-\RRthemeProj{moais} % theme du projet Apics
 \RCGrenoble % Grenoble - Rh\^one-Alpes
 
 \begin{document}
