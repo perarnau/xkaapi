@@ -58,14 +58,6 @@ int kaapi_request_pushtask(kaapi_request_t* request)
 
 
 /* Here:
-    - the user task is already pushed its task into the frame pointed by the request
-    - acts as kaapi_thread_pushtask_adaptive in order to envelop the (adaptative) top task
-    in a kaapi_taskstealadapt_body body.
-    - the kaapi_taskstealadapt_body has the following properties:
-      - it has the same format as the embedded task with an extra format parameter
-      - on remote side, the body executes the task (as kaapi_taskadapt_body)
-      - it updates (using XX_body) the thief result with the list of thieves
-    - link victim steal context and thief steal context using the direction encoded in headtail_flag
  */
 int kaapi_request_pushtask_adaptive(
   kaapi_request_t*              request, 

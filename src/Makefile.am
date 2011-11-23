@@ -114,7 +114,6 @@ libkaapi_la_SOURCES=\
   adapt/kaapi_adapt_taskbegendbody.c \
   adapt/kaapi_adapt_taskbody.c \
   adapt/kaapi_adapt_taskmergebody.c \
-  adapt/kaapi_adapt_taskstealbody.c \
   machine/common/kaapi_procinfo.c \
   machine/common/kaapi_procinfo.h \
   machine/common/kaapi_hwtopo.c \

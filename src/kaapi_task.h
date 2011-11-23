@@ -217,12 +217,6 @@ extern void kaapi_taskstealready_body( void*, kaapi_thread_t* );
 */
 extern void kaapi_taskwrite_body( void*, kaapi_thread_t*, kaapi_task_t* );
 
-/** Body of the task in charge of executing the task created during a split operation.
-    This task is created if the pushed task into the thief stack is an adaptive task.
-    \ingroup TASK
-*/
-extern void kaapi_taskstealadapt_body( void*, kaapi_thread_t* );
-
 /** Body of the task in charge of signaling the end of the task created
     during the split operation. This task body is only used in case of the task
     returned to the thief thread in a splitter is a non adaptive task.
