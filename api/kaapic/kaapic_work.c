@@ -44,7 +44,7 @@
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
 
-#define BIG_DEBUG_MACOSX 1
+//#define BIG_DEBUG_MACOSX 1
 
 #define CONFIG_FOREACH_STATS 0
 #if CONFIG_FOREACH_STATS
@@ -338,7 +338,7 @@ redo_steal:
 
     goto redo_steal;
   }
-#if 0//defined(BIG_DEBUG_MACOSX)
+#if defined(BIG_DEBUG_MACOSX)
     kaapi_workqueue_index_t beg,end;
     beg = kaapi_workqueue_range_begin(&vw->cr);
     end = kaapi_workqueue_range_end(&vw->cr);
@@ -400,7 +400,7 @@ skip_workqueue:
     }
 
     /* finish work init and reply the request */
-#if 0//defined(BIG_DEBUG_MACOSX)
+#if defined(BIG_DEBUG_MACOSX)
     printf("%i:: WS/ Steal %i @%p[%i,%i[\n", 
       (int)req->ident, 
       (int)kaapi_all_kprocessors[req->ident]->victim_kproc->kid,
@@ -473,7 +473,7 @@ static void _kaapic_thief_entrypoint(
 
   while (kaapi_workqueue_pop(&thief_work->cr, &i, &j, wi->seq_grain) ==0)
   {
-#if 0//defined(BIG_DEBUG_MACOSX)
+#if defined(BIG_DEBUG_MACOSX)
     printf("%i:: WS/Pop @%p[%i,%i[\n", 
       tid,
       (void*)&thief_work->cr,
