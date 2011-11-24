@@ -52,6 +52,7 @@
 #include <iterator>
 #include <stdexcept>
 #include <cstddef>
+#include <new>
 
 /** Version number for the API
     - v1: new API for DFG with pointer interface.
@@ -100,6 +101,10 @@ namespace ka {
   class ODotStream;
   class SyncGuard;
   
+  /* used in utility functions */
+  typedef char kaapi_no_type;
+  typedef double kaapi_yes_type;
+
 
   // --------------------------------------------------------------------
   class gpuStream {
@@ -398,6 +403,7 @@ namespace ka {
   class SetStickyC{};
   extern SetStickyC SetSticky;
 
+
   // --------------------------------------------------------------------
   /* type for nothing */
   struct THIS_TYPE_IS_USED_ONLY_INTERNALLY  { };
@@ -442,9 +448,177 @@ namespace ka {
   struct IsAccessMode { static const bool value = true; };
   template<> struct IsAccessMode<ACCESS_MODE_V> { static const bool value = false; };
 
-  struct TYPE_INTASK {}; /* internal purpose to define representation of a type in a task */
-  struct TYPE_INPROG {}; /* internal purpose to define representation of a type in the user program */
+  // --------------------------------------------------------------------  
+  /* WARNING WARNING WARNING
+     Attribut is responsible for pushing or not closure into the stack thread 
+  */
+  class DefaultAttribut {
+  public:
+    void operator()( kaapi_thread_t* thread ) const
+    { 
+      kaapi_thread_pushtask(thread); 
+    }
+  };
+  extern DefaultAttribut SetDefault;
+  
+#if 0
+  /* The only attribut that can be passed to task creation:
+  */
+  class AttributSchedTask {
+    int   _partition;   // logical partition id
+  public:
+    AttributSchedTask( int s ) : _partition(s) {}
+    void operator()( kaapi_thread_t* thread ) const
+    { 
+      kaapi_thread_pushtask_withpartitionid(thread, _partition);
+    }
+  };
 
+  inline AttributSchedTask SetPartition( int s )
+  { return AttributSchedTask(s); }
+#endif
+  
+  // --------------------------------------------------------------------
+  // A task forked with SetStaticSched attribut may have first formal
+  // parameter a StaticSchedInfo returned by the runtime
+  class StaticSchedInfo : public kaapi_staticschedinfo_t {
+  public:
+    StaticSchedInfo() {}
+
+    /* return the total number of core */
+    size_t count() const 
+    { size_t retval = 0;
+      for (int i=0; i<KAAPI_PROC_TYPE_MAX-1; ++i)
+        retval += nkproc[i];
+      return retval;
+    }
+    
+    /* return the number of cpu */
+    size_t count_cpu() const { return nkproc[KAAPI_PROC_TYPE_CPU-1]; }
+    
+    /* return the number of gpu */
+    size_t count_gpu() const { return nkproc[KAAPI_PROC_TYPE_GPU-1]; }
+  };
+
+  // --------------------------------------------------------------------
+  /* Static Sched attribut pass to the runtime
+     Allows the user to specified number of ressources (at least 
+     number threads) which may be scheduled on typed ressources.
+     - 4 kinds of constraints that can be specify by the user:
+      1. total number of ressources: anonymous ressources that can be scheduled
+      on CPU or GPU.
+        The user asks for a given number of threads that will be scheduled
+        on the available ressources (CPU or GPU) depending of its tasks and
+        available ressources at runtime. 
+      2. total number of CPUs and (not inclusive) total number of GPUs.
+        In that case, the user asks for a fixed number of Ncpus threads and Ngpus threads
+        that will be scheduled on the specified architecture.
+        Because if CPU is always available, it is possible that no GPU is available.
+        It is strongly recommanded that the user tests the number of ressources passed from
+        the runtime to the user if it declares its tasks with SchedInfo attribute.
+      3. AutoCPU | AutoGPU: detection by the runtime of the number of available ressources.
+        Using this specification, the user will received in its schedinfo task's parameter
+        the number of available ressources for its task's execution. The number of ressources
+        given by the runtime will never exeed the physical number of ressources.
+      4. No specification: is equivalent to AutoCPU | AutoGPU.
+
+      In all the cases, if the physical ressources are less than the requested number, then the user's 
+      threads will be scheduled non preemptively on the physical ressources.
+      
+      All requested ressources or the ressources allocated by the runtime are lineary numbered
+      from 0 to N-1, where N is the total number of ressources. The first set of ressources
+      from 0 to Ncpu-1 corresponds to the CPU ressources. The second set of ressources from
+      Ncpu to Ngpu+Ncpu-1 corresponds to the GPU ressources. Both Ncpu and Ngpu are accessible
+      through the sched info data structure.
+      
+      Implementation note.
+      -1: means auto detect ressources
+      -2: means all ressources of the given type
+  */
+  class SetStaticSchedAttribut {
+    int16_t  _nress;  /* N ressources are requested by the user, -1: fixed by the runtime */
+    int16_t  _ncpu;   /* N CPU requested by the user, -1 fixed by the runtime */
+    int16_t  _ngpu;   /* N GPU requested by the user, -1 fixed by the runtime */
+  public:
+    SetStaticSchedAttribut( int nc, int ng )
+     : _nress(-1), _ncpu(nc), _ngpu(ng)
+    {}
+    /* format for N ressources */
+    SetStaticSchedAttribut( int n )
+     : _nress(n), _ncpu(-1), _ngpu(-1)
+    {}
+    SetStaticSchedAttribut( )
+     : _nress(-1), _ncpu(-1), _ngpu(-1)
+    {}
+    void* operator()( kaapi_thread_t* thread ) const
+    { 
+      /* push a task that will encapsulated the execution of the top task */
+      kaapi_task_t* task = kaapi_thread_toptask(thread);
+      kaapi_staticschedtask_arg_t* arg 
+        = (kaapi_staticschedtask_arg_t*)kaapi_thread_pushdata( thread, sizeof(kaapi_staticschedtask_arg_t) );
+      arg->sub_sp   = task->sp;
+      arg->sub_body = (kaapi_task_vararg_body_t)task->body;
+      arg->schedinfo.nkproc[0]                   = (uint32_t)_nress;
+      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU] = (uint32_t)_ngpu;
+      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU] = (uint32_t)_ngpu;
+      kaapi_task_init(task, (kaapi_task_body_t)kaapi_staticschedtask_body, arg);
+      kaapi_thread_pushtask(thread);
+      return 0;
+    }
+  };
+  
+  /* */
+  struct _KaapiCPU_Encode {
+    _KaapiCPU_Encode() : ncpu(-1) {}
+    _KaapiCPU_Encode( int16_t nc ) : ncpu(nc) {}
+    int16_t ncpu;
+  };
+
+  /* */
+  struct _KaapiGPU_Encode {
+    _KaapiGPU_Encode() : ngpu(-1) {}
+    _KaapiGPU_Encode( int16_t ng ) : ngpu(ng) {}
+    int16_t ngpu;
+  };
+
+  /* */
+  struct _KaapiCPUGPU_Encode : public _KaapiCPU_Encode, public _KaapiGPU_Encode {
+    _KaapiCPUGPU_Encode() {}
+    _KaapiCPUGPU_Encode( _KaapiCPU_Encode nc ) 
+     : _KaapiCPU_Encode(nc) {}
+    _KaapiCPUGPU_Encode( _KaapiGPU_Encode ng ) 
+     : _KaapiGPU_Encode(ng) {}
+    _KaapiCPUGPU_Encode( _KaapiCPU_Encode nc, _KaapiGPU_Encode ng ) 
+     : _KaapiCPU_Encode(nc), _KaapiGPU_Encode(ng) {}
+  };
+
+  static const _KaapiCPU_Encode AutoCPU = _KaapiCPU_Encode();
+  static const _KaapiGPU_Encode AutoGPU = _KaapiGPU_Encode();
+  static const _KaapiCPU_Encode AllCPU  = _KaapiCPU_Encode(-2);
+  static const _KaapiGPU_Encode AllGPU  = _KaapiGPU_Encode(-2);
+  inline _KaapiCPU_Encode SetnCPU(int nc) { return _KaapiCPU_Encode(nc); }
+  inline _KaapiGPU_Encode SetnGPU(int ng) { return _KaapiGPU_Encode(ng); }
+
+  inline _KaapiCPUGPU_Encode operator|( const _KaapiCPU_Encode nc, const _KaapiGPU_Encode ng )
+  { return _KaapiCPUGPU_Encode(nc,ng); }
+  inline _KaapiCPUGPU_Encode operator|( const _KaapiGPU_Encode ng, const _KaapiCPU_Encode nc )
+  { return _KaapiCPUGPU_Encode(nc,ng); }
+
+  /* user level attribut definition */
+  inline SetStaticSchedAttribut SetStaticSched(int n)
+  { return SetStaticSchedAttribut(n); }
+  inline SetStaticSchedAttribut SetStaticSched( _KaapiCPU_Encode xx )
+  { return SetStaticSchedAttribut(xx.ncpu, 0); }
+  inline SetStaticSchedAttribut SetStaticSched( _KaapiGPU_Encode xx )
+  { return SetStaticSchedAttribut(0, xx.ngpu); }
+  inline SetStaticSchedAttribut SetStaticSched( _KaapiCPUGPU_Encode xx )
+  { return SetStaticSchedAttribut(xx.ncpu, xx.ngpu); }
+  inline SetStaticSchedAttribut SetStaticSched()
+  { return SetStaticSchedAttribut(); }
+
+
+
+  /* */
   template<class T>
   struct DefaultAdd {
     void operator()( T& result, const T& value)
@@ -1525,9 +1699,11 @@ namespace ka {
     const array<1,T>* operator->() const { return this; }
 
     size_t size() const { return array<1,T>::size(); }
-    const T* ptr() const { return array<1,T>::ptr(); }
-    const T* begin() const { return array<1,T>::ptr(); }
-    const T* end() const { return array<1,T>::ptr()+array<1,T>::size(); }
+    
+    /* pointed values are assumed not to be accessed */
+    T* ptr() const { return array<1,T>::ptr(); }
+    T* begin() const { return array<1,T>::ptr(); }
+    T* end() const { return array<1,T>::ptr()+array<1,T>::size(); }
 
     Self_t operator[] (const rangeindex& r) const 
     { return pointer_rpwp( array<1,T>::operator()(r) ); }
@@ -2043,7 +2219,10 @@ namespace ka {
   struct TraitFormalParam< CW<array<dim,T,S> > > : public TraitFormalParam<pointer_cw<array<dim,T,S> > > {};
   
   template<typename T>
-  struct TraitFormalParam<range1d<T> > : public TraitFormalParam<array<1,T> > { };
+  struct TraitFormalParam<range1d<T> > : public TraitFormalParam<array<1,T> > { 
+    typedef ACCESS_MODE_RPWP   mode_t; 
+  };
+
   template<typename T>
   struct TraitFormalParam<range1d_r<T> > : public TraitFormalParam<pointer_r<array<1,T> > > { 
     typedef TraitFormalParam<pointer_r<array<1,T> > > inherited_t;
@@ -2545,298 +2724,6 @@ namespace ka {
   };
 
 
-  // --------------------------------------------------------------------  
-  /* WARNING WARNING WARNING
-     Attribut is responsible for pushing or not closure into the stack thread 
-  */
-  class DefaultAttribut {
-  public:
-    void operator()( kaapi_thread_t* thread ) const
-    { 
-      kaapi_thread_pushtask(thread); 
-    }
-  };
-  extern DefaultAttribut SetDefault;
-  
-  /* The only attribut that can be passed to task creation:
-  
-  */
-  class AttributSchedTask {
-    int   _partition;   // logical partition id
-  public:
-    AttributSchedTask( int s ) : _partition(s) {}
-    void operator()( kaapi_thread_t* thread ) const
-    { 
-      kaapi_thread_pushtask_withpartitionid(thread, _partition);
-    }
-  };
-
-  inline AttributSchedTask SetPartition( int s )
-  { return AttributSchedTask(s); }
-  
-  // --------------------------------------------------------------------
-  // A task forked with SetStaticSched attribut may have first formal
-  // parameter a StaticSchedInfo returned by the runtime
-  class StaticSchedInfo : public kaapi_staticschedinfo_t {
-  public:
-    StaticSchedInfo() {}
-
-    /* return the total number of core */
-    size_t count() const 
-    { size_t retval = 0;
-      for (int i=0; i<KAAPI_PROC_TYPE_MAX-1; ++i)
-        retval += nkproc[i];
-      return retval;
-    }
-    
-    /* return the number of cpu */
-    size_t count_cpu() const { return nkproc[KAAPI_PROC_TYPE_CPU-1]; }
-    
-    /* return the number of gpu */
-    size_t count_gpu() const { return nkproc[KAAPI_PROC_TYPE_GPU-1]; }
-  };
-
-  // --------------------------------------------------------------------
-  /* Static Sched attribut pass to the runtime
-     Allows the user to specified number of ressources (at least 
-     number threads) which may be scheduled on typed ressources.
-     - 4 kinds of constraints that can be specify by the user:
-      1. total number of ressources: anonymous ressources that can be scheduled
-      on CPU or GPU.
-        The user asks for a given number of threads that will be scheduled
-        on the available ressources (CPU or GPU) depending of its tasks and
-        available ressources at runtime. 
-      2. total number of CPUs and (not inclusive) total number of GPUs.
-        In that case, the user asks for a fixed number of Ncpus threads and Ngpus threads
-        that will be scheduled on the specified architecture.
-        Because if CPU is always available, it is possible that no GPU is available.
-        It is strongly recommanded that the user tests the number of ressources passed from
-        the runtime to the user if it declares its tasks with SchedInfo attribute.
-      3. AutoCPU | AutoGPU: detection by the runtime of the number of available ressources.
-        Using this specification, the user will received in its schedinfo task's parameter
-        the number of available ressources for its task's execution. The number of ressources
-        given by the runtime will never exeed the physical number of ressources.
-      4. No specification: is equivalent to AutoCPU | AutoGPU.
-
-      In all the cases, if the physical ressources are less than the requested number, then the user's 
-      threads will be scheduled non preemptively on the physical ressources.
-      
-      All requested ressources or the ressources allocated by the runtime are lineary numbered
-      from 0 to N-1, where N is the total number of ressources. The first set of ressources
-      from 0 to Ncpu-1 corresponds to the CPU ressources. The second set of ressources from
-      Ncpu to Ngpu+Ncpu-1 corresponds to the GPU ressources. Both Ncpu and Ngpu are accessible
-      through the sched info data structure.
-      
-      Implementation note.
-      -1: means auto detect ressources
-      -2: means all ressources of the given type
-  */
-  class SetStaticSchedAttribut {
-    int16_t  _nress;  /* N ressources are requested by the user, -1: fixed by the runtime */
-    int16_t  _ncpu;   /* N CPU requested by the user, -1 fixed by the runtime */
-    int16_t  _ngpu;   /* N GPU requested by the user, -1 fixed by the runtime */
-  public:
-    SetStaticSchedAttribut( int nc, int ng )
-     : _nress(-1), _ncpu(nc), _ngpu(ng)
-    {}
-    /* format for N ressources */
-    SetStaticSchedAttribut( int n )
-     : _nress(n), _ncpu(-1), _ngpu(-1)
-    {}
-    SetStaticSchedAttribut( )
-     : _nress(-1), _ncpu(-1), _ngpu(-1)
-    {}
-    void* operator()( kaapi_thread_t* thread ) const
-    { 
-      /* push a task that will encapsulated the execution of the top task */
-      kaapi_task_t* task = kaapi_thread_toptask(thread);
-      kaapi_staticschedtask_arg_t* arg 
-        = (kaapi_staticschedtask_arg_t*)kaapi_thread_pushdata( thread, sizeof(kaapi_staticschedtask_arg_t) );
-      arg->sub_sp   = task->sp;
-      arg->sub_body = (kaapi_task_vararg_body_t)task->body;
-      arg->schedinfo.nkproc[0]                   = (uint32_t)_nress;
-      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU] = (uint32_t)_ngpu;
-      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU] = (uint32_t)_ngpu;
-      kaapi_task_init(task, kaapi_staticschedtask_body, arg);
-      kaapi_thread_pushtask(thread);
-      return 0;
-    }
-  };
-  
-  /* */
-  struct _KaapiCPU_Encode {
-    _KaapiCPU_Encode() : ncpu(-1) {}
-    _KaapiCPU_Encode( int16_t nc ) : ncpu(nc) {}
-    int16_t ncpu;
-  };
-
-  /* */
-  struct _KaapiGPU_Encode {
-    _KaapiGPU_Encode() : ngpu(-1) {}
-    _KaapiGPU_Encode( int16_t ng ) : ngpu(ng) {}
-    int16_t ngpu;
-  };
-
-  /* */
-  struct _KaapiCPUGPU_Encode : public _KaapiCPU_Encode, public _KaapiGPU_Encode {
-    _KaapiCPUGPU_Encode() {}
-    _KaapiCPUGPU_Encode( _KaapiCPU_Encode nc ) 
-     : _KaapiCPU_Encode(nc) {}
-    _KaapiCPUGPU_Encode( _KaapiGPU_Encode ng ) 
-     : _KaapiGPU_Encode(ng) {}
-    _KaapiCPUGPU_Encode( _KaapiCPU_Encode nc, _KaapiGPU_Encode ng ) 
-     : _KaapiCPU_Encode(nc), _KaapiGPU_Encode(ng) {}
-  };
-
-  static const _KaapiCPU_Encode AutoCPU = _KaapiCPU_Encode();
-  static const _KaapiGPU_Encode AutoGPU = _KaapiGPU_Encode();
-  static const _KaapiCPU_Encode AllCPU  = _KaapiCPU_Encode(-2);
-  static const _KaapiGPU_Encode AllGPU  = _KaapiGPU_Encode(-2);
-  inline _KaapiCPU_Encode SetnCPU(int nc) { return _KaapiCPU_Encode(nc); }
-  inline _KaapiGPU_Encode SetnGPU(int ng) { return _KaapiGPU_Encode(ng); }
-
-  inline _KaapiCPUGPU_Encode operator|( const _KaapiCPU_Encode nc, const _KaapiGPU_Encode ng )
-  { return _KaapiCPUGPU_Encode(nc,ng); }
-  inline _KaapiCPUGPU_Encode operator|( const _KaapiGPU_Encode ng, const _KaapiCPU_Encode nc )
-  { return _KaapiCPUGPU_Encode(nc,ng); }
-
-  /* user level attribut definition */
-  inline SetStaticSchedAttribut SetStaticSched(int n)
-  { return SetStaticSchedAttribut(n); }
-  inline SetStaticSchedAttribut SetStaticSched( _KaapiCPU_Encode xx )
-  { return SetStaticSchedAttribut(xx.ncpu, 0); }
-  inline SetStaticSchedAttribut SetStaticSched( _KaapiGPU_Encode xx )
-  { return SetStaticSchedAttribut(0, xx.ngpu); }
-  inline SetStaticSchedAttribut SetStaticSched( _KaapiCPUGPU_Encode xx )
-  { return SetStaticSchedAttribut(xx.ncpu, xx.ngpu); }
-  inline SetStaticSchedAttribut SetStaticSched()
-  { return SetStaticSchedAttribut(); }
-
-
-  // --------------------------------------------------------------------
-  /* Mapping of data into logical set of partitions
-  */
-  struct BlockCyclic {
-  };
-  struct Block {
-  };
-
-  template<typename DIST, typename T, bool isaccess>
-  struct Mapping2DHelper {
-  };
-
-  template<typename T>
-  struct Mapping2DHelper<Block,T,true> 
-  {
-    /* assume that T implements the range2D interface */
-    static void map( const T& C, size_t n_bloc_i, size_t n_bloc_j )
-    {
-      std::cout << __PRETTY_FUNCTION__ << " TODO" << std::endl;
-      int dim0 __attribute__((unused))= C.dim(0);
-      int dim1 __attribute__((unused))= C.dim(1);
-    }
-  };
-
-  template<typename T>
-  struct Mapping2DHelper<BlockCyclic,T,true> 
-  {
-    /* assume that T implements the range2D interface */
-    static void map( const T& C, size_t sz_bloc_i, size_t sz_bloc_j )
-    {
-      std::cout << __PRETTY_FUNCTION__ << " TODO" << std::endl;
-      int dim0 __attribute__((unused))= C.dim(0);
-      int dim1 __attribute__((unused))= C.dim(1);
-    }
-  };
-
-  template<typename DIST>
-  struct Mapping2D {
-  };
-
-  template<>
-  struct Mapping2D<Block> 
-  {
-    /* assume that T implements the range2D interface */
-    template<class T>
-    static void map( const T& C, size_t n_bloc_i, size_t n_bloc_j )
-    {
-      Mapping2DHelper<Block,T,IsAccessMode<typename TraitFormalParam<T>::mode_t>::value>::map( C, n_bloc_i, n_bloc_j );
-    }
-  };
-
-  template<>
-  struct Mapping2D<BlockCyclic> 
-  {
-    /* assume that T implements the range2D interface */
-    template<class T>
-    static void map( const T& C, size_t sz_bloc_i, size_t sz_bloc_j )
-    {
-      Mapping2DHelper<BlockCyclic,T,IsAccessMode<typename TraitFormalParam<T>::mode_t>::value>::map( C, sz_bloc_i, sz_bloc_j );
-    }
-  };
-
-
-  // --------------------------------------------------------------------
-  /* OwnerComputeRule attribut: specify, during fork that a task should
-     have the same site location than the site location of a data.
-     Usage: 
-     * Spawn<Task>( ka::OCR( <here a ka_pointer_XX> ) (... ): try to get site from the ka_pointer_xx.
-     * Spawn<Task>( ka::OCR( <here a C++ pointer> ) (... ): try to get site from mapping of application data.
-     * Spawn<Task>( ka::OCR( <any other type> ) (... ): no effect.
-  */
-  template<typename T, bool isaccess>
-  struct OCRAttribut;
-
-  template<typename T>  
-  struct OCRAttribut<T,false> { /* not a ka::pointer type, do nothing */
-    OCRAttribut<T,false>(const T* a) {}
-    void operator()( kaapi_thread_t* thread ) const
-    { 
-      kaapi_thread_pushtask(thread); 
-    }
-  };
-
-  template<typename T>  /* case of a ka::pointer type */
-  struct OCRAttribut<T,true> {
-    const void* _ptr;
-    OCRAttribut<T,true>(const T* a)
-     : _ptr( (a == 0 ? 0 : a->ptr()) )
-    { 
-    }
-    void operator()( kaapi_thread_t* thread ) const
-    { 
-      kaapi_thread_pushtask_withocr(thread, _ptr); 
-    }
-  };
-
-  template<typename T>  
-  struct OCRAttribut<T*,false> {
-    const void* _ptr;
-    OCRAttribut<T*,false>(const T* const* a)
-     : _ptr( (const void*)a )
-    { }    
-    void operator()( kaapi_thread_t* thread ) const
-    { 
-      kaapi_thread_pushtask_withocr(thread, _ptr); 
-    }
-  };
-  template<typename T>  
-  struct OCRAttribut<const T*,false> {
-    const void* _ptr;
-    OCRAttribut<const T*,false>(const T* const* a)
-     : _ptr( (const void*)a )
-    { }    
-    void operator()( kaapi_thread_t* thread ) const
-    { 
-      kaapi_thread_pushtask_withocr(thread, _ptr); 
-    }
-  };
-  
-  template<typename T>
-  inline OCRAttribut<T, IsAccessMode<typename TraitFormalParam<T>::mode_t>::value > OCR( const T& a )
-  { return OCRAttribut<T, IsAccessMode<typename TraitFormalParam<T>::mode_t>::value >(&a); }
-
-
   // --------------------------------------------------------------------
   template<class F>
   struct TraitIsOut {
@@ -3044,11 +2931,21 @@ namespace ka {
   template<int i>
   struct Task {};
 
+  template<int i>
+  struct Splitter {};
+
+  template<typename TYPE>
+  kaapi_no_type kaapi_is_func_splitter( TYPE );
+
+  template<class TASK>
+  struct IsASplitter {
+    static const bool is_splitter = false;
+  };
+
 } // end of namespace atha: following definition sould be in global namespace in 
   // order to be specialized easily
 
-  // --------------------------------------------------------------------
-  
+  // --------------------------------------------------------------------  
   template<class TASK>
   struct TaskBodyCPU : public TASK {};
 
@@ -3056,7 +2953,70 @@ namespace ka {
   template<class TASK>
   struct TaskBodyGPU : public TASK {};
 
+  // --------------------------------------------------------------------  
+  template<class TASK>
+  struct TaskSplitter;
+
 namespace ka {
+
+  /**
+  */
+  struct FlagReplyHead {};
+  extern FlagReplyHead ReplyHead;
+  struct FlagReplyTail {};
+  extern FlagReplyTail ReplyTail;
+
+  class Request;
+
+  /* Class to envelop iteration over requests
+  */
+  class ListRequest {
+  public:
+    /* forward iterator */
+    struct iterator {
+      Request* operator->()
+      { 
+        return (Request*)(kaapi_api_listrequest_iterator_get(_lr, _lri));
+      }
+
+      Request* operator*()
+      { 
+        return (Request*)(kaapi_api_listrequest_iterator_get(_lr, _lri));
+      }
+
+      /* */
+      bool operator==(const iterator& i) const
+      { 
+        return (_lr == i._lr) 
+            && (   ((_lri !=0) && (i._lri !=0)
+                   && (kaapi_api_listrequest_iterator_get( _lr, _lri) ==
+                       kaapi_api_listrequest_iterator_get( i._lr, i._lri) ))
+                || ((_lri ==0) && (i._lri ==0))
+               );
+      }
+
+      /* */
+      bool operator!=(const iterator& i) const
+      { return !( *this == i); }
+  
+      /* prefix op*/
+      iterator& operator++()
+      {
+        if (0 == kaapi_api_listrequest_iterator_next(_lr, _lri))
+          _lri = 0;
+        return *this;
+      }
+
+    public: /* to be used by wrapper to C++ splitter */
+      iterator( kaapi_listrequest_t* lr, kaapi_listrequest_iterator_t* lri)
+       : _lr(lr), _lri(lri)
+      {}
+    private:
+      kaapi_listrequest_t* _lr;           /* end iterator == _lri =0 */
+      kaapi_listrequest_iterator_t* _lri;
+    };
+  };
+
 
   // --------------------------------------------------------------------
   template<class TASK>
@@ -3071,6 +3031,143 @@ namespace ka {
   TASK KaapiTask0<TASK>::dummy;
 
 #include "ka_api_clo.h"
+}
+
+  // --------------------------------------------------------------------  
+  template<class TASK>
+  struct TaskSplitter : public ka::Splitter<TASK::nargs> {};
+
+namespace ka {
+
+  template<class TASK>
+  struct TraitSplitter {
+    static const bool has_splitter = 
+      (sizeof(kaapi_yes_type) == sizeof(kaapi_is_func_splitter( &TaskSplitter<TASK>::operator())));
+  };
+
+  // --------------------------------------------------------------------
+  /* Mapping of data into logical set of partitions
+  */
+  struct BlockCyclic {
+  };
+  struct Block {
+  };
+
+  template<typename DIST, typename T, bool isaccess>
+  struct Mapping2DHelper {
+  };
+
+  template<typename T>
+  struct Mapping2DHelper<Block,T,true> 
+  {
+    /* assume that T implements the range2D interface */
+    static void map( const T& C, size_t n_bloc_i, size_t n_bloc_j )
+    {
+      std::cout << __PRETTY_FUNCTION__ << " TODO" << std::endl;
+      int dim0 __attribute__((unused))= C.dim(0);
+      int dim1 __attribute__((unused))= C.dim(1);
+    }
+  };
+
+  template<typename T>
+  struct Mapping2DHelper<BlockCyclic,T,true> 
+  {
+    /* assume that T implements the range2D interface */
+    static void map( const T& C, size_t sz_bloc_i, size_t sz_bloc_j )
+    {
+      std::cout << __PRETTY_FUNCTION__ << " TODO" << std::endl;
+      int dim0 __attribute__((unused))= C.dim(0);
+      int dim1 __attribute__((unused))= C.dim(1);
+    }
+  };
+
+  template<typename DIST>
+  struct Mapping2D {
+  };
+
+  template<>
+  struct Mapping2D<Block> 
+  {
+    /* assume that T implements the range2D interface */
+    template<class T>
+    static void map( const T& C, size_t n_bloc_i, size_t n_bloc_j )
+    {
+      Mapping2DHelper<Block,T,IsAccessMode<typename TraitFormalParam<T>::mode_t>::value>::map( C, n_bloc_i, n_bloc_j );
+    }
+  };
+
+  template<>
+  struct Mapping2D<BlockCyclic> 
+  {
+    /* assume that T implements the range2D interface */
+    template<class T>
+    static void map( const T& C, size_t sz_bloc_i, size_t sz_bloc_j )
+    {
+      Mapping2DHelper<BlockCyclic,T,IsAccessMode<typename TraitFormalParam<T>::mode_t>::value>::map( C, sz_bloc_i, sz_bloc_j );
+    }
+  };
+
+
+  // --------------------------------------------------------------------
+  /* OwnerComputeRule attribut: specify, during fork that a task should
+     have the same site location than the site location of a data.
+     Usage: 
+     * Spawn<Task>( ka::OCR( <here a ka_pointer_XX> ) (... ): try to get site from the ka_pointer_xx.
+     * Spawn<Task>( ka::OCR( <here a C++ pointer> ) (... ): try to get site from mapping of application data.
+     * Spawn<Task>( ka::OCR( <any other type> ) (... ): no effect.
+  */
+  template<typename T, bool isaccess>
+  struct OCRAttribut;
+
+  template<typename T>  
+  struct OCRAttribut<T,false> { /* not a ka::pointer type, do nothing */
+    OCRAttribut<T,false>(const T* a) {}
+    void operator()( kaapi_thread_t* thread ) const
+    { 
+      kaapi_thread_pushtask(thread); 
+    }
+  };
+
+  template<typename T>  /* case of a ka::pointer type */
+  struct OCRAttribut<T,true> {
+    const void* _ptr;
+    OCRAttribut<T,true>(const T* a)
+     : _ptr( (a == 0 ? 0 : a->ptr()) )
+    { 
+    }
+    void operator()( kaapi_thread_t* thread ) const
+    { 
+      kaapi_thread_pushtask_withocr(thread, _ptr); 
+    }
+  };
+
+  template<typename T>  
+  struct OCRAttribut<T*,false> {
+    const void* _ptr;
+    OCRAttribut<T*,false>(const T* const* a)
+     : _ptr( (const void*)a )
+    { }    
+    void operator()( kaapi_thread_t* thread ) const
+    { 
+      kaapi_thread_pushtask_withocr(thread, _ptr); 
+    }
+  };
+  template<typename T>  
+  struct OCRAttribut<const T*,false> {
+    const void* _ptr;
+    OCRAttribut<const T*,false>(const T* const* a)
+     : _ptr( (const void*)a )
+    { }    
+    void operator()( kaapi_thread_t* thread ) const
+    { 
+      kaapi_thread_pushtask_withocr(thread, _ptr); 
+    }
+  };
+  
+  template<typename T>
+  inline OCRAttribut<T, IsAccessMode<typename TraitFormalParam<T>::mode_t>::value > OCR( const T& a )
+  { return OCRAttribut<T, IsAccessMode<typename TraitFormalParam<T>::mode_t>::value >(&a); }
+
 
   // --------------------------------------------------------------------
   /* New API: thread.Spawn<TASK>([ATTR])( args )
@@ -3096,10 +3193,10 @@ namespace ka {
        return new (data) T[1];
     }
 
-    template<class TASK, class Attr>
+    template<class TASK, class ATTR>
     class Spawner {
     public:
-      Spawner( kaapi_thread_t* t, const Attr& a ) : _thread(t), _attr(a) {}
+      Spawner( kaapi_thread_t* t, const ATTR& a ) : _thread(t), _attr(a) {}
 
       /**
       **/      
@@ -3109,14 +3206,21 @@ namespace ka {
         kaapi_task_t* clo = kaapi_thread_toptask( _thread );
         kaapi_task_init( clo, KaapiFormatTask_t::default_bodies.cpu_body, 0 );
         /* attribut is reponsible for pushing task into the thread */
-        _attr(_thread);
+      if (TraitSplitter<TASK>::has_splitter)
+        kaapi_thread_pushtask_adaptive( _thread, 
+          KaapiWrapperSplitter0<TASK>::splitter
+        );
+      else
+        kaapi_thread_pushtask( _thread );
+
+//        _attr(_thread);
       }
 
 #include "ka_api_spawn.h"
 
     protected:
       kaapi_thread_t* _thread;
-      const Attr&     _attr;
+      const ATTR&     _attr;
     };
 
     template<class TASK>
@@ -3134,8 +3238,17 @@ namespace ka {
 
 
   // --------------------------------------------------------------------
-  class Request;
+  /** Top level Spawn */
+  template<class TASK>
+  Thread::Spawner<TASK, DefaultAttribut> Spawn() 
+  { return Thread::Spawner<TASK, DefaultAttribut>(kaapi_self_thread(), DefaultAttribut()); }
 
+  template<class TASK, class Attr>
+  Thread::Spawner<TASK, Attr> Spawn(const Attr& a) 
+  { return Thread::Spawner<TASK, Attr>(kaapi_self_thread(), a); }
+
+
+  // --------------------------------------------------------------------
   /* Stealcontext */
   class StealContext {
   public:
@@ -3306,50 +3419,7 @@ namespace ka {
     kaapi_task_t _adaptivetask; /* should be the object returned by begin_adaptive */
     friend class Request;
   };
-  
-  
-  /**
-  */
-  struct FlagReplyHead {};
-  extern FlagReplyHead ReplyHead;
-  struct FlagReplyTail {};
-  extern FlagReplyTail ReplyTail;
 
-  /* Dummy class that represent a container of requests
-  */
-  class ListRequest {
-  public:
-    /* forward iterator */
-    struct iterator {
-      Request* operator->()
-      { 
-        return (Request*)(kaapi_api_listrequest_iterator_get(_lr, _lri));
-      }
-
-      /* */
-      bool operator==(const iterator& i) const
-      { 
-        return (_lr == i._lr) 
-            && ( kaapi_api_listrequest_iterator_get( _lr, _lri) ==
-                 kaapi_api_listrequest_iterator_get( i._lr, i._lri) );
-      }
-
-      /* */
-      bool operator!=(const iterator& i) const
-      { return !( *this == i); }
-  
-      /* prefix op*/
-      iterator& operator++()
-      {
-        kaapi_api_listrequest_iterator_next(_lr, _lri);
-        return *this;
-      }
-
-    private:
-      kaapi_listrequest_t* _lr;
-      kaapi_listrequest_iterator_t* _lri;
-    };
-  };
 
   /* New API: request->Spawn<TASK>(sc)( args ) for adaptive tasks
   */
@@ -3374,7 +3444,12 @@ namespace ka {
           KaapiTask0<TASK>::body,
           0
         );
-        kaapi_request_pushtask_adaptive( _req, _adaptivetask, 0, _flag );
+        if (TraitSplitter<TASK>::has_splitter)
+          kaapi_request_pushtask_adaptive( _req, _adaptivetask, 
+            KaapiWrapperSplitter0<TASK>::splitter, _flag 
+          );
+        else 
+          kaapi_request_pushtask( _req, _adaptivetask );
       }
 
 #include "ka_api_reqspawn.h"
@@ -3385,8 +3460,7 @@ namespace ka {
       int               _flag;          /* head or tail push */
       friend class Request;
     };
-
-
+    
   public:
     template<class TASK>
     Spawner<TASK> Spawn(StealContext* sc) 
@@ -3398,19 +3472,103 @@ namespace ka {
     Spawner<TASK> Spawn(StealContext* sc, FlagReplyTail flag) 
     { return Spawner<TASK>(&_request, &sc->_adaptivetask, KAAPI_REQUEST_REPLY_TAIL); }
 
+    /* reply to the request */
+    void commit()
+    { kaapi_request_committask(&_request); }
+
+    /* return its id */
+    int ident() const
+    { return _request.ident; }
+
+    /* return a buffer of size bytes */
+    void* allocate(size_t size)
+    { return kaapi_request_pushdata(&_request, size); }
+
   protected:
     kaapi_request_t _request;
   };
-
   
-  /* push new steal context */
+    
+  /* wrapper from Kaapi C -> C++ API */
   template<class OBJECT>
-  inline int __kaapi_trampoline_lambda( kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
+  inline int __kaapi_trampoline_lambda( 
+      kaapi_task_t* victim, 
+      void* arg, 
+      struct kaapi_listrequest_t* lr,
+      struct kaapi_listrequest_iterator_t* lri 
+  )
   { OBJECT* o = (OBJECT*)arg; 
-    (*o)( (StealContext*)sc, nreq, (Request*)req );
+    (*o)( (StealContext*)victim, 
+           kaapi_api_listrequest_iterator_count(lri),
+           ListRequest::iterator(lr,lri), ListRequest::iterator(lr,0) );
     return 0;
   }
 
+  /* wrapper from Kaapi C -> C++ API */
+  template<class OBJECT>
+  inline int __kaapi_trampoline_method( 
+      kaapi_task_t* victim, 
+      void* arg, 
+      struct kaapi_listrequest_t* lr,
+      struct kaapi_listrequest_iterator_t* lri 
+  )
+  { OBJECT* o = (OBJECT*)arg; 
+    o->split( (StealContext*)victim, 
+              kaapi_api_listrequest_iterator_count(lri),
+              ListRequest::iterator(lr,lri), ListRequest::iterator(lr,0) 
+            );
+    return 0;
+  }
+
+#if 0 // DEPRECATED_
+  /* wrapper to splitter method */
+  template<typename OBJECT, void (OBJECT::*s)(StealContext*, int, Request*)>
+  struct Wrapper {
+    static int splitter( 
+      kaapi_task_t* victim, 
+      void* arg, 
+      struct kaapi_listrequest_t* lr,
+      struct kaapi_listrequest_iterator_t* lri 
+    )    
+    { OBJECT* o = (OBJECT*)arg; 
+      (o->*s)( (StealContext*)victim, 
+                kaapi_api_listrequest_iterator_count(lri),
+                ListRequest::iterator(lr,lri), ListRequest::iterator(lr,0) );
+      return 0;
+    };
+  };
+#endif
+
+  template<typename OBJECT, void (OBJECT::*pmethod)(StealContext*, int, ListRequest::iterator, ListRequest::iterator)>
+  int WrapperSplitter(
+      kaapi_task_t* victim, 
+      void* arg, 
+      struct kaapi_listrequest_t* lr,
+      struct kaapi_listrequest_iterator_t* lri 
+  )
+  { 
+    OBJECT* o = (OBJECT*)arg; 
+    (o->*pmethod)( (StealContext*)victim,
+                    kaapi_api_listrequest_iterator_count(lri),
+                    ListRequest::iterator(lr,lri), ListRequest::iterator(lr,0) );
+    return 0;
+  }
+
+  template<typename OBJECT, int (OBJECT::*pmethod)(StealContext*, int, ListRequest::iterator, ListRequest::iterator)>
+  int WrapperSplitter(
+      kaapi_task_t* victim, 
+      void* arg, 
+      struct kaapi_listrequest_t* lr,
+      struct kaapi_listrequest_iterator_t* lri 
+  )
+  { 
+    OBJECT* o = (OBJECT*)arg; 
+    return (o->*pmethod)( (StealContext*)victim,
+                           kaapi_api_listrequest_iterator_count(lri),
+                           ListRequest::iterator(lr,lri), ListRequest::iterator(lr,0) );
+  }
+
+  /* case of lambda: OBJECT is a function call. Context is passed by side effect */
   template<class OBJECT>
   inline StealContext* TaskBeginAdaptive(
         int flag,
@@ -3423,31 +3581,18 @@ namespace ka {
         (void*)&func); 
   }
 
-  /* wrapper to splitter method */
-  template<typename OBJECT, void (OBJECT::*s)(StealContext*, int, Request*)>
-  struct Wrapper {
-    static int splitter( kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
-    { OBJECT* o = (OBJECT*)arg; 
-      (o->*s)( (StealContext*)sc, nreq, (Request*)req );
-      return 0;
-    };
-  };
-
-  template<typename OBJECT, void (OBJECT::*s)(StealContext*, int, Request*)>
-  int WrapperSplitter(kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* arg )
-  { 
-    OBJECT* o = (OBJECT*)arg; 
-    (o->*s)( (StealContext*)sc, nreq, (Request*)req );
-    return 0;
-  }
-
   template<class OBJECT>
   inline StealContext* TaskBeginAdaptive(
-        int                   flag,
-        kaapi_task_splitter_t splitter,
-        OBJECT*               arg
+        int                           flag,
+        kaapi_adaptivetask_splitter_t splitter,
+        OBJECT*                       arg
   )
-  { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, splitter, arg); }
+  { return (StealContext*)kaapi_task_begin_adaptive(
+      kaapi_self_thread(), 
+      flag, 
+      splitter, 
+      arg); 
+  }
 
   template<class OBJECT>
   inline StealContext* TaskBeginAdaptive(
@@ -3555,10 +3700,10 @@ namespace ka {
     };
 
     /** Spawner for ThreadGroup */
-    template<class TASK>
+    template<class TASK, class ATTR=AttributComputeDependencies>
     class Spawner {
     public:
-      Spawner( AttributComputeDependencies attr, kaapi_thread_t* t ) 
+      Spawner( ATTR attr, kaapi_thread_t* t ) 
        : _attr(attr), _thread(t) {}
 
       /**
@@ -3574,19 +3719,20 @@ namespace ka {
 #include "ka_api_spawn.h"
 
     protected:
-      AttributComputeDependencies _attr;
+      ATTR _attr;
       kaapi_thread_t*             _thread;
     };  
 
-
+#if 0
     /* Interface: threadgroup.Spawn<TASK>(SetPartition(i) [, ATTR])( args ) */
     template<class TASK>
     Spawner<TASK> Spawn(const AttributSchedTask& a) 
-    { return Spawner<TASK>(
+    { return Spawner<TASK,AttributComputeDependencies>(
                   AttributComputeDependencies(_threadgroup, a._partition),
                   kaapi_threadgroup_thread(_threadgroup, a._partition)
               ); 
     }
+#endif
 
     /** Executor of one task for ThreadGroup */
     template<class TASKGENERATOR>
@@ -3751,19 +3897,6 @@ namespace ka {
     kaapi_threadgroup_t _threadgroup;
   };
 
-  
-  
-  // --------------------------------------------------------------------
-  /** Top level Spawn */
-  template<class TASK>
-  Thread::Spawner<TASK, DefaultAttribut> Spawn() 
-  { return Thread::Spawner<TASK, DefaultAttribut>(kaapi_self_thread(), DefaultAttribut()); }
-
-  template<class TASK, class Attr>
-  Thread::Spawner<TASK, Attr> Spawn(const Attr& a) 
-  { return Thread::Spawner<TASK, Attr>(kaapi_self_thread(), a); }
-
-
 
 
   // --------------------------------------------------------------------
@@ -3822,7 +3955,8 @@ namespace ka {
       arg->argv = argv;
       arg->mainentry = &MainTaskBodyArgcv<TASK>::body;
       kaapi_task_init( clo, (kaapi_task_body_t)kaapi_taskmain_body, arg );
-      _attr( _thread );    
+      kaapi_thread_pushtask(_thread);
+      //_attr( _thread );    
     }
 
     void operator()()
@@ -4011,6 +4145,10 @@ inline ka::IStream& operator>> (ka::IStream& s_in, float& c )
 inline ka::IStream& operator>> (ka::IStream& s_in, double& c )
 { return s_in; }
 
+
+// --------------------------------------------------------------------
+inline void* operator new( size_t size, ka::Request* arenea)
+{ return kaapi_request_pushdata((kaapi_request_t*)arenea, size); }
 
 #if !defined(_KAAPIPLUSPLUS_NOT_IN_GLOBAL_NAMESPACE)
 using namespace ka;

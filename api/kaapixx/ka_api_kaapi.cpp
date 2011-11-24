@@ -110,6 +110,8 @@ Community System::initialize_community( int& argc, char**& argv )
     System::saved_argv[i][lenargvi] = 0;
   }
   
+
+#if 0
   /* first initialize KaapiComponentManager::prop from file $HOME/.kaapirc */
   std::string filename;
   char* name = getenv("HOME");
@@ -135,6 +137,7 @@ Community System::initialize_community( int& argc, char**& argv )
     } catch (...) { 
     }
   }
+#endif
 
   if (KaapiComponentManager::initialize( argc, argv ) != 0)
     throw std::runtime_error("[ka::System::initialize], Kaapi not initialized");

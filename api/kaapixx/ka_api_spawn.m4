@@ -28,6 +28,13 @@
       // todo -> grep a type in UAMTYpe with Effective type in parameter in place of actual inclosure
       M4_PARAM(`ConvertEffective2InClosure<E$1,F$1,inclosure$1_t>::doit(&arg->f$1, e$1);
       ', `', `')
+      
+      KAAPI_PUSHER(KAAPI_NUMBER_PARAMS)<
+        TraitSplitter<TASK>::has_splitter,
+        ATTR,
+        TASK
+        M4_PARAM(`TraitFormalParam$1_t', `,', `,')
+      >::push( _attr, _thread );
     }
     
 
@@ -37,5 +44,4 @@
       KAAPI_NAME(PushArg,KAAPI_NUMBER_PARAMS)(
          &TASK::dummy_method_to_have_formal_param_type, M4_PARAM(`e$1', `', `, ') 
       );
-      _attr(_thread );
     }
