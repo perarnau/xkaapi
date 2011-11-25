@@ -419,7 +419,7 @@ skip_workqueue:
       tw,
       KAAPI_TASK_UNSTEALABLE
     );
-    kaapi_reply_pushtask_adaptive_tail( 
+    kaapi_request_pushtask_adaptive_tail( 
       req, 
       victim_task,
       _kaapic_split_leaf_task 
