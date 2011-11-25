@@ -1809,7 +1809,6 @@ static inline unsigned int kaapi_workqueue_isempty( const kaapi_workqueue_t* kwq
   return size <= 0;
 }
 
-
 /** This function should be called by the current kaapi thread that own the workqueue.
     The function push work into the workqueue.
     Assuming that before the call, the workqueue is [beg,end).
@@ -1833,7 +1832,6 @@ static inline int kaapi_workqueue_push(
   return EINVAL;
 }
 
-
 /** Helper function called in case of conflict.
     Return EBUSY is the queue is empty.
     Return EINVAL if invalid arguments
@@ -1845,7 +1843,6 @@ extern int kaapi_workqueue_slowpop(
   kaapi_workqueue_index_t* end,
   kaapi_workqueue_index_t  size
 );
-
 
 /** This function should be called by the current kaapi thread that own the workqueue.
     Return 0 in case of success 
@@ -1882,7 +1879,6 @@ static inline int kaapi_workqueue_pop(
   kwq->beg = loc_init;
   return kaapi_workqueue_slowpop(kwq, beg, end, max_size);
 }
-
 
 /** This function should only be called into a splitter to ensure correctness
     the lock of the victim kprocessor is assumed to be locked to handle conflict.
