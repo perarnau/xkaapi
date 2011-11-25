@@ -616,9 +616,9 @@ static int splitter
   for (; nreq; --nreq, ++req, ++nrep, j -= unit_size)
   {
     // thief result
-    kaapi_taskadaptive_result_t* const ktr =
-      kaapi_allocate_thief_result(req, sizeof(thief_result_t), NULL);
-    thief_result_t* const tres = (thief_result_t*)ktr->data;
+    kaapi_taskadaptive_result_t* const ktr = kaapi_request_pushdata(req, sizeof(thief_result_t));
+
+// TODO    thief_result_t* const tres = (thief_result_t*)ktr->data;
     new (tres) thief_result_t
       (j - unit_size, j, vw->adj_nodes, vw->adj_sums, vw->sums[j - unit_size]);
 
