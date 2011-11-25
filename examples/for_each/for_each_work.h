@@ -50,6 +50,8 @@
 #include <math.h>
 
 
+void* baseaddr;
+
 /** Description of the example.
 
     Overview of the execution.
@@ -61,36 +63,62 @@
 template<typename T, typename OP>
 class Work {
 public:
+  Work()
+   : _array(0)
+  {}
+  
   /* cstor */
-  Work(T* beg, T* end, OP op)
+  Work(T* beg, size_t size, OP op)
   {
     /* initialize work */
     _op    = op;
     _array = beg;
-    kaapi_workqueue_init(&wq, 0, end-beg);
+    kaapi_atomic_initlock( &_lock );
+    kaapi_workqueue_init_with_lock(&_wq, 0, size, &_lock);
+  }
+
+  /* */
+  ~Work()
+  {
+    kaapi_atomic_destroylock( &_lock );
   }
   
   /* extract sequential work */
-  bool extract_seq( T*& beg, T*& end)
+  bool pop( T*& beg, T*& end)
   {
-#define CONFIG_SEQ_GRAIN 256
+#define CONFIG_SEQ_GRAIN 8
     kaapi_workqueue_index_t b, e;
-    if (kaapi_workqueue_pop(&wq, &b, &e, CONFIG_SEQ_GRAIN)) return false;
-//    printf("Pop: [%li, %li)\n", b, e);
-//    fflush(stdout);
+    if (kaapi_workqueue_pop(&_wq, &b, &e, CONFIG_SEQ_GRAIN)) return false;
     beg = _array+b;
     end = _array+e;
     return true;
   }
   
+  /* name of the method should be splitter !!! split work and reply to requests */
+  int split (
+    ka::StealContext* sc, 
+    int nreq, 
+    ka::ListRequest::iterator beg,
+    ka::ListRequest::iterator end
+  );
+  
+  T* begin() { return _array + kaapi_workqueue_range_begin(&_wq); }
+  T* end()   { return _array + kaapi_workqueue_range_end(&_wq); }
+  OP& op()   { return _op; }
+
+protected:
   /* extract parallel work for nreq. Return the unit size */
-  bool extract_par( int& nreq, T*& beg, T*& end)
+  bool helper_split( int& nreq, T*& beg, T*& end)
   {
-#define CONFIG_PAR_GRAIN 128
+    kaapi_atomic_lock( &_lock );
+#define CONFIG_PAR_GRAIN 8
     kaapi_workqueue_index_t steal_size, i,j;
-    kaapi_workqueue_index_t range_size = kaapi_workqueue_size(&wq);
+    kaapi_workqueue_index_t range_size = kaapi_workqueue_size(&_wq);
     if (range_size <= CONFIG_PAR_GRAIN)
+    {
+      kaapi_atomic_unlock( &_lock );
       return false;
+    }
 
     steal_size = range_size * nreq / (nreq + 1);
     if (steal_size == 0)
@@ -102,8 +130,12 @@ public:
     /* perform the actual steal. if the range
        changed size in between, redo the steal
      */
-    if (kaapi_workqueue_steal(&wq, &i, &j, steal_size))
+    if (kaapi_workqueue_steal(&_wq, &i, &j, steal_size))
+    {
+      kaapi_atomic_unlock( &_lock );
       return false;
+    }
+    kaapi_atomic_unlock( &_lock );
 //    printf("Steal: [%li, %li)\n", i, j);
 //    fflush(stdout);
     beg = _array + i;
@@ -111,19 +143,11 @@ public:
     return true;
   }
   
-  /* name of the method should be splitter !!! split work and reply to requests */
-  void split (
-    ka::StealContext* sc, 
-    int nreq, 
-    ka::Request* req
-  );
-  
-  T* begin() { return _array + kaapi_workqueue_range_begin(&wq); }
-  T* end()   { return _array + kaapi_workqueue_range_end(&wq); }
 protected:
-  OP _op;
-  T* _array;
-  kaapi_workqueue_t wq;
+  OP                _op;
+  T*                _array;
+  kaapi_workqueue_t _wq;
+  kaapi_lock_t      _lock;
 };
 
 
@@ -131,15 +155,16 @@ protected:
     CPU implementation: see different implementations
 */
 template<typename T, typename OP>
-struct TaskThief : public ka::Task<2>::Signature<ka::RW<ka::range1d<T> >, OP> {};
+struct TaskWork : public ka::Task<1>::Signature<ka::RW<Work<T,OP> > > {};
 
 
 /* name of the method should be splitter !!! split work and reply to requests */
 template<typename T, typename OP>
-void Work<T,OP>::split (
+int Work<T,OP>::split (
   ka::StealContext* sc, 
   int nreq, 
-  ka::Request* req
+  ka::ListRequest::iterator beg,
+  ka::ListRequest::iterator end
 )
 {
   /* stolen range */
@@ -147,19 +172,25 @@ void Work<T,OP>::split (
   T* end_theft;
   size_t size_theft;
 
-  if (!extract_par( nreq, beg_theft, end_theft )) return;
+  if (!helper_split( nreq, beg_theft, end_theft )) 
+    return 0;
   size_theft = (end_theft-beg_theft)/nreq;
-  
+
   /* thief work: create a task */
-  for (; nreq>1; --nreq, ++req, beg_theft+=size_theft)
+  for (; nreq>1; --nreq, ++beg, beg_theft+=size_theft)
   {
-    req->Spawn<TaskThief<T,OP> >(sc)( ka::array<1,T>(beg_theft, size_theft), _op );
-//    printf("reply: [%p, %p)\n", beg_theft, beg_theft+size_theft);
-//    fflush(stdout);
+    beg->Spawn<TaskWork<T,OP> >(sc)( 
+      new (*beg) Work<T,OP>( beg_theft, size_theft, _op)
+    );
+    beg->commit();
   }
-  req->Spawn<TaskThief<T,OP> >(sc)( ka::array<1,T>(beg_theft, end_theft-beg_theft), _op );
-//  printf("reply: [%p, %p)\n", beg_theft, end_theft);
-//  fflush(stdout);
+  beg->Spawn<TaskWork<T,OP> >(sc)(
+    new (*beg) Work<T,OP>( beg_theft, end_theft-beg_theft, _op)
+  );
+  beg->commit();
+  ++beg;
+  
+  return 0;
 }
 
 #endif

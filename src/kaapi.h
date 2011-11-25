@@ -1144,7 +1144,7 @@ extern int kaapi_request_pushtask_adaptive(
 /** \ingroup ADAPTIVE
     push the task associated with an adaptive request
 */
-static inline void kaapi_reply_pushtask_adaptive_tail(
+static inline void kaapi_request_pushtask_adaptive_tail(
   kaapi_request_t* request, 
   kaapi_task_t* victim_task,
   kaapi_adaptivetask_splitter_t splitter
@@ -1157,7 +1157,7 @@ static inline void kaapi_reply_pushtask_adaptive_tail(
 /** \ingroup ADAPTIVE
     push the task associated with an adaptive request
 */
-static inline void kaapi_reply_pushtask_adaptive_head(
+static inline void kaapi_request_pushtask_adaptive_head(
   kaapi_request_t* request, 
   kaapi_task_t* victim_task,
   kaapi_adaptivetask_splitter_t splitter

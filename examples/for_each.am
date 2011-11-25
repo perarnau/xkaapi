@@ -5,18 +5,15 @@
 ##  Copyright 2010 INRIA. All rights reserved.
 ##
 
-FOREACH_PRGS=for_each_0_kaapi for_each_1_kaapi for_each_2_kaapi
+FOREACH_PRGS=for_each_adapt_kaapi
+
+if KAAPI_API_KAAPIC
+FOREACH_PRGS+=\
+	for_each_kaapi
+endif
 if KAAPI_API_KAAPIXX
 FOREACH_PRGS+=\
-	for_each_rec_kaapi++  for_each_0_kaapi++ for_each_1_kaapi++ \
-	for_each_2_kaapi++
-if KAAPI_CXX_HAS_LAMBDA
-FOREACH_PRGS+=for_each_0_kaapi++_lambda
-endif
-endif
-if KAAPI_API_KASTL
-FOREACH_PRGS+=\
-	for_each_kastl
+	for_each_rec_kaapi++ for_each_kaapi++
 endif
 if KAAPI_API_KASTL
 FOREACH_PRGS+=\
@@ -27,55 +24,31 @@ check_PROGRAMS+=$(FOREACH_PRGS)
 all-for_each: $(FOREACH_PRGS)
 
 #For each variation
-for_each_0_kaapi_SOURCES=for_each/for_each_0_kaapi.c
-for_each_1_kaapi_SOURCES=for_each/for_each_1_kaapi.c
-for_each_2_kaapi_SOURCES=for_each/for_each_2_kaapi.c
+for_each_adapt_kaapi_SOURCES=for_each/for_each_adapt_kaapi.c
+for_each_kaapi_SOURCES=for_each/for_each_kaapi.c
 for_each_rec_kaapi___SOURCES=for_each/for_each_rec_kaapi++.cpp
-for_each_0_kaapi___SOURCES=for_each/for_each_0_kaapi++.cpp for_each/for_each_work.h
-for_each_0_kaapi___lambda_SOURCES=for_each/for_each_0_kaapi++_lambda.cpp for_each/for_each_work.h
-for_each_1_kaapi___SOURCES=for_each/for_each_1_kaapi++.cpp for_each/for_each_work.h
-for_each_2_kaapi___SOURCES=for_each/for_each_2_kaapi++.cpp for_each/for_each_work.h
+for_each_kaapi___SOURCES=for_each/for_each_kaapi++.cpp for_each/for_each_work.h
 for_each_kastl_SOURCES=for_each/for_each_kastl.cpp
 
-for_each_0_kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
-for_each_0_kaapi_CFLAGS  =$(AM_CFLAGS)   $(KAAPIPROGS_BUILD_CFLAGS)
-for_each_0_kaapi_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIPROGS_BUILD_LDFLAGS)
-for_each_0_kaapi_LDADD   =$(LIBS)        $(KAAPIPROGS_BUILD_LIBS) -lm
+for_each_adapt_kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
+for_each_adapt_kaapi_CFLAGS  =$(AM_CFLAGS)   $(KAAPIPROGS_BUILD_CFLAGS)
+for_each_adapt_kaapi_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIPROGS_BUILD_LDFLAGS)
+for_each_adapt_kaapi_LDADD   =$(LIBS)        $(KAAPIPROGS_BUILD_LIBS) -lm
 
-for_each_1_kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
-for_each_1_kaapi_CFLAGS  =$(AM_CFLAGS)   $(KAAPIPROGS_BUILD_CFLAGS)
-for_each_1_kaapi_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIPROGS_BUILD_LDFLAGS)
-for_each_1_kaapi_LDADD   =$(LIBS)        $(KAAPIPROGS_BUILD_LIBS) -lm
-
-for_each_2_kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
-for_each_2_kaapi_CFLAGS  =$(AM_CFLAGS)   $(KAAPIPROGS_BUILD_CFLAGS)
-for_each_2_kaapi_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIPROGS_BUILD_LDFLAGS)
-for_each_2_kaapi_LDADD   =$(LIBS)        $(KAAPIPROGS_BUILD_LIBS) -lm
+for_each_kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
+for_each_kaapi_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
+for_each_kaapi_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
+for_each_kaapi_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm
 
 for_each_rec_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 for_each_rec_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
 for_each_rec_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
 for_each_rec_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
 
-for_each_0_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
-for_each_0_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
-for_each_0_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
-for_each_0_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
-
-for_each_0_kaapi___lambda_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
-for_each_0_kaapi___lambda_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS) $(STD_CXX0X_FLAGS)
-for_each_0_kaapi___lambda_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
-for_each_0_kaapi___lambda_LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
-
-for_each_1_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
-for_each_1_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
-for_each_1_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
-for_each_1_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
-
-for_each_2_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
-for_each_2_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
-for_each_2_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
-for_each_2_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
+for_each_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+for_each_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+for_each_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+for_each_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
 
 for_each_kastl_CPPFLAGS=$(AM_CPPFLAGS) $(KASTLPROGS_BUILD_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 for_each_kastl_CXXFLAGS=$(AM_CXXFLAGS) $(KASTLPROGS_BUILD_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)

@@ -47,46 +47,47 @@
 /** Description of the example.
 
     Overview of the execution.
-      The previous example, for_each_0_xx.cpp has a main drawback: 
-    - if the work load is unbalanced, then some of the thief becomes idle and
-    try to steal other threads. But an overloaded thief cannot be steal once
-    it begins its execution.
-        
+    
     What is shown in this example.
-      The purpose of this example is to show how to allow thief to be theft
-    by other idle thread. The idea is just to declare the executed task as new 
-    adaptive algorithm.
-
-
+    
     Next example(s) to read.
-      for_each_2xx.cpp
 */
 
-/** Here the thief task is defined with an extra optional parameter which is the
-    StealContext of the thief. This version of the task redefines splitter on
-    its work in order to allows other thieves to steal it.
+
+/** Simple task that only do sequential computation
 */
 template<typename T, typename OP>
-struct TaskBodyCPU<TaskThief<T, OP> > {
-  void operator() ( ka::StealContext* sc, ka::range1d_rw<T> range, OP op )
+struct TaskBodyCPU<TaskWork<T, OP> > {
+  void operator() ( ka::pointer_rw<Work<T,OP> > work )
   {
-    Work<T,OP> work(range.begin(), range.end(), op);
-    T* beg;
+    T* beg; 
     T* end;
-
-    /* set the splitter for this task */
-    sc->set_splitter(
-        /* as for the initial work: set the method to call and the object */
-        &ka::WrapperSplitter<Work<T,OP>,&Work<T,OP>::split>,
-        &work
-    );
-
+    
     /* while there is sequential work to do*/
-    while (work.extract_seq(beg, end))
+    while (work->pop(beg, end))
+    {
       /* apply w->op foreach item in [pos, end[ */
-      std::for_each( beg, end, op );
+      std::for_each( beg, end, work->op() );
+    }
   }
 };
+
+/** Splitter for CPU implementation, call in concurrency with 
+    TaskBodyCPU<TaskWork<T, OP> >
+*/
+template<typename T, typename OP>
+struct TaskSplitter<TaskWork<T, OP> > {
+  int operator() ( ka::StealContext* sc, 
+                   int nreq, 
+                   ka::ListRequest::iterator begin, 
+                   ka::ListRequest::iterator end,
+                   ka::pointer_rw<Work<T,OP> > work
+                  ) 
+  {
+    return work->split(sc, nreq, begin, end );
+  }
+};
+
 
 
 /* For each main function */
@@ -94,28 +95,9 @@ template<typename T, class OP>
 static void for_each( T* beg, T* end, OP op )
 {
   /* range to process */
-  ka::StealContext* sc;
-  Work<T,OP> work(beg, end, op);
-
-  /* push an adaptive task */
-  sc = ka::TaskBeginAdaptive(
-        /* flag: concurrent which means concurrence between extrac_seq & splitter executions */
-          KAAPI_SC_CONCURRENT 
-        /* flag: no preemption which means that not preemption will be available (few ressources) */
-        | KAAPI_SC_NOPREEMPTION, 
-        /* use a wrapper to specify the method to used during parallel split */
-        &ka::WrapperSplitter<Work<T,OP>,&Work<T,OP>::split>,
-        &work
-  );
-  
-  /* while there is sequential work to do*/
-  while (work.extract_seq(beg, end))
-    /* apply w->op foreach item in [pos, end[ */
-    std::for_each( beg, end, op );
-
-  /* wait for thieves */
-  ka::TaskEndAdaptive(sc);
-  /* here: 1/ all thieves have finish their result */
+  Work<T,OP> work(beg, end-beg, op);
+  ka::Spawn<TaskWork<T,OP> >()(&work);
+  ka::Sync();
 }
 
 
@@ -123,7 +105,8 @@ static void for_each( T* beg, T* end, OP op )
 */
 void apply_cos( double& v )
 {
-  v = cos(v);
+  v += cos(v);
+  usleep(100);
 }
 
 /* My main task */
@@ -132,12 +115,13 @@ struct doit {
   {
     double t0,t1;
     double sum = 0.f;
-    size_t size = 100000;
+    size_t size = 30000;
     if (argc >1) size = atoi(argv[1]);
     
     double* array = new double[size];
+baseaddr = array;    
 
-    for (int iter = 0; iter < 100; ++iter)
+    for (int iter = 0; iter < 1; ++iter)
     {
       /* initialize, apply, check */
       for (size_t i = 0; i < size; ++i)
