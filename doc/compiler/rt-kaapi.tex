@@ -21,7 +21,7 @@
 \usepackage[dvipsnames]{color}
 \usepackage[latin1]{inputenc} % ou \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc} % ou \usepackage[OT1]{fontenc}
-\usepackage{RR,RRthemes}
+\usepackage{RR} %,RRthemes}
 %\usepackage[dvipsname]{color}
 \usepackage{hyperref}
 \usepackage{listings}
@@ -30,7 +30,7 @@
 %%\usepackage[frenchb]{babel} % optionnel
 %%
 %% date de publication du rapport
-\RRdate{Juin 2011}
+\RRdate{November 2011}
 %%
 %% Cas d'une version deux
 %% \RRversion{2}
@@ -99,22 +99,23 @@ Vincent Danjean%\thanks{Footnote for second author}%
 %% Ceci apparait sur chaque page paire.
 \authorhead{Le Mentec \& Gautier & Danjean}
 %%
-\RRtitle{Le modèle de programmation \kaapi \\et manuel d'utilisation}
+\RRtitle{\kaapi~: interface de programmation parallèle}
 %% English title
-\RRetitle{The \kaapi's programming model \\and \\User's manual}
+\RRetitle{The \kaapi's Application Programming Interface.
+ \Huge{Part I: Data Flow Programming}}
 %%
-\titlehead{The \kaapi's programming model}
+\titlehead{The \kaapi's API}
 %%
 %\RRnote{This is a note}
 %\RRnote{This is a second note}
 %%
 \RRresume{
-Le renouveau de l'utilisation d'un graphe de flot de données pour exécutuer les algorithmes par blocs en algèbre linéaire est une approche qui vise à garantir la portabilité des performances des applications sur architecture multi-c\oe urs. L'idée est d'utiliser une  représentation abstraite des algorithmes en terme de dépendances de données entre les tâches indépendament de l'algorithme d'ordonnancement qui sera utilisé.
+%Le renouveau de l'utilisation d'un graphe de flot de données pour exécutuer les algorithmes par blocs en algèbre linéaire est une approche qui vise à garantir la portabilité des performances des applications sur architecture multi-c\oe urs. L'idée est d'utiliser une  représentation abstraite des algorithmes en terme de dépendances de données entre les tâches indépendament de l'algorithme d'ordonnancement qui sera utilisé.
 
-Ce rapport présente le modèle de programmation \kaapi qui permet d'annonter par des directives de compilation du type \texttt{\#pragma} un code séquentiel afin de décrire simplement les tâches du programme. Un compilateur source à source génère un code qui permet, grâce au runtime \kaapi, d'extraire à l'exécution ce graphe de flot de données, y compris pour les programmes récursifs dont les tâches seront générées récursivement. 
+Ce rapport présente le modèle de programmation \kaapi qui permet d'annonter un programme séquentiel écrit en C ou C++ par des directives de compilation \texttt{\#pragma} afin de décrire simplement les tâches du programme. Un compilateur source à source génère un code qui permet, grâce au runtime \kaapi, d'extraire à l'exécution ce graphe de flot de données, y compris pour les programmes récursifs dont les tâches seront générées récursivement. 
 }
-\RRabstract{During the past years, dynamically scheduled data flow graphs for tiled algorithms in linear algebra have appeared as a promising way to reach the portability of performance onto several multicore architectures.
-The idea was to describe those algorithms as an abstract data flow graph representation that only encodes tasks and their dependencies independently of the scheduling algorithm, which folds up tasks onto the cores of the target architecture. 
+\RRabstract{%During the past years, dynamically scheduled data flow graphs for tiled algorithms in linear algebra have appeared as a promising way to reach the portability of performance onto several multicore architectures.
+%The idea was to describe those algorithms as an abstract data flow graph representation that only encodes tasks and their dependencies independently of the scheduling algorithm, which folds up tasks onto the cores of the target architecture. 
 %Reported experimental timings show good performances for linear algebra algorithms where tasks are generated only from nested loops. Nevertheless, all recently proposed frameworks do not consider programs where tasks with data flow dependencies are generated recursively. 
 
 In this report, we present \kaapi's programming model. A parallel \kaapi program is a C or C++ sequential program with code annotation using \texttt{\#pragma} compiler directives. A specific source to source compiler translates \kaapi directives to runtime calls.
@@ -126,8 +127,8 @@ In this report, we present \kaapi's programming model. A parallel \kaapi program
 %%
 %% \RRprojet{Apics}  % cas d'un seul projet
 \RRprojets{MOAIS}
-\RRdomaine{3} % cas du domaine numero 1
-\RRthemeProj{moais} % theme du projet Apics
+%\RRdomaine{3} % cas du domaine numero 1
+%\RRthemeProj{moais} % theme du projet Apics
 %\RRdomaineProjBis{apics} % domaine du projet Apics
 %% \RRdomaineProjBis{pop art} % domaine du projet PopArt
 %%
@@ -1326,15 +1327,15 @@ if (...)
 
 In that case, the user has two possibilities:
 \begin{itemize}
-\item Add a synchronization point between line 4 and 5. It enforces the execution to wait for the completion of \texttt{g} (the 2 left solutions in figure~\ref{ex:caplanteplus}).
-\item Allocate the data in the same scope as the tasks. In that case, the data is allocated with a scope wide enough to execute the task \texttt{g} (right solution in figure~\ref{ex:caplanteplus}).
+\item Add a synchronization point between line 4 and 5. It enforces the execution to wait for the completion of \texttt{g} (the 2 solutions at the top of figure~\ref{ex:caplanteplus}).
+\item Allocate the data in the same scope as the tasks. In that case, the data is allocated with a scope wide enough to execute the task \texttt{g} (bottom solution in figure~\ref{ex:caplanteplus}).
 \end{itemize}
 
 \begin{figure}[ht]
 \begin{center}
-\begin{minipage}[t]{0.30\linewidth}
+\begin{minipage}[t]{0.45\linewidth}
 \scriptsize
-\begin{tiny}
+\begin{footnotesize}
 \begin{lstlisting}[frame=tb]
 if (...)
 {
@@ -1343,12 +1344,12 @@ if (...)
   #pragma kaapi sync
 }
 \end{lstlisting}
-\end{tiny}
-\end{minipage}
+\end{footnotesize}
+\end{minipage}\hfill
 %\vrule~~
-\begin{minipage}[t]{0.31\linewidth}
+\begin{minipage}[t]{0.45\linewidth}
 \scriptsize
-\begin{tiny}
+\begin{footnotesize}
 \begin{lstlisting}[frame=tb]
 if (...)
 {
@@ -1359,12 +1360,12 @@ if (...)
   }
 }
 \end{lstlisting}
-\end{tiny}
-\end{minipage}
+\end{footnotesize}
+\end{minipage}\\
 %\vrule~~
-\begin{minipage}[t]{0.35\linewidth}
+\begin{minipage}[t]{0.45\linewidth}
 \scriptsize
-\begin{tiny}
+\begin{footnotesize}
 \begin{lstlisting}[frame=tb]
 if (...)
 {
@@ -1373,7 +1374,7 @@ if (...)
   g(&r, input_values); 
 }
 \end{lstlisting}
-\end{tiny}
+\end{footnotesize}
 \end{minipage}
 
 \end{center}
@@ -1393,7 +1394,7 @@ With \texttt{\#pragma kaapi alloca}, the user can allocate data within the same 
 
 %%%%
 \subsubsection{Synchronisation and recursive tasks}\label{sec:alloca}
-
+In a recursive computation, the \texttt{\#pragma kaapi sync} directive inside a task only synchronizes the child tasks spawned by the task instance. Tasks spawned by an ancestor tasks are note synchronized\footnote{Cilk+ has the same semantic for its sync keyword.}.
 
 %%%%%
 %\subsubsection{Example with recursive tasks}\label{sec:alloca}
