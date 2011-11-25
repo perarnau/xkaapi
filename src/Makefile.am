@@ -101,6 +101,7 @@ libkaapi_la_SOURCES=\
   adapt/kaapi_adapt_api_lr.c \
   adapt/kaapi_adapt_begendadaptfmt.c \
   adapt/kaapi_adapt_finalize.c \
+  adapt/kaapi_adapt_signal.c \
   adapt/kaapi_adapt_init.c \
   adapt/kaapi_adapt_mergefmt.c \
   adapt/kaapi_adapt_preempt_head.c \
@@ -111,6 +112,7 @@ libkaapi_la_SOURCES=\
   adapt/kaapi_adapt_pushtask.c \
   adapt/kaapi_adapt_reqcommittask.c \
   adapt/kaapi_adapt_reqpushtask.c \
+  adapt/kaapi_adapt_reqpushtask_adapt.c \
   adapt/kaapi_adapt_taskbegendbody.c \
   adapt/kaapi_adapt_taskbody.c \
   adapt/kaapi_adapt_taskmergebody.c \

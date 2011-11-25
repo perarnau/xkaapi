@@ -564,9 +564,9 @@ static inline void kaapi_lfree_push(
   list->_front = ctxt;
 
 
+  /* wait end of thieves on the processor */
   kaapi_synchronize_steal(kproc);
 
-//  kaapi_atomic_lock( &kproc->lock );
   /* pop back if new size exceeds max */
 #  define KAAPI_MAXFREECTXT 4
   if (kproc->sizelfree >= KAAPI_MAXFREECTXT)

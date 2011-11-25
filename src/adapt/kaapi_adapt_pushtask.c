@@ -101,6 +101,8 @@ int kaapi_thread_pushtask_adaptive(
   */
   task_adapt->body = (kaapi_task_body_t)kaapi_taskadapt_body;
   task_adapt->sp   = arg;
+  if (splitter !=0) 
+    kaapi_task_set_splittable(task_adapt);
   
   kaapi_access_init( &merge_arg->shared_sc, sc );
 

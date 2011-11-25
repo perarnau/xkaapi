@@ -1107,7 +1107,7 @@ static inline void* kaapi_request_pushdata( kaapi_request_t* request, uint32_t s
     \param thread INOUT a pointer to the kaapi_stack_t data structure.
     \retval EINVAL invalid argument: bad stack pointer.
 */
-extern int kaapi_request_pushtask(kaapi_request_t* request);
+extern int kaapi_request_pushtask(kaapi_request_t* request, kaapi_task_t* victim_task);
 
 /** \ingroup ADAPTIVE
     The function kaapi_request_toptask() will return the task to reply.
@@ -1708,7 +1708,7 @@ typedef struct kaapi_staticschedtask_arg_t {
   kaapi_staticschedinfo_t  schedinfo; /* number of partition */
 } kaapi_staticschedtask_arg_t;
 
-extern void kaapi_staticschedtask_body( void*, kaapi_thread_t* );
+extern void kaapi_staticschedtask_body( void*, kaapi_thread_t*, kaapi_task_t* pc );
 
 /* ========================================================================= */
 /* THE workqueue to be used with adaptive interface                          */

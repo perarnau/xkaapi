@@ -567,11 +567,12 @@ static inline void kaapi_atomic_waitlock( kaapi_lock_t* lock)
 {
   kaapi_assert_debug( lock->_magic == 123123123U);
   
-  /* barrier to made visible local modification */
-  kaapi_writemem_barrier();
+  lock->_sync = 1;
+
+  /* barrier to made visible local modification before reading lock->_sync */
+  kaapi_mem_barrier();
 
   /* wait until reaches the unlocked state */
-  lock->_sync = 1;
   while ((lock->_sync !=0) && (KAAPI_ATOMIC_READ(lock) <=0))
     kaapi_slowdown_cpu();
 }

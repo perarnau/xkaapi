@@ -126,7 +126,7 @@ static int kaapi_task_splitter_readylist(
       kaapi_taskstealready_body,
       argsteal
     );
-    kaapi_request_pushtask(request);
+    kaapi_request_pushtask(request, 0);
 
     kaapi_request_replytask( request, KAAPI_REQUEST_S_OK); /* success of steal */
     KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( lrrange ) );
