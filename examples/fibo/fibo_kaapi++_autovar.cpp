@@ -69,7 +69,8 @@ long fiboseq_On(const long n){
 
 
 /* Sum two integers
- * this task reads a and b (read acces mode) and write their sum to res (write access mode)
+ * this task reads a and b (read acces mode) 
+ * and write their sum to res (write access mode)
  * it will wait until previous write to a and b are done
  * once finished, further read of res will be possible
  */
@@ -91,7 +92,8 @@ struct TaskBodyCPU<TaskSum>
 
 
 /* Kaapi Fibo task.
-   A Task is a type with respect a given signature. The signature specifies the number of arguments (2),
+   A Task is a type with respect a given signature. 
+   The signature specifies the number of arguments (2),
    and the type and access mode for each parameters.
    Here the first parameter is declared with a write mode. The second is passed by value.
  */
@@ -109,7 +111,8 @@ struct TaskBodyCPU<TaskFibo>
       *ptr = n; 
       return;
     }
-    else {
+    else 
+    {
       ka::auto_variable<long> res1;
       ka::auto_variable<long> res2;
 
@@ -140,7 +143,7 @@ struct doit {
     int ref_value = fiboseq_On(n);
     double delay = ka::WallTimer::gettime() - t;
     ka::logfile() << "[fibo] Sequential value for n = " << n << " : " << ref_value 
-                    << " (computed in " << delay << " s)" << std::endl;
+                  << " (computed in " << delay << " s)" << std::endl;
       
     long* res_value = ka::Alloca<long>(1);
     *res_value = rand();
@@ -164,11 +167,10 @@ struct doit {
       }
       stop_time= ka::WallTimer::gettime();
 
-      /*  ka::System::getRank() prints out the id of the node executing the task */
-      ka::logfile() << ka::System::getRank() << ": -----------------------------------------" << std::endl;
-      ka::logfile() << ka::System::getRank() << ": Res  = " << *res_value << std::endl;
-      ka::logfile() << ka::System::getRank() << ": Time(s): " << (stop_time-start_time)/iter << std::endl;
-      ka::logfile() << ka::System::getRank() << ": -----------------------------------------" << std::endl;
+      ka::logfile() << ": -----------------------------------------" << std::endl;
+      ka::logfile() << ": Res  = " << *res_value << std::endl;
+      ka::logfile() << ": Time(s): " << (stop_time-start_time)/iter << std::endl;
+      ka::logfile() << ": -----------------------------------------" << std::endl;
     }
   }
 

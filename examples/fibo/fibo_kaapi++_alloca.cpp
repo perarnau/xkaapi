@@ -162,11 +162,10 @@ struct doit {
       }
       stop_time= ka::WallTimer::gettime();
 
-      /*  ka::System::getRank() prints out the id of the node executing the task */
-      ka::logfile() << ka::System::getRank() << ": -----------------------------------------" << std::endl;
-      ka::logfile() << ka::System::getRank() << ": Res  = " << *res_value << std::endl;
-      ka::logfile() << ka::System::getRank() << ": Time(s): " << (stop_time-start_time)/iter << std::endl;
-      ka::logfile() << ka::System::getRank() << ": -----------------------------------------" << std::endl;
+      ka::logfile() << ": -----------------------------------------" << std::endl;
+      ka::logfile() << ": Res  = " << *res_value << std::endl;
+      ka::logfile() << ": Time(s): " << (stop_time-start_time)/iter << std::endl;
+      ka::logfile() << ": -----------------------------------------" << std::endl;
     }
   }
 
