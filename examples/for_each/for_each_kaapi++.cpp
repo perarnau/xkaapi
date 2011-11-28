@@ -119,7 +119,6 @@ struct doit {
     if (argc >1) size = atoi(argv[1]);
     
     double* array = new double[size];
-baseaddr = array;    
 
     for (int iter = 0; iter < 1; ++iter)
     {

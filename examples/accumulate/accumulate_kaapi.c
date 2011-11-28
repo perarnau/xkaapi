@@ -60,12 +60,16 @@ typedef struct thief_work_t {
 
 
 /* fwd decl */
-static void thief_entrypoint(void*, kaapi_thread_t*, kaapi_stealcontext_t*);
+static void thief_entrypoint(void*, kaapi_thread_t*, kaapi_task_t*);
 
 
 /* result reducer */
-static int reducer
-(kaapi_stealcontext_t* sc, void* targ, void* tdata, size_t tsize, void* varg)
+static int reducer( struct kaapi_stealcontext_t* sc, 
+                    void* targ, 
+                    void* tdata, 
+                    size_t tsize, 
+                    void* varg
+)
 {
   /* victim work */
   work_t* const vw = (work_t*)varg;
@@ -91,7 +95,7 @@ static int reducer
 
 /* parallel work splitter */
 static int splitter
-(kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* args)
+(struct kaapi_stealcontext_t* sc, int nreq, kaapi_request_t* req, void* args)
 {
   /* victim work */
   work_t* const vw = (work_t*)args;

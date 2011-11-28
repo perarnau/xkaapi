@@ -461,22 +461,22 @@ namespace ka {
   };
   extern DefaultAttribut SetDefault;
   
-#if 0
   /* The only attribut that can be passed to task creation:
   */
-  class AttributSchedTask {
+  class AttributSchedTask : protected DefaultAttribut {
     int   _partition;   // logical partition id
   public:
     AttributSchedTask( int s ) : _partition(s) {}
+    __attribute__((deprecated))
     void operator()( kaapi_thread_t* thread ) const
     { 
-      kaapi_thread_pushtask_withpartitionid(thread, _partition);
+      DefaultAttribut::operator()(thread);
+      //kaapi_thread_pushtask_withpartitionid(thread, _partition);
     }
   };
 
   inline AttributSchedTask SetPartition( int s )
   { return AttributSchedTask(s); }
-#endif
   
   // --------------------------------------------------------------------
   // A task forked with SetStaticSched attribut may have first formal
@@ -3322,7 +3322,7 @@ namespace ka {
            \retval an error code
         */
         int signal_preempt()
-        { return 0; /* kaapi_preemptasync_thief(_sc, _ktr, 0); */ }
+        { return kaapi_preemptasync_thief(_tit, 0); }
 
         /* signal_preempt: send preemption signal to the thief.
            When the victim caller send a signal to one of its thief,
@@ -3341,7 +3341,7 @@ namespace ka {
         */
         template<class T>
         int signal_preempt( const T* arg )
-        { return 0; /* kaapi_preemptasync_thief(_sc, _ktr, 0); */ }
+        { return kaapi_preemptasync_thief(_tit, arg); }
 
         /* wait_preempt: waits until the thief has received the preemption flag. 
            The caller is suspended until the thief has received the preemption flag
@@ -3353,33 +3353,28 @@ namespace ka {
         */
         void wait_preempt()
         {
-          //kaapi_preemptasync_waitthief(_sc,_ktr);
-        }
-
-        template<class R>
-        R* wait_preempt()
-        {
-          //kaapi_preemptasync_waitthief(_sc,_ktr);
-          return (R*)0; //_ktr->data;
+          kaapi_preemptasync_waitthief(_tit);
         }
       
+      private:
+        friend class thief_iterator;
+        
         /* private part */
-        one_thief( kaapi_task_t* thief )
-         : _cthief(thief)
+        one_thief( kaapi_thief_iterator_t* tit )
+         : _tit(tit)
         {}
-        kaapi_task_t*           _cthief;
+        kaapi_thief_iterator_t* _tit;
       };
       
       /* */
       one_thief* operator->()
       { 
-        _thief._cthief = kaapi_thiefiterator_get(_tit); 
         return &_thief; 
       }
 
       /* */
       bool operator==(const thief_iterator& i) const
-      { return kaapi_thiefiterator_equal( _tit, i._tit ); }
+      { return kaapi_thiefiterator_equal( _thief._tit, i._thief._tit ); }
 
       /* */
       bool operator!=(const thief_iterator& i) const
@@ -3388,22 +3383,21 @@ namespace ka {
       /* prefix op*/
       thief_iterator& operator++()
       {
-        _tit = kaapi_thiefiterator_next(_tit);
+        _thief._tit = kaapi_thiefiterator_next(_thief._tit);
         return *this;
       }
 
       /* prefix op*/
       thief_iterator& operator--()
       {
-        _tit = kaapi_thiefiterator_prev(_tit);
+        _thief._tit = kaapi_thiefiterator_prev(_thief._tit);
         return *this;
       }
     protected:
       friend class StealContext;
       thief_iterator( kaapi_thief_iterator_t* tit)
-       : _tit(tit), _thief(0)
+       : _thief(tit)
       {}
-      kaapi_thief_iterator_t* _tit;
       one_thief _thief;
     };
     

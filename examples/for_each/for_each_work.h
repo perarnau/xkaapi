@@ -49,9 +49,6 @@
 #include <string.h>
 #include <math.h>
 
-
-void* baseaddr;
-
 /** Description of the example.
 
     Overview of the execution.

@@ -107,6 +107,7 @@ libkaapi_la_SOURCES=\
   adapt/kaapi_adapt_preempt_head.c \
   adapt/kaapi_adapt_preempt_tail.c \
   adapt/kaapi_adapt_preempt_thief.c \
+  adapt/kaapi_adapt_preempt_async.c \
   adapt/kaapi_adapt_preemptpoint.c \
   adapt/kaapi_adapt_pushstealcontext.c \
   adapt/kaapi_adapt_pushtask.c \

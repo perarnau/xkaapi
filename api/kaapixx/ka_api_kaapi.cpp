@@ -190,13 +190,25 @@ int System::getRank()
 
 
 // --------------------------------------------------------------------
-void Sync()
+void StealContext::unset_splittable()
 {
-  kaapi_sched_sync( );
+  kaapi_task_unset_splittable(&_adaptivetask);
 }
 
 
 // --------------------------------------------------------------------
+void StealContext::set_splittable()
+{
+  kaapi_task_set_splittable(&_adaptivetask);
+}
+
+
+
+// --------------------------------------------------------------------
+void Sync()
+{
+  kaapi_sched_sync( );
+}
 
 // --------------------------------------------------------------------
 void MemorySync()

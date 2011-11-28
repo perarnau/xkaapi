@@ -73,7 +73,10 @@ struct TaskSeqMatProduct: public ka::Task<3>::Signature<
 
 template<>
 struct TaskBodyCPU<TaskSeqMatProduct> {
-  void operator()( ka::range2d_r<double> A, ka::range2d_r<double> B, ka::range2d_cw<double> C )
+  void operator()( ka::range2d_r<double> A, 
+                   ka::range2d_r<double> B, 
+                   ka::range2d_cw<double> C 
+                 )
   {
     size_t N = A.dim(0);
     size_t M = B.dim(0);
