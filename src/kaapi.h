@@ -1286,24 +1286,18 @@ extern int kaapi_preempt_thief_helper(
    If the thief has already finished its computation bfore sending the signal,
    then the return value is ECHILD.
 */
-#if 0
 extern int kaapi_preemptasync_thief( 
-  kaapi_stealcontext_t*               stc, 
-  struct kaapi_taskadaptive_result_t* ktr, 
-  void*                               arg_to_thief 
+  struct kaapi_thief_iterator_t*     thief, 
+  void*                              arg_to_thief 
 );
-#endif // #if 0
 
 /** The thief should have been preempted using preempasync_thief
     Returns 0 when the thief has reply to its preemption flag
 */
-#if 0
 extern int kaapi_preemptasync_waitthief
 ( 
- kaapi_stealcontext_t*               sc,
- struct kaapi_taskadaptive_result_t* ktr
+  struct kaapi_thief_iterator_t*     thief 
 );
-#endif // #if 0
 
 /** \ingroup ADAPTIVE
     Remove the thief ktr form the list of stc iff it is has finished its computation and returns 0.

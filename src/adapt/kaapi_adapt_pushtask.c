@@ -78,7 +78,7 @@ int kaapi_thread_pushtask_adaptive(
     kaapi_assert_debug( !(task_adapt->u.s.flag & KAAPI_TASK_S_NOPREEMPTION) );
     sc->flag = KAAPI_SC_PREEMPTION;
     /* if preemption, thief list used ... */
-    KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
+    kaapi_atomic_initlock(&sc->thieves.list.lock);
     sc->thieves.list.head = 0;
     sc->thieves.list.tail = 0;
   }

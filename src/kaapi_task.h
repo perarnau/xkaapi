@@ -354,9 +354,6 @@ static inline uintptr_t kaapi_task_andstate(kaapi_task_t* task, uint32_t mask)
 */
 static inline int kaapi_task_markexec( kaapi_task_t* task )
 {
-#if 0
-  return KAAPI_ATOMIC_CAS( &task->u.s.state, KAAPI_TASK_STATE_INIT, KAAPI_TASK_STATE_EXEC);
-#endif
   return KAAPI_ATOMIC_OR_ORIG( &task->u.s.state, KAAPI_TASK_STATE_EXEC) & KAAPI_TASK_EXECUTION_STATE;
 }
 
@@ -366,9 +363,6 @@ static inline int kaapi_task_markexec( kaapi_task_t* task )
 */
 static inline int kaapi_task_marksteal( kaapi_task_t* task )
 {
-#if 0
-  return KAAPI_ATOMIC_CAS( &task->u.s.state, KAAPI_TASK_STATE_INIT, KAAPI_TASK_STATE_STEAL);
-#endif
   return 0==(KAAPI_ATOMIC_OR_ORIG( &task->u.s.state, KAAPI_TASK_STATE_STEAL) & KAAPI_TASK_STATE_EXEC);
 }
 
@@ -381,7 +375,11 @@ static inline void kaapi_task_markterm( kaapi_task_t* task )
 static inline void kaapi_task_markaftersteal( kaapi_task_t* task )
 {
   KAAPI_ATOMIC_OR( &task->u.s.state, KAAPI_TASK_STATE_MERGE);
-  kaapi_abort();
+}
+
+static inline void kaapi_task_markpreempted( kaapi_task_t* task )
+{
+  KAAPI_ATOMIC_OR( &task->u.s.state, KAAPI_TASK_STATE_SIGNALED);
 }
 
 static inline void kaapi_task_lock( kaapi_task_t* task )
@@ -732,6 +730,8 @@ typedef struct kaapi_thiefadaptcontext_t {
   struct kaapi_thiefadaptcontext_t*   next;                    /* link fields in the victim steal context list */
   struct kaapi_thiefadaptcontext_t*   prev;                    /* */
   kaapi_task_t*                       thief_task;              /* thief task, !=0 until completion or preemption */
+  void*                               arg_from_thief;
+  void*                               arg_from_victim;
   struct kaapi_thiefadaptcontext_t*   thief_of_the_thief_head; /* list of the thief of the thief */
   struct kaapi_thiefadaptcontext_t*   thief_of_the_thief_tail;
 } kaapi_thiefadaptcontext_t __attribute__((aligned(KAAPI_CACHE_LINE)));
@@ -757,7 +757,7 @@ typedef struct kaapi_stealcontext_t {
     /* 1) a thief list if preemption enabled */
     struct
     {
-      kaapi_atomic_t lock;
+      kaapi_lock_t lock;
       kaapi_thiefadaptcontext_t* head __attribute__((aligned(sizeof(void*))));
       kaapi_thiefadaptcontext_t* tail __attribute__((aligned(sizeof(void*))));
     } list;

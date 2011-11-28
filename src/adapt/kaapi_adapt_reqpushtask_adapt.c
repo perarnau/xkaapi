@@ -83,7 +83,7 @@ int kaapi_request_pushtask_adaptive(
     sc->flag = KAAPI_SC_PREEMPTION;
   }
 
-  /* list insert is atomic with respect to the lock on the adaptive task */
+  /* cas if toptask is with preemption flag (may be inherited, see above) */
   if (kaapi_task_is_withpreemption(toptask))
   {
     /* this allocation may be amortized if we reserve some memory in the steal context
@@ -93,6 +93,8 @@ int kaapi_request_pushtask_adaptive(
       = (kaapi_thiefadaptcontext_t*)malloc(sizeof(kaapi_thiefadaptcontext_t));
     if (ktr ==0)
       return ENOMEM;
+    ktr->arg_from_thief = 0;
+    ktr->arg_from_victim = 0;
     sc->ktr = ktr;
     kaapi_atomic_initlock(&ktr->lock);
     ktr->thief_task = toptask; /* task to signal */
@@ -104,6 +106,7 @@ int kaapi_request_pushtask_adaptive(
     /* insert in head or tail: one thief do allocation at any time, due 
        to kproc lock owner ship
     */
+    kaapi_atomic_lock(&sc->thieves.list.lock);
     if (sc->thieves.list.head == 0)
     {
       sc->thieves.list.tail = ktr;
@@ -121,6 +124,7 @@ int kaapi_request_pushtask_adaptive(
       sc->thieves.list.tail->next = ktr;
       sc->thieves.list.tail = ktr;
     }
+    kaapi_atomic_unlock(&sc->thieves.list.lock);
   }
   else
   {

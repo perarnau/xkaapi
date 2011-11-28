@@ -1,4 +1,5 @@
 /*
+** kaapi_task_preemptpoint.c
 ** xkaapi
 ** 
 **
@@ -7,7 +8,6 @@
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -44,29 +44,37 @@
 */
 #include "kaapi_impl.h"
 
-/**
-*/
-struct kaapi_thief_iterator_t* kaapi_thiefiterator_head( kaapi_task_t* task )
+extern int kaapi_preemptasync_thief( 
+  struct kaapi_thief_iterator_t*     thief, 
+  void*                              arg_to_thief 
+)
 {
-  kaapi_taskadaptive_arg_t* adapt_arg = kaapi_task_getargst(task, kaapi_taskadaptive_arg_t);
-  kaapi_assert_debug( kaapi_task_is_splittable(task) );
-  kaapi_assert_debug( kaapi_task_is_withpreemption(task) );
-  kaapi_assert_debug( task->body == (kaapi_task_body_t)kaapi_taskadapt_body );
-  kaapi_stealcontext_t* sc = (kaapi_stealcontext_t*)adapt_arg->shared_sc.data;
+  kaapi_thiefadaptcontext_t* thief_arg = (kaapi_thiefadaptcontext_t*)thief;
   
-  kaapi_atomic_waitlock(&sc->thieves.list.lock);
+  kaapi_atomic_lock(&thief_arg->lock);
+  if (thief_arg->arg_from_thief !=0)
+  {
+    kaapi_atomic_unlock(&thief_arg->lock);
+    return 1;
+  }
+  thief_arg->arg_from_victim = arg_to_thief;
   
-  /* only the owner can iterate through the list.
-     head is always a valid pointer (if read was atomic) 
-  */
-  return (struct kaapi_thief_iterator_t*)sc->thieves.list.head;
+  /* here either thief has view the preemption request */
+  kaapi_atomic_unlock(&thief_arg->lock);
+  
+  return 0; /* return 0 iff not terminated */
 }
 
-/**
-*/
-struct kaapi_thief_iterator_t* kaapi_thiefiterator_next( struct kaapi_thief_iterator_t* pos )
+
+int kaapi_preemptasync_waitthief( 
+  struct kaapi_thief_iterator_t*     thief 
+)
 {
-  kaapi_thiefadaptcontext_t* arg = (kaapi_thiefadaptcontext_t*)pos;
-  /* next is always a valid pointer (if read was atomic) */
-  return (struct kaapi_thief_iterator_t*)arg->next;
+  kaapi_thiefadaptcontext_t* thief_arg = (kaapi_thiefadaptcontext_t*)thief;
+  while (thief_arg->arg_from_thief ==0)
+  {
+    kaapi_slowdown_cpu();
+  }
+  return 1;
 }
+
