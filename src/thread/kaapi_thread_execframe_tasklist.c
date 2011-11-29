@@ -110,8 +110,8 @@ redo_while:
 #endif
   while (!kaapi_tasklist_isempty( tasklist ))
   {
-    err = kaapi_readylist_pop( &tasklist->rtl, &td );
     kaapi_processor_set_workload( stack->proc, kaapi_readylist_workload(&tasklist->rtl) );
+    err = kaapi_readylist_pop( &tasklist->rtl, &td );
 
     if (err ==0)
     {
