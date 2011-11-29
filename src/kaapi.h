@@ -2241,7 +2241,7 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     static int isinit = 0;\
     if (isinit) return;\
     isinit = 1;\
-    kaapi_format_taskregister_static( formatobject(), fnc_body, 0, name, ##__VA_ARGS__,  0 /* for reduction operators not supported in C */,0);\
+    kaapi_format_taskregister_static( formatobject(), fnc_body, 0, name, ##__VA_ARGS__,  0, 0 /* for reduction operators not supported in C */,0);\
   }
 
 
