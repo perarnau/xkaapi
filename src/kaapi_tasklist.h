@@ -686,6 +686,23 @@ extern int kaapi_thread_initialize_first_access(
     void*               srcdata    
 );
 
+/** Return the number of tasks inside the tasklist
+*/
+static inline size_t kaapi_readylist_workload( kaapi_readytasklist_t* rtl )
+{
+  size_t size = 0;
+  kaapi_onereadytasklist_t* onertl;
+  int i;
+
+  for (i =KAAPI_TASKLIST_MAX_PRIORITY; i<(1+KAAPI_TASKLIST_MIN_PRIORITY); ++i)
+  {
+    onertl = &rtl->prl[i];
+    if (onertl->next == -1) continue;
+    size = 100*size+kaapi_workqueue_size(&onertl->wq);
+  }
+  return size;
+}
+
 /** To pop the next ready tasks
     Return the next task to execute if err ==0
     Return 0 if case of success

@@ -43,22 +43,23 @@
  */
 #include "kaapi_impl.h"
 
+#define MAX_SKPROC 4
 
 static int kaapi_select_victim_workload( 
-  kaapi_processor_t* kproc __attribute__((unused)), 
+  kaapi_processor_t* self_kproc,
   kaapi_victim_t* victim 
 )
 {  
   const int count = kaapi_count_kprocessors;
-  kaapi_processor_t* const self_kproc = kaapi_get_current_processor();
   
-  kaapi_processor_t* max_kproc = NULL;
-  uint32_t max_workload = 1;
-  int i;
+  kaapi_processor_t* max_kproc[MAX_SKPROC] = {0,0,0,0};
+  uint32_t max_workload[MAX_SKPROC] = {0,0,0,0};
+  int k;
+  int max_index = 0;
   
-  for (i = 0; i < count; ++i)
+  for (k = 0; k < count; ++k)
   {
-    kaapi_processor_t* const cur_kproc = kaapi_all_kprocessors[i];
+    kaapi_processor_t* const cur_kproc = kaapi_all_kprocessors[k];
     
     if ((cur_kproc == NULL) || (cur_kproc == self_kproc))
       continue ;
@@ -67,21 +68,62 @@ static int kaapi_select_victim_workload(
     {
       const uint32_t cur_workload = KAAPI_ATOMIC_READ(&cur_kproc->workload);
       
-      if (cur_workload < max_workload)
-        continue ;
-      
-      max_workload = cur_workload;
-      max_kproc = cur_kproc;
+      if (cur_workload > max_workload[0])
+      {
+        int i;
+        for (i=3; i>0; --i)
+        {
+          max_kproc[i]    = max_kproc[i-1];
+          max_workload[i] = max_workload[i-1];
+        }
+        max_kproc[0]    = cur_kproc;
+        max_workload[0] = cur_workload;
+      }
+      else if (cur_workload > max_workload[1])
+      {
+        int i;
+        for (i=3; i>1; --i)
+        {
+          max_kproc[i]    = max_kproc[i-1];
+          max_workload[i] = max_workload[i-1];
+        }
+        max_kproc[1]    = cur_kproc;
+        max_workload[1] = cur_workload;
+      }
+      else if (cur_workload > max_workload[2])
+      {
+        int i;
+        for (i=3; i>2; --i)
+        {
+          max_kproc[i]    = max_kproc[i-1];
+          max_workload[i] = max_workload[i-1];
+        }
+        max_kproc[2]    = cur_kproc;
+        max_workload[2] = cur_workload;
+      }      
+      else if (cur_workload > max_workload[3])
+      {
+        max_kproc[3]    = cur_kproc;
+        max_workload[3] = cur_workload;
+      }      
     }
   }
   
-  /* found a victim */
-  if (max_kproc != NULL)
+  /* found a victim ? */
+  if (max_workload[3] !=0)
+    max_index = 4;
+  else if (max_workload[2] !=0)
+    max_index = 3;
+  else if (max_workload[1] !=0)
+    max_index = 2;
+  else if (max_workload[0] !=0)
+    max_index = 1;
+  if (max_index !=0) 
   {
-    victim->kproc = max_kproc;
+    int idx = rand_r( (unsigned int*)&self_kproc->seed ) % max_index;
+    victim->kproc = max_kproc[ idx ];
     return 0;
   }
-  
   return EINVAL;
 }
 
@@ -96,10 +138,8 @@ int kaapi_sched_select_victim_workload_rand(
 {
   int err;
   if (flag != KAAPI_SELECT_VICTIM) return 0;  
-  do {
-    err = kaapi_select_victim_workload( kproc, victim );
-    if (err ==0) return 0;
-  } while(1);
+  err = kaapi_select_victim_workload( kproc, victim );
+  return err;
 }
 
 

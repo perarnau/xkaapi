@@ -111,6 +111,8 @@ redo_while:
   while (!kaapi_tasklist_isempty( tasklist ))
   {
     err = kaapi_readylist_pop( &tasklist->rtl, &td );
+    kaapi_processor_set_workload( stack->proc, kaapi_readylist_workload(&tasklist->rtl) );
+
     if (err ==0)
     {
 execute_first:
