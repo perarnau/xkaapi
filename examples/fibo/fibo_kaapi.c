@@ -66,7 +66,6 @@ KAAPI_REGISTER_TASKFORMAT( sum_format,
     (kaapi_access_mode_t[])   { KAAPI_ACCESS_MODE_W, KAAPI_ACCESS_MODE_R, KAAPI_ACCESS_MODE_R },
     (kaapi_offset_t[])        { offsetof(sum_arg_t, result.data), offsetof(sum_arg_t, subresult1.data), offsetof(sum_arg_t, subresult2.data) },
     (kaapi_offset_t[])        { offsetof(sum_arg_t, result.version), offsetof(sum_arg_t, subresult1.version), offsetof(sum_arg_t, subresult2.version) },
-    0,
     (const struct kaapi_format_t*[]) { kaapi_int_format, kaapi_int_format, kaapi_int_format },
     0
 )
