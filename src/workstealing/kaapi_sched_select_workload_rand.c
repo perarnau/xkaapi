@@ -56,6 +56,7 @@ static int kaapi_select_victim_workload(
   int k;
   int max_index = 0;
   
+redo_select:
   count = kaapi_count_kprocessors/4;
   if (count ==0) count = kaapi_count_kprocessors;
   for (k = 0; k < count; ++k)
@@ -135,7 +136,8 @@ static int kaapi_select_victim_workload(
     }
     int idx = rand_r( (unsigned int*)&self_kproc->seed ) % MAX_SKPROC;
     victim->kproc = max_kproc[ idx ];
-    return max_kproc[ idx ] == 0 ? EINVAL : 0;
+    if  (max_kproc[ idx ] == 0) 
+      goto redo_select;
   }
   return EINVAL;
 }
