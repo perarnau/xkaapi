@@ -50,8 +50,7 @@ static int kaapi_select_victim_workload(
   kaapi_victim_t* victim 
 )
 {  
-  const int count = kaapi_count_kprocessors;
-  
+  int count;
   kaapi_processor_t* max_kproc[MAX_SKPROC] = {0,0,0,0};
   uint32_t max_workload[MAX_SKPROC] = {0,0,0,0};
   int k;
@@ -64,9 +63,12 @@ static int kaapi_select_victim_workload(
     max_kproc[k] = rand_kproc;
   }
   
+  count = kaapi_count_kprocessors/4;
+  if (count ==0) count = kaapi_count_kprocessors;
   for (k = 0; k < count; ++k)
   {
-    kaapi_processor_t* const cur_kproc = kaapi_all_kprocessors[k];
+    kaapi_processor_t* const cur_kproc = kaapi_all_kprocessors[ 
+        rand_r( (unsigned int*)&self_kproc->seed ) %kaapi_count_kprocessors ];
     
     if ((cur_kproc == NULL) || (cur_kproc == self_kproc))
       continue ;
