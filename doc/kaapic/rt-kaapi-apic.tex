@@ -34,11 +34,7 @@
 \newcolumntype{I}{!{\vrule width 1.5pt}}
 \renewcommand{\arraystretch}{1.5}
 
-\newcommand{\kaapi}{\textsc{X-Kaapi}\xspace}
-
-%%% For all listing figures
-\definecolor{MyDarkBlue}{rgb}{0.254901960784314, 0.411764705882353, 0.882352941176471}
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \lstset{commentstyle=\color{blue}}
 \lstset{language=C}
 \lstset{stringstyle=\ttfamily}
@@ -48,8 +44,78 @@
            }
 \lstset{ classoffset=3
            }
-           
 \lstset{classoffset=0, showstringspaces=false}
+
+\lstnewenvironment{code}{%
+  \small%
+  \lstset{commentstyle=\color{blue}}%
+  \lstset{language=C}%
+  \lstset{frame=tb}%
+}{%
+}
+\makeatletter
+\newcommand{\apirefp}[2][\@empty]{%
+  \def\api@part{#1}%
+  \def\api@partref{\@empty}%
+  \ifx\api@part\api@partref%
+    \def\api@lab{api@#2}%
+  \else%
+    \def\api@lab{api@#2@#1}%
+  \fi%
+  \expandafter\ref\expandafter{\api@lab} on page \pageref{\api@lab}%
+}
+\newenvironment{apisection}[2][noshortnameprovided]{%
+  % 1: section short name (for ref)
+  % 2: section name
+  \newpage
+  \section{#2}
+  \label{api@#1}
+  \newcommand{\api@newpart}[4][noshortpartnameprovided]{%
+    \newenvironment{##1}{%
+      \subsection{##2}%
+      \label{api@#1@##1}%
+      ##3%
+    }{##4}%
+  }%
+  \api@newpart[synopsis]{Synopsis}{}{}%
+  \api@newpart[desc]{Description}{}{}%
+  \api@newpart[params]{Parameters}{%
+    \let\api@indesc\@empty
+    \newcommand{\param}[1]{%r
+      \def\api@indesc{yes}%
+      \begin{description}%
+        \renewcommand{\param}[1]{\item[########1]}%
+      \item[####1]
+      }%
+      %\bgroup%
+      \newenvironment{parameters}{%
+        \begin{description}%
+          \renewcommand{\param}[1]{\item[########1]}%
+        }{%
+        \end{description}%
+      }
+    }{%
+      %\egroup%
+      \ifx\api@indesc\@empty\relax\else%
+    \end{description}%
+    \fi%
+  }%
+  \api@newpart[ret]{Return value}{%
+    \newcommand{\otherret}{\par\medskip\noindent}%
+  }{}%
+  \api@newpart[example]{Example}{}{}%
+}{}
+\makeatother
+
+\newcommand{\fn}[1]{\textit{#1}}%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\kaapi}{\textsc{X-Kaapi}\xspace}
+
+%%% For all listing figures
+\definecolor{MyDarkBlue}{rgb}{0.254901960784314, 0.411764705882353, 0.882352941176471}
+
 
 \RRdate{November 2011}
 
@@ -120,44 +186,35 @@ If you wish to contact the XKaapi team, please visite the web site at:
 \end{center}
 
 
-
-\newpage
-\section{Initialization and termination}
-
-\subsection{Synopsis}
-\begin{small}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
-\begin{lstlisting}[frame=tb]
+%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{apisection}[init]{Initialization and termination}
+  \begin{synopsis}%
+    \begin{code}
 int kaapic_init(int flags)
-int kaapic_finalize(void)
-\end{lstlisting}
-\end{small}
-
-\subsection{Description}
-\paragraph{}
-\textit{kaapic\_init} initializes the runtime. 
-It must be called  by the program before using any of the other routines. 
-If successful, there must be a
-corresponding \textit{kaapic\_finalize} at the end of the program.
-
-\subsection{Parameters}
-\begin{itemize}
-\item \textit{flags}: if not zero, only start the main thread to avoid disturbing
-the execution until tasks are actually scheduled. The other threads are suspended
-waiting for a parallel region to be entered (refer to kaapic\_begin\_parallel).
-\end{itemize}
-
-\subsection{Return value}
-\begin{itemize}
-\item [0] in case of success
-\item [else] an error code
-\end{itemize}
-
-\subsection{Example}
-\paragraph{}
-\begin{small}
-\begin{lstlisting}[frame=tb]
+int kaapic_finalize(void)      
+     \end{code}
+  \end{synopsis}
+  \begin{desc}
+    \fn{kaapic\_init} initializes the runtime. 
+    It must be called  by the program before using any of the other routines. 
+    If successful, there must be a
+    corresponding \fn{kaapic\_finalize} at the end of the program.
+  \end{desc}
+  \begin{params}
+    \param{flags} if not zero, only start the main thread to avoid
+    disturbing the execution until tasks are actually scheduled. The
+    other threads are suspended waiting for a parallel region to be
+    entered (refer to kaapic\_begin\_parallel in part
+    \apirefp{parallel}).
+  \end{params}
+  \begin{ret}
+    \begin{itemize}
+    \item [0] in case of success
+    \item [else] an error code
+    \end{itemize}
+  \end{ret}
+  \begin{example}
+    \begin{code}
   int main()
   {
     int err = kaapic_init(1);
@@ -165,40 +222,34 @@ waiting for a parallel region to be entered (refer to kaapic\_begin\_parallel).
     ...
 
     kaapic_finalize();
-}
-\end{lstlisting}
-\end{small}
+  }      
+    \end{code}
+  \end{example}
+\end{apisection}
 
+%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{apisection}[concurrency]{Concurrency}
 
-\newpage
-\section{Concurrency}
-
-\subsection{Synopsis}
-\begin{small}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
-\begin{lstlisting}[frame=tb]
-int  kaapic_get_concurrency(void)
+  \begin{synopsis}
+    \begin{code}
+int kaapic_get_concurrency(void)
 int kaapic_get_thread_num(void)
-\end{lstlisting}
-\end{small}
+    \end{code}
+  \end{synopsis}
+  \begin{desc}
+    Concurrency related routines.
+  \end{desc}
+  \begin{ret}
+    \fn{kaapic\_get\_concurrency} returns the number of parallel
+    thread available to the \kaapi runtime.
 
-\subsection{Description}
-\paragraph{}
-Concurrency related routines.
-
-\subsection{Return value}
-\paragraph{}
-\textit{kaapic\_get\_concurrency} returns the number of parallel thread available
-to the \kaapi runtime.
-\paragraph{}
-\textit{kaapic\_get\_thread\_num} returns the current thread identifier. Note it
-should only be called in the context of a \kaapi thread.
-
-\subsection{Example}
-\paragraph{}
-\begin{small}
-\begin{lstlisting}[frame=tb]
+    \otherret
+    \fn{kaapic\_get\_thread\_num} returns the current thread
+    identifier. Note it should only be called in the context of a
+    \kaapi thread.
+  \end{ret}
+  \begin{example}
+    \begin{code}
   int main()
   {
     int err = kaapic_init(1);
@@ -211,62 +262,49 @@ should only be called in the context of a \kaapi thread.
 
     kaapic_finalize();
   }
-\end{lstlisting}
-\end{small}
+    \end{code}
+  \end{example}
+\end{apisection}
 
 
-\newpage
-\section{Performance}
-
-\subsection{Synopsis}
-\begin{small}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
-\begin{lstlisting}[frame=tb]
+%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{apisection}[perf]{Performance}
+  \begin{synopsis}
+    \begin{code}
 double kaapic_get_time(void)
-\end{lstlisting}
-\end{small}
-
-\subsection{Description}
-\paragraph{}
-Capture the current time. Used to measure the time spent in a code region.
-
-\subsection{Parameters}
-\paragraph{}
-None.
-
-\subsection{Return value}
-\paragraph{}
-Time in seconds since an arbitrary time in the past.
-
-\subsection{Example}
-\paragraph{}
-\begin{small}
-\begin{lstlisting}[frame=tb]
-  int main()
-  {
+    \end{code}
+  \end{synopsis}
+  \begin{desc}
+    Capture the current time. Used to measure the time spent in a code
+    region.
+  \end{desc}
+  \begin{params}
+    None.
+  \end{params}
+  \begin{ret}
+    Time in seconds since an arbitrary time in the past.
+  \end{ret}
+  \begin{example}
+    \begin{code}
+  int main() {
     double start, stop;
     int err = kaapic_init(1);
-    start = kaapi_get_time(); 
+    start = kaapi_get_time();
     ...
-    stop = kaapi_get_time(); 
-
+    stop = kaapi_get_time();
 
     printf("Time : %f (us)\n", stop-start );
     kaapic_finalize();
   }
-\end{lstlisting}
-\end{small}
+    \end{code}
+  \end{example}
+\end{apisection}
 
+%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{apisection}[loop]{Independent loops}
 
-\newpage
-\section{Independent loops}
-
-\subsection{Synopsis}
-\begin{small}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
-\begin{lstlisting}[frame=tb]
+  \begin{synopsis}
+    \begin{code}
 int kaapic_foreach( 
   int first, 
   int last,
@@ -282,63 +320,85 @@ int kaapic_foreach_withformat(
   int32_t nparam,
   ...
  ) 
-\end{lstlisting}
-\end{small}
+    \end{code}
+  \end{synopsis}
 
-\subsection{Description}
-\paragraph{}
-Those routines run a parallel loop over the range [\textit{first}, \textit{last})\footnote{
-This is an \textbf{exclusive} interval in the C interface and an \textbf{inclusive} interval in the Fortran interface.}
-The loop is given as function with its parameters. The body function has \textit{nparam} parameters and it is 
-passed in the \textit{...} optional effective parameter list of the foreach interface.
+  \begin{desc}
+    Those routines run a parallel loop over the range [\textit{first},
+    \textit{last})\footnote{ This is an \textbf{exclusive} interval in
+      the C interface and an \textbf{inclusive} interval in the
+      Fortran interface.}  The loop is given as function with its
+    parameters. The body function has \textit{nparam} parameters and
+    it is passed in the \textit{...} optional effective parameter list
+    of the foreach interface.
 
-At runtime, the initial interval is dynamically split in $K$ disjoint intervals $[b_i, e_i)$ such that $\cup_{i=0..K-1} [b_i, e_i) = [first, last)$. For each of this sub-interval, \kaapi calls by several threads \textit{body( $b_i$, $e_i$, tid, $e_0$, ..., $e_{nparam-1}$)} where \textit{tid} is the thread identifier that made the call.
+    At runtime, the initial interval is dynamically split in $K$
+    disjoint intervals $[b_i, e_i)$ such that $\cup_{i=0..K-1} [b_i,
+    e_i) = [first, last)$. For each of this sub-interval, \kaapi calls
+    by several threads \textit{body( $b_i$, $e_i$, tid, $e_0$, ...,
+      $e_{nparam-1}$)} where \textit{tid} is the thread identifier
+    that made the call.
 
-If not null, \textit{attr} is a pointer to an attribut that can be pass tuning parameter to the runtime. Please see \textit{kaapic\_foreach\_attr\_set\_grains}.
-\subsection{Parameters}
-\paragraph{}
-For \textit{kaapi\_foreach} interface, the format of the optional parameter list is:
-\begin{description}
-\item [body]: the function with signature\\
-\hspace*{5ex}\textit{void (*)(int, int, int [,type$_0$, .., type$_{nparam-1}$])}.\\
-Each type \textit{type$_i$} could be:
-\begin{itemize}
-\item a pointer to a memory data
-\item a scalar value with size not bigger that the size of a pointer.
-\end{itemize}
+    If not null, \textit{attr} is a pointer to an attribut that can be
+    pass tuning parameter to the runtime. Please see
+    \fn{kaapic\_foreach\_attr\_set\_grains}.
+  \end{desc}
 
-\item [$e_0$]: first effective parameter passed to \textit{body}.
-\item [...]
-\item [$e_{nparam-1}$]: last effective parameters passed to \textit{body}.
-\end{description}
+  \begin{params}
+    For \fn{kaapi\_foreach} interface, the format of the optional
+    parameter list is:
+    \begin{parameters}
+    \param{body} the function with signature\\
+      \hspace*{5ex}\textit{void (*)(int, int, int [,type$_0$, .., type$_{nparam-1}$])}.\\
+      Each type \textit{type$_i$} could be:
+      \begin{itemize}
+      \item a pointer to a memory data
+      \item a scalar value with size not bigger that the size of a
+        pointer.
+      \end{itemize}
+    
+      \param{$e_0$} first effective parameter passed to \fn{body}.
+      \param{\ldots}
+      \param{$e_{nparam-1}$} last effective parameters passed to
+      \fn{body}.
+    \end{parameters}
+    
+  
+    For \fn{kaapi\_foreach\_with\_format} interface extend
+    \fn{kaapi\_foreach} interface in order to pass the size, the type
+    and the access mode of each of the effective parameter. The format
+    of the optional parameter list is:
+    \begin{parameters}
+    \param{body} the function with signature\\
+      \hspace*{5ex}\textit{void (*)(int, int, int [,type$_0$, .., type$_{nparam-1}$])}.\\
+      Each type \textit{type$_i$} could be:
+      \begin{itemize}
+      \item a pointer to a memory data
+      \item a scalar value with size not bigger that the size of a
+        pointer.
+      \end{itemize}
+      
+    \param{mode, $e_0$, count, type} access mode, first effective
+      parameter passed to \fn{body}, the number of type elements pointed
+      by $e_0$ and the type of each element.
+    \param{\ldots}
+    \param{mode, $e_{nparam-1}$, count, type} access mode, last
+      effective parameter passed to \fn{body}, the number of type
+      elements pointed by $e_{nparam-1}$ and the type of each element.
+    \end{parameters}
+    Please refer to the data flow programming section
+    (\apirefp{dataflow}) to have a description of \textit{mode} and
+    \textit{type} informations.
+  \end{params}
 
-\paragraph{}
-For \textit{kaapi\_foreach\_with\_format} interface extend \textit{kaapi\_foreach} interface in order to pass the size, the type and the access mode of each of the effective parameter. The format of the optional parameter list is:
-\begin{description}
-\item [body]: the function with signature\\
-\hspace*{5ex}\textit{void (*)(int, int, int [,type$_0$, .., type$_{nparam-1}$])}.\\
-Each type \textit{type$_i$} could be:
-\begin{itemize}
-\item a pointer to a memory data
-\item a scalar value with size not bigger that the size of a pointer.
-\end{itemize}
+  \begin{ret}
+    In case of success the function return 0, else it returns an error
+    code.
+  \end{ret}
+  \begin{example}
+    Refer to examples/kaapic subdirectory in sources\\
 
-\item [mode, $e_0$, count, type]: access mode, first effective parameter passed to \textit{body}, the number of type elements pointed by $e_0$ and the type of each element.
-\item [...]
-\item [mode, $e_{nparam-1}$, count, type]: access mode, last effective parameter passed to \textit{body}, the number of type elements pointed by $e_{nparam-1}$ and the type of each element.
-\end{description}
-Please refer to the data flow programming section to have a description of \textit{mode} and \textit{type} informations.
-
-\subsection{Return value}
-\paragraph{}
-
-In case of success the function return 0, else it returns an error code.
-
-\subsection{Example}
-Refer to examples/kaapic\\
-
-\begin{small}
-\begin{lstlisting}[frame=tb]
+    \begin{code}
   /* loop body */
   static void body(
     int i, int j, int tid, double* array, double* value
@@ -362,12 +422,10 @@ Refer to examples/kaapic\\
     printf("Time : %f (us)\n", stop-start );
     kaapic_finalize();
   }
-\end{lstlisting}
-\end{small}
+    \end{code}
 
-The next example is equivalent to the previous:
-\begin{small}
-\begin{lstlisting}[frame=tb]
+    The next example is equivalent to the previous:
+    \begin{code}
   /* loop body */
   static void body(
     int i, int j, int tid, double* array, double* value
@@ -394,97 +452,96 @@ The next example is equivalent to the previous:
     printf("Time : %f (us)\n", stop-start );
     kaapic_finalize();
   }
-\end{lstlisting}
-\end{small}
+    \end{code}
+  \end{example}
+\end{apisection}
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{apisection}[dataflow]{Dataflow programming}
+  \begin{synopsis}
+    \begin{code}
+int kaapic_spawn(int32_t nargs, ...)
+    \end{code}
+  \end{synopsis}
+  \begin{desc}
+    Create a new computation task implemented by a call to a function
+    \fn{body} with effective parameters \textit{e$_i$}.
 
-\newpage
-\section{Dataflow programming}
-\subsection{Synopsis}
-\begin{small}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
-\begin{lstlisting}[frame=tb]
-int kaapic_spawn(int32_t nargs, ... )
-\end{lstlisting}
-\end{small}
+    The function \fn{body} as well as its effective parameters are pass in the optional parameter list of \fn{kaapic\_spawn}.
+    The format of the optional parameter list is:
+    \begin{description}
+    \item [body]: the function with signature\\
+      \hspace*{5ex}\textit{void (*)([type$_0$, .., type$_{nparam-1}$])}.\\
+      Each type \textit{type$_i$} could be:
+      \begin{itemize}
+      \item a pointer to a memory data
+      \item a scalar value with size not bigger that the size of a pointer.
+      \end{itemize}
+    \end{description}
+    
+    \fn{body} is called with the user specified arguments, there is no argument added by \kaapi:\\
+    \begin{small}
+      \lstset{language=C}
+      \begin{lstlisting}[frame=tb]
+        body(e0, e1, ..., )
+      \end{lstlisting}
+    \end{small}
+  \end{desc}
 
-\subsection{Description}
-\paragraph{}
-Create a new computation task implemented by a call to a function \textit{body} with effective parameters \textit{e$_i$}.
+  \begin{params}    
+    \begin{parameters}
+    \param{nargs} the argument count;
+    \param{...} the \fn{body} followed by a list of groups of 4
+    arguments (\textit{mode}, \textit{value}, \textit{count}, \textit{type}).
+    \end{parameters}
 
-The function \textit{body} as well as its effective parameters are pass in the optional parameter list of \textit{kaapic\_spawn}.
-The format of the optional parameter list is:
-\begin{description}
-\item [body]: the function with signature\\
-\hspace*{5ex}\textit{void (*)([type$_0$, .., type$_{nparam-1}$])}.\\
-Each type \textit{type$_i$} could be:
-\begin{itemize}
-\item a pointer to a memory data
-\item a scalar value with size not bigger that the size of a pointer.
-\end{itemize}
-\end{description}
+    \subsubsection{Format of each 4 successive arguments}
 
-\textit{body} is called with the user specified arguments, there is no argument added by \kaapi:\\
-\begin{small}
-\lstset{language=C}
-\begin{lstlisting}[frame=tb]
-body(e0, e1, ..., )
-\end{lstlisting}
-\end{small}
+    Each task parameter is described by 4 successive arguments including:
+    \begin{itemize}
+    \item the access \textit{mode}.
+    \item the argument \textit{value},
+    \item the element \textit{cound},
+    \item the parameter \textit{type}
+    \end{itemize}
+    
+    \subsubsection{Mode information}
+    \paragraph{}
+    The parameter \textit{mode} is one of the following:
+    \begin{itemize}
+    \item KAAPIC\_MODE\_R for a read access,
+    \item KAAPIC\_MODE\_W for a write access,
+    \item KAAPIC\_MODE\_RW for a read write access,
+    \item KAAPIC\_MODE\_V for a parameter passed by value.
+    \end{itemize}
+    
+    \subsubsection{Type information}
+    \paragraph{}
+    The \textit{type} is one of the following:
+    \begin{itemize}
+    \item KAAPIC\_TYPE\_CHAR,
+    \item KAAPIC\_TYPE\_INT,
+    \item KAAPIC\_TYPE\_REAL,
+    \item KAAPIC\_TYPE\_DOUBLE.
+    \end{itemize}
+    
+    \paragraph{}
+    If a parameter is an array, \textit{count} must be set to the number of the element of the array.
+    For a scalar value, it must be set to 1.
+    
+  \end{params}
+    
+  
+  \begin{ret}
+    None.
+  \end{ret}
 
-\subsubsection{Format of each 4 successive arguments}
-\paragraph{}
-Each task parameter is described by 4 successive arguments including:
-\begin{itemize}
-\item the access \textit{mode}.
-\item the argument \textit{value},
-\item the element \textit{cound},
-\item the parameter \textit{type}
-\end{itemize}
-
-\subsubsection{Mode information}
-\paragraph{}
-The parameter \textit{mode} is one of the following:
-\begin{itemize}
-\item KAAPIC\_MODE\_R=0 for a read access,
-\item KAAPIC\_MODE\_W=1 for a write access,
-\item KAAPIC\_MODE\_RW=2 for a read write access,
-\item KAAPIC\_MODE\_V=3 for a parameter passed by value.
-\end{itemize}
-
-\subsubsection{Type information}
-\paragraph{}
-The \textit{type} is one of the following:
-\begin{itemize}
-\item KAAPIC\_TYPE\_CHAR=0,
-\item KAAPIC\_TYPE\_INT=1,
-\item KAAPIC\_TYPE\_REAL=2,
-\item KAAPIC\_TYPE\_DOUBLE=3.
-\end{itemize}
-
-\paragraph{}
-If a parameter is an array, \textit{count} must be set to the number of the element of the array.
-For a scalar value, it must be set to 1.
-
-
-\subsection{Parameters}
-\begin{itemize}
-\item \textit{nargs}: the argument count.
-\item \textit{...}: the \textit{body} followed by a \textit{mode}, \textit{value}, \textit{count} , \textit{type}  tuple list.
-\end{itemize}
-
-\subsection{Return value}
-\paragraph{}
-None.
-
-\subsection{Example}\label{fibo}
-\paragraph{}
-Refer to examples/kaapif/dfg
-
-\begin{small}
-\begin{lstlisting}[frame=tb]
+  \begin{example}\label{fibo}
+    \paragraph{}
+    Refer to examples/kaapif/dfg subdirectory in sources
+    
+    \begin{code}
   /* computation task entry point */
   void fibonacci(int n, int* result)
   {
@@ -524,44 +581,38 @@ Refer to examples/kaapif/dfg
     printf("Time : %f (us)\n", stop-start );
     kaapic_finalize();
   }
-\end{lstlisting}
-\end{small}
+    \end{code}
+  \end{example}
+\end{apisection}
 
 
-\newpage
-\section{Parallel regions}
+%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{apisection}[parallel]{Parallel regions}
 
-\subsection{Synopsis}
-\begin{small}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
-\begin{lstlisting}[frame=tb]
+  \begin{synopsis}
+    \begin{code}
 int kaapic_begin_parallel(void)
-int kaapic_end_parallel( int flag )
-\end{lstlisting}
-\end{small}
-
-\subsection{Description}
-\paragraph{}
-\textit{kaapic\_begin\_parallel} and \textit{kaapic\_end\_parallel} mark the
-start and the end of a parallel region. Regions are used to wakeup and suspend
-the \kaapi system threads so they avoid disturbing the application when idle.
-This is important if another parallel library is being used. Wether threads
-are suspendable or not is controlled according by the \textit{kaapi\_init} parameter.
-
-\subsection{Parameters}
-\begin{itemize}
-\item \textit{falg}: if zero, an implicit synchronization is inserted before leaving the region.
-\end{itemize}
-
-\subsection{Return value}
-\paragraph{}
-None.
-
-\subsection{Example}
-\paragraph{}
-\begin{small}
-\begin{lstlisting}[frame=tb]
+int kaapic_end_parallel(int flag)
+    \end{code}
+  \end{synopsis}
+  \begin{desc}
+    \fn{kaapic\_begin\_parallel} and \fn{kaapic\_end\_parallel} mark
+    the start and the end of a parallel region. Regions are used to
+    wakeup and suspend the \kaapi system threads so they avoid
+    disturbing the application when idle.  This is important if
+    another parallel library is being used. Wether threads are
+    suspendable or not is controlled according by the \fn{kaapi\_init}
+    parameter.
+  \end{desc}
+  \begin{params}
+    \param{falg} if zero, an implicit synchronization is inserted
+    before leaving the region.
+  \end{params}
+  \begin{ret}
+    None.
+  \end{ret}
+  \begin{example}
+    \begin{code}
   int main()
   {
     int err = kaapic_init(1);
@@ -572,35 +623,32 @@ None.
     ...
 
   }
-\end{lstlisting}
-\end{small}
+    \end{code}
+  \end{example}
+\end{apisection}
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%
 \newpage
-\section{Synchronization}
+\begin{apisection}[sync]{Synchronization}
 
-\subsection{Synopsis}
-\begin{small}
-\lstset{commentstyle=\color{blue}}
-\lstset{language=C}
-\begin{lstlisting}[frame=tb]
+  \begin{synopsis}
+    \begin{code}
 void kaapic_sync(void)
-\end{lstlisting}
-\end{small}
+    \end{code}
+  \end{synopsis}
 
-\subsection{Description}
-\paragraph{}
-Synchronize the sequential with the parallel execution flow. When this routine
-returns, every computation task has been executed and memory is consistent for
-the processor executing the sequential flow.
-
-\subsection{Return value}
-\paragraph{}
-None.
-
-\subsection{Example}
-\paragraph{}
-Refer to the Fibonacci example in section~\ref{fibo}.
-
+  \begin{desc}
+    Synchronize the sequential with the parallel execution flow. When
+    this routine returns, every computation task has been executed and
+    memory is consistent for the processor executing the sequential
+    flow.
+  \end{desc}
+  \begin{ret}
+    None.
+  \end{ret}
+  \begin{example}
+    Refer to the Fibonacci example in section~\apirefp[example]{dataflow}.
+  \end{example}
+\end{apisection}
 
 \end{document}
