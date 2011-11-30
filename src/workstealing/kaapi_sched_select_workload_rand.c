@@ -137,7 +137,7 @@ static int kaapi_select_victim_workload(
 #endif
     int idx = rand_r( (unsigned int*)&self_kproc->seed ) % MAX_SKPROC;
     victim->kproc = max_kproc[ idx ];
-    return 0;
+    return max_kproc[ idx ] == 0 ? EINVAL : 0;
   }
   return EINVAL;
 }
