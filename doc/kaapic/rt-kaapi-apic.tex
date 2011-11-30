@@ -334,14 +334,15 @@ int kaapic_foreach_withformat(
 
     At runtime, the initial interval is dynamically split in $K$
     disjoint intervals $[b_i, e_i)$ such that $\cup_{i=0..K-1} [b_i,
-    e_i) = [first, last)$. For each of these sub-intervals, \kaapi calls
-    by several threads \textit{body( $b_i$, $e_i$, tid, $e_0$, ...,
-      $e_{nparam-1}$)} where \textit{tid} is the thread identifier
-    that makes the call.
+    e_i) = [first, last)$. The \kaapi threads call \textit{body(
+      $b_i$, $e_i$, tid, $e_0$, ..., $e_{nparam-1}$)} for each of
+    these sub-intervals. Hence, \textit{tid} is the thread identifier
+    of the thread that makes the call. And the different calls can
+    occur in parallel if they are done by different threads.
 
-    If not null, \textit{attr} is a pointer to an attribute that can be
-    pass tuning parameter to the runtime. Please, see
-    \fn{kaapic\_foreach\_attr\_set\_grains}.
+    \textit{attr} is a pointer to an attribute that can be
+    pass tuning parameter to the runtime. It should be null for now,
+    until future extensions are developed and stabilized.
   \end{desc}
 
   \begin{params}
