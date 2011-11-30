@@ -92,16 +92,16 @@ Thierry Gautier
 
 \kaapi is both a programming model and a runtime for high performance parallelism targeting multicore and distributed architectures. 
 It relies on the work stealing paradigm.
-\kaapi was developed in the MOAIS INRIA project by Thierry Gautier, Fabien Le Mentec, Vincent Danjean and Christophe Laferrière in the early stage of the library.
+\kaapi was developed in the MOAIS INRIA project by Thierry Gautier, Fabien Le Mentec, Vincent Danjean, and Christophe Laferrière in the early stage of the library.
 
 In this report, only the programming model based on the C API is presented.
-The runtime library comes also with a full set of complementary programming interfaces: C, C++ and STL-like interfaces. The C++ and STL interfaces, at a higher level than the C interface, may be directly used for developing parallel programs or libraries.
+The runtime library also comes with a full set of complementary programming interfaces: C, C++, and STL-like interfaces. The C++ and STL interfaces, at a higher level than the C interface, may be directly used for developing parallel programs or libraries.
 
 \subsubsection*{Supported Platforms}
 \kaapi targets essentially SMP and NUMA platforms. The runtime should run
 on any system providing:
 \begin{itemize}
-\item a GNU toolchain (4.3),
+\item a GNU toolchain ($\textrm{GCC} \ge 4.3$),
 \item the pthread library,
 \item Unix based environment.
 \end{itemize}
@@ -143,7 +143,7 @@ corresponding \textit{kaapic\_finalize} at the end of the program.
 
 \subsection{Parameters}
 \begin{itemize}
-\item \textit{flags}: if not zero, start only the main thread to avoid disturbing
+\item \textit{flags}: if not zero, only start the main thread to avoid disturbing
 the execution until tasks are actually scheduled. The other threads are suspended
 waiting for a parallel region to be entered (refer to kaapic\_begin\_parallel).
 \end{itemize}
