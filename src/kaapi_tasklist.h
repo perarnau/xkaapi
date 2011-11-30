@@ -780,7 +780,7 @@ extern int kaapi_tasklist_pushready_td(
 );
 
 /** Activate and push ready tasks of an activation link.
-    Return 1 if at least one ready task has been pushed into local ready queue.
+    Return the number of ready tasks that have been activated. into local ready queue.
     Else return 0.
 */
 static inline int kaapi_thread_tasklistready_pushactivated( 
@@ -788,14 +788,16 @@ static inline int kaapi_thread_tasklistready_pushactivated(
     kaapi_activationlink_t* head 
 )
 {
-  kaapi_readytasklist_t*  rtl = &tasklist->rtl;
+//  kaapi_readytasklist_t*  rtl = &tasklist->rtl;
   kaapi_taskdescr_t* td;
+  int retval =0;
   
   while (head !=0)
   {
     td = head->td;
     if (kaapi_taskdescr_activated(td))
     {
+      ++retval;
       kaapi_tasklist_pushready_td( 
               tasklist, 
               td, 
@@ -807,7 +809,7 @@ static inline int kaapi_thread_tasklistready_pushactivated(
     }
     head = head->next;
   }
-  return 0 != kaapi_bitmap_value_empty_32(&rtl->task_pushed);
+  return retval; //0 != kaapi_bitmap_value_empty_32(&rtl->task_pushed);
 }
 
 

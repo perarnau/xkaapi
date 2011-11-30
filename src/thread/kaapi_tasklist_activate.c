@@ -88,8 +88,10 @@ int kaapi_tasklist_pushready_td(
 )
 {
   int nodeid;
+#if 0 /* desactivate this portion of code if you do not want push on remote queue */
   kaapi_bitmap_value32_t ocr = td->ocr;
   uintptr_t addr = 0;
+#endif
   kaapi_ws_queue_t* queue = 0;
   kaapi_task_t* task;
 #if defined(KAAPI_TASKLIST_POINTER_TASK)
@@ -99,7 +101,7 @@ int kaapi_tasklist_pushready_td(
 #endif
 
 
-#if 1 /* desactivate this portion of code if you do not want push on remote queue */
+#if 0 /* desactivate this portion of code if you do not want push on remote queue */
 
   /* if non local -> push on remote queue ? 
      - first find a memory address where to get numa information

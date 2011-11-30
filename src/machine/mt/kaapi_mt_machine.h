@@ -772,6 +772,20 @@ static inline void kaapi_processor_set_workload(kaapi_processor_t* kproc, uint32
 
 /**
 */
+static inline void kaapi_processor_incr_workload(kaapi_processor_t* kproc, uint32_t value) 
+{
+  KAAPI_ATOMIC_ADD(&kproc->workload, value);
+}
+
+/**
+*/
+static inline void kaapi_processor_decr_workload(kaapi_processor_t* kproc, uint32_t value) 
+{
+  KAAPI_ATOMIC_SUB(&kproc->workload, value);
+}
+
+/**
+*/
 static inline void kaapi_processor_set_self_workload(uint32_t workload) 
 {
   KAAPI_ATOMIC_WRITE(&kaapi_get_current_processor()->workload, workload);
