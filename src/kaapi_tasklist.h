@@ -897,7 +897,7 @@ static inline int kaapi_thread_tasklist_commit_ready( kaapi_tasklist_t* tasklist
       int ith = kaapi_bitmap_first1_and_zero_32( &tasklist->rtl.task_pushed ) -1;
 
 kaapi_processor_incr_workload(kaapi_get_current_processor(), 
-    kaapi_workqueue_range_begin( &tasklist->rtl.prl[ith].wq ) - 1+tasklist->rtl.prl[ith].next
+    kaapi_workqueue_range_begin( &tasklist->rtl.prl[ith].wq ) - (1+tasklist->rtl.prl[ith].next)
 );
       /* do not keep tasklist->next for local exec */
       kaapi_workqueue_push(&tasklist->rtl.prl[ith].wq, 1+tasklist->rtl.prl[ith].next); 
@@ -936,7 +936,7 @@ static inline kaapi_taskdescr_t* kaapi_thread_tasklist_commit_ready_and_steal(
         td_steal = onertl->base[++onertl->next];
       }
 kaapi_processor_incr_workload(kaapi_get_current_processor(), 
-    kaapi_workqueue_range_begin( &onertl->wq ) - 1+onertl->next
+    kaapi_workqueue_range_begin( &onertl->wq ) - (1+onertl->next)
 );
       kaapi_workqueue_lock( &onertl->wq );
       kaapi_workqueue_push(&onertl->wq, 1+onertl->next); 
