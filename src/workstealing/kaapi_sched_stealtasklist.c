@@ -180,6 +180,7 @@ void kaapi_sched_stealtasklist(
     err = kaapi_workqueue_steal(&onertl->wq, &steal_beg, &steal_end, size_steal);
     if (err ==0) 
     {
+      kaapi_processor_decr_workload( thread->stack.proc, steal_end-steal_beg );
       steal_td_beg = onertl->base + steal_beg;
       steal_td_end = onertl->base + steal_end;
       kaapi_task_splitter_readylist( 
