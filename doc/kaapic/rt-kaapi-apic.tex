@@ -241,7 +241,7 @@ int kaapic_get_thread_num(void)
   \end{desc}
   \begin{ret}
     \fn{kaapic\_get\_concurrency} returns the number of parallel
-    thread available to the \kaapi runtime.
+    threads available to the \kaapi runtime.
 
     \otherret
     \fn{kaapic\_get\_thread\_num} returns the current thread
@@ -293,7 +293,7 @@ double kaapic_get_time(void)
     ...
     stop = kaapi_get_time();
 
-    printf("Time : %f (us)\n", stop-start );
+    printf("Time : %f (s)\n", stop-start );
     kaapic_finalize();
   }
     \end{code}
@@ -334,13 +334,13 @@ int kaapic_foreach_withformat(
 
     At runtime, the initial interval is dynamically split in $K$
     disjoint intervals $[b_i, e_i)$ such that $\cup_{i=0..K-1} [b_i,
-    e_i) = [first, last)$. For each of this sub-interval, \kaapi calls
+    e_i) = [first, last)$. For each of these sub-intervals, \kaapi calls
     by several threads \textit{body( $b_i$, $e_i$, tid, $e_0$, ...,
       $e_{nparam-1}$)} where \textit{tid} is the thread identifier
-    that made the call.
+    that makes the call.
 
-    If not null, \textit{attr} is a pointer to an attribut that can be
-    pass tuning parameter to the runtime. Please see
+    If not null, \textit{attr} is a pointer to an attribute that can be
+    pass tuning parameter to the runtime. Please, see
     \fn{kaapic\_foreach\_attr\_set\_grains}.
   \end{desc}
 
@@ -353,8 +353,7 @@ int kaapic_foreach_withformat(
       Each type \textit{type$_i$} could be:
       \begin{itemize}
       \item a pointer to a memory data
-      \item a scalar value with size not bigger that the size of a
-        pointer.
+      \item a scalar value with size equal to the size of a pointer.
       \end{itemize}
     
       \param{$e_0$} first effective parameter passed to \fn{body}.
@@ -374,8 +373,7 @@ int kaapic_foreach_withformat(
       Each type \textit{type$_i$} could be:
       \begin{itemize}
       \item a pointer to a memory data
-      \item a scalar value with size not bigger that the size of a
-        pointer.
+      \item a scalar value with size equal to the size of a pointer.
       \end{itemize}
       
     \param{mode, $e_0$, count, type} access mode, first effective
@@ -419,7 +417,7 @@ int kaapic_foreach_withformat(
     kaapic_foreach( 0, size, 2, body, array, &value );
     stop = kaapi_get_time(); 
 
-    printf("Time : %f (us)\n", stop-start );
+    printf("Time : %f (s)\n", stop-start );
     kaapic_finalize();
   }
     \end{code}
@@ -449,7 +447,7 @@ int kaapic_foreach_withformat(
     );
     stop = kaapi_get_time(); 
 
-    printf("Time : %f (us)\n", stop-start );
+    printf("Time : %f (s)\n", stop-start );
     kaapic_finalize();
   }
     \end{code}
@@ -476,7 +474,7 @@ int kaapic_spawn(int32_t nargs, ...)
       Each type \textit{type$_i$} could be:
       \begin{itemize}
       \item a pointer to a memory data
-      \item a scalar value with size not bigger that the size of a pointer.
+      \item a scalar value with size equal to the size of a pointer.
       \end{itemize}
     \end{description}
     
@@ -578,7 +576,7 @@ int kaapic_spawn(int32_t nargs, ...)
     );
     stop = kaapi_get_time(); 
 
-    printf("Time : %f (us)\n", stop-start );
+    printf("Time : %f (s)\n", stop-start );
     kaapic_finalize();
   }
     \end{code}
@@ -598,9 +596,9 @@ int kaapic_end_parallel(int flag)
   \begin{desc}
     \fn{kaapic\_begin\_parallel} and \fn{kaapic\_end\_parallel} mark
     the start and the end of a parallel region. Regions are used to
-    wakeup and suspend the \kaapi system threads so they avoid
+    wake-up and suspend the \kaapi system threads so they avoid
     disturbing the application when idle.  This is important if
-    another parallel library is being used. Wether threads are
+    another parallel library is being used. Whether threads are
     suspendable or not is controlled according by the \fn{kaapi\_init}
     parameter.
   \end{desc}
@@ -628,7 +626,6 @@ int kaapic_end_parallel(int flag)
 \end{apisection}
 
 %%%%%%%%%%%%%%%%%%%%%%%%
-\newpage
 \begin{apisection}[sync]{Synchronization}
 
   \begin{synopsis}
@@ -652,3 +649,5 @@ void kaapic_sync(void)
 \end{apisection}
 
 \end{document}
+
+%  LocalWords:  runtime
