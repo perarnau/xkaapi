@@ -764,8 +764,6 @@ static inline int kaapi_readylist_pushone_td( kaapi_readytasklist_t* rtl, kaapi_
   kaapi_bitmap_value_set_32(&rtl->task_pushed, priority);
   KAAPI_DEBUG_INST( if (rtl->max_task < -local_beg) rtl->max_task = -local_beg  );
 
-kaapi_processor_incr_workload(kaapi_get_current_processor(), 1);
-
   return priority;
 }
 
@@ -898,8 +896,12 @@ static inline int kaapi_thread_tasklist_commit_ready( kaapi_tasklist_t* tasklist
     {
       int ith = kaapi_bitmap_first1_and_zero_32( &tasklist->rtl.task_pushed ) -1;
 
+kaapi_processor_incr_workload(kaapi_get_current_processor(), 
+    kaapi_workqueue_range_begin( &tasklist->rtl.prl[ith].wq ) - 1+tasklist->rtl.prl[ith].next
+);
       /* do not keep tasklist->next for local exec */
       kaapi_workqueue_push(&tasklist->rtl.prl[ith].wq, 1+tasklist->rtl.prl[ith].next); 
+
     }
     //kaapi_atomic_unlock( &tasklist->thread->stack.lock );
     kaapi_bitmap_value_clear_32(&tasklist->rtl.task_pushed);
@@ -933,9 +935,12 @@ static inline kaapi_taskdescr_t* kaapi_thread_tasklist_commit_ready_and_steal(
         kaapi_assert_debug( ((1+onertl->next)< 0) && ((onertl->next+1) >= -onertl->size) );
         td_steal = onertl->base[++onertl->next];
       }
-      kaapi_atomic_lock( onertl->wq.lock );
+kaapi_processor_incr_workload(kaapi_get_current_processor(), 
+    kaapi_workqueue_range_begin( &onertl->wq ) - 1+onertl->next
+);
+      kaapi_workqueue_lock( &onertl->wq );
       kaapi_workqueue_push(&onertl->wq, 1+onertl->next); 
-      kaapi_atomic_unlock( onertl->wq.lock );
+      kaapi_workqueue_unlock( &onertl->wq );
     }
   }
 
