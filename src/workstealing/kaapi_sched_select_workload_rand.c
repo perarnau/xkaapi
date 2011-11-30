@@ -129,6 +129,7 @@ static int kaapi_select_victim_workload(
   if (max_index !=0) 
 #endif
   {
+#if 0
     if (max_index >1)
     {
       printf("%i:: workload[%i:%i, %i:%i, %i:%i, %i:%i]\n", self_kproc->kid, 
@@ -138,6 +139,7 @@ static int kaapi_select_victim_workload(
           max_kproc[3]->kid, max_workload[3]
       );
     }
+#endif
     int idx = rand_r( (unsigned int*)&self_kproc->seed ) % MAX_SKPROC;
     victim->kproc = max_kproc[ idx ];
     return 0;

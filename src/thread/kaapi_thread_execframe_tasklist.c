@@ -188,8 +188,10 @@ printf("EWOULDBLOCK case 1\n");
       if (td->u.acl.bcast !=0) 
         cnt_pushed += kaapi_thread_tasklistready_pushactivated( tasklist, td->u.acl.bcast->front );
       
+#if 0
       if (cnt_pushed !=0)
         kaapi_processor_incr_workload( stack->proc, cnt_pushed );
+#endif
     }
     
     /* recv incomming synchronisation 
