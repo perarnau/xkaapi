@@ -151,7 +151,13 @@ AC_DEFUN([KAAPI_FEATURE], [dnl
   m4_if([$7],[],[],[
     AM_CONDITIONAL([$7], [test x"$VAR" != x"no"])
   ])
+  FEATURE_RESUME="${FEATURE_RESUME}
+  $2    => $VAR"
   m4_popdef([VAR])
+])
+
+AC_DEFUN([KAAPI_FEATURE_RESUME], [dnl
+  AC_MSG_NOTICE([Selected features in this release:$FEATURE_RESUME])
 ])
 
 dnl ******************************************************************

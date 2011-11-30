@@ -931,4 +931,5 @@ for flag in CC CXX CFLAGS CPPFLAGS CXXFLAGS; do
 done
 AC_MSG_NOTICE([Compilers and default flags used:$list])
 AC_MSG_NOTICE([*************************************])
-
+KAAPI_FEATURE_RESUME
+AC_MSG_NOTICE([*************************************])
