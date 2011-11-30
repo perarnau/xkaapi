@@ -50,94 +50,34 @@ static int kaapi_select_victim_workload(
   kaapi_victim_t* victim 
 )
 {  
-  int count;
-  kaapi_processor_t* max_kproc[MAX_SKPROC] = {0,0,0,0};
-  uint32_t max_workload[MAX_SKPROC] = {0,0,0,0};
+  int32_t cur_workload;
   int k;
-  int max_index = 0;
   
-redo_select:
-  count = kaapi_count_kprocessors/4;
-  if (count ==0) count = kaapi_count_kprocessors;
-  for (k = 0; k < count; ++k)
+  while (1)
   {
-    kaapi_processor_t* const cur_kproc = kaapi_all_kprocessors[ 
-        rand_r( (unsigned int*)&self_kproc->seed ) %kaapi_count_kprocessors ];
+    kaapi_processor_t* max_kproc =0;
+    uint32_t max_workload= 0;
     
-    if ((cur_kproc == NULL) || (cur_kproc == self_kproc))
-      continue ;
-    
-    /* swap if more or equally loaded */
+    for (k = 0; k < 3; ++k)
     {
-      const uint32_t cur_workload = KAAPI_ATOMIC_READ(&cur_kproc->workload);
+      kaapi_processor_t* const victim_kproc = kaapi_all_kprocessors[ 
+          rand_r( (unsigned int*)&self_kproc->seed ) %kaapi_count_kprocessors ];
       
-      if (cur_workload > max_workload[0])
+      if ((victim_kproc == NULL) || (victim_kproc == self_kproc))
+        continue ;
+      
+      /* swap if more or equally loaded */
+      cur_workload = kaapi_processor_get_workload(victim_kproc);
+      
+      if (cur_workload > max_workload)
       {
-        int i;
-        for (i=3; i>0; --i)
-        {
-          max_kproc[i]    = max_kproc[i-1];
-          max_workload[i] = max_workload[i-1];
-        }
-        max_kproc[0]    = cur_kproc;
-        max_workload[0] = cur_workload;
+        max_kproc    = victim_kproc;
+        max_workload = cur_workload;
       }
-      else if (cur_workload > max_workload[1])
-      {
-        int i;
-        for (i=3; i>1; --i)
-        {
-          max_kproc[i]    = max_kproc[i-1];
-          max_workload[i] = max_workload[i-1];
-        }
-        max_kproc[1]    = cur_kproc;
-        max_workload[1] = cur_workload;
-      }
-      else if (cur_workload > max_workload[2])
-      {
-        int i;
-        for (i=3; i>2; --i)
-        {
-          max_kproc[i]    = max_kproc[i-1];
-          max_workload[i] = max_workload[i-1];
-        }
-        max_kproc[2]    = cur_kproc;
-        max_workload[2] = cur_workload;
-      }      
-      else if (cur_workload > max_workload[3])
-      {
-        max_kproc[3]    = cur_kproc;
-        max_workload[3] = cur_workload;
-      }      
     }
-  }
-  
-  /* found a victim ? */
-  if (max_workload[3] !=0)
-    max_index = 4;
-  else if (max_workload[2] !=0)
-    max_index = 3;
-  else if (max_workload[1] !=0)
-    max_index = 2;
-  else if (max_workload[0] !=0)
-    max_index = 1;
-#if 0
-  if (max_index !=0) 
-#endif
-  {
-    if (max_index >1)
-    {
-      printf("%i:: workload[%i:%i, %i:%i, %i:%i, %i:%i]\n", self_kproc->kid, 
-          max_kproc[0]->kid, max_workload[0],
-          max_kproc[1]->kid, max_workload[1],
-          max_kproc[2]->kid, max_workload[2],
-          max_kproc[3]->kid, max_workload[3]
-      );
-    }
-    int idx = rand_r( (unsigned int*)&self_kproc->seed ) % MAX_SKPROC;
-    victim->kproc = max_kproc[ idx ];
-    if  (max_kproc[ idx ] == 0) 
-      goto redo_select;
+    
+    victim->kproc = max_kproc;
+    if  (max_kproc != 0) return 0;
   }
   return EINVAL;
 }
