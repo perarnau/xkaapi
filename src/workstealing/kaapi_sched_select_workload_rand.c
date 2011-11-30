@@ -131,11 +131,11 @@ static int kaapi_select_victim_workload(
   {
     if (max_index >1)
     {
-      printf("%i:: workload[%i, %i, %i, %i]\n", self_kproc->kid, 
-          max_workload[0],
-          max_workload[1],
-          max_workload[2],
-          max_workload[3]
+      printf("%i:: workload[%i:%i, %i:%i, %i:%i, %i:%i]\n", self_kproc->kid, 
+          max_kproc[0]->kid, max_workload[0],
+          max_kproc[1]->kid, max_workload[1],
+          max_kproc[2]->kid, max_workload[2],
+          max_kproc[3]->kid, max_workload[3]
       );
     }
     int idx = rand_r( (unsigned int*)&self_kproc->seed ) % MAX_SKPROC;
