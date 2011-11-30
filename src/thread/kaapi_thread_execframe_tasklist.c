@@ -108,7 +108,6 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   /* force previous write before next write */
   //kaapi_writemem_barrier();
 KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist = *tasklist; )
-  kaapi_processor_set_workload( stack->proc, kaapi_readylist_workload(&tasklist->rtl) );
 
 #if 0
 redo_while:

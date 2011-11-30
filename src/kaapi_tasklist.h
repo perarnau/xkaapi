@@ -763,6 +763,9 @@ static inline int kaapi_readylist_pushone_td( kaapi_readytasklist_t* rtl, kaapi_
   wq->task_pushed = 1;
   kaapi_bitmap_value_set_32(&rtl->task_pushed, priority);
   KAAPI_DEBUG_INST( if (rtl->max_task < -local_beg) rtl->max_task = -local_beg  );
+
+kaapi_processor_incr_workload(kaapi_get_current_processor(), 1);
+
   return priority;
 }
 
