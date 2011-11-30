@@ -5,7 +5,7 @@
 \usepackage{verbatim}
 \usepackage{listings}
 \usepackage{color}
-%\usepackage{RR,RRthemes}
+\usepackage[utf8]{inputenc}
 \usepackage{RR}
 \usepackage{hyperref}
 
@@ -69,7 +69,7 @@ Thierry Gautier
 
 \RRabstract{This report defines the \kaapi C programming interface.
 }
-\RRresume{The rapport décrit l'interface de programmation C pour \kaapi
+\RRresume{The rapport dÃ©crit l'interface de programmation C pour \kaapi
 }
 
 \RRmotcle{calcul parallel, \kaapi, C}
@@ -92,7 +92,7 @@ Thierry Gautier
 
 \kaapi is both a programming model and a runtime for high performance parallelism targeting multicore and distributed architectures. 
 It relies on the work stealing paradigm.
-\kaapi was developed in the MOAIS INRIA project by Thierry Gautier, Fabien Le Mentec, Vincent Danjean and Christophe Laferrière in the early stage of the library.
+\kaapi was developed in the MOAIS INRIA project by Thierry Gautier, Fabien Le Mentec, Vincent Danjean and Christophe LaferriÃ¨re in the early stage of the library.
 
 In this report, only the programming model based on the C API is presented.
 The runtime library comes also with a full set of complementary programming interfaces: C, C++ and STL-like interfaces. The C++ and STL interfaces, at a higher level than the C interface, may be directly used for developing parallel programs or libraries.
