@@ -11,12 +11,17 @@
 ###################
 /api/atha/athapascan_closure.h
 /api/atha/athapascan_fork.h
+/api/kaapic/kaapic_adaptive_switch.h
+/api/kaapic/kaapic_dfg_switch.h
+/api/kaapif/kaapif_adaptive_switch.h
+/api/kaapif/kaapif_dfg_switch.h
 /api/kaapixx/ka_api_tuple.h
 /api/kaapixx/ka_api_clo.h
 /api/kaapixx/ka_api_spawn.h
 /api/kaapixx/ka_api_reqspawn.h
 /api/kaapixx/ka_api_execforeach.h
 /api/kaapixx/ka_api_execgraph.h
+
 
 ########################
 # Files from bootstrap #
