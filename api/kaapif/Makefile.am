@@ -27,6 +27,7 @@ M4_SRCS=\
   m4_macros
 
 BUILT_SOURCES = $(M4_BUILT_FILES)
+EXTRA_DIST = $(M4_SRCS)
 
 $(M4_BUILT_FILES): stamp-m4_generator
 
