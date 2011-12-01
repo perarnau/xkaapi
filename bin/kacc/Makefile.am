@@ -11,7 +11,7 @@ check_PROGRAMS=$(BIN_PRGS)
 
 all-bfs: $(BIN_PRGS)
 
-kacc_SOURCES=kacc.cpp 
+nodist_kacc_SOURCES=kacc.cpp 
 kacc_CPPFLAGS=$(AM_CPPFLAGS) $(KACC_BUILD_CPPFLAGS)
 kacc_CXXFLAGS=$(AM_CXXFLAGS)
 kacc_LDFLAGS =$(AM_LDFLAGS) 
