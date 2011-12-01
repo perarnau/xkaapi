@@ -39,6 +39,14 @@ if test -d "$prefix" ; then
    fi
 fi
 
+git_repo=yes
+dnl try to find if we are in a git repo
+GIT_LAST_COMMIT="$(cd "$srcdir" ; git log -n 1 --format="format:%H" HEAD 2>/dev/null)"
+if test -z "$GIT_LAST_COMMIT" ; then
+  git_repo=no
+fi
+AM_CONDITIONAL([GIT_REPO],[test $git_repo = yes])
+
 dnl do not change order of --with and --enable options
 AC_PRESERVE_HELP_ORDER
 
