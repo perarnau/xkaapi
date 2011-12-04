@@ -117,7 +117,7 @@
 \definecolor{MyDarkBlue}{rgb}{0.254901960784314, 0.411764705882353, 0.882352941176471}
 
 
-\RRdate{November 2011}
+\RRdate{December 2011}
 
 %%
 \RRauthor{
@@ -141,12 +141,12 @@ Thierry Gautier
 \RRmotcle{calcul parallel, \kaapi, C}
 \RRkeyword{parallel computing, \kaapi, C}
 \RRprojets{MOAIS}
-\RRdomaine{3} % cas du domaine numero 1
-\RRthemeProj{moais} % theme du projet Apics
+%%\RRdomaine{3} % cas du domaine numero 1
+%%\RRthemeProj{moais} % theme du projet Apics
 \RCGrenoble % Grenoble - Rh\^one-Alpes
 
 \begin{document}
-
+ \RRNo{0417}
 % \makeRR % cas d'un rapport de recherche
 \makeRT % cas d'un rapport technique.
 
@@ -190,6 +190,8 @@ If you wish to contact the XKaapi team, please visite the web site at:
 \begin{apisection}[init]{Initialization and termination}
   \begin{synopsis}%
     \begin{code}
+#include "kaapic.h"
+
 int kaapic_init(int flags)
 int kaapic_finalize(void)      
      \end{code}
@@ -215,6 +217,8 @@ int kaapic_finalize(void)
   \end{ret}
   \begin{example}
     \begin{code}
+  #include "kaapic.h"
+
   int main()
   {
     int err = kaapic_init(1);
@@ -232,6 +236,8 @@ int kaapic_finalize(void)
 
   \begin{synopsis}
     \begin{code}
+#include "kaapic.h"
+
 int kaapic_get_concurrency(void)
 int kaapic_get_thread_num(void)
     \end{code}
@@ -250,6 +256,8 @@ int kaapic_get_thread_num(void)
   \end{ret}
   \begin{example}
     \begin{code}
+  #include "kaapic.h"
+
   int main()
   {
     int err = kaapic_init(1);
@@ -271,6 +279,8 @@ int kaapic_get_thread_num(void)
 \begin{apisection}[perf]{Performance}
   \begin{synopsis}
     \begin{code}
+#include "kaapic.h"
+
 double kaapic_get_time(void)
     \end{code}
   \end{synopsis}
@@ -286,6 +296,8 @@ double kaapic_get_time(void)
   \end{ret}
   \begin{example}
     \begin{code}
+  #include "kaapic.h"
+
   int main() {
     double start, stop;
     int err = kaapic_init(1);
@@ -305,6 +317,8 @@ double kaapic_get_time(void)
 
   \begin{synopsis}
     \begin{code}
+#include "kaapic.h"
+
 int kaapic_foreach( 
   int first, 
   int last,
@@ -398,6 +412,8 @@ int kaapic_foreach_withformat(
     Refer to examples/kaapic subdirectory in sources\\
 
     \begin{code}
+  #include "kaapic.h"
+
   /* loop body */
   static void body(
     int i, int j, int tid, double* array, double* value
@@ -425,6 +441,8 @@ int kaapic_foreach_withformat(
 
     The next example is equivalent to the previous:
     \begin{code}
+  #include "kaapic.h"
+
   /* loop body */
   static void body(
     int i, int j, int tid, double* array, double* value
@@ -460,6 +478,8 @@ int kaapic_foreach_withformat(
 \begin{apisection}[dataflow]{Dataflow programming}
   \begin{synopsis}
     \begin{code}
+#include "kaapic.h"
+
 int kaapic_spawn(int32_t nargs, ...)
     \end{code}
   \end{synopsis}
@@ -541,6 +561,8 @@ int kaapic_spawn(int32_t nargs, ...)
     Refer to examples/kaapif/dfg subdirectory in sources
     
     \begin{code}
+  #include "kaapic.h"
+
   /* computation task entry point */
   void fibonacci(int n, int* result)
   {
@@ -590,6 +612,8 @@ int kaapic_spawn(int32_t nargs, ...)
 
   \begin{synopsis}
     \begin{code}
+#include "kaapic.h"
+
 int kaapic_begin_parallel(void)
 int kaapic_end_parallel(int flag)
     \end{code}
@@ -612,6 +636,8 @@ int kaapic_end_parallel(int flag)
   \end{ret}
   \begin{example}
     \begin{code}
+  #include "kaapic.h"
+
   int main()
   {
     int err = kaapic_init(1);
@@ -631,6 +657,8 @@ int kaapic_end_parallel(int flag)
 
   \begin{synopsis}
     \begin{code}
+#include "kaapic.h"
+
 void kaapic_sync(void)
     \end{code}
   \end{synopsis}
