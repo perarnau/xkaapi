@@ -41,6 +41,9 @@
  ** terms.
  ** 
  */
+ 
+//#define USE_KPROC_LOCK  /* defined to use kprocessor lock, else use local lock */
+ 
 #include "kaapi_impl.h"
 
 #warning "TODO: based dependencies on kaapi.h only"
@@ -164,7 +167,10 @@ typedef struct work_info
 typedef struct work
 {
   kaapi_workqueue_t cr __attribute__((aligned(64)));
+#if defined(USE_KPROC_LOCK)
+#else
   kaapi_lock_t      lock;
+#endif
 
 #if CONFIG_TERM_COUNTER
   /* global work counter */
@@ -325,14 +331,19 @@ redo_steal:
   /* perform the actual steal. if the range
      changed size in between, redo the steal
   */
+#if defined(USE_KPROC_LOCK)
   kaapi_assert_debug( vw->cr.lock 
     == &kaapi_get_current_processor()->victim_kproc->lock );
   kaapi_assert_debug( kaapi_atomic_assertlocked(vw->cr.lock) );
-
-  kaapi_atomic_lock(&vw->lock);
+#else
+  _kaapi_workqueue_lock(&vw->cr);
+#endif
   if (kaapi_workqueue_steal(&vw->cr, &i, &j, leaf_count * unit_size))
   {
-    kaapi_atomic_unlock(&vw->lock);
+#if defined(USE_KPROC_LOCK)
+#else
+    _kaapi_workqueue_unlock(&vw->cr);
+#endif
     if ((trials--) == 0)
     {
       leaf_count = 0;
@@ -341,8 +352,11 @@ redo_steal:
 
     goto redo_steal;
   }
+#if defined(USE_KPROC_LOCK)
+#else
   else
-    kaapi_atomic_unlock(&vw->lock);
+    _kaapi_workqueue_unlock(&vw->cr);
+#endif
     
 #if defined(BIG_DEBUG_MACOSX)
     kaapi_workqueue_index_t beg,end;
@@ -414,9 +428,14 @@ skip_workqueue:
       (int)p, (int)q);
     fflush(stdout);
 #endif
+#if defined(USE_KPROC_LOCK)
+    kaapi_workqueue_init_with_lock
+      (&tw->cr, p, q, &kaapi_all_kprocessors[req->ident]->lock);
+#else
     kaapi_atomic_initlock(&tw->lock);
     kaapi_workqueue_init_with_lock
       (&tw->cr, p, q, &tw->lock);
+#endif
     tw->body_f    = vw->body_f;
     tw->body_args = vw->body_args;
     tw->wi = wi;
@@ -473,7 +492,10 @@ static void _kaapic_thief_entrypoint(
 #if defined(KAAPI_DEBUG)
   kaapi_processor_t* kproc = kaapi_get_current_processor();
 #endif
+#if defined(USE_KPROC_LOCK)
   kaapi_assert_debug( &kproc->lock == thief_work->cr.lock );
+#else
+#endif
   kaapi_assert_debug( kproc->kid == tid );
 
   /* while there is sequential work to do */
@@ -493,13 +515,19 @@ static void _kaapic_thief_entrypoint(
       (int)i, (int)j);
     fflush(stdout);
 #endif
+#if defined(USE_KPROC_LOCK)
     kaapi_assert_debug( &kproc->lock == thief_work->cr.lock );
+#else
+#endif
 #if defined(BIG_DEBUG_MACOSX)
     if (first_i == -1) first_i = i;
     last_j = j;
     beforewq = thief_work->cr;
 #endif
+#if defined(USE_KPROC_LOCK)
     kaapi_assert_debug( &kaapi_get_current_processor()->lock == thief_work->cr.lock );
+#else
+#endif
     kaapi_assert_debug( i < j );
 //    printf("%i:: WS/S_pop [%i,%i[\n", kaapi_get_self_kid(), (int)i, (int)j);
 
@@ -642,12 +670,21 @@ int kaapic_foreach_common
   j = i + off + scale;
 
   /* initialize the workqueue */
+#if defined(USE_KPROC_LOCK)
+  kaapi_workqueue_init_with_lock(
+    &w.cr,
+    i, j,
+    &kaapi_all_kprocessors[tid]->lock
+  );
+#else
   kaapi_atomic_initlock(&w.lock);
   kaapi_workqueue_init_with_lock(
     &w.cr, 
     i, j,
     &w.lock
   );
+#endif
+
   w.wa        = &wa;
   w.body_f    = body_f;
   w.body_args = body_args;
@@ -694,14 +731,18 @@ continue_work:
   last_refill_j  = -1;
 #endif
 
+#if defined(USE_KPROC_LOCK)
   kaapi_assert_debug( &kproc->lock == w.cr.lock );
+#endif
   while (kaapi_workqueue_pop(&w.cr, &i, &j, wi.seq_grain) == 0)
   {
 #if defined(BIG_DEBUG_MACOSX)
     beforewq = savewq;
 #endif
 
+#if defined(USE_KPROC_LOCK)
     kaapi_assert_debug( &kproc->lock == w.cr.lock );
+#endif
 #if 0//defined(BIG_DEBUG_MACOSX)
     printf("WS/M_pop [%i,%i[\n", (int)i, (int) j);
     fflush(stdout);
@@ -715,6 +756,9 @@ continue_work:
   }
   kaapi_assert_debug( kaapi_workqueue_isempty(&w.cr) );
 
+  /* here array pop + workqueue_set must be exclusive
+     with respect to thieves
+  */
   _kaapi_workqueue_lock( &w.cr );
   if (work_array_is_empty(&wa))
   {
@@ -731,7 +775,7 @@ continue_work:
   last_refill_i  = i;
   last_refill_j  = j;
 #endif
-  kaapi_workqueue_init(
+  kaapi_workqueue_set(
     &w.cr, 
     (kaapi_workqueue_index_t)i, (kaapi_workqueue_index_t)j
   );

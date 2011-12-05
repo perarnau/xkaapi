@@ -135,6 +135,7 @@ static void common_reducer(work_t* vw, thief_work_t* tw)
 
   /* continue the thief work */
   vw->prefix += tw->prefix;
+#warning "Now may be not safe for concurrent exec"
   kaapi_workqueue_set(&vw->cr, beg, end);
 }
 

@@ -88,6 +88,7 @@ static void common_reducer
   vw->reduce(*vr, *tr, processed);
 
   // continue the thief work
+#warning "Now may be not safe for concurrent exec"
   kaapi_workqueue_set(&vw->_wq, tr->_range._i, tr->_range._j);
 }
 

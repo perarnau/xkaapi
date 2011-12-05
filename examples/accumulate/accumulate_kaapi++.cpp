@@ -406,6 +406,7 @@ static int reducer
   beg = (kaapi_workqueue_index_t)(tw->beg - vw->array);
   end = (kaapi_workqueue_index_t)(tw->end - vw->array);
 
+#warning "Now may be not safe for concurrent exec"
   kaapi_workqueue_set(&vw->cr, beg, end);
 
   return 0;

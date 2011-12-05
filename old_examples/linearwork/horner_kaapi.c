@@ -101,6 +101,7 @@ static void common_reducer(horner_work_t* vw, horner_res_t* tw)
   vw->res = axnb_modp(vw->res, vw->x, n, tw->res);
 
   /* continue the thief work */
+#warning "Now may be not safe for concurrent exec"
   kaapi_workqueue_set(&vw->range.wq, tw->i, tw->j);
 }
 

@@ -682,6 +682,7 @@ static int common_reducer
 
   // work continuation
   if (tres->range.beg != tres->range.end)
+#warning "Now may be not safe for concurrent exec"
     kaapi_workqueue_set(&vres->range, tres->range.beg, tres->range.end);
 
   return 0;
@@ -846,6 +847,7 @@ static unsigned int find_shortest_path_par
     }
 
     // commit the parallel work
+#warning "Now may be not safe for concurrent exec"
     kaapi_workqueue_set(&res.range, 0, (kaapi_workqueue_index_t)res.j);
 
     if (saved_nodes != NULL) free(saved_nodes);
@@ -872,6 +874,7 @@ static unsigned int find_shortest_path_par
 	  // ensure no more parallel work, otherwise
 	  // a thief could be missed during abortion
 	  kaapi_steal_setsplitter(ksc, 0, 0);
+#warning "Now may be not safe for concurrent exec"
 	  kaapi_workqueue_set(pw.range, 0, 0);
 	  goto on_abort;
 	}

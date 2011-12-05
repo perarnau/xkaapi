@@ -179,6 +179,7 @@ static int reducer
   /* otherwise, continue preempted thief work */
   beg = (kaapi_workqueue_index_t)(tw->beg - vw->array);
   end = (kaapi_workqueue_index_t)(tw->end - vw->array);
+#warning "Now may be not safe for concurrent exec"
   kaapi_workqueue_set(&vw->cr, beg, end);
   
   return 0;
@@ -292,6 +293,7 @@ redo_work:
       {
         /* key found, disable stealing... */
         kaapi_steal_setsplitter(sc, 0, 0);
+#warning "Now may be not safe for concurrent exec"
         kaapi_workqueue_set(&work.cr,0,0);
         
         work.res = pos - array;

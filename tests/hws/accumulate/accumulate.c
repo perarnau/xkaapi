@@ -224,6 +224,7 @@ static int reducer
 
   vw->res += tw->res;
 
+#warning "Now may be not safe for concurrent exec"
   kaapi_workqueue_set(&vw->cr, tw->cr.beg, tw->cr.end);
 
   return 0;
