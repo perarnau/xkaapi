@@ -88,7 +88,20 @@ redo_select:
   }
   /* never pass by this function for a processor to steal itself */
   if (kproc == victim.kproc) return KAAPI_REQUEST_S_NOK;
+
+#if 0 // to avoid lock
+  /* quick test to detect if thread has work */
+  if ((victim.kproc->thread ==0)||
+      ( 
+        (kproc->thread->stack.sfp == &kproc->thread->stack.stackframe[1])
+      &&  kaapi_frame_isempty( kproc->thread->stack.sfp ) 
+      ))
+  {
+    (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_FAILED );
+    goto redo_select;
+  }
   kaapi_assert_debug( (victim.kproc->kid >=0) && (victim.kproc->kid <kaapi_count_kprocessors));
+#endif
 
 
   /* (1) 
@@ -127,6 +140,9 @@ redo_select:
 #endif
     kaapi_slowdown_cpu();
   }
+
+  kaapi_sched_unlock(&victim.kproc->lock);
+  return KAAPI_REQUEST_S_NOK;
 
   /* here becomes an aggregator... the trylock has synchronized memory */
   kaapi_listrequest_iterator_init(&victim_stealctxt->lr, &lri);
