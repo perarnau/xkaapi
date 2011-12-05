@@ -5,6 +5,7 @@
       integer*4 size
       real*8 start
       real*8 stop
+      real*8 kaapif_get_time
 
       ! initialize array
       size = 10000 * 48
@@ -15,6 +16,8 @@
       ! init runtime
       call kaapif_init(1)
 
+
+      call kaapif_set_grains(128,128)
       ! parallel loop
       start = kaapif_get_time()
       do i = 1, 100
@@ -40,6 +43,6 @@
       call kaapif_finalize()
 
       ! done
-      write(*, *) stop - start
+      write(*, *) "time:", stop - start, " second(s)"
 
       end program main
