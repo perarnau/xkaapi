@@ -73,9 +73,8 @@ int kaapi_thread_pushtask_adaptive(
 
   sc->msc        = sc; /* self pointer to detect master */
   sc->ktr        = 0;
-  if ( kaapi_task_is_withpreemption(task_adapt) & KAAPI_TASK_S_PREEMPTION)
+  if ( kaapi_task_is_withpreemption(task_adapt) )
   {
-    kaapi_assert_debug( !(task_adapt->u.s.flag & KAAPI_TASK_S_NOPREEMPTION) );
     sc->flag = KAAPI_SC_PREEMPTION;
     /* if preemption, thief list used ... */
     KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
@@ -84,7 +83,6 @@ int kaapi_thread_pushtask_adaptive(
   }
   else /* no preemption */
   {
-    kaapi_assert_debug( !(task_adapt->u.s.flag & KAAPI_TASK_S_PREEMPTION) );
     sc->flag = KAAPI_SC_NOPREEMPTION;
     /* ... otherwise thief count */
     KAAPI_ATOMIC_WRITE(&sc->thieves.count, 0);

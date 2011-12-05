@@ -360,9 +360,7 @@ static inline int kaapi_bitmap_first1_and_zero_64( kaapi_bitmap_value64_t* b )
 static inline int kaapi_bitmap_first1_64( const kaapi_bitmap_value64_t* b )
 {
   /* Note: for WIN32, to have a look at _BitScanForward */
-  int fb = __builtin_ffsl( b->proc64 );
-  if (fb ==0) return 0;
-  return fb;
+  return __builtin_ffsl( b->proc64 );
 }
 
 static inline void kaapi_bitmap_set_low_bits_64( kaapi_bitmap_value64_t* b, unsigned int i)

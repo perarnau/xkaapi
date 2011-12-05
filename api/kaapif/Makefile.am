@@ -39,8 +39,9 @@ clean-local:
 	$(RM) stamp-m4_generator
 
 include_HEADERS=\
-	kaapif.h
-    
+	kaapif.h\
+	kaapif.inc
+
 libkaapif_la_SOURCES=\
 	kaapif.c \
 	kaapif_foreach.c \
