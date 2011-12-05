@@ -41,7 +41,10 @@
 ** terms.
 ** 
 */
-#include "for_each_work.h"
+#include "kaapi++"
+#include <algorithm>
+#include <string.h>
+#include <math.h>
 
 
 /** Description of the example.
@@ -51,50 +54,77 @@
     What is shown in this example.
     
     Next example(s) to read.
-*/
+*/  
 
 
-/** Simple thief task that only do sequential computation
-*/
+/* task signature */
 template<typename T, typename OP>
-struct TaskBodyCPU<TaskThief<T, OP> > {
-  void operator() ( ka::range1d_rw<T> range, OP op)
+struct TaskForEachTerminal : public ka::Task<2>::Signature<ka::RPWP<ka::range1d<T> >, OP> {};
+
+/* CPU implementation */
+template<typename T, typename OP>
+struct TaskBodyCPU<TaskForEachTerminal<T, OP> > {
+  void operator() ( ka::range1d_rpwp<T> range, OP op) 
   {
     std::for_each( range.begin(), range.end(), op );
   }
 };
 
 
+/* task signature */
+template<typename T, typename OP>
+struct TaskForEach : public ka::Task<2>::Signature< ka::RPWP<ka::range1d<T> >, OP> {};
+
+/* CPU implementation */
+template<typename T, typename OP>
+struct TaskBodyCPU<TaskForEach<T, OP> > {
+  void operator() ( ka::range1d_rpwp<T> range, OP op) 
+  {
+    int size = range.size();
+#define CONFIG_SEQ_GRAIN 256
+    if (size < CONFIG_SEQ_GRAIN)
+      ka::Spawn<TaskForEachTerminal<T,OP> >()( range, op );
+    else {
+      int med = size/2;
+      ka::Spawn<TaskForEach<T,OP> >()( range(ka::rangeindex(0,med)), op );
+      ka::Spawn<TaskForEach<T,OP> >()( range(ka::rangeindex(med,size)), op );
+    }
+  }
+};
+
+/* Splitter for CPU implementation */
+template<typename T, typename OP>
+struct TaskSplitter<TaskForEach<T, OP> > {
+  void operator() ( ka::StealContext* sc, 
+                    int nreq, ka::ListRequest::iterator begin, ka::ListRequest::iterator end,
+                    ka::range1d_rpwp<T> range, OP op
+                  ) 
+  {
+    /* concurrent with TaskBodyCPU !!! */
+    int size = range.size();
+    int unit_size = size / nreq;
+    if (unit_size ==0)
+      nreq = size;
+      
+    for ( int i; begin != end; ++begin, ++i)
+    {
+      ka::Request* req = *begin;
+      req->Spawn<TaskForEach<T, OP> >(sc)( ka::range1d<T>(range.begin()+i*unit_size, unit_size), op );
+      req->commit();
+    }
+  }
+};
+
 
 /* For each main function */
 template<typename T, class OP>
-static void for_each( T* beg, T* end, OP op )
+void for_each( T* beg, T* end, OP op )
 {
-  /* range to process */
-  ka::StealContext* sc;
-  Work<T,OP> work(beg, end, op);
+  ka::range1d<T> range(beg, end-beg);
+  ka::Spawn<TaskForEach<T,OP> >()( range, op);
 
-  /* push an adaptive task */
-  sc = ka::TaskBeginAdaptive(
-        /* flag: concurrent which means concurrence between extrac_seq & splitter executions */
-          KAAPI_SC_CONCURRENT 
-        /* flag: no preemption which means that not preemption will be available (few ressources) */
-        | KAAPI_SC_NOPREEMPTION, 
-        /* use a wrapper to specify the method to used during parallel split */
-        &ka::WrapperSplitter<Work<T,OP>,&Work<T,OP>::split>,
-        &work
-  );
-  
-  /* while there is sequential work to do*/
-  while (work.extract_seq(beg, end))
-  {
-    /* apply w->op foreach item in [pos, end[ */
-    std::for_each( beg, end, op );
-  }
-  
-  /* wait for thieves */
-  ka::TaskEndAdaptive(sc);
-  /* here: 1/ all thieves have finish their result */
+  /* here: wait all thieves have finish their result */
+  ka::Sync();
 }
 
 
@@ -102,8 +132,9 @@ static void for_each( T* beg, T* end, OP op )
 */
 void apply_cos( double& v )
 {
-  v += cos(v);
+  v = cos(v);
 }
+
 
 /* My main task */
 struct doit {

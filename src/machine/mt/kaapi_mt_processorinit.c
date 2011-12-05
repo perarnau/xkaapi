@@ -116,8 +116,8 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   kproc->eventbuffer     = 0;
   
   /* workload */
-  kproc->workload._counter= 0;
-  
+  kaapi_processor_set_workload(kproc, 0);
+
   /* seed */
   kproc->seed_data = rand();
 

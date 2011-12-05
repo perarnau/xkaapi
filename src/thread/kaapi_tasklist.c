@@ -100,6 +100,7 @@ extern int kaapi_tasklist_destroy( kaapi_tasklist_t* tl )
   }
   kaapi_allocator_destroy( &tl->td_allocator );
   kaapi_allocator_destroy( &tl->allocator );
+  kaapi_atomic_destroylock(&tl->lock);
   return 0;
 }
 

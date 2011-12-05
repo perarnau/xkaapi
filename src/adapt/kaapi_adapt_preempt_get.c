@@ -46,27 +46,9 @@
 
 /**
 */
-struct kaapi_thief_iterator_t* kaapi_thiefiterator_head( kaapi_task_t* task )
-{
-  kaapi_taskadaptive_arg_t* adapt_arg = kaapi_task_getargst(task, kaapi_taskadaptive_arg_t);
-  kaapi_assert_debug( kaapi_task_is_splittable(task) );
-  kaapi_assert_debug( kaapi_task_is_withpreemption(task) );
-  kaapi_assert_debug( task->body == (kaapi_task_body_t)kaapi_taskadapt_body );
-  kaapi_stealcontext_t* sc = (kaapi_stealcontext_t*)adapt_arg->shared_sc.data;
-  
-  kaapi_atomic_waitlock(&sc->thieves.list.lock);
-  
-  /* only the owner can iterate through the list.
-     head is always a valid pointer (if read was atomic) 
-  */
-  return (struct kaapi_thief_iterator_t*)sc->thieves.list.head;
-}
-
-/**
-*/
-struct kaapi_thief_iterator_t* kaapi_thiefiterator_next( struct kaapi_thief_iterator_t* pos )
+kaapi_task_t* kaapi_thiefiterator_get( struct kaapi_thief_iterator_t* pos )
 {
   kaapi_thiefadaptcontext_t* arg = (kaapi_thiefadaptcontext_t*)pos;
   /* next is always a valid pointer (if read was atomic) */
-  return (struct kaapi_thief_iterator_t*)arg->next;
+  return arg->thief_task;
 }

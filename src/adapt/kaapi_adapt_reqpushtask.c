@@ -45,101 +45,44 @@
 #include "kaapi_impl.h"
 
 
-int kaapi_request_pushtask(kaapi_request_t* request)
+int kaapi_request_pushtask(kaapi_request_t* request, kaapi_task_t* victim_task )
 {
+  kaapi_task_t* toptask;
+  kaapi_task_t* signaltask;
+  kaapi_stealcontext_t* victim_sc;
+  
   kaapi_assert_debug( request !=0 );
   /* this a reply to a steal request: do not allow to steal first again the task */
   kaapi_task_set_unstealable(request->frame.sp);
-  --request->frame.sp;
+  
+  if (victim_task !=0)
+  {
+    if (kaapi_task_is_withpreemption(victim_task))
+    {
+      /* push a non adaptive task, but with preemption = used general pushtask_adaptive */
+      return kaapi_request_pushtask_adaptive(request, victim_task, 0, KAAPI_REQUEST_REPLY_TAIL);
+    }
+
+    toptask = kaapi_request_toptask(request);
+    signaltask = kaapi_thread_nexttask(&request->frame, toptask);
+    victim_sc = (kaapi_stealcontext_t*)kaapi_task_getargst(
+          victim_task, kaapi_taskadaptive_arg_t)->shared_sc.data;
+    kaapi_task_init_with_flag(
+        signaltask, 
+        kaapi_tasksignaladapt_body, 
+        victim_sc->msc,
+        KAAPI_TASK_UNSTEALABLE /* default is also un-splittable */
+    );
+    KAAPI_ATOMIC_INCR(&victim_sc->msc->thieves.count);
+
+    /* push two tasks at a time */
+    request->frame.sp -= 2;
+  }
+  else 
+    /* else push only the top task */
+    --request->frame.sp;
+  
   /* do not use a barrier here: it exists on reply 
      to the request, see kaapi_request_committask */
-  return 0;
-}
-
-
-/* Here:
- */
-int kaapi_request_pushtask_adaptive(
-  kaapi_request_t*              request, 
-  kaapi_task_t*                 victim_task, 
-  kaapi_adaptivetask_splitter_t user_splitter,
-  int                           headtail_flag
-)
-{
-  kaapi_taskadaptive_arg_t* victim_adapt_arg;
-  kaapi_taskadaptive_arg_t* adapt_arg;
-  kaapi_stealcontext_t* sc;
-  kaapi_task_t* toptask;
-  
-  kaapi_assert_debug( kaapi_task_is_splittable(victim_task) );
-  kaapi_assert_debug( (victim_task->body == (kaapi_task_body_t)kaapi_taskadapt_body )
-                  ||  (victim_task->body == (kaapi_task_body_t)kaapi_taskbegendadapt_body) );
-  
-  toptask = kaapi_thread_toptask(&request->frame);
-  /* this a reply to an adaptive task: set the task as unstealable */
-  kaapi_task_set_unstealable(toptask);
-  kaapi_task_set_splittable(toptask);
-  kaapi_thread_pushtask_adaptive(&request->frame, user_splitter);
-
-  /* here toptask was replaced in pushtask_adaptive by a kaapi_taskadapt_body, 
-     but flags remain equals.
-     Link together the adaptive victim_task's steal context to the newly created task stealcontext
-  */
-  victim_adapt_arg = kaapi_task_getargst(victim_task, kaapi_taskadaptive_arg_t);
-  adapt_arg = kaapi_task_getargst(toptask, kaapi_taskadaptive_arg_t);
-  sc = (kaapi_stealcontext_t*)adapt_arg->shared_sc.data;
-  sc->msc  = ((kaapi_stealcontext_t*)victim_adapt_arg->shared_sc.data)->msc;
-
-  if (kaapi_task_is_withpreemption(victim_task) && !kaapi_task_is_withpreemption(toptask))
-  {
-    toptask->u.s.flag = KAAPI_TASK_S_PREEMPTION;
-    sc->flag = KAAPI_SC_PREEMPTION;
-  }
-
-  /* list insert is atomic with respect to the lock on the adaptive task */
-  if (kaapi_task_is_withpreemption(toptask))
-  {
-    /* this allocation may be amortized if we reserve some memory in the steal context
-       for thief + bloc allocation
-    */
-    kaapi_thiefadaptcontext_t* ktr 
-      = (kaapi_thiefadaptcontext_t*)malloc(sizeof(kaapi_thiefadaptcontext_t));
-    if (ktr ==0)
-      return ENOMEM;
-    sc->ktr = ktr;
-    kaapi_atomic_initlock(&ktr->lock);
-    ktr->thief_task = toptask; /* task to signal */
-#if defined(KAAPI_DEBUG) /* will be set by the thief on terminaison / preemption */
-    ktr->thief_of_the_thief_tail = 0;
-    ktr->thief_of_the_thief_head = 0;
-#endif
-  
-    /* insert in head or tail: one thief do allocation at any time, due 
-       to kproc lock owner ship
-    */
-    if (sc->thieves.list.head == 0)
-    {
-      sc->thieves.list.tail = ktr;
-      sc->thieves.list.head = ktr;
-    }
-    else if (headtail_flag == KAAPI_REQUEST_REPLY_HEAD)
-    { 
-      ktr->next = sc->thieves.list.head;
-      sc->thieves.list.head->prev = ktr;
-      sc->thieves.list.head = ktr;
-    } 
-    else 
-    {
-      ktr->prev = sc->thieves.list.tail;
-      sc->thieves.list.tail->next = ktr;
-      sc->thieves.list.tail = ktr;
-    }
-  }
-  else
-  {
-    sc->ktr = 0;
-    KAAPI_ATOMIC_INCR(&sc->msc->thieves.count);
-  }
-  
   return 0;
 }

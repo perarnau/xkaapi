@@ -51,7 +51,7 @@ AC_PROG_CC_C99
 AM_PROG_CC_C_O
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL
-ACX_PROG_CCACHE_CC
+#ACX_PROG_CCACHE_CC
 AC_PROG_CXX
 ACX_PROG_CCACHE_CXX
 AC_PROG_F77
@@ -297,7 +297,7 @@ KAAPI_FEATURE([api-atha], [compile Athapascan-1 API, [[DEPRECATED]] ],
   [],
   [KAAPI_API_ATHA],
   [
-    if test "$enable_api_kaapi__" != yes ; then
+    if test "$enable_api_kaapixx" != yes ; then
       AC_MSG_NOTICE([Kaapi++ API is required for Athapascan-1 API])
       FEATURE_DISABLE
     else

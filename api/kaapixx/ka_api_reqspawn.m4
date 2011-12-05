@@ -30,6 +30,11 @@
         KaapiFormatTask_t::default_bodies.cpu_body,
         arg
       );
+      KAAPI_REQPUSHER(KAAPI_NUMBER_PARAMS)<
+        TraitSplitter<TASK>::has_splitter,
+        TASK
+        M4_PARAM(`TraitFormalParam$1_t', `,', `,')
+      >::push( _req, _adaptivetask, _flag );
     }
 
     template<M4_PARAM(`class E$1', `', `,')>
@@ -38,6 +43,4 @@
       KAAPI_NAME(PushArg,KAAPI_NUMBER_PARAMS)(
          &TASK::dummy_method_to_have_formal_param_type, M4_PARAM(`e$1', `', `, ') 
       );
-      kaapi_request_pushtask(_req);
-      kaapi_request_pushtask_adaptive( _req, _adaptivetask, 0, _flag );
     }

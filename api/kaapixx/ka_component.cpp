@@ -196,7 +196,8 @@ int KaapiComponentManager::parseoption(int& argc , char**& argv ) throw()
 
   /* second: initialize kaapi_prop from file $PWD/kaapi.rc */
   name = getcwd( 0, 0 );
-  if (name !=0) {
+  if (name !=0) 
+  {
     try {
       filename = name;
       filename = filename + "/kaapi.rc";
@@ -260,7 +261,10 @@ int KaapiComponentManager::initialize(int& argc, char**& argv) throw()
   static bool is_called = false; if (is_called) return 0; is_called = true;
   if (argv ==0) return 0;
   
+#if 0
+  /* should be moved outside kaapi... */
   KaapiComponentManager::parseoption( argc, argv );
+#endif
 
   int err;
   std::list<KaapiComponent*>::iterator ibeg;

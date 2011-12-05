@@ -43,45 +43,42 @@
  */
 #include "kaapi_impl.h"
 
+#define MAX_SKPROC 4
 
 static int kaapi_select_victim_workload( 
-  kaapi_processor_t* kproc __attribute__((unused)), 
+  kaapi_processor_t* self_kproc,
   kaapi_victim_t* victim 
 )
 {  
-  const int count = kaapi_count_kprocessors;
-  kaapi_processor_t* const self_kproc = kaapi_get_current_processor();
+  int32_t cur_workload;
+  int k;
   
-  kaapi_processor_t* max_kproc = NULL;
-  uint32_t max_workload = 1;
-  int i;
-  
-  for (i = 0; i < count; ++i)
+  while (1)
   {
-    kaapi_processor_t* const cur_kproc = kaapi_all_kprocessors[i];
+    kaapi_processor_t* max_kproc =0;
+    uint32_t max_workload= 0;
+    kaapi_processor_t* victim_kproc;
     
-    if ((cur_kproc == NULL) || (cur_kproc == self_kproc))
-      continue ;
-    
-    /* swap if more or equally loaded */
+    for (k = 0; k < kaapi_count_kprocessors/4; ++k)
     {
-      const uint32_t cur_workload = KAAPI_ATOMIC_READ(&cur_kproc->workload);
+      do { 
+        victim_kproc = kaapi_all_kprocessors[ 
+            rand_r( (unsigned int*)&self_kproc->seed ) %kaapi_count_kprocessors ];
+      } while ((victim_kproc ==0) || (victim_kproc == self_kproc));
       
-      if (cur_workload < max_workload)
-        continue ;
+      /* swap if more or equally loaded */
+      cur_workload = kaapi_processor_get_workload(victim_kproc);
       
-      max_workload = cur_workload;
-      max_kproc = cur_kproc;
+      if (cur_workload > max_workload)
+      {
+        max_kproc    = victim_kproc;
+        max_workload = cur_workload;
+      }
     }
-  }
   
-  /* found a victim */
-  if (max_kproc != NULL)
-  {
     victim->kproc = max_kproc;
-    return 0;
+    if  (max_kproc != 0) return 0;
   }
-  
   return EINVAL;
 }
 
@@ -96,10 +93,8 @@ int kaapi_sched_select_victim_workload_rand(
 {
   int err;
   if (flag != KAAPI_SELECT_VICTIM) return 0;  
-  do {
-    err = kaapi_select_victim_workload( kproc, victim );
-    if (err ==0) return 0;
-  } while(1);
+  err = kaapi_select_victim_workload( kproc, victim );
+  return err;
 }
 
 
@@ -114,13 +109,5 @@ void kaapi_set_workload(kaapi_processor_t* kproc, uint32_t workload)
 
 void kaapi_set_self_workload(uint32_t workload)
 {
-  kaapi_set_workload(kaapi_get_current_processor(), workload);
+  kaapi_processor_set_workload(kaapi_get_current_processor(), workload);
 }
-
-
-#if 0
-void kaapi_set_workload_by_kid(kaapi_processor_id_t kid, uint32_t workload)
-{
-  kaapi_set_workload(kaapi_all_kprocessors[kid], workload);
-}
-#endif

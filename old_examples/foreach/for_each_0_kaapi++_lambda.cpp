@@ -87,9 +87,10 @@ static void for_each( T* ibeg, T* iend, OP op )
            In this version, we do not use the method Work::split which is defined here as a lambda.
         */
         [&](                       /* standard arguments for the splitter function */
-            ka::StealContext* sc,  /* the steal context */
-            int nreq,              /* number of requests */
-            ka::Request* req       /* array of request */
+              ka::StealContext* sc,  /* the steal context */
+              int nreq,              /* number of requests */
+              ka::ListRequest::iterator beg,  /* array of request */
+              ka::ListRequest::iterator end   /* array of request */
            ) -> void
           {
             /* stolen range */

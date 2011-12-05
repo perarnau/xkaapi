@@ -464,7 +464,7 @@ typedef struct kaapi_task_binding
 /* ========================================================================= */
 /** Task priority
 */
-#define KAAPI_TASK_MAX_PRIORITY     15
+#define KAAPI_TASK_MAX_PRIORITY     1
 #define KAAPI_TASK_MIN_PRIORITY     0
 
 #define KAAPI_TASK_STATE_SIGNALED   0x20   /* mask: extra flag to set the task as signaled for preemption */
@@ -1107,7 +1107,7 @@ static inline void* kaapi_request_pushdata( kaapi_request_t* request, uint32_t s
     \param thread INOUT a pointer to the kaapi_stack_t data structure.
     \retval EINVAL invalid argument: bad stack pointer.
 */
-extern int kaapi_request_pushtask(kaapi_request_t* request);
+extern int kaapi_request_pushtask(kaapi_request_t* request, kaapi_task_t* victim_task);
 
 /** \ingroup ADAPTIVE
     The function kaapi_request_toptask() will return the task to reply.
@@ -1144,7 +1144,7 @@ extern int kaapi_request_pushtask_adaptive(
 /** \ingroup ADAPTIVE
     push the task associated with an adaptive request
 */
-static inline void kaapi_reply_pushtask_adaptive_tail(
+static inline void kaapi_request_pushtask_adaptive_tail(
   kaapi_request_t* request, 
   kaapi_task_t* victim_task,
   kaapi_adaptivetask_splitter_t splitter
@@ -1157,7 +1157,7 @@ static inline void kaapi_reply_pushtask_adaptive_tail(
 /** \ingroup ADAPTIVE
     push the task associated with an adaptive request
 */
-static inline void kaapi_reply_pushtask_adaptive_head(
+static inline void kaapi_request_pushtask_adaptive_head(
   kaapi_request_t* request, 
   kaapi_task_t* victim_task,
   kaapi_adaptivetask_splitter_t splitter
@@ -1286,24 +1286,18 @@ extern int kaapi_preempt_thief_helper(
    If the thief has already finished its computation bfore sending the signal,
    then the return value is ECHILD.
 */
-#if 0
 extern int kaapi_preemptasync_thief( 
-  kaapi_stealcontext_t*               stc, 
-  struct kaapi_taskadaptive_result_t* ktr, 
-  void*                               arg_to_thief 
+  struct kaapi_thief_iterator_t*     thief, 
+  void*                              arg_to_thief 
 );
-#endif // #if 0
 
 /** The thief should have been preempted using preempasync_thief
     Returns 0 when the thief has reply to its preemption flag
 */
-#if 0
 extern int kaapi_preemptasync_waitthief
 ( 
- kaapi_stealcontext_t*               sc,
- struct kaapi_taskadaptive_result_t* ktr
+  struct kaapi_thief_iterator_t*     thief 
 );
-#endif // #if 0
 
 /** \ingroup ADAPTIVE
     Remove the thief ktr form the list of stc iff it is has finished its computation and returns 0.
@@ -1708,7 +1702,7 @@ typedef struct kaapi_staticschedtask_arg_t {
   kaapi_staticschedinfo_t  schedinfo; /* number of partition */
 } kaapi_staticschedtask_arg_t;
 
-extern void kaapi_staticschedtask_body( void*, kaapi_thread_t* );
+extern void kaapi_staticschedtask_body( void*, kaapi_thread_t*, kaapi_task_t* pc );
 
 /* ========================================================================= */
 /* THE workqueue to be used with adaptive interface                          */
@@ -1809,7 +1803,6 @@ static inline unsigned int kaapi_workqueue_isempty( const kaapi_workqueue_t* kwq
   return size <= 0;
 }
 
-
 /** This function should be called by the current kaapi thread that own the workqueue.
     The function push work into the workqueue.
     Assuming that before the call, the workqueue is [beg,end).
@@ -1833,7 +1826,6 @@ static inline int kaapi_workqueue_push(
   return EINVAL;
 }
 
-
 /** Helper function called in case of conflict.
     Return EBUSY is the queue is empty.
     Return EINVAL if invalid arguments
@@ -1845,7 +1837,6 @@ extern int kaapi_workqueue_slowpop(
   kaapi_workqueue_index_t* end,
   kaapi_workqueue_index_t  size
 );
-
 
 /** This function should be called by the current kaapi thread that own the workqueue.
     Return 0 in case of success 
@@ -1882,7 +1873,6 @@ static inline int kaapi_workqueue_pop(
   kwq->beg = loc_init;
   return kaapi_workqueue_slowpop(kwq, beg, end, max_size);
 }
-
 
 /** This function should only be called into a splitter to ensure correctness
     the lock of the victim kprocessor is assumed to be locked to handle conflict.
@@ -2251,7 +2241,7 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     static int isinit = 0;\
     if (isinit) return;\
     isinit = 1;\
-    kaapi_format_taskregister_static( formatobject(), fnc_body, 0, name, ##__VA_ARGS__,  0 /* for reduction operators not supported in C */, 0);\
+    kaapi_format_taskregister_static( formatobject(), fnc_body, 0, name, ##__VA_ARGS__,  0, 0 /* for reduction operators not supported in C */,0);\
   }
 
 

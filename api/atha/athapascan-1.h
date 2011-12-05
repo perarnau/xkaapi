@@ -345,9 +345,9 @@ namespace a1 {
   using ka::SetUnStealable;
   using ka::SetLocalAttribut;
   using ka::SetLocal;
-#endif
   using ka::AttributSchedTask;
   using ka::SetPartition;
+#endif
   
 #if 0
   class DefaultAttribut {

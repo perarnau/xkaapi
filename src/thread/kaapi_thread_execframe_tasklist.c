@@ -68,6 +68,7 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   unsigned int               proc_type;
   int                        err =0;
   uint32_t                   cnt_exec; /* executed tasks during one call of execframe_tasklist */
+  uint32_t                   cnt_pushed;
 
   kaapi_assert_debug( stack->sfp >= stack->stackframe );
   kaapi_assert_debug( stack->sfp < stack->stackframe+KAAPI_MAX_RECCALL );
@@ -82,6 +83,9 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   
   /* */
   cnt_exec = 0;
+  
+  /* */
+  cnt_pushed = 0;
   
   /* jump to previous state if return from suspend 
      (if previous return from EWOULDBLOCK)
@@ -111,8 +115,10 @@ redo_while:
   while (!kaapi_tasklist_isempty( tasklist ))
   {
     err = kaapi_readylist_pop( &tasklist->rtl, &td );
+
     if (err ==0)
     {
+      kaapi_processor_decr_workload( stack->proc, 1 );
 execute_first:
 #if defined(KAAPI_TASKLIST_POINTER_TASK)
       pc = td->task;
@@ -174,11 +180,18 @@ printf("EWOULDBLOCK case 1\n");
 
       /* push in the front the activated tasks */
       if (!kaapi_activationlist_isempty(&td->u.acl.list))
-        kaapi_thread_tasklistready_pushactivated( tasklist, td->u.acl.list.front );
+        cnt_pushed = kaapi_thread_tasklistready_pushactivated( tasklist, td->u.acl.list.front );
+      else 
+        cnt_pushed = 0;
 
       /* do bcast after child execution (they can produce output data) */
       if (td->u.acl.bcast !=0) 
-        kaapi_thread_tasklistready_pushactivated( tasklist, td->u.acl.bcast->front );
+        cnt_pushed += kaapi_thread_tasklistready_pushactivated( tasklist, td->u.acl.bcast->front );
+      
+#if 0
+      if (cnt_pushed !=0)
+        kaapi_processor_incr_workload( stack->proc, cnt_pushed );
+#endif
     }
     
     /* recv incomming synchronisation 

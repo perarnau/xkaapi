@@ -781,8 +781,10 @@ extern int kaapi_perf_thread_state(kaapi_processor_t* kproc);
 extern uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
 
 /* */
+__attribute__((deprecated))
 extern void kaapi_set_workload( kaapi_processor_t*, uint32_t workload );
 
+__attribute__((deprecated))
 /* */
 extern void kaapi_set_self_workload( uint32_t workload );
 

@@ -92,6 +92,7 @@ int kaapi_sched_steal_task
 	kaapi_listrequest_iterator_get( lrequests, lrrange );
   kaapi_assert_debug( request != 0 );
 
+
   /* - create the task steal that will execute the stolen task
      The task stealtask stores:
      - the original task pointer
@@ -113,7 +114,7 @@ int kaapi_sched_steal_task
     argsteal
   );
   ((kaapi_task_t* volatile)task)->reserved = tasksteal;
-  kaapi_request_pushtask(request);
+  kaapi_request_pushtask(request,0);
 
   /* success of steal */
   kaapi_request_replytask( request, KAAPI_REQUEST_S_OK);

@@ -99,17 +99,28 @@ extern int32_t kaapic_get_concurrency(void);
 */
 extern int32_t kaapic_get_thread_num(void);
 
+/*
+*/
 typedef struct kaapic_foreach_attr_t {
   uint32_t s_grain;
   uint32_t p_grain;  
+  int      policy;       /* choose the policy for splitting */
 } kaapic_foreach_attr_t;
   
+/*
+*/
 extern int kaapic_foreach_attr_init(kaapic_foreach_attr_t* attr);
+
+/*
+*/
 extern int kaapic_foreach_attr_set_grains(
   kaapic_foreach_attr_t* attr, 
   uint32_t s_grain,
   uint32_t p_grain
 );
+
+/*
+*/
 static inline int kaapic_foreach_attr_destroy(kaapic_foreach_attr_t* attr)
 { return 0; }
 
@@ -138,10 +149,10 @@ extern void kaapic_foreach_with_format(
 
 /* Create a task that may be steal.
    See documentation for restriction on by value passing rule.
-  \param body : the task body. 
-  \param nargs: the argument count. 
-  \param ...: a list of tuple { VALUE, COUNT, TYPE, MODE } tuple list.
-  \retval 0 in case of success, else an error code
+   \param body : the task body. 
+   \param nargs: the argument count. 
+   \param ...: a list of tuple { MODE, VALUE/@, COUNT, TYPE  } tuple list.
+   \retval 0 in case of success, else an error code
 */
 extern int kaapic_spawn(int32_t nargs, ...);
 

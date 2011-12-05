@@ -5,14 +5,20 @@
 \usepackage{verbatim}
 \usepackage{listings}
 \usepackage{color}
-\usepackage[utf8]{inputenc}
+%\usepackage[utf8]{inputenc}
 \usepackage{RR}
 \usepackage{hyperref}
 
-%%\usepackage[frenchb]{babel} % optionnel
+\usepackage[latin1]{inputenc} % ou \usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc} % ou \usepackage[OT1]{fontenc}
+
+%%% A METTRE
+%%%
+\RRNo{xxxx}
+
 %%
 %% date de publication du rapport
-\RRdate{Juin 2011}
+\RRdate{November 2011}
 %%
 %% Cas d'une version deux
 %% \RRversion{2}
@@ -55,26 +61,25 @@
 
 %%
 \RRauthor{
-Fabien Le Mentec
+Fabien Le Mentec\thanks[INRIA]{INRIA, MOAIS project team, Grenoble France, \url{http://moais.imag.fr}}
   \and
-Vincent Faucher
+Vincent Faucher\thanks{CEA, DEN, DANS, DM2S, SEMT, DYN, F-91191 Gif-sur-Yvette, France}
   \and
-Thierry Gautier
+Thierry Gautier\thanksref{INRIA}
 }
 
 \authorhead{Gautier \& Faucher \& Le Mentec}
-\RRtitle{\kaapi FORTRAN programming interface}
-\RRetitle{\kaapi FORTRAN programming interface}
-\titlehead{\kaapi FORTRAN programming interface}
+\RRtitle{Interface de programmation Fortran pour \kaapi}
+\RRetitle{\kaapi Fortran programming interface}
+\titlehead{\kaapi Fortran programming interface}
 
-\RRabstract{This report defines the \kaapi FORTRAN programming interface.}
+\RRabstract{This report defines the \kaapi Fortran programming interface.}
 
 \RRmotcle{}
-\RRkeyword{parallel computing, \kaapi, FORTRAN}
+\RRkeyword{parallel computing, \kaapi, Fortran}
 \RRprojets{MOAIS}
-%\RRdomaine{3} % cas du domaine numero 1
-%\RRthemeProj{moais} % theme du projet Apics
 \RCGrenoble % Grenoble - Rh\^one-Alpes
+
 
 \begin{document}
 
@@ -603,7 +608,7 @@ Refer to examples/kaapif/dfg\\
 \paragraph{}
 When indicated, a routine may return one of the following error code:
 \begin{itemize}
-\item KAAPIF\_ERR\_SUCCESS=0: success
+\item KAAPIF\_SUCCESS=0: success
 \item KAAPIF\_ERR\_FAILURE=-1: generic error code
 \item KAAPIF\_ERR\_EINVAL=-2: invalid argument
 \item KAAPIF\_ERR\_UNIMPL=-3: feature not implemented

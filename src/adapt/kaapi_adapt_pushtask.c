@@ -73,11 +73,11 @@ int kaapi_thread_pushtask_adaptive(
 
   sc->msc        = sc; /* self pointer to detect master */
   sc->ktr        = 0;
-  if ( kaapi_task_is_withpreemption(task_adapt) )
+  if (kaapi_task_is_withpreemption(task_adapt))
   {
     sc->flag = KAAPI_SC_PREEMPTION;
     /* if preemption, thief list used ... */
-    KAAPI_ATOMIC_WRITE(&sc->thieves.list.lock, 0);
+    kaapi_atomic_initlock(&sc->thieves.list.lock);
     sc->thieves.list.head = 0;
     sc->thieves.list.tail = 0;
   }
@@ -99,6 +99,8 @@ int kaapi_thread_pushtask_adaptive(
   */
   task_adapt->body = (kaapi_task_body_t)kaapi_taskadapt_body;
   task_adapt->sp   = arg;
+  if (splitter !=0) 
+    kaapi_task_set_splittable(task_adapt);
   
   kaapi_access_init( &merge_arg->shared_sc, sc );
 

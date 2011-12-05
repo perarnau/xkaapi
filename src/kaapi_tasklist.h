@@ -686,6 +686,23 @@ extern int kaapi_thread_initialize_first_access(
     void*               srcdata    
 );
 
+/** Return the number of tasks inside the tasklist
+*/
+static inline size_t kaapi_readylist_workload( kaapi_readytasklist_t* rtl )
+{
+  size_t size = 0;
+  kaapi_onereadytasklist_t* onertl;
+  int i;
+
+  for (i =KAAPI_TASKLIST_MAX_PRIORITY; i<(1+KAAPI_TASKLIST_MIN_PRIORITY); ++i)
+  {
+    onertl = &rtl->prl[i];
+    if (onertl->next == -1) continue;
+    size = 100*size+kaapi_workqueue_size(&onertl->wq);
+  }
+  return size;
+}
+
 /** To pop the next ready tasks
     Return the next task to execute if err ==0
     Return 0 if case of success
@@ -746,6 +763,7 @@ static inline int kaapi_readylist_pushone_td( kaapi_readytasklist_t* rtl, kaapi_
   wq->task_pushed = 1;
   kaapi_bitmap_value_set_32(&rtl->task_pushed, priority);
   KAAPI_DEBUG_INST( if (rtl->max_task < -local_beg) rtl->max_task = -local_beg  );
+
   return priority;
 }
 
@@ -763,7 +781,7 @@ extern int kaapi_tasklist_pushready_td(
 );
 
 /** Activate and push ready tasks of an activation link.
-    Return 1 if at least one ready task has been pushed into local ready queue.
+    Return the number of ready tasks that have been activated. into local ready queue.
     Else return 0.
 */
 static inline int kaapi_thread_tasklistready_pushactivated( 
@@ -771,14 +789,16 @@ static inline int kaapi_thread_tasklistready_pushactivated(
     kaapi_activationlink_t* head 
 )
 {
-  kaapi_readytasklist_t*  rtl = &tasklist->rtl;
+//  kaapi_readytasklist_t*  rtl = &tasklist->rtl;
   kaapi_taskdescr_t* td;
+  int retval =0;
   
   while (head !=0)
   {
     td = head->td;
     if (kaapi_taskdescr_activated(td))
     {
+      ++retval;
       kaapi_tasklist_pushready_td( 
               tasklist, 
               td, 
@@ -790,7 +810,7 @@ static inline int kaapi_thread_tasklistready_pushactivated(
     }
     head = head->next;
   }
-  return 0 != kaapi_bitmap_value_empty_32(&rtl->task_pushed);
+  return retval; //0 != kaapi_bitmap_value_empty_32(&rtl->task_pushed);
 }
 
 
@@ -876,8 +896,12 @@ static inline int kaapi_thread_tasklist_commit_ready( kaapi_tasklist_t* tasklist
     {
       int ith = kaapi_bitmap_first1_and_zero_32( &tasklist->rtl.task_pushed ) -1;
 
+kaapi_processor_incr_workload(kaapi_get_current_processor(), 
+    kaapi_workqueue_range_begin( &tasklist->rtl.prl[ith].wq ) - (1+tasklist->rtl.prl[ith].next)
+);
       /* do not keep tasklist->next for local exec */
       kaapi_workqueue_push(&tasklist->rtl.prl[ith].wq, 1+tasklist->rtl.prl[ith].next); 
+
     }
     //kaapi_atomic_unlock( &tasklist->thread->stack.lock );
     kaapi_bitmap_value_clear_32(&tasklist->rtl.task_pushed);
@@ -911,9 +935,12 @@ static inline kaapi_taskdescr_t* kaapi_thread_tasklist_commit_ready_and_steal(
         kaapi_assert_debug( ((1+onertl->next)< 0) && ((onertl->next+1) >= -onertl->size) );
         td_steal = onertl->base[++onertl->next];
       }
-      kaapi_atomic_lock( onertl->wq.lock );
+kaapi_processor_incr_workload(kaapi_get_current_processor(), 
+    kaapi_workqueue_range_begin( &onertl->wq ) - (1+onertl->next)
+);
+      kaapi_workqueue_lock( &onertl->wq );
       kaapi_workqueue_push(&onertl->wq, 1+onertl->next); 
-      kaapi_atomic_unlock( onertl->wq.lock );
+      kaapi_workqueue_unlock( &onertl->wq );
     }
   }
 

@@ -51,7 +51,7 @@
 
 /* 
 */
-void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
+void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t* pc )
 {
   int save_state;
   kaapi_frame_t* fp;
@@ -147,7 +147,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread )
   kaapi_event_push0(thread->stack.proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
 
   /* the embedded task cannot be steal because it was not visible to thieves */
-  arg->sub_body( arg->sub_sp, uthread, &arg->schedinfo );
+  arg->sub_body( arg->sub_sp, uthread, pc );
 
   kaapi_event_push0(thread->stack.proc, thread, KAAPI_EVT_STATIC_TASK_END );
 

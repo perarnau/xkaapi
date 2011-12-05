@@ -43,19 +43,23 @@
 */
 #include "kaapi_impl.h"
 
-/** \ingroup ADAPTIVE
+/**
 */
 struct kaapi_thief_iterator_t* kaapi_thiefiterator_tail( kaapi_task_t* task )
 {
   kaapi_taskadaptive_arg_t* adapt_arg = kaapi_task_getargst(task, kaapi_taskadaptive_arg_t);
   kaapi_assert_debug( kaapi_task_is_splittable(task) );
+  kaapi_assert_debug( kaapi_task_is_withpreemption(task) );
   kaapi_assert_debug( task->body == (kaapi_task_body_t)kaapi_taskadapt_body );
   kaapi_stealcontext_t* sc = (kaapi_stealcontext_t*)adapt_arg->shared_sc.data;
+
+  kaapi_atomic_waitlock(&sc->thieves.list.lock);
+
   /* tail is always a valid pointer (if read was atomic) */
   return (struct kaapi_thief_iterator_t*)sc->thieves.list.tail;
 }
 
-/** \ingroup ADAPTIVE
+/**
 */
 struct kaapi_thief_iterator_t* kaapi_thiefiterator_prev( struct kaapi_thief_iterator_t* pos )
 {

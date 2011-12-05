@@ -84,16 +84,21 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
 
   /* Fill the task list with ready stolen tasks.
   */
+#if defined(TASKLIST_REPLY_ONETD)  
   kaapi_thread_tasklistready_push_init_fromsteal( 
     tasklist, 
-#if defined(TASKLIST_REPLY_ONETD)  
     &arg->td, 
     &arg->td+1
+  );
+  kaapi_processor_incr_workload(kaapi_get_current_processor(), 1);
 #else
+  kaapi_thread_tasklistready_push_init_fromsteal( 
+    tasklist, 
     arg->td_beg, 
     arg->td_end
-#endif
   );
+  kaapi_processor_incr_workload(kaapi_get_current_processor(), arg->td_end-arg->td_beg);
+#endif
   
 #if defined(TASKLIST_ONEGLOBAL_MASTER) && !defined(TASKLIST_REPLY_ONETD)
   /* to synchronize steal operation and the recopy of TD on the non master tasklist */

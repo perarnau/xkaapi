@@ -1,12 +1,11 @@
 /*
  ** xkaapi
  ** 
- ** Created on Tue Mar 31 15:19:14 2009
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
+ **
  ** thierry.gautier@inrialpes.fr
- ** fabien.lementec@imag.fr
  ** 
  ** This software is a computer program whose purpose is to execute
  ** multithreaded computation with data flow synchronization between
@@ -41,64 +40,26 @@
  ** terms.
  ** 
  */
+#include "kaapi_impl.h"
 
+/* Signal body task
+   - used if the stolen task a non adaptive task and preemption flag was unset
+   on the victim adaptive task
+   - arg is the master steal context to signal (remotely)
+*/
+void kaapi_tasksignaladapt_body(void* sp, kaapi_thread_t* thread)
+{
+  kaapi_stealcontext_t* const msc  = (kaapi_stealcontext_t*)sp;
 
-#ifndef KAAPIF_H_INCLUDED
-# define KAAPIF_H_INCLUDED
+  kaapi_assert_debug( msc->flag != KAAPI_SC_PREEMPTION );
 
+  /* Then flush memory & signal master context
+  */
+  kaapi_writemem_barrier();
 
-#include <stdint.h>
-
-
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
-
-/* kaapi fortran interface */
-
-extern int kaapif_init_(int32_t*);
-extern int kaapif_finalize_(void);
-
-extern double kaapif_get_time_(void);
-
-extern int32_t kaapif_get_concurrency_(void);
-extern int32_t kaapif_get_thread_num_(void);
-
-extern void kaapif_set_max_tid_(int32_t*);
-extern int32_t kaapif_get_max_tid_(void);
-
-extern void kaapif_set_grains_(int32_t*, int32_t*);
-
-extern int kaapif_foreach_(
-  int32_t*,  /* first */
-  int32_t*,  /* last */
-  int32_t*,  /* NARGS */
-  void (*)(int32_t*, int32_t*, int32_t*, ...), 
-  ...  
-);
-extern int kaapif_foreach_with_format_(
-  int32_t*,  /* first */
-  int32_t*,  /* last */
-  int32_t*,  /* NARGS */
-  void (*)(int32_t*, int32_t*, int32_t*, ...), 
-  ...
-);
-
-extern int kaapif_spawn_(
-    int32_t*,    /* NARGS */
-    void (*f)(), /* F */
-    ...
-);
-
-extern void kaapif_sync_(void);
-extern int kaapif_begin_parallel_(void);
-extern int kaapif_end_parallel_(int32_t*);
-
-
-#if defined(__cplusplus)
+  /* here a remote read of sc->msc->thieves may be avoided if
+     sc stores a  pointer to the master count.
+  */
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&msc->thieves.count) > 0);
+  KAAPI_ATOMIC_DECR(&msc->thieves.count);
 }
-#endif
-
-
-#endif /* ! KAAPIF_H_INCLUDED */
