@@ -70,7 +70,7 @@ int kaapif_spawn_(
   unsigned int k;
 
   if (*nargs > KAAPIF_MAX_ARGS) 
-    return EINVAL;
+    return KAAPIF_ERR_EINVAL;
     
   /* cast into task_info_t */
 
@@ -103,11 +103,11 @@ int kaapif_spawn_(
         break;
       case KAAPIC_MODE_V:  
         if (count >1) 
-          return EINVAL;
+          return KAAPIF_ERR_EINVAL;
         ai->mode = KAAPI_ACCESS_MODE_V; 
         break;
       default: 
-        return EINVAL;
+        return KAAPIF_ERR_EINVAL;
     }
 
     switch (type)
@@ -138,7 +138,7 @@ int kaapif_spawn_(
         break ;
 
       default: 
-        return EINVAL;
+        return KAAPIF_ERR_EINVAL;
     }
     
     kaapi_access_init( &ai->access, addr );
@@ -154,5 +154,7 @@ int kaapif_spawn_(
   va_end(va_args);
 
   /* spawn the task */
-  return kaapic_spawn_ti( thread, kaapif_dfg_body, ti );
+  if (0== kaapic_spawn_ti( thread, kaapif_dfg_body, ti ))
+    return KAAPIF_SUCCESS;
+  return KAAPIF_ERR_FAILURE;
 }

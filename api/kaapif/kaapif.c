@@ -49,10 +49,10 @@
 extern void _kaapif_register_task_format(void);
 
 #if CONFIG_MAX_TID
-static int xxx_max_tid;
+int xxx_max_tid;
 #endif
-static int xxx_seq_grain;
-static int xxx_par_grain;
+int xxx_seq_grain;
+int xxx_par_grain;
 
 #define FATAL()						\
 do {							\
@@ -65,10 +65,10 @@ static kaapi_atomic_t kaapif_initcalled = { 0 };
 int kaapif_init_(int32_t* flags)
 {
   if (KAAPI_ATOMIC_INCR(&kaapif_initcalled) != 1)
-    return 0;
+    return KAAPIF_SUCCESS;
 
   int err = kaapic_init(*flags);
-  if (err !=0) return err;
+  if (err !=0) return KAAPIF_ERR_FAILURE;
 
   /* default work info */
 #if CONFIG_MAX_TID
@@ -77,15 +77,18 @@ int kaapif_init_(int32_t* flags)
   xxx_seq_grain = 16;
   xxx_par_grain = 2 * xxx_seq_grain;
 
-  return 0;
+  return KAAPIF_SUCCESS;
 }
 
 
 int kaapif_finalize_(void)
 {
+  int err;
   if (KAAPI_ATOMIC_DECR(&kaapif_initcalled) != 0)
-    return 0;
-  return kaapic_finalize();
+    return KAAPIF_SUCCESS;
+  err = kaapic_finalize();
+  if (err !=0) return KAAPIF_ERR_FAILURE;
+  return KAAPIF_SUCCESS;
 }
 
 
@@ -135,7 +138,7 @@ int32_t kaapif_get_max_tid_(void)
 }
 
 
-void kaapif_sync_(void)
+void kaapif_sched_sync_(void)
 {
   kaapi_sched_sync();
 }
@@ -144,12 +147,12 @@ void kaapif_sync_(void)
 int kaapif_begin_parallel_(void)
 {
   kaapi_begin_parallel(KAAPI_SCHEDFLAG_DEFAULT);
-  return 0;
+  return KAAPIF_SUCCESS;
 }
 
 
 int kaapif_end_parallel_(int32_t* flags)
 {
   kaapi_end_parallel(*flags);
-  return 0;
+  return KAAPIF_SUCCESS;
 }

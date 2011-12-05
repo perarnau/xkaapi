@@ -81,9 +81,11 @@ int kaapif_foreach_(
   int32_t k;
   kaapic_body_arg_t* body_arg;
   va_list va_args;
+  
+  kaapic_foreach_attr_t attr;
 
   if (*nargs >= KAAPIF_MAX_ARGS)
-    return EINVAL;
+    return KAAPIF_ERR_EINVAL;
 
   body_arg = (kaapic_body_arg_t*)alloca(
     offsetof(kaapic_body_arg_t, args) + *nargs * sizeof(void*)
@@ -100,7 +102,11 @@ int kaapif_foreach_(
     body_arg->args[k] = va_arg(va_args, void*);
   va_end(va_args);
   
-  return kaapic_foreach_common( *first, *last+1, 0,kaapif_foreach_body2user, body_arg);
+  kaapic_foreach_attr_init(&attr);
+  kaapic_foreach_attr_set_grains(&attr, xxx_seq_grain, xxx_par_grain);
+  if (kaapic_foreach_common( *first, *last+1, &attr, kaapif_foreach_body2user, body_arg) ==0)
+    return KAAPIF_SUCCESS;
+  return KAAPIF_ERR_FAILURE;
 }
 
 
@@ -119,7 +125,7 @@ int kaapif_foreach_with_format_(
   kaapic_foreach_attr_t attr;
 
   if (*nargs >= KAAPIF_MAX_ARGS)
-    return EINVAL;
+    return KAAPIF_ERR_EINVAL;
 
   body_arg = (kaapic_body_arg_t*)alloca(
     offsetof(kaapic_body_arg_t, args) + *nargs * sizeof(void*)
@@ -143,9 +149,10 @@ int kaapif_foreach_with_format_(
     /* int* type  = (int*)*/va_arg(va_args, uintptr_t);
   }
   va_end(va_args);
-
-  kaapic_foreach_attr_init(&attr);
-  kaapic_foreach_attr_set_grains(&attr, 128, 128);  
   
-  return kaapic_foreach_common( *first, *last+1, &attr,kaapif_foreach_body2user, body_arg);
+  kaapic_foreach_attr_init(&attr);
+  kaapic_foreach_attr_set_grains(&attr, xxx_seq_grain, xxx_par_grain);
+  if (kaapic_foreach_common( *first, *last+1, &attr,kaapif_foreach_body2user, body_arg) ==0)
+    return KAAPIF_SUCCESS;
+  return KAAPIF_ERR_FAILURE;
 }

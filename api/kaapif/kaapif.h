@@ -56,6 +56,16 @@ extern "C" {
 
 
 /* kaapi fortran interface */
+#define KAAPIF_SUCCESS 0
+#define KAAPIF_ERR_FAILURE -1
+#define KAAPIF_ERR_EINVAL -2
+#define KAAPIF_ERR_UNIMPL -3
+
+#if CONFIG_MAX_TID
+extern int xxx_max_tid;
+#endif
+extern int xxx_seq_grain;
+extern int xxx_par_grain;
 
 extern int kaapif_init_(int32_t*);
 extern int kaapif_finalize_(void);
@@ -91,7 +101,7 @@ extern int kaapif_spawn_(
     ...
 );
 
-extern void kaapif_sync_(void);
+extern void kaapif_sched_sync_(void);
 extern int kaapif_begin_parallel_(void);
 extern int kaapif_end_parallel_(int32_t*);
 
