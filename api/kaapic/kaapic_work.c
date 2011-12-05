@@ -317,6 +317,8 @@ redo_steal:
   {
     leaf_count = (range_size / wi->par_grain) - 1;
     unit_size = wi->par_grain;
+    if (leaf_count ==0)
+      goto skip_workqueue;
   }
 
   /* perform the actual steal. if the range
