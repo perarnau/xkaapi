@@ -48,6 +48,6 @@
       call kaapif_finalize()
 
       ! done
-      write(*, *) (stop - start)/100
+      write(*, *) (stop - start)
 
       end program main
