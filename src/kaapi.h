@@ -1764,14 +1764,27 @@ static inline int kaapi_workqueue_destroy( kaapi_workqueue_t* kwq )
 }
 
 /** This function set new bounds for the workqueue.
-    The only garantee is that is a concurrent thread tries
-    to access to the size of the queue while a thread set the workqueue, 
-    then the concurrent thread will see the size of the queue before the call to set
-    or it will see a nul size queue.
+    Their is no guarantee on this function with respect to concurrent thieves.
+    The caller must ensure atomic update by surrounding the call to
+    kaapi_workqueue_set by kaapi_workqueue_lock/kaapi_workqueue_unlock
     \retval 0 in case of success
     \retval ESRCH if the current thread is not a kaapi thread.
 */
-extern int kaapi_workqueue_set( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t b, kaapi_workqueue_index_t e);
+static inline int kaapi_workqueue_set( 
+  kaapi_workqueue_t* kwq, 
+  kaapi_workqueue_index_t beg, 
+  kaapi_workqueue_index_t end
+)
+{
+  if ( kwq->lock ==0 ) return ESRCH;
+
+  kaapi_assert_debug( beg <= end );
+  
+  /* may be not thread save ! */
+  kwq->beg = beg;
+  kwq->end = end;
+  return 0;  
+}
 
 /**
 */

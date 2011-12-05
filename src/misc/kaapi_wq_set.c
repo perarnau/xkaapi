@@ -45,22 +45,23 @@
 */
 #include "kaapi_impl.h"
 
-/** This function set new bounds for the workqueue.
-    The only garantee is that is a concurrent thread tries
-    to access to the size of the queue while a thread set the workqueue, 
-    then the concurrent thread will see the size of the queue before the call to set
-    or it will see a nul size queue.
+#if 0
+/** 
 */
-int kaapi_workqueue_set
-( kaapi_workqueue_t* kwq, kaapi_workqueue_index_t beg, kaapi_workqueue_index_t end)
+int kaapi_workqueue_set( 
+  kaapi_workqueue_t* kwq, 
+  kaapi_workqueue_index_t beg, 
+  kaapi_workqueue_index_t end
+)
 {
   if ( kwq->lock ==0 ) return ESRCH;
 
   kaapi_assert_debug( beg <= end );
+  
   kaapi_sched_lock( kwq->lock );
   kwq->beg = beg;
   kwq->end = end;
   kaapi_sched_unlock( kwq->lock );
   return 0;
 }
-
+#endif
