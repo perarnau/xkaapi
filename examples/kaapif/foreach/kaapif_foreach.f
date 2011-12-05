@@ -16,7 +16,7 @@
       ! init runtime
       call kaapif_init(1)
 
-      call kaapif_set_grains( 128, 128)
+      call kaapif_set_grains( 32, 32)
 
       do i = 1,2 
         call kaapif_foreach(1, size, 1, fu, array)

@@ -12,8 +12,7 @@
       tid = tid
 
       do k = i, j
-         array(k) = sqrt(sin(array(k)) * cos(array(k)))
-         !!! &    + sqrt(sin(0.5*array(k)) * cos(0.5*array(k)))
+         array(k) = sqrt(sin(array(k)))
          ! array(k) = array(k) + 1
       end do
 
