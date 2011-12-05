@@ -206,7 +206,6 @@ static int _kaapic_split_leaf_task
   struct kaapi_listrequest_iterator_t* lri
 )
 {
-return 0;
   return _kaapic_split_common(task, arg, lr, lri, 0);
 }
 

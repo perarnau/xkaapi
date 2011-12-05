@@ -141,9 +141,6 @@ redo_select:
     kaapi_slowdown_cpu();
   }
 
-  kaapi_sched_unlock(&victim.kproc->lock);
-  return KAAPI_REQUEST_S_NOK;
-
   /* here becomes an aggregator... the trylock has synchronized memory */
   kaapi_listrequest_iterator_init(&victim_stealctxt->lr, &lri);
 

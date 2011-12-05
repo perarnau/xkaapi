@@ -42,7 +42,7 @@
 ** 
 */
 
-#define CONFIG_USE_DELAY 0
+#define CONFIG_USE_DELAY 1
 
 #include "kaapi_impl.h"
 
