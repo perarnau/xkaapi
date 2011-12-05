@@ -5,6 +5,7 @@
       integer*4 size
       real*8 start
       real*8 stop
+      real*8 kaapif_get_time
 
       ! initialize array
       size = 10000 * 48
@@ -15,14 +16,20 @@
       ! init runtime
       call kaapif_init(1)
 
+      call kaapif_set_grains( 128, 128)
+
+      do i = 1,2 
+        call kaapif_foreach(1, size, 1, fu, array)
+      end do
+
       ! parallel loop
       start = kaapif_get_time()
       do i = 1, 100
-         call kaapif_foreach(13, size, 1, fu, array)
+         call kaapif_foreach(1, size, 1, fu, array)
 
          ! check contents. replace by .true. to enable
          if (.false.) then
-            do k = 13, size
+            do k = 1, size
                if (array(k) .ne. (2 + i)) then
                   write(*, *) '-- INVALID --', i, k, array(k)
                   call flush( 0 )
@@ -32,6 +39,7 @@
             end do
          end if
          ! end check
+         ! write(*, *) "Step ", i
 
       end do
       stop = kaapif_get_time()
@@ -40,6 +48,6 @@
       call kaapif_finalize()
 
       ! done
-      write(*, *) stop - start
+      write(*, *) (stop - start)/100
 
       end program main
