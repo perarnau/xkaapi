@@ -26,7 +26,6 @@ M4_SRCS=\
   m4_macros
 
 BUILT_SOURCES = $(M4_BUILT_FILES)
-EXTRA_DIST = $(M4_SRCS)
 
 $(M4_BUILT_FILES): stamp-m4_generator
 
@@ -50,7 +49,6 @@ libkaapic_la_SOURCES=\
 	kaapic_foreach.c \
 	kaapic_foreach_withformat.c \
 	$(include_HEADERS)\
-	kaapic_impl.h \
-	$(M4_BUILT_FILES)
+    $(M4_BUILT_FILES)
 
 endif

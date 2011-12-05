@@ -13,19 +13,8 @@ libkaapi_la_CFLAGS=@AM_CFLAGS@ $(CFLAGS) $(STD_C99_FLAGS) $(KAAPILIB_BUILD_CFLAG
 libkaapi_la_LDFLAGS = -version-info 0:0:0 $(KAAPILIB_BUILD_LDFLAGS)
 libkaapi_la_LIBADD = $(KAAPILIB_BUILD_LIBS)
 
-
-BUILT_SOURCES=misc/kaapi_version.c kaapi_version_githash.h
-
-# Rebuild the version if gitlastcommit change
-kaapi_version_githash.h: $(srcdir)/../gitlastcommit
-	printf '#define KAAPI_GIT_HASH "%s"\n' "$$(cat $(srcdir)/../gitlastcommit)" > $@
-$(srcdir)/../gitlastcommit:
-	$(MAKE) -C .. gitlastcommit
-clean-local:
-	$(RM) $(BUILT_SOURCES)
-
-nodist_libkaapi_la_SOURCES=$(BUILT_SOURCES)
 libkaapi_la_SOURCES=\
+  misc/kaapi_version.c \
   kaapi_defs.h \
   kaapi_error.h \
   kaapi_machine.h \

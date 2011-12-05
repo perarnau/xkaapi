@@ -125,7 +125,6 @@ static inline void kaapi_request_init( struct kaapi_request_t* pkr, uintptr_t id
 }
 
 
-static int init_iscalled = 0;
 /**
 */
 int kaapi_mt_init(void)
@@ -134,8 +133,9 @@ int kaapi_mt_init(void)
   kaapi_task_t*           task;
   const char* volatile    version __attribute__((unused));
 
-  if (init_iscalled !=0) return EALREADY;
-  init_iscalled = 1;
+  static int iscalled = 0;
+  if (iscalled !=0) return EALREADY;
+  iscalled = 1;
   
   kaapi_isterm = 0;
   version = get_kaapi_version();
@@ -464,9 +464,6 @@ int kaapi_mt_finalize(void)
 
 __attribute__ ((destructor)) static void __kaapi_mt_finalize(void)
 {
-  if (!init_iscalled)
-    return;
-
   kaapi_mt_finalize();
 }
 
