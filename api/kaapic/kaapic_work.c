@@ -164,6 +164,7 @@ typedef struct work_info
 typedef struct work
 {
   kaapi_workqueue_t cr __attribute__((aligned(64)));
+  kaapi_lock_t      lock;
 
 #if CONFIG_TERM_COUNTER
   /* global work counter */
@@ -327,8 +328,11 @@ redo_steal:
   kaapi_assert_debug( vw->cr.lock 
     == &kaapi_get_current_processor()->victim_kproc->lock );
   kaapi_assert_debug( kaapi_atomic_assertlocked(vw->cr.lock) );
+
+  kaapi_atomic_lock(&vw->lock);
   if (kaapi_workqueue_steal(&vw->cr, &i, &j, leaf_count * unit_size))
   {
+    kaapi_atomic_unlock(&vw->lock);
     if ((trials--) == 0)
     {
       leaf_count = 0;
@@ -337,6 +341,9 @@ redo_steal:
 
     goto redo_steal;
   }
+  else
+    kaapi_atomic_unlock(&vw->lock);
+    
 #if defined(BIG_DEBUG_MACOSX)
     kaapi_workqueue_index_t beg,end;
     beg = kaapi_workqueue_range_begin(&vw->cr);
@@ -407,8 +414,9 @@ skip_workqueue:
       (int)p, (int)q);
     fflush(stdout);
 #endif
+    kaapi_atomic_initlock(&tw->lock);
     kaapi_workqueue_init_with_lock
-      (&tw->cr, p, q, &kaapi_all_kprocessors[req->ident]->lock);
+      (&tw->cr, p, q, &tw->lock);
     tw->body_f    = vw->body_f;
     tw->body_args = vw->body_args;
     tw->wi = wi;
@@ -634,10 +642,11 @@ int kaapic_foreach_common
   j = i + off + scale;
 
   /* initialize the workqueue */
+  kaapi_atomic_initlock(&w.lock);
   kaapi_workqueue_init_with_lock(
     &w.cr, 
     i, j,
-    &kaapi_all_kprocessors[tid]->lock
+    &w.lock
   );
   w.wa        = &wa;
   w.body_f    = body_f;

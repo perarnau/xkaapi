@@ -466,11 +466,11 @@ static inline int kaapi_stack_init(
 static inline int kaapi_stack_reset(kaapi_stack_t* stack )
 {
   kaapi_frame_t* fp   = stack->stackframe;
-  stack->sfp          = fp;
-  stack->esfp         = fp;
   fp->sp              = fp->pc  = stack->task; /* empty frame */
   fp->sp_data         = stack->data;
-  stack->sfp->tasklist= 0;
+  fp->tasklist        = 0;
+  stack->sfp          = fp;
+  stack->esfp         = fp;
   return 0;
 }
 
