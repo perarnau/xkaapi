@@ -6,17 +6,31 @@
 ##
 
 ACCUMULATE_PRGS=accumulate_kaapi
+
+if KAAPI_API_KAAPIXX
+ACCUMULATE_PRGS+=\
+	accumulate_kaapi++
+endif
+
 check_PROGRAMS+=$(ACCUMULATE_PRGS)
 all-accumulate: $(ACCUMULATE_PRGS)
 
 #Accumulate STL algorithm
 
+
 accumulate_kaapi_SOURCES=accumulate/accumulate_kaapi.c
+accumulate_kaapi___SOURCES=accumulate/accumulate_kaapi++.cpp
 
 accumulate_kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
 accumulate_kaapi_CFLAGS  =$(AM_CFLAGS)   $(KAAPIPROGS_BUILD_CFLAGS) $(STD_C99_FLAGS)
 accumulate_kaapi_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIPROGS_BUILD_LDFLAGS)
 accumulate_kaapi_LDADD   =$(LIBS)        $(KAAPIPROGS_BUILD_LIBS)
+
+accumulate_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+accumulate_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+accumulate_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+accumulate_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS) -lm
+
 
 #accumulate_while_kastl_CPPFLAGS=$(AM_CPPFLAGS) $(KASTLPROGS_BUILD_CPPFLAGS)
 #accumulate_while_kastl_CXXFLAGS=$(AM_CXXFLAGS) $(KASTLPROGS_BUILD_CXXFLAGS)

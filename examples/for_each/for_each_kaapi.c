@@ -1,7 +1,7 @@
 /*
  ** xkaapi
  ** 
- ** Created on Tue Mar 31 15:19:14 2009
+ **
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
@@ -41,120 +41,71 @@
  ** terms.
  ** 
  */
-#include "kaapi.h"
-#include "kaapif.h"
-#include "kaapic_impl.h"
+#include "kaapic.h"
+#include <string.h>
+#include <math.h>
 
 
-extern void _kaapif_register_task_format(void);
+/** Description of the example.
+ 
+ Overview of the execution.
+ 
+ What is shown in this example.
+ 
+ Next example(s) to read.
+ */
 
-#if CONFIG_MAX_TID
-static int xxx_max_tid;
-#endif
-static int xxx_seq_grain;
-static int xxx_par_grain;
 
-#define FATAL()						\
-do {							\
-  printf("fatal error @ %s::%d\n", __FILE__, __LINE__);	\
-  kaapi_abort();						\
-} while(0)
-
-static kaapi_atomic_t kaapif_initcalled = { 0 };
-
-int kaapif_init_(int32_t* flags)
+static void apply_cos(
+  int32_t i, int32_t j, int32_t tid, double* array
+)
 {
-  if (KAAPI_ATOMIC_INCR(&kaapif_initcalled) != 1)
-    return 0;
+  /* process array[i, j[, inclusive */
+  int32_t k;
 
-  int err = kaapic_init(*flags);
-  if (err !=0) return err;
-
-  /* default work info */
-#if CONFIG_MAX_TID
-  xxx_max_tid = (unsigned int)(kaapi_getconcurrency() - 1);
-#endif
-  xxx_seq_grain = 16;
-  xxx_par_grain = 2 * xxx_seq_grain;
-
-  return 0;
+  for (k = i; k < j; ++k)
+    array[k] += cos(array[k]);
 }
 
 
-int kaapif_finalize_(void)
+/**
+ */
+int main(int ac, char** av)
 {
-  if (KAAPI_ATOMIC_DECR(&kaapif_initcalled) != 0)
-    return 0;
+  double t0,t1;
+  double sum = 0.f;
+  size_t i;
+  size_t iter;
+  
+#define ITEM_COUNT 100000
+  static double array[ITEM_COUNT];
+  
+  /* initialize the runtime */
+  kaapic_init(1);
+  
+  for (iter = 0; iter < 100; ++iter)
+  {
+    /* initialize, apply, check */
+    for (i = 0; i < ITEM_COUNT; ++i)
+      array[i] = 0.f;
 
-#if CONFIG_FOREACH_STATS
-  printf("foreach: %lf\n", foreach_time);
-#endif
+    t0 = kaapic_get_time();
+    kaapic_foreach( 0, ITEM_COUNT, 0, 1, apply_cos, array );
+    t1 = kaapic_get_time();
+    sum += (t1-t0)*1000; /* ms */
 
-  return kaapic_finalize();
-}
+    for (i = 0; i < ITEM_COUNT; ++i)
+      if (array[i] != 1.f)
+      {
+        printf("invalid @%lu == %lf\n", i, array[i]);
+        break ;
+      }
+  }
 
+  printf("done: %lf (ms)\n", sum / 100);
 
-double kaapif_get_time_(void)
-{
-  return kaapi_get_elapsedtime();
-}
-
-
-int32_t kaapif_get_concurrency_(void)
-{
-  return (int32_t)kaapi_getconcurrency();
-}
-
-
-int32_t kaapif_get_thread_num_(void)
-{
-  return (int32_t)kaapi_get_self_kid();
-}
-
-
-void kaapif_set_max_tid_(int32_t* tid)
-{
-#if CONFIG_MAX_TID
-  xxx_max_tid = *tid;
-#else
-  /* unused */
-  *tid = *tid;
-#endif
-}
-
-
-void kaapif_set_grains_(int32_t* par_grain, int32_t* seq_grain)
-{
-  xxx_par_grain = *par_grain;
-  xxx_seq_grain = *seq_grain;
-}
-
-
-int32_t kaapif_get_max_tid_(void)
-{
-#if CONFIG_MAX_TID
-  return xxx_max_tid;
-#else
-  return 0;
-#endif
-}
-
-
-void kaapif_sync_(void)
-{
-  kaapi_sched_sync();
-}
-
-
-int kaapif_begin_parallel_(void)
-{
-  kaapi_begin_parallel(KAAPI_SCHEDFLAG_DEFAULT);
-  return 0;
-}
-
-
-int kaapif_end_parallel_(int32_t* flags)
-{
-  kaapi_end_parallel(*flags);
+  /* finalize the runtime */
+  kaapic_finalize();
+  
   return 0;
 }

@@ -72,8 +72,8 @@ Thierry Gautier
 \RRmotcle{}
 \RRkeyword{parallel computing, \kaapi, FORTRAN}
 \RRprojets{MOAIS}
-\RRdomaine{3} % cas du domaine numero 1
-\RRthemeProj{moais} % theme du projet Apics
+%\RRdomaine{3} % cas du domaine numero 1
+%\RRthemeProj{moais} % theme du projet Apics
 \RCGrenoble % Grenoble - Rh\^one-Alpes
 
 \begin{document}
@@ -89,7 +89,7 @@ Thierry Gautier
 
 \kaapi is both a programming model and a runtime for high performance parallelism targeting multicore and distributed architectures. 
 It relies on the work stealing paradigm.
-\kaapi was developed in the MOAIS INRIA project by Thierry Gautier, Fabien Le Mentec, Vincent Danjean and Christophe Laferrière in the early stage of the library.
+\kaapi was developed in the MOAIS INRIA project by Thierry Gautier, Fabien Le Mentec, Vincent Danjean and Christophe Laferri\`{e}re in the early stage of the library.
 
 In this report, only the programming model based on the C API is presented.
 The runtime library comes also with a full set of complementary programming interfaces: C, C++ and STL-like interfaces. The C++ and STL interfaces, at a higher level than the C interface, may be directly used for developing parallel programs or libraries.
@@ -124,8 +124,8 @@ If you wish to contact the XKaapi team, please visite the web site at:
 \lstset{commentstyle=\color{blue}}
 \lstset{language=C}
 \begin{lstlisting}[frame=tb]
-SUBROUTINE KAAPIF_INIT(INTEGER*4 FLAGS)
-SUBROUTINE KAAPIF_FINALIZE()
+INTEGER*4 FUNCTION KAAPIF_INIT(INTEGER*4 FLAGS)
+INTEGER*4 FUNCTION KAAPIF_FINALIZE()
 \end{lstlisting}
 \end{small}
 
@@ -144,7 +144,7 @@ waiting for a parallel region to be entered (refer to KAAPIF\_BEGIN\_PARALLEL).
 
 \subsection{Return value}
 \paragraph{}
-None.
+Refer to the \textit{Error codes} section.
 
 \subsection{Example}
 \paragraph{}
@@ -152,11 +152,12 @@ Refer to examples/kaapif/foreach\\
 \begin{small}
 \begin{lstlisting}[frame=tb]
   PROGRAM MAIN
-    CALL KAAPIF_INIT(1)
+    INTEGER*4 E
 
+    E = KAAPIF_INIT(1)
     ...
+    E = KAAPIF_FINALIZE()
 
-    CALL KAAPIF_FINALIZE()
   END PROGRAM MAIN
 \end{lstlisting}
 \end{small}
@@ -186,10 +187,75 @@ to the \kaapi runtime.
 \paragraph{}
 \textit{KAAPIF\_GET\_THREAD\_NUM} returns the current thread identifier. Note it
 should only be called in the context of a \kaapi thread.
+\paragraph{}
+For both functions, a negative value means an error occured. Refer to the
+\textit{Error codes} section.
 
 \subsection{Example}
 \paragraph{}
 Refer to examples/kaapif/foreach
+
+
+\newpage
+\section{Adaptive grains}
+
+\subsection{Synopsis}
+\begin{small}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+INTEGER*4 FUNCTION KAAPIF_SET_GRAINS
+(
+  INTEGER*4 PAR_GRAIN,
+  INTEGER*4 SEQ_GRAIN
+)
+\end{lstlisting}
+\end{small}
+
+\subsection{Description}
+\paragraph{}
+\textit{KAAPIF\_SET\_GRAINS} sets the adaptive loop grains. Grains are used
+to amortize the act of extracting work for both the parallel (ie. during a
+steal) and sequential (ie. during a pop) executions. Guessing those grains
+is problem specific. The general intuition is that they should be inversely
+propotionnal to a single task processing time (given a task processing time
+is constant across execution). The parallel grain should be greater than the
+sequential grain, since a steal operation requires a bigger task to be amortized.
+
+\paragraph{}
+Note that this routine sets global variables used by a subsequent calls to
+\textit{KAAPIF\_FOREACH} family functions. To avoid reentrancy issues,
+\textit{KAAPIF\_SET\_GRAINS} should be called just before the corresponding
+\textit{KAAPIF\_FOREACH} function.
+
+\subsection{Parameters}
+\begin{itemize}
+\item \textit{PAR\_GRAIN}: below this size, a task cannot be split for
+subsequent parallel execution. default to 32.
+\item \textit{SEQ\_GRAIN}: the size used by the sequential execution to
+extract work from its local workqueue. default to 16.
+\end{itemize}
+
+\subsection{Return value}
+\paragraph{}
+Refer to the \textit{Error codes} section.
+
+\subsection{Example}
+\paragraph{}
+\begin{small}
+\begin{lstlisting}[frame=tb]
+  PROGRAM MAIN
+    INTEGER*4 E
+
+    ...
+    E = KAAPIF_INIT(1)
+    E = KAAPIF_SET_GRAINS(32, 32)
+    E = KAAPIF_FOREACH(...)
+    ...
+
+  END PROGRAM MAIN
+\end{lstlisting}
+\end{small}
 
 
 \newpage
@@ -225,14 +291,13 @@ Refer to examples/kaapif/foreach\\
   PROGRAM MAIN
     REAL*8 START
     REAL*8 STOP
+    INTEGER*4 E
 
-    CALL KAAPIF_INIT(1)
+    E = KAAPIF_INIT(1)
     START = KAAPIF_GET_TIME()
-
     ...
-
     STOP = KAAPIF_GET_TIME()
-    CALL KAAPIF_FINALIZE()
+    E = KAAPIF_FINALIZE()
 
     WRITE(*, *) STOP - START
 
@@ -249,7 +314,7 @@ Refer to examples/kaapif/foreach\\
 \lstset{commentstyle=\color{blue}}
 \lstset{language=C}
 \begin{lstlisting}[frame=tb]
-SUBROUTINE KAAPIF_FOREACH
+INTEGER*4 FUNCTION KAAPIF_FOREACH
 (
   BODY,
   INTEGER*4 FIRST, INTEGER*4 LAST,
@@ -257,7 +322,7 @@ SUBROUTINE KAAPIF_FOREACH
   ...
 )
 
-SUBROUTINE KAAPIF_FOREACH_WITH_FORMAT
+INTEGER*4 FUNCTION KAAPIF_FOREACH_WITH_FORMAT
 (
   BODY,
   INTEGER*4 FIRST, INTEGER*4 LAST,
@@ -296,11 +361,11 @@ documentation.
 
 \subsection{Return value}
 \paragraph{}
-None.
+Refer to the \textit{Error codes} section.
 
 \subsection{Example}
 Refer to examples/kaapif/foreach\\
-Refer to examples/kaapif/foreach\_with\_format
+Refer to examples/kaapif/foreach\_with\_format\\
 
 \begin{small}
 \begin{lstlisting}[frame=tb]
@@ -314,14 +379,29 @@ Refer to examples/kaapif/foreach\_with\_format
   END
 
   PROGRAM MAIN
+    INTEGER*4 E
+
     ...
     ! apply the OP routine on ARRAY[1:SIZE]
-    CALL KAAPIF_FOREACH(OP, 1, SIZE, 1, ARRAY)
+    E = KAAPIF_FOREACH(OP, 1, SIZE, 1, ARRAY)
+
     ...
+    ! version with format
+    ! as above, ARRAY is the only argument
+    ! 
+    E = KAAPIF_FOREACH_WITH_FORMAT
+    (
+    ! iterated range and argument count are the same as above
+    OP, 1, SIZE, 1,
+    ! ARRAY an array of SIZE double
+    ! ARRAY elments are read and written by the task
+    ARRAY, KAAPIF_TYPE_DOUBLE, SIZE, KAAPIF_MODE_RW
+    )
+    ...
+
   END PROGRAM MAIN
 \end{lstlisting}
 \end{small}
-
 
 \newpage
 \section{Dataflow programming}
@@ -330,7 +410,7 @@ Refer to examples/kaapif/foreach\_with\_format
 \lstset{commentstyle=\color{blue}}
 \lstset{language=C}
 \begin{lstlisting}[frame=tb]
-SUBROUTINE KAAPIF_SPAWN
+INTEGER*4 FUNCTION KAAPIF_SPAWN
 (
   BODY,
   INTEGER*4 NARGS,
@@ -367,8 +447,8 @@ Each task parameter is described by 4 successive arguments including:
 \begin{itemize}
 \item KAAPIF\_TYPE\_CHAR=0,
 \item KAAPIF\_TYPE\_INT=1,
-\item KAPAIF\_TYPE\_REAL=2,
-\item KAPAIF\_TYPE\_DOUBLE=3.
+\item KAAPIF\_TYPE\_REAL=2,
+\item KAAPIF\_TYPE\_DOUBLE=3.
 \end{itemize}
 
 \paragraph{}
@@ -393,7 +473,7 @@ For a scalar value, it must be set to 1.
 
 \subsection{Return value}
 \paragraph{}
-None.
+Refer to the \textit{Error codes} section.
 
 \subsection{Example}
 \paragraph{}
@@ -409,10 +489,10 @@ Refer to examples/kaapif/dfg
   END
 
   PROGRAM MAIN
+    INTEGER*4 E
     ...
-
     ! spawn a task implemented by the OP routine
-    call kaapif_spawn(fu, 2,
+    E = KAAPIF_SPAWN(OP, 2,
     ! argument[0]
      &                42
      &                KAAPIF_TYPE_DOUBLE,
@@ -423,7 +503,6 @@ Refer to examples/kaapif/dfg
      &                KAAPIF_TYPE_DOUBLE,
      &                1,
      &                KAAPIF_MODE_V)
-
     ...
   END PROGRAM MAIN
 \end{lstlisting}
@@ -438,8 +517,8 @@ Refer to examples/kaapif/dfg
 \lstset{commentstyle=\color{blue}}
 \lstset{language=C}
 \begin{lstlisting}[frame=tb]
-SUBROUTINE KAAPIF_BEGIN_PARALLEL()
-SUBROUTINE KAAPIF_END_PARALLEL(INTEGER*4 FLAGS)
+INTEGER*4 FUNCTION KAAPIF_BEGIN_PARALLEL()
+INTEGER*4 FUNCTION KAAPIF_END_PARALLEL(INTEGER*4 FLAGS)
 \end{lstlisting}
 \end{small}
 
@@ -459,7 +538,7 @@ leaving the region.
 
 \subsection{Return value}
 \paragraph{}
-None.
+Refer to the \textit{Error codes} section.
 
 \subsection{Example}
 \paragraph{}
@@ -467,15 +546,14 @@ Refer to examples/kaapif/dfg\\
 \begin{small}
 \begin{lstlisting}[frame=tb]
   PROGRAM MAIN
-    ...
-
-    CALL KAAPIF_BEGIN_PARALLEL()
+    INTEGER*4 E
 
     ...
-
-    CALL KAAPIF_END_PARALLEL(1)
-
+    E = KAAPIF_BEGIN_PARALLEL()
     ...
+    E = KAAPIF_END_PARALLEL(1)
+    ...
+
   END PROGRAM MAIN
 \end{lstlisting}
 \end{small}
@@ -489,7 +567,7 @@ Refer to examples/kaapif/dfg\\
 \lstset{commentstyle=\color{blue}}
 \lstset{language=C}
 \begin{lstlisting}[frame=tb]
-SUBROUTINE KAAPIF_SCHED_SYNC()
+INTEGER*4 FUNCTION KAAPIF_SYNC()
 \end{lstlisting}
 \end{small}
 
@@ -501,7 +579,7 @@ the processor executing the sequential flow.
 
 \subsection{Return value}
 \paragraph{}
-None.
+Refer to the \textit{Error codes} section.
 
 \subsection{Example}
 \paragraph{}
@@ -509,14 +587,27 @@ Refer to examples/kaapif/dfg\\
 \begin{small}
 \begin{lstlisting}[frame=tb]
   PROGRAM MAIN
-    ...
-
-    CALL KAAPIF_SYNC()
+    INTEGER*4 E
 
     ...
+    E = KAAPIF_SYNC()
+    ...
+
   END PROGRAM MAIN
 \end{lstlisting}
 \end{small}
+
+
+\newpage
+\section{Error codes}
+\paragraph{}
+When indicated, a routine may return one of the following error code:
+\begin{itemize}
+\item KAAPIF\_ERR\_SUCCESS=0: success
+\item KAAPIF\_ERR\_FAILURE=-1: generic error code
+\item KAAPIF\_ERR\_EINVAL=-2: invalid argument
+\item KAAPIF\_ERR\_UNIMPL=-3: feature not implemented
+\end{itemize}
 
 
 \end{document}

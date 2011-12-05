@@ -14,47 +14,50 @@ AM_CXXFLAGS=@AM_CXXFLAGS@
 
 check_PROGRAMS=
 
-include accumulate.am
+#include accumulate.am
 include array.am
-include bfs.am
+#include bfs.am
 include branchbound.am
 include cilk.am
 include fibo.am
-include find.am
+#include find.am
 include for_each.am
 include hello.am
-include jacobi2D.am
+#include jacobi2D.am
 include kaapic.am
-include linearwork.am
+#include linearwork.am
 include listranking.am
 include matrix.am
 include mergesort.am
 include net.am
 include nqueens.am
 include poisson3D.am
-include prefix.am
+#include prefix.am
 # include papi.am
 
 USER_MAKEFILES=\
-	mergesort/Makefile \
-	accumulate/Makefile \
 	array/Makefile \
-	bfs/Makefile \
 	branchbound/Makefile \
 	cilk/Makefile \
 	fibo/Makefile \
-	find/Makefile \
 	for_each/Makefile \
-	jacobi2D/Makefile \
 	kaapic/Makefile \
-    linearwork/Makefile \
 	listranking/Makefile \
 	hello/Makefile \
 	matrix/Makefile \
+	mergesort/Makefile \
 	net/Makefile \
 	nqueens/Makefile \
-	poisson3D/Makefile \
+	poisson3D/Makefile
+
+#TO CORRECT	\
+	accumulate/Makefile\
+	bfs/Makefile \
+	find/Makefile \
+	jacobi2D/Makefile \
+    linearwork/Makefile \
 	prefix/Makefile
+
 
 TESTS=  
 

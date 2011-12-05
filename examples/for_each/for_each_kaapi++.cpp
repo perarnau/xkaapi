@@ -5,8 +5,8 @@
 ** Copyright 2009 INRIA.
 **
 ** Contributors :
-**
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -41,88 +41,105 @@
 ** terms.
 ** 
 */
-#include <iostream>
-#include <stdlib.h>
-#include "kaapi++" // this is the new C++ interface for Kaapi
-
-/* Task Print
- * this task prints the sum of the entries of an array 
- * each entries is view as a pointer object:
-    array<1,R<int> > means that each entry may be read by the task
- */
-struct TaskPrintMatrix : public ka::Task<1>::Signature<ka::R<ka::range2d<double> > > {};
-
-template<>
-struct TaskBodyCPU<TaskPrintMatrix> {
-  void operator() ( ka::range2d_r<double> array  )
-  {
-    int d0 = array.dim(0);
-    int d1 = array.dim(1);
-    std::cout << "In TaskPrintMatrix/CPU, matrix = " << d0 << "x" << d1 << std::endl;
-    for (int i=0; i < d0; ++i)
-    {
-      for (int j=0; j < d1; ++j)
-      {
-        std::cout << array(i,j) << " ";
-      }
-      std::cout << std::endl;
-    }
-  }
-};
+#include "for_each_work.h"
 
 
-/* Task Print BLOCK
- * this task prints the sum of the entries of an array 
- * each entries is view as a pointer object:
-    array<1,R<int> > means that each entry may be read by the task
- */
-struct TaskPrintMatrixRec : public ka::Task<1>::Signature<ka::R<ka::range2d<double> > > {};
+/** Description of the example.
 
-template<>
-struct TaskBodyCPU<TaskPrintMatrixRec> {
-  void operator() ( ka::range2d_r<double> array  )
-  {
-    size_t d0 = array.dim(0);
-    size_t d1 = array.dim(1);
-    if ((d0 >= d1) && d0 >= 10)
-    {
-       ka::Spawn<TaskPrintMatrixRec>()(array(ka::rangeindex(0, d0/2), ka::rangeindex::full));
-       ka::Spawn<TaskPrintMatrixRec>()(array(ka::rangeindex(d0/2, d0), ka::rangeindex::full));
-    }
-    else if (d1 >= 10) {
-       ka::Spawn<TaskPrintMatrixRec>()(array(ka::rangeindex::full, ka::rangeindex(0, d1/2)));
-       ka::Spawn<TaskPrintMatrixRec>()(array(ka::rangeindex::full, ka::rangeindex(d1/2, d1)));
-    }
-    else {
-       ka::Spawn<TaskPrintMatrix>()(array);
-    }
-
-  }
-};
-
-
-
-/* Main task of the program
+    Overview of the execution.
+    
+    What is shown in this example.
+    
+    Next example(s) to read.
 */
+
+
+/** Simple task that only do sequential computation
+*/
+template<typename T, typename OP>
+struct TaskBodyCPU<TaskWork<T, OP> > {
+  void operator() ( ka::pointer_rw<Work<T,OP> > work )
+  {
+    T* beg; 
+    T* end;
+    
+    /* while there is sequential work to do*/
+    while (work->pop(beg, end))
+    {
+      /* apply w->op foreach item in [pos, end[ */
+      std::for_each( beg, end, work->op() );
+    }
+  }
+};
+
+/** Splitter for CPU implementation, call in concurrency with 
+    TaskBodyCPU<TaskWork<T, OP> >
+*/
+template<typename T, typename OP>
+struct TaskSplitter<TaskWork<T, OP> > {
+  int operator() ( ka::StealContext* sc, 
+                   int nreq, 
+                   ka::ListRequest::iterator begin, 
+                   ka::ListRequest::iterator end,
+                   ka::pointer_rw<Work<T,OP> > work
+                  ) 
+  {
+    return work->split(sc, nreq, begin, end );
+  }
+};
+
+
+
+/* For each main function */
+template<typename T, class OP>
+static void for_each( T* beg, T* end, OP op )
+{
+  /* range to process */
+  Work<T,OP> work(beg, end-beg, op);
+  ka::Spawn<TaskWork<T,OP> >()(&work);
+  ka::Sync();
+}
+
+
+/**
+*/
+void apply_cos( double& v )
+{
+  v += cos(v);
+  usleep(100);
+}
+
+/* My main task */
 struct doit {
   void operator()(int argc, char** argv )
   {
-    int n= 10;
-    if (argc >1) n = atoi(argv[1]);
-
-    double* data = new double[n*n];
-    for (int i=0; i<n; ++i)
-      for (int j=0; j<n; ++j)
-        data[i*n+j] = i*n+j;
+    double t0,t1;
+    double sum = 0.f;
+    size_t size = 30000;
+    if (argc >1) size = atoi(argv[1]);
     
-    /* form a view of data as an 2-dimensional array */
-    ka::range2d<double> arr(data, n, n, n); 
+    double* array = new double[size];
 
-    /* be carrefull here: the array is equivalent as if each of its entries has
-       been passed to the task (the formal parameter is array<1,W<int> >).
-    */
-    ka::Spawn<TaskPrintMatrixRec>()( arr );
-    ka::Sync();    
+    for (int iter = 0; iter < 1; ++iter)
+    {
+      /* initialize, apply, check */
+      for (size_t i = 0; i < size; ++i)
+        array[i] = 0.f;
+        
+      t0 = kaapi_get_elapsedns();
+      for_each( array, array+size, apply_cos );
+      t1 = kaapi_get_elapsedns();
+      sum += (t1-t0)/1000; /* ms */
+
+      for (size_t i = 0; i < size; ++i)
+        if (array[i] != 1.f)
+        {
+          std::cout << "invalid @" << i << " == " << array[i] << std::endl;
+          break ;
+        }
+    }
+
+    std::cout << "Done " << sum/100 << " (ms)" << std::endl;
   }
 };
 

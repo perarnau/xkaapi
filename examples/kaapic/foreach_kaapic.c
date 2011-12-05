@@ -13,8 +13,8 @@
 
 
 #define CONFIG_TERM_BUG 0
-#define CONFIG_CHECK_RES 1
-#define CONFIG_BENCH 0
+#define CONFIG_CHECK_RES 0
+#define CONFIG_BENCH 1
 
 
 #if CONFIG_TERM_BUG
@@ -45,11 +45,7 @@ static void fu (
     }
 #endif
 
-#if CONFIG_CHECK_RES
     array[k] += *value;
-#else
-    array[k] += sin(*value);
-#endif
   }
 
 #if CONFIG_TERM_BUG
@@ -90,10 +86,9 @@ int main(int ac, char** av)
 #if CONFIG_TERM_BUG
   for (i = 0; i < 100000; ++i)
 #else
-  for (i = 0; i < 1; ++i)
+  for (i = 0; i < 100; ++i)
 #endif
   {
-    printf("--\n");
 #if CONFIG_TERM_BUG
     global_check = (void*)(uintptr_t)i;
 //OLD    kaapic_foreach(fu, 0, size - 1, 3, array, &one, global_check);

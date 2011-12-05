@@ -70,6 +70,7 @@ struct TaskBodyCPU<TaskForEachTerminal<T, OP> > {
   }
 };
 
+
 /* task signature */
 template<typename T, typename OP>
 struct TaskForEach : public ka::Task<2>::Signature< ka::RPWP<ka::range1d<T> >, OP> {};
