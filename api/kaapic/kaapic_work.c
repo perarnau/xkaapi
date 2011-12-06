@@ -668,8 +668,8 @@ int kaapic_foreach_common
   /* process locally */
 #if defined(KAAPI_DEBUG)
   kaapi_processor_t* kproc = kaapi_get_current_processor();
-#endif
   kaapi_assert_debug( kproc->kid == tid );
+#endif
 
 #if defined(BIG_DEBUG_MACOSX)
   kaapi_workqueue_t savewq;
