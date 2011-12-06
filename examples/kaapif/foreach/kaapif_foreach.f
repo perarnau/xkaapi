@@ -18,10 +18,6 @@
 
       call kaapif_set_grains( 32, 32)
 
-      do i = 1,2 
-        call kaapif_foreach(1, size, 1, fu, array)
-      end do
-
       ! parallel loop
       start = kaapif_get_time()
       do i = 1, 100
