@@ -335,6 +335,9 @@ int kaapi_mt_finalize(void)
   if (KAAPI_ATOMIC_DECR(&iscalled) !=0) 
     return EALREADY;
 
+  if (kaapi_count_kprocessors ==0) 
+    return 0;
+  
   /* if thread suspended, then resume all threads
   */
   if (kaapi_suspendflag)
