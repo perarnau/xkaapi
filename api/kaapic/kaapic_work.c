@@ -322,8 +322,18 @@ redo_steal:
   /* perform the actual steal. if the range
      changed size in between, redo the steal
   */
-  kaapi_assert_debug( vw->cr.lock 
-    == &kaapi_get_current_processor()->victim_kproc->lock );
+#if defined(KAAPI_DEBUG)
+  if (vw->cr.lock != &kaapi_get_current_processor()->victim_kproc->lock )
+  {
+    kaapi_processor_t* kproc = kaapi_get_current_processor();
+    printf("@lock victim:%p, kid combiner:%i, victim_kproc:%i\n",
+      (void*)vw->cr.lock,
+      kproc->kid,
+      kproc->victim_kproc->kid
+    );
+  }
+#endif
+  kaapi_assert_debug( vw->cr.lock == &kaapi_get_current_processor()->victim_kproc->lock );
   kaapi_assert_debug( kaapi_atomic_assertlocked(vw->cr.lock) );
   if (kaapi_workqueue_steal(&vw->cr, &i, &j, leaf_count * unit_size))
   {
@@ -723,7 +733,7 @@ continue_work:
   last_refill_i  = i;
   last_refill_j  = j;
 #endif
-  kaapi_workqueue_init(
+  kaapi_workqueue_set(
     &w.cr, 
     (kaapi_workqueue_index_t)i, (kaapi_workqueue_index_t)j
   );
