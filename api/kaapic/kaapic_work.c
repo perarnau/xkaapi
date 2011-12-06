@@ -431,7 +431,7 @@ skip_workqueue:
       tw,
       KAAPI_TASK_UNSTEALABLE
     );
-#if 1
+#if 1 /* comment this line if you do not want thief to be thief by other */
     kaapi_request_pushtask_adaptive_tail( 
       req, 
       victim_task,
