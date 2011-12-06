@@ -354,7 +354,9 @@ redo_steal:
 
 
 skip_workqueue:
+#if defined(BIG_DEBUG_MACOSX)
   printf("Split WQ #:%lli, #steal:%lli\n", range_size, j-i );
+#endif
   for ( /* void */; 
         !kaapi_listrequest_iterator_empty(lri) && (root_count || leaf_count); 
         kaapi_listrequest_iterator_next(lr, lri)

@@ -16,18 +16,25 @@
       ! init runtime
       call kaapif_init(1)
 
+      call kaapif_set_grains( 32, 32)
 
-      call kaapif_set_grains(128,128)
       ! parallel loop
       start = kaapif_get_time()
       do i = 1, 100
-         call kaapif_foreach(13, size, 1, fu, array)
+         call kaapif_foreach(1, size, 1, fu, array)
 
          ! check contents. replace by .true. to enable
-         if (.false.) then
-            do k = 13, size
+         if (.true.) then
+            do k = 1, size
                if (array(k) .ne. (2 + i)) then
                   write(*, *) '-- INVALID --', i, k, array(k)
+                  do l=1,size
+                    if (array(l) .eq. (2+i)) then
+                      write(*, *) '-- VALID --[', l, ']-> ', array(l)
+                    else
+                      write(*, *) '-- INVALID --[', 1, ']->', array(l)
+                    end if
+                  end do
                   call flush( 0 )
                   call sleep( 1 )
                   stop
@@ -35,6 +42,7 @@
             end do
          end if
          ! end check
+         ! write(*, *) "Step ", i
 
       end do
       stop = kaapif_get_time()
@@ -43,6 +51,6 @@
       call kaapif_finalize()
 
       ! done
-      write(*, *) "time:", stop - start, " second(s)"
+      write(*, *) (stop - start)
 
       end program main
