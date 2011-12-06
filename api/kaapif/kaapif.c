@@ -51,8 +51,8 @@ extern void _kaapif_register_task_format(void);
 #if CONFIG_MAX_TID
 static int xxx_max_tid;
 #endif
-static int xxx_seq_grain;
-static int xxx_par_grain;
+int xxx_seq_grain;
+int xxx_par_grain;
 
 #define FATAL()						\
 do {							\
