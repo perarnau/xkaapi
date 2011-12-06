@@ -1770,7 +1770,7 @@ static inline int kaapi_workqueue_destroy( kaapi_workqueue_t* kwq )
     \retval 0 in case of success
     \retval ESRCH if the current thread is not a kaapi thread.
 */
-static inline int kaapi_workqueue_set( 
+static inline int kaapi_workqueue_reset( 
   kaapi_workqueue_t* kwq, 
   kaapi_workqueue_index_t beg, 
   kaapi_workqueue_index_t end
@@ -1785,6 +1785,14 @@ static inline int kaapi_workqueue_set(
   kwq->end = end;
   return 0;  
 }
+
+/* deprecated: assume lock is free */
+__attribute__((deprecated))
+extern int kaapi_workqueue_set( 
+  kaapi_workqueue_t* kwq, 
+  kaapi_workqueue_index_t beg, 
+  kaapi_workqueue_index_t end
+);
 
 /**
 */
