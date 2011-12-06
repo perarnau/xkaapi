@@ -11,7 +11,7 @@ AM_CPPFLAGS=@AM_CPPFLAGS@
 AM_CFLAGS=@AM_CFLAGS@ $(STD_C99_FLAGS)
 AM_CXXFLAGS=@AM_CXXFLAGS@ $(STD_CXX0X_FLAGS)
 
-if KAAPI_API_KAAPIXX
+if  KAAPI_API_KAAPIXX
 check_PROGRAMS=   \
 	test_R_R.1      \
 	test_R_R.2      \
@@ -38,6 +38,7 @@ check_PROGRAMS=   \
   minijacobi\
   war_test
 endif
+
 
 TESTS=
 
