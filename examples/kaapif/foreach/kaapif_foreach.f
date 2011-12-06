@@ -16,11 +16,7 @@
       ! init runtime
       call kaapif_init(1)
 
-      call kaapif_set_grains( 32, 32)
-
-      do i = 1,2 
-        call kaapif_foreach(1, size, 1, fu, array)
-      end do
+      call kaapif_set_grains( 32, 128)
 
       ! parallel loop
       start = kaapif_get_time()

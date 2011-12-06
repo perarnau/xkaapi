@@ -244,6 +244,9 @@ return_value:
       kaapi_writemem_barrier();
       kproc->thread->stack.stackframe[0].sp = self_request->frame.sp;
         
+#if defined(KAAPI_USE_PERFCOUNTER)
+      ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
+#endif
       (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_SUCCESS );
       return KAAPI_REQUEST_S_OK;
 

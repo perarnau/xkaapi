@@ -81,7 +81,7 @@ int kaapif_foreach_(
   int32_t k;
   kaapic_body_arg_t* body_arg;
   va_list va_args;
-  
+
   kaapic_foreach_attr_t attr;
 
   if (*nargs >= KAAPIF_MAX_ARGS)
@@ -104,6 +104,7 @@ int kaapif_foreach_(
   
   kaapic_foreach_attr_init(&attr);
   kaapic_foreach_attr_set_grains(&attr, xxx_seq_grain, xxx_par_grain);
+
   if (kaapic_foreach_common( *first, *last+1, &attr, kaapif_foreach_body2user, body_arg) ==0)
     return KAAPIF_SUCCESS;
   return KAAPIF_ERR_FAILURE;
@@ -152,6 +153,7 @@ int kaapif_foreach_with_format_(
   
   kaapic_foreach_attr_init(&attr);
   kaapic_foreach_attr_set_grains(&attr, xxx_seq_grain, xxx_par_grain);
+
   if (kaapic_foreach_common( *first, *last+1, &attr,kaapif_foreach_body2user, body_arg) ==0)
     return KAAPIF_SUCCESS;
   return KAAPIF_ERR_FAILURE;
