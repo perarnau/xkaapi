@@ -54,6 +54,8 @@
 extern "C" {
 #endif
 
+extern int xxx_seq_grain;
+extern int xxx_par_grain;
 
 /* kaapi fortran interface */
 

@@ -42,11 +42,9 @@
  ** 
  */
 #include "kaapi_impl.h"
-
-#warning "TODO: based dependencies on kaapi.h only"
 #include "kaapic_impl.h"
 
-//#define BIG_DEBUG_MACOSX 1
+//#define BIG_DEBUG_MACOSX 0
 
 #define CONFIG_FOREACH_STATS 0
 #if CONFIG_FOREACH_STATS
@@ -317,13 +315,24 @@ redo_steal:
   {
     leaf_count = (range_size / wi->par_grain) - 1;
     unit_size = wi->par_grain;
+    if (leaf_count ==0) goto skip_workqueue;
   }
 
   /* perform the actual steal. if the range
      changed size in between, redo the steal
   */
-  kaapi_assert_debug( vw->cr.lock 
-    == &kaapi_get_current_processor()->victim_kproc->lock );
+#if defined(KAAPI_DEBUG)
+  if (vw->cr.lock != &kaapi_get_current_processor()->victim_kproc->lock )
+  {
+    kaapi_processor_t* kproc = kaapi_get_current_processor();
+    printf("@lock victim:%p, kid combiner:%i, victim_kproc:%i\n",
+      (void*)vw->cr.lock,
+      kproc->kid,
+      kproc->victim_kproc->kid
+    );
+  }
+#endif
+  kaapi_assert_debug( vw->cr.lock == &kaapi_get_current_processor()->victim_kproc->lock );
   kaapi_assert_debug( kaapi_atomic_assertlocked(vw->cr.lock) );
   if (kaapi_workqueue_steal(&vw->cr, &i, &j, leaf_count * unit_size))
   {
@@ -422,11 +431,18 @@ skip_workqueue:
       tw,
       KAAPI_TASK_UNSTEALABLE
     );
+#if 0
     kaapi_request_pushtask_adaptive_tail( 
       req, 
       victim_task,
       _kaapic_split_leaf_task 
     );
+#else // unstealable task 
+    kaapi_request_pushtask(
+      req,
+      victim_task
+    );
+#endif
     kaapi_request_committask(req);
   }
 
@@ -723,7 +739,7 @@ continue_work:
   last_refill_i  = i;
   last_refill_j  = j;
 #endif
-  kaapi_workqueue_init(
+  kaapi_workqueue_set(
     &w.cr, 
     (kaapi_workqueue_index_t)i, (kaapi_workqueue_index_t)j
   );
@@ -754,5 +770,4 @@ end_adaptive:
   
   return 0;
 }
-
 

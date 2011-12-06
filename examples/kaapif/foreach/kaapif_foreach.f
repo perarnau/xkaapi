@@ -16,7 +16,7 @@
       ! init runtime
       call kaapif_init(1)
 
-      call kaapif_set_grains( 32, 32)
+      call kaapif_set_grains( 32, 128)
 
       ! parallel loop
       start = kaapif_get_time()
@@ -24,17 +24,10 @@
          call kaapif_foreach(1, size, 1, fu, array)
 
          ! check contents. replace by .true. to enable
-         if (.true.) then
+         if (.false.) then
             do k = 1, size
                if (array(k) .ne. (2 + i)) then
                   write(*, *) '-- INVALID --', i, k, array(k)
-                  do l=1,size
-                    if (array(l) .eq. (2+i)) then
-                      write(*, *) '-- VALID --[', l, ']-> ', array(l)
-                    else
-                      write(*, *) '-- INVALID --[', 1, ']->', array(l)
-                    end if
-                  end do
                   call flush( 0 )
                   call sleep( 1 )
                   stop
