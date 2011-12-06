@@ -24,7 +24,7 @@
          call kaapif_foreach(1, size, 1, fu, array)
 
          ! check contents. replace by .true. to enable
-         if (.false.) then
+         if (.true.) then
             do k = 1, size
                if (array(k) .ne. (2 + i)) then
                   write(*, *) '-- INVALID --', i, k, array(k)
