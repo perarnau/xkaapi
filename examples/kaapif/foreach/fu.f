@@ -13,8 +13,8 @@
 
       !$omp parallel fo
       do k = i, j
-         ! array(k) = sqrt(sin(array(k)) * cos(array(k)))
-         array(k) = array(k) + 1
+         array(k) = sqrt(sin(array(k)) * cos(array(k)))
+         !array(k) = array(k) + 1
       end do
       !$omp end parallel
 
