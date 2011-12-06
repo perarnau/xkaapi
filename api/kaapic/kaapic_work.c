@@ -42,11 +42,9 @@
  ** 
  */
 #include "kaapi_impl.h"
-
-#warning "TODO: based dependencies on kaapi.h only"
 #include "kaapic_impl.h"
 
-//#define BIG_DEBUG_MACOSX 1
+//#define BIG_DEBUG_MACOSX 0
 
 #define CONFIG_FOREACH_STATS 0
 #if CONFIG_FOREACH_STATS
@@ -317,6 +315,7 @@ redo_steal:
   {
     leaf_count = (range_size / wi->par_grain) - 1;
     unit_size = wi->par_grain;
+    if (leaf_count ==0) goto skip_workqueue;
   }
 
   /* perform the actual steal. if the range
@@ -432,11 +431,18 @@ skip_workqueue:
       tw,
       KAAPI_TASK_UNSTEALABLE
     );
+#if 0
     kaapi_request_pushtask_adaptive_tail( 
       req, 
       victim_task,
       _kaapic_split_leaf_task 
     );
+#else // unstealable task 
+    kaapi_request_pushtask(
+      req,
+      victim_task
+    );
+#endif
     kaapi_request_committask(req);
   }
 
@@ -764,5 +770,4 @@ end_adaptive:
   
   return 0;
 }
-
 
