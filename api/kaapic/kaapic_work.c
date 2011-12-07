@@ -308,7 +308,7 @@ redo_steal:
 
   /* do not steal if range size <= par_grain */
   range_size = kaapi_workqueue_size(&vw->cr);
-  if (range_size <= wi->seq_grain)
+  if (range_size <= wi->par_grain)
   {
     leaf_count = 0;
     goto skip_workqueue;
