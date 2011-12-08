@@ -1,6 +1,7 @@
 #include "kaapi++"
 #include <iostream>
 
+#if 0 // DEPRECATED_ATTRIBUTE
 
 // --------------------------------------------------------------------
 struct TaskR: public ka::Task<1>::Signature<ka::R<int> > {};
@@ -8,7 +9,7 @@ template<>
 struct TaskBodyCPU<TaskR> {
   void operator() ( ka::pointer_r<int> d )
   {
-    std::cout << ka::System::local_gid << "::In Task R=" << *d << ", @:" << (int*)d << std::endl;
+    std::cout << ka::System::local_gid << "::In Task R=" << *d << ", @:" << (int*)&*d << std::endl;
   }
 };
 
@@ -36,7 +37,7 @@ struct doit {
     threadgroup.execute();
   }
 };
-
+#endif
 
 /*
 */
@@ -45,7 +46,9 @@ int main( int argc, char** argv )
   try {
     ka::Community com = ka::System::join_community( argc, argv );
     
+#if 0 // DEPRECATED_ATTRIBUTE
     ka::SpawnMain<doit>()(argc, argv); 
+#endif
           
     com.leave();
 
@@ -59,3 +62,4 @@ int main( int argc, char** argv )
   }
   return 0;    
 }
+

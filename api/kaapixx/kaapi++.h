@@ -464,6 +464,7 @@ namespace ka {
   /* The only attribut that can be passed to task creation:
   */
   class AttributSchedTask : protected DefaultAttribut {
+  public:
     int   _partition;   // logical partition id
   public:
     AttributSchedTask( int s ) : _partition(s) {}
@@ -3683,9 +3684,9 @@ namespace ka {
       AttributComputeDependencies( kaapi_threadgroup_t thgrp, int thid ) 
        : _threadgroup(thgrp), _threadindex(thid) 
       {}
-      void* operator()(kaapi_thread_t* thread, kaapi_task_t* task)
+      void* operator()(kaapi_thread_t* thread) const
       { 
-        kaapi_threadgroup_computedependencies( _threadgroup, _threadindex, task );
+/*        kaapi_threadgroup_computedependencies( _threadgroup, _threadindex, kaapi_thread_toptask(thread) );*/
         return 0;
       }
     public:
@@ -3717,7 +3718,7 @@ namespace ka {
       kaapi_thread_t*             _thread;
     };  
 
-#if 0
+#if 1
     /* Interface: threadgroup.Spawn<TASK>(SetPartition(i) [, ATTR])( args ) */
     template<class TASK>
     Spawner<TASK> Spawn(const AttributSchedTask& a) 

@@ -16,7 +16,11 @@
       ! init runtime
       call kaapif_init(1)
 
+<<<<<<< HEAD
       call kaapif_set_grains( 32, 32)
+=======
+      call kaapif_set_grains( 32, 128)
+>>>>>>> origin/thierry/master-rc
 
       ! parallel loop
       start = kaapif_get_time()

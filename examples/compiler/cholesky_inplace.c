@@ -57,20 +57,26 @@ int clapack_dpotrf(const enum ATLAS_ORDER Order, const enum ATLAS_UPLO Uplo,
                    const int N, double *A, const int lda);
 
 
-#pragma kaapi task value(Order, Side, Uplo, TransA, Diag, M, N, alpha, lda, ldb) read(A{ld=lda; [N][N]}) readwrite(B{ld=ldb; [N][N]})
+#pragma kaapi task value(Order, Side, Uplo, TransA, Diag, M, N, alpha, lda, ldb) \
+                   read(A{ld=lda; [N][N]}) \
+                   readwrite(B{ld=ldb; [N][N]})
 void cblas_dtrsm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
                  const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
                  const enum CBLAS_DIAG Diag, const int M, const int N,
                  const double alpha, const double *A, const int lda,
                  double *B, const int ldb);
 
-#pragma kaapi task value(Order, Uplo, Trans, N, K, alpha, lda, beta, ldc) read(A{ld=lda; [N][N]}) readwrite(C{ld=ldc; [N][N]})
+#pragma kaapi task value(Order, Uplo, Trans, N, K, alpha, lda, beta, ldc) \
+                   read(A{ld=lda; [N][N]}) \
+                   readwrite(C{ld=ldc; [N][N]})
 void cblas_dsyrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
                  const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
                  const double alpha, const double *A, const int lda,
                  const double beta, double *C, const int ldc);
 
-#pragma kaapi task value(Order, TransA, TransB, M, N, K, alpha, lda, ldb, beta, ldc) read(A{ld=lda; [M][K]}, B{ld=ldb; [K][N]}) readwrite(C{ld=ldc; [M][N]})
+#pragma kaapi task value(Order, TransA, TransB, M, N, K, alpha, lda, ldb, beta, ldc) \
+                   read(A{ld=lda; [M][K]}, B{ld=ldb; [K][N]}) \
+                   readwrite(C{ld=ldc; [M][N]})
 void cblas_dgemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA,
                  const enum CBLAS_TRANSPOSE TransB, const int M, const int N,
                  const int K, const double alpha, const double *A,

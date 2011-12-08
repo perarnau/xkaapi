@@ -1,6 +1,7 @@
 #include "kaapi++"
 #include <iostream>
 
+#if 0 // DEPRECATED_ATTRIBUTE
 
 // --------------------------------------------------------------------
 struct TaskW: public ka::Task<2>::Signature<ka::W<int>,int > {};
@@ -47,7 +48,7 @@ struct doit {
     threadgroup.execute();
   }
 };
-
+#endif
 
 /*
 */
@@ -56,8 +57,9 @@ int main( int argc, char** argv )
   try {
     ka::Community com = ka::System::join_community( argc, argv );
     
+#if 0 // DEPRECATED_ATTRIBUTE
     ka::SpawnMain<doit>()(argc, argv); 
-          
+#endif          
     com.leave();
 
     ka::System::terminate();

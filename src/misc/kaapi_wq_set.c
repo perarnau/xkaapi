@@ -45,7 +45,6 @@
 */
 #include "kaapi_impl.h"
 
-#if 0
 /** 
 */
 int kaapi_workqueue_set( 
@@ -54,14 +53,7 @@ int kaapi_workqueue_set(
   kaapi_workqueue_index_t end
 )
 {
-  if ( kwq->lock ==0 ) return ESRCH;
-
-  kaapi_assert_debug( beg <= end );
-  
-  kaapi_sched_lock( kwq->lock );
-  kwq->beg = beg;
-  kwq->end = end;
-  kaapi_sched_unlock( kwq->lock );
+  /* deprecated because the old version lock the queue */
+  kaapi_abort();
   return 0;
 }
-#endif
