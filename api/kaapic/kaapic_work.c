@@ -55,7 +55,7 @@
 extern void kaapi_set_self_workload(unsigned long);
 #define KAAPI_SET_SELF_WORKLOAD(__w)		\
 do {						\
-  kaapi_set_self_workload(0);			\
+  kaapi_set_self_workload(__w);			\
 } while (0)
 #else 
 #define kaapi_SET_SELF_WORKLOAD(__w)
