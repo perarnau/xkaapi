@@ -121,5 +121,5 @@ void kaapi_set_workload(kaapi_processor_t* kproc, unsigned long workload)
 
 void kaapi_set_self_workload(unsigned long workload)
 {
-  kaapi_processor_set_workload(kaapi_get_current_processor(), workload);
+  kaapi_set_workload(kaapi_get_current_processor(), workload);
 }

@@ -430,7 +430,7 @@ typedef struct kaapi_processor_t {
   struct kaapi_event_buffer_t* eventbuffer;
 
   /* workload */
-  kaapi_atomic_t	       workload;
+  kaapi_atomic64_t	       workload;
 
   /* processor type */
   unsigned int			   proc_type;
