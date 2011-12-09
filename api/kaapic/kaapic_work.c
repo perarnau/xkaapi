@@ -42,16 +42,23 @@
  ** 
  */
 
-#define CONFIG_USE_WORKLOAD 1
- 
 //#define USE_KPROC_LOCK  /* defined to use kprocessor lock, else use local lock */
  
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
 
 
+/* set to 0 to disable workload */
+#define CONFIG_USE_WORKLOAD 1
+
 #if CONFIG_USE_WORKLOAD
 extern void kaapi_set_self_workload(unsigned long);
+#define KAAPI_SET_SELF_WORKLOAD(__w)		\
+do {						\
+  kaapi_set_self_workload(0);			\
+} while (0)
+#else 
+#define kaapi_SET_SELF_WORKLOAD(__w)
 #endif
 
 
@@ -541,9 +548,7 @@ static void _kaapic_thief_entrypoint(
 
   while (kaapi_workqueue_pop(&thief_work->cr, &i, &j, wi->seq_grain) ==0)
   {
-#if CONFIG_USE_WORKLOAD
-    kaapi_set_self_workload(kaapi_workqueue_size(&thief_work->cr));
-#endif
+    KAAPI_SET_SELF_WORKLOAD(kaapi_workqueue_size(&thief_work->cr));
 
 #if defined(BIG_DEBUG_MACOSX)
     printf("%i:: WS/Pop @%p[%i,%i[\n", 
@@ -586,9 +591,7 @@ static void _kaapic_thief_entrypoint(
 #endif
   }
 
-#if CONFIG_USE_WORKLOAD
-  kaapi_set_self_workload(0);
-#endif
+  KAAPI_SET_SELF_WORKLOAD(0);
 
 #if 0//defined(BIG_DEBUG_MACOSX)
   if (last_j != -1)
@@ -684,9 +687,7 @@ int kaapic_foreach_common
   /* map has one bit per core and excludes the master */
   range_size = j - i;
 
-#if CONFIG_USE_WORKLOAD
-  kaapi_set_self_workload(range_size);
-#endif
+  KAAPI_SET_SELF_WORKLOAD(range_size);
 
 #if CONFIG_TERM_COUNTER
   /* initialize work counter before changing range_size */
@@ -782,9 +783,7 @@ continue_work:
 #endif
   while (kaapi_workqueue_pop(&w.cr, &i, &j, wi.seq_grain) == 0)
   {
-#if CONFIG_USE_WORKLOAD
-    kaapi_set_self_workload(work_array_size(&wa) + kaapi_workqueue_size(&w.cr));
-#endif
+    KAAPI_SET_SELF_WORKLOAD(work_array_size(&wa) + kaapi_workqueue_size(&w.cr));
 
 #if defined(BIG_DEBUG_MACOSX)
     beforewq = savewq;
@@ -835,9 +834,7 @@ continue_work:
 
 end_adaptive:
 
-#if CONFIG_USE_WORKLOAD
-  kaapi_set_self_workload(0);
-#endif
+  KAAPI_SET_SELF_WORKLOAD(0);
 
 #if CONFIG_TERM_COUNTER
   KAAPI_ATOMIC_SUB(&counter, local_counter);
