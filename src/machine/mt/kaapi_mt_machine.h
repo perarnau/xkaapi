@@ -430,7 +430,7 @@ typedef struct kaapi_processor_t {
   struct kaapi_event_buffer_t* eventbuffer;
 
   /* workload */
-  kaapi_atomic_t	       workload;
+  kaapi_atomic64_t	       workload;
 
   /* processor type */
   unsigned int			   proc_type;
@@ -765,7 +765,8 @@ static inline unsigned int kaapi_processor_get_type(const kaapi_processor_t* kpr
 
 /**
 */
-static inline void kaapi_processor_set_workload(kaapi_processor_t* kproc, uint32_t workload) 
+static inline void kaapi_processor_set_workload
+(kaapi_processor_t* kproc, unsigned long workload) 
 {
   KAAPI_ATOMIC_WRITE(&kproc->workload, workload);
 }
@@ -779,21 +780,24 @@ static inline int kaapi_processor_get_workload(const kaapi_processor_t* kproc)
 
 /**
 */
-static inline void kaapi_processor_incr_workload(kaapi_processor_t* kproc, uint32_t value) 
+static inline void kaapi_processor_incr_workload
+(kaapi_processor_t* kproc, unsigned long value) 
 {
   KAAPI_ATOMIC_ADD(&kproc->workload, value);
 }
 
 /**
 */
-static inline void kaapi_processor_decr_workload(kaapi_processor_t* kproc, uint32_t value) 
+static inline void kaapi_processor_decr_workload
+(kaapi_processor_t* kproc, unsigned long value) 
 {
   KAAPI_ATOMIC_SUB(&kproc->workload, value);
 }
 
 /**
 */
-static inline void kaapi_processor_set_self_workload(uint32_t workload) 
+static inline void kaapi_processor_set_self_workload
+(unsigned long workload) 
 {
   KAAPI_ATOMIC_WRITE(&kaapi_get_current_processor()->workload, workload);
 }
