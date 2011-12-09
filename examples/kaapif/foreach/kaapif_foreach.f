@@ -16,11 +16,7 @@
       ! init runtime
       call kaapif_init(1)
 
-<<<<<<< HEAD
-      call kaapif_set_grains( 32, 32)
-=======
       call kaapif_set_grains( 32, 128)
->>>>>>> origin/thierry/master-rc
 
       ! parallel loop
       start = kaapif_get_time()
@@ -28,7 +24,7 @@
          call kaapif_foreach(1, size, 1, fu, array)
 
          ! check contents. replace by .true. to enable
-         if (.true.) then
+         if (.false.) then
             do k = 1, size
                if (array(k) .ne. (2 + i)) then
                   write(*, *) '-- INVALID --', i, k, array(k)
