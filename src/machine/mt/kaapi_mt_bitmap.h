@@ -122,6 +122,11 @@ static inline int kaapi_bitmap_value_empty_32( const kaapi_bitmap_value32_t* b )
   return b->proc32 ==0;
 }
 
+static inline unsigned long kaapi_bitmap_value_count_32( const kaapi_bitmap_value32_t* b )
+{ 
+  return (unsigned long)__builtin_popcount(b->proc32);
+}
+
 static inline void kaapi_bitmap_value_set_32( kaapi_bitmap_value32_t* b, int i ) 
 { 
   kaapi_assert_debug( (i<32) && (i>=0) );
@@ -246,6 +251,12 @@ static inline void kaapi_bitmap_clear_64( kaapi_bitmap64_t* b )
 static inline int kaapi_bitmap_empty_64( kaapi_bitmap64_t* b )
 { 
   return (KAAPI_ATOMIC_READ(&b->proc64) ==0);
+}
+
+static inline unsigned long kaapi_bitmap_value_count_64
+( const kaapi_bitmap_value64_t* b )
+{ 
+  return (unsigned long)__builtin_popcountl(b->proc64);
 }
 
 static inline void kaapi_bitmap_value_clear_64( kaapi_bitmap_value64_t* b )
@@ -387,6 +398,16 @@ static inline void kaapi_bitmap_value_clear_128( kaapi_bitmap_value128_t* b )
 { 
   b->proc128[0] =0;
   b->proc128[1] =0;
+}
+
+static inline unsigned long kaapi_bitmap_value_count_128
+( const kaapi_bitmap_value128_t* b )
+{ 
+  return (unsigned long)
+    (
+     __builtin_popcountl(b->proc128[0]) +
+     __builtin_popcountl(b->proc128[1])
+    );
 }
 
 static inline int kaapi_bitmap_value_empty_128( const kaapi_bitmap_value128_t* b )
@@ -563,6 +584,7 @@ static inline void kaapi_bitmap_set_low_bits_128( kaapi_bitmap_value128_t* b, un
 extern void (*kaapi_bitmap_clear)( kaapi_bitmap_t* b );
 extern int (*kaapi_bitmap_empty)( kaapi_bitmap_t* b );
 extern int (*kaapi_bitmap_value_empty)( const kaapi_bitmap_value_t* b );
+extern unsigned long (*kaapi_bitmap_value_count)( const kaapi_bitmap_value_t* b );
 extern void (*kaapi_bitmap_value_set)( kaapi_bitmap_value_t* b, int i );
 extern void (*kaapi_bitmap_value_get)( const kaapi_bitmap_value_t* b, int i );
 extern void (*kaapi_bitmap_value_unset)( kaapi_bitmap_value_t* b, int i );
@@ -598,6 +620,7 @@ typedef kaapi_bitmap_value128_t kaapi_bitmap_value_t;
 #    define kaapi_bitmap_clear(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_clear)(b)
 #    define kaapi_bitmap_empty(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_empty)(b)
 #    define kaapi_bitmap_value_clear(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_clear)(b)
+#    define kaapi_bitmap_value_count(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_count)(b)
 #    define kaapi_bitmap_value_empty(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_empty)(b)
 #    define kaapi_bitmap_value_set(b,i) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_set)((b),(i))
 #    define kaapi_bitmap_value_get(b,i) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_get)((b),(i))

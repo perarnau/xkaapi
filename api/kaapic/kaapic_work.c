@@ -41,11 +41,19 @@
  ** terms.
  ** 
  */
+
+#define CONFIG_USE_WORKLOAD 1
  
 //#define USE_KPROC_LOCK  /* defined to use kprocessor lock, else use local lock */
  
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
+
+
+#if CONFIG_USE_WORKLOAD
+extern void kaapi_set_self_workload(unsigned long);
+#endif
+
 
 //#define BIG_DEBUG_MACOSX 0
 
@@ -130,6 +138,12 @@ static void work_array_pop
 static inline unsigned int work_array_is_empty(const work_array_t* wa)
 {
   return kaapi_bitmap_value_empty(&wa->map);
+}
+
+
+static inline unsigned long work_array_size(const work_array_t* wa)
+{
+  return kaapi_bitmap_value_count(&wa->map) * wa->scale;
 }
 
 
@@ -527,6 +541,10 @@ static void _kaapic_thief_entrypoint(
 
   while (kaapi_workqueue_pop(&thief_work->cr, &i, &j, wi->seq_grain) ==0)
   {
+#if CONFIG_USE_WORKLOAD
+    kaapi_set_self_workload(kaapi_workqueue_size(&thief_work->cr));
+#endif
+
 #if defined(BIG_DEBUG_MACOSX)
     printf("%i:: WS/Pop @%p[%i,%i[\n", 
       tid,
@@ -567,6 +585,11 @@ static void _kaapic_thief_entrypoint(
     counter += j - i;
 #endif
   }
+
+#if CONFIG_USE_WORKLOAD
+  kaapi_set_self_workload(0);
+#endif
+
 #if 0//defined(BIG_DEBUG_MACOSX)
   if (last_j != -1)
     printf("%i:: WS/S_pop [%i,%i[\n", kaapi_get_self_kid(), (int)first_i, (int)last_j);
@@ -658,14 +681,18 @@ int kaapic_foreach_common
 
   /* alignment constraint ? sizeof(void*) */
 
+  /* map has one bit per core and excludes the master */
+  range_size = j - i;
+
+#if CONFIG_USE_WORKLOAD
+  kaapi_set_self_workload(range_size);
+#endif
+
 #if CONFIG_TERM_COUNTER
   /* initialize work counter before changing range_size */
   KAAPI_ATOMIC_WRITE(&counter, range_size);
   w.counter = &counter;
 #endif
-
-  /* map has one bit per core and excludes the master */
-  range_size = j - i;
 
   /* handle concurrency too high case */
   if (range_size < concurrency) concurrency = 1;
@@ -755,6 +782,10 @@ continue_work:
 #endif
   while (kaapi_workqueue_pop(&w.cr, &i, &j, wi.seq_grain) == 0)
   {
+#if CONFIG_USE_WORKLOAD
+    kaapi_set_self_workload(work_array_size(&wa) + kaapi_workqueue_size(&w.cr));
+#endif
+
 #if defined(BIG_DEBUG_MACOSX)
     beforewq = savewq;
 #endif
@@ -803,6 +834,11 @@ continue_work:
   goto continue_work;
 
 end_adaptive:
+
+#if CONFIG_USE_WORKLOAD
+  kaapi_set_self_workload(0);
+#endif
+
 #if CONFIG_TERM_COUNTER
   KAAPI_ATOMIC_SUB(&counter, local_counter);
 #endif

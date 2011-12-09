@@ -68,7 +68,7 @@ int kaapi_sched_select_victim_rand(
 
       /* select a victim */
       if (kproc->fnc_selecarg[0] == 0) 
-	kproc->fnc_selecarg[0] = (void*)(long)rand();
+	kproc->fnc_selecarg[0] = (uintptr_t)(long)rand();
 
     redo_select:
       nbproc = kaapi_count_kprocessors;
@@ -107,7 +107,7 @@ int kaapi_sched_select_victim_rand(
       /* wait for failures to reach threshold */
       if (nsteals <= (kaapi_count_kprocessors * 8))
       {
-	kproc->fnc_selecarg[1] = (void*)(nsteals + 1);
+	kproc->fnc_selecarg[1] = (uintptr_t)(nsteals + 1);
       }
       /* update delay */
       else
