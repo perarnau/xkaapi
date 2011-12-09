@@ -29,6 +29,8 @@ BUILT_SOURCES = $(M4_BUILT_FILES)
 
 $(M4_BUILT_FILES): stamp-m4_generator
 
+EXTRA_DIST=$(M4_BUILT_FILES) $(M4_SRCS)
+
 .INTERMEDIATE: stamp-m4_generator
 stamp-m4_generator: $(M4_SRCS)
 	cd $(srcdir) && ./m4_generator 32
@@ -42,6 +44,7 @@ include_HEADERS=\
 
 libkaapic_la_SOURCES=\
 	kaapic.c \
+	kaapic_impl.h \
 	kaapic_spawn.c \
 	kaapic_work.c \
 	kaapic_foreach_docall.c \

@@ -225,6 +225,7 @@ endif
 
 include_HEADERS=\
   kaapi.h \
+  kaapi_defs.h \
   kaapi_atomic.h\
   kaapi_error.h
 

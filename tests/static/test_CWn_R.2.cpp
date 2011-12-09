@@ -19,7 +19,7 @@ template<>
 struct TaskBodyCPU<TaskR> {
   void operator() ( ka::pointer_r<int> d )
   {
-    std::cout << ka::System::local_gid << "::In Task R=" << *d << ", @:" << (int*)d << std::endl;
+    std::cout << ka::System::local_gid << "::In Task R=" << *d << ", @:" << (int*)&*d << std::endl;
   }
 };
 

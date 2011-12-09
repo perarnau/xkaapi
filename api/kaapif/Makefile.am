@@ -30,20 +30,22 @@ BUILT_SOURCES = $(M4_BUILT_FILES)
 
 $(M4_BUILT_FILES): stamp-m4_generator
 
+EXTRA_DIST=$(M4_BUILT_FILES) $(M4_SRCS) kaapif.inc.f90 kaapif.inc.f95
+
 .INTERMEDIATE: stamp-m4_generator
 stamp-m4_generator: $(M4_SRCS)
-	cd $(srcdir) && ./m4_generator 32
+	cd $(srcdir) && ./m4_generator 64
 	touch $@
 
 clean-local:
 	$(RM) stamp-m4_generator
 
 include_HEADERS=\
-	kaapif.h\
 	kaapif.inc
 
 libkaapif_la_SOURCES=\
 	kaapif.c \
+	kaapif.h\
 	kaapif_foreach.c \
 	kaapif_spawn.c \
 	$(include_HEADERS)\
