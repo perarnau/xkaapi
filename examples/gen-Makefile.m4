@@ -67,12 +67,12 @@ define([CXX_OBJS],
 dnl -----------------------------------------------------------
 define([C_RULES],
 [C_OBJS([$1],[$2]): $2
-	$(CC) $(CFLAGS) AM_GET([$1],[CFLAGS]) foreach_w([L],AM_GET([$1],[PKGLIBS]),[$(PKGCONFIG_[]AM_NAME([L])[]_CFLAGS)]) $(CPPFLAGS) AM_GET([$1],[CPPFLAGS]) -MMD -MF .$[]@.d -c $(OUTPUT_OPTION) $<
+	$(CC) $(CFLAGS) AM_GET([$1],[CFLAGS]) foreach_w([L],AM_GET([$1],[PKGLIBS]),[$(PKGCONFIG_[]AM_NAME([L])[]_CFLAGS) ]) $(CPPFLAGS) AM_GET([$1],[CPPFLAGS]) -MMD -MF .$[]@.d -c $(OUTPUT_OPTION) $<
 ])dnl
 dnl -----------------------------------------------------------
 define([CXX_RULES],
 [CXX_OBJS([$1],[$2]): $2
-	$(CXX) $(CXXFLAGS) AM_GET([$1],[CXXFLAGS]) foreach_w([L],AM_GET([$1],[PKGLIBS]),[$(PKGCONFIG_[]AM_NAME([L])[]_CFLAGS)]) $(CPPFLAGS) AM_GET([$1],[CPPFLAGS]) -MMD -MF .$[]@.d -c $(OUTPUT_OPTION) $<
+	$(CXX) $(CXXFLAGS) AM_GET([$1],[CXXFLAGS]) foreach_w([L],AM_GET([$1],[PKGLIBS]),[$(PKGCONFIG_[]AM_NAME([L])[]_CFLAGS) ]) $(CPPFLAGS) AM_GET([$1],[CPPFLAGS]) -MMD -MF .$[]@.d -c $(OUTPUT_OPTION) $<
 ])dnl
 dnl -----------------------------------------------------------
 define([PROG_RULES_VAR],
@@ -91,7 +91,7 @@ PROG_RULES_VAR(AM_NAME([$1]))
 foreach_w([C_SOURCE],AM_NAME([$1])_C_SOURCES,[C_RULES([$1], [C_SOURCE])])
 foreach_w([CXX_SOURCE],AM_NAME([$1])_CXX_SOURCES,[CXX_RULES([$1], [CXX_SOURCE])])
 $1: AM_NAME([$1])_OBJS
-	LINKER([$1]) $(LDFLAGS) $^ foreach_w([L],AM_GET([$1],[PKGLIBS]),[$(PKGCONFIG_[]AM_NAME([L])[]_LIBS)]) AM_GET([$1],[LDADD]) $(LDLIBS) -o $[]@
+	LINKER([$1]) $(LDFLAGS) $^ foreach_w([L],AM_GET([$1],[PKGLIBS]),[$(PKGCONFIG_[]AM_NAME([L])[]_LIBS) ]) AM_GET([$1],[LDADD]) $(LDLIBS) -o $[]@
 clean::
 	$(RM) AM_NAME([$1])_OBJS[]foreach_w([OBJ],AM_NAME([$1])_OBJS,[ [.]OBJ[.d]])
 
