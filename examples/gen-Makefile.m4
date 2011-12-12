@@ -93,7 +93,7 @@ foreach_w([CXX_SOURCE],AM_NAME([$1])_CXX_SOURCES,[CXX_RULES([$1], [CXX_SOURCE])]
 $1: AM_NAME([$1])_OBJS
 	LINKER([$1]) $(LDFLAGS) $^ foreach_w([L],AM_GET([$1],[PKGLIBS]),[$(PKGCONFIG_[]AM_NAME([L])[]_LIBS)]) AM_GET([$1],[LDADD]) $(LDLIBS) -o $[]@
 clean::
-	$(RM) $1_OBJS[]foreach_w([OBJ],$1_OBJS,[ [.]OBJ[.d]])
+	$(RM) AM_NAME([$1])_OBJS[]foreach_w([OBJ],AM_NAME([$1])_OBJS,[ [.]OBJ[.d]])
 
 -include[]foreach_w([OBJ],$1_OBJS,[ [.]OBJ[.d]])
 ])dnl
