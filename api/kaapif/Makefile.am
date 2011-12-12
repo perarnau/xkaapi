@@ -27,11 +27,9 @@ M4_SRCS=\
   m4_macros
 
 BUILT_SOURCES = $(M4_BUILT_FILES)
-EXTRA_DIST = $(M4_SRCS)
+EXTRA_DIST = $(M4_SRCS) kaapif.inc.f90 kaapif.inc.f95
 
 $(M4_BUILT_FILES): stamp-m4_generator
-
-EXTRA_DIST=$(M4_BUILT_FILES) $(M4_SRCS) kaapif.inc.f90 kaapif.inc.f95
 
 .INTERMEDIATE: stamp-m4_generator
 stamp-m4_generator: $(M4_SRCS)
