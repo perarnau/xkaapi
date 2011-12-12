@@ -7,14 +7,12 @@
 
 MATPROG_PRGS=
 if KAAPI_API_KAAPIXX
-MATPROG_PRGS+=matprod_rec_kaapi++ \
-  matprod_iter_part_kaapi++
+MATPROG_PRGS+=matprod_rec_kaapi++
 if KAAPI_HAVE_CBLAS
-MATPROG_PRGS+=matprod_bloc_kaapi++ matprod_rowcol_kaapi++\
+MATPROG_PRGS+=matprod_bloc_kaapi++\
   matlu_nopiv_kaapi++\
   matcholesky_kaapi++\
-  matcholesky_bloc_kaapi++\
-  matprod_bloc_mapping_kaapi++
+  matcholesky_bloc_kaapi++
 else
 all-matrix: no-cblas
 endif
@@ -33,9 +31,6 @@ no-cblas:
 
 matprod_rec_kaapi___SOURCES=matrix/matprod_rec_kaapi++.cpp matrix/matrix.h
 matprod_bloc_kaapi___SOURCES=matrix/matprod_bloc_kaapi++.cpp matrix/matrix.h
-matprod_bloc_mapping_kaapi___SOURCES=matrix/matprod_bloc_mapping_kaapi++.cpp matrix/matrix.h
-matprod_rowcol_kaapi___SOURCES=matrix/matprod_rowcol_kaapi++.cpp matrix/matrix.h
-matprod_iter_part_kaapi___SOURCES=matrix/matprod_iter_part_kaapi++.cpp matrix/matrix.h
 matlu_nopiv_kaapi___SOURCES=matrix/matlu_nopiv_kaapi++.cpp matrix/matrix.h
 matcholesky_kaapi___SOURCES=matrix/matcholesky_kaapi++.cpp matrix/matrix.h
 matcholesky_bloc_kaapi___SOURCES=matrix/matcholesky_bloc_kaapi++.cpp 
@@ -49,21 +44,6 @@ matprod_bloc_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CB
 matprod_bloc_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
 matprod_bloc_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS)
 matprod_bloc_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
-
-matprod_bloc_mapping_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS)
-matprod_bloc_mapping_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
-matprod_bloc_mapping_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS)
-matprod_bloc_mapping_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
-
-matprod_rowcol_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS)
-matprod_rowcol_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
-matprod_rowcol_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS)
-matprod_rowcol_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
-
-matprod_iter_part_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
-matprod_iter_part_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
-matprod_iter_part_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
-matprod_iter_part_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
 
 # matlu without pivoting
 matlu_nopiv_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS)
