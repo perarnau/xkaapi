@@ -81,7 +81,7 @@ struct TaskBodyCPU<TaskForEach<T, OP> > {
   void operator() ( ka::range1d_rpwp<T> range, OP op) 
   {
     int size = range.size();
-#define CONFIG_SEQ_GRAIN 256
+#define CONFIG_SEQ_GRAIN 1024
     if (size < CONFIG_SEQ_GRAIN)
       ka::Spawn<TaskForEachTerminal<T,OP> >()( range, op );
     else {
