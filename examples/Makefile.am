@@ -130,6 +130,10 @@ gen-%.am.m4: gen-%.am.m4.info Makefile
 		VALUE="$$VALUE kaapi" ;; esac ; \
 	    case " $$EQ " in *'$$(KAAPIXXPROGS_BUILD_LIBS)'*) \
 		VALUE="$$VALUE kaapi++" ;; esac ; \
+	    case " $$EQ " in *'$$(KAAPICPROGS_BUILD_LIBS)'*) \
+		VALUE="$$VALUE kaapic" ;; esac ; \
+	    case " $$EQ " in *'$$(KAAPIFPROGS_BUILD_LIBS)'*) \
+		VALUE="$$VALUE kaapif" ;; esac ; \
 	    case " $$EQ " in *'$$(ATHAPROGS_BUILD_LIBS)'*) \
 		VALUE="$$VALUE atha" ;; esac ; \
 	    case " $$EQ " in *'$$(KASTLPROGS_BUILD_LIBS)'*) \
