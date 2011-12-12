@@ -133,7 +133,10 @@ void print_matrix(double* M, int nn)
     return;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) 
+{
+    ka::Community com = ka::System::join_community(argc,argv);
+
     // Create random input matrices. Override the default size with argv[1]
     // Warning: Matrix indexing is 0 based.
     int nn = DEFAULT_MATRIX_SIZE;
@@ -183,5 +186,7 @@ int main(int argc, char** argv) {
     free(A);
     free(B);
     free(C);
+    com.leave();
+    ka::System::terminate();
     return 0;
 }
