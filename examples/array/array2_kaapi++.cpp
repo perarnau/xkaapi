@@ -49,11 +49,14 @@
  * This task initializes each entries of the array to 1
  * The task declares an write access pointer to an array object.
  */
-struct TaskInit : public ka::Task<1>::Signature<ka::W<ka::array<1,int> > > {};
+struct TaskInit : public ka::Task<2>::Signature<
+  ka::W<int>,
+  ka::W<ka::array<1,int> > 
+> {};
 
 template<>
 struct TaskBodyCPU<TaskInit> {
-  void operator() ( ka::pointer_w<ka::array<1,int> > array )
+  void operator() ( ka::pointer_w<int> dummy, ka::pointer_w<ka::array<1,int> > array )
   {
     size_t sz = array.size();
     std::cout << "In TaslInit/CPU, size of array = " << sz << std::endl;
@@ -67,12 +70,20 @@ struct TaskBodyCPU<TaskInit> {
 /* Task Accumulate
  * This task computes the sum of the entries of an array 
  * The task declares an object with CW access to accumulate the result and read pointer to an array object.
+ * The task add 2 dummy formel argument to defines right dependencies between sub array computation
  */
-struct TaskAccumulate : public ka::Task<2>::Signature<ka::CW<int>, ka::R<ka::array<1,int> > > {};
+struct TaskAccumulate : public ka::Task<4>::Signature<
+  ka::CW<int>, 
+  ka::R<int>,
+  ka::R<int>,
+  ka::R<ka::array<1,int> > 
+> {};
 
 template<>
 struct TaskBodyCPU<TaskAccumulate> {
-  void operator() ( ka::pointer_cw<int> acc, ka::pointer_r<ka::array<1,int> > array  )
+  void operator() ( ka::pointer_cw<int> acc, 
+                    ka::pointer_r<int> d1, ka::pointer_r<int> d2, 
+                    ka::pointer_r<ka::array<1,int> > array  )
   {
     size_t sz = array.size();
     for (size_t i=0; i < sz; ++i)
@@ -96,22 +107,24 @@ struct doit {
     /* form a view of data as an 1-dimensional array */
     ka::array<1,int> arr(data, n); 
     int res = 0;
+    int v1;
+    int v2;
 
     /* be carrefull here: the array is equivalent as if each of its entries has
        been passed to the task (the formal parameter is array<1,W<int> >).
     */
-    ka::Spawn<TaskInit>()( arr[ka::rangeindex(0,med)] );
+    ka::Spawn<TaskInit>()( &v1, arr[ka::rangeindex(0,med)] );
 
     /* be carrefull here: the array is equivalent as if each of its entries has
        been passed to the task (the formal parameter is array<1,W<int> >).
     */
-    ka::Spawn<TaskInit>()( arr[ka::rangeindex(med,n)] );
+    ka::Spawn<TaskInit>()( &v2, arr[ka::rangeindex(med,n)] );
 
 
     /* Here the dependencies is accross each entries of the array arr,
        thus this task is ready iff the two previous tasks are finished
     */
-    ka::Spawn<TaskAccumulate>()( &res, arr );
+    ka::Spawn<TaskAccumulate>()( &res, &v1, &v2, arr );
     ka::Sync();
 
     std::cout << "Res = " << res << std::endl;
