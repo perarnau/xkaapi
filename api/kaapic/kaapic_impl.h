@@ -70,6 +70,11 @@ typedef struct kaapic_body_arg_t {
 */
 typedef void (*kaapic_foreach_body_t)(int32_t, int32_t, int32_t, kaapic_body_arg_t* );
 
+
+/* Default attribut if not specified
+*/
+extern kaapic_foreach_attr_t kaapic_default_attr;
+
 /* exported foreach interface 
    evaluate body_f(first, last, body_args) in parallel, assuming
    that the evaluation of body_f(i, j, body_args) does not impose

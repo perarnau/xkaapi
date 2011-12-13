@@ -127,6 +127,12 @@ void kaapif_set_grains_(int32_t* par_grain, int32_t* seq_grain)
   xxx_seq_grain = *seq_grain;
 }
 
+void kaapif_set_default_grains_()
+{
+  xxx_par_grain = kaapic_default_attr.s_grain;
+  xxx_seq_grain = kaapic_default_attr.p_grain;
+}
+
 
 int32_t kaapif_get_max_tid_(void)
 {

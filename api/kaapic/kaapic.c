@@ -42,6 +42,9 @@
  */
 #include "kaapic_impl.h"
 
+
+kaapic_foreach_attr_t kaapic_default_attr;
+
 static kaapi_atomic_t kaapic_initcalled = { 0 };
 
 int kaapic_init(int32_t flags)
@@ -53,6 +56,15 @@ int kaapic_init(int32_t flags)
   err = kaapi_init(flags, 0, 0);
   if (err !=0) return err;
   
+  if (getenv("KAAPI_SEQ_GRAIN") !=0)
+    kaapic_default_attr.s_grain = atoi(getenv("KAAPI_SEQ_GRAIN"));
+  else
+    kaapic_default_attr.s_grain = 1;
+  if (getenv("KAAPI_PAR_GRAIN") !=0)
+    kaapic_default_attr.p_grain = atoi(getenv("KAAPI_PAR_GRAIN"));
+  else
+    kaapic_default_attr.p_grain = 1;
+
   _kaapic_register_task_format();
   return 0;
 }

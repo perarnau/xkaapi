@@ -95,12 +95,6 @@ do {							\
 static volatile unsigned int xxx_max_tid;
 #endif
 
-/* parallel and sequential grains */
-static volatile long xxx_par_grain;
-static volatile long xxx_seq_grain;
-
-
-
 /* work array. allow for random access. */
 
 typedef struct work_array
@@ -740,9 +734,12 @@ int kaapic_foreach_common
 #if CONFIG_MAX_TID
   wi.max_tid = xxx_max_tid;
 #endif
-  wi.par_grain = (attr ==0 ? 1 : attr->p_grain);
-  wi.seq_grain = (attr ==0 ? 1 : attr->s_grain);
+  if (attr == 0) attr = &kaapic_default_attr;
+  wi.par_grain = attr->p_grain;
+  wi.seq_grain = attr->s_grain;
   w.wi = &wi;
+//printf("Seq grain:%i\n", wi.seq_grain );
+//printf("Par grain:%i\n", wi.par_grain );
 
   /* start adaptive region */
   context = kaapi_task_begin_adaptive(
