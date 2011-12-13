@@ -1,6 +1,5 @@
 
       subroutine fu(i, j, tid, array)
-      !$ use omp_lib
       ! process [i, j]
 
       integer*4 i
@@ -12,7 +11,8 @@
       ! write(*, *) tid
       tid = tid
 
-      do k = 1, j
+      
+      do k = i, j
          array(k) = sqrt(sin(array(k)) * cos(array(k)))
          !array(k) = array(k) + 1
       end do
