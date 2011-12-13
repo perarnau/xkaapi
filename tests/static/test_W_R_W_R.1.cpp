@@ -8,7 +8,7 @@ template<>
 struct TaskBodyCPU<TaskW1> {
   void operator() ( ka::pointer_w<int> d, int value )
   {
-    std::cout << "In Task W1=" << value << ", @:" << (int*)&*d << std::endl;
+    std::cout << "In Task W1=" << value << std::endl;
     *d = value;
   }
 };
@@ -19,7 +19,7 @@ template<>
 struct TaskBodyCPU<TaskR1> {
   void operator() ( ka::pointer_r<int> d )
   {
-    std::cout << "In Task R1=" << *d << ", @:" << (int*)&*d << std::endl;
+    std::cout << "In Task R1=" << *d << std::endl;
   }
 };
 
@@ -29,7 +29,7 @@ template<>
 struct TaskBodyCPU<TaskW2> {
   void operator() ( ka::pointer_w<int> d, int value )
   {
-    std::cout << "In Task W2=" << value << ", @:" << (int*)&*d << std::endl;
+    std::cout << "In Task W2=" << value << std::endl;
     *d = value;
   }
 };
@@ -40,7 +40,7 @@ template<>
 struct TaskBodyCPU<TaskR2> {
   void operator() ( ka::pointer_r<int> d )
   {
-    std::cout << "In Task R2=" << *d << ", @:" << (int*)&*d << std::endl;
+    std::cout << "In Task R2=" << *d << std::endl;
   }
 };
 
