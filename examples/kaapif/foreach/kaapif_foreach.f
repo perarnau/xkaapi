@@ -16,10 +16,10 @@
       ! init runtime
       call kaapif_init(1)
 
-      ! set_default_grains may user KAAPI_SEQ_GRAIN and KAAPI_PAR_GRAIN
-      ! environment variable
+      ! By default, the grain is set to 1,1.
+      ! The user may use KAAPI_SEQ_GRAIN and KAAPI_PAR_GRAIN
+      ! environment variables to fix them.
       !call kaapif_set_grains( 128, 128)
-      call kaapif_set_default_grains()
 
       ! parallel loop
       start = kaapif_get_time()

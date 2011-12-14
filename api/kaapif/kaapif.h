@@ -82,8 +82,6 @@ extern int32_t kaapif_get_max_tid_(void);
 
 extern void kaapif_set_grains_(int32_t*, int32_t*);
 
-extern void kaapif_set_default_grains_(void);
-
 extern int kaapif_foreach_(
   int32_t*,  /* first */
   int32_t*,  /* last */

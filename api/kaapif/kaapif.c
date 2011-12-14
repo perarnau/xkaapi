@@ -74,9 +74,13 @@ int kaapif_init_(int32_t* flags)
 #if CONFIG_MAX_TID
   xxx_max_tid = (unsigned int)(kaapi_getconcurrency() - 1);
 #endif
+#if 0 // OLD INITIALIZATION
   xxx_seq_grain = 16;
   xxx_par_grain = 2 * xxx_seq_grain;
-
+#else
+  xxx_seq_grain = kaapic_default_attr.s_grain;
+  xxx_par_grain = kaapic_default_attr.p_grain;
+#endif
   return KAAPIF_SUCCESS;
 }
 
