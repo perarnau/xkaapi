@@ -149,6 +149,7 @@ int kaapi_tasklist_pushready_td(
     return 0;
   }
 
+#if 0
   /* push remote queue:
      - same code as kaapi_task_splitter_readylist except state ALLOCATED */
 #if defined(TASKLIST_ONEGLOBAL_MASTER)  
@@ -182,6 +183,8 @@ int kaapi_tasklist_pushready_td(
   /* push the task in the remote queue */
   //kaapi_thread_pushtask_atlevel(task, KAAPI_HWS_LEVELID_NUMA);
   kaapi_thread_pushtask_atlevel_with_nodeid( &td->tasksteal, KAAPI_HWS_LEVELID_NUMA, nodeid );
+
+#endif
 
   return 1;
 }

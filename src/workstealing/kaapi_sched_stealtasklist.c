@@ -64,8 +64,10 @@ static int kaapi_task_splitter_readylist(
   kaapi_assert_debug( taskdescr_beg != taskdescr_end );
   /* new assert in this version: only one task steal */
 
-//  size_t blocsize = (taskdescr_end-taskdescr_beg+countreq-1)/countreq;
+#if !defined(TASKLIST_REPLY_ONETD)
+  size_t blocsize = (taskdescr_end-taskdescr_beg+countreq-1)/countreq;
 //if (blocsize >1) printf("Steal with blocize:%i\n", blocsize );  
+#endif
 
   /* decrement with the number of thief: one single increment in place of several */
 #if defined(TASKLIST_ONEGLOBAL_MASTER) 
