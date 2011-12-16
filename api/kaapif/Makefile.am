@@ -27,7 +27,7 @@ M4_SRCS=\
   m4_macros
 
 BUILT_SOURCES = $(M4_BUILT_FILES)
-EXTRA_DIST = $(M4_SRCS) kaapif.inc.f90 kaapif.inc.f95
+EXTRA_DIST = $(M4_SRCS) kaapif.inc kaapif.inc.f90 kaapif.inc.f95
 
 $(M4_BUILT_FILES): stamp-m4_generator
 
@@ -39,8 +39,7 @@ stamp-m4_generator: $(M4_SRCS)
 clean-local:
 	$(RM) stamp-m4_generator
 
-include_HEADERS=\
-	kaapif.inc
+include_HEADERS=
 
 libkaapif_la_SOURCES=\
 	kaapif.c \
