@@ -40,6 +40,7 @@
  ** terms.
  ** 
  */
+#include "kaapi_impl.h"
 #include "kaapic_impl.h"
 
 int kaapic_foreach_attr_init(kaapic_foreach_attr_t* attr)
