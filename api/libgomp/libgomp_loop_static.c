@@ -70,10 +70,10 @@ becomes
 
 static void gomp_foreach_wrapper(
   int32_t i, int32_t j, int32_t tid, 
-  void (*fn)(void*), void* data, uintptr_t start, uintptr_t incr )
+  kaapic_body_arg_t* call
+)
 {
-  void (*fnc)(void*) = (void (*)(void*))work->user_data[0];
-  fnc( work->user_data[1] );
+//TODO
 }
 
 /* */
@@ -84,23 +84,23 @@ bool GOMP_loop_static_start (
   long *iend
 )
 {
-  kaapi_thread_t* self = kaapi_self_thread();
+  kaapi_thread_t* thread = kaapi_self_thread();
   kaapic_foreach_attr_t attr;
   kaapic_foreach_attr_init(&attr);
   kaapic_foreach_attr_set_grains(&attr, chunk_size, chunk_size);
   kaapic_work_t* work = kaapi_thread_pushdata(thread, sizeof(kaapic_work_t));
-  kaapic_body_arg_t* arg = kaapi_thread_pushdata(thread, 
+  kaapic_body_arg_t* fnc_arg = kaapi_thread_pushdata(thread, 
       offsetof(kaapic_body_arg_t, args)+4*sizeof(void*)
   );
-  arg->u.f_c    = gomp_foreach_wrapper;
-  work->nargs   = 4;
-  work->args[0] = fn;
-  work->args[1] = data;
-  work->args[2] = (void*)start;
-  work->args[3] = (void*)incr;
+//TODO  fnc_arg->u.f_c   = gomp_foreach_wrapper;
+  fnc_arg->nargs   = 4;
+  fnc_arg->args[0] = 0; /* where is the entry point... not needed */
+  fnc_arg->args[1] = 0;
+  fnc_arg->args[2] = (void*)start;
+  fnc_arg->args[3] = (void*)incr;
 
   /* normalize iteration: to 0,M */
-  kaapic_foreach_workinit( work, 0, (end-start)/incr, attr, kaapic_foreach_wrapper, work );
+  kaapic_foreach_workinit( work, 0, (end-start)/incr, attr, gomp_foreach_wrapper, fnc_arg );
 
   printf("%s:: \n", __FUNCTION__);
 }
