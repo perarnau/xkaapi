@@ -43,11 +43,9 @@
 #ifndef KAAPIC_HIMPL_INCLUDED
 # define KAAPIC_HIMPL_INCLUDED
 
-#include "kaapi.h"
 #include "kaapic.h"
 
 /* implementation for kaapic API */
-
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -132,6 +130,97 @@ extern int kaapic_spawn_ti(
   kaapi_task_body_t body, 
   kaapic_task_info_t* ti
 );
+
+
+/* work array. allow for random access. */
+typedef struct work_array
+{
+  kaapi_bitmap_value_t map;
+  long off;
+  long scale;
+} work_array_t;
+
+
+/* work container */
+typedef struct work_info
+{
+#if CONFIG_MAX_TID
+  /* maximum thread index */
+  unsigned int max_tid;
+#endif
+
+  /* grains */
+  long par_grain;
+  long seq_grain;
+
+} work_info_t;
+
+
+/* master work */
+typedef struct work
+{
+  kaapi_workqueue_t cr __attribute__((aligned(64)));
+#if defined(USE_KPROC_LOCK)
+#else
+  kaapi_lock_t      lock;
+#endif
+
+#if CONFIG_TERM_COUNTER
+  /* global work counter */
+  kaapi_atomic_t* counter;
+#endif
+
+  /* work routine */
+  kaapic_foreach_body_t body_f;
+  kaapic_body_arg_t*    body_args;
+
+  /* points to next _wa and _wi fields */
+  work_array_t* wa;
+  work_info_t* wi;
+
+  /* split_root_task container */
+  work_array_t _wa;
+
+  /* infos container */
+  work_info_t _wi;
+  
+  void* context; /* return by begin_adapt */
+
+} kaapic_work_t;
+
+
+/* thief work: keep reference to initial work array and wi 
+   This structure is the same as kaapic_work_t except 
+   the container fields _wa and _wi
+*/
+typedef struct thief_work
+{
+  kaapi_workqueue_t cr __attribute__((aligned(64)));
+#if defined(USE_KPROC_LOCK)
+#else
+  kaapi_lock_t      lock;
+#endif
+
+#if CONFIG_TERM_COUNTER
+  /* global work counter */
+  kaapi_atomic_t* counter;
+#endif
+
+  /* work routine */
+  kaapic_foreach_body_t body_f;
+  kaapic_body_arg_t*    body_args;
+
+
+  /* split_root_task */
+  work_array_t* wa;
+
+  /* infos */
+  const work_info_t* wi;
+  void* context_adapt;
+  void* user_data[4];
+
+} kaapic_thief_work_t;
+
 
 #if defined(__cplusplus)
 }
