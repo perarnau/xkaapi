@@ -379,9 +379,9 @@ void buildVariableAssignment (
 SgClassDeclaration* buildOutlineArgStruct(
   const std::set<SgVariableSymbol*>& listvar,
   SgGlobal*                          scope,
-  SgClassDefinition*		     this_class_def,
-  const char*			     name_prefix,
-  bool				     do_pointers
+  SgClassDefinition*		         this_class_def,
+  const char*			             name_prefix,
+  bool				                 do_pointers
 )
 {
   static int cnt_sa = 0;
