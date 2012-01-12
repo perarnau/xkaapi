@@ -6,7 +6,7 @@
 ##  Copyright 2009 INRIA. All rights reserved.
 ##
 
-SUBDIRS=kaapixx kaapic kaapif quark kastl atha libgomp
+SUBDIRS=kaapixx kaapic kaapif quark kastl atha
 
 DIST=check-headers.am
 
