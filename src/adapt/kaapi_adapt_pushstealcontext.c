@@ -79,7 +79,7 @@ static int kaapi_adaptivetask_splitter_2_usersplitter(
 */
 void* kaapi_task_begin_adaptive
 (
-   kaapi_thread_t*              thread,
+  kaapi_thread_t*              thread,
   int                           flag,
   kaapi_adaptivetask_splitter_t splitter,
   void*                         argsplitter
