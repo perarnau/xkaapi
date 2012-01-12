@@ -491,8 +491,6 @@ int kaapic_foreach_workinit
   kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
   kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
 
-  kaapi_frame_t frame;
-
   /* warning: interval includes j */
   kaapi_workqueue_index_t i = first;
   kaapi_workqueue_index_t j = last;
@@ -519,9 +517,6 @@ int kaapic_foreach_workinit
   kaapi_atomic_t counter;
   unsigned long local_counter = 0;
 #endif
-
-  /* save frame */
-  kaapi_thread_save_frame(thread, &frame);
 
   /* initialize work array */
 
@@ -615,6 +610,9 @@ int kaapic_foreach_common
 
   /* master work */
   kaapic_work_t w;
+
+  /* save frame */
+  kaapi_thread_save_frame(thread, &frame);
   
   /* */
   kaapic_foreach_workinit( &w, first, last, attr, body_f, body_args );
@@ -695,6 +693,8 @@ end_adaptive:
   /* restore frame */
   kaapi_thread_restore_frame(thread, &frame);
   kaapi_synchronize_steal_thread(self_thread);
+
+  kaapi_atomic_destroylock(&w.lock);
   
 #if CONFIG_TERM_COUNTER
   /* wait for work counter */
