@@ -192,7 +192,6 @@ static int _kaapic_split_root_task
 
 
 /* parallel work splitters */
-
 static int _kaapic_split_common(
   struct kaapi_task_t*                 victim_task,
   void*                                args,
@@ -249,7 +248,6 @@ static int _kaapic_split_common(
   }
 
 skip_work_array:
-
   /* todo: request preprocessing should be done in one pass.
      this will be no longer necessary with new splitter interface
    */
@@ -311,6 +309,7 @@ redo_steal:
 #else
   _kaapi_workqueue_lock(&vw->cr);
 #endif
+
   if (kaapi_workqueue_steal(&vw->cr, &i, &j, leaf_count * unit_size))
   {
 #if defined(USE_KPROC_LOCK)
@@ -325,6 +324,7 @@ redo_steal:
 
     goto redo_steal;
   }
+  
 #if defined(USE_KPROC_LOCK)
 #else
   else
@@ -376,6 +376,7 @@ skip_workqueue:
     }
 
     /* finish work init and reply the request */
+
 #if defined(USE_KPROC_LOCK)
     kaapi_workqueue_init_with_lock
       (&tw->cr, p, q, &kaapi_all_kprocessors[req->ident]->lock);
@@ -384,9 +385,10 @@ skip_workqueue:
     kaapi_workqueue_init_with_lock
       (&tw->cr, p, q, &tw->lock);
 #endif
+
     tw->body_f    = vw->body_f;
     tw->body_args = vw->body_args;
-    tw->wi = wi;
+    tw->wi        = wi;
 #if CONFIG_TERM_COUNTER
     tw->counter = vw->counter;
 #endif
@@ -660,21 +662,22 @@ continue_work:
      with respect to thieves
   */
   _kaapi_workqueue_lock( &w.cr );
-  if (work_array_is_empty(w.wa))
+  if ( work_array_is_empty(&wa) || ((pos = work_array_first( &wa )) <=0) )
   {
     _kaapi_workqueue_unlock( &w.cr );
     goto end_adaptive;
   }
 
   /* refill the workqueue from reseved task and continue */
-  pos = work_array_first(w.wa);
   kaapi_assert_debug( pos >0 );
-  work_array_pop(w.wa, pos, &i, &j);
+  work_array_pop( &wa, pos, &i, &j );
 
   kaapi_workqueue_reset(
     &w.cr, 
-    (kaapi_workqueue_index_t)i, (kaapi_workqueue_index_t)j
+    (kaapi_workqueue_index_t)i, 
+    (kaapi_workqueue_index_t)j
   );
+
   _kaapi_workqueue_unlock( &w.cr );
 
   goto continue_work;
