@@ -104,5 +104,8 @@ void kaapic_begin_parallel(void)
 
 void kaapic_end_parallel(int32_t flags)
 {
-  kaapi_end_parallel(flags);
+  if (flags)
+    kaapi_end_parallel(KAAPI_SCHEDFLAG_NOWAIT);
+  else
+    kaapi_end_parallel(KAAPI_SCHEDFLAG_DEFAULT);
 }
