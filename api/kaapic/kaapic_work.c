@@ -662,7 +662,7 @@ continue_work:
      with respect to thieves
   */
   _kaapi_workqueue_lock( &w.cr );
-  if ( work_array_is_empty(&wa) || ((pos = work_array_first( &wa )) <=0) )
+  if ( work_array_is_empty(w.wa) || ((pos = work_array_first( w.wa )) <=0) )
   {
     _kaapi_workqueue_unlock( &w.cr );
     goto end_adaptive;
@@ -670,7 +670,7 @@ continue_work:
 
   /* refill the workqueue from reseved task and continue */
   kaapi_assert_debug( pos >0 );
-  work_array_pop( &wa, pos, &i, &j );
+  work_array_pop( w.wa, pos, &i, &j );
 
   kaapi_workqueue_reset(
     &w.cr, 
