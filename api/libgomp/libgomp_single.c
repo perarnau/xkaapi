@@ -43,15 +43,21 @@
 */
 #include "libgomp.h"
 
+#include <stdio.h>
+
 /* return true if the thread success to get single */
 bool GOMP_single_start (void)
 {
   printf("%s:: \n", __FUNCTION__);
+
+  return (bool)0;
 }
 
-void *GOMP_single_copy_start (void)
+void * GOMP_single_copy_start (void)
 {  
   printf("%s:: \n", __FUNCTION__);
+
+  return NULL;
 }
 
 void GOMP_single_copy_end (void *data)

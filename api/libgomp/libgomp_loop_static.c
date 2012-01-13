@@ -41,6 +41,9 @@
 ** terms.
 ** 
 */
+
+#include <stdio.h>
+
 #include "libgomp.h"
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
@@ -67,6 +70,8 @@ becomes
        subfunction (NULL);
        GOMP_parallel_end ();
 */
+
+int kaapic_foreach_workinit (kaapic_work_t *, int32_t, int32_t, kaapic_foreach_attr_t, kaapic_foreach_body_t, kaapic_body_arg_t *);
 
 static void gomp_foreach_wrapper(
   int32_t i, int32_t j, int32_t tid, 
@@ -103,12 +108,16 @@ bool GOMP_loop_static_start (
   kaapic_foreach_workinit( work, 0, (end-start)/incr, attr, gomp_foreach_wrapper, fnc_arg );
 
   printf("%s:: \n", __FUNCTION__);
+  
+  return (bool)0;
 }
 
 bool GOMP_loop_static_next (long *istart, long *iend)
 {
   /* seems never called except through runtime selection ? */
   printf("%s:: \n", __FUNCTION__);
+
+  return (bool)0;
 }
 
 

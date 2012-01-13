@@ -41,8 +41,13 @@
 ** terms.
 ** 
 */
+
+#include <stdio.h>
+
 #include "libgomp.h"
 #include "kaapi.h"
+
+kaapi_thread_context_t * kaapi_self_thread_context (void);
 
 void GOMP_task(
   void (*fn) (void *), 
@@ -55,6 +60,7 @@ void GOMP_task(
 )
 {
   kaapi_thread_context_t* self = kaapi_self_thread_context();
+  printf ("GOMP_task: Task created (%p)\n", self);
 }
 
 void GOMP_taskwait (void)
