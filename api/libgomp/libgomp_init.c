@@ -44,16 +44,16 @@
 */
 
 #include <stdio.h>
-#include <kaapi.h>
+#include <kaapic.h>
 
 static void __attribute__ ((constructor))  
 initialize_lib (void) 
 {
-  kaapi_init (0, NULL, NULL);
+  kaapic_init (1);
 }
 
 static void __attribute__ ((destructor))
 finalize_lib (void)
 {
-  kaapi_finalize ();
+  kaapic_finalize ();
 }
