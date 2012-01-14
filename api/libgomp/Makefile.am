@@ -28,6 +28,7 @@ libgomp_la_SOURCES=\
     libgomp_loop_static.c \
     libgomp_section.c \
     libgomp_task.c \
+    libgomp_init.c \
     $(include_HEADERS)
 
 check_headers_SRC_C=
