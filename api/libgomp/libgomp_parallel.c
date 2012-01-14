@@ -7,6 +7,7 @@
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** francois.broquedis@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -42,14 +43,24 @@
 ** 
 */
 #include "libgomp.h"
-#include "kaapi.h"
+#include <kaapic.h>
 
-void GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
+void 
+GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
 {
-  kaapi_begin_parallel(KAAPI_SCHEDFLAG_DEFAULT);
+  kaapic_begin_parallel ();
+
+  if (num_threads == 0)
+    num_threads = kaapic_get_concurrency ();
+
+  /* The master thread (id 0) calls fn (data) directly. That's why we
+     start this loop from id = 1.*/
+  for (int i = 1; i < num_threads; i++)
+    kaapic_spawn (1, fn, KAAPIC_MODE_R, data, 1, KAAPIC_TYPE_INT);
 }
 
 void GOMP_parallel_end (void)
 {
-  kaapi_end_parallel(0); /* implicit sync */
+  kaapic_end_parallel (0); 
+  /* implicit sync */
 }
