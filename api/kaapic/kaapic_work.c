@@ -287,8 +287,11 @@ static int _kaapic_split_common(
   if ((do_root_task == 0) || work_array_is_empty(wa))
     goto skip_work_array;
 
-  /* count requests that will be served by root tasks */
+  /* count requests that will be served by root tasks 
+     may be computed by mask + bit count
+  */
   kaapi_listrequest_iterator_t cpy_lri;
+
   /* make a copy of the iterator state */
   cpy_lri = *lri;
   for (; !kaapi_listrequest_iterator_empty(&cpy_lri); ) 
@@ -442,7 +445,13 @@ skip_workqueue:
     }
     else
     {
-      /* dont reply, neither root nor leaf */
+      /* dont reply, neither root nor leaf 
+      */
+      /* This is a bug in the current version: all next to iterator
+         must be replied
+      */
+      kaapi_request_replytask(req, KAAPI_REQUEST_S_NOK);
+      KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( lri ) );
       continue ;
     }
 
