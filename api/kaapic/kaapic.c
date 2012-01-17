@@ -53,7 +53,11 @@ int kaapic_init(int32_t flags)
   if (KAAPI_ATOMIC_INCR(&kaapic_initcalled) != 1)
     return 0;
 
-  err = kaapi_init(flags, 0, 0);
+  if (flags ==0)
+    err = kaapi_init(1, 0, 0);
+  else 
+    err = kaapi_init(0, 0, 0);
+
   if (err !=0) return err;
   
   if (getenv("KAAPI_SEQ_GRAIN") !=0)
@@ -104,5 +108,8 @@ void kaapic_begin_parallel(void)
 
 void kaapic_end_parallel(int32_t flags)
 {
-  kaapi_end_parallel(flags);
+  if (flags)
+    kaapi_end_parallel(KAAPI_SCHEDFLAG_NOWAIT);
+  else
+    kaapi_end_parallel(KAAPI_SCHEDFLAG_DEFAULT);
 }
