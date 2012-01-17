@@ -52,6 +52,7 @@
 int kaapi_context_free( kaapi_thread_context_t* ctxt )
 {
   if (ctxt ==0) return 0;
+
 //to delete stack frame pointer, but now its part of the thread data structure
 //  if (ctxt->alloc_ptr !=0) free(ctxt->alloc_ptr);
 #if defined (_WIN32)
