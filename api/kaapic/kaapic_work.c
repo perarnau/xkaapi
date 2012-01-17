@@ -50,6 +50,7 @@
 
 /* set to 0 to disable workload */
 #define CONFIG_USE_WORKLOAD 1
+#define USE_KPROC_LOCK 1
 
 #if CONFIG_USE_WORKLOAD
 extern void kaapi_set_self_workload(unsigned long);
@@ -296,7 +297,7 @@ redo_steal:
 #if defined(USE_KPROC_LOCK)
   kaapi_assert_debug( vw->cr.lock 
     == &kaapi_get_current_processor()->victim_kproc->lock );
-#if defined(KAAPI_DEBUG)
+#  if defined(KAAPI_DEBUG)
   if (vw->cr.lock != &kaapi_get_current_processor()->victim_kproc->lock )
   {
     kaapi_processor_t* kproc = kaapi_get_current_processor();
@@ -306,11 +307,12 @@ redo_steal:
       kproc->victim_kproc->kid
     );
   }
-#endif
+#  endif
   kaapi_assert_debug( kaapi_atomic_assertlocked(vw->cr.lock) );
 #else
   _kaapi_workqueue_lock(&vw->cr);
 #endif
+
   if (kaapi_workqueue_steal(&vw->cr, &i, &j, leaf_count * unit_size))
   {
 #if defined(USE_KPROC_LOCK)
@@ -473,6 +475,10 @@ static void _kaapic_thief_entrypoint(
 #if CONFIG_TERM_COUNTER
   KAAPI_ATOMIC_SUB(thief_work->counter, counter);
 #endif
+
+#if defined(KAAPI_DEBUG)
+  kaapi_atomic_destroylock(&thief_work->lock);
+#endif
 }
 
 
@@ -490,8 +496,9 @@ int kaapic_foreach_workinit
   /* is_format true if called from kaapif_foreach_with_format */
   kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
   kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
-
-  kaapi_frame_t frame;
+#if defined(USE_KPROC_LOCK)
+  int tid = self_thread->stack.proc->kid;
+#endif
 
   /* warning: interval includes j */
   kaapi_workqueue_index_t i = first;
@@ -519,9 +526,6 @@ int kaapic_foreach_workinit
   kaapi_atomic_t counter;
   unsigned long local_counter = 0;
 #endif
-
-  /* save frame */
-  kaapi_thread_save_frame(thread, &frame);
 
   /* initialize work array */
 
@@ -615,6 +619,9 @@ int kaapic_foreach_common
 
   /* master work */
   kaapic_work_t w;
+
+  /* save frame */
+  kaapi_thread_save_frame(thread, &frame);
   
   /* */
   kaapic_foreach_workinit( &w, first, last, attr, body_f, body_args );
@@ -695,6 +702,8 @@ end_adaptive:
   /* restore frame */
   kaapi_thread_restore_frame(thread, &frame);
   kaapi_synchronize_steal_thread(self_thread);
+
+  kaapi_atomic_destroylock(&w.lock);
   
 #if CONFIG_TERM_COUNTER
   /* wait for work counter */

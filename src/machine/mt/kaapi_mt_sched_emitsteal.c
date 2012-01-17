@@ -82,10 +82,12 @@ kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
 redo_select:
   /* select the victim processor */
   err = (*kproc->fnc_select)( kproc, &victim, KAAPI_SELECT_VICTIM );
-  if (unlikely(err !=0)) {
+  if (unlikely(err !=0)) 
+  {
     if (kaapi_isterm) return 0;
     goto redo_select;
   }
+
   /* never pass by this function for a processor to steal itself */
   if (kproc == victim.kproc) return KAAPI_REQUEST_S_NOK;
 
