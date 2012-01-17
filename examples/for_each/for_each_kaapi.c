@@ -91,8 +91,10 @@ int main(int ac, char** av)
     for (i = 0; i < ITEM_COUNT; ++i)
       array[i] = 0.f;
 
+    kaapic_begin_parallel();
     t0 = kaapic_get_time();
     kaapic_foreach( 0, ITEM_COUNT, 0, 1, apply_cos, array );
+    kaapic_end_parallel(1);
     t1 = kaapic_get_time();
     sum += (t1-t0)*1000; /* ms */
 
