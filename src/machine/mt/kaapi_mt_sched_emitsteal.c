@@ -151,6 +151,7 @@ redo_select:
 #if defined(KAAPI_DEBUG)
   int path0 = 0;
   int path1 = 0;
+  kaapi_listrequest_iterator_t save_lri;
 #endif
 
   /* (3)
@@ -161,7 +162,8 @@ redo_select:
   if (!kaapi_listrequest_iterator_empty(&lri) ) 
   {
     kaapi_sched_stealprocessor( victim.kproc, &victim_stealctxt->lr, &lri );
-    KAAPI_DEBUG_INST(path0= 1);    
+    KAAPI_DEBUG_INST(path0= 1); 
+    KAAPI_DEBUG_INST(save_lri = lri);   
 
     /* reply failed for all others requests */
     request = kaapi_listrequest_iterator_get( &victim_stealctxt->lr, &lri );
