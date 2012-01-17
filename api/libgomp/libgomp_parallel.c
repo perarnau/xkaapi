@@ -56,7 +56,7 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
   /* The master thread (id 0) calls fn (data) directly. That's why we
      start this loop from id = 1.*/
   for (int i = 1; i < num_threads; i++)
-    kaapic_spawn (1, fn, KAAPIC_MODE_R, data, 1, KAAPIC_TYPE_INT);
+    kaapic_spawn (1, fn, KAAPIC_MODE_V, data, 1, KAAPIC_TYPE_PTR);
 }
 
 void GOMP_parallel_end (void)
