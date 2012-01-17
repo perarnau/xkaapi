@@ -42,7 +42,7 @@
  ** 
  */
 
-#define USE_KPROC_LOCK  /* defined to use kprocessor lock, else use local lock */
+#define USE_KPROC_LOCK 1 /* defined to use kprocessor lock, else use local lock */
  
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
@@ -50,7 +50,6 @@
 
 /* set to 0 to disable workload */
 #define CONFIG_USE_WORKLOAD 1
-#define USE_KPROC_LOCK 1
 
 #if CONFIG_USE_WORKLOAD
 extern void kaapi_set_self_workload(unsigned long);
@@ -484,8 +483,9 @@ static void _kaapic_thief_entrypoint(
 #if CONFIG_TERM_COUNTER
   KAAPI_ATOMIC_SUB(thief_work->counter, counter);
 #endif
-
-#if defined(KAAPI_DEBUG)
+  
+#if defined(USE_KPROC_LOCK)
+#else
   kaapi_atomic_destroylock(&thief_work->lock);
 #endif
 }
@@ -508,7 +508,7 @@ int kaapic_foreach_workinit
 #if defined(USE_KPROC_LOCK)
   int tid = self_thread->stack.proc->kid;
 #endif
-
+  
   /* warning: interval includes j */
   kaapi_workqueue_index_t i = first;
   kaapi_workqueue_index_t j = last;
@@ -678,7 +678,7 @@ continue_work:
      with respect to thieves
   */
   _kaapi_workqueue_lock( &w.cr );
-  if ( work_array_is_empty(&wa) || ((pos = work_array_first( &wa )) <=0) )
+  if ( work_array_is_empty(w.wa) || ((pos = work_array_first( w.wa )) <=0) )
   {
     _kaapi_workqueue_unlock( &w.cr );
     goto end_adaptive;
@@ -686,7 +686,7 @@ continue_work:
 
   /* refill the workqueue from reseved task and continue */
   kaapi_assert_debug( pos >0 );
-  work_array_pop( &wa, pos, &i, &j );
+  work_array_pop( w.wa, pos, &i, &j );
 
   kaapi_workqueue_reset(
     &w.cr, 
@@ -713,7 +713,10 @@ end_adaptive:
   kaapi_thread_restore_frame(thread, &frame);
   kaapi_synchronize_steal_thread(self_thread);
 
+#if defined(USE_KPROC_LOCK)
+#else
   kaapi_atomic_destroylock(&w.lock);
+#endif
   
 #if CONFIG_TERM_COUNTER
   /* wait for work counter */

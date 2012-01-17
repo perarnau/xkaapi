@@ -82,8 +82,8 @@ int main(int ac, char** av)
 #define ITEM_COUNT 100000
   static double array[ITEM_COUNT];
   
-  /* initialize the runtime */
-  kaapic_init(0);
+  /* initialize the runtime : do not start worker threads */
+  kaapic_init(1);
   
   for (iter = 0; iter < 100; ++iter)
   {
@@ -92,7 +92,9 @@ int main(int ac, char** av)
       array[i] = 0.f;
 
     t0 = kaapic_get_time();
+    kaapic_begin_parallel();
     kaapic_foreach( 0, ITEM_COUNT, 0, 1, apply_cos, array );
+    kaapic_end_parallel(0);
     t1 = kaapic_get_time();
     sum += (t1-t0)*1000; /* ms */
 
