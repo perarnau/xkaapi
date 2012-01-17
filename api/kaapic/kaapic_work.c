@@ -376,7 +376,6 @@ skip_workqueue:
     }
 
     /* finish work init and reply the request */
-
 #if defined(USE_KPROC_LOCK)
     kaapi_workqueue_init_with_lock
       (&tw->cr, p, q, &kaapi_all_kprocessors[req->ident]->lock);

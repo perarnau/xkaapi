@@ -203,7 +203,7 @@ int kaapic_finalize(void)
     corresponding \fn{kaapic\_finalize} at the end of the program.
   \end{desc}
   \begin{params}
-    \param{flags} if not zero, only start the main thread to avoid
+    \param{flags} if zero, only start the main thread to avoid
     disturbing the execution until tasks are actually scheduled. The
     other threads are suspended waiting for a parallel region to be
     entered (refer to kaapic\_begin\_parallel in part
@@ -628,7 +628,7 @@ int kaapic_end_parallel(int flag)
     parameter.
   \end{desc}
   \begin{params}
-    \param{falg} if zero, an implicit synchronization is inserted
+    \param{flag} if zero, an implicit synchronization is inserted
     before leaving the region.
   \end{params}
   \begin{ret}
