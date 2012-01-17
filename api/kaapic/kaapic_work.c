@@ -42,7 +42,7 @@
  ** 
  */
 
-//#define USE_KPROC_LOCK  /* defined to use kprocessor lock, else use local lock */
+#define USE_KPROC_LOCK  /* defined to use kprocessor lock, else use local lock */
  
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
