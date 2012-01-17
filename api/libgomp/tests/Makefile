@@ -4,15 +4,16 @@ LDFLAGS=-lgomp
 
 PROGS= hello par-shared
 
-all: hello par-shared get-gimple
+all: $(PROGS) get-gimple
 
 hello: hello.o
 
 par-shared: par-shared.o
 
-hello.o: hello.c
+%.o: %.c
+	$(CC) $(CFLAGS) -c $<
 
-par-shared.o: par-shared.c
+.PHONY: clean get-gimple
 
 get-gimple: $(PROGS)
 	./get-gimple.sh "$(PROGS)"
@@ -20,4 +21,3 @@ get-gimple: $(PROGS)
 clean:
 	rm -rf *~ *.o $(PROGS) hello.c.* par-shared.c.* gimp-*
 
-.PHONY: clean

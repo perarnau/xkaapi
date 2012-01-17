@@ -1,8 +1,8 @@
 #! /bin/bash
 
-files=$(find . -name "*omp*" -exec ls {} +)
+echo "Generating OpenMP-related gimple files..."
 
-echo "Files = $files"
+files=$(find . -name "*omp*" -exec ls {} +)
 
 # Back up the interesting gimple files
 for gimpfile in $files;
@@ -11,12 +11,9 @@ do
     cp $gimpfile "gimp-$filename"
 done
 
-echo "\$1 = $1"
-
 # Delete the rest of them
 for progname in $1;
 do
-    echo "Progname = $progname"
     temp=$(find . -name "$progname.c.*" -exec ls {} +)
     if ! [ "$temp" == "" ];
     then	
