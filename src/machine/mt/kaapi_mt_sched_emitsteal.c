@@ -70,6 +70,7 @@ kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
   kaapi_atomic_t               status __attribute__((aligned(8)));
   kaapi_victim_t               victim;
   kaapi_request_t*             self_request;
+  kaapi_request_t*             request;
   int                          err;
   kaapi_listrequest_iterator_t lri;
   
@@ -152,8 +153,6 @@ redo_select:
   */
   if (!kaapi_listrequest_iterator_empty(&lri) ) 
   {
-    kaapi_request_t* request;
-
     kaapi_sched_stealprocessor( victim.kproc, &victim_stealctxt->lr, &lri );
 
     /* reply failed for all others requests */
