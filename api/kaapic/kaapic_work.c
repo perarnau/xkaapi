@@ -42,7 +42,7 @@
  ** 
  */
 
-//#define USE_KPROC_LOCK  /* defined to use kprocessor lock, else use local lock */
+#define USE_KPROC_LOCK  /* defined to use kprocessor lock, else use local lock */
  
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
@@ -475,6 +475,11 @@ static void _kaapic_thief_entrypoint(
 #if CONFIG_TERM_COUNTER
   KAAPI_ATOMIC_SUB(thief_work->counter, counter);
 #endif
+  
+#if defined(USE_KPROC_LOCK)
+#else
+  kaapi_atomic_destroylock(&thief_work->lock);
+#endif
 }
 
 
@@ -493,6 +498,10 @@ int kaapic_foreach_workinit
   kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
   kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
 
+#if defined(USE_KPROC_LOCK)
+  int tid = self_thread->stack.proc->kid;
+#endif
+  
   /* warning: interval includes j */
   kaapi_workqueue_index_t i = first;
   kaapi_workqueue_index_t j = last;
@@ -697,7 +706,10 @@ end_adaptive:
   kaapi_thread_restore_frame(thread, &frame);
   kaapi_synchronize_steal_thread(self_thread);
 
+#if defined(USE_KPROC_LOCK)
+#else
   kaapi_atomic_destroylock(&w.lock);
+#endif
   
 #if CONFIG_TERM_COUNTER
   /* wait for work counter */
