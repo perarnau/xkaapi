@@ -7,7 +7,7 @@ main (int argc, char **argv)
 
 #pragma omp parallel shared (cpt)
   {
-    printf ("par-shared: cpt = %i\n\n", cpt);
+    printf ("par-shared: cpt = %i\n", cpt);
   }
 
   return 0;

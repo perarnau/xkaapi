@@ -2,17 +2,28 @@ CC=gcc-mp-4.6
 CFLAGS=-g -fopenmp -fdump-tree-all -O3 -Wall
 LDFLAGS=-lgomp
 
-all: hello par-shared
+PROGS= hello par-shared critical
 
-hello: hello.o
+all: $(PROGS) get-gimple
 
-par-shared: par-shared.o
+hello: hello.o test-toolbox.o
 
-hello.o: hello.c
+par-shared: par-shared.o test-toolbox.o
 
-par-shared.o: par-shared.c
+critical: critical.o test-toolbox.o
+
+# We don't want to generate gimple files for the test-toolbox.
+test-toolbox.o: test-toolbox.c test-toolbox.h
+	$(CC) -g -O3 -Wall -c $<
+
+%.o: %.c test-toolbox.h
+	$(CC) $(CFLAGS) -c $<
+
+.PHONY: clean get-gimple
+
+get-gimple: $(PROGS)
+	./get-gimple.sh "$(PROGS)"
 
 clean:
-	rm -rf *~ *.o hello par-shared hello.c.* par-shared.c.*
+	rm -rf *~ *.o $(PROGS) hello.c.* par-shared.c.* gimp-*
 
-.PHONY: clean
