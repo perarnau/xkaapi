@@ -70,6 +70,7 @@ kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
   kaapi_atomic_t               status __attribute__((aligned(8)));
   kaapi_victim_t               victim;
   kaapi_request_t*             self_request;
+  kaapi_request_t*             request;
   int                          err;
   kaapi_listrequest_iterator_t lri;
   
@@ -89,7 +90,8 @@ redo_select:
   }
 
   /* never pass by this function for a processor to steal itself */
-  if (kproc == victim.kproc) return KAAPI_REQUEST_S_NOK;
+  if (kproc == victim.kproc) 
+    return KAAPI_REQUEST_S_NOK;
 
 #if 0 // to avoid lock
   /* quick test to detect if thread has work */
@@ -146,22 +148,27 @@ redo_select:
   /* here becomes an aggregator... the trylock has synchronized memory */
   kaapi_listrequest_iterator_init(&victim_stealctxt->lr, &lri);
 
+#if defined(KAAPI_DEBUG)
+  int path0 = 0;
+  int path1 = 0;
+#endif
+
   /* (3)
      process all requests on the victim kprocessor and reply failed to remaining requests
-     Warning: In this version the aggregator has a lock on the victim processor.
+     Warning: In this version the aggregator has a lock on the victim processor 
+     steal context (i.e. the list of requests).
   */
   if (!kaapi_listrequest_iterator_empty(&lri) ) 
   {
-    kaapi_request_t* request;
-
     kaapi_sched_stealprocessor( victim.kproc, &victim_stealctxt->lr, &lri );
+    KAAPI_DEBUG_INST(path0= 1);    
 
     /* reply failed for all others requests */
     request = kaapi_listrequest_iterator_get( &victim_stealctxt->lr, &lri );
     kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
-    
     while (request !=0)
     {
+      KAAPI_DEBUG_INST(path1 |= 1 << (request->ident) );    
       kaapi_request_replytask(request, KAAPI_REQUEST_S_NOK);
       KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( &lri ) );
       request = kaapi_listrequest_iterator_next( &victim_stealctxt->lr, &lri );
