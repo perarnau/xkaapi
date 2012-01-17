@@ -237,10 +237,10 @@ int kaapic_spawn(int32_t nargs, ...)
   {
     kaapic_arg_info_t* const ai = &ti->args[k];
 
+    const uint32_t mode  = va_arg(va_args, int);
     void* const addr     = va_arg(va_args, void*);
     const uint32_t count = va_arg(va_args, int);
     const uint32_t type  = va_arg(va_args, int);
-    const uint32_t mode  = va_arg(va_args, int);
 
     switch (mode)
     {
