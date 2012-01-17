@@ -41,6 +41,10 @@
 ** terms.
 ** 
 */
+
+#include <stdio.h>
+#include <kaapi.h>
+
 void GOMP_loop_end (void)
 {
   kaapi_sched_sync();
