@@ -203,8 +203,8 @@ redo_select:
       /* note: could be optimized a bit, but finalization code */
 
       /* FIXME
-	 should wait for the request but does not work. maybe
-	 the request bitmap is being destroyed.
+	   should wait for the request but does not work. maybe
+	   the request bitmap is being destroyed.
        */
       return KAAPI_REQUEST_S_NOK;
       /* FIXME */
