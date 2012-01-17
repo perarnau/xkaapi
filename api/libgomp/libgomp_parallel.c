@@ -45,6 +45,18 @@
 #include "libgomp.h"
 #include <kaapic.h>
 
+int
+omp_get_num_threads (void)
+{
+  return kaapic_get_concurrency ();
+}
+
+int
+omp_get_thread_num (void)
+{
+  return kaapic_get_thread_num ();
+}
+
 void 
 GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
 {
