@@ -2,7 +2,9 @@ CC=gcc-mp-4.6
 CFLAGS=-g -fopenmp -fdump-tree-all -O3 -Wall
 LDFLAGS=-lgomp
 
-all: hello par-shared
+PROGS= hello par-shared
+
+all: hello par-shared get-gimple
 
 hello: hello.o
 
@@ -12,7 +14,10 @@ hello.o: hello.c
 
 par-shared.o: par-shared.c
 
+get-gimple: $(PROGS)
+	./get-gimple.sh "$(PROGS)"
+
 clean:
-	rm -rf *~ *.o hello par-shared hello.c.* par-shared.c.*
+	rm -rf *~ *.o $(PROGS) hello.c.* par-shared.c.* gimp-*
 
 .PHONY: clean
