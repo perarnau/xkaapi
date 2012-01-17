@@ -892,7 +892,6 @@ AC_CONFIG_FILES([
 	api/kaapic/Makefile
 	api/kaapif/Makefile
 	api/quark/Makefile
-	api/libgomp/Makefile
 	api/kastl/Makefile
 	api/atha/Makefile
 	examples/Makefile
