@@ -563,9 +563,13 @@ static inline void kaapi_lfree_push(
     list->_front->_prev = ctxt;
   list->_front = ctxt;
 
-
   /* wait end of thieves on the processor */
   kaapi_synchronize_steal(kproc);
+
+  /* this is the only vital ressource to destroy properly
+     whatever is the distination list (free list) or deleted.
+   */
+  kaapi_atomic_destroylock(&ctxt->stack.lock);
 
   /* pop back if new size exceeds max */
 #  define KAAPI_MAXFREECTXT 4
@@ -576,9 +580,6 @@ static inline void kaapi_lfree_push(
     ctxt = list->_back;
     list->_back = list->_back->_prev;
     list->_back->_next = NULL;
-
-    /* this is the only vital ressource to destroy properly */
-    kaapi_atomic_destroylock(&ctxt->stack.lock);
 
     /* free the popped context: lock the kproc until to wait end of thief operation */
     kaapi_context_free(ctxt);
