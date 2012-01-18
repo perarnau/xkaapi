@@ -83,7 +83,7 @@ int main(int ac, char** av)
   static double array[ITEM_COUNT];
   
   /* initialize the runtime */
-  kaapic_init(1);
+  kaapic_init(0);
   
   for (iter = 0; iter < 100; ++iter)
   {
