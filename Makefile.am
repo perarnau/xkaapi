@@ -22,7 +22,7 @@ clean-local:
 
 .PHONY: gitlastcommit
 gitlastcommit:
-	@( cd $(srcdir) ; git log -n 1 --format="format:%H" HEAD ) > $@.new
+	@( cd $(srcdir) ; git describe --always --dirty=+ --tags --long --abbrev=16 ) > $@.new
 	@if cmp --quiet $@.new "$(srcdir)/$@" ; then \
 		echo "Git version not changed" ;\
 		$(RM) $@.new ;\
