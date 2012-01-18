@@ -1,5 +1,5 @@
 CC = gcc-mp-4.6
-CFLAGS = -fopenmp -O3 -g
+CFLAGS = -fopenmp -O3 -g -DOMPCLOCK
 LDFLAGS = -lm -lgomp
 
 TOOLS = delay.o getclock.o
