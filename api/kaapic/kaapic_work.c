@@ -677,7 +677,7 @@ continue_work:
 
   /* refill the workqueue from reseved task and continue */
   pos = work_array_first(w.wa);
-  kaapi_assert_debug( pos >0 );
+  kaapi_assert_debug( pos >=0 );
   work_array_pop(w.wa, pos, &i, &j);
 
   kaapi_workqueue_reset(
