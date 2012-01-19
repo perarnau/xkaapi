@@ -2,13 +2,13 @@ CC=gcc-mp-4.6
 CFLAGS=-g -fopenmp -fdump-tree-all -O3 -Wall
 LDFLAGS=-lgomp
 
-PROGS= hello par-shared critical nested
+PROGS= parallel shared critical nested
 
 all: $(PROGS) get-gimple
 
-hello: hello.o test-toolbox.o
+parallel: parallel.o test-toolbox.o
 
-par-shared: par-shared.o test-toolbox.o
+shared: shared.o test-toolbox.o
 
 critical: critical.o test-toolbox.o
 
@@ -27,5 +27,5 @@ get-gimple: $(PROGS)
 	./get-gimple.sh "$(PROGS)"
 
 clean:
-	rm -rf *~ *.o $(PROGS) hello.c.* par-shared.c.* gimp-*
+	rm -rf *~ *.o $(PROGS) parallel.c.* shared.c.* critical.c.* nested.c.* gimp-*
 
