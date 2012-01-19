@@ -7,6 +7,7 @@
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** francois.broquedis@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -41,8 +42,39 @@
 ** terms.
 ** 
 */
+
+#include <kaapi.h>
+
 #include "libgomp.h"
+
+struct gomp_barrier global_barrier;
+
+void
+gomp_barrier_init (struct gomp_barrier *barrier, unsigned int num)
+{
+  barrier->nthreads = num;
+  KAAPI_ATOMIC_WRITE_BARRIER (&barrier->count, 0);
+}
+
+void
+gomp_barrier_destroy (struct gomp_barrier *barrier)
+{
+  barrier->nthreads = -1;
+  KAAPI_ATOMIC_WRITE_BARRIER (&barrier->count, -1);  
+}
+
+void
+gomp_barrier_wait (struct gomp_barrier *barrier)
+{
+  int nthreads = barrier->nthreads;
+  KAAPI_ATOMIC_INCR (&barrier->count);
+  while (KAAPI_ATOMIC_READ (&barrier->count) != nthreads)
+    {
+      kaapi_slowdown_cpu ();
+    }
+}
 
 void GOMP_barrier (void)
 {
+  gomp_barrier_wait (&global_barrier);
 }

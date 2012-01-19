@@ -65,6 +65,8 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
   if (num_threads == 0)
     num_threads = kaapic_get_concurrency ();
 
+  gomp_barrier_init (&global_barrier, num_threads);
+
   /* The master thread (id 0) calls fn (data) directly. That's why we
      start this loop from id = 1.*/
   for (int i = 1; i < num_threads; i++)
@@ -73,6 +75,7 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
 
 void GOMP_parallel_end (void)
 {
+  gomp_barrier_destroy (&global_barrier);
   kaapic_end_parallel (0); 
   /* implicit sync */
 }

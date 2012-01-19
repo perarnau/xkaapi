@@ -46,6 +46,9 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdint.h>
+
+#include <kaapi_atomic.h>
 
 enum omp_task_kind
 {
@@ -55,8 +58,20 @@ enum omp_task_kind
   GOMP_TASK_TIED
 };
 
-
 /* barrier.c */
+
+struct gomp_barrier {
+  unsigned int nthreads;
+  kaapi_atomic64_t count;
+}; 
+
+/* This is temporary, and will be replaced by a per-team local barrier
+   soon. */
+extern struct gomp_barrier global_barrier;
+
+void gomp_barrier_init (struct gomp_barrier *barrier, unsigned int num);
+void gomp_barrier_destroy (struct gomp_barrier *barrier);
+void gomp_barrier_wait (struct gomp_barrier *barrier);
 
 extern void GOMP_barrier (void);
 
