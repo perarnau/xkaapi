@@ -2,7 +2,7 @@
 
 KAAPI_INSTALL_PATH=/Users/broq/soft/install
 
-TESTS=hello
+TESTS="parallel barrier critical single shared"
 
 make clean
 make
