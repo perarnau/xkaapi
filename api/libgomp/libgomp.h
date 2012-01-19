@@ -65,8 +65,8 @@ struct gomp_barrier {
   kaapi_atomic64_t count;
 }; 
 
-/* This is temporary, and will be replaced by a per-team local barrier
-   soon. */
+/* TODO: This is temporary, and has to be replaced by a per-team local
+   barrier. */
 extern struct gomp_barrier global_barrier;
 
 void gomp_barrier_init (struct gomp_barrier *barrier, unsigned int num);
@@ -215,6 +215,10 @@ extern void GOMP_sections_end (void);
 extern void GOMP_sections_end_nowait (void);
 
 /* single.c */
+
+/* TODO: This is temporary, and has to be replaced by a per-team local
+   variable. */
+extern kaapi_atomic64_t global_single;
 
 extern bool GOMP_single_start (void);
 extern void *GOMP_single_copy_start (void);

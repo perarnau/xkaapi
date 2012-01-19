@@ -45,12 +45,12 @@
 
 #include <stdio.h>
 
+kaapi_atomic64_t global_single;
+
 /* return true if the thread success to get single */
 bool GOMP_single_start (void)
 {
-  printf("%s:: \n", __FUNCTION__);
-
-  return (bool)0;
+  return KAAPI_ATOMIC_CAS (&global_single, 0, 1);
 }
 
 void * GOMP_single_copy_start (void)
