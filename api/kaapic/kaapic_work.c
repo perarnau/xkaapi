@@ -58,7 +58,7 @@ do {						\
   kaapi_set_self_workload(__w);			\
 } while (0)
 #else 
-#define kaapi_SET_SELF_WORKLOAD(__w)
+#define KAAPI_SET_SELF_WORKLOAD(__w)
 #endif
 
 
