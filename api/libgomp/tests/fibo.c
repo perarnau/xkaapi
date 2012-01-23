@@ -118,7 +118,7 @@ int main (int argc, char** argv)
   if (argc >1)
     n = atoi(argv[1]);
   else 
-    n = 30;
+    n = 34;
 
   #pragma omp parallel
   #pragma omp single
