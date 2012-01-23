@@ -57,6 +57,7 @@
 typedef struct PerTeamLocalStorage {
   int            threadid;
   int            numthreads;
+  kaapi_frame_t  frame;
 } kaapi_libgompctxt_t ;
 
 extern kaapi_libgompctxt_t* GOMP_get_ctxt();

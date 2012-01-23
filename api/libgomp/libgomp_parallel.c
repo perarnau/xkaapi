@@ -45,9 +45,8 @@
 #include "libgomp.h"
 
 
-kaapi_libgompctxt_t* GOMP_get_ctxt()
+static inline kaapi_libgompctxt_t* _GOMP_get_ctxt( kaapi_processor_t* kproc )
 {
-  kaapi_processor_t* kproc = kaapi_get_current_processor();
   if (kproc->libgomp_tls == 0)
   {
     kaapi_libgompctxt_t* ctxt = (kaapi_libgompctxt_t*)malloc(sizeof(kaapi_libgompctxt_t));
@@ -57,6 +56,12 @@ kaapi_libgompctxt_t* GOMP_get_ctxt()
     return ctxt;
   }
   return (kaapi_libgompctxt_t*)kproc->libgomp_tls;
+}
+
+
+kaapi_libgompctxt_t* GOMP_get_ctxt()
+{
+  return _GOMP_get_ctxt(kaapi_get_current_processor());
 }
 
 
@@ -73,31 +78,73 @@ omp_get_thread_num (void)
 }
 
 
+typedef struct GOMP_parallel_task_arg {
+  int numthreads;
+  int threadid;
+  void (*fn) (void *);
+  void *data;
+} GOMP_parallel_task_arg_t;
+
 static void GOMP_trampoline_spawn(
-  int numthreads,
-  int threadid,
-  void (*fn) (void *),
-  void *data
+  void* voidp, kaapi_thread_t* thread
 )
 {
+  GOMP_parallel_task_arg_t* taskarg = (GOMP_parallel_task_arg_t*)voidp;
   kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();
   
-  ctxt->numthreads = numthreads;
-  ctxt->threadid   = threadid;
-  fn(data);
+  ctxt->numthreads = taskarg->numthreads;
+  ctxt->threadid   = taskarg->threadid;
+  taskarg->fn(taskarg->data);
 }
+
+KAAPI_REGISTER_TASKFORMAT( GOMP_parallel_task_format,
+    "GOMP/Parallel Task",
+    GOMP_trampoline_spawn,
+    sizeof(GOMP_parallel_task_arg_t),
+    4,
+    (kaapi_access_mode_t[]){ 
+        KAAPI_ACCESS_MODE_V, 
+        KAAPI_ACCESS_MODE_V, 
+        KAAPI_ACCESS_MODE_V,
+        KAAPI_ACCESS_MODE_V 
+    },
+    (kaapi_offset_t[])     { 
+        offsetof(GOMP_parallel_task_arg_t, numthreads), 
+        offsetof(GOMP_parallel_task_arg_t, threadid), 
+        offsetof(GOMP_parallel_task_arg_t, fn), 
+        offsetof(GOMP_parallel_task_arg_t, data)
+    },
+    (kaapi_offset_t[])     { 0, 0, 0, 0 },
+    (const struct kaapi_format_t*[]) { 
+        kaapi_int_format, 
+        kaapi_int_format,
+        kaapi_voidp_format,
+        kaapi_voidp_format 
+      },
+    0
+)
+
 
 void 
 GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
 {
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  kaapi_thread_t* thread;
+  GOMP_parallel_task_arg_t* arg;
+  
   kaapic_begin_parallel();
 
   if (num_threads == 0)
     num_threads = kaapic_get_concurrency ();
   
-  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();
   /* do not save the ctxt, assume just one top level ctxt */
+  kaapi_libgompctxt_t* ctxt = _GOMP_get_ctxt(kproc);
+  thread = kaapi_threadcontext2thread(kproc->thread);
 
+  /* save frame */
+  kaapi_thread_save_frame( thread, &ctxt->frame);
+  
+  /* init team context */
   KAAPI_ATOMIC_WRITE(&global_single, 0);
   gomp_barrier_init (&global_barrier, num_threads);
 
@@ -105,22 +152,46 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
   /* The master thread (id 0) calls fn (data) directly. That's why we
      start this loop from id = 1.*/
   for (int i = 1; i < num_threads; i++)
-    kaapic_spawn (4, 
+  {
+    kaapi_task_t* task = kaapi_thread_toptask(thread);
+    kaapi_task_init( 
+        task, 
+        GOMP_trampoline_spawn, 
+        kaapi_thread_pushdata(thread, sizeof(GOMP_parallel_task_arg_t)) 
+    );
+    arg = kaapi_task_getargst( task, GOMP_parallel_task_arg_t );
+    arg->numthreads = num_threads;
+    arg->threadid   = i;
+    arg->fn         = fn;
+    arg->data       = data;
+    kaapi_thread_pushtask(thread);
+  }
+
+#if 0 /* previous lines are equivalents to : */
+      kaapic_spawn (4, 
        GOMP_trampoline_spawn,
        KAAPIC_MODE_V, num_threads, 1, KAAPIC_TYPE_INT,
        KAAPIC_MODE_V, i, 1, KAAPIC_TYPE_INT,
        KAAPIC_MODE_V, fn, 1, KAAPIC_TYPE_PTR,
        KAAPIC_MODE_V, data, 1, KAAPIC_TYPE_PTR
     );
+#endif
 
   /* initialize master context */
   ctxt->numthreads = num_threads;
-  ctxt->threadid = 0;
+  ctxt->threadid   = 0;
 }
 
 void 
 GOMP_parallel_end (void)
 {
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapic_end_parallel (0); 
   /* implicit sync */
+
+  /* do not save the ctxt, assume just one top level ctxt */
+  kaapi_libgompctxt_t* ctxt = _GOMP_get_ctxt(kproc);
+
+  /* restore frame */
+  kaapi_thread_restore_frame( kaapi_threadcontext2thread(kproc->thread), &ctxt->frame);
 }
