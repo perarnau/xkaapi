@@ -43,42 +43,84 @@
 ** 
 */
 #include "libgomp.h"
-#include <kaapic.h>
+
+
+kaapi_libgompctxt_t* GOMP_get_ctxt()
+{
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  if (kproc->libgomp_tls == 0)
+  {
+    kaapi_libgompctxt_t* ctxt = (kaapi_libgompctxt_t*)malloc(sizeof(kaapi_libgompctxt_t));
+    ctxt->threadid   = 0;
+    ctxt->numthreads = 1;
+    kproc->libgomp_tls = ctxt;
+    return ctxt;
+  }
+  return (kaapi_libgompctxt_t*)kproc->libgomp_tls;
+}
+
 
 int
 omp_get_num_threads (void)
 {
-  return kaapic_get_concurrency ();
+  return GOMP_get_ctxt()->numthreads;
 }
 
 int
 omp_get_thread_num (void)
 {
-  return kaapic_get_thread_num ();
+  return GOMP_get_ctxt()->threadid;
+}
+
+
+static void GOMP_trampoline_spawn(
+  int numthreads,
+  int threadid,
+  void (*fn) (void *),
+  void *data
+)
+{
+  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();
+  
+  ctxt->numthreads = numthreads;
+  ctxt->threadid   = threadid;
+  fn(data);
 }
 
 void 
 GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
 {
-  kaapic_begin_parallel ();
+  kaapic_begin_parallel();
 
   if (num_threads == 0)
     num_threads = kaapic_get_concurrency ();
+  
+  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();
+  /* do not save the ctxt, assume just one top level ctxt */
 
+  KAAPI_ATOMIC_WRITE(&global_single, 0);
   gomp_barrier_init (&global_barrier, num_threads);
-  KAAPI_ATOMIC_WRITE_BARRIER (&global_single, 0);
+
 
   /* The master thread (id 0) calls fn (data) directly. That's why we
      start this loop from id = 1.*/
   for (int i = 1; i < num_threads; i++)
-    kaapic_spawn (1, fn, KAAPIC_MODE_V, data, 1, KAAPIC_TYPE_PTR);
+    kaapic_spawn (4, 
+       GOMP_trampoline_spawn,
+       KAAPIC_MODE_V, num_threads, 1, KAAPIC_TYPE_INT,
+       KAAPIC_MODE_V, i, 1, KAAPIC_TYPE_INT,
+       KAAPIC_MODE_V, fn, 1, KAAPIC_TYPE_PTR,
+       KAAPIC_MODE_V, data, 1, KAAPIC_TYPE_PTR
+    );
+
+  /* initialize master context */
+  ctxt->numthreads = num_threads;
+  ctxt->threadid = 0;
 }
 
 void 
 GOMP_parallel_end (void)
 {
-  gomp_barrier_destroy (&global_barrier);
-  KAAPI_ATOMIC_WRITE_BARRIER (&global_single, 0);
   kaapic_end_parallel (0); 
   /* implicit sync */
 }

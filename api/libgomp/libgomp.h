@@ -48,7 +48,17 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include <kaapi_atomic.h>
+#include "kaapi_impl.h"
+#include "kaapic.h"
+
+
+
+/** Pre-historic TLS multiplex support for OMP */
+typedef struct PerTeamLocalStorage {
+  int            threadid;
+  int            numthreads;
+} kaapi_libgompctxt_t ;
+
 
 enum omp_task_kind
 {
@@ -60,14 +70,12 @@ enum omp_task_kind
 
 /* barrier.c */
 
-struct gomp_barrier {
-  unsigned int nthreads;
+typedef struct gomp_barrier {
   kaapi_atomic64_t count;
-}; 
+  unsigned int nthreads;
+} gomp_barrier_t; 
 
-/* TODO: This is temporary, and has to be replaced by a per-team local
-   barrier. */
-extern struct gomp_barrier global_barrier;
+extern gomp_barrier_t global_barrier;
 
 void gomp_barrier_init (struct gomp_barrier *barrier, unsigned int num);
 void gomp_barrier_destroy (struct gomp_barrier *barrier);
@@ -215,10 +223,7 @@ extern void GOMP_sections_end (void);
 extern void GOMP_sections_end_nowait (void);
 
 /* single.c */
-
-/* TODO: This is temporary, and has to be replaced by a per-team local
-   variable. */
-extern kaapi_atomic64_t global_single;
+extern kaapi_atomic_t global_single;
 
 extern bool GOMP_single_start (void);
 extern void *GOMP_single_copy_start (void);
