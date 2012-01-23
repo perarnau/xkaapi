@@ -42,7 +42,6 @@
 ** 
 */
 #include "libgomp.h"
-#include "kaapi_impl.h"
 
 static struct current_selection {
   kaapi_thread_context_t* master;

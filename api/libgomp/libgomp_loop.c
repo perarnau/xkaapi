@@ -41,9 +41,8 @@
 ** terms.
 ** 
 */
-
+#include "libgomp.h"
 #include <stdio.h>
-#include <kaapi.h>
 
 void GOMP_loop_end (void)
 {

@@ -42,7 +42,6 @@
 ** 
 */
 #include "libgomp.h"
-#include "kaapi.h"
 
 static kaapi_lock_t thecritical = KAAPI_LOCK_INITIALIZER;
 

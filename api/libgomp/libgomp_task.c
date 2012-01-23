@@ -41,11 +41,8 @@
 ** terms.
 ** 
 */
-
-#include <stdio.h>
-
 #include "libgomp.h"
-#include "kaapi.h"
+#include <stdio.h>
 
 kaapi_thread_context_t * kaapi_self_thread_context (void);
 

@@ -41,6 +41,7 @@
 ** terms.
 ** 
 */
+#include "libgomp.h"
 
 
 bool GOMP_loop_runtime_start (long, long, long, long, long *, long *)

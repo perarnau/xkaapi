@@ -44,7 +44,7 @@
 */
 
 #include <stdio.h>
-#include <kaapic.h>
+#include "kaapic.h"
 
 static void __attribute__ ((constructor))  
 initialize_lib (void) 

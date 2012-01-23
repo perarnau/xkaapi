@@ -41,11 +41,9 @@
 ** terms.
 ** 
 */
-
+#include "libgomp.h"
 #include <stdio.h>
 
-#include "libgomp.h"
-#include "kaapi_impl.h"
 #include "kaapic_impl.h"
 
 /*
