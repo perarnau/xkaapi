@@ -2,7 +2,7 @@
 ** kaapi_cuda_proc.h
 ** xkaapi
 ** 
-**
+** Created on Jul 2010
 ** Copyright 2010 INRIA.
 **
 ** Contributors :
@@ -49,31 +49,70 @@
 
 #include <pthread.h>
 #include <sys/types.h>
-#include <cuda.h>
+#include "cuda.h"
+#include "cublas_v2.h"
 
+//#define KAAPI_CUDA_USE_POOL	1
+
+#define KAAPI_CUDA_MAX_STREAMS		4
+#define KAAPI_CUDA_HTOD_STREAM		0
+#define KAAPI_CUDA_KERNEL_STREAM        1
+#define KAAPI_CUDA_DTOH_STREAM		2
+#define KAAPI_CUDA_DTOD_STREAM		3
+
+typedef struct kaapi_cuda_ctx
+{
+	CUcontext ctx;
+	cublasHandle_t handle;
+	pthread_mutex_t mutex;
+	pthread_mutexattr_t mta;
+} kaapi_cuda_ctx_t;
+
+struct kaapi_cuda_mem_blk_t;
+
+typedef struct kaapi_cuda_mem
+{
+	size_t total;
+	size_t used;
+	struct kaapi_cuda_mem_blk_t* beg;
+	struct kaapi_cuda_mem_blk_t* end;
+} kaapi_cuda_mem_t;
+
+#ifdef KAAPI_CUDA_USE_POOL
+struct kaapi_cuda_pool;
+#endif
 
 typedef struct kaapi_cuda_proc
 {
   CUdevice dev;
-  CUstream stream;
-
-  CUcontext ctx;
-  pthread_mutex_t ctx_lock;
-
+  CUstream stream[KAAPI_CUDA_MAX_STREAMS];
+  kaapi_cuda_ctx_t ctx;
+  kaapi_cuda_mem_t memory;
+#ifdef KAAPI_CUDA_USE_POOL
+  struct kaapi_cuda_pool* pool;
+#endif
   int is_initialized;
 
   /* cached attribtues */
-  unsigned int attr_concurrent_kernels;
-
   unsigned int kasid_user;
-
+  kaapi_address_space_id_t asid;
 } kaapi_cuda_proc_t;
 
 
 int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t*, unsigned int);
+
 int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t*);
+
 size_t kaapi_cuda_get_proc_count(void);
+
 unsigned int kaapi_cuda_get_first_kid(void);
 
+CUstream kaapi_cuda_kernel_stream(void);
+
+CUstream kaapi_cuda_HtoD_stream(void);
+
+CUstream kaapi_cuda_DtoH_stream(void);
+
+CUstream kaapi_cuda_DtoD_stream(void);
 
 #endif /* ! KAAPI_CUDA_PROC_H_INCLUDED */

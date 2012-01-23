@@ -44,7 +44,6 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -55,6 +54,7 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include "kaapi_impl.h"
 
 /* == 0 if lib is not initialized
 */
@@ -196,7 +196,8 @@ int kaapi_init(int flag, int* argc, char*** argv)
   kaapi_network_init(argc, argv);
 #endif
 
-  kaapi_memory_init();
+  kaapi_memory_init(); /* TODO: not necessary */
+  kaapi_mem_init();
   int err = kaapi_mt_init();
 
   if (flag)
@@ -214,6 +215,8 @@ int kaapi_finalize(void)
     return EAGAIN;
 
   kaapi_memory_destroy();
+  
+  kaapi_mem_destroy();
 
   kaapi_mt_finalize();
 

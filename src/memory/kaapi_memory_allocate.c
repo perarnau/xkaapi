@@ -45,7 +45,7 @@
 
 #if defined(KAAPI_USE_CUDA)
 
-#include "../machine/cuda/kaapi_cuda_error.h"
+//#include "../machine/cuda/kaapi_cuda_error.h"
 
 /* in kaapi_memory_copy.c */
 
@@ -57,7 +57,7 @@ static inline int allocate_cu_mem(CUdeviceptr* devptr, size_t size)
   const CUresult res = cuMemAlloc(devptr, size);
   if (res != CUDA_SUCCESS)
   {
-    kaapi_cuda_error("cuMemAlloc", res);
+//    kaapi_cuda_error("cuMemAlloc", res);
     return -1;
   }
   

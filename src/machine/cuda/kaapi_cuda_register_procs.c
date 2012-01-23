@@ -85,6 +85,7 @@ int kaapi_cuda_register_procs(kaapi_procinfo_list_t* kpl)
 }
 
 
+#if 0
 /* todo: put in kaapi_sched_select_victim_with_tasks.c */
 static inline void lock_proc(kaapi_processor_t* proc, kaapi_processor_id_t kid)
 {
@@ -113,6 +114,7 @@ static inline void unlock_thread(kaapi_thread_context_t* thread)
 {
   KAAPI_ATOMIC_WRITE(&thread->lock, 0);
 }
+#endif
 
 #if 1 /* unused */
 static inline int is_task_ready(const kaapi_task_t* task)

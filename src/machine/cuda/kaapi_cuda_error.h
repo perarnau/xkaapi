@@ -45,7 +45,7 @@
 */
 
 
-#ifndef KAAPI_CUDA_ERROR_H_INCLUDED
+#if 0
 # define KAAPI_CUDA_ERROR_H_INCLUDED
 
 /* internally defined */

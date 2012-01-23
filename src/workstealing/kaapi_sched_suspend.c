@@ -180,10 +180,10 @@ redo_execution:
 #if defined(KAAPI_USE_CUDA)
     if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
     {
-      if (kproc->thread->sfp->tasklist == 0)
-        err = kaapi_cuda_execframe( kproc->thread );
-      else /* assumed kaapi_threadgroup_execframe */
-        err = kaapi_cuda_threadgroup_execframe(kproc->thread);
+      if (kproc->thread->stack.sfp->tasklist ==0)
+        err = kaapi_stack_execframe( &kproc->thread->stack );
+      else 
+        err = kaapi_cuda_thread_execframe_tasklist( kproc->thread );
     }
     else
 #endif /* KAAPI_USE_CUDA */

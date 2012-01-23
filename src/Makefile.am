@@ -138,6 +138,10 @@ libkaapi_la_SOURCES=\
   memory/kaapi_memory_bind.c \
   memory/kaapi_memory_find_writer.c \
   memory/kaapi_numa.c \
+  memory/kaapi_mem_init.c \
+  memory/kaapi_mem_destroy.c \
+  memory/kaapi_mem_data.c \
+  memory/kaapi_mem_host_map.c \
   memory/kaapi_mem.c \
   memory/kaapi_mem.h \
   workstealing/kaapi_sched_select_rand.c \
@@ -231,6 +235,18 @@ libkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda_thread_execframe_tasklist.c \
   machine/cuda/kaapi_cuda_threadgroup_execframe.h \
   machine/cuda/kaapi_cuda_threadgroup_execframe.c \
+  machine/cuda/kaapi_cuda_cublas.h \
+  machine/cuda/kaapi_cuda_cublas.c \
+  machine/cuda/kaapi_cuda_data.h \
+  machine/cuda/kaapi_cuda_data.c \
+  machine/cuda/kaapi_cuda_mem.h \
+  machine/cuda/kaapi_cuda_mem.c \
+  machine/cuda/kaapi_cuda_pool.h \
+  machine/cuda/kaapi_cuda_pool.c \
+  machine/cuda/kaapi_cuda_taskmovealloc.h \
+  machine/cuda/kaapi_cuda_taskmovealloc.c \
+  machine/cuda/kaapi_cuda_utils.h \
+  machine/cuda/kaapi_cuda_utils.c \
   machine/cuda/kaapi_cuda_kasid.c
 endif
 

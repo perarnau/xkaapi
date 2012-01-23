@@ -1,0 +1,16 @@
+
+* TODO kaapi_memory_sync.c
+
+* ngpus >= 2
+	- kaapi_mem_copy.c sempre pega o primeiro kproc CUDA, então arrumar para
+	  pegar o kproc certo
+
+* parametros invalidos no kaapi_thread_execframe_tasklist.c
+	- também depende do assunto anterior
+	- precisa fazer get_proc (TODO ctx precisa de lock)
+	- precisa fazer sync da thread (garantir execução)
+	- fazer copia 
+
+
+TODO taskmove
+	- o taskmove deveria estar mais atrelado a task

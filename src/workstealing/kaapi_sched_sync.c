@@ -111,21 +111,17 @@ int kaapi_sched_sync_(kaapi_thread_context_t* thread)
   
 redo:
 #if defined(KAAPI_USE_CUDA)
-  if (thread->proc->proc_type == KAAPI_PROC_TYPE_CUDA)
-  {
-    if (thread->sfp->tasklist == 0)
-      err = kaapi_thread_execframe(thread);
+  if( kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA ){
+    if (thread->stack.sfp->tasklist == 0) 
+      err = kaapi_stack_execframe( &thread->stack );
     else
-      err = kaapi_cuda_thread_execframe_tasklist(thread);
+      err = kaapi_cuda_thread_execframe_tasklist( thread );
   }
   else
 #endif /* KAAPI_USE_CUDA */
-  if (thread->stack.sfp->tasklist == 0) 
-  {
+  if (thread->stack.sfp->tasklist == 0) {
     err = kaapi_stack_execframe(&thread->stack);
-  } 
-  else
-  {
+  } else {
     err = kaapi_thread_execframe_tasklist(thread);
   }
   kaapi_assert_debug( kaapi_self_thread_context() == thread );

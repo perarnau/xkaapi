@@ -43,6 +43,7 @@
 */
 #include "kaapi_impl.h"
 #include "kaapi_tasklist.h"
+#include "../memory/kaapi_mem.h"
 
 /** Use the readylist and list of task to execute tasks.
     If the list doesnot have ready tasks but all the tasks
@@ -152,6 +153,12 @@ execute_first:
         /* start execution of the user body of the task */
         KAAPI_DEBUG_INST(kaapi_assert( td->u.acl.exec_date == 0 ));
         kaapi_event_push1(stack->proc, thread, KAAPI_EVT_TASK_BEG, pc );
+#if 1
+	if ( td->fmt != 0 )
+		kaapi_mem_host_map_sync( td->fmt, pc );
+//		kaapi_memory_synchronize_params( thread, td->fmt, pc );
+//		kaapi_thread_sync_params( thread, td, pc );
+#endif
         body( pc->sp, (kaapi_thread_t*)stack->sfp );
         kaapi_event_push1(stack->proc, thread, KAAPI_EVT_TASK_END, pc );  
         KAAPI_DEBUG_INST( td->u.acl.exec_date = kaapi_get_elapsedns() );

@@ -439,7 +439,7 @@ typedef struct kaapi_processor_t {
   unsigned int             seed_data;
   
   /* memory map */
-  kaapi_mem_map_t          mem_map;
+  kaapi_mem_host_map_t mem_host_map;
 
   struct kaapi_processor_t* victim_kproc;
   /* cuda */
@@ -641,6 +641,10 @@ static inline kaapi_thread_context_t* kaapi_self_thread_context(void)
 /* */
 static inline kaapi_processor_id_t kaapi_get_current_kid(void)
 { return kaapi_get_current_processor()->kid; }
+
+static inline kaapi_mem_host_map_t*
+kaapi_get_current_mem_host_map(void)
+{ return &kaapi_get_current_processor()->mem_host_map; }
 
 
 /* ========================================================================== */

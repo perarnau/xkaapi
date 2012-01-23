@@ -50,9 +50,10 @@
 #include <stdlib.h>
 #include <cuda.h>
 #include "kaapi_impl.h"
-#include "kaapi_cuda_error.h"
+//#include "kaapi_cuda_error.h"
 #include "../../memory/kaapi_mem.h"
 
+#if 0
 
 /* exported */
 kaapi_processor_t* get_proc_by_asid(kaapi_mem_asid_t asid)
@@ -108,7 +109,7 @@ static inline int allocate_device_mem(CUdeviceptr* devptr, size_t size)
   const CUresult res = cuMemAlloc(devptr, size);
   if (res != CUDA_SUCCESS)
   {
-    kaapi_cuda_error("cuMemAlloc", res);
+//    kaapi_cuda_error("cuMemAlloc", res);
     return -1;
   }
 
@@ -443,6 +444,7 @@ static inline int synchronize_processor(kaapi_processor_t* proc)
   return 0;
 }
 
+#endif
 
 #if 0 /* unused tasks */
 
@@ -670,6 +672,7 @@ static void cuda_taskrecv_body
 /* unwrap a wrapped task
  */
 
+#if 0
 static inline void unwrap_task
 (cuda_task_body_t* cuda_body, kaapi_task_body_t* original_body, void** original_sp)
 {
@@ -678,7 +681,6 @@ static inline void unwrap_task
      original_sp the current sp. updated to point the original sp.
    */
 
-#if 0
   if (*original_body == kaapi_taskbcast_body)
   {
     kaapi_taskbcast_arg_t* const arg = (kaapi_taskbcast_arg_t*)*original_sp;
@@ -693,10 +695,10 @@ static inline void unwrap_task
     *original_sp = arg->original_sp;
     *cuda_body = cuda_taskrecv_body;
   }
-#endif
   /* else, nonwrapped task */
 }
 
+#endif
 
 #if 0 /* todo, remove */
 static const char* get_body_name(kaapi_task_body_t body)
@@ -721,6 +723,12 @@ static const char* get_body_name(kaapi_task_body_t body)
 
 /* exported */
 
+int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
+{
+    return 0;
+}
+
+#if 0
 int kaapi_cuda_execframe(kaapi_thread_context_t* thread)
 {
   kaapi_processor_t* const proc = thread->proc;
@@ -935,6 +943,13 @@ error_swap_body:
   /* here back track the kaapi_thread_execframe until go out */
   return 0;
 }
+#endif
+
+int kaapi_cuda_exectask
+(kaapi_thread_context_t* thread, void* sp, kaapi_format_t* format)
+{
+    return 0;
+}
 
 
 #if 0 /* OLD_UNUSED */
@@ -1106,7 +1121,7 @@ int kaapi_cuda_exectask
   return res;
 }
 
-#else /* NEW_WIP2 */
+#elif 0 /* NEW_WIP2 */
 
 static int cast_memory_view
 (kaapi_memory_view_t* dview, const kaapi_memory_view_t* sview)
@@ -1275,6 +1290,7 @@ static inline int viewcopy_dtoh
 # include <sys/time.h>
 #endif
 
+#if 0
 int kaapi_cuda_exectask
 (kaapi_thread_context_t* thread, void* sp, kaapi_format_t* format)
 {
@@ -1443,5 +1459,6 @@ int kaapi_cuda_exectask
 
   return 0;
 }
+#endif
 
 #endif /* NEW_WIP */

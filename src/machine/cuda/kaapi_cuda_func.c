@@ -43,12 +43,14 @@
 ** terms.
 ** 
 */
+
+#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include <cuda.h>
 #include "kaapi_cuda_func.h"
-#include "kaapi_cuda_error.h"
+//#include "kaapi_cuda_error.h"
 
 
 /* exported */
@@ -68,14 +70,20 @@ int kaapi_cuda_func_load_ptx
   res = cuModuleLoad(&fn->mod, mpath);
   if (res != CUDA_SUCCESS)
   {
-    kaapi_cuda_error("cuModuleLoad", res);
+	if( res != CUDA_SUCCESS ) {
+		fprintf( stderr, "%s ERROR: %d\n", __FUNCTION__, res );
+		fflush( stderr );
+	}
     goto on_error0;
   }
 
   res = cuModuleGetFunction(&fn->fu, fn->mod, fname);
   if (res != CUDA_SUCCESS)
   {
-    kaapi_cuda_error("cuModuleGetFunction", res);
+	if( res != CUDA_SUCCESS ) {
+		fprintf( stderr, "%s ERROR: %d\n", __FUNCTION__, res );
+		fflush( stderr );
+	}
     goto on_error1;
   }
 
@@ -107,7 +115,7 @@ int kaapi_cuda_func_push_uint(kaapi_cuda_func_t* fn, unsigned int value)
   res = cuParamSeti(fn->fu, fn->off, value);
   if (res != CUDA_SUCCESS)
   {
-    kaapi_cuda_error("cuParamSeti", res);
+//    kaapi_cuda_error("cuParamSeti", res);
     return -1;
   }
 
@@ -126,7 +134,7 @@ int kaapi_cuda_func_push_float(kaapi_cuda_func_t* fn, float value)
   res = cuParamSetf(fn->fu, fn->off, value);
   if (res != CUDA_SUCCESS)
   {
-    kaapi_cuda_error("cuParamSetf", res);
+//    kaapi_cuda_error("cuParamSetf", res);
     return -1;
   }
 
@@ -145,7 +153,7 @@ int kaapi_cuda_func_push_ptr(kaapi_cuda_func_t* fn, CUdeviceptr devptr)
   res = cuParamSetv(fn->fu, fn->off, &devptr, sizeof(devptr));
   if (res != CUDA_SUCCESS)
   {
-    kaapi_cuda_error("cuParamSetv", res);
+//    kaapi_cuda_error("cuParamSetv", res);
     return -1;
   }
 
@@ -172,7 +180,7 @@ int kaapi_cuda_func_call_async
   res = cuFuncSetBlockShape(fn->fu, tdim->x, tdim->y, tdim->z);
   if (res != CUDA_SUCCESS)
   {
-    kaapi_cuda_error("cuFuncSetBlockShape", res);
+//    kaapi_cuda_error("cuFuncSetBlockShape", res);
     goto on_error;
   }
 
@@ -180,7 +188,7 @@ int kaapi_cuda_func_call_async
   res = cuLaunchGridAsync(fn->fu, bdim->x, bdim->y, stream);
   if (res != CUDA_SUCCESS)
   {
-    kaapi_cuda_error("cuLaunchGridAsync", res);
+//    kaapi_cuda_error("cuLaunchGridAsync", res);
     goto on_error;
   }
 
@@ -197,7 +205,7 @@ int kaapi_cuda_func_wait(kaapi_cuda_func_t* fn, CUstream stream)
 
   if (res != CUDA_SUCCESS)
   {
-    kaapi_cuda_error("cuStreamSynchronize", res);
+//    kaapi_cuda_error("cuStreamSynchronize", res);
     return -1;
   }
 

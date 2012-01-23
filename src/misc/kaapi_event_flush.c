@@ -64,7 +64,7 @@ void kaapi_event_flushbuffer( kaapi_processor_t* kproc )
       sprintf(filename,"/tmp/events.%i.evt", kproc->kid );
 
     /* open it */
-    evb->fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC);
+    evb->fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC, S_IRWXU);
     kaapi_assert( evb->fd != -1 );
     fchmod( evb->fd, S_IRUSR|S_IWUSR);
   }

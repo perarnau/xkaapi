@@ -67,6 +67,7 @@ typedef struct kaapi_gd_t {
 */
 struct kaapi_version_t;
 struct kaapi_metadata_info_t;
+struct kaapi_mem_data_t;
 
 /** pair of pointer,int 
     Used to display tasklist
@@ -104,6 +105,7 @@ typedef struct kaapi_hashentries_t {
     kaapi_pair_ptrint_t           data;        /* used for print tasklist */
     struct kaapi_metadata_info_t* mdi;         /* store of metadata info */
     struct kaapi_taskdescr_t*     td;          /* */
+    struct kaapi_mem_data_t*	 kmd;
   } u;
   const void*                     key;
   struct kaapi_hashentries_t*     next; 

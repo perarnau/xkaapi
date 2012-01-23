@@ -89,6 +89,8 @@ extern "C" {
 #include "kaapi_task.h"
 #include "kaapi_format.h"
 
+#include "memory/kaapi_mem.h"
+
 #include <string.h>
 
 #include "kaapi_defs.h"
@@ -405,7 +407,8 @@ typedef struct kaapi_thread_context_t {
   struct kaapi_thread_context_t* _next;          /** to be linkable */
   struct kaapi_thread_context_t* _prev;          /** to be linkable */
 
-#if defined(KAAPI_USE_CUDA)
+//#if defined(KAAPI_USE_CUDA)
+#if 0
 #warning "lock already defined in stack or in kproc"
   kaapi_atomic_t                 lock;           /** */ 
 #endif

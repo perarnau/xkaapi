@@ -1,0 +1,25 @@
+-- what
+
+non working, in progress, cholesky factorization
+
+
+-- todo, bugs
+
+. cublas considers matrices to be col ordered. The
+current code considers row major ordering.
+-> use transpose operations
+
+. do not use magma, since we want to use on device
+allocated matrices and asynchronous execution.
+-> implement our own routines
+
+. parts of potrf and getrf must be done on cpu
+-> use postpone mode + a gpu task that forks on CPU
+and GPU
+
+. set_cublas_stream is not correct when used with
+multiple GPUs
+-> xkaapi should export:
+kaapi_cublas_initialize();
+kaapi_cublas_finalize();
+kaapi_cublas_get_self_handle();
