@@ -90,7 +90,7 @@ void GOMP_task(
       memcpy(argtask, data, arg_size);
 
     kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();      
-    kaapic_spawn( 1,
+    kaapic_spawn( 4,
        GOMP_trampoline_task,
        KAAPIC_MODE_V, ctxt->numthreads, 1, KAAPIC_TYPE_INT,
        KAAPIC_MODE_V, ctxt->threadid, 1, KAAPIC_TYPE_INT,
