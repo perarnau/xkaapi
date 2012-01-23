@@ -49,6 +49,12 @@
 static void __attribute__ ((constructor))  
 initialize_lib (void) 
 {
+  if (getenv("OMP_NUM_THREADS") !=0)
+  {
+    /* Kaapi inherits OMP_NUM_THREADS */
+//    setenv("KAAPI_CPUCOUNT", getenv("OMP_NUM_THREADS"), 1);
+  }
+  
   kaapic_init (1);
 }
 
