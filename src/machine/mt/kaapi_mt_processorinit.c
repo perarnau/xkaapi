@@ -135,6 +135,8 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
 
   /* set new context to the kprocessor */
   kaapi_setcontext(kproc, ctxt);
+  
+  kproc->libgomp_tls = 0;
 
 #if defined(KAAPI_USE_CUDA)
   /* initialize cuda processor */

@@ -442,6 +442,9 @@ typedef struct kaapi_processor_t {
   kaapi_mem_map_t          mem_map;
 
   struct kaapi_processor_t* victim_kproc;
+
+  void*                    libgomp_tls;
+
   /* cuda */
 #if defined(KAAPI_USE_CUDA)
   kaapi_cuda_proc_t cuda_proc;
