@@ -59,6 +59,8 @@ typedef struct PerTeamLocalStorage {
   int            numthreads;
 } kaapi_libgompctxt_t ;
 
+extern kaapi_libgompctxt_t* GOMP_get_ctxt();
+
 
 enum omp_task_kind
 {

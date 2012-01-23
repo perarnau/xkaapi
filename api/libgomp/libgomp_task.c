@@ -44,7 +44,19 @@
 #include "libgomp.h"
 #include <stdio.h>
 
-kaapi_thread_context_t * kaapi_self_thread_context (void);
+static void GOMP_trampoline_task(
+  int numthreads,
+  int threadid,
+  void (*fn) (void *),
+  void *data
+)
+{
+  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();
+  
+  ctxt->numthreads = numthreads;
+  ctxt->threadid   = threadid;
+  fn(data);
+}
 
 void GOMP_task(
   void (*fn) (void *), 
@@ -56,11 +68,40 @@ void GOMP_task(
   unsigned flags __attribute__((unused))
 )
 {
-  kaapi_thread_context_t* self = kaapi_self_thread_context();
-  printf ("GOMP_task: Task created (%p)\n", self);
+  if (!if_clause) 
+  {
+    if (cpyfn)
+	{
+	  char buf[arg_size + arg_align - 1];
+	  char *arg = (char *) (((uintptr_t) buf + arg_align - 1)
+                            & ~(uintptr_t) (arg_align - 1));
+	  cpyfn (arg, data);
+	  fn (arg);
+	}
+    else
+      fn (data);
+  }
+  else {
+    kaapi_thread_t* thread = kaapi_self_thread();
+    void* argtask = kaapi_thread_pushdata_align( thread, arg_size, arg_align);
+    if (cpyfn)
+      cpyfn(argtask, data);
+    else
+      memcpy(argtask, data, arg_size);
+
+    kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();      
+    kaapic_spawn( 1,
+       GOMP_trampoline_task,
+       KAAPIC_MODE_V, ctxt->numthreads, 1, KAAPIC_TYPE_INT,
+       KAAPIC_MODE_V, ctxt->threadid, 1, KAAPIC_TYPE_INT,
+       KAAPIC_MODE_V, fn, 1, KAAPIC_TYPE_PTR,
+       KAAPIC_MODE_V, data, 1, KAAPIC_TYPE_PTR
+    );
+  }
 }
 
 void GOMP_taskwait (void)
 {
+  kaapic_sync();
 }
 
