@@ -1,6 +1,6 @@
 #! /bin/bash
 
-KAAPI_INSTALL_PATH=/Users/broq/soft/install
+KAAPI_INSTALL_PATH=/tmp/xkaapi
 
 TESTS="parallel barrier critical single shared"
 
@@ -26,5 +26,5 @@ fi
 for prog in $TESTS; 
 do
     echo "*** Running \"$prog\" test ***"
-    ./$prog
+    time ./$prog
 done
