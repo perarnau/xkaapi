@@ -297,7 +297,7 @@ int kaapic_spawn(int32_t nargs, ...)
     if (mode == KAAPIC_MODE_V)
     {
       /* can only pass exactly by value the size of a uintptr_t */
-      kaapi_assert_debug( wordsize*count == sizeof(uintptr_t) );
+      kaapi_assert_debug( wordsize*count <= sizeof(uintptr_t) );
       memcpy(&ai->access.version, &addr, wordsize*count );  /* but count == 1 here */
     }
 
