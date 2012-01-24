@@ -5,7 +5,7 @@ then
     echo "Usage: ./run-single-test.sh testname"
 fi
 
-KAAPI_INSTALL_PATH=/Users/broq/soft/install
+KAAPI_INSTALL_PATH=/tmp/xkaapi
 
 (uname -a | grep Darwin) > /dev/null 2> /dev/null
 DARWIN_SYS=$?
