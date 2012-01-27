@@ -87,9 +87,9 @@ int kaapi_tasklist_pushready_td(
     int                     priority
 )
 {
-  int nodeid;
   kaapi_ws_queue_t* queue = 0;
 #if 0 /* desactivate this portion of code if you do not want push on remote queue */
+  int nodeid;
   kaapi_bitmap_value32_t ocr = td->ocr;
   uintptr_t addr = 0;
   kaapi_task_t* task;
