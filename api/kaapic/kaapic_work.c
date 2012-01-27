@@ -655,6 +655,69 @@ int kaapic_foreach_workend
 }
 
 
+/* 
+  Return !=0 iff first and last have been filled for the next piece
+  of work to execute
+*/
+int kaapic_foreach_worknext(
+  kaapic_work_t*           work,
+  kaapi_workqueue_index_t* first,
+  kaapi_workqueue_index_t* last
+)
+{
+  long pos;
+
+#if defined(KAAPI_DEBUG)
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+#endif
+
+#if defined(USE_KPROC_LOCK)
+  kaapi_assert_debug( &kproc->lock == work->cr.lock );
+#endif
+
+continue_work:
+  if (kaapi_workqueue_pop(&work->cr, first, last, work->_wi.seq_grain) == 0)
+  {
+    KAAPI_SET_SELF_WORKLOAD(work_array_size(work->wa) + kaapi_workqueue_size(&work->cr));
+
+#if defined(USE_KPROC_LOCK)
+    kaapi_assert_debug( &kproc->lock == work->cr.lock );
+#endif
+    return 1;
+  }
+  kaapi_assert_debug( kaapi_workqueue_isempty(&work->cr) );
+
+  /* TG: avoid unecessary lock if array is empty array
+  */
+  if (work_array_is_empty(work->wa)) 
+    return 0;
+
+  /* here array pop + workqueue_set must be exclusive
+     with respect to thieves.
+  */
+  _kaapi_workqueue_lock( &work->cr );
+  if ( work_array_is_empty(work->wa) || ((pos = work_array_first( work->wa )) <=0) )
+  {
+    _kaapi_workqueue_unlock( &work->cr );
+    return 0;
+  }
+
+  /* refill the workqueue from reseved task and continue */
+  kaapi_assert_debug( pos >=0 );
+  work_array_pop( work->wa, pos, first, last );
+
+  kaapi_workqueue_reset(
+    &work->cr, 
+    *first, 
+    *last
+  );
+
+  _kaapi_workqueue_unlock( &work->cr );
+
+  goto continue_work;
+}
+
+
 /* exported foreach interface */
 int kaapic_foreach_common
 (
@@ -669,7 +732,6 @@ int kaapic_foreach_common
   kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
   const int tid = self_thread->stack.proc->kid;
 
-  long pos;
 
   /* warning: interval includes j */
   kaapi_workqueue_index_t i;
@@ -693,51 +755,12 @@ int kaapic_foreach_common
   kaapi_assert_debug( kproc->kid == tid );
 #endif
 
-continue_work:
-#if defined(USE_KPROC_LOCK)
-  kaapi_assert_debug( &kproc->lock == w.cr.lock );
-#endif
-  while (kaapi_workqueue_pop(&w.cr, &i, &j, w._wi.seq_grain) == 0)
+  while (kaapic_foreach_worknext(&w, &i, &j))
   {
-    KAAPI_SET_SELF_WORKLOAD(work_array_size(w.wa) + kaapi_workqueue_size(&w.cr));
-
-#if defined(USE_KPROC_LOCK)
-    kaapi_assert_debug( &kproc->lock == w.cr.lock );
-#endif
     /* apply w->f on [i, j[ */
     body_f((int)i, (int)j, (int)tid, body_args);
-
-#if CONFIG_TERM_COUNTER
-    local_counter += j - i;
-#endif
   }
   kaapi_assert_debug( kaapi_workqueue_isempty(&w.cr) );
-
-  /* here array pop + workqueue_set must be exclusive
-     with respect to thieves
-  */
-  _kaapi_workqueue_lock( &w.cr );
-  if ( work_array_is_empty(w.wa) || ((pos = work_array_first( w.wa )) <=0) )
-  {
-    _kaapi_workqueue_unlock( &w.cr );
-    goto end_adaptive;
-  }
-
-  /* refill the workqueue from reseved task and continue */
-  kaapi_assert_debug( pos >=0 );
-  work_array_pop( w.wa, pos, &i, &j );
-
-  kaapi_workqueue_reset(
-    &w.cr, 
-    (kaapi_workqueue_index_t)i, 
-    (kaapi_workqueue_index_t)j
-  );
-
-  _kaapi_workqueue_unlock( &w.cr );
-
-  goto continue_work;
-
-end_adaptive:
 
   kaapic_foreach_workend( self_thread, &w );
 
