@@ -53,17 +53,6 @@
 void kaapi_taskmove_body( void* sp, kaapi_thread_t* thread)
 {
   kaapi_move_arg_t* arg = (kaapi_move_arg_t*)sp;
-  kaapi_mem_data_t *kmd;
-
-#if defined(KAAPI_USE_CUDA)
-  if (kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA) {
-    kaapi_cuda_taskmove_body(sp, thread);
-    return;
-  }
-#endif
-
-    kaapi_mem_host_map_find_or_insert( kaapi_get_current_mem_host_map(),
-	   (kaapi_mem_addr_t)kaapi_pointer2void(arg->src_data.ptr),  &kmd );
 
 #if KAAPI_VERBOSE
   kaapi_processor_t* const proc = kaapi_get_current_processor();
@@ -81,22 +70,22 @@ void kaapi_taskmove_body( void* sp, kaapi_thread_t* thread)
 	 );
 #endif 
 
+#if defined(KAAPI_USE_CUDA)
+  if (kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA) {
+    kaapi_cuda_taskmove_body(sp, thread);
+    return;
+  }
+#endif
+
   /* on multiprocessor: move data from XXX to YYY */
   arg->dest->ptr  = arg->src_data.ptr;
-  arg->dest->mdi = arg->src_data.mdi;
+//  arg->dest->mdi = arg->src_data.mdi;
 }
 
 /* */
 void kaapi_taskalloc_body( void* sp, kaapi_thread_t* thread )
 {
   kaapi_move_arg_t* arg = (kaapi_move_arg_t*)sp;
-
-#if defined(KAAPI_USE_CUDA)
-  if (kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA) {
-    kaapi_cuda_taskalloc_body(sp, thread);
-    return ;
-  }
-#endif
 
 #if KAAPI_VERBOSE
   kaapi_processor_t* const proc = kaapi_get_current_processor();
@@ -106,6 +95,13 @@ void kaapi_taskalloc_body( void* sp, kaapi_thread_t* thread )
 	 arg->src_data.ptr.asid, (uintptr_t)arg->src_data.ptr.ptr,
 	 arg->dest->ptr.asid, (uintptr_t)arg->dest->ptr.ptr,
 	 (uintptr_t)arg->dest->mdi);
+#endif
+
+#if defined(KAAPI_USE_CUDA)
+  if (kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA) {
+    kaapi_cuda_taskalloc_body(sp, thread);
+    return ;
+  }
 #endif
 
   /* on multiprocessor: move data from XXX to YYY */

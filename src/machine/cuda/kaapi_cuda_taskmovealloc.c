@@ -50,9 +50,8 @@ kaapi_cuda_taskmove_body(void* sp, kaapi_thread_t* thread)
 {
   kaapi_move_arg_t* const arg = (kaapi_move_arg_t*)sp;
 
+#if 0
   kaapi_processor_t* const proc = kaapi_get_current_processor();
-
-#if KAAPI_VERBOSE
   printf("[%s]: [%u:%u] (%lx:%lx -> %lx:%lx) %lx\n",
 	 __FUNCTION__,
 	 proc->kid, proc->proc_type,
@@ -66,7 +65,7 @@ kaapi_cuda_taskmove_body(void* sp, kaapi_thread_t* thread)
    * kaapi_memory_bind.c:_kaapi_metadata_info_bind_data()
    */
   arg->dest->ptr  = arg->src_data.ptr;
-  arg->dest->mdi = arg->src_data.mdi;
+//  arg->dest->mdi = arg->src_data.mdi;
 }
 
 void
@@ -74,9 +73,8 @@ kaapi_cuda_taskalloc_body(void* sp, kaapi_thread_t* thread)
 {
   kaapi_move_arg_t* const arg = (kaapi_move_arg_t*)sp;
 
+#if 0
   kaapi_processor_t* const proc = kaapi_get_current_processor();
-
-#if KAAPI_VERBOSE
   printf("[%s]: [%u:%u] (%lx:%lx -> %lx:%lx) %lx\n",
 	 __FUNCTION__,
 	 proc->kid, proc->proc_type,

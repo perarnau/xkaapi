@@ -646,6 +646,10 @@ static inline kaapi_mem_host_map_t*
 kaapi_get_current_mem_host_map(void)
 { return &kaapi_get_current_processor()->mem_host_map; }
 
+static inline kaapi_mem_host_map_t*
+kaapi_processor_get_mem_host_map( kaapi_processor_t* kproc )
+{ return &kproc->mem_host_map; }
+
 
 /* ========================================================================== */
 /** Termination dectecting barrier

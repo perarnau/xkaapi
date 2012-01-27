@@ -82,7 +82,7 @@ extern cublasHandle_t kaapi_cuda_cublas_handle( void );
 
 #endif
 
-#if CONFIG_USE_CUBLAS
+#if 1
 
 // from cublas.h
 static inline cublasOperation_t convertToOp( char trans )

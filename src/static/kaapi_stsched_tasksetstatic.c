@@ -169,6 +169,16 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
 //FALSE  tasklist->context.chkpt = 2;
   tasklist->context.chkpt = 0;
 
+#if 0
+  {
+    char filename[128];
+    sprintf( filename, "/tmp/tasklist.txt" );
+    FILE* filedot = fopen(filename, "w");
+    kaapi_thread_tasklist_print( filedot, tasklist );
+    fclose(filedot);
+  }
+#endif
+
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* here sfp is initialized, dump graph if required */
   if (getenv("KAAPI_DUMP_GRAPH") !=0)

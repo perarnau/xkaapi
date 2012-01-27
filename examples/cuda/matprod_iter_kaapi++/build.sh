@@ -1,16 +1,17 @@
 #!/usr/bin/env sh
 
 XKAAPIDIR=$HOME/install/xkaapi/default
-CUDADIR=$CUDA_HOME/cuda
+CUDADIR=$CUDA_HOME
+ATLAS=$HOME/install/atlas3.9.63
 
 #CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1 -maxrregcount 32"
-#CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1 -DCONFIG_USE_FLOAT=1"
+#CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"
 #CUBLAS_CFLAGS="-DCONFIG_USE_FLOAT=1"
 CUBLAS_LDFLAGS="-lcublas"
 
-CBLAS_LDFLAGS="-L$HOME/install/atlas3.9.47/lib -llapack -lcblas -latlas
+CBLAS_LDFLAGS="-L$ATLAS/lib -llapack -lcblas -latlas
 	-lf77blas -L$HOME/install/lapacke-3.3.0/lib -llapacke"
-CBLAS_CPPFLAGS="-I$HOME/install/atlas3.9.47/include
+CBLAS_CPPFLAGS="-I$ATLAS/include
 -I$HOME/install/lapacke-3.3.0/include
 -DCONFIG_USE_FLOAT=1
 "
@@ -35,6 +36,6 @@ g++ -g -Wall \
     matprod_iter_kaapi++.cpp \
     -L$XKAAPIDIR/lib -lkaapi -lkaapi++ \
     -L$CUDADIR/lib64 -lcuda \
-    $CBLAS_LDFLAGS \
     $CUBLAS_LDFLAGS \
+    $CBLAS_LDFLAGS \
     $MAGMA_LDFLAGS

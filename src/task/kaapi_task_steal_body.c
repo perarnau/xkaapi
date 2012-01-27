@@ -170,6 +170,11 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     arg->origin_fmt = fmt = kaapi_format_resolvebybody(body);
   kaapi_assert_debug( fmt !=0 );
 
+#if KAAPI_VERBOSE
+	/* TODO ver aqui */
+    fprintf( stdout, "[%s] task=%s\n", __FUNCTION__, fmt->name );
+    fflush(stdout);
+#endif
   /* the original task arguments */
   orig_task_args  = kaapi_task_getargs(arg->origin_task);
 
@@ -187,7 +192,8 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   {
     /* Execute the orinal body function with the original args.
     */
-#if defined(KAAPI_USE_CUDA)
+//#if defined(KAAPI_USE_CUDA)
+#if 0
     if (kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA)
     {
 	fprintf(stdout, "[%s] CUDA task kid=%lu\n", __FUNCTION__,
@@ -263,7 +269,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 
 
     /* call directly the stolen body function */
-#if defined(KAAPI_USE_CUDA)
+#if 0
     if (kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA)
     {
 	fprintf(stdout, "[%s] CUDA task kid=%lu\n", __FUNCTION__,

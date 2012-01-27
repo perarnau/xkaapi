@@ -157,12 +157,6 @@ int kaapi_thread_computedep_task(
     */
     handle = kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
 
-#if 0
-    // TODO
-    kaapi_mem_data_t *kmd;
-    kaapi_mem_host_map_find_or_insert( kaapi_get_current_mem_host_map(),
-	    kaapi_pointer2void( handle->ptr ), &kmd );
-#endif
     /* replace the pointer to the data in the task argument by the pointer to the global data */
     access.data = handle;
     kaapi_format_set_access_param(task_fmt, i, task->sp, &access);

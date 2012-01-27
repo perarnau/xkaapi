@@ -98,6 +98,12 @@ kaapi_mem_data_clear_dirty( kaapi_mem_data_t* m, kaapi_mem_asid_t asid )
   m->dirty_bits &= ~(1 << asid);
 }
 
+static inline void
+kaapi_mem_data_clear_all_dirty( kaapi_mem_data_t* m )
+{
+  m->dirty_bits = 0UL;
+}
+
 static inline unsigned int
 kaapi_mem_data_is_dirty( const kaapi_mem_data_t* m, kaapi_mem_asid_t asid )
 {
@@ -113,13 +119,13 @@ kaapi_mem_data_set_addr(kaapi_mem_data_t* m,
 }
 
 static inline kaapi_mem_addr_t
-kaapi_mem_data_get_addr( const kaapi_mem_data_t* m, kaapi_mem_asid_t asid )
+kaapi_mem_data_get_addr( const kaapi_mem_data_t* m, const kaapi_mem_asid_t asid )
 {
   return  m->addr[asid];
 }
 
 static inline unsigned int
-kaapi_mem_data_has_addr( const kaapi_mem_data_t* m, kaapi_mem_asid_t asid )
+kaapi_mem_data_has_addr( const kaapi_mem_data_t* m, const kaapi_mem_asid_t asid )
 {
   return m->addr_bits & (1 << asid);
 }
@@ -150,14 +156,18 @@ kaapi_mem_host_map_init( kaapi_mem_host_map_t* map, kaapi_mem_asid_t asid )
 }
 
 static inline kaapi_mem_asid_t
-kaapi_mem_host_map_get_asid( kaapi_mem_host_map_t* map )
+kaapi_mem_host_map_get_asid( const kaapi_mem_host_map_t* map )
 { return map->asid; }
 
 int
-kaapi_mem_host_map_find( kaapi_mem_host_map_t*, kaapi_mem_addr_t, kaapi_mem_data_t** );
+kaapi_mem_host_map_find( const kaapi_mem_host_map_t*, kaapi_mem_addr_t, kaapi_mem_data_t** );
 
 int
-kaapi_mem_host_map_find_or_insert( kaapi_mem_host_map_t*, kaapi_mem_addr_t, kaapi_mem_data_t** );
+kaapi_mem_host_map_find_or_insert( const kaapi_mem_host_map_t*, kaapi_mem_addr_t, kaapi_mem_data_t** );
+
+int
+kaapi_mem_host_map_find_or_insert_( const kaapi_mem_host_map_t*,
+	kaapi_mem_addr_t, kaapi_mem_data_t**);
 
 int
 kaapi_mem_host_map_sync( const kaapi_format_t* , kaapi_task_t* );

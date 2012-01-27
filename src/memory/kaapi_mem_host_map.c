@@ -8,11 +8,12 @@ static inline kaapi_mem_data_t*
 _kaapi_mem_data_alloc( void )
 {
     kaapi_mem_data_t* kmd = malloc( sizeof(kaapi_mem_data_t) );
+    kaapi_mem_data_init( kmd );
     return kmd;
 }
 
 int
-kaapi_mem_host_map_find( kaapi_mem_host_map_t* m, kaapi_mem_addr_t addr,
+kaapi_mem_host_map_find( const kaapi_mem_host_map_t* m, kaapi_mem_addr_t addr,
 	kaapi_mem_data_t** data )
 {
     kaapi_hashentries_t* entry;
@@ -27,7 +28,7 @@ kaapi_mem_host_map_find( kaapi_mem_host_map_t* m, kaapi_mem_addr_t addr,
 }
 
 int
-kaapi_mem_host_map_find_or_insert( kaapi_mem_host_map_t* m,
+kaapi_mem_host_map_find_or_insert( const kaapi_mem_host_map_t* m,
 	kaapi_mem_addr_t addr, kaapi_mem_data_t** kmd )
 {
     kaapi_hashentries_t* entry;
@@ -40,9 +41,22 @@ kaapi_mem_host_map_find_or_insert( kaapi_mem_host_map_t* m,
 	entry->u.kmd = _kaapi_mem_data_alloc();
 
     /* identity mapping */
-    kaapi_mem_data_init( entry->u.kmd );
-    kaapi_mem_data_set_addr( entry->u.kmd, kaapi_mem_host_map_get_asid(m), addr );
     *kmd = entry->u.kmd;
+
+    return 0;
+}
+
+int
+kaapi_mem_host_map_find_or_insert_( const kaapi_mem_host_map_t* m,
+	kaapi_mem_addr_t addr, kaapi_mem_data_t** kmd )
+{
+    kaapi_hashentries_t* entry;
+    const int res = kaapi_mem_host_map_find( m, addr, kmd );
+    if( res == 0 )
+        return 0;
+
+    entry = kaapi_big_hashmap_findinsert( &kmem_hm, (void*)addr );
+    entry->u.kmd = *kmd;
 
     return 0;
 }
@@ -54,7 +68,8 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, kaapi_task_t* task )
     size_t count_params = kaapi_format_get_count_params( fmt, sp );
     size_t i;
     kaapi_mem_data_t *kmd;
-    kaapi_mem_host_map_t* host_map = kaapi_get_current_mem_host_map();
+    const kaapi_mem_host_map_t* host_map = kaapi_get_current_mem_host_map();
+    const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
 
 #if KAAPI_VERBOSE
     fprintf( stdout, "[%s] asid=%lu task=%s params=%lu\n",
@@ -80,11 +95,21 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, kaapi_task_t* task )
 		host_map,
 		(kaapi_mem_addr_t)kaapi_pointer2void(kdata->ptr),
 		&kmd );
+	if( !kaapi_mem_data_has_addr( kmd, host_asid ) )
+	    kaapi_mem_data_set_addr( kmd, host_asid,
+		    (kaapi_mem_addr_t)kdata  );
+//		    (kaapi_mem_addr_t)kaapi_pointer2void(kdata->ptr) );
 
-	if( KAAPI_ACCESS_IS_WRITE(m) ) {
-	    kaapi_mem_data_set_all_dirty_except( kmd, 
-		    kaapi_mem_host_map_get_asid(host_map) );
-	}
+#if KAAPI_VERBOSE
+    fprintf( stdout, "[%s] asid=%lu task=%s params=%lu ptr=%p kmd=%p\n",
+	    __FUNCTION__,
+	    (unsigned long int)kaapi_mem_host_map_get_asid(host_map),
+	    fmt->name,
+	    count_params,
+	    kaapi_pointer2void(kdata->ptr),
+	    kmd );
+    fflush(stdout);
+#endif
 
 	if( KAAPI_ACCESS_IS_READ(m) ) {
 	    if( kaapi_mem_data_is_dirty( kmd,
@@ -94,6 +119,12 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, kaapi_task_t* task )
 		fflush(stdout);
 	    }
 	}
+
+	if( KAAPI_ACCESS_IS_WRITE(m) ) {
+	    kaapi_mem_data_set_all_dirty_except( kmd, 
+		    kaapi_mem_host_map_get_asid(host_map) );
+	}
+
     }
 
     return 0;

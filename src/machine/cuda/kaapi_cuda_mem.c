@@ -111,7 +111,6 @@ __kaapi_cuda_mem_is_full( kaapi_processor_t* proc, const size_t size )
 
 int
 kaapi_cuda_mem_alloc(
-		kaapi_metadata_info_t*  mdi,
 		kaapi_pointer_t *ptr,
 		const kaapi_address_space_id_t kasid,
 		const size_t size,
@@ -147,7 +146,8 @@ out_of_memory:
 		ptr->asid = kasid;
 		proc->cuda_proc.memory.used += size;
 	}
-	kaapi_cuda_mem_blk_insert( proc, mdi );
+//	kaapi_cuda_mem_blk_insert( proc, mdi );
+//	TODO
 
 #if 0
 	fprintf(stdout, "[%s] mem=%lu used=%lu kid=%lu\n", __FUNCTION__,
@@ -264,10 +264,12 @@ int kaapi_cuda_mem_register( kaapi_pointer_t ptr,
 #if 0
 	const CUresult res = 
 #endif
+#if KAAPI_CUDA_ASYNC
 	cuMemHostRegister(
 		(void*)__kaapi_pointer2void(ptr),
 		kaapi_memory_view_size(view),
 		CU_MEMHOSTREGISTER_PORTABLE );
+#endif
 
 #if 0
 	if (res != CUDA_SUCCESS) {
@@ -347,9 +349,14 @@ kaapi_cuda_mem_2dcopy_htod(
 	CUDA_MEMCPY2D m;
 
 #if KAAPI_VERBOSE
-		fprintf(stdout, "[%s] src=%p dst=%p size=%ld\n", __FUNCTION__,
+		fprintf(stdout, "[%s] src=%p %ldx%ld lda=%ld dst=%p %ldx%ld lda=%ld size=%ld\n",
+				__FUNCTION__,
 				__kaapi_pointer2void(src),
+				view_src->size[0], view_src->size[1],
+				view_src->lda,
 				__kaapi_pointer2void(dest),
+				view_dest->size[0], view_dest->size[1],
+				view_dest->lda,
 			       	kaapi_memory_view_size( view_src ));
 		fflush(stdout);
 #endif
@@ -396,9 +403,14 @@ kaapi_cuda_mem_2dcopy_dtoh(
 	CUDA_MEMCPY2D m;
 
 #if KAAPI_VERBOSE
-		fprintf(stdout, "[%s] src=%p dst=%p size=%ld\n", __FUNCTION__,
+		fprintf(stdout, "[%s] src=%p %ldx%ld lda=%ld dst=%p %ldx%ld lda=%ld size=%ld\n",
+				__FUNCTION__,
 				__kaapi_pointer2void(src),
+				view_src->size[0], view_src->size[1],
+				view_src->lda,
 				__kaapi_pointer2void(dest),
+				view_dest->size[0], view_dest->size[1],
+				view_dest->lda,
 			       	kaapi_memory_view_size( view_src ));
 		fflush(stdout);
 #endif

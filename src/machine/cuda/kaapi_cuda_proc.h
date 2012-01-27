@@ -55,10 +55,15 @@
 //#define KAAPI_CUDA_USE_POOL	1
 
 #define KAAPI_CUDA_MAX_STREAMS		4
+//#define KAAPI_CUDA_HTOD_STREAM		0
+//#define KAAPI_CUDA_KERNEL_STREAM        1
+//#define KAAPI_CUDA_DTOH_STREAM		2
+//#define KAAPI_CUDA_DTOD_STREAM		3
+/* TODO: ifdef to multiple streams */
 #define KAAPI_CUDA_HTOD_STREAM		0
-#define KAAPI_CUDA_KERNEL_STREAM        1
-#define KAAPI_CUDA_DTOH_STREAM		2
-#define KAAPI_CUDA_DTOD_STREAM		3
+#define KAAPI_CUDA_KERNEL_STREAM        0
+#define KAAPI_CUDA_DTOH_STREAM		0
+#define KAAPI_CUDA_DTOD_STREAM		0
 
 typedef struct kaapi_cuda_ctx
 {

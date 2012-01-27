@@ -1551,7 +1551,6 @@ typedef struct kaapi_data_t {
 */
 typedef kaapi_data_t* kaapi_handle_t;
 
-
 /** Synchronize all shared memory in the local address space to the up-to-date value.
 */
 extern int kaapi_memory_synchronize(void);
