@@ -494,6 +494,7 @@ static void _kaapic_thief_entrypoint(
 /* init work */
 int kaapic_foreach_workinit
 (
+  kaapi_thread_context_t* self_thread,
   kaapic_work_t*         work,
   int32_t                first, 
   int32_t                last,
@@ -502,8 +503,12 @@ int kaapic_foreach_workinit
   kaapic_body_arg_t*     body_args
 )
 {
+  /* if empty work 
+  */
+  if (first >= last) 
+    return 0;
+  
   /* is_format true if called from kaapif_foreach_with_format */
-  kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
   kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
 #if defined(USE_KPROC_LOCK)
   int tid = self_thread->stack.proc->kid;
@@ -600,9 +605,55 @@ int kaapic_foreach_workinit
   work->body_args = body_args;
   work->wa        = &work->_wa;
   work->wi        = &work->_wi;
+
+  /* save frame */
+  kaapi_thread_save_frame(thread, &work->frame);  
+
+  /* start adaptive region */
+  work->context = kaapi_task_begin_adaptive(
+     thread, 
+     KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION,
+     _kaapic_split_root_task,
+     work
+  );
+
+  return 1;
+}
+
+
+int kaapic_foreach_workend
+(
+  kaapi_thread_context_t* self_thread,
+  kaapic_work_t*          work
+)
+{
+  kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
+
+  KAAPI_SET_SELF_WORKLOAD(0);
+
+#if CONFIG_TERM_COUNTER
+  KAAPI_ATOMIC_SUB(&counter, local_counter);
+#endif
+
+  /* wait for thieves */
+  kaapi_task_end_adaptive(work->context);
+
+  /* restore frame */
+  kaapi_thread_restore_frame(thread, &work->frame);
+  kaapi_synchronize_steal_thread(self_thread);
+
+#if defined(USE_KPROC_LOCK)
+#else
+  kaapi_atomic_destroylock(&work->lock);
+#endif
   
+#if CONFIG_TERM_COUNTER
+  /* wait for work counter */
+  while (KAAPI_ATOMIC_READ(&counter)) ;
+#endif
   return 0;
 }
+
 
 /* exported foreach interface */
 int kaapic_foreach_common
@@ -616,10 +667,8 @@ int kaapic_foreach_common
 {
   /* is_format true if called from kaapif_foreach_with_format */
   kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
-  kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
   const int tid = self_thread->stack.proc->kid;
 
-  kaapi_frame_t frame;
   long pos;
 
   /* warning: interval includes j */
@@ -629,20 +678,10 @@ int kaapic_foreach_common
   /* master work */
   kaapic_work_t w;
 
-  /* save frame */
-  kaapi_thread_save_frame(thread, &frame);
-  
   /* */
-  kaapic_foreach_workinit( &w, first, last, attr, body_f, body_args );
+  if (0 == kaapic_foreach_workinit( self_thread, &w, first, last, attr, body_f, body_args ))
+    return 0;
   
-  /* start adaptive region */
-  w.context = kaapi_task_begin_adaptive(
-     thread, 
-     KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION,
-     _kaapic_split_root_task,
-     &w
-  );
-
 #if CONFIG_MAX_TID
   /* dont process if we are excluded from tid set */
   if (tid > wi.max_tid) goto end_adaptive;
@@ -700,28 +739,7 @@ continue_work:
 
 end_adaptive:
 
-  KAAPI_SET_SELF_WORKLOAD(0);
-
-#if CONFIG_TERM_COUNTER
-  KAAPI_ATOMIC_SUB(&counter, local_counter);
-#endif
-
-  /* wait for thieves */
-  kaapi_task_end_adaptive(w.context);
-
-  /* restore frame */
-  kaapi_thread_restore_frame(thread, &frame);
-  kaapi_synchronize_steal_thread(self_thread);
-
-#if defined(USE_KPROC_LOCK)
-#else
-  kaapi_atomic_destroylock(&w.lock);
-#endif
-  
-#if CONFIG_TERM_COUNTER
-  /* wait for work counter */
-  while (KAAPI_ATOMIC_READ(&counter)) ;
-#endif
+  kaapic_foreach_workend( self_thread, &w );
 
 #if CONFIG_FOREACH_STATS
   foreach_time += kaapif_get_time_() - time;
