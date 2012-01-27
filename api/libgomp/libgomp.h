@@ -73,9 +73,13 @@ enum omp_task_kind
 
 /* barrier.c */
 
+#define BAR_CYCLES 3
+
 typedef struct gomp_barrier {
-  kaapi_atomic64_t count;
+  kaapi_atomic_t cycle;
   unsigned int nthreads;
+  char padding[64];
+  kaapi_atomic_t count[BAR_CYCLES];
 } gomp_barrier_t; 
 
 extern gomp_barrier_t global_barrier;

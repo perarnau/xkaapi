@@ -50,24 +50,40 @@ void
 gomp_barrier_init (struct gomp_barrier *barrier, unsigned int num)
 {
   barrier->nthreads = num;
-  KAAPI_ATOMIC_WRITE_BARRIER (&barrier->count, 0);
+  KAAPI_ATOMIC_WRITE (&barrier->cycle, 0);
+  memset (barrier->count, 0, BAR_CYCLES * sizeof (kaapi_atomic_t));
 }
 
 void
 gomp_barrier_destroy (struct gomp_barrier *barrier)
 {
   barrier->nthreads = -1;
-  KAAPI_ATOMIC_WRITE_BARRIER (&barrier->count, -1);  
+  KAAPI_ATOMIC_WRITE (&barrier->cycle, -1);
+  memset (barrier->count, -1, BAR_CYCLES * sizeof (kaapi_atomic_t));
 }
 
 void
 gomp_barrier_wait (struct gomp_barrier *barrier)
 {
+  int current_cycle = KAAPI_ATOMIC_READ (&barrier->cycle);
+  int next_cycle = (current_cycle + 1) % BAR_CYCLES;
   int nthreads = barrier->nthreads;
-  KAAPI_ATOMIC_INCR (&barrier->count);
-  while (KAAPI_ATOMIC_READ (&barrier->count) != nthreads)
+
+  int nb_arrived = KAAPI_ATOMIC_INCR (&barrier->count[current_cycle]);
+
+  if (nb_arrived == nthreads)
     {
-      kaapi_slowdown_cpu ();
+      int cycle_to_clean = (next_cycle + 1) % BAR_CYCLES;
+
+      KAAPI_ATOMIC_WRITE_BARRIER (&barrier->cycle, next_cycle);
+      KAAPI_ATOMIC_WRITE (&barrier->count[cycle_to_clean], 0);
+    }
+  else
+    {
+      while (KAAPI_ATOMIC_READ (&barrier->cycle) != next_cycle)
+	{
+	  kaapi_slowdown_cpu ();
+	}
     }
 }
 
