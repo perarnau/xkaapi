@@ -1,6 +1,5 @@
 
-#ifndef KAAPI_CUDA_UTILS_H_INCLUDED
-#define KAAPI_CUDA_UTILS_H_INCLUDED
+#if 0
 
 #include "kaapi_cuda_proc.h"
 

@@ -1,11 +1,10 @@
 
-#include <cuda.h>
+#include <stdio.h>
 
 #include "kaapi_impl.h"
 #include "../../kaapi_memory.h" /* TODO: remove this */
 #include "../../memory/kaapi_mem.h"
 #include "kaapi_cuda_proc.h"
-#include "kaapi_cuda_utils.h"
 #include "kaapi_cuda_mem.h"
 #include "kaapi_cuda_data.h"
 

@@ -43,11 +43,15 @@
 ** terms.
 ** 
 */
+
+#include <stdio.h>
+#include <cuda_runtime_api.h>
+
 #include "kaapi_impl.h"
 #include "kaapi_cuda_proc.h"
 #include "kaapi_cuda_kasid.h"
-//#include "kaapi_cuda_error.h"
-#include "kaapi_cuda_utils.h"
+#include "kaapi_cuda_dev.h"
+#include "kaapi_cuda_ctx.h"
 #include "kaapi_cuda_cublas.h"
 
 #ifdef KAAPI_CUDA_USE_POOL
@@ -57,9 +61,10 @@
 
 /* exported */
 
-int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
+int
+kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
 {
-  CUresult res;
+  cudaError_t res;
   int i;
 
   proc->is_initialized = 0;
@@ -68,7 +73,7 @@ int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
     return -1;
 
   for( i= 0; i < KAAPI_CUDA_MAX_STREAMS; i++ ) {
-      res = cuStreamCreate(&proc->stream[i], 0);
+      res = cudaStreamCreate( &proc->stream[i] );
       if (res != CUDA_SUCCESS)
       {
 		fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
@@ -102,10 +107,8 @@ int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
      so allow another thread to use it, such
      as the main one with kaapi_mem_synchronize2
   */
-  kaapi_cuda_ctx_pop( proc );
-  kaapi_cuda_ctx_push( proc );
+  kaapi_cuda_ctx_push( );
   kaapi_cuda_cublas_init( proc );
-  kaapi_cuda_ctx_pop( proc );
 
 #ifdef KAAPI_CUDA_USE_POOL
   kaapi_cuda_pool_init( proc );
@@ -132,10 +135,15 @@ int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t* proc)
   if (proc->is_initialized == 0)
     return -1;
 
+#if defined(KAAPI_DEBUG)
+    fprintf(stdout, "[%s] kid=%lu\n", __FUNCTION__,
+		    kaapi_get_current_kid() );
+    fflush( stdout );
+#endif
   kaapi_cuda_cublas_finalize( proc );
   for( i= 0; i < KAAPI_CUDA_MAX_STREAMS; i++ ) 
-      cuStreamDestroy(proc->stream[i]);
-  kaapi_cuda_ctx_pop( proc );
+      cudaStreamDestroy( proc->stream[i] );
+  kaapi_cuda_ctx_pop( );
 
   kaapi_cuda_dev_close( proc );
   proc->is_initialized = 0;
@@ -157,28 +165,28 @@ size_t kaapi_cuda_get_proc_count(void)
   return count;
 }
 
-CUstream kaapi_cuda_kernel_stream(void)
+cudaStream_t kaapi_cuda_kernel_stream(void)
 {
   kaapi_processor_t* const self_proc =
     kaapi_get_current_processor();
   return self_proc->cuda_proc.stream[KAAPI_CUDA_KERNEL_STREAM];
 }
 
-CUstream kaapi_cuda_HtoD_stream(void)
+cudaStream_t kaapi_cuda_HtoD_stream(void)
 {
   kaapi_processor_t* const self_proc =
     kaapi_get_current_processor();
   return self_proc->cuda_proc.stream[KAAPI_CUDA_HTOD_STREAM];
 }
 
-CUstream kaapi_cuda_DtoH_stream(void)
+cudaStream_t kaapi_cuda_DtoH_stream(void)
 {
   kaapi_processor_t* const self_proc =
     kaapi_get_current_processor();
   return self_proc->cuda_proc.stream[KAAPI_CUDA_DTOH_STREAM];
 }
 
-CUstream kaapi_cuda_DtoD_stream(void)
+cudaStream_t kaapi_cuda_DtoD_stream(void)
 {
   kaapi_processor_t* const self_proc =
     kaapi_get_current_processor();

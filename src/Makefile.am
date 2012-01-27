@@ -245,8 +245,10 @@ libkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda_pool.c \
   machine/cuda/kaapi_cuda_taskmovealloc.h \
   machine/cuda/kaapi_cuda_taskmovealloc.c \
-  machine/cuda/kaapi_cuda_utils.h \
-  machine/cuda/kaapi_cuda_utils.c \
+  machine/cuda/kaapi_cuda_dev.h \
+  machine/cuda/kaapi_cuda_dev.c \
+  machine/cuda/kaapi_cuda_ctx.h \
+  machine/cuda/kaapi_cuda_ctx.c \
   machine/cuda/kaapi_cuda_kasid.c
 endif
 

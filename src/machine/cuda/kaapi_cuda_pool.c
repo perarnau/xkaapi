@@ -12,12 +12,12 @@
 #if KAAPI_CUDA_USE_POOL
 
 /* cuda task body */
-typedef void (*cuda_task_body_t)(void*, CUstream);
+typedef void (*cuda_task_body_t)(void*, cudaStream_t);
 
 static inline void 
 kaapi_cuda_pool_new_event( kaapi_cuda_pool_node_t* node )
 {
-    const CUresult res = cuEventCreate( &node->event, CU_EVENT_DISABLE_TIMING );
+    const cudaError_t res = cuEventCreate( &node->event, CU_EVENT_DISABLE_TIMING );
     if( res != CUDA_SUCCESS ) {
 	fprintf( stdout, "[%s] ERROR cuEventCreate %d\n",
 		__FUNCTION__, res );
@@ -68,7 +68,7 @@ kaapi_cuda_pool_launch_kernel( const kaapi_processor_t* proc,
 
     body( node->pc->sp, kaapi_cuda_kernel_stream() );
 
-    const CUresult res = cuEventRecord( node->event, kaapi_cuda_kernel_stream() );
+    const cudaError_t res = cuEventRecord( node->event, kaapi_cuda_kernel_stream() );
     if( res != CUDA_SUCCESS ) {
 	fprintf( stdout, "[%s] ERROR cuEventCreate (launch) %d\n",
 		__FUNCTION__, res );
@@ -100,7 +100,7 @@ kaapi_cuda_pool_submit(
 	kaapi_task_t*              pc
     )
 {
-    CUresult res;
+    cudaError_t res;
     kaapi_processor_t* const proc = kaapi_get_current_processor();
     kaapi_cuda_pool_node_t* node = kaapi_cuda_pool_node_new();
     node->next = NULL;

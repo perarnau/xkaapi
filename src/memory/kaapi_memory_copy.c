@@ -50,9 +50,8 @@
 
 #include "../cuda/kaapi_cuda.h"
 #include "../machine/cuda/kaapi_cuda_mem.h"
-//#include "../machine/cuda/kaapi_cuda_error.h"
-#include "../machine/cuda/kaapi_cuda_utils.h"
-
+#include "../machine/cuda/kaapi_cuda_ctx.h"
+#include "../machine/cuda/kaapi_cuda_dev.h"
 #endif
 
 /* basic function to write contiguous block of memory */
@@ -134,34 +133,36 @@ static inline unsigned int is_self_cu_proc
  * assuming that we have more than 1 GPU and only the pointer, not the device
  * So, the function has to: 1) search device 2) push ctx
  */
-kaapi_cuda_proc_t* get_cu_context( void )
+kaapi_processor_t*
+get_cu_context( void )
 {
-  kaapi_cuda_proc_t* cu_proc;
+  kaapi_processor_t* cu_proc;
   if( kaapi_get_current_processor()->proc_type != KAAPI_PROC_TYPE_CUDA )
 	  cu_proc= kaapi_cuda_mem_get_proc();
   else
-  	 cu_proc = &kaapi_get_current_processor()->cuda_proc;
+  	 cu_proc = kaapi_get_current_processor();
   
   
-  kaapi_cuda_ctx_push( cu_proc );
+  _kaapi_cuda_ctx_push( cu_proc );
   return cu_proc;
 }
 
-static kaapi_cuda_proc_t* xxx_get_cu_context( kaapi_address_space_id_t asid )
+static kaapi_processor_t*
+xxx_get_cu_context( kaapi_address_space_id_t asid )
 {
-	kaapi_cuda_proc_t* proc = kaapi_cuda_get_proc_by_asid( asid );
-	kaapi_cuda_ctx_push( proc );
+	kaapi_processor_t* proc = kaapi_cuda_get_proc_by_asid( asid );
+	_kaapi_cuda_ctx_push( proc );
 	return proc;
 }
 
-static void xxx_put_cu_context( kaapi_cuda_proc_t* proc )
+static void xxx_put_cu_context( kaapi_processor_t* proc )
 {
-	kaapi_cuda_ctx_pop( proc );
+	_kaapi_cuda_ctx_pop( proc );
 }
 
-void put_cu_context(kaapi_cuda_proc_t* cu_proc)
+void put_cu_context( kaapi_processor_t* cu_proc)
 {
-	kaapi_cuda_ctx_pop( cu_proc );
+	_kaapi_cuda_ctx_pop( cu_proc );
 }
 
 static inline int kaapi_memory_write_cu2cpu
@@ -172,7 +173,7 @@ static inline int kaapi_memory_write_cu2cpu
  const kaapi_memory_view_t* view_src
 )
 {
-  kaapi_cuda_proc_t* cu_proc = NULL;
+  kaapi_processor_t* cu_proc = NULL;
   int error = EINVAL;
 
   if (kaapi_pointer_isnull(dest)) return EINVAL;
@@ -198,7 +199,7 @@ static int kaapi_memory_write_cpu2cu
  const kaapi_memory_view_t* view_src
 )
 {
-  kaapi_cuda_proc_t* cu_proc = NULL;
+  kaapi_processor_t* cu_proc = NULL;
   int error = EINVAL;
 
   if (kaapi_pointer_isnull(dest)) return EINVAL;

@@ -46,17 +46,17 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stddef.h>
-#include <cuda.h>
+#include <cuda_runtime_api.h>
 #include <sys/types.h>
 
 #include "kaapi_impl.h"
 #include "kaapi_tasklist.h"
 
-#include "kaapi_cuda_utils.h"
+#include "kaapi_cuda_ctx.h"
 #include "kaapi_cuda_data.h"
 
 /* cuda task body */
-typedef void (*cuda_task_body_t)(void*, CUstream);
+typedef void (*cuda_task_body_t)(void*, cudaStream_t);
 
 int kaapi_cuda_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 {
@@ -149,11 +149,11 @@ execute_first:
 	    kaapi_task_body_t body = kaapi_task_getbody( pc );
 	    body( pc->sp, (kaapi_thread_t*)stack->sfp );
         } else {
-	    CUresult res;
+	    cudaError_t res;
 	    cuda_task_body_t body =
 		(cuda_task_body_t) td->fmt->entrypoint_wh[proc_type];
     /* Enter CUDA context */
-  kaapi_cuda_ctx_push( &kaapi_get_current_processor()->cuda_proc );
+  kaapi_cuda_ctx_push( );
 
 	    kaapi_cuda_data_send( thread, td->fmt, pc );
 	    res = cuCtxSynchronize( );
@@ -170,13 +170,13 @@ execute_first:
 	    kaapi_cuda_data_recv( thread, td->fmt, pc );
 	    res = cuCtxSynchronize( );
 	    cuStreamSynchronize( kaapi_cuda_DtoH_stream() );
-	    //const CUresult res = cuStreamSynchronize( kaapi_cuda_DtoH_stream() );
+	    //const cudaError_t res = cuStreamSynchronize( kaapi_cuda_DtoH_stream() );
 	    if( res != CUDA_SUCCESS ) {
 		    fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
 		    fflush(stdout);
 	    }
     /* Exit CUDA context */
-  kaapi_cuda_ctx_pop( &kaapi_get_current_processor()->cuda_proc );
+  kaapi_cuda_ctx_pop( );
 
         }
         kaapi_event_push1(stack->proc, thread, KAAPI_EVT_TASK_END, pc );  

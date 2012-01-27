@@ -49,7 +49,8 @@
 
 #include <pthread.h>
 #include <sys/types.h>
-#include "cuda.h"
+#include <cuda_runtime_api.h>
+
 #include "cublas_v2.h"
 
 //#define KAAPI_CUDA_USE_POOL	1
@@ -67,7 +68,6 @@
 
 typedef struct kaapi_cuda_ctx
 {
-	CUcontext ctx;
 	cublasHandle_t handle;
 	pthread_mutex_t mutex;
 	pthread_mutexattr_t mta;
@@ -89,8 +89,9 @@ struct kaapi_cuda_pool;
 
 typedef struct kaapi_cuda_proc
 {
-  CUdevice dev;
-  CUstream stream[KAAPI_CUDA_MAX_STREAMS];
+//  CUdevice dev;
+    unsigned int index;
+  cudaStream_t stream[KAAPI_CUDA_MAX_STREAMS];
   kaapi_cuda_ctx_t ctx;
   kaapi_cuda_mem_t memory;
 #ifdef KAAPI_CUDA_USE_POOL
@@ -112,12 +113,12 @@ size_t kaapi_cuda_get_proc_count(void);
 
 unsigned int kaapi_cuda_get_first_kid(void);
 
-CUstream kaapi_cuda_kernel_stream(void);
+cudaStream_t kaapi_cuda_kernel_stream(void);
 
-CUstream kaapi_cuda_HtoD_stream(void);
+cudaStream_t kaapi_cuda_HtoD_stream(void);
 
-CUstream kaapi_cuda_DtoH_stream(void);
+cudaStream_t kaapi_cuda_DtoH_stream(void);
 
-CUstream kaapi_cuda_DtoD_stream(void);
+cudaStream_t kaapi_cuda_DtoD_stream(void);
 
 #endif /* ! KAAPI_CUDA_PROC_H_INCLUDED */

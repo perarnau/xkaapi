@@ -1,6 +1,6 @@
 
 #include <stdio.h>
-#include "cuda.h"
+#include <cuda_runtime_api.h>
 
 #include "kaapi_impl.h"
 //#include "../memory/kaapi_mem.h"
@@ -117,16 +117,19 @@ kaapi_cuda_mem_alloc(
 		const int flag
 	)
 {
-	CUdeviceptr devptr;
-	CUresult res;
+	void* devptr;
+	cudaError_t res;
   	kaapi_processor_t* const proc = kaapi_get_current_processor();
 
+	/* TODO */
+#if 0
 	if( __kaapi_cuda_mem_is_full( proc, size) )
 		if( kaapi_cuda_mem_blk_remove( proc, size ) )
 			return -1;
+#endif
 
 out_of_memory:
-	res = cuMemAlloc( &devptr, size );
+	res = cudaMalloc( &devptr, size );
 	if( res == CUDA_ERROR_OUT_OF_MEMORY ) {
 		if( kaapi_cuda_mem_blk_remove( proc, size ) )
 			return -1;
@@ -167,7 +170,7 @@ out_of_memory:
 int
 kaapi_cuda_mem_free( kaapi_pointer_t *ptr )
 {
-	cuMemFree( ptr->ptr );
+	cudaFree( kaapi_pointer2void(*ptr) );
 	ptr->ptr = 0;
 	ptr->asid = 0;
 	return 0;
@@ -262,13 +265,13 @@ int kaapi_cuda_mem_register( kaapi_pointer_t ptr,
 		const kaapi_memory_view_t *view )
 {
 #if 0
-	const CUresult res = 
+	const cudaError_t res = 
 #endif
 #if KAAPI_CUDA_ASYNC
-	cuMemHostRegister(
+	cudaHostRegister(
 		(void*)__kaapi_pointer2void(ptr),
 		kaapi_memory_view_size(view),
-		CU_MEMHOSTREGISTER_PORTABLE );
+		cudaHostRegisterPortable );
 #endif
 
 #if 0
@@ -294,14 +297,18 @@ kaapi_cuda_mem_1dcopy_htod(
 	const size_t size = kaapi_memory_view_size( view_src );
 
 #if KAAPI_CUDA_ASYNC
-	const CUresult res = cuMemcpyHtoDAsync(
-			 (CUdeviceptr)__kaapi_pointer2void(dest),
-			__kaapi_pointer2void(src), size,
+	const cudaError_t res = cudaMemcpyAsync(
+			 __kaapi_pointer2void(dest),
+			__kaapi_pointer2void(src),
+			size,
+			cudaMemcpyHostToDevice,
 			kaapi_cuda_HtoD_stream() );
 #else
-	const CUresult res = cuMemcpyHtoD(
-			 (CUdeviceptr)__kaapi_pointer2void(dest),
-			__kaapi_pointer2void(src), size );
+	const cudaError_t res = cudaMemcpy(
+			 __kaapi_pointer2void(dest),
+			__kaapi_pointer2void(src),
+			size,
+			cudaMemcpyHostToDevice );
 #endif
 	if (res != CUDA_SUCCESS) {
 		fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
@@ -320,16 +327,18 @@ kaapi_cuda_mem_1dcopy_dtoh(
 	const size_t size = kaapi_memory_view_size( view_src );
 
 #if KAAPI_CUDA_ASYNC
-	const CUresult res = cuMemcpyDtoHAsync(
+	const cudaError_t res = cudaMemcpyAsync(
 			 __kaapi_pointer2void(dest),
-			(CUdeviceptr)__kaapi_pointer2void(src),
+			__kaapi_pointer2void(src),
 			size,
+			cudaMemcpyDeviceToHost,
 			kaapi_cuda_DtoH_stream() );
 #else
-	const CUresult res = cuMemcpyDtoH(
+	const cudaError_t res = cudaMemcpy(
 			 __kaapi_pointer2void(dest),
-			(CUdeviceptr)__kaapi_pointer2void(src),
-			size );
+			__kaapi_pointer2void(src),
+			size,
+			cudaMemcpyDeviceToHost);
 #endif
 	if (res != CUDA_SUCCESS) {
 		fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
@@ -345,8 +354,7 @@ kaapi_cuda_mem_2dcopy_htod(
 	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
 	)
 {
-	CUresult res;
-	CUDA_MEMCPY2D m;
+	cudaError_t res;
 
 #if KAAPI_VERBOSE
 		fprintf(stdout, "[%s] src=%p %ldx%ld lda=%ld dst=%p %ldx%ld lda=%ld size=%ld\n",
@@ -360,6 +368,8 @@ kaapi_cuda_mem_2dcopy_htod(
 			       	kaapi_memory_view_size( view_src ));
 		fflush(stdout);
 #endif
+#if 0
+	CUDA_MEMCPY2D m;
 	m.srcMemoryType = CU_MEMORYTYPE_HOST;
 	m.srcHost = __kaapi_pointer2void(src);
 	m.srcPitch = view_src->lda * view_src->wordsize;
@@ -374,11 +384,27 @@ kaapi_cuda_mem_2dcopy_htod(
 
 	m.WidthInBytes = view_dest->size[1] * view_dest->wordsize;
 	m.Height = view_dest->size[0];
+#endif
 
 #if KAAPI_CUDA_ASYNC
-	res = cuMemcpy2DAsync( &m, kaapi_cuda_HtoD_stream() );
+	res = cudaMemcpy2DAsync(
+	    __kaapi_pointer2void(dest),
+	    view_dest->size[1] * view_dest->wordsize,
+	    __kaapi_pointer2void(src),
+	    view_src->lda * view_src->wordsize,
+	    view_dest->size[1] * view_dest->wordsize,
+	    view_dest->size[0],
+	    cudaMemcpyHostToDevice,
+	   kaapi_cuda_HtoD_stream() );
 #else
-	res = cuMemcpy2D( &m );
+	res = cudaMemcpy2D(
+	    __kaapi_pointer2void(dest),
+	    view_dest->size[1] * view_dest->wordsize,
+	    __kaapi_pointer2void(src),
+	    view_src->lda * view_src->wordsize,
+	    view_dest->size[1] * view_dest->wordsize,
+	    view_dest->size[0],
+	    cudaMemcpyHostToDevice );
 #endif
 	if (res != CUDA_SUCCESS) {
 		fprintf( stdout, "[%s] ERROR cuMemcpy2D (%d) kid=%lu src=%p dst=%p size=%lu\n",
@@ -399,8 +425,7 @@ kaapi_cuda_mem_2dcopy_dtoh(
 	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
 	)
 {
-	CUresult res;
-	CUDA_MEMCPY2D m;
+	cudaError_t res;
 
 #if KAAPI_VERBOSE
 		fprintf(stdout, "[%s] src=%p %ldx%ld lda=%ld dst=%p %ldx%ld lda=%ld size=%ld\n",
@@ -414,6 +439,8 @@ kaapi_cuda_mem_2dcopy_dtoh(
 			       	kaapi_memory_view_size( view_src ));
 		fflush(stdout);
 #endif
+#if 0
+	CUDA_MEMCPY2D m;
 	m.srcMemoryType = CU_MEMORYTYPE_DEVICE;
 	m.srcDevice = (uintptr_t) __kaapi_pointer2void(src);
 	m.srcPitch = view_src->size[1] * view_src->wordsize;
@@ -428,11 +455,27 @@ kaapi_cuda_mem_2dcopy_dtoh(
 
 	m.WidthInBytes = view_src->size[1] * view_src->wordsize;
 	m.Height = view_src->size[0];
+#endif
 
 #if KAAPI_CUDA_ASYNC
-	res = cuMemcpy2DAsync( &m, kaapi_cuda_DtoH_stream() );
+	res = cudaMemcpy2DAsync(
+		__kaapi_pointer2void(dest),
+		view_dest->lda * view_dest->wordsize,
+		__kaapi_pointer2void(src),
+		view_src->size[1] * view_src->wordsize,
+		view_src->size[1] * view_src->wordsize,
+		view_src->size[0],
+		cudaMemcpyDeviceToHost,
+	       kaapi_cuda_DtoH_stream()	);
 #else
-	res = cuMemcpy2D( &m );
+	res = cudaMemcpy2D(
+		__kaapi_pointer2void(dest),
+		view_dest->lda * view_dest->wordsize,
+		__kaapi_pointer2void(src),
+		view_src->size[1] * view_src->wordsize,
+		view_src->size[1] * view_src->wordsize,
+		view_src->size[0],
+		cudaMemcpyDeviceToHost );
 #endif
 	if (res != CUDA_SUCCESS) {
 		fprintf( stdout, "[%s] ERROR cuMemcpy2D (%d) kid=%lu src=%p dst=%p size=%lu\n",
