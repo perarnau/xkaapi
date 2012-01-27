@@ -43,6 +43,7 @@
 ** 
 */
 
+#include <stdlib.h>
 #include <stdio.h>
 #include "kaapic.h"
 

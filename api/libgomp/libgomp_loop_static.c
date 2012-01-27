@@ -69,8 +69,6 @@ becomes
        GOMP_parallel_end ();
 */
 
-int kaapic_foreach_workinit (kaapic_work_t *, int32_t, int32_t, kaapic_foreach_attr_t, kaapic_foreach_body_t, kaapic_body_arg_t *);
-
 static void gomp_foreach_wrapper(
   int32_t i, int32_t j, int32_t tid, 
   kaapic_body_arg_t* call
@@ -87,6 +85,7 @@ bool GOMP_loop_static_start (
   long *iend
 )
 {
+#if 0
   kaapi_thread_t* thread = kaapi_self_thread();
   kaapic_foreach_attr_t attr;
   kaapic_foreach_attr_init(&attr);
@@ -106,7 +105,8 @@ bool GOMP_loop_static_start (
   kaapic_foreach_workinit( work, 0, (end-start)/incr, attr, gomp_foreach_wrapper, fnc_arg );
 
   printf("%s:: \n", __FUNCTION__);
-  
+#endif
+
   return (bool)0;
 }
 

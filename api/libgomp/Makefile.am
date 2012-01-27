@@ -31,10 +31,4 @@ libgomp_la_SOURCES=\
     libgomp_init.c \
     $(include_HEADERS)
 
-check_headers_SRC_C=
-check_headers_SRC_CXX=
-check_headers_LIBS=$(KAAPIPROGS_BUILD_LDFLAGS) $(KAAPIPROGS_BUILD_LIBS)
-
-include ../check-headers.am
-
 #endif
