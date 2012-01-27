@@ -59,7 +59,7 @@ typedef struct kaapic_body_arg_t {
     void (*f_f)(int32_t*, int32_t*, int32_t*, ...);
   } u;
   unsigned int        nargs;
-  void*               args[1];
+  void*               args[];
 } kaapic_body_arg_t;
 
 /* Signature of foreach body 
@@ -186,6 +186,9 @@ typedef struct work
   
   void* context; /* return by begin_adapt */
 
+  /* thread context to restore */
+  kaapi_frame_t frame;
+
 } kaapic_work_t;
 
 
@@ -221,6 +224,26 @@ typedef struct thief_work
 
 } kaapic_thief_work_t;
 
+
+
+/* Lower level function used by libgomp implementation */
+
+/* init work 
+   \retval returns non zero if there is work to do, else returns 0
+*/
+extern int kaapic_foreach_workinit
+(
+  kaapi_thread_context_t* self_thread,
+  kaapic_work_t*          work,
+  int32_t                 first, 
+  int32_t                 last,
+  kaapic_foreach_attr_t*  attr,
+  kaapic_foreach_body_t   body_f,
+  kaapic_body_arg_t*      body_args
+);
+
+/* worknext
+*/
 
 #if defined(__cplusplus)
 }
