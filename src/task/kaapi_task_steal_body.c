@@ -46,7 +46,7 @@
 #include <stdio.h>
 
 #if defined(KAAPI_USE_CUDA)
-# include "../machine/cuda/kaapi_cuda_execframe.h"
+# include "../machine/cuda/kaapi_cuda_task_steal_body.h"
 #endif
 
 /* toremove */
@@ -136,10 +136,9 @@ void kaapi_taskwrite_body(
 void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 {
 #if 0
-  kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
-  kaapi_processor_t* const self_proc = self_thread->proc;
+    kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
+    kaapi_processor_t* const self_proc = self_thread->proc;
 #endif
-
   unsigned int           i;
   size_t                 count_params;
   kaapi_task_t*          task;
@@ -171,7 +170,6 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   kaapi_assert_debug( fmt !=0 );
 
 #if KAAPI_VERBOSE
-	/* TODO ver aqui */
     fprintf( stdout, "[%s] task=%s\n", __FUNCTION__, fmt->name );
     fflush(stdout);
 #endif
@@ -192,25 +190,17 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   {
     /* Execute the orinal body function with the original args.
     */
-//#if defined(KAAPI_USE_CUDA)
-#if 0
+#if defined(KAAPI_USE_CUDA)
     if (kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA)
     {
-	fprintf(stdout, "[%s] CUDA task kid=%lu\n", __FUNCTION__,
-	       (unsigned long int)kaapi_get_current_kid() );
-	fflush(stdout);
-#if 0
-      /* todo_remove */
       if (fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0)
-        body(orig_task_args, thread, );
+        body( orig_task_args, thread );
       else
-        /* todo_remove */
-        kaapi_cuda_exectask(self_thread, orig_task_args, fmt);
-#endif
+        kaapi_cuda_task_steal_body( thread, fmt, orig_task_args );
     }
     else
 #endif
-    body(orig_task_args, thread);
+	body( orig_task_args, thread );
   }
   else /* it exists at least one w parameter with war dependency or a cw_param: recopies the arguments */
   {
@@ -269,20 +259,13 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 
 
     /* call directly the stolen body function */
-#if 0
+#if defined(KAAPI_USE_CUDA)
     if (kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA)
     {
-	fprintf(stdout, "[%s] CUDA task kid=%lu\n", __FUNCTION__,
-	       (unsigned long int)kaapi_get_current_kid() );
-	fflush(stdout);
-#if 0
-      /* todo_remove */
       if (fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0)
-        body(copy_task_args, thread);
+        body( copy_task_args, thread );
       else
-        /* todo_remove */
-        kaapi_cuda_exectask(self_thread, copy_task_args, fmt);
-#endif
+        kaapi_cuda_task_steal_body( thread, fmt, copy_task_args );
     }
     else
 #endif

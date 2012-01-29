@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
-XKAAPIDIR=$HOME/install/xkaapi/mat_gpu
-CUDADIR=$CUDA_HOME/cuda
+XKAAPIDIR=$HOME/install/xkaapi/default
+CUDADIR=$CUDA_HOME
 
 $CUDADIR/bin/nvcc -w -g \
     -I$XKAAPIDIR/include \

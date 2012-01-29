@@ -64,6 +64,10 @@ size_t kaapi_task_computeready(
   
   count_params = wc = kaapi_format_get_count_params(task_fmt, sp); 
   
+#if KAAPI_VERBOSE
+    fprintf( stdout, "[%s] task=%s\n", __FUNCTION__, task_fmt->name );
+    fflush(stdout);
+#endif
   for (i=0; i<count_params; ++i)
   {
     kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(  kaapi_format_get_mode_param(task_fmt, i, sp) );

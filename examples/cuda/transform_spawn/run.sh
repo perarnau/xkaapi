@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
-export LD_LIBRARY_PATH=$CUDA_HOME/cuda/lib64:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=$HOME/install/xkaapi/mat_gpu/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/install/xkaapi/default/lib:$LD_LIBRARY_PATH
 
 # CONFIG_USE_STATIC == 1
 #export KAAPI_CPUSET=0,1
@@ -12,9 +12,9 @@ export LD_LIBRARY_PATH=$HOME/install/xkaapi/mat_gpu/lib:$LD_LIBRARY_PATH
 
 export KAAPI_CPUSET='0:1'
 #export KAAPI_CPUSET='0'
-#export KAAPI_GPUSET='0~3'
-export KAAPI_GPUSET=''
+export KAAPI_GPUSET='0~3'
+#export KAAPI_GPUSET=''
 #export KAAPI_DUMP_GRAPH='1'
 
-KAAPI_STACKSIZE=260046848 ./a.out 256
+KAAPI_STACKSIZE=260046848 ./a.out 2048
 #KAAPI_STACKSIZE=260046848 gdb ./a.out 

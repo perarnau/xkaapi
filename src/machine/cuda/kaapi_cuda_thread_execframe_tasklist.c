@@ -155,7 +155,7 @@ execute_first:
     /* Enter CUDA context */
   kaapi_cuda_ctx_push( );
 
-	    kaapi_cuda_data_send( thread, td->fmt, pc );
+	    kaapi_cuda_data_send( td->fmt, pc->sp );
 	    res = cuCtxSynchronize( );
 	    if( res != CUDA_SUCCESS ) {
 		    fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
@@ -167,7 +167,7 @@ execute_first:
 		    fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
 		    fflush(stdout);
 	    }
-	    kaapi_cuda_data_recv( thread, td->fmt, pc );
+	    kaapi_cuda_data_recv( td->fmt, pc->sp );
 	    res = cuCtxSynchronize( );
 	    cuStreamSynchronize( kaapi_cuda_DtoH_stream() );
 	    //const cudaError_t res = cuStreamSynchronize( kaapi_cuda_DtoH_stream() );

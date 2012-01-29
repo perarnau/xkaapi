@@ -238,7 +238,7 @@ struct doit {
 	    if( do_check(dA, dB, dC, dC_old, n) == -1 )
 	      fprintf(stdout, "# ERROR invalid matrix\n");
 	    else
-		    fprintf(stdout, "# OK\n");
+		    fprintf(stdout, "# output OK\n");
 	    fflush(stdout);
 	    free(dC_old);
     }

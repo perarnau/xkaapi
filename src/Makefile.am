@@ -249,6 +249,8 @@ libkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda_dev.c \
   machine/cuda/kaapi_cuda_ctx.h \
   machine/cuda/kaapi_cuda_ctx.c \
+  machine/cuda/kaapi_cuda_task_steal_body.h \
+  machine/cuda/kaapi_cuda_task_steal_body.c \
   machine/cuda/kaapi_cuda_kasid.c
 endif
 

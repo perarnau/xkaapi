@@ -68,7 +68,9 @@ void
 kaapi_cuda_dev_close( kaapi_cuda_proc_t* proc )
 {
 	pthread_mutex_destroy( &proc->ctx.mutex );
+#if (CUDART_VERSION >= 4010)
 	cudaDeviceReset();
+#endif
 //	cuCtxDestroy( proc->ctx.ctx );
 }
 

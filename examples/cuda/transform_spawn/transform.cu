@@ -101,7 +101,7 @@ template<> struct TaskBodyGPU<TaskAddone>
     const CUstream custream = (CUstream)stream.stream;
     addone<<<1, 256, 0, custream>>>(range.begin(), range.size());
 
-//    ka::Spawn<TaskHello>() (1);
+    ka::Spawn<TaskHello>() (1);
   }
 };
 
@@ -117,7 +117,7 @@ template<> struct TaskBodyCPU<TaskAddone>
     for (size_t i = 0; i < range_size; ++i)
       range[i] += 1;
 
-//    ka::Spawn<TaskHello>() (1);
+    ka::Spawn<TaskHello>() (1);
   }
 };
 
@@ -164,16 +164,9 @@ struct doit {
 
       // fork the root task
       ka::range1d<double_type> range(array, size);
-      //ka::array<1,double_type> A(array, size);
        ka::Spawn<TaskAddoneMain>()(range);
-//       ka::Spawn<TaskAddoneMain>(ka::SetStaticSched())(range);
-      //ka::Spawn<TaskAddone>()(range);
-      //waitabit(); // gpu task scheduled
       ka::Sync();
     kaapi_memory_synchronize();
-
-      //kaapi_mem_delete_host_mappings
-	//((kaapi_mem_addr_t)array, sizeof(double_type) * size);
 
       t1 = kaapi_get_elapsedns();
 
