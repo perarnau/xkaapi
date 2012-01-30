@@ -78,7 +78,7 @@ xxx_kaapi_cuda_data_send_ro(
 			src->ptr, &src->view );
 		kaapi_mem_data_clear_dirty( kmd, host_asid );
 	}
-#if 1
+#if 0
 	else {
 	fprintf(stdout, "[%s] CLEAN dest=%p src=%p kid=%lu asid=%lu\n", __FUNCTION__,
 		kaapi_pointer2void(dest->ptr), kaapi_pointer2void(src->ptr),
@@ -151,7 +151,7 @@ int kaapi_cuda_data_send(
 		if( !kaapi_mem_data_has_addr( kmd, host_asid ) )
 		    kaapi_mem_data_set_addr( kmd, host_asid,
 			    (kaapi_mem_addr_t)src );
-#if 1
+#if 0
 	fprintf(stdout, "[%s] find=%p kmd=%p kid=%lu asid=%lu\n", __FUNCTION__,
 		kaapi_pointer2void(src->ptr), kmd,
 		(unsigned long int)kaapi_get_current_kid(),
@@ -233,7 +233,7 @@ int kaapi_cuda_data_recv(
 		    &kmd );
 	    kaapi_data_t* d_host = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
 		    kaapi_mem_host_map_get_asid(host_map) );
-#if 1
+#if 0
     fprintf(stdout, "[%s] (%lu -> %lu) hostptr=%p devptr=%p kmd=%p kid=%lu\n", __FUNCTION__,
 	    (unsigned long int)kaapi_mem_host_map_get_asid(cuda_map), 
 	    (unsigned long int)kaapi_mem_host_map_get_asid(host_map), 

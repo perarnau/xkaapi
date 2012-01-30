@@ -150,34 +150,23 @@ execute_first:
 	    kaapi_task_body_t body = kaapi_task_getbody( pc );
 	    body( pc->sp, (kaapi_thread_t*)stack->sfp );
         } else {
-	    cudaError_t res;
 	    cuda_task_body_t body =
 		(cuda_task_body_t) td->fmt->entrypoint_wh[proc_type];
-    /* Enter CUDA context */
-  kaapi_cuda_ctx_push( );
+	    /* Enter CUDA context */
+	    kaapi_cuda_ctx_push( );
 
 	    kaapi_cuda_data_send( td->fmt, pc->sp );
-	    res = cuCtxSynchronize( );
-	    if( res != CUDA_SUCCESS ) {
-		    fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
-		    fflush(stdout);
-	    }
 	    body( pc->sp, kaapi_cuda_kernel_stream() );
-	    res = cuCtxSynchronize( );
-	    if( res != CUDA_SUCCESS ) {
-		    fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
-		    fflush(stdout);
-	    }
 	    kaapi_cuda_data_recv( td->fmt, pc->sp );
-	    res = cuCtxSynchronize( );
-	    cuStreamSynchronize( kaapi_cuda_DtoH_stream() );
-	    //const cudaError_t res = cuStreamSynchronize( kaapi_cuda_DtoH_stream() );
+#ifndef KAAPI_CUDA_ASYNC
+	    const cudaError_t res = cuCtxSynchronize( );
 	    if( res != CUDA_SUCCESS ) {
 		    fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
 		    fflush(stdout);
 	    }
-    /* Exit CUDA context */
-  kaapi_cuda_ctx_pop( );
+#endif
+	    /* Exit CUDA context */
+	    kaapi_cuda_ctx_pop( );
 
         }
         kaapi_event_push1(stack->proc, thread, KAAPI_EVT_TASK_END, pc );  

@@ -74,7 +74,7 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, void* sp )
     const kaapi_mem_host_map_t* host_map = kaapi_get_current_mem_host_map();
     const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
 
-#if 1
+#if 0
     fprintf( stdout, "[%s] asid=%lu task=%s params=%lu\n",
 	    __FUNCTION__,
 	    (unsigned long int)kaapi_mem_host_map_get_asid(host_map),
@@ -96,7 +96,7 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, void* sp )
 	if( !kaapi_mem_data_has_addr( kmd, host_asid ) )
 	    kaapi_mem_data_set_addr( kmd, host_asid,
 		    (kaapi_mem_addr_t)kdata  );
-#if 1
+#if 0
     fprintf( stdout, "[%s] asid=%lu task=%s params=%lu ptr=%p kmd=%p\n",
 	    __FUNCTION__,
 	    (unsigned long int)kaapi_mem_host_map_get_asid(host_map),
@@ -135,7 +135,7 @@ kaapi_mem_host_map_sync_ptr( const kaapi_format_t* fmt, void* sp )
     const kaapi_mem_host_map_t* host_map = kaapi_get_current_mem_host_map();
     const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
 
-#if 1
+#if 0
     fprintf( stdout, "[%s] asid=%lu task=%s stack=%p params=%lu\n",
 	    __FUNCTION__,
 	    (unsigned long int)kaapi_mem_host_map_get_asid(host_map),
@@ -152,7 +152,7 @@ kaapi_mem_host_map_sync_ptr( const kaapi_format_t* fmt, void* sp )
 
 	kaapi_access_t access = kaapi_format_get_access_param( fmt,
 			i, sp );
-#if 1
+#if 0
     fprintf( stdout, "[%s] asid=%lu task=%s params=%lu ptr=%p\n",
 	    __FUNCTION__,
 	    (unsigned long int)kaapi_mem_host_map_get_asid(host_map),

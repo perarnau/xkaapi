@@ -117,7 +117,6 @@ struct doit {
       ka::range1d<double_type> range(array, size);
        ka::Spawn<TaskAddoneMain>()(range);
       ka::Sync();
-    kaapi_memory_synchronize();
 
       t1 = kaapi_get_elapsedns();
 
