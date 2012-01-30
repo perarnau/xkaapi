@@ -62,6 +62,7 @@ typedef struct kaapic_body_arg_t {
   void*               args[];
 } kaapic_body_arg_t;
 
+
 /* Signature of foreach body 
    Called with (first, last, tid, arg) in order to do
    computation over the range [first,last[.
@@ -72,6 +73,7 @@ typedef void (*kaapic_foreach_body_t)(int32_t, int32_t, int32_t, kaapic_body_arg
 /* Default attribut if not specified
 */
 extern kaapic_foreach_attr_t kaapic_default_attr;
+
 
 /* exported foreach interface 
    evaluate body_f(first, last, body_args) in parallel, assuming
@@ -87,6 +89,7 @@ extern int kaapic_foreach_common
   kaapic_foreach_body_t  body_f,
   kaapic_body_arg_t*     body_args
 );
+
 
 /* wrapper for kaapic_foreach(...) and kaapic_foreach_withformat(...)
 */
@@ -115,6 +118,7 @@ typedef struct kaapic_arg_info_t
   kaapi_access_t access;
 
 } kaapic_arg_info_t;
+
 
 /*
 */
@@ -235,15 +239,30 @@ extern int kaapic_foreach_workinit
 (
   kaapi_thread_context_t* self_thread,
   kaapic_work_t*          work,
-  int32_t                 first, 
-  int32_t                 last,
+  kaapi_workqueue_index_t first, 
+  kaapi_workqueue_index_t last,
   kaapic_foreach_attr_t*  attr,
   kaapic_foreach_body_t   body_f,
   kaapic_body_arg_t*      body_args
 );
 
-/* worknext
+/* 
+  Return !=0 iff first and last have been filled for the next piece
+  of work to execute
 */
+extern int kaapic_foreach_worknext(
+  kaapic_work_t*           work,
+  kaapi_workqueue_index_t* first,
+  kaapi_workqueue_index_t* last
+);
+
+/*
+*/
+int kaapic_foreach_workend
+(
+  kaapi_thread_context_t* self_thread,
+  kaapic_work_t*          work
+);
 
 #if defined(__cplusplus)
 }

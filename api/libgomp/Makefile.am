@@ -29,6 +29,7 @@ libgomp_la_SOURCES=\
     libgomp_section.c \
     libgomp_task.c \
     libgomp_init.c \
+    libomprt.c\
     $(include_HEADERS)
 
 #endif

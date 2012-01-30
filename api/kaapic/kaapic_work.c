@@ -495,12 +495,12 @@ static void _kaapic_thief_entrypoint(
 int kaapic_foreach_workinit
 (
   kaapi_thread_context_t* self_thread,
-  kaapic_work_t*         work,
-  int32_t                first, 
-  int32_t                last,
-  kaapic_foreach_attr_t* attr,
-  kaapic_foreach_body_t  body_f,
-  kaapic_body_arg_t*     body_args
+  kaapic_work_t*          work,
+  kaapi_workqueue_index_t first, 
+  kaapi_workqueue_index_t last,
+  kaapic_foreach_attr_t*  attr,
+  kaapic_foreach_body_t   body_f,
+  kaapic_body_arg_t*      body_args
 )
 {
   /* if empty work 
@@ -514,10 +514,6 @@ int kaapic_foreach_workinit
   int tid = self_thread->stack.proc->kid;
 #endif
   
-  /* warning: interval includes j */
-  kaapi_workqueue_index_t i = first;
-  kaapi_workqueue_index_t j = last;
-
 #if CONFIG_MAX_TID
   /* concurrency cannot be more than (maxtid + 1) threads */
   unsigned long concurrency = (unsigned long)(xxx_max_tid + 1);
@@ -546,7 +542,7 @@ int kaapic_foreach_workinit
   /* alignment constraint ? sizeof(void*) */
 
   /* map has one bit per core and excludes the master */
-  range_size = j - i;
+  range_size = last - first;
 
   KAAPI_SET_SELF_WORKLOAD(range_size);
 
@@ -572,23 +568,23 @@ int kaapic_foreach_workinit
   kaapi_bitmap_value_unset(&map, 0);
 
   /* allocate and init work array */
-  work_array_init(&work->_wa, i + off, scale, &map);
+  work_array_init(&work->_wa, first + off, scale, &map);
 
   /* master has to adjust to include off. bypass first pop. */
-  j = i + off + scale;
+  last = first + off + scale;
 
   /* initialize the workqueue */
 #if defined(USE_KPROC_LOCK)
   kaapi_workqueue_init_with_lock(
     &work->cr,
-    i, j,
+    first, last,
     &kaapi_all_kprocessors[tid]->lock
   );
 #else
   kaapi_atomic_initlock(&work->lock);
   kaapi_workqueue_init_with_lock(
     &work->cr, 
-    i, j,
+    first, last,
     &work->lock
   );
 #endif

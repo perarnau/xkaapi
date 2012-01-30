@@ -49,7 +49,7 @@
 #include <stdint.h>
 
 #include "kaapi_impl.h"
-#include "kaapic.h"
+#include "kaapic_impl.h"
 
 
 
@@ -58,8 +58,10 @@ typedef struct PerTeamLocalStorage {
   int            threadid;
   int            numthreads;
   kaapi_frame_t  frame;
+  kaapic_work_t  work;    /* last foreach loop context */
 } kaapi_libgompctxt_t ;
 
+extern kaapi_libgompctxt_t* GOMP_get_ctxtkproc( kaapi_processor_t* kproc );
 extern kaapi_libgompctxt_t* GOMP_get_ctxt();
 
 

@@ -93,14 +93,50 @@ There are separate routines for handling loops with an ORDERED clause. Bookkeepi
 */
 
 
-bool GOMP_loop_dynamic_start (long, long, long, long, long *, long *)
+bool GOMP_loop_dynamic_start (
+  long start, 
+  long end, 
+  long incr, 
+  long chunk_size,
+	long *istart, 
+  long *iend
+)
 {
   printf("%s:: \n", __FUNCTION__);
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  kaapi_thread_context_t* const self_thread = kproc->thread;
+  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc( kproc );
+  
+  if (kaapic_foreach_workinit(self_thread, 
+        &ctxt->work, 
+        start, 
+        end, 
+        0,    /* attr */
+        0,    /* body */
+        0     /* arg */
+    ) ==0)
+    return 0;
+  
+  return kaapic_foreach_worknext(
+        &ctxt->work, 
+        istart,
+        iend
+  );
+  
 }
 
-bool GOMP_loop_dynamic_next (long *, long *)
+bool GOMP_loop_dynamic_next (long *istart, long *iend)
 {
   printf("%s:: \n", __FUNCTION__);
+
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc( kproc );
+
+  return kaapic_foreach_worknext(
+        &ctxt->work, 
+        istart,
+        iend
+  );
 }
 
 void GOMP_parallel_loop_dynamic_start (void (*)(void *), void *,

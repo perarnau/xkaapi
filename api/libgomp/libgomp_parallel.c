@@ -45,7 +45,7 @@
 #include "libgomp.h"
 
 
-static inline kaapi_libgompctxt_t* _GOMP_get_ctxt( kaapi_processor_t* kproc )
+kaapi_libgompctxt_t* GOMP_get_ctxtkproc( kaapi_processor_t* kproc )
 {
   if (kproc->libgomp_tls == 0)
   {
@@ -61,7 +61,7 @@ static inline kaapi_libgompctxt_t* _GOMP_get_ctxt( kaapi_processor_t* kproc )
 
 kaapi_libgompctxt_t* GOMP_get_ctxt()
 {
-  return _GOMP_get_ctxt(kaapi_get_current_processor());
+  return GOMP_get_ctxtkproc(kaapi_get_current_processor());
 }
 
 
@@ -138,7 +138,7 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
     num_threads = kaapic_get_concurrency ();
   
   /* do not save the ctxt, assume just one top level ctxt */
-  kaapi_libgompctxt_t* ctxt = _GOMP_get_ctxt(kproc);
+  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc(kproc);
   thread = kaapi_threadcontext2thread(kproc->thread);
 
   /* save frame */
@@ -190,7 +190,7 @@ GOMP_parallel_end (void)
   /* implicit sync */
 
   /* do not save the ctxt, assume just one top level ctxt */
-  kaapi_libgompctxt_t* ctxt = _GOMP_get_ctxt(kproc);
+  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc(kproc);
 
   /* restore frame */
   kaapi_thread_restore_frame( kaapi_threadcontext2thread(kproc->thread), &ctxt->frame);
