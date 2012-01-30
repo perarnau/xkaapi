@@ -130,11 +130,13 @@ kaapi_cuda_mem_alloc(
 
 out_of_memory:
 	res = cudaMalloc( &devptr, size );
+#if 0
 	if( res == CUDA_ERROR_OUT_OF_MEMORY ) {
 		if( kaapi_cuda_mem_blk_remove( proc, size ) )
 			return -1;
 		goto out_of_memory;
 	}
+#endif
 	if (res != CUDA_SUCCESS) {
 		fprintf( stdout, "[%s] ERROR cuMemAlloc (%d) size=%lu kid=%lu\n",
 				__FUNCTION__, res, size, 
