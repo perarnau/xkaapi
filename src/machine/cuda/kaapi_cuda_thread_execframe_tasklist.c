@@ -46,8 +46,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stddef.h>
-#include <cuda_runtime_api.h>
 #include <sys/types.h>
+
+#include <cuda_runtime_api.h>
 
 #include "kaapi_impl.h"
 #include "kaapi_tasklist.h"

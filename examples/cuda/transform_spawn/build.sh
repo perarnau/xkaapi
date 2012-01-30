@@ -9,5 +9,6 @@ $CUDADIR/bin/nvcc -w -g \
     -DKAAPI_NDEBUG=1 \
     -DKAAPI_DEBUG=0 \
     transform.cu \
+    -o transform \
     -L$XKAAPIDIR/lib -lkaapi -lkaapi++ \
     -L$CUDADIR/lib64 -lcuda -lcublas

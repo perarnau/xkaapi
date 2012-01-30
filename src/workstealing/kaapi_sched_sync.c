@@ -113,7 +113,7 @@ redo:
 #if defined(KAAPI_USE_CUDA)
   if( kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA ){
     if (thread->stack.sfp->tasklist == 0) 
-      err = kaapi_stack_execframe( &thread->stack );
+      err = kaapi_cuda_thread_stack_execframe( &thread->stack );
     else
       err = kaapi_cuda_thread_execframe_tasklist( thread );
   }

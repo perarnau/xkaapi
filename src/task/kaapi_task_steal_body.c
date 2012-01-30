@@ -169,10 +169,6 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     arg->origin_fmt = fmt = kaapi_format_resolvebybody(body);
   kaapi_assert_debug( fmt !=0 );
 
-#if KAAPI_VERBOSE
-    fprintf( stdout, "[%s] task=%s\n", __FUNCTION__, fmt->name );
-    fflush(stdout);
-#endif
   /* the original task arguments */
   orig_task_args  = kaapi_task_getargs(arg->origin_task);
 
@@ -200,7 +196,16 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     }
     else
 #endif
+    {
+#if KAAPI_VERBOSE
+    fprintf( stdout, "[%s] task=%p stack=%p kid=%lu\n", __FUNCTION__,
+	    fmt->name, orig_task_args, kaapi_get_current_kid() );
+    fflush(stdout);
+#endif
+//	if ( fmt != 0 )
+//		kaapi_mem_host_map_sync_ptr( fmt, orig_task_args );
 	body( orig_task_args, thread );
+    }
   }
   else /* it exists at least one w parameter with war dependency or a cw_param: recopies the arguments */
   {
@@ -269,7 +274,11 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     }
     else
 #endif
-    body( copy_task_args, thread);
+    {
+//	if ( fmt != 0 )
+//		kaapi_mem_host_map_sync_ptr( fmt, copy_task_args );
+        body( copy_task_args, thread);
+    }
   }
 
   /* push task that will be executed after all created task by the user task */

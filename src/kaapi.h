@@ -57,7 +57,7 @@
 #  include <winnt.h>
 #endif
 
-#define KAAPI_VERBOSE 1
+//#define KAAPI_VERBOSE 1
 
 #if !defined(__SIZEOF_POINTER__)
 #  if defined(__LP64__) || defined(__x86_64__)

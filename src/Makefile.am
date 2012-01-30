@@ -233,6 +233,7 @@ libkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda_execframe.h \
   machine/cuda/kaapi_cuda_execframe.c \
   machine/cuda/kaapi_cuda_thread_execframe_tasklist.c \
+  machine/cuda/kaapi_cuda_thread_stack_execframe.c \
   machine/cuda/kaapi_cuda_threadgroup_execframe.h \
   machine/cuda/kaapi_cuda_threadgroup_execframe.c \
   machine/cuda/kaapi_cuda_cublas.h \

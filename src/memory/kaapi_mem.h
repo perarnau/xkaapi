@@ -160,17 +160,20 @@ kaapi_mem_host_map_get_asid( const kaapi_mem_host_map_t* map )
 { return map->asid; }
 
 int
-kaapi_mem_host_map_find( const kaapi_mem_host_map_t*, kaapi_mem_addr_t, kaapi_mem_data_t** );
+kaapi_mem_host_map_find( kaapi_mem_addr_t, kaapi_mem_data_t** );
 
 int
-kaapi_mem_host_map_find_or_insert( const kaapi_mem_host_map_t*, kaapi_mem_addr_t, kaapi_mem_data_t** );
+kaapi_mem_host_map_find_or_insert( kaapi_mem_addr_t, kaapi_mem_data_t** );
 
 int
-kaapi_mem_host_map_find_or_insert_( const kaapi_mem_host_map_t*,
+kaapi_mem_host_map_find_or_insert_(
 	kaapi_mem_addr_t, kaapi_mem_data_t**);
 
 int
-kaapi_mem_host_map_sync( const kaapi_format_t* , kaapi_task_t* );
+kaapi_mem_host_map_sync( const kaapi_format_t* , void* );
+
+int
+kaapi_mem_host_map_sync_ptr( const kaapi_format_t* , void* );
 
 #if 0
 /* kaapi_mem_mapping is the set of the remote addr

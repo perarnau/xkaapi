@@ -14,12 +14,12 @@
  */
 static inline kaapi_data_t*
 xxx_kaapi_cuda_data_allocate(
-		const kaapi_mem_host_map_t* host_map,
+		const kaapi_mem_host_map_t* map,
 		kaapi_mem_data_t* kmd,
 		kaapi_data_t* src
 		)
 {
-	const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
+	const kaapi_mem_asid_t asid = kaapi_mem_host_map_get_asid(map);
 
 #if 0
 	fprintf(stdout, "[%s] kid=%lu asid=%lu\n", __FUNCTION__,
@@ -27,7 +27,7 @@ xxx_kaapi_cuda_data_allocate(
 	      (unsigned long int)host_asid );
 	fflush( stdout );
 #endif
-	if( !kaapi_mem_data_has_addr( kmd, host_asid ) ) {
+	if( !kaapi_mem_data_has_addr( kmd, asid ) ) {
 		kaapi_data_t* dest = (kaapi_data_t*)malloc(sizeof(kaapi_data_t));
 		kaapi_cuda_mem_alloc( &dest->ptr, 0UL, 
 		    kaapi_memory_view_size(&src->view), 0 );
@@ -40,16 +40,16 @@ xxx_kaapi_cuda_data_allocate(
 	      (unsigned long int)host_asid );
 	fflush( stdout );
 #endif
-		kaapi_mem_data_set_addr( kmd, host_asid, (kaapi_mem_addr_t)dest );
-		kaapi_mem_data_set_dirty( kmd, host_asid );
-		kaapi_mem_host_map_find_or_insert_( host_map,
+		kaapi_mem_data_set_addr( kmd, asid, (kaapi_mem_addr_t)dest );
+		kaapi_mem_data_set_dirty( kmd, asid );
+		kaapi_mem_host_map_find_or_insert_( 
 		    (kaapi_mem_addr_t)kaapi_pointer2void(dest->ptr),
 		    &kmd );
 		kaapi_cuda_mem_register( src->ptr, &src->view );
-	return dest;
+		return dest;
 	} else {
 	    kaapi_data_t* dest= (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
-		     host_asid );
+		     asid );
 #if 0
 	fprintf(stdout, "[%s] FOUND hostptr=%p devptr=%p kmd=%p kid=%lu asid=%lu\n", __FUNCTION__,
 		kaapi_pointer2void(src->ptr), kaapi_pointer2void(dest->ptr),
@@ -78,7 +78,7 @@ xxx_kaapi_cuda_data_send_ro(
 			src->ptr, &src->view );
 		kaapi_mem_data_clear_dirty( kmd, host_asid );
 	}
-#if 0
+#if 1
 	else {
 	fprintf(stdout, "[%s] CLEAN dest=%p src=%p kid=%lu asid=%lu\n", __FUNCTION__,
 		kaapi_pointer2void(dest->ptr), kaapi_pointer2void(src->ptr),
@@ -145,13 +145,13 @@ int kaapi_cuda_data_send(
 		kaapi_access_t access = kaapi_format_get_access_param( fmt,
 			       	i, sp );
 		kaapi_data_t* src = kaapi_data( kaapi_data_t, &access );
-		kaapi_mem_host_map_find_or_insert( host_map,
+		kaapi_mem_host_map_find_or_insert( 
 			(kaapi_mem_addr_t)kaapi_pointer2void(src->ptr),
 			&kmd );
 		if( !kaapi_mem_data_has_addr( kmd, host_asid ) )
 		    kaapi_mem_data_set_addr( kmd, host_asid,
 			    (kaapi_mem_addr_t)src );
-#if 0
+#if 1
 	fprintf(stdout, "[%s] find=%p kmd=%p kid=%lu asid=%lu\n", __FUNCTION__,
 		kaapi_pointer2void(src->ptr), kmd,
 		(unsigned long int)kaapi_get_current_kid(),
@@ -228,12 +228,12 @@ int kaapi_cuda_data_recv(
 	    kaapi_access_t access = kaapi_format_get_access_param( fmt,
 			    i, sp );
 	    kaapi_data_t* d_dev = kaapi_data( kaapi_data_t, &access );
-	    kaapi_mem_host_map_find_or_insert( cuda_map,
+	    kaapi_mem_host_map_find_or_insert( 
 		    (kaapi_mem_addr_t)kaapi_pointer2void(d_dev->ptr),
 		    &kmd );
 	    kaapi_data_t* d_host = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
 		    kaapi_mem_host_map_get_asid(host_map) );
-#if 0
+#if 1
     fprintf(stdout, "[%s] (%lu -> %lu) hostptr=%p devptr=%p kmd=%p kid=%lu\n", __FUNCTION__,
 	    (unsigned long int)kaapi_mem_host_map_get_asid(cuda_map), 
 	    (unsigned long int)kaapi_mem_host_map_get_asid(host_map), 
@@ -277,7 +277,7 @@ int kaapi_cuda_data_send_ptr(
 
 	    kaapi_access_t access = kaapi_format_get_access_param( fmt,
 			    i, sp );
-	    kaapi_mem_host_map_find_or_insert( host_map,
+	    kaapi_mem_host_map_find_or_insert( 
 		    (kaapi_mem_addr_t)access.data,
 		    &kmd );
 	    kaapi_data_t* src;
@@ -291,7 +291,7 @@ int kaapi_cuda_data_send_ptr(
 		kaapi_mem_data_set_addr( kmd, host_asid,
 			(kaapi_mem_addr_t)src );
 	    }
-#if 1
+#if 0
     fprintf(stdout, "[%s] find=%p kmd=%p kid=%lu asid=%lu\n", __FUNCTION__,
 	    kaapi_pointer2void(src->ptr), kmd,
 	    (unsigned long int)kaapi_get_current_kid(),
@@ -343,12 +343,12 @@ int kaapi_cuda_data_recv_ptr(
 	    kaapi_access_t access = kaapi_format_get_access_param(
 		    fmt, i, sp );
 	    kaapi_data_t* d_dev = (kaapi_data_t*) access.data;
-	    kaapi_mem_host_map_find_or_insert( cuda_map,
+	    kaapi_mem_host_map_find_or_insert(
 		    (kaapi_mem_addr_t)kaapi_pointer2void(d_dev->ptr),
 		    &kmd );
 	    kaapi_data_t* d_host = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
 		    kaapi_mem_host_map_get_asid(host_map) );
-#if 1
+#if 0
     fprintf(stdout, "[%s] (%lu -> %lu) hostptr=%p devptr=%p kmd=%p kid=%lu\n", __FUNCTION__,
 	    (unsigned long int)kaapi_mem_host_map_get_asid(cuda_map), 
 	    (unsigned long int)kaapi_mem_host_map_get_asid(host_map), 

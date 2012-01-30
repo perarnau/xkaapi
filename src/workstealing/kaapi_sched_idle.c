@@ -126,7 +126,7 @@ redo_execute:
     if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
     {
       if (kproc->thread->stack.sfp->tasklist ==0)
-        err = kaapi_stack_execframe( &kproc->thread->stack );
+        err = kaapi_cuda_thread_stack_execframe( &kproc->thread->stack );
       else
         err = kaapi_cuda_thread_execframe_tasklist( kproc->thread );
     }

@@ -135,7 +135,7 @@ int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t* proc)
   if (proc->is_initialized == 0)
     return -1;
 
-#if defined(KAAPI_DEBUG)
+#if defined(KAAPI_VERBOSE)
     fprintf(stdout, "[%s] kid=%lu\n", __FUNCTION__,
 		    kaapi_get_current_kid() );
     fflush( stdout );

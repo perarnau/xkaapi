@@ -155,9 +155,7 @@ execute_first:
         kaapi_event_push1(stack->proc, thread, KAAPI_EVT_TASK_BEG, pc );
 #if 1
 	if ( td->fmt != 0 )
-		kaapi_mem_host_map_sync( td->fmt, pc );
-//		kaapi_memory_synchronize_params( thread, td->fmt, pc );
-//		kaapi_thread_sync_params( thread, td, pc );
+		kaapi_mem_host_map_sync( td->fmt, pc->sp );
 #endif
         body( pc->sp, (kaapi_thread_t*)stack->sfp );
         kaapi_event_push1(stack->proc, thread, KAAPI_EVT_TASK_END, pc );  

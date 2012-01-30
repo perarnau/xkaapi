@@ -16,5 +16,10 @@ export KAAPI_GPUSET='0~3'
 #export KAAPI_GPUSET=''
 #export KAAPI_DUMP_GRAPH='1'
 
-KAAPI_STACKSIZE=260046848 ./a.out 2048
-#KAAPI_STACKSIZE=260046848 gdb ./a.out 
+inputs="1024 2048 4096"
+
+for i in $inputs
+do
+    KAAPI_STACKSIZE=260046848 ./transform $i
+    #KAAPI_STACKSIZE=260046848 gdb ./transform
+done
