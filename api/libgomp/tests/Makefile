@@ -1,9 +1,9 @@
-#CC=gcc-mp-4.6
-CC=gcc-fsf-4.4
+CC=gcc-mp-4.6
+#CC=gcc-fsf-4.4
 CFLAGS=-g -fopenmp -fdump-tree-all -O3 -Wall
 LDFLAGS=-lgomp
 
-PROGS= parallel shared critical nested barrier single fibo
+PROGS= parallel shared critical nested barrier single fibo task-firstprivate
 
 all: $(PROGS) get-gimple
 
@@ -21,6 +21,8 @@ single: single.o test-toolbox.o
 
 fibo: fibo.o test-toolbox.o
 
+task-firstprivate: task-firstprivate.o test-toolbox.o
+
 # We don't want to generate gimple files for the test-toolbox.
 test-toolbox.o: test-toolbox.c test-toolbox.h
 	$(CC) -g -O3 -Wall -c $<
@@ -34,5 +36,5 @@ get-gimple: $(PROGS)
 	./get-gimple.sh "$(PROGS)"
 
 clean:
-	rm -rf *~ *.o $(PROGS) parallel.c.* shared.c.* critical.c.* nested.c.* barrier.c.* single.c.* fibo.c.* gimp-* 
+	rm -rf *~ *.o $(PROGS) parallel.c.* shared.c.* critical.c.* nested.c.* barrier.c.* single.c.* fibo.c.* task-firstprivate.c.* gimp-* 
 

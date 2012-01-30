@@ -1,8 +1,9 @@
 #! /bin/bash
 
-if [ $# -ne 1 ]; 
+if [ $# -eq 0 ]; 
 then
-    echo "Usage: ./run-single-test.sh testname"
+    echo "Usage: ./run-single-test.sh testname [testargs]"
+    exit
 fi
 
 KAAPI_INSTALL_PATH=/tmp/xkaapi
@@ -18,5 +19,8 @@ else
     export LD_PRELOAD="../.libs/libgomp.so"
 fi
 
+testname=$1
+shift
+
 # Run the test  
-./$1
+./$testname $@
