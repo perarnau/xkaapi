@@ -50,6 +50,7 @@ xxx_kaapi_cuda_data_allocate(
 	} else {
 	    kaapi_data_t* dest= (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
 		     asid );
+	    kaapi_cuda_mem_inc_use( &dest->ptr );
 #if 0
 	fprintf(stdout, "[%s] FOUND hostptr=%p devptr=%p kmd=%p kid=%lu asid=%lu\n", __FUNCTION__,
 		kaapi_pointer2void(src->ptr), kaapi_pointer2void(dest->ptr),
@@ -118,11 +119,6 @@ int kaapi_cuda_data_send(
 {
 	const size_t count_params = kaapi_format_get_count_params(fmt, sp );
 	size_t i;
-//	kaapi_metadata_info_t*  mdi;
-//	kaapi_mem_mapping_t* mapping;
-//	kaapi_mem_map_t* const host_map = &kaapi_all_kprocessors[0]->mem_map;
-//	kaapi_mem_map_t* const self_map = kaapi_get_current_mem_map();
-//	kaapi_mem_asid_t asid = kaapi_mem_map_get_asid( self_map );
     const kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
     const kaapi_mem_host_map_t* host_map = 
 	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
@@ -148,6 +144,7 @@ int kaapi_cuda_data_send(
 		kaapi_mem_host_map_find_or_insert( 
 			(kaapi_mem_addr_t)kaapi_pointer2void(src->ptr),
 			&kmd );
+
 		if( !kaapi_mem_data_has_addr( kmd, host_asid ) )
 		    kaapi_mem_data_set_addr( kmd, host_asid,
 			    (kaapi_mem_addr_t)src );
@@ -158,15 +155,8 @@ int kaapi_cuda_data_send(
 	        (unsigned long int)kaapi_mem_host_map_get_asid(host_map) );
 	fflush( stdout );
 #endif
-//		mdi = src->mdi;
-//		mdi = kaapi_memory_find_metadata( __kaapi_pointer2void(src->ptr) );
-		//kaapi_data_t* dest = _kaapi_metadata_info_get_data( mdi, thread->asid );
-//		dest->view = kaapi_format_get_view_param( fmt,
-//			i, pc->sp );
-//		dest->mdi= mdi;
 
 		kaapi_data_t* dest = xxx_kaapi_cuda_data_allocate( cuda_map, kmd, src );
-//		dest->view = kaapi_format_get_view_param( fmt, i, task->sp );
 
 		if( KAAPI_ACCESS_IS_READ(m) )
 			xxx_kaapi_cuda_data_send_ro( cuda_map, kmd, dest, src );

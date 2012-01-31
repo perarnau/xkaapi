@@ -143,8 +143,8 @@ int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t* proc)
   kaapi_cuda_cublas_finalize( proc );
   for( i= 0; i < KAAPI_CUDA_MAX_STREAMS; i++ ) 
       cudaStreamDestroy( proc->stream[i] );
-  kaapi_cuda_ctx_pop( );
 
+//  kaapi_cuda_ctx_pop( );
   kaapi_cuda_dev_close( proc );
   proc->is_initialized = 0;
 

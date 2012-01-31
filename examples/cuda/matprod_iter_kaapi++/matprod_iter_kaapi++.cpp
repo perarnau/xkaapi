@@ -150,19 +150,19 @@ struct doit {
   void operator()(int argc, char** argv)
   {
     // av[1] = matrix_size
-    // av[2] = block_count
+    // av[2] = block_size
     int matrix_size = 512;
-    int block_count = 1;
+    int block_size = 1;
     int verif = 0;
 
     if( argc > 1 )
 	    matrix_size= atoi(argv[1]);
     if( argc > 2 )
-	    block_count= atoi(argv[2]);
+	    block_size= atoi(argv[2]);
     if( argc > 3 )
 	    verif = 1; // check results ON
 
-    BLOCSIZE = matrix_size / block_count;
+    BLOCSIZE = block_size;
 
     const int n = matrix_size;
 
@@ -220,11 +220,11 @@ struct doit {
     double gflops = 1.0e-9 * ((2.0 * n * n * n)/(t1-t0));
 
     fprintf( stdout, "# size bloc threads time GFlop/s\n" );
-    fprintf( stdout, "GEMM %d %d %d %.10f %.6f\n", matrix_size, block_count,
+    fprintf( stdout, "GEMM %d %d %d %.10f %.6f\n", matrix_size, block_size,
 		    kaapi_getconcurrency(), tdelta, gflops );
     fflush(stdout);
 
-    //fprintf( stdout, "%d %d %.4f %\n", matrix_size, block_count, tdelta );
+    //fprintf( stdout, "%d %d %.4f %\n", matrix_size, block_size, tdelta );
     //fprintf( stdout, "Gflop/second %.2f\n", gflops);
 
     // If n is small, print the results

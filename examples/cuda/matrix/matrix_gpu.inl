@@ -384,7 +384,7 @@ template<> struct TaskBodyGPU<TaskDGEMM>
 	kaapi_data_t* h_src= _kaapi_metadata_info_get_data( mdi, host_asid );
 #endif
 
-#if KAAPI_VERBOSE
+#if 1
     fprintf(stdout, "TaskGPU GEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", m, n, k, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
 #endif
 

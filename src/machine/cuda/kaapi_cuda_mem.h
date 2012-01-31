@@ -19,6 +19,9 @@ int kaapi_cuda_mem_alloc(
 int kaapi_cuda_mem_register( kaapi_pointer_t ptr, 
 		const kaapi_memory_view_t *view );
 
+int
+kaapi_cuda_mem_inc_use( kaapi_pointer_t *ptr );
+
 int kaapi_cuda_mem_copy_htod(
 	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
 	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src

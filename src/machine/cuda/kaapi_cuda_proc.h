@@ -81,6 +81,9 @@ typedef struct kaapi_cuda_mem
 	size_t used;
 	struct kaapi_cuda_mem_blk_t* beg;
 	struct kaapi_cuda_mem_blk_t* end;
+
+	/* all GPU allocated pointers */
+	kaapi_big_hashmap_t kmem;
 } kaapi_cuda_mem_t;
 
 #ifdef KAAPI_CUDA_USE_POOL
@@ -89,19 +92,19 @@ struct kaapi_cuda_pool;
 
 typedef struct kaapi_cuda_proc
 {
-//  CUdevice dev;
     unsigned int index;
-  cudaStream_t stream[KAAPI_CUDA_MAX_STREAMS];
-  kaapi_cuda_ctx_t ctx;
-  kaapi_cuda_mem_t memory;
+    cudaStream_t stream[KAAPI_CUDA_MAX_STREAMS];
+    kaapi_cuda_ctx_t ctx;
+    kaapi_cuda_mem_t memory;
 #ifdef KAAPI_CUDA_USE_POOL
-  struct kaapi_cuda_pool* pool;
+    struct kaapi_cuda_pool* pool;
 #endif
-  int is_initialized;
+    int is_initialized;
 
-  /* cached attribtues */
-  unsigned int kasid_user;
-  kaapi_address_space_id_t asid;
+    /* cached attribtues */
+    unsigned int kasid_user;
+    kaapi_address_space_id_t asid;
+
 } kaapi_cuda_proc_t;
 
 

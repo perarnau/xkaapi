@@ -57,9 +57,10 @@ kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
     return -1;
   }
   /* 80% of total memory */
-  proc->memory.total = 0.8*prop.totalGlobalMem;
+  proc->memory.total = 0.2*prop.totalGlobalMem;
   proc->memory.used= 0;
   proc->memory.beg = proc->memory.end = NULL;
+  kaapi_big_hashmap_init( &proc->memory.kmem, 0 );  
 
   return 0;
 }
@@ -67,7 +68,12 @@ kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
 void
 kaapi_cuda_dev_close( kaapi_cuda_proc_t* proc )
 {
-	pthread_mutex_destroy( &proc->ctx.mutex );
+    pthread_mutex_destroy( &proc->ctx.mutex );
+    kaapi_big_hashmap_destroy( &proc->memory.kmem );  
+#if 0
+		fprintf(stdout, "[%s]\n", __FUNCTION__ );
+		fflush(stdout);
+#endif
 #if (CUDART_VERSION >= 4010)
 	cudaDeviceReset();
 #endif
