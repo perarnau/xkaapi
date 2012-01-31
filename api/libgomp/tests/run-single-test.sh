@@ -6,7 +6,15 @@ then
     exit
 fi
 
-KAAPI_INSTALL_PATH=/tmp/xkaapi
+KAAPI_INSTALL_PATH=
+
+# KAAPI_INSTALL_PATH=$HOME/soft/install/xkaapi
+
+if [ "x$KAAPI_INSTALL_PATH" == "x" ];
+then
+    echo "Fatal: KAAPI_INSTALL_PATH must be defined in run-single-test.sh."
+    exit
+fi
 
 (uname -a | grep Darwin) > /dev/null 2> /dev/null
 DARWIN_SYS=$?
@@ -23,4 +31,4 @@ testname=$1
 shift
 
 # Run the test  
-./$testname $@
+$testname $@

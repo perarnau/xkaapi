@@ -1,6 +1,15 @@
 #! /bin/bash
 
-KAAPI_INSTALL_PATH=/tmp/xkaapi
+KAAPI_INSTALL_PATH=
+
+# KAAPI_INSTALL_PATH=$HOME/soft/install/xkaapi
+
+if [ "x$KAAPI_INSTALL_PATH" == "x" ];
+then
+    echo "Fatal: KAAPI_INSTALL_PATH must be defined in run-tests.sh."
+    exit
+fi
+
 
 TESTS="parallel barrier critical single shared"
 
