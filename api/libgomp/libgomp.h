@@ -51,8 +51,6 @@
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
 
-
-
 /** Pre-historic TLS multiplex support for OMP */
 typedef struct PerTeamLocalStorage {
   int            threadid;
@@ -72,6 +70,10 @@ enum omp_task_kind
   GOMP_TASK_WAITING,
   GOMP_TASK_TIED
 };
+
+/* init.c */
+
+extern int gomp_nthreads_var;
 
 /* barrier.c */
 
