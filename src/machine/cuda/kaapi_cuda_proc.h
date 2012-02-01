@@ -53,18 +53,20 @@
 
 #include "cublas_v2.h"
 
+//#define KAAPI_CUDA_ASYNC	1
+//#define	    KAAPI_CUDA_MEM_ALLOC_MANAGER  0
+#define KAAPI_CUDA_MEM_FREE_FACTOR  1
+//#define	    KAAPI_CUDA_MODE_BASIC	1
+
 //#define KAAPI_CUDA_USE_POOL	1
 
+#ifdef KAAPI_CUDA_ASYNC
 #define KAAPI_CUDA_MAX_STREAMS		4
-//#define KAAPI_CUDA_HTOD_STREAM		0
-//#define KAAPI_CUDA_KERNEL_STREAM        1
-//#define KAAPI_CUDA_DTOH_STREAM		2
-//#define KAAPI_CUDA_DTOD_STREAM		3
-/* TODO: ifdef to multiple streams */
 #define KAAPI_CUDA_HTOD_STREAM		0
-#define KAAPI_CUDA_KERNEL_STREAM        0
-#define KAAPI_CUDA_DTOH_STREAM		0
-#define KAAPI_CUDA_DTOD_STREAM		0
+#define KAAPI_CUDA_KERNEL_STREAM        1
+#define KAAPI_CUDA_DTOH_STREAM		2
+#define KAAPI_CUDA_DTOD_STREAM		3
+#endif /* KAAPI_CUDA_ASYNC */
 
 typedef struct kaapi_cuda_ctx
 {
@@ -95,7 +97,11 @@ struct kaapi_cuda_pool;
 typedef struct kaapi_cuda_proc
 {
     unsigned int index;
+#ifdef KAAPI_CUDA_ASYNC
     cudaStream_t stream[KAAPI_CUDA_MAX_STREAMS];
+#else
+    cudaStream_t stream;
+#endif
     kaapi_cuda_ctx_t ctx;
 
 #ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER

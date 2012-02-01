@@ -72,16 +72,25 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
   if ( kaapi_cuda_dev_open( proc, idev) )
     return -1;
 
+#ifdef KAAPI_CUDA_ASYNC
   for( i= 0; i < KAAPI_CUDA_MAX_STREAMS; i++ ) {
       res = cudaStreamCreate( &proc->stream[i] );
-      if (res != CUDA_SUCCESS)
-      {
+      if (res != CUDA_SUCCESS) {
 		fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
 		fflush(stdout);
 	kaapi_cuda_dev_close( proc );
 	return -1;
       }
   }
+#else
+  res = cudaStreamCreate( &proc->stream );
+  if (res != CUDA_SUCCESS) {
+	    fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
+	    fflush(stdout);
+    kaapi_cuda_dev_close( proc );
+    return -1;
+  }
+#endif
 
   /* TODO */
 #if 0
@@ -167,10 +176,11 @@ cudaStream_t kaapi_cuda_kernel_stream(void)
 {
   kaapi_processor_t* const self_proc =
     kaapi_get_current_processor();
-#if KAAPI_CUDA_ASYNC
+  return self_proc->cuda_proc.stream;
+#ifdef KAAPI_CUDA_ASYNC
   return self_proc->cuda_proc.stream[KAAPI_CUDA_KERNEL_STREAM];
 #else
-  return self_proc->cuda_proc.stream[0];
+  return self_proc->cuda_proc.stream;
 #endif
 }
 
@@ -181,7 +191,7 @@ cudaStream_t kaapi_cuda_HtoD_stream(void)
 #if KAAPI_CUDA_ASYNC
   return self_proc->cuda_proc.stream[KAAPI_CUDA_HTOD_STREAM];
 #else
-  return self_proc->cuda_proc.stream[0];
+  return self_proc->cuda_proc.stream;
 #endif
 }
 
@@ -192,7 +202,7 @@ cudaStream_t kaapi_cuda_DtoH_stream(void)
 #if KAAPI_CUDA_ASYNC
   return self_proc->cuda_proc.stream[KAAPI_CUDA_DTOH_STREAM];
 #else
-  return self_proc->cuda_proc.stream[0];
+  return self_proc->cuda_proc.stream;
 #endif
 }
 
@@ -203,7 +213,7 @@ cudaStream_t kaapi_cuda_DtoD_stream(void)
 #if KAAPI_CUDA_ASYNC
   return self_proc->cuda_proc.stream[KAAPI_CUDA_DTOD_STREAM];
 #else
-  return self_proc->cuda_proc.stream[0];
+  return self_proc->cuda_proc.stream;
 #endif
 }
 
