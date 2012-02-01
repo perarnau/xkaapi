@@ -172,12 +172,7 @@ xxx_kaapi_cuda_data_recv(
 	kaapi_cuda_mem_copy_dtoh( h_dest->ptr, &h_dest->view,
 		d_src->ptr, &d_src->view );
 	kaapi_mem_data_clear_all_dirty( kmd );
-#ifdef KAAPI_CUDA_MODE_BASIC
-	const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(map);
-	kaapi_mem_data_clear_addr( kmd, cuda_asid );
-	kaapi_cuda_mem_free( &d_src->ptr );
-	free( d_src );
-#endif
+
 	return 0;
 }
 
@@ -225,6 +220,15 @@ int kaapi_cuda_data_recv(
 #endif
 	    xxx_kaapi_cuda_data_recv( cuda_map, kmd, d_host, d_dev );
 	    }
+#ifdef KAAPI_CUDA_MODE_BASIC
+	    access.data =  d_host;
+	    kaapi_format_set_access_param( fmt, i, sp, &access );
+
+	    const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
+	    kaapi_mem_data_clear_addr( kmd, cuda_asid );
+	    kaapi_cuda_mem_free( &d_dev->ptr );
+	    free( d_dev );
+#endif
     }
 
     return 0;

@@ -7,7 +7,7 @@
 #include "kaapi_cuda_mem.h"
 
 
-#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
+#if	KAAPI_CUDA_MEM_ALLOC_MANAGER
 
 typedef struct kaapi_cuda_mem_blk_t {
 	struct kaapi_cuda_mem_blk_t* next;
@@ -128,7 +128,7 @@ kaapi_cuda_mem_alloc(
 {
 	void* devptr;
 	cudaError_t res;
-#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
+#if	KAAPI_CUDA_MEM_ALLOC_MANAGER
   	kaapi_processor_t* const proc = kaapi_get_current_processor();
 
 	if( __kaapi_cuda_mem_is_full( proc, size) )
@@ -138,7 +138,7 @@ kaapi_cuda_mem_alloc(
 
 out_of_memory:
 	res = cudaMalloc( &devptr, size );
-#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
+#if	KAAPI_CUDA_MEM_ALLOC_MANAGER
 	if( res == CUDA_ERROR_OUT_OF_MEMORY ) {
 		if( kaapi_cuda_mem_blk_remove( proc, size ) )
 			return -1;
@@ -154,7 +154,7 @@ out_of_memory:
 		ptr->ptr = (uintptr_t)devptr;
 		ptr->asid = kasid;
 	}
-#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
+#if	KAAPI_CUDA_MEM_ALLOC_MANAGER
 	kaapi_cuda_mem_blk_insert( proc, ptr, size );
 #endif
 
@@ -170,7 +170,7 @@ kaapi_cuda_mem_free( kaapi_pointer_t *ptr )
 	return 0;
 }
 
-#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
+#if	KAAPI_CUDA_MEM_ALLOC_MANAGER
 int
 kaapi_cuda_mem_inc_use( kaapi_pointer_t *ptr ) 
 {
