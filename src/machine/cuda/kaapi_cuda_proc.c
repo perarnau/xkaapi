@@ -148,8 +148,12 @@ int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t* proc)
     fflush( stdout );
 #endif
   kaapi_cuda_cublas_finalize( proc );
+#ifdef KAAPI_CUDA_ASYNC
   for( i= 0; i < KAAPI_CUDA_MAX_STREAMS; i++ ) 
       cudaStreamDestroy( proc->stream[i] );
+#else
+   cudaStreamDestroy( proc->stream );
+#endif
 
 //  kaapi_cuda_ctx_pop( );
   kaapi_cuda_dev_close( proc );
