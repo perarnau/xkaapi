@@ -50,7 +50,9 @@ xxx_kaapi_cuda_data_allocate(
 	} else {
 	    kaapi_data_t* dest= (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
 		     asid );
+#ifdef	KAAPI_CUDA_MEM_CONTROL
 	    kaapi_cuda_mem_inc_use( &dest->ptr );
+#endif
 #if 0
 	fprintf(stdout, "[%s] FOUND hostptr=%p devptr=%p kmd=%p kid=%lu asid=%lu\n", __FUNCTION__,
 		kaapi_pointer2void(src->ptr), kaapi_pointer2void(dest->ptr),
@@ -180,13 +182,9 @@ xxx_kaapi_cuda_data_recv(
 	       	kaapi_data_t* d_src
 		)
 {
-//	const kaapi_address_space_id_t host_asid = 0UL;
 	kaapi_cuda_mem_copy_dtoh( h_dest->ptr, &h_dest->view,
 		d_src->ptr, &d_src->view );
-	//kaapi_mem_data_clear_dirty( kmd, kaapi_mem_host_map_get_asid(host_map) );
-//	kaapi_mem_data_clear_dirty( kmd, 0 );
 	kaapi_mem_data_clear_all_dirty( kmd );
-//	_kaapi_metadata_info_set_valid( mdi, host_asid );
 	return 0;
 }
 
