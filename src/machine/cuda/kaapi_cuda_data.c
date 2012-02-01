@@ -45,7 +45,7 @@ xxx_kaapi_cuda_data_allocate(
 		     asid );
 #ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
 	    kaapi_cuda_mem_inc_use( &dest->ptr );
-#endif
+#endif /* KAAPI_CUDA_MEM_ALLOC_MANAGER */
 	return dest;
 	}
 #else
@@ -54,26 +54,34 @@ xxx_kaapi_cuda_data_allocate(
 	    kaapi_memory_view_size(&src->view), 0 );
 	dest->view = src->view;
 	kaapi_mem_data_set_addr( kmd, asid, (kaapi_mem_addr_t)dest );
-	kaapi_mem_data_set_dirty( kmd, asid );
 	kaapi_mem_host_map_find_or_insert_( 
 	    (kaapi_mem_addr_t)kaapi_pointer2void(dest->ptr),
 	    &kmd );
-	return dest;
+#if 0
+	fprintf(stdout, "[%s] dest=%p src=%p data=%p kid=%lu asid=%lu\n", __FUNCTION__,
+		kaapi_pointer2void(dest->ptr),
+		kaapi_pointer2void(src->ptr),
+		dest,
+		(unsigned long)kaapi_get_current_kid(),
+	      (unsigned long int)asid );
+	fflush( stdout );
 #endif
+	return dest;
+#endif /* KAAPI_CUDA_MODE_BASIC */
 }
 
 /* The function checks if the dest memory is valid on GPU 
  * */
 static inline int
 xxx_kaapi_cuda_data_send_ro(
-		const kaapi_mem_host_map_t* host_map,
+		const kaapi_mem_host_map_t* map,
 		kaapi_mem_data_t* kmd,
 		kaapi_data_t* dest,
 		kaapi_data_t* src
 		)
 {
+	const kaapi_mem_asid_t host_asid= kaapi_mem_host_map_get_asid(map);
 #ifndef KAAPI_CUDA_MODE_BASIC
-	const kaapi_mem_asid_t host_asid= kaapi_mem_host_map_get_asid(host_map);
 	if ( kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
 		kaapi_cuda_mem_copy_htod( dest->ptr, &dest->view,
 			src->ptr, &src->view );
@@ -98,8 +106,10 @@ xxx_kaapi_cuda_data_send_wr(
 	       	kaapi_data_t* src
 		)
 {
+#ifndef KAAPI_CUDA_MODE_BASIC
         kaapi_mem_data_set_all_dirty_except( kmd, 
 	    kaapi_mem_host_map_get_asid(host_map) );
+#endif
 	return 0;
 }
 
@@ -171,7 +181,9 @@ xxx_kaapi_cuda_data_recv(
 {
 	kaapi_cuda_mem_copy_dtoh( h_dest->ptr, &h_dest->view,
 		d_src->ptr, &d_src->view );
+#ifndef KAAPI_CUDA_MODE_BASIC
 	kaapi_mem_data_clear_all_dirty( kmd );
+#endif
 
 	return 0;
 }
@@ -234,8 +246,10 @@ int kaapi_cuda_data_recv(
 	    kaapi_cuda_mem_free( &d_dev->ptr );
 	    free( d_dev );
 
+#if 0
 	    access.data =  d_host;
 	    kaapi_format_set_access_param( fmt, i, sp, &access );
+#endif
 #endif
     }
 

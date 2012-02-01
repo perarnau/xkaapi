@@ -9,8 +9,8 @@ version="$(date +%s)"
 out="$HOME/res/xkaapi-sgemm-4cpu1gpu-${version}.txt"
 
 #export KAAPI_CPUSET='0:3'
-export KAAPI_CPUSET='0:1'
-#export KAAPI_CPUSET='0'
+#export KAAPI_CPUSET='0:2'
+export KAAPI_CPUSET='0'
 
 export KAAPI_GPUSET='0~3'
 #export KAAPI_GPUSET=''
@@ -18,7 +18,7 @@ export KAAPI_GPUSET='0~3'
 
 #export KAAPI_DUMP_GRAPH='1'
 
-#verif="1"
+verif="1"
 
 # small test configuration
 # bsizes="1" ;
@@ -42,9 +42,10 @@ export KAAPI_GPUSET='0~3'
 #bsizes="8"
 #bsizes="16"
 #bsizes="64"
-bsizes="128"
+#bsizes="128"
 #bsizes="256"
-#bsizes="1024"
+#bsizes="512"
+bsizes="1024"
 #bsizes="2048"
 #msizes="2048"
 #msizes="128"
@@ -53,11 +54,11 @@ bsizes="128"
 #msizes="1024"
 #msizes="2048"
 #msizes="4096"
-msizes="8192"
+#msizes="8192"
 #msizes="10240"
 #msizes="$(seq 64 64 2048) $(seq 3072 1024 10240)"
 #msizes="12288" # ouch
-#msizes="16384" # ouch
+msizes="16384" # ouch
 #msizes="20480"
 # bsizes="2 4 8 16"
 
