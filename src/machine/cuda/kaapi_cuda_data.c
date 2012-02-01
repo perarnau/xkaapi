@@ -200,10 +200,11 @@ int kaapi_cuda_data_recv(
 	    if (m == KAAPI_ACCESS_MODE_V) 
 		    continue;
 
-	    if( KAAPI_ACCESS_IS_WRITE(m) ) {
 	    kaapi_access_t access = kaapi_format_get_access_param( fmt,
 			    i, sp );
 	    kaapi_data_t* d_dev = kaapi_data( kaapi_data_t, &access );
+
+	    if( KAAPI_ACCESS_IS_WRITE(m) ) {
 	    kaapi_mem_host_map_find_or_insert( 
 		    (kaapi_mem_addr_t)kaapi_pointer2void(d_dev->ptr),
 		    &kmd );
