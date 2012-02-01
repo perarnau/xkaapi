@@ -6,7 +6,7 @@
 #include "kaapi_cuda_proc.h"
 
 //#define KAAPI_CUDA_ASYNC	1
-#define	    KAAPI_CUDA_MEM_CONTROL  0
+//#define	    KAAPI_CUDA_MEM_CONTROL  0
 #define KAAPI_CUDA_MEM_FREE_FACTOR  1
 
 int kaapi_cuda_mem_free( kaapi_pointer_t *ptr );
