@@ -315,36 +315,6 @@ template<> struct TaskBodyGPU<TaskDTRSM_right>
   }
 };
 
-#if 0
-__global__ void mulKernel
-(const double_type* a, const double_type* b, double_type* c, unsigned int m)
-{
-  // compute a * b = c;
-  // a, b, c of size m x m
-  // ldN the leading dimension
-
-  if ((threadIdx.x == 0) && (threadIdx.y == 0))
-  {
-    for (unsigned int i = 0; i < m; ++i)
-      for (unsigned int j = 0; j < m; ++j)
-	for (unsigned int k = 0; k < m; ++k)
-	  c[i * m + j] += a[i * m + k] * b[k * m + j];
-	  //c[i * m + j] = 1.11;
-  }
-}
-#endif
-
-#if 0
-#if defined(__cplusplus)
-extern "C" {
-#endif
-#include "kaapi_memory.h"
-//extern kaapi_metadata_info_t* kaapi_mem_findinsert_metadata( void* ptr );
-#if defined(__cplusplus)
-}
-#endif
-#endif
-
 template<> struct TaskBodyGPU<TaskDGEMM>
 {
   void operator()
@@ -384,7 +354,7 @@ template<> struct TaskBodyGPU<TaskDGEMM>
 	kaapi_data_t* h_src= _kaapi_metadata_info_get_data( mdi, host_asid );
 #endif
 
-#if 1
+#if 0
     fprintf(stdout, "TaskGPU GEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", m, n, k, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
 #endif
 
@@ -625,19 +595,6 @@ template<> struct TaskBodyGPU<TaskDGETRF>
 #endif
   }
 
-#if 0
-  static void mein_getrf
-  (
-   CUstream stream,
-   int m, int n,
-   double_type* a, int ldda,
-   int* ipiv
-  ) 
-  {
-    // getrf implementation
-    // forked from magma_1.0.0-rc5/src/sgetrf_gpu.cpp
-  }
-#endif // CONFIG_USE_MAGMA == 0
 };
 
 template<> struct TaskBodyGPU<TaskDGETRFNoPiv>
@@ -669,20 +626,6 @@ template<> struct TaskBodyGPU<TaskDGETRFNoPiv>
 	}
 #endif
   }
-
-#if 0
-  static void mein_getrf
-  (
-   CUstream stream,
-   int m, int n,
-   double_type* a, int ldda,
-   int* ipiv
-  ) 
-  {
-    // getrf implementation
-    // forked from magma_1.0.0-rc5/src/sgetrf_gpu.cpp
-  }
-#endif // CONFIG_USE_MAGMA == 0
 };
 
 
@@ -728,21 +671,6 @@ template<> struct TaskBodyGPU<TaskDPOTRF>
 #endif
 
   }
-
-#if 0
-  static void mein_potrf
-  (
-   CUstream stream,
-   char uplo,
-   int n,
-   double_type* a, int lda
-  )
-  {
-    // potrf implementation
-    // forked from magma_1.0.0-rc5/src/dpotrf_gpu.cpp
-  }
-#endif // CONFIG_USE_MAGMA == 0
-
 };
 
 
