@@ -97,7 +97,7 @@ initialize_lib (void)
   if (parse_unsigned_long ("OMP_NUM_THREADS", &env_nthreads))
   {
     /* Kaapi inherits OMP_NUM_THREADS */
-    setenv ("KAAPI_CPU_COUNT", getenv ("OMP_NUM_THREADS"), 1);
+    setenv ("KAAPI_CPUCOUNT", getenv ("OMP_NUM_THREADS"), 1);
   }
 
   kaapic_init (1);
