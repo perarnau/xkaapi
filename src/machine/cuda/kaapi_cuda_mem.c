@@ -6,6 +6,9 @@
 #include "../../src/machine/mt/kaapi_mt_machine.h"
 #include "kaapi_cuda_mem.h"
 
+
+#ifdef	KAAPI_CUDA_MEM_CONTROL
+
 typedef struct kaapi_cuda_mem_blk_t {
 	struct kaapi_cuda_mem_blk_t* next;
 	struct kaapi_cuda_mem_blk_t* prev;
@@ -56,7 +59,6 @@ kaapi_cuda_mem_blk_remove(
 	kaapi_hashentries_t* entry;
 	kaapi_cuda_mem_blk_t *blk;
 	kaapi_cuda_mem_t* cuda_mem = &proc->cuda_proc.memory;
-//	kaapi_data_t* ptr;
 	const kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
 	const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
 	kaapi_mem_data_t *kmd;
@@ -114,6 +116,7 @@ __kaapi_cuda_mem_is_full( kaapi_processor_t* proc, const size_t size )
 	else
 	    return 0;
 }
+#endif /* KAAPI_CUDA_MEM_CONTROL */
 
 int
 kaapi_cuda_mem_alloc(
@@ -125,19 +128,23 @@ kaapi_cuda_mem_alloc(
 {
 	void* devptr;
 	cudaError_t res;
+#ifdef	KAAPI_CUDA_MEM_CONTROL
   	kaapi_processor_t* const proc = kaapi_get_current_processor();
 
 	if( __kaapi_cuda_mem_is_full( proc, size) )
 		if( kaapi_cuda_mem_blk_remove( proc, size ) )
 			return -1;
+#endif
 
 out_of_memory:
 	res = cudaMalloc( &devptr, size );
+#ifdef	KAAPI_CUDA_MEM_CONTROL
 	if( res == CUDA_ERROR_OUT_OF_MEMORY ) {
 		if( kaapi_cuda_mem_blk_remove( proc, size ) )
 			return -1;
 		goto out_of_memory;
 	}
+#endif
 	if (res != CUDA_SUCCESS) {
 		fprintf( stdout, "[%s] ERROR cuMemAlloc (%d) size=%lu kid=%lu\n",
 				__FUNCTION__, res, size, 
@@ -147,15 +154,10 @@ out_of_memory:
 		ptr->ptr = (uintptr_t)devptr;
 		ptr->asid = kasid;
 	}
+#ifdef	KAAPI_CUDA_MEM_CONTROL
 	kaapi_cuda_mem_blk_insert( proc, ptr, size );
-
-#if 0
-	fprintf(stdout, "[%s] mem=%lu used=%lu kid=%lu\n", __FUNCTION__,
-			(size_t)(proc->cuda_proc.memory.total/(2<<20)),
-			(size_t)(proc->cuda_proc.memory.used/(2<<20)),
-			(long unsigned int)kaapi_get_current_kid() );
-	fflush( stdout );
 #endif
+
 	return res;
 }
 
@@ -168,6 +170,7 @@ kaapi_cuda_mem_free( kaapi_pointer_t *ptr )
 	return 0;
 }
 
+#ifdef	KAAPI_CUDA_MEM_CONTROL
 int
 kaapi_cuda_mem_inc_use( kaapi_pointer_t *ptr ) 
 {
@@ -204,6 +207,7 @@ kaapi_cuda_mem_inc_use( kaapi_pointer_t *ptr )
 
     return 0;
 }
+#endif /* KAAPI_CUDA_MEM_CONTROL */
 
 int kaapi_cuda_mem_copy_htod(
 	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,

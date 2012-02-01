@@ -11,43 +11,14 @@
 int
 kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
 {
-  cudaError_t res;
-  size_t mfree;
-  struct cudaDeviceProp prop;
-
   proc->index = index;
-#if 0
-  res = cuDeviceGet( &proc->dev, index );
-  if (res != CUDA_SUCCESS)
-  {
-	if( res != CUDA_SUCCESS ) {
-		fprintf( stderr, "%s ERROR: %d\n", __FUNCTION__, res );
-		fflush( stderr );
-	}
-    return -1;
-  }
-
-  /* use sched_yield while waiting for sync.
-     context is made current for the thread.
-   */
-  res = cuCtxCreate( &proc->ctx.ctx, CU_CTX_SCHED_YIELD, proc->dev );
-  if (res != CUDA_SUCCESS) {
-	if( res != CUDA_SUCCESS ) {
-		fprintf( stderr, "%s ERROR: %d\n", __FUNCTION__, res );
-		fflush( stderr );
-	}
-    return -1;
-  }
-#endif
   pthread_mutexattr_init( &proc->ctx.mta );
   pthread_mutexattr_settype( &proc->ctx.mta, PTHREAD_MUTEX_RECURSIVE );
   pthread_mutex_init( &proc->ctx.mutex, &proc->ctx.mta );
 
-
-  //res= cuMemGetInfo( &proc->memory.total, &mfree );
-#if 0
-  res= cuDeviceTotalMem( &proc->memory.total, proc->dev );
-#endif
+#ifdef	KAAPI_CUDA_MEM_CONTROL
+  cudaError_t res;
+  struct cudaDeviceProp prop;
   res = cudaGetDeviceProperties( &prop, index );
   if (res != CUDA_SUCCESS) {
 	if( res != CUDA_SUCCESS ) {
@@ -61,6 +32,7 @@ kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
   proc->memory.used= 0;
   proc->memory.beg = proc->memory.end = NULL;
   kaapi_big_hashmap_init( &proc->memory.kmem, 0 );  
+#endif
 
   return 0;
 }
@@ -69,15 +41,12 @@ void
 kaapi_cuda_dev_close( kaapi_cuda_proc_t* proc )
 {
     pthread_mutex_destroy( &proc->ctx.mutex );
+#ifdef	KAAPI_CUDA_MEM_CONTROL
     kaapi_big_hashmap_destroy( &proc->memory.kmem );  
-#if 0
-		fprintf(stdout, "[%s]\n", __FUNCTION__ );
-		fflush(stdout);
 #endif
 #if (CUDART_VERSION >= 4010)
 	cudaDeviceReset();
 #endif
-//	cuCtxDestroy( proc->ctx.ctx );
 }
 
 kaapi_processor_t*

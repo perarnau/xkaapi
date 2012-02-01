@@ -73,6 +73,7 @@ typedef struct kaapi_cuda_ctx
 	pthread_mutexattr_t mta;
 } kaapi_cuda_ctx_t;
 
+#ifdef	KAAPI_CUDA_MEM_CONTROL
 struct kaapi_cuda_mem_blk_t;
 
 typedef struct kaapi_cuda_mem
@@ -85,6 +86,7 @@ typedef struct kaapi_cuda_mem
 	/* all GPU allocated pointers */
 	kaapi_big_hashmap_t kmem;
 } kaapi_cuda_mem_t;
+#endif
 
 #ifdef KAAPI_CUDA_USE_POOL
 struct kaapi_cuda_pool;
@@ -95,7 +97,11 @@ typedef struct kaapi_cuda_proc
     unsigned int index;
     cudaStream_t stream[KAAPI_CUDA_MAX_STREAMS];
     kaapi_cuda_ctx_t ctx;
+
+#ifdef	KAAPI_CUDA_MEM_CONTROL
     kaapi_cuda_mem_t memory;
+#endif
+
 #ifdef KAAPI_CUDA_USE_POOL
     struct kaapi_cuda_pool* pool;
 #endif

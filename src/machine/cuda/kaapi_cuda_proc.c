@@ -83,9 +83,7 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
       }
   }
 
-  /* cache the device attributes
-     * TODO kaapi_cuda_proc_properties
-   */
+  /* TODO */
 #if 0
   res = cuDeviceGetAttribute
   (
