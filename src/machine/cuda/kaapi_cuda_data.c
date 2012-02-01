@@ -27,6 +27,7 @@ xxx_kaapi_cuda_data_allocate(
 	      (unsigned long int)host_asid );
 	fflush( stdout );
 #endif
+#ifndef KAAPI_CUDA_MODE_BASIC
 	if( !kaapi_mem_data_has_addr( kmd, asid ) ) {
 		kaapi_data_t* dest = (kaapi_data_t*)malloc(sizeof(kaapi_data_t));
 		kaapi_cuda_mem_alloc( &dest->ptr, 0UL, 
@@ -47,6 +48,18 @@ xxx_kaapi_cuda_data_allocate(
 #endif
 	return dest;
 	}
+#else
+	kaapi_data_t* dest = (kaapi_data_t*)malloc(sizeof(kaapi_data_t));
+	kaapi_cuda_mem_alloc( &dest->ptr, 0UL, 
+	    kaapi_memory_view_size(&src->view), 0 );
+	dest->view = src->view;
+	kaapi_mem_data_set_addr( kmd, asid, (kaapi_mem_addr_t)dest );
+	kaapi_mem_data_set_dirty( kmd, asid );
+	kaapi_mem_host_map_find_or_insert_( 
+	    (kaapi_mem_addr_t)kaapi_pointer2void(dest->ptr),
+	    &kmd );
+	return dest;
+#endif
 }
 
 /* The function checks if the dest memory is valid on GPU 
@@ -59,12 +72,17 @@ xxx_kaapi_cuda_data_send_ro(
 		kaapi_data_t* src
 		)
 {
+#ifndef KAAPI_CUDA_MODE_BASIC
 	const kaapi_mem_asid_t host_asid= kaapi_mem_host_map_get_asid(host_map);
 	if ( kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
 		kaapi_cuda_mem_copy_htod( dest->ptr, &dest->view,
 			src->ptr, &src->view );
 		kaapi_mem_data_clear_dirty( kmd, host_asid );
 	}
+#else
+	kaapi_cuda_mem_copy_htod( dest->ptr, &dest->view,
+		src->ptr, &src->view );
+#endif
 
 	return 0;
 }
@@ -145,7 +163,7 @@ int kaapi_cuda_data_send(
 
 static inline int
 xxx_kaapi_cuda_data_recv(
-		const kaapi_mem_host_map_t* host_map,
+		const kaapi_mem_host_map_t* map,
 		kaapi_mem_data_t* kmd,
 		kaapi_data_t* h_dest, 
 	       	kaapi_data_t* d_src
@@ -154,6 +172,12 @@ xxx_kaapi_cuda_data_recv(
 	kaapi_cuda_mem_copy_dtoh( h_dest->ptr, &h_dest->view,
 		d_src->ptr, &d_src->view );
 	kaapi_mem_data_clear_all_dirty( kmd );
+#ifdef KAAPI_CUDA_MODE_BASIC
+	const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(map);
+	kaapi_mem_data_clear_addr( kmd, cuda_asid );
+	kaapi_cuda_mem_free( &d_src->ptr );
+	free( d_src );
+#endif
 	return 0;
 }
 
