@@ -112,16 +112,6 @@ kaapi_cuda_mem_blk_remove(
 		/* nor allocated neither valid */
 		kaapi_cuda_mem_free( &ptr );
 		mem_free += ptr_size;
-#if 0
-	       	else {
-		    const kaapi_mem_host_map_t* host_map = 
-			kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
-		    const kaapi_mem_asid_t host_asid =
-			kaapi_mem_host_map_get_asid(host_map);
-		    ptr = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd, host_asid );
-		    mem_free += kaapi_memory_view_size( &ptr->view );
-		}
-#endif
 		if( mem_free >= (size * KAAPI_CUDA_MEM_FREE_FACTOR) )
 			break;
 	}
