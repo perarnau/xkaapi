@@ -200,35 +200,42 @@ int kaapi_cuda_data_recv(
 	    if (m == KAAPI_ACCESS_MODE_V) 
 		    continue;
 
+#ifdef KAAPI_CUDA_MODE_BASIC
+	    /* This block executes in the basic case only */
 	    kaapi_access_t access = kaapi_format_get_access_param( fmt,
 			    i, sp );
 	    kaapi_data_t* d_dev = kaapi_data( kaapi_data_t, &access );
-
-	    if( KAAPI_ACCESS_IS_WRITE(m) ) {
 	    kaapi_mem_host_map_find_or_insert( 
 		    (kaapi_mem_addr_t)kaapi_pointer2void(d_dev->ptr),
 		    &kmd );
 	    kaapi_data_t* d_host = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
 		    kaapi_mem_host_map_get_asid(host_map) );
-#if 0
-    fprintf(stdout, "[%s] (%lu -> %lu) hostptr=%p devptr=%p kmd=%p kid=%lu\n", __FUNCTION__,
-	    (unsigned long int)kaapi_mem_host_map_get_asid(cuda_map), 
-	    (unsigned long int)kaapi_mem_host_map_get_asid(host_map), 
-	    kaapi_pointer2void(d_host->ptr), kaapi_pointer2void(d_dev->ptr),
-	    (void*)kmd,
-	    (unsigned long)kaapi_get_current_kid() );
-    fflush( stdout );
 #endif
-	    xxx_kaapi_cuda_data_recv( cuda_map, kmd, d_host, d_dev );
-	    }
-#ifdef KAAPI_CUDA_MODE_BASIC
-	    access.data =  d_host;
-	    kaapi_format_set_access_param( fmt, i, sp, &access );
 
+	    if( KAAPI_ACCESS_IS_WRITE(m) ) {
+#ifndef KAAPI_CUDA_MODE_BASIC
+		/* Additional code in case of non-enabled basic mode.
+		 * So, It just enters at WR parameters */
+		kaapi_access_t access = kaapi_format_get_access_param( fmt,
+				i, sp );
+		kaapi_data_t* d_dev = kaapi_data( kaapi_data_t, &access );
+		kaapi_mem_host_map_find_or_insert( 
+			(kaapi_mem_addr_t)kaapi_pointer2void(d_dev->ptr),
+			&kmd );
+		kaapi_data_t* d_host = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
+			kaapi_mem_host_map_get_asid(host_map) );
+#endif
+		xxx_kaapi_cuda_data_recv( cuda_map, kmd, d_host, d_dev );
+	    }
+
+#ifdef KAAPI_CUDA_MODE_BASIC
 	    const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
 	    kaapi_mem_data_clear_addr( kmd, cuda_asid );
 	    kaapi_cuda_mem_free( &d_dev->ptr );
 	    free( d_dev );
+
+	    access.data =  d_host;
+	    kaapi_format_set_access_param( fmt, i, sp, &access );
 #endif
     }
 
