@@ -16,7 +16,7 @@ kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
   pthread_mutexattr_settype( &proc->ctx.mta, PTHREAD_MUTEX_RECURSIVE );
   pthread_mutex_init( &proc->ctx.mutex, &proc->ctx.mta );
 
-#ifdef	KAAPI_CUDA_MEM_CONTROL
+#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
   cudaError_t res;
   struct cudaDeviceProp prop;
   res = cudaGetDeviceProperties( &prop, index );
@@ -41,7 +41,7 @@ void
 kaapi_cuda_dev_close( kaapi_cuda_proc_t* proc )
 {
     pthread_mutex_destroy( &proc->ctx.mutex );
-#ifdef	KAAPI_CUDA_MEM_CONTROL
+#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
     kaapi_big_hashmap_destroy( &proc->memory.kmem );  
 #endif
 #if (CUDART_VERSION >= 4010)

@@ -32,14 +32,6 @@ xxx_kaapi_cuda_data_allocate(
 		kaapi_cuda_mem_alloc( &dest->ptr, 0UL, 
 		    kaapi_memory_view_size(&src->view), 0 );
 		dest->view = src->view;
-#if 0
-	fprintf(stdout, "[%s] hostptr=%p devptr=%p kmd=%p kid=%lu asid=%lu\n", __FUNCTION__,
-		kaapi_pointer2void(src->ptr), kaapi_pointer2void(dest->ptr),
-		(void*)kmd,
-		(unsigned long)kaapi_get_current_kid(),
-	      (unsigned long int)host_asid );
-	fflush( stdout );
-#endif
 		kaapi_mem_data_set_addr( kmd, asid, (kaapi_mem_addr_t)dest );
 		kaapi_mem_data_set_dirty( kmd, asid );
 		kaapi_mem_host_map_find_or_insert_( 
@@ -50,16 +42,8 @@ xxx_kaapi_cuda_data_allocate(
 	} else {
 	    kaapi_data_t* dest= (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
 		     asid );
-#ifdef	KAAPI_CUDA_MEM_CONTROL
+#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
 	    kaapi_cuda_mem_inc_use( &dest->ptr );
-#endif
-#if 0
-	fprintf(stdout, "[%s] FOUND hostptr=%p devptr=%p kmd=%p kid=%lu asid=%lu\n", __FUNCTION__,
-		kaapi_pointer2void(src->ptr), kaapi_pointer2void(dest->ptr),
-		(void*)kmd,
-		(unsigned long)kaapi_get_current_kid(),
-	      (unsigned long int)host_asid );
-	fflush( stdout );
 #endif
 	return dest;
 	}
@@ -81,15 +65,7 @@ xxx_kaapi_cuda_data_send_ro(
 			src->ptr, &src->view );
 		kaapi_mem_data_clear_dirty( kmd, host_asid );
 	}
-#if 0
-	else {
-	fprintf(stdout, "[%s] CLEAN dest=%p src=%p kid=%lu asid=%lu\n", __FUNCTION__,
-		kaapi_pointer2void(dest->ptr), kaapi_pointer2void(src->ptr),
-		(unsigned long)kaapi_get_current_kid(),
-	        (unsigned int long)host_asid );
-	fflush( stdout );
-	}
-#endif
+
 	return 0;
 }
 
@@ -150,13 +126,6 @@ int kaapi_cuda_data_send(
 		if( !kaapi_mem_data_has_addr( kmd, host_asid ) )
 		    kaapi_mem_data_set_addr( kmd, host_asid,
 			    (kaapi_mem_addr_t)src );
-#if 0
-	fprintf(stdout, "[%s] find=%p kmd=%p kid=%lu asid=%lu\n", __FUNCTION__,
-		kaapi_pointer2void(src->ptr), kmd,
-		(unsigned long int)kaapi_get_current_kid(),
-	        (unsigned long int)kaapi_mem_host_map_get_asid(host_map) );
-	fflush( stdout );
-#endif
 
 		kaapi_data_t* dest = xxx_kaapi_cuda_data_allocate( cuda_map, kmd, src );
 

@@ -73,7 +73,7 @@ typedef struct kaapi_cuda_ctx
 	pthread_mutexattr_t mta;
 } kaapi_cuda_ctx_t;
 
-#ifdef	KAAPI_CUDA_MEM_CONTROL
+#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
 struct kaapi_cuda_mem_blk_t;
 
 typedef struct kaapi_cuda_mem
@@ -98,7 +98,7 @@ typedef struct kaapi_cuda_proc
     cudaStream_t stream[KAAPI_CUDA_MAX_STREAMS];
     kaapi_cuda_ctx_t ctx;
 
-#ifdef	KAAPI_CUDA_MEM_CONTROL
+#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
     kaapi_cuda_mem_t memory;
 #endif
 
