@@ -45,18 +45,64 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
+#include <ctype.h>
+#include <errno.h>
 #include "kaapic.h"
+
+int gomp_nthreads_var = 0;
+
+/* Parse an unsigned long environment varible.  Return true if one was
+   present and it was successfully parsed.  */
+
+static bool
+parse_unsigned_long (const char *name, unsigned long *pvalue)
+{
+  char *env, *end;
+  unsigned long value;
+
+  env = getenv (name);
+  if (env == NULL)
+    return false;
+
+  while (isspace ((unsigned char) *env))
+    ++env;
+  if (*env == '\0')
+    goto invalid;
+
+  errno = 0;
+  value = strtoul (env, &end, 10);
+  if (errno || (long) value <= 0)
+    goto invalid;
+
+  while (isspace ((unsigned char) *end))
+    ++end;
+  if (*end != '\0')
+    goto invalid;
+
+  *pvalue = value;
+  return true;
+
+ invalid:
+  fprintf (stderr, "Invalid value for environment variable %s", name);
+  return false;
+}
+
 
 static void __attribute__ ((constructor))  
 initialize_lib (void) 
 {
-  if (getenv("OMP_NUM_THREADS") !=0)
+  unsigned long env_nthreads = 0;
+  
+  if (parse_unsigned_long ("OMP_NUM_THREADS", &env_nthreads))
   {
     /* Kaapi inherits OMP_NUM_THREADS */
-//    setenv("KAAPI_CPUCOUNT", getenv("OMP_NUM_THREADS"), 1);
+    setenv ("KAAPI_CPUCOUNT", getenv ("OMP_NUM_THREADS"), 1);
   }
-  
+
   kaapic_init (1);
+
+  gomp_nthreads_var = (env_nthreads > 0) ? env_nthreads : kaapic_get_concurrency ();  
 }
 
 static void __attribute__ ((destructor))
