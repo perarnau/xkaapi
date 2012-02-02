@@ -64,6 +64,7 @@ struct WorkShareRep;
 typedef struct GlobalTeamInformation {
   kaapi_lock_t                 lock;       /* 1 iff work is init */
   int                          numthreads;
+  kaapi_atomic_t               single_state;
   struct WorkShareRep*         localinfo[KAAPI_MAX_PROCESSOR];
 } kaapi_libgomp_teaminfo_t;
 
@@ -75,13 +76,13 @@ typedef struct WorkShareRep {
   kaapic_work_t                work;       /* last foreach loop context */
   int                          workload;   /* workload */
   struct WorkShareRep*         master;     /* master workshare */
-  kaapi_libgomp_teaminfo_t*    teaminfo;   /* team information */
 } kaapi_libgompworkshared_t;
 
 
 /** Pre-historic TLS  support for OMP */
 typedef struct PerTeamLocalStorage {
-  kaapi_libgompworkshared_t    workshare;            /* team information */
+  kaapi_libgompworkshared_t    workshare;  /* team workshare */
+  kaapi_libgomp_teaminfo_t*    teaminfo;   /* team information */
   
   int                          threadid;
   int                          numthreads;
@@ -264,8 +265,6 @@ extern void GOMP_sections_end (void);
 extern void GOMP_sections_end_nowait (void);
 
 /* single.c */
-extern kaapi_atomic_t global_single;
-
 extern bool GOMP_single_start (void);
 extern void *GOMP_single_copy_start (void);
 extern void GOMP_single_copy_end (void *);

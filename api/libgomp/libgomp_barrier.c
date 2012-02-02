@@ -89,5 +89,10 @@ gomp_barrier_wait (struct gomp_barrier *barrier)
 
 void GOMP_barrier (void)
 {
+  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();
+  /* to do: move barrier to the information contained in ctxt->teaminfo */
   gomp_barrier_wait (&global_barrier);
+  
+  /* barrier should reset single ? */
+  
 }

@@ -6,7 +6,7 @@ then
     exit
 fi
 
-# KAAPI_INSTALL_PATH=$HOME/soft/install/xkaapi
+#KAAPI_INSTALL_PATH=
 
 if [ "x$KAAPI_INSTALL_PATH" == "x" ];
 then
@@ -29,4 +29,4 @@ testname=$1
 shift
 
 # Run the test  
-$testname $@
+time $testname $@

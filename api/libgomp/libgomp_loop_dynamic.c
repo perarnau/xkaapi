@@ -108,7 +108,7 @@ bool GOMP_loop_dynamic_start (
   kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc( kproc );
   kaapi_libgompworkshared_t* workshare = &ctxt->workshare;
 
-  kaapi_atomic_lock( &workshare->teaminfo->lock );
+  kaapi_atomic_lock( &ctxt->teaminfo->lock );
 
   if (1 /* is master init ? 1 -> yes I'm a slave*/)
   {
@@ -130,7 +130,7 @@ bool GOMP_loop_dynamic_start (
           0     /* arg */
       );
   }
-  kaapi_atomic_unlock( &workshare->teaminfo->lock );
+  kaapi_atomic_unlock( &ctxt->teaminfo->lock );
 
   if (retval ==0) return 0;
   

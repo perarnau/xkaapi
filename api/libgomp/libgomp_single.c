@@ -45,14 +45,18 @@
 
 #include <stdio.h>
 
-kaapi_atomic_t global_single;
-
 /* return true if the thread success to get single */
 bool GOMP_single_start (void)
 {
-  if (KAAPI_ATOMIC_READ(&global_single) == 1) 
+  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();
+#if 1 // ONLY 0 PASS SINGLE
+  if (ctxt->threadid == 0) return 1;
+  return 0;
+#else
+  if (KAAPI_ATOMIC_READ(&ctxt->teaminfo->single_state) == 1) 
     return 0;
-  return KAAPI_ATOMIC_CAS (&global_single, 0, 1) !=0;
+  return KAAPI_ATOMIC_CAS (&ctxt->teaminfo->single_state, 0, 1) !=0;
+#endif
 }
 
 void * GOMP_single_copy_start (void)
