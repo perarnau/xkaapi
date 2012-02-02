@@ -88,66 +88,48 @@ extern cublasHandle_t kaapi_cuda_cublas_handle( void );
 /* from cublas.h */
 
 /* Helper functions */
-static __inline__ cublasOperation_t convertToOp( char trans ) 
+static __inline__ cublasOperation_t convertToOp( const enum CBLAS_TRANSPOSE trans ) 
 {
     switch(trans) {
         case CblasNoTrans:
-	case 'n':
-	case 'N':
             return CUBLAS_OP_N;
         case CblasTrans:
-	case 't':
-	case 'T':
             return CUBLAS_OP_T;
         case CblasConjTrans:
-	case 'c':
-	case 'C':
             return CUBLAS_OP_C;                        
         default:
             return CUBLAS_OP_N;
     }
 
 }
-static __inline__ cublasFillMode_t convertToFillMode( char uplo ) 
+static __inline__ cublasFillMode_t convertToFillMode( const enum CBLAS_UPLO uplo ) 
 {
     switch (uplo) {
         case CblasUpper:
-	case 'u':
-	case 'U':
             return CUBLAS_FILL_MODE_UPPER;
 	case CblasLower:
-        case 'L':
-        case 'l':
         default:
          return CUBLAS_FILL_MODE_LOWER;
     }        
 }
 
-static __inline__ cublasDiagType_t convertToDiagType( char diag ) 
+static __inline__ cublasDiagType_t convertToDiagType( const enum CBLAS_DIAG diag ) 
 {
     switch (diag) {
 	case CblasUnit:
-        case 'U':
-        case 'u':
             return CUBLAS_DIAG_UNIT;
 	case CblasNonUnit:
-        case 'N':
-        case 'n':
         default:
          return CUBLAS_DIAG_NON_UNIT;
     }        
 }
 
-static __inline__ cublasSideMode_t convertToSideMode( char side ) 
+static __inline__ cublasSideMode_t convertToSideMode( const enum CBLAS_SIDE side ) 
 {
     switch (side) {
 	case CblasRight:
-        case 'R':
-        case 'r':
             return CUBLAS_SIDE_RIGHT;
 	case CblasLeft:
-        case 'L':
-        case 'l':
         default:
          return CUBLAS_SIDE_LEFT;
     }        
