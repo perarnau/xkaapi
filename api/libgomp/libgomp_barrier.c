@@ -51,7 +51,7 @@ gomp_barrier_init (struct gomp_barrier *barrier, unsigned int num)
 {
   barrier->nthreads = num;
   KAAPI_ATOMIC_WRITE (&barrier->cycle, 0);
-  memset (barrier->count, 0, BAR_CYCLES * sizeof (kaapi_atomic_t));
+  memset (barrier->count, 0, BAR_CYCLES * CACHE_LINE_SIZE);
 }
 
 void
@@ -59,7 +59,7 @@ gomp_barrier_destroy (struct gomp_barrier *barrier)
 {
   barrier->nthreads = -1;
   KAAPI_ATOMIC_WRITE (&barrier->cycle, -1);
-  memset (barrier->count, -1, BAR_CYCLES * sizeof (kaapi_atomic_t));
+  memset (barrier->count, -1, BAR_CYCLES * CACHE_LINE_SIZE);
 }
 
 void
@@ -69,14 +69,14 @@ gomp_barrier_wait (struct gomp_barrier *barrier)
   int next_cycle = (current_cycle + 1) % BAR_CYCLES;
   int nthreads = barrier->nthreads;
 
-  int nb_arrived = KAAPI_ATOMIC_INCR (&barrier->count[current_cycle]);
+  int nb_arrived = KAAPI_ATOMIC_INCR ((kaapi_atomic_t *)&barrier->count[current_cycle * CACHE_LINE_SIZE]);
 
   if (nb_arrived == nthreads)
     {
       int cycle_to_clean = (next_cycle + 1) % BAR_CYCLES;
 
       KAAPI_ATOMIC_WRITE_BARRIER (&barrier->cycle, next_cycle);
-      KAAPI_ATOMIC_WRITE (&barrier->count[cycle_to_clean], 0);
+      KAAPI_ATOMIC_WRITE ((kaapi_atomic_t *)&barrier->count[cycle_to_clean * CACHE_LINE_SIZE], 0);
     }
   else
     {

@@ -44,7 +44,6 @@
 */
 #include "libgomp.h"
 
-
 kaapi_libgompctxt_t* GOMP_get_ctxtkproc( kaapi_processor_t* kproc )
 {
   if (kproc->libgomp_tls == 0)
@@ -147,8 +146,11 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
   kaapic_begin_parallel();
 
   if (num_threads == 0)
-    num_threads = kaapic_get_concurrency();
-  
+    num_threads = gomp_nthreads_var;
+
+  /* do not save the ctxt, assume just one top level ctxt */
+  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc(kproc);
+
   thread = kaapi_threadcontext2thread(kproc->thread);
 
   kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc(kproc);

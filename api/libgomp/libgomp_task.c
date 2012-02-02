@@ -97,7 +97,7 @@ void GOMP_task(
                  KAAPIC_MODE_V, ctxt->threadid, 1, KAAPIC_TYPE_INT,
                  KAAPIC_MODE_V, fn, 1, KAAPIC_TYPE_PTR,
                  KAAPIC_MODE_V, argtask, 1, KAAPIC_TYPE_PTR
-                 );
+    );
   }
 }
 

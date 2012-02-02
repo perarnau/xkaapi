@@ -7,6 +7,7 @@
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** francois.broquedis@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -100,15 +101,19 @@ enum omp_task_kind
   GOMP_TASK_TIED
 };
 
+/* init.c */
+
+extern int gomp_nthreads_var;
+
 /* barrier.c */
 
 #define BAR_CYCLES 3
+#define CACHE_LINE_SIZE 64
 
 typedef struct gomp_barrier {
-  kaapi_atomic_t cycle;
-  unsigned int nthreads;
-  char padding[64];
-  kaapi_atomic_t count[BAR_CYCLES];
+  kaapi_atomic_t __attribute__ ((aligned (CACHE_LINE_SIZE))) cycle;
+  unsigned int __attribute__ ((aligned (CACHE_LINE_SIZE))) nthreads;
+  char __attribute__ ((aligned (CACHE_LINE_SIZE))) count[BAR_CYCLES * CACHE_LINE_SIZE];
 } gomp_barrier_t; 
 
 extern gomp_barrier_t global_barrier;
