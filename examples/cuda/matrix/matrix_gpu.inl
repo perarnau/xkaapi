@@ -84,7 +84,7 @@ extern cublasHandle_t kaapi_cuda_cublas_handle( void );
 #endif
 
 
-#if (CONFIG_USE_CUBLAS) || (CONFIG_USE_MAGMA)
+#if CONFIG_USE_CUBLAS
 /* from cublas.h */
 
 /* Helper functions */
@@ -134,6 +134,60 @@ static inline cublasSideMode_t convertToSideMode( const enum CBLAS_SIDE side )
          return CUBLAS_SIDE_LEFT;
     }        
 }
+
+/* KAAPI_USE_CUBLAS */
+#elif KAAPI_USE_MAGMA
+
+/* Old CUBLAS API, returns char parameters */
+
+static inline char convertToOp( const enum CBLAS_TRANSPOSE trans ) 
+{
+    switch(trans) {
+        case CblasNoTrans:
+            return 'n';
+        case CblasTrans:
+            return 't';
+        case CblasConjTrans:
+            return 'c';                        
+        default:
+            return 'n';
+    }
+
+}
+static inline char convertToFillMode( const enum CBLAS_UPLO uplo ) 
+{
+    switch (uplo) {
+        case CblasUpper:
+            return 'u';
+	case CblasLower:
+        default:
+         return 'l';
+    }        
+}
+
+static inline char convertToDiagType( const enum CBLAS_DIAG diag ) 
+{
+    switch (diag) {
+	case CblasUnit:
+            return 'u';
+	case CblasNonUnit:
+        default:
+         return 'n';
+    }        
+}
+
+static inline char convertToSideMode( const enum CBLAS_SIDE side ) 
+{
+    switch (side) {
+	case CblasRight:
+            return 'r';
+	case CblasLeft:
+        default:
+         return 'l';
+    }        
+}
+
+#endif
 
 #endif
 
