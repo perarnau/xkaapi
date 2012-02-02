@@ -63,6 +63,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   kaapi_thread_context_t* thread_condition;
   kaapi_task_t*           task_condition;
   kaapi_tasklist_t*       tasklist;
+  kaapi_thread_context_t* tmp;
 
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc->thread !=0 );
@@ -132,11 +133,13 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     {
       if (thread == thread_condition)
       {
-        /* push kproc context into free list */
-        if (kproc->thread !=0)
-          kaapi_context_free( kproc, kproc->thread );
-
+        tmp = kproc->thread;
         kaapi_setcontext( kproc, thread_condition );
+
+        /* push kproc context into free list */
+        if (tmp !=0)
+          kaapi_context_free( kproc, tmp );
+
         
         /* ok suspended thread is ready for execution */
         kaapi_assert((tasklist !=0) || (thread->stack.sfp->pc == task_condition));
@@ -147,11 +150,13 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
         return 0;
       }
 
-      /* push kproc context into free list */
-      if (kproc->thread !=0)
-        kaapi_context_free( kproc, kproc->thread );
-
+      tmp = kproc->thread;
       kaapi_setcontext( kproc, thread );
+
+      /* push kproc context into free list */
+      if (tmp !=0)
+        kaapi_context_free( kproc, tmp );
+
 
       goto redo_execution;
     }

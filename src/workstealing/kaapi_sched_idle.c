@@ -57,6 +57,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
 {
   kaapi_request_status_t  ws_status;
   kaapi_thread_context_t* thread;
+  kaapi_thread_context_t* tmp;
   int err;
   
   kaapi_assert_debug( kproc !=0 );
@@ -92,12 +93,14 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       
       if (thread !=0) /* push kproc->thread to freelist and set thread as the new ctxt */
       {
-        /* push kproc context into free list */
-        if (kproc->thread) 
-          kaapi_context_free( kproc, kproc->thread );
-        
+        tmp = kproc->thread;
         /* set new context to the kprocessor */
         kaapi_setcontext(kproc, thread);
+
+        /* push kproc context into free list */
+        if (tmp) 
+          kaapi_context_free( kproc, tmp );
+        
         goto redo_execute;
       }
     }
