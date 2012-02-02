@@ -135,8 +135,8 @@ static inline cublasSideMode_t convertToSideMode( const enum CBLAS_SIDE side )
     }        
 }
 
-/* KAAPI_USE_CUBLAS */
-#elif KAAPI_USE_MAGMA
+/* CONFIG_USE_CUBLAS */
+#elif CONFIG_USE_MAGMA
 
 /* Old CUBLAS API, returns char parameters */
 
@@ -187,7 +187,7 @@ static inline char convertToSideMode( const enum CBLAS_SIDE side )
     }        
 }
 
-#endif
+#endif /* CONFIG_USE_MAGMA */
 
 #if CONFIG_USE_FLOAT
 # define cublasTrsm cublasStrsm
