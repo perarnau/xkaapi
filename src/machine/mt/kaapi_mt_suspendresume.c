@@ -51,6 +51,7 @@ volatile int kaapi_suspendflag;
 */
 kaapi_atomic_t kaapi_suspendedthreads;
 
+#define USE_POSIX_CONDITION 0
 
 /*
 */
@@ -68,14 +69,23 @@ void kaapi_mt_suspendresume_init(void)
 
 void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
 {
-  pthread_mutex_lock(&wakeupmutex_threads);
+#if USE_POSIX_CONDITION
   if (kaapi_suspendflag)
   {
     KAAPI_ATOMIC_INCR( &kaapi_suspendedthreads );
+    pthread_mutex_lock(&wakeupmutex_threads);
     pthread_cond_wait(&wakeupcond_threads, &wakeupmutex_threads);
     memset(&kproc->fnc_selecarg, 0, sizeof(kproc->fnc_selecarg) );
+    pthread_mutex_unlock(&wakeupmutex_threads);
   }
-  pthread_mutex_unlock(&wakeupmutex_threads);
+#else
+  if (kaapi_suspendflag)
+  {
+    KAAPI_ATOMIC_INCR( &kaapi_suspendedthreads );
+    while (kaapi_suspendflag !=0)
+      kaapi_slowdown_cpu();
+  }
+#endif
 }
 
 
@@ -98,10 +108,15 @@ void kaapi_mt_suspend_threads(void)
 void kaapi_mt_resume_threads(void)
 {
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );
+#if USE_POSIX_CONDITION
   pthread_mutex_lock(&wakeupmutex_threads);
   kaapi_suspendflag = 0;
   KAAPI_ATOMIC_WRITE(&kaapi_suspendedthreads, 0);
   pthread_cond_broadcast(&wakeupcond_threads);
   pthread_mutex_unlock(&wakeupmutex_threads);  
+#else
+  KAAPI_ATOMIC_WRITE_BARRIER(&kaapi_suspendedthreads, 0);
+  kaapi_suspendflag = 0;
+#endif
 }
 
