@@ -166,7 +166,10 @@ KAAPI_REGISTER_TASKFORMAT( print_format,
 void print_body( void* taskarg, kaapi_thread_t* thread )
 {
   print_arg_t* arg0 = (print_arg_t*)taskarg;
-  printf("Fibo(%i)=%i\n", arg0->n, *kaapi_data(int, &arg0->result));
+  printf("Fibo(%i)=%i\n", 
+      arg0->n, 
+      *kaapi_data(int, &arg0->result)
+  );
   printf("Time: %g\n", arg0->delay/arg0->niter);
 }
 
@@ -174,7 +177,7 @@ int main(int argc, char** argv)
 {
   kaapi_frame_t frame;
   double t0, t1;
-  long value_result;
+  int value_result;
   int n;
   int niter;
   int i;
@@ -194,8 +197,7 @@ int main(int argc, char** argv)
 
   kaapi_init(1, &argc, &argv);
   thread = kaapi_self_thread();
-  kaapi_thread_save_frame(thread, &frame);
-  
+
   t0 = kaapi_get_elapsedtime();
   for ( i=-1; i<niter; ++i)
   {
@@ -224,7 +226,6 @@ int main(int argc, char** argv)
 
   kaapi_sched_sync( );
   
-  printf("After sync: Fibo(%i)=%li\n", n, value_result);
   printf("Time Fibo(%i): %f\n", n, (t1-t0)/niter);
 
   kaapi_finalize();
