@@ -88,7 +88,7 @@ extern cublasHandle_t kaapi_cuda_cublas_handle( void );
 /* from cublas.h */
 
 /* Helper functions */
-static __inline__ cublasOperation_t convertToOp( const enum CBLAS_TRANSPOSE trans ) 
+static inline cublasOperation_t convertToOp( const enum CBLAS_TRANSPOSE trans ) 
 {
     switch(trans) {
         case CblasNoTrans:
@@ -102,7 +102,7 @@ static __inline__ cublasOperation_t convertToOp( const enum CBLAS_TRANSPOSE tran
     }
 
 }
-static __inline__ cublasFillMode_t convertToFillMode( const enum CBLAS_UPLO uplo ) 
+static inline cublasFillMode_t convertToFillMode( const enum CBLAS_UPLO uplo ) 
 {
     switch (uplo) {
         case CblasUpper:
@@ -113,7 +113,7 @@ static __inline__ cublasFillMode_t convertToFillMode( const enum CBLAS_UPLO uplo
     }        
 }
 
-static __inline__ cublasDiagType_t convertToDiagType( const enum CBLAS_DIAG diag ) 
+static inline cublasDiagType_t convertToDiagType( const enum CBLAS_DIAG diag ) 
 {
     switch (diag) {
 	case CblasUnit:
@@ -124,7 +124,7 @@ static __inline__ cublasDiagType_t convertToDiagType( const enum CBLAS_DIAG diag
     }        
 }
 
-static __inline__ cublasSideMode_t convertToSideMode( const enum CBLAS_SIDE side ) 
+static inline cublasSideMode_t convertToSideMode( const enum CBLAS_SIDE side ) 
 {
     switch (side) {
 	case CblasRight:
