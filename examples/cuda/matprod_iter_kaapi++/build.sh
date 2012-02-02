@@ -1,8 +1,9 @@
 #!/usr/bin/env sh
 
-XKAAPIDIR=$HOME/install/xkaapi/default
+SCRATCH=$HOME
+XKAAPIDIR=$SCRATCH/install/xkaapi/default
 CUDADIR=$CUDA_HOME
-ATLAS=$HOME/install/atlas3.9.63
+ATLAS=$SCRATCH/install/atlas3.9.63
 
 #CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1 -maxrregcount 32"
 #CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"
@@ -10,14 +11,14 @@ ATLAS=$HOME/install/atlas3.9.63
 CUBLAS_LDFLAGS="-lcublas"
 
 CBLAS_LDFLAGS="-L$ATLAS/lib -llapack -lcblas -latlas
-	-lf77blas -L$HOME/install/lapacke-3.3.0/lib -llapacke"
+	-lf77blas -L$SCRATCH/install/lapacke-3.3.0/lib -llapacke"
 CBLAS_CPPFLAGS="-I$ATLAS/include
--I$HOME/install/lapacke-3.3.0/include
+-I$SCRATCH/install/lapacke-3.3.0/include
 -DCONFIG_USE_FLOAT=1
 "
 
-MAGMA_CFLAGS="-I${HOME}/install/magma_1.0.0/include -DCONFIG_USE_MAGMA=1"
-MAGMA_LDFLAGS="-L${HOME}/install/magma_1.0.0/lib -lmagma -lmagmablas -llapack -lf77blas -lgfortran"
+MAGMA_CFLAGS="-I${SCRATCH}/install/magma_1.0.0/include -DCONFIG_USE_MAGMA=1"
+MAGMA_LDFLAGS="-L${SCRATCH}/install/magma_1.0.0/lib -lmagma -lmagmablas -llapack -lf77blas -lgfortran"
 
 # use this flag for atomic instruction 
 # does not work on gtx280

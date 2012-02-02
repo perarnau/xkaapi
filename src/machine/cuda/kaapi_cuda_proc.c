@@ -65,7 +65,6 @@ int
 kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
 {
   cudaError_t res;
-  int i;
 
   proc->is_initialized = 0;
 
@@ -73,6 +72,7 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
     return -1;
 
 #ifdef KAAPI_CUDA_ASYNC
+  int i;
   for( i= 0; i < KAAPI_CUDA_MAX_STREAMS; i++ ) {
       res = cudaStreamCreate( &proc->stream[i] );
       if (res != CUDA_SUCCESS) {
@@ -138,7 +138,6 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
 
 int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t* proc)
 {
-    int i;
   if (proc->is_initialized == 0)
     return -1;
 
@@ -149,6 +148,7 @@ int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t* proc)
 #endif
   kaapi_cuda_cublas_finalize( proc );
 #ifdef KAAPI_CUDA_ASYNC
+  int i;
   for( i= 0; i < KAAPI_CUDA_MAX_STREAMS; i++ ) 
       cudaStreamDestroy( proc->stream[i] );
 #else

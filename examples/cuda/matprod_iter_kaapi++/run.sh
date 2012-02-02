@@ -1,12 +1,13 @@
 #!/usr/bin/env sh
 
+SCRATCH=$HOME
 export LD_LIBRARY_PATH=$CUDA_HOME/cuda/lib64:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=$HOME/install/xkaapi/default/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$SCRATCH/install/xkaapi/default/lib:$LD_LIBRARY_PATH
 
 niter=1
 #niter=30
 version="$(date +%s)"
-out="$HOME/res/xkaapi-sgemm-4cpu1gpu-${version}.txt"
+out="$SCRATCH/res/xkaapi-sgemm-4cpu1gpu-${version}.txt"
 
 #export KAAPI_CPUSET='0:3'
 #export KAAPI_CPUSET='0:2'

@@ -1,12 +1,13 @@
 #!/bin/bash
 
+SCRATCH=$HOME
 export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=$HOME/install/xkaapi/default/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$SCRATCH/install/xkaapi/default/lib:$LD_LIBRARY_PATH
 
 #niter=30
 niter=1
 version="$(date +%s)"
-out="$HOME/res/xkaapi-spotrf-4cpu1gpu-${version}.txt"
+out="$SCRATCH/res/xkaapi-spotrf-4cpu1gpu-${version}.txt"
 
 # CONFIG_USE_STATIC == 1
 #export KAAPI_CPUSET=0,1
