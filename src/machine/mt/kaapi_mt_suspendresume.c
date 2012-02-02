@@ -79,12 +79,9 @@ void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
     pthread_mutex_unlock(&wakeupmutex_threads);
   }
 #else
-  if (kaapi_suspendflag)
-  {
-    KAAPI_ATOMIC_INCR( &kaapi_suspendedthreads );
-    while (kaapi_suspendflag !=0)
-      kaapi_slowdown_cpu();
-  }
+  KAAPI_ATOMIC_INCR( &kaapi_suspendedthreads );
+  while (kaapi_suspendflag !=0)
+    kaapi_slowdown_cpu();
 #endif
 }
 

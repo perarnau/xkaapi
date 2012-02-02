@@ -270,7 +270,8 @@ void* kaapi_sched_run_processor( void* arg )
 #endif
 
   /* suspend the threads */
-  kaapi_mt_suspend_self( kproc );
+  if (kaapi_suspendflag)
+    kaapi_mt_suspend_self( kproc );
   
   /* main work stealing loop */
   kaapi_assert( kproc->thread != 0 );
