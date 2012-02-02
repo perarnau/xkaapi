@@ -58,7 +58,7 @@ do {						\
   kaapi_set_self_workload(__w);			\
 } while (0)
 #else 
-#define kaapi_SET_SELF_WORKLOAD(__w)
+#define KAAPI_SET_SELF_WORKLOAD(__w)
 #endif
 
 
@@ -491,7 +491,10 @@ static void _kaapic_thief_entrypoint(
 }
 
 
-/* init work */
+
+/* Used to start parallel region if required */
+extern unsigned int kaapic_do_parallel;
+
 int kaapic_foreach_workinit
 (
   kaapi_thread_context_t* self_thread,
@@ -536,6 +539,13 @@ int kaapic_foreach_workinit
   kaapi_atomic_t counter;
   unsigned long local_counter = 0;
 #endif
+
+
+  /* begin a parallel region */
+  if (kaapic_do_parallel) kaapic_begin_parallel();
+
+  /* save frame */
+  kaapi_thread_save_frame(thread, &work->frame);  
 
   /* initialize work array */
 
@@ -601,9 +611,6 @@ int kaapic_foreach_workinit
   work->body_args = body_args;
   work->wa        = &work->_wa;
   work->wi        = &work->_wi;
-
-  /* save frame */
-  kaapi_thread_save_frame(thread, &work->frame);  
 
   /* start adaptive region */
   work->context = kaapi_task_begin_adaptive(
@@ -763,6 +770,8 @@ int kaapic_foreach_common
 #if CONFIG_FOREACH_STATS
   foreach_time += kaapif_get_time_() - time;
 #endif
+
+  if (kaapic_do_parallel) kaapic_end_parallel(0);
   
   return 0;
 }

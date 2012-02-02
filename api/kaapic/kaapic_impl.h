@@ -43,6 +43,7 @@
 #ifndef KAAPIC_HIMPL_INCLUDED
 # define KAAPIC_HIMPL_INCLUDED
 
+#include "kaapi_impl.h"
 #include "kaapic.h"
 
 /* implementation for kaapic API */
