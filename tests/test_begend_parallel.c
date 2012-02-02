@@ -53,7 +53,7 @@ int main(int argc, char** argv)
   double t0, t1;
   
   /* start all the thread */
-  kaapic_init(KAAPIC_START_ALL);
+  kaapic_init(KAAPIC_START_ONLY_MAIN);
   
   t0 = kaapic_get_time();
   for ( i=0; i<10000; ++i)

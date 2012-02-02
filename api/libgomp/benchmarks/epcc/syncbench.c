@@ -196,7 +196,7 @@ int main (int argv, char **argc)
   testlock();
 
   /* TEST ORDERED SECTION */
-  testorder();
+  //testorder();
 
   /* GENERATE NEW REFERENCE TIME */
   referatom();

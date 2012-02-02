@@ -1,4 +1,4 @@
-CC = gcc-fsf-4.4
+CC = gcc
 CFLAGS = -fopenmp -O3 -g -DOMPCLOCK
 LDFLAGS = -lm -lgomp
 

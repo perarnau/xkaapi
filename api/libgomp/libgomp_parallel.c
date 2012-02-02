@@ -224,7 +224,8 @@ GOMP_parallel_end (void)
 
   /* restore frame */
   kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc(kproc);
-  kaapi_thread_restore_frame( kaapi_threadcontext2thread(kproc->thread), &ctxt->frame);
   kaapi_atomic_destroylock(&ctxt->teaminfo->lock);
+
+  kaapi_thread_restore_frame( kaapi_threadcontext2thread(kproc->thread), &ctxt->frame);
   ctxt->teaminfo = 0;
 }
