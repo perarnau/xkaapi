@@ -354,10 +354,10 @@ static void transpose_inplace(double_type* a, int n)
 /* Main of the program
 */
 struct doit {
-  void doone_exp( int n, int block_count, int niter, int verif )
+  void doone_exp( int n, int block_size, int niter, int verif )
   {
-    global_blocsize = n / block_count;
-    n = block_count * global_blocsize;
+    global_blocsize = block_size;
+    n = (n/block_size) * global_blocsize;
 
     double t0, t1;
     double_type* dA = (double_type*) calloc(n* n, sizeof(double_type));
@@ -433,15 +433,6 @@ struct doit {
 
       if (verif)
       {
-#if 0
-        generate_matrix(dA, n);
-        if (verif)
-          memcpy(dAcopy, dA, n*n*sizeof(double_type) );
-
-        ka::Spawn<TaskDPOTRF>()( CblasLower, A );
-        ka::Sync();
-#endif
-
         /* If n is small, print the results */
 #if 0
         if (n <= 32) 
@@ -465,7 +456,6 @@ struct doit {
     	ka::array<2,double_type> A2(dA2, n, n, n);
 
           t0 = kaapi_get_elapsedtime();
-          //ka::Spawn<TaskNormMatrix>()( &norm, ka::array<2,double_type>(dAcopy, n, n, n), A );
           ka::Spawn<TaskNormMatrix>()( CblasColMajor, CblasLower, &norm, ka::array<2,double_type>(dAcopy, n, n, n), A );
           ka::Sync();
           t1 = kaapi_get_elapsedtime();
@@ -476,7 +466,6 @@ struct doit {
 
 	t0 = kaapi_get_elapsedtime();
 	clapack_potrf( CblasRowMajor, CblasLower, n, A2.ptr(), A2.lda() );
-	//ka::Spawn<TaskNormMatrix>()( &norm, ka::array<2,double_type>(dAcopy2, n, n, n), A2 );
          ka::Spawn<TaskNormMatrix>()( CblasColMajor, CblasLower, &norm, ka::array<2,double_type>(dAcopy2, n, n, n), A2 );
 	ka::Sync();
 	t1 = kaapi_get_elapsedtime();
@@ -498,10 +487,6 @@ struct doit {
     else
       sd = sqrt((sumgf2 - (sumgf*sumgf)/niter)/niter);
     
-//    printf("%6d %5d %5d %9.10f %9.6f %9.6f %9.6f\n", (int)n,
-//	    (int)kaapi_getconcurrency(),
-//	    (int)(n/global_blocsize),
-//	    sumt/niter, gflops, sd, gflops_max );
     printf("%6d %5d %5d %9.10f %9.6f\n",
 	    (int)n,
 	    (int)kaapi_getconcurrency(),
@@ -519,9 +504,9 @@ struct doit {
       n = atoi(argv[1]);
 
     // block count
-    int block_count = 2;
+    int block_size = 2;
     if (argc > 2)
-      block_count = atoi(argv[2]);
+      block_size = atoi(argv[2]);
       
     // Number of iterations
     int niter = 1;
@@ -533,11 +518,10 @@ struct doit {
     if (argc >4)
       verif = atoi(argv[4]);
 
-    //int nmax = n+16*incr;
     printf("# size   #threads #bs    time      GFlop/s\n");
     for (int k=0; k<1; ++k, ++n )
     {
-      doone_exp( n, block_count, niter, verif );
+      doone_exp( n, block_size, niter, verif );
     }
   }
 

@@ -57,8 +57,9 @@
 
 
 #if CONFIG_USE_CUBLAS
-// cublas related
 #include "cublas_v2.h"
+#else
+#include "cublas.h"
 #endif
 
 #if CONFIG_USE_MAGMA
@@ -82,10 +83,12 @@ extern cublasHandle_t kaapi_cuda_cublas_handle( void );
 
 #endif
 
-#if 1
 
-// from cublas.h
-static inline cublasOperation_t convertToOp( char trans )
+#if (CONFIG_USE_CUBLAS) || (CONFIG_USE_MAGMA)
+/* from cublas.h */
+
+/* Helper functions */
+static __inline__ cublasOperation_t convertToOp( char trans ) 
 {
     switch(trans) {
         case 'N':
@@ -102,8 +105,7 @@ static inline cublasOperation_t convertToOp( char trans )
     }
 
 }
-
-static inline cublasFillMode_t convertToFillMode( char uplo ) 
+static __inline__ cublasFillMode_t convertToFillMode( char uplo ) 
 {
     switch (uplo) {
         case 'U':
@@ -116,7 +118,7 @@ static inline cublasFillMode_t convertToFillMode( char uplo )
     }        
 }
 
-static inline cublasDiagType_t convertToDiagType( char diag ) 
+static __inline__ cublasDiagType_t convertToDiagType( char diag ) 
 {
     switch (diag) {
         case 'U':
@@ -129,7 +131,7 @@ static inline cublasDiagType_t convertToDiagType( char diag )
     }        
 }
 
-static inline cublasSideMode_t convertToSideMode( char side ) 
+static __inline__ cublasSideMode_t convertToSideMode( char side ) 
 {
     switch (side) {
         case 'R':
@@ -141,10 +143,7 @@ static inline cublasSideMode_t convertToSideMode( char side )
          return CUBLAS_SIDE_LEFT;
     }        
 }
-
-// specialize for double_type
-
-#endif /* CONFIG_USE_CUBLAS */
+#endif
 
 #if CONFIG_USE_FLOAT
 # define cublasTrsm cublasStrsm
@@ -346,13 +345,6 @@ template<> struct TaskBodyGPU<TaskDGEMM>
     //const int ldb = Akj.lda();
     //const int ldc = Aij.lda();
 
-
-#if 0
-	const kaapi_address_space_id_t host_asid = 0UL;
-	kaapi_metadata_info_t*  mdi;
-	mdi = kaapi_mem_findinsert_metadata( (void*)Aik.ptr() );
-	kaapi_data_t* h_src= _kaapi_metadata_info_get_data( mdi, host_asid );
-#endif
 
 #if 0
     fprintf(stdout, "TaskGPU GEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", m, n, k, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);

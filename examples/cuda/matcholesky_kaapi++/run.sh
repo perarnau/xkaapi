@@ -1,7 +1,7 @@
 #!/bin/bash
 
-export LD_LIBRARY_PATH=$CUDA_HOME/cuda/lib64:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=$HOME/install/xkaapi/mat_gpu/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/install/xkaapi/default/lib:$LD_LIBRARY_PATH
 
 #niter=30
 niter=1
@@ -26,13 +26,13 @@ export KAAPI_GPUSET='0~7'
 #msize="512"
 #msize="64"
 #msize="2048"
-msizes="4096"
+#msizes="4096"
 #msize="8192"
 #msizes="$(seq 64 64 2048) $(seq 3072 1024 10240)"
-#msizes="1024"
+msizes="1024"
 #nb="2 4 8 12 16 32"
 #nb="32"
-nb="16"
+nb="256"
 verif="1"
 
 for m in $msizes 

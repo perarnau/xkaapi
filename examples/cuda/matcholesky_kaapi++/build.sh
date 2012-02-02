@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
-XKAAPIDIR=$HOME/install/xkaapi/mat_gpu
-CUDADIR=$CUDA_HOME/cuda
+XKAAPIDIR=$HOME/install/xkaapi/default
+CUDADIR=$CUDA_HOME
 
 #CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1 -maxrregcount 32"
 #CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"
