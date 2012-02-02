@@ -1,5 +1,6 @@
 CC=gcc-mp-4.6
 #CC=gcc-fsf-4.4
+#CC=gcc
 CFLAGS=-g -fopenmp -fdump-tree-all -O3 -Wall
 LDFLAGS=-lgomp
 
@@ -36,5 +37,5 @@ get-gimple: $(PROGS)
 	./get-gimple.sh "$(PROGS)"
 
 clean:
-	rm -rf *~ *.o $(PROGS) parallel.c.* shared.c.* critical.c.* nested.c.* barrier.c.* single.c.* fibo.c.* task-firstprivate.c.* gimp-* 
+	rm -rf *~ *.o $(PROGS) parallel.c.* shared.c.* critical.c.* nested.c.* barrier.c.* single.c.* fibo.c.* task-firstprivate.c.* test-toolbox.c.* gimp-* 
 
