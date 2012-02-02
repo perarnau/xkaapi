@@ -6,8 +6,6 @@ then
     exit
 fi
 
-KAAPI_INSTALL_PATH=
-
 # KAAPI_INSTALL_PATH=$HOME/soft/install/xkaapi
 
 if [ "x$KAAPI_INSTALL_PATH" == "x" ];
