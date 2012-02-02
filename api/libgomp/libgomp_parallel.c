@@ -143,7 +143,7 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
   kaapi_thread_t* thread;
   GOMP_parallel_task_arg_t* arg;
   
-  kaapic_begin_parallel();
+//  kaapic_begin_parallel();
 
   if (num_threads == 0)
     num_threads = gomp_nthreads_var;
@@ -220,7 +220,7 @@ GOMP_parallel_end (void)
   kaapi_processor_t* kproc = kaapi_get_current_processor();
 
   /* implicit sync */
-  kaapic_end_parallel (0); 
+//  kaapic_end_parallel (0); 
 
   /* restore frame */
   kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc(kproc);
