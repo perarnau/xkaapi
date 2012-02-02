@@ -189,8 +189,6 @@ static inline char convertToSideMode( const enum CBLAS_SIDE side )
 
 #endif
 
-#endif
-
 #if CONFIG_USE_FLOAT
 # define cublasTrsm cublasStrsm
 # define cublasGemm cublasSgemm
