@@ -134,7 +134,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       {
         /* push kproc context into free list */
         if (kproc->thread !=0)
-          kaapi_lfree_push( kproc, kproc->thread );
+          kaapi_context_free( kproc, kproc->thread );
 
         kaapi_setcontext( kproc, thread_condition );
         
@@ -149,7 +149,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 
       /* push kproc context into free list */
       if (kproc->thread !=0)
-        kaapi_lfree_push( kproc, kproc->thread );
+        kaapi_context_free( kproc, kproc->thread );
 
       kaapi_setcontext( kproc, thread );
 

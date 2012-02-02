@@ -480,8 +480,15 @@ static inline int kaapi_stack_reset(kaapi_stack_t* stack )
 static inline int kaapi_stack_clear(kaapi_stack_t* stack )
 {
   kaapi_stack_reset( stack );
-  kaapi_atomic_initlock( &stack->lock );
   stack->thieffp      = 0;
+  return 0;
+}
+
+/* more field are reset than in stack_reset 
+*/
+static inline int kaapi_stack_destroy(kaapi_stack_t* stack )
+{
+  kaapi_atomic_destroylock( &stack->lock );
   return 0;
 }
 

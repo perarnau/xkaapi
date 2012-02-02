@@ -49,9 +49,21 @@
 
 /**
 */
-int kaapi_context_free( kaapi_thread_context_t* ctxt )
+int kaapi_context_free(
+    kaapi_processor_t* kproc, 
+    kaapi_thread_context_t* ctxt 
+)
 {
   if (ctxt ==0) return 0;
+
+  /* wait end of thieves on the processor */
+  kaapi_synchronize_steal(kproc);
+
+  if (kaapi_lfree_push(kproc, ctxt)) 
+    return 0;
+
+  /* this is the only vital ressource to destroy properly */
+  kaapi_stack_destroy(&ctxt->stack);
 
 //to delete stack frame pointer, but now its part of the thread data structure
 //  if (ctxt->alloc_ptr !=0) free(ctxt->alloc_ptr);

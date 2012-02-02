@@ -522,7 +522,9 @@ extern void kaapi_synchronize_steal_thread( kaapi_thread_context_t* );
     \retval pointer to the stack 
     \retval 0 if allocation failed
 */
-extern kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc, size_t stacksize );
+extern kaapi_thread_context_t* kaapi_context_alloc( 
+      kaapi_processor_t* kproc, 
+      size_t stacksize );
 
 
 /** \ingroup TASK
@@ -530,15 +532,17 @@ extern kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc, si
     If successful, the kaapi_context_free() function will return zero.  
     Otherwise, an error number will be returned to indicate the error.
     This function is machine dependent.
+    \param kproc IN/OUT the kprocessor that make allocation
     \param ctxt INOUT a pointer to the kaapi_thread_context_t to allocate.
     \retval EINVAL invalid argument: bad stack pointer.
 */
-extern int kaapi_context_free( kaapi_thread_context_t* ctxt );
+extern int kaapi_context_free( 
+      kaapi_processor_t* kproc, 
+      kaapi_thread_context_t* ctxt );
 
 
 /* lfree list routines
  */
-
 static inline void kaapi_lfree_clear(struct kaapi_processor_t* kproc)
 {
   kproc->sizelfree = 0;
@@ -551,11 +555,18 @@ static inline int kaapi_lfree_isempty(struct kaapi_processor_t* kproc)
   return kproc->sizelfree == 0;
 }
 
-static inline void kaapi_lfree_push(
-  struct kaapi_processor_t* kproc, kaapi_thread_context_t* ctxt
+/* return 1 iff the ctxt is pushed into free list else return 0
+*/
+static inline int kaapi_lfree_push(
+  struct kaapi_processor_t* kproc, 
+  kaapi_thread_context_t* ctxt
 )
 {
   kaapi_lfree_t* const list = &kproc->lfree;
+
+#  define KAAPI_MAXFREECTXT 4
+  if (kproc->sizelfree >= KAAPI_MAXFREECTXT)
+    return 0;
 
   /* push the node */
   ctxt->_next = list->_front;
@@ -566,29 +577,9 @@ static inline void kaapi_lfree_push(
     list->_front->_prev = ctxt;
   list->_front = ctxt;
 
-  /* wait end of thieves on the processor */
-  kaapi_synchronize_steal(kproc);
+  ++kproc->sizelfree;
 
-  /* this is the only vital ressource to destroy properly
-     whatever is the distination list (free list) or deleted.
-   */
-  kaapi_atomic_destroylock(&ctxt->stack.lock);
-
-  /* pop back if new size exceeds max */
-#  define KAAPI_MAXFREECTXT 4
-  if (kproc->sizelfree >= KAAPI_MAXFREECTXT)
-  {
-
-    /* list size at least 2, no special case handling */
-    ctxt = list->_back;
-    list->_back = list->_back->_prev;
-    list->_back->_next = NULL;
-
-    /* free the popped context: lock the kproc until to wait end of thief operation */
-    kaapi_context_free(ctxt);
-  }
-  else
-    ++kproc->sizelfree;
+  return 1;
 }
 
 /* Re-design interface between context_free / context_alloc and lfree_push and lfree_pop

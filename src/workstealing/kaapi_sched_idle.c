@@ -94,7 +94,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       {
         /* push kproc context into free list */
         if (kproc->thread) 
-          kaapi_lfree_push( kproc, kproc->thread );
+          kaapi_context_free( kproc, kproc->thread );
         
         /* set new context to the kprocessor */
         kaapi_setcontext(kproc, thread);
