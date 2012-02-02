@@ -8,7 +8,9 @@
 int
 main (int argc, char **argv)
 {
- v#pragma omp parallel shared (res)
+  int res[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
+#pragma omp parallel shared (res)
   {
 #pragma omp single 
     {
