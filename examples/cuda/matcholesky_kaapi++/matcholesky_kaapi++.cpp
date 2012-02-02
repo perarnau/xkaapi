@@ -56,10 +56,6 @@
 
 #include "lapacke.h"
 
-// missing definition
-extern "C" int kaapi_memory_synchronize(void);
-
-
 #if 1
 /* Generate a random matrix symetric definite positive matrix of size m x m 
    - it will be also interesting to generate symetric diagonally dominant 
@@ -417,7 +413,6 @@ struct doit {
       t0 = kaapi_get_elapsedtime();
       ka::Spawn<TaskCholesky>(ka::SetStaticSched())(A);
       ka::Sync();
-      kaapi_memory_synchronize();
       t1 = kaapi_get_elapsedtime();
 
 #if CONFIG_INVERSE_ORDERING

@@ -54,8 +54,6 @@
 
 #include "../matrix/matrix.h"
 
-extern "C" int kaapi_memory_synchronize(void);
-
 /* Task Print Matrix LU
  * assume that the matrix stores an LU decomposition with L lower triangular matrix with unit diagonal
    and U upper triangular matrix, then print both L and U using the Maple matrix format.
@@ -314,9 +312,9 @@ struct doit {
       n = atoi(argv[1]);
 
     // block count
-    int block_count = 2;
+    int block_size = 2;
     if (argc > 2)
-      block_count = atoi(argv[2]);
+      block_size = atoi(argv[2]);
       
     // Number of iterations
     int niter = 1;
@@ -328,8 +326,8 @@ struct doit {
     if (argc >4)
       verif = atoi(argv[4]);
 
-    global_blocsize = n / block_count;
-    n = block_count * global_blocsize;
+    global_blocsize = block_size;
+    n = (n / block_size) * block_size;
 
     double t0, t1;
     double_type* dA = (double_type*) calloc(n* n, sizeof(double_type));
@@ -344,7 +342,6 @@ struct doit {
     ka::array<2,double_type> A(dA, n, n, n);
     ka::Spawn<TaskDLARNV>()( A );
     ka::Sync();
-    //generate_matrix(dA, n);
 
     if (verif) {
 	/* copy the matrix to compute the norm */
@@ -369,7 +366,7 @@ struct doit {
 #endif
 
     std::cout << "# Start LU with " 
-              << block_count << 'x' << block_count 
+              << block_size << 'x' << block_size 
               << " blocs of matrix of size " << n << 'x' << n 
               << std::endl;
               
@@ -379,12 +376,9 @@ struct doit {
     fprintf( stdout, "# size #threads #bs time Gflops\n" );
     for (int i=0; i<niter; ++i)
     {
-      //generate_matrix(dA, n);
-
       t0 = kaapi_get_elapsedtime();
       ka::Spawn<TaskLU>(ka::SetStaticSched())( A, Piv );
       ka::Sync();
-      kaapi_memory_synchronize();
       t1 = kaapi_get_elapsedtime();
 
       /* formula used by plasma */
@@ -395,7 +389,6 @@ struct doit {
       double gflops = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / (t1-t0);
       gtime += t1-t0;
       ggflops += gflops;
-//      std::cout << "LU " << t1-t0 << " seconds   " <<  gflops << " GFlops" << std::endl;
 	fprintf( stdout, "%6d %5d %5d %9.10f %9.6f\n",
 	    (int)n,
 	    (int)kaapi_getconcurrency(),
@@ -403,8 +396,6 @@ struct doit {
 	    t1-t0, gflops );
 	fflush(stdout);
     }
-//    std::cout << "# LU took " << gtime/niter << " seconds   " <<  ggflops/niter << " GFlops" << std::endl;
-
 
     if (verif) {
 	/* If n is small, print the results */

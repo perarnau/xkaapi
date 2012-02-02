@@ -91,14 +91,17 @@ extern cublasHandle_t kaapi_cuda_cublas_handle( void );
 static __inline__ cublasOperation_t convertToOp( char trans ) 
 {
     switch(trans) {
-        case 'N':
-        case 'n':
+        case CblasNoTrans:
+	case 'n':
+	case 'N':
             return CUBLAS_OP_N;
-        case 't':
-        case 'T':
+        case CblasTrans:
+	case 't':
+	case 'T':
             return CUBLAS_OP_T;
-        case 'C':
-        case 'c':
+        case CblasConjTrans:
+	case 'c':
+	case 'C':
             return CUBLAS_OP_C;                        
         default:
             return CUBLAS_OP_N;
@@ -108,9 +111,11 @@ static __inline__ cublasOperation_t convertToOp( char trans )
 static __inline__ cublasFillMode_t convertToFillMode( char uplo ) 
 {
     switch (uplo) {
-        case 'U':
-        case 'u':
+        case CblasUpper:
+	case 'u':
+	case 'U':
             return CUBLAS_FILL_MODE_UPPER;
+	case CblasLower:
         case 'L':
         case 'l':
         default:
@@ -121,9 +126,11 @@ static __inline__ cublasFillMode_t convertToFillMode( char uplo )
 static __inline__ cublasDiagType_t convertToDiagType( char diag ) 
 {
     switch (diag) {
+	case CblasUnit:
         case 'U':
         case 'u':
             return CUBLAS_DIAG_UNIT;
+	case CblasNonUnit:
         case 'N':
         case 'n':
         default:
@@ -134,15 +141,18 @@ static __inline__ cublasDiagType_t convertToDiagType( char diag )
 static __inline__ cublasSideMode_t convertToSideMode( char side ) 
 {
     switch (side) {
+	case CblasRight:
         case 'R':
         case 'r':
             return CUBLAS_SIDE_RIGHT;
+	case CblasLeft:
         case 'L':
         case 'l':
         default:
          return CUBLAS_SIDE_LEFT;
     }        
 }
+
 #endif
 
 #if CONFIG_USE_FLOAT

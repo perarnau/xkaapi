@@ -35,11 +35,6 @@
 
 #include "../matrix/matrix.h"
 
-#define ALIGN_UP(x) ((double_type*)(((size_t)x+(4096-1))&(~(4096-1)) ))
-
-// missing definition
-//extern "C" int kaapi_memory_synchronize(void);
-
 static int BLOCSIZE = 0;
 
 // check results
@@ -210,7 +205,6 @@ struct doit {
     //ka::Spawn<TaskMatProduct>()( A, B, C );
     ka::Spawn<TaskMatProduct>(ka::SetStaticSched())( A, B, C );
     ka::Sync();
-//    kaapi_memory_synchronize();
 
     // dont time memory sync for the benchmarks since
     // it does not reflect the execution pipeline
@@ -224,10 +218,6 @@ struct doit {
 		    kaapi_getconcurrency(), tdelta, gflops );
     fflush(stdout);
 
-    //fprintf( stdout, "%d %d %.4f %\n", matrix_size, block_size, tdelta );
-    //fprintf( stdout, "Gflop/second %.2f\n", gflops);
-
-    // If n is small, print the results
 #if 0
     ka::Spawn<TaskPrintMatrix>()( std::string("C"), C );
     ka::Sync();

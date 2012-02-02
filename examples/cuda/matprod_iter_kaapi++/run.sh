@@ -36,17 +36,14 @@ verif="1"
 # msizes="16384" ;
 
 # test configuration
-#bsizes="16"
-#bsizes="2"
-#bsizes="1 2 4 8 16 32 64"
-#bsizes="8"
-#bsizes="16"
 #bsizes="64"
 #bsizes="128"
 bsizes="256"
 #bsizes="512"
 #bsizes="1024"
 #bsizes="2048"
+
+
 #msizes="2048"
 #msizes="128"
 #msizes="256"

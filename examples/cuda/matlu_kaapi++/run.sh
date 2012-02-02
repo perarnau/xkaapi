@@ -25,11 +25,12 @@ niter=30
 #msize="64"
 #msize="2048"
 msize="4096"
-#nb="2 4 8 12 16"
-nb="16"
-#nb="8"
-#nb="4"
-#nb="2"
+
+nb="256"
+#nb="512"
+#nb="1024"
+#nb="2048"
+
 #verif="1"
 
 for b in $nb 
