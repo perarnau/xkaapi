@@ -79,10 +79,11 @@ omp_get_thread_num (void)
 
 
 typedef struct GOMP_parallel_task_arg {
-  int numthreads;
-  int threadid;
-  void (*fn) (void *);
-  void *data;
+  int                       numthreads;
+  int                       threadid;
+  void                    (*fn) (void *);
+  void*                     data;
+  kaapi_libgomp_teaminfo_t* teaminfo;
 } GOMP_parallel_task_arg_t;
 
 static void GOMP_trampoline_spawn(
@@ -92,8 +93,16 @@ static void GOMP_trampoline_spawn(
   GOMP_parallel_task_arg_t* taskarg = (GOMP_parallel_task_arg_t*)voidp;
   kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();
   
-  ctxt->numthreads = taskarg->numthreads;
-  ctxt->threadid   = taskarg->threadid;
+  ctxt->numthreads         = taskarg->numthreads;
+  ctxt->threadid           = taskarg->threadid;
+  KAAPI_ATOMIC_WRITE(&ctxt->workshare.init, 0);
+  ctxt->workshare.master   = taskarg->teaminfo->localinfo[0];
+  ctxt->workshare.teaminfo = taskarg->teaminfo;
+
+  /* register thread to the workshare structure */
+  KAAPI_ATOMIC_WRITE_BARRIER(&ctxt->workshare.init, 0);
+  taskarg->teaminfo->localinfo[ctxt->threadid] = &ctxt->workshare;
+
   taskarg->fn(taskarg->data);
 }
 
@@ -101,10 +110,11 @@ KAAPI_REGISTER_TASKFORMAT( GOMP_parallel_task_format,
     "GOMP/Parallel Task",
     GOMP_trampoline_spawn,
     sizeof(GOMP_parallel_task_arg_t),
-    4,
+    5,
     (kaapi_access_mode_t[]){ 
         KAAPI_ACCESS_MODE_V, 
         KAAPI_ACCESS_MODE_V, 
+        KAAPI_ACCESS_MODE_V,
         KAAPI_ACCESS_MODE_V,
         KAAPI_ACCESS_MODE_V 
     },
@@ -112,14 +122,16 @@ KAAPI_REGISTER_TASKFORMAT( GOMP_parallel_task_format,
         offsetof(GOMP_parallel_task_arg_t, numthreads), 
         offsetof(GOMP_parallel_task_arg_t, threadid), 
         offsetof(GOMP_parallel_task_arg_t, fn), 
-        offsetof(GOMP_parallel_task_arg_t, data)
+        offsetof(GOMP_parallel_task_arg_t, data),
+        offsetof(GOMP_parallel_task_arg_t, teaminfo)
     },
-    (kaapi_offset_t[])     { 0, 0, 0, 0 },
+    (kaapi_offset_t[])     { 0, 0, 0, 0, 0 },
     (const struct kaapi_format_t*[]) { 
         kaapi_int_format, 
         kaapi_int_format,
         kaapi_voidp_format,
-        kaapi_voidp_format 
+        kaapi_voidp_format, 
+        kaapi_voidp_format
       },
     0
 )
@@ -135,15 +147,34 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
   kaapic_begin_parallel();
 
   if (num_threads == 0)
-    num_threads = kaapic_get_concurrency ();
+    num_threads = kaapic_get_concurrency();
   
-  /* do not save the ctxt, assume just one top level ctxt */
-  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc(kproc);
   thread = kaapi_threadcontext2thread(kproc->thread);
 
+  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc(kproc);
+
   /* save frame */
-  kaapi_thread_save_frame( thread, &ctxt->frame);
+  kaapi_thread_save_frame( thread, &ctxt->frame );
   
+  /* init team information */
+  kaapi_libgomp_teaminfo_t* teaminfo = 
+    (kaapi_libgomp_teaminfo_t*)kaapi_thread_pushdata_align(
+        thread, 
+        sizeof(kaapi_libgomp_teaminfo_t), 
+        8
+  );
+  kaapi_atomic_initlock(&teaminfo->lock);
+  teaminfo->numthreads   = num_threads;
+  memset( teaminfo->localinfo, 0, num_threads*sizeof(kaapi_libgompworkshared_t*) );
+  teaminfo->localinfo[0] = &ctxt->workshare;
+  
+  
+  /* init workshared construct, assume just one top level ctxt */
+  KAAPI_ATOMIC_WRITE(&ctxt->workshare.init, 0);
+  ctxt->workshare.workload  = 0;
+  ctxt->workshare.master    = &ctxt->workshare;
+  ctxt->workshare.teaminfo  = teaminfo;
+
   /* init team context */
   KAAPI_ATOMIC_WRITE(&global_single, 0);
   gomp_barrier_init (&global_barrier, num_threads);
@@ -164,6 +195,7 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
     arg->threadid   = i;
     arg->fn         = fn;
     arg->data       = data;
+    arg->teaminfo   = teaminfo; /* this is the master workshare of the team... */
     kaapi_thread_pushtask(thread);
   }
 
@@ -186,12 +218,11 @@ void
 GOMP_parallel_end (void)
 {
   kaapi_processor_t* kproc = kaapi_get_current_processor();
-  kaapic_end_parallel (0); 
-  /* implicit sync */
 
-  /* do not save the ctxt, assume just one top level ctxt */
-  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc(kproc);
+  /* implicit sync */
+  kaapic_end_parallel (0); 
 
   /* restore frame */
+  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc(kproc);
   kaapi_thread_restore_frame( kaapi_threadcontext2thread(kproc->thread), &ctxt->frame);
 }

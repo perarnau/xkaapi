@@ -50,6 +50,8 @@ kaapi_atomic_t global_single;
 /* return true if the thread success to get single */
 bool GOMP_single_start (void)
 {
+  if (KAAPI_ATOMIC_READ(&global_single) == 1) 
+    return 0;
   return KAAPI_ATOMIC_CAS (&global_single, 0, 1) !=0;
 }
 

@@ -51,15 +51,42 @@
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
 
+struct PerTeamLocalStorage;
+struct WorkShareRep;
+
+/* Team information : common to all threads that shared a same parallel region 
+   - localinfo is set to 0 at creation time
+   - localinfo[tid] = &workshare of the thread tid is set in the trampoline task
+   used to initialize task contexte.
+   - the workshare is initialized in the workshare construct (parallel loop)
+*/
+typedef struct GlobalTeamInformation {
+  kaapi_lock_t                 lock;       /* 1 iff work is init */
+  int                          numthreads;
+  struct WorkShareRep*         localinfo[KAAPI_MAX_PROCESSOR];
+} kaapi_libgomp_teaminfo_t;
 
 
-/** Pre-historic TLS multiplex support for OMP */
+/* Workshare structure
+*/
+typedef struct WorkShareRep {
+  kaapi_atomic_t               init;       /* 1 iff work is init */
+  kaapic_work_t                work;       /* last foreach loop context */
+  int                          workload;   /* workload */
+  struct WorkShareRep*         master;     /* master workshare */
+  kaapi_libgomp_teaminfo_t*    teaminfo;   /* team information */
+} kaapi_libgompworkshared_t;
+
+
+/** Pre-historic TLS  support for OMP */
 typedef struct PerTeamLocalStorage {
-  int            threadid;
-  int            numthreads;
-  kaapi_frame_t  frame;
-  kaapic_work_t  work;    /* last foreach loop context */
+  kaapi_libgompworkshared_t    workshare;            /* team information */
+  
+  int                          threadid;
+  int                          numthreads;
+  kaapi_frame_t                frame;
 } kaapi_libgompctxt_t ;
+
 
 extern kaapi_libgompctxt_t* GOMP_get_ctxtkproc( kaapi_processor_t* kproc );
 extern kaapi_libgompctxt_t* GOMP_get_ctxt();
