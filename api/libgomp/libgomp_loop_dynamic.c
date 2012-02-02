@@ -91,8 +91,6 @@ If we have SCHEDULE(STATIC), and no ORDERED, then we ought to be able to get awa
 There are separate routines for handling loops with an ORDERED clause. Bookkeeping for that is non-trivial...
 
 */
-
-
 bool GOMP_loop_dynamic_start (
   long start, 
   long end, 
@@ -102,56 +100,87 @@ bool GOMP_loop_dynamic_start (
   long *iend
 )
 {
+  int retval;
+  
   printf("%s:: \n", __FUNCTION__);
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_context_t* const self_thread = kproc->thread;
   kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc( kproc );
-  
-  if (kaapic_foreach_workinit(self_thread, 
-        &ctxt->work, 
-        start, 
-        end, 
-        0,    /* attr */
-        0,    /* body */
-        0     /* arg */
-    ) ==0)
-    return 0;
+  kaapi_libgompworkshared_t* workshare = &ctxt->workshare;
+
+  kaapi_atomic_lock( &workshare->teaminfo->lock );
+
+  if (1 /* is master init ? 1 -> yes I'm a slave*/)
+  {
+    /* I'm a slave with respect to the master */
+    /* - steal from master my initial range or a part... */
+    /* - initialize my local work with this initial range */
+    /* - update my work count */
+
+    retval = 0;
+  }
+  else {
+    /* initialize the master if not already done */
+    retval = kaapic_foreach_workinit(self_thread, 
+          &ctxt->workshare.work, 
+          start, 
+          end, 
+          0,    /* attr */
+          0,    /* body */
+          0     /* arg */
+      );
+  }
+  kaapi_atomic_unlock( &workshare->teaminfo->lock );
+
+  if (retval ==0) return 0;
   
   return kaapic_foreach_worknext(
-        &ctxt->work, 
+        &ctxt->workshare.work, 
         istart,
         iend
   );
-  
 }
 
 bool GOMP_loop_dynamic_next (long *istart, long *iend)
 {
   printf("%s:: \n", __FUNCTION__);
 
-  kaapi_processor_t* kproc = kaapi_get_current_processor();
-  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc( kproc );
+  kaapi_processor_t*   kproc = kaapi_get_current_processor();
+  kaapi_libgompctxt_t* ctxt  = GOMP_get_ctxtkproc( kproc );
 
   return kaapic_foreach_worknext(
-        &ctxt->work, 
+        &ctxt->workshare.work, 
         istart,
         iend
   );
 }
 
-void GOMP_parallel_loop_dynamic_start (void (*)(void *), void *,
-					     unsigned, long, long, long, long)
+void GOMP_parallel_loop_dynamic_start (
+          void (*fn) (void *), 
+          void *data,
+				  unsigned num_threads, 
+          long start, 
+          long end, 
+          long incr, 
+          long chunk_size
+)
 {
   printf("%s:: \n", __FUNCTION__);
 }
 
-bool GOMP_loop_ordered_dynamic_start (long, long, long, long,
-					     long *, long *)
+bool GOMP_loop_ordered_dynamic_start (
+          long start, 
+          long end, 
+          long incr,
+          long chunk_size, 
+          long *istart, 
+          long *iend
+)
 {
   printf("%s:: \n", __FUNCTION__);
 }
 
-bool GOMP_loop_ordered_dynamic_next (long *, long *)
+bool GOMP_loop_ordered_dynamic_next (long *istart, long *iend)
 {
   printf("%s:: \n", __FUNCTION__);
 }

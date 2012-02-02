@@ -25,6 +25,7 @@ libgomp_la_SOURCES=\
     libgomp_ordered.c \
     libgomp_single.c \
     libgomp_loop.c \
+    libgomp_loop_dynamic.c \
     libgomp_loop_static.c \
     libgomp_section.c \
     libgomp_task.c \
