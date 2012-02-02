@@ -153,8 +153,6 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
 
   thread = kaapi_threadcontext2thread(kproc->thread);
 
-  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc(kproc);
-
   /* save frame */
   kaapi_thread_save_frame( thread, &ctxt->frame );
   

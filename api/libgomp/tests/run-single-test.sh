@@ -6,7 +6,7 @@ then
     exit
 fi
 
-KAAPI_INSTALL_PATH=
+#KAAPI_INSTALL_PATH=
 
 # KAAPI_INSTALL_PATH=$HOME/soft/install/xkaapi
 
@@ -31,4 +31,4 @@ testname=$1
 shift
 
 # Run the test  
-$testname $@
+time $testname $@
