@@ -68,6 +68,11 @@ enum kaapic_mode
   KAAPIC_MODE_V
 };
 
+enum kaapic_init_flag {
+  KAAPIC_START_ALL = 0,
+  KAAPIC_START_ONLY_MAIN = 1
+};
+
 /** kaapic_init INIT initializes the runtime. 
   It must be called once per pro- gram before using any of 
   the other routines. 
