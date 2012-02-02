@@ -246,6 +246,9 @@ extern int kaapic_foreach_workinit
   kaapic_body_arg_t*      body_args
 );
 
+
+
+
 /* 
   Return !=0 iff first and last have been filled for the next piece
   of work to execute
@@ -255,6 +258,7 @@ extern int kaapic_foreach_worknext(
   kaapi_workqueue_index_t* first,
   kaapi_workqueue_index_t* last
 );
+
 
 /*
 */
