@@ -54,6 +54,29 @@ static void kaapic_dfg_body(void* p, kaapi_thread_t* t)
   KAAPIC_DFG_SWITCH(ti);
 }
 
+static void* get_arg_wh
+(const kaapic_task_info_t* ti, unsigned int i)
+{
+  const kaapic_arg_info_t* const ai = &ti->args[i];
+
+  if (ai->mode != KAAPI_ACCESS_MODE_V)
+  {
+    const kaapi_data_t* const gd = (kaapi_data_t*)ai->access.data;
+    return (void*)gd->ptr.ptr;
+  }
+
+  return ai->access.data;
+}
+
+static void kaapic_dfg_body_wh
+(void* p, kaapi_thread_t* thread, kaapi_task_t* task)
+{
+  const kaapic_task_info_t* const ti = (const kaapic_task_info_t*)p;
+
+#include "kaapic_dfg_wh_switch.h"
+  KAAPIC_DFG_WH_SWITCH(ti);
+}
+
 /* format definition of C task */
 
 static size_t kaapic_taskformat_get_count_params(
@@ -183,7 +206,7 @@ void _kaapic_register_task_format(void)
   (
     format,
     kaapic_dfg_body, 
-    0,
+    (kaapi_task_body_t)kaapic_dfg_body_wh,
     "kaapic_dfg_task",
     sizeof(kaapic_task_info_t),
     kaapic_taskformat_get_count_params,
