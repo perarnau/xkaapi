@@ -44,7 +44,12 @@
 */
 #include "libgomp.h"
 
+// ==1 to use task based begin_parallel
+// else ==0 to use foreach based begin_parallel
+#define KAAPI_GOMP_USE_TASK 0
 
+
+#if (KAAPI_GOMP_USE_TASK == 1)
 
 typedef struct GOMP_parallel_task_arg {
   int                       numthreads;
@@ -54,8 +59,10 @@ typedef struct GOMP_parallel_task_arg {
   kaapi_libgomp_teaminfo_t* teaminfo;
 } GOMP_parallel_task_arg_t;
 
-static void GOMP_trampoline_spawn(
-  void* voidp, kaapi_thread_t* thread
+static void GOMP_trampoline_parallel
+(
+  void*           voidp, 
+  kaapi_thread_t* thread
 )
 {
   GOMP_parallel_task_arg_t* taskarg = (GOMP_parallel_task_arg_t*)voidp;
@@ -76,7 +83,7 @@ static void GOMP_trampoline_spawn(
 
 KAAPI_REGISTER_TASKFORMAT( GOMP_parallel_task_format,
     "GOMP/Parallel Task",
-    GOMP_trampoline_spawn,
+    GOMP_trampoline_parallel,
     sizeof(GOMP_parallel_task_arg_t),
     5,
     (kaapi_access_mode_t[]){ 
@@ -104,16 +111,39 @@ KAAPI_REGISTER_TASKFORMAT( GOMP_parallel_task_format,
     0
 )
 
+#else
+
+static void GOMP_trampoline_parallel
+(
+  int32_t i, int32_t j, int32_t tid,
+  int                       numthreads,
+  kaapi_libgomp_teaminfo_t* teaminfo,
+  void                    (*fn) (void *),
+  void*                     data
+)
+{
+  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();
+  
+  ctxt->numthreads         = numthreads;
+  KAAPI_ATOMIC_WRITE(&ctxt->workshare.init, 0);
+  ctxt->workshare.master   = teaminfo->localinfo[0];
+  ctxt->teaminfo           = teaminfo;
+  
+  for (int32_t k = i; k<j; ++k)
+  {
+    ctxt->threadid = k;
+    fn(data);
+  }
+}
+
+#endif
 
 void 
 GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
 {
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_t* thread;
-  kaapi_task_t* task;
-  GOMP_parallel_task_arg_t* arg;
-  GOMP_parallel_task_arg_t* allarg;
-  
+
   if (num_threads == 0)
     num_threads = gomp_nthreads_var;
 
@@ -150,6 +180,11 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
   ctxt->teaminfo            = teaminfo;
 
 
+#if (KAAPI_GOMP_USE_TASK == 1)
+  kaapi_task_t* task;
+  GOMP_parallel_task_arg_t* arg;
+  GOMP_parallel_task_arg_t* allarg;
+  
   allarg = kaapi_thread_pushdata(thread, num_threads * sizeof(GOMP_parallel_task_arg_t));
 
   /* The master thread (id 0) calls fn (data) directly. That's why we
@@ -159,7 +194,7 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
   {
     kaapi_task_init( 
         task, 
-        GOMP_trampoline_spawn, 
+        GOMP_trampoline_parallel, 
         allarg+i
     );
     arg = kaapi_task_getargst( task, GOMP_parallel_task_arg_t );
@@ -175,12 +210,27 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
 
 #if 0 /* previous lines are equivalents to : */
       kaapic_spawn (4, 
-       GOMP_trampoline_spawn,
+       GOMP_trampoline_parallel,
        KAAPIC_MODE_V, num_threads, 1, KAAPIC_TYPE_INT,
        KAAPIC_MODE_V, i, 1, KAAPIC_TYPE_INT,
        KAAPIC_MODE_V, fn, 1, KAAPIC_TYPE_PTR,
        KAAPIC_MODE_V, data, 1, KAAPIC_TYPE_PTR
     );
+#endif
+
+#else
+
+  kaapic_foreach_attr_t attr;
+  kaapic_foreach_attr_init(&attr);
+  kaapic_foreach_attr_set_grains( &attr, 1, 1 );
+  
+  kaapic_foreach(1, num_threads, &attr, 
+    4, GOMP_trampoline_parallel,
+    num_threads,
+    teaminfo,
+    fn,
+    data
+  );
 #endif
 
   kaapic_begin_parallel();
