@@ -150,7 +150,6 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
   ctxt->teaminfo            = teaminfo;
 
 
-#if 1 // TEST COUT...
   allarg = kaapi_thread_pushdata(thread, num_threads * sizeof(GOMP_parallel_task_arg_t));
 
   /* The master thread (id 0) calls fn (data) directly. That's why we
@@ -184,7 +183,6 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
     );
 #endif
 
-#endif
   kaapic_begin_parallel();
 
   /* initialize master context */
