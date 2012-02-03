@@ -358,10 +358,10 @@ void testfor()
 
   for (k=0; k<=OUTERREPS; k++){
     start  = getclock();
-#pragma omp parallel private(j)
+#pragma omp parallel private(j) 
       {
 	for (j=0; j<innerreps; j++){
-#pragma omp for
+#pragma omp for nowait
 	  for (i=0; i<nthreads; i++){
 	    delay(delaylength);
 	  }
