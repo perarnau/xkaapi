@@ -44,37 +44,6 @@
 */
 #include "libgomp.h"
 
-kaapi_libgompctxt_t* GOMP_get_ctxtkproc( kaapi_processor_t* kproc )
-{
-  if (kproc->libgomp_tls == 0)
-  {
-    kaapi_libgompctxt_t* ctxt = (kaapi_libgompctxt_t*)malloc(sizeof(kaapi_libgompctxt_t));
-    ctxt->threadid   = 0;
-    ctxt->numthreads = 1;
-    kproc->libgomp_tls = ctxt;
-    return ctxt;
-  }
-  return (kaapi_libgompctxt_t*)kproc->libgomp_tls;
-}
-
-
-kaapi_libgompctxt_t* GOMP_get_ctxt()
-{
-  return GOMP_get_ctxtkproc(kaapi_get_current_processor());
-}
-
-
-int
-omp_get_num_threads (void)
-{
-  return GOMP_get_ctxt()->numthreads;
-}
-
-int
-omp_get_thread_num (void)
-{
-  return GOMP_get_ctxt()->threadid;
-}
 
 
 typedef struct GOMP_parallel_task_arg {
@@ -143,7 +112,7 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
   kaapi_thread_t* thread;
   GOMP_parallel_task_arg_t* arg;
   
-//  kaapic_begin_parallel();
+  //kaapic_begin_parallel();
 
   if (num_threads == 0)
     num_threads = gomp_nthreads_var;
@@ -163,21 +132,22 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
         sizeof(kaapi_libgomp_teaminfo_t), 
         8
   );
+  /* lock for ??? */
   kaapi_atomic_initlock(&teaminfo->lock);
+
+  /* barrier for the team */
+  gomp_barrier_init (&teaminfo->barrier, num_threads);
+
   teaminfo->numthreads   = num_threads;
   KAAPI_ATOMIC_WRITE(&teaminfo->single_state, 0);
   memset( teaminfo->localinfo, 0, num_threads*sizeof(kaapi_libgompworkshared_t*) );
   teaminfo->localinfo[0] = &ctxt->workshare;
-
   
   /* init workshared construct, assume just one top level ctxt */
   KAAPI_ATOMIC_WRITE(&ctxt->workshare.init, 0);
   ctxt->workshare.workload  = 0;
   ctxt->workshare.master    = &ctxt->workshare;
   ctxt->teaminfo            = teaminfo;
-
-  /* init team context */
-  gomp_barrier_init (&global_barrier, num_threads);
 
 
   /* The master thread (id 0) calls fn (data) directly. That's why we
@@ -220,7 +190,8 @@ GOMP_parallel_end (void)
   kaapi_processor_t* kproc = kaapi_get_current_processor();
 
   /* implicit sync */
-//  kaapic_end_parallel (0); 
+  //kaapic_end_parallel (0);
+  kaapic_sync ();
 
   /* restore frame */
   kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc(kproc);

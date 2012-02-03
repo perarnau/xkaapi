@@ -111,28 +111,30 @@ void GOMP_task(
     }
     else
       fn (data);
+    return;
   }
-  else {
-    kaapi_thread_t* thread = kaapi_self_thread();    
-    kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();  
-    kaapi_task_t* task = kaapi_thread_toptask(thread);
-    kaapi_task_init( 
-        task, 
-        GOMP_trampoline_task, 
-        kaapi_thread_pushdata(thread, sizeof(GOMP_spawn_task_arg_t)) 
-    );
-    void* userarg = kaapi_thread_pushdata_align( thread, arg_size, arg_align);
-    if (cpyfn)
-      cpyfn(userarg, data);
-    else
-      memcpy(userarg, data, arg_size);
 
-    GOMP_spawn_task_arg_t* arg = kaapi_task_getargst( task, GOMP_spawn_task_arg_t );
-    arg->numthreads = ctxt->numthreads;
-    arg->threadid   = ctxt->threadid;
-    arg->fn         = fn;
-    arg->data       = userarg;
-    kaapi_thread_pushtask(thread);
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc(kproc);
+  kaapi_thread_t* thread =  kaapi_threadcontext2thread(kproc->thread);
+  kaapi_task_t* task = kaapi_thread_toptask(thread);
+  kaapi_task_init( 
+      task, 
+      GOMP_trampoline_task, 
+      kaapi_thread_pushdata(thread, sizeof(GOMP_spawn_task_arg_t)) 
+  );
+  void* userarg = kaapi_thread_pushdata_align( thread, arg_size, arg_align);
+  if (cpyfn)
+    cpyfn(userarg, data);
+  else
+    memcpy(userarg, data, arg_size);
+
+  GOMP_spawn_task_arg_t* arg = kaapi_task_getargst( task, GOMP_spawn_task_arg_t );
+  arg->numthreads = ctxt->numthreads;
+  arg->threadid   = ctxt->threadid;
+  arg->fn         = fn;
+  arg->data       = userarg;
+  kaapi_thread_pushtask(thread);
 
 #if OLD
     /* todo: create a runtime task without using kaapic API */    
@@ -144,7 +146,6 @@ void GOMP_task(
                  KAAPIC_MODE_V, argtask, 1, KAAPIC_TYPE_PTR
     );
 #endif
-  }
 }
 
 void GOMP_taskwait (void)
