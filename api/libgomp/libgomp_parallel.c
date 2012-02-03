@@ -46,7 +46,7 @@
 
 // ==1 to use task based begin_parallel
 // else ==0 to use foreach based begin_parallel
-#define KAAPI_GOMP_USE_TASK 0
+#define KAAPI_GOMP_USE_TASK 1
 
 
 #if (KAAPI_GOMP_USE_TASK == 1)
@@ -220,6 +220,12 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
 
 #else
 
+  /* ici : il faut un kaapic_foreach asynchrone 
+     - creation de la tache adaptative
+     - mais on continue localement.
+     Le thread courant ne doit pas prendre d'element dans la sequence
+     pour les executer.
+  */
   kaapic_foreach_attr_t attr;
   kaapic_foreach_attr_init(&attr);
   kaapic_foreach_attr_set_grains( &attr, 1, 1 );
