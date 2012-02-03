@@ -110,10 +110,10 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
 {
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_t* thread;
+  kaapi_task_t* task;
   GOMP_parallel_task_arg_t* arg;
+  GOMP_parallel_task_arg_t* allarg;
   
-  //kaapic_begin_parallel();
-
   if (num_threads == 0)
     num_threads = gomp_nthreads_var;
 
@@ -150,15 +150,18 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
   ctxt->teaminfo            = teaminfo;
 
 
+#if 1 // TEST COUT...
+  allarg = kaapi_thread_pushdata(thread, num_threads * sizeof(GOMP_parallel_task_arg_t));
+
   /* The master thread (id 0) calls fn (data) directly. That's why we
      start this loop from id = 1.*/
+  task = kaapi_thread_toptask(thread);
   for (int i = 1; i < num_threads; i++)
   {
-    kaapi_task_t* task = kaapi_thread_toptask(thread);
     kaapi_task_init( 
         task, 
         GOMP_trampoline_spawn, 
-        kaapi_thread_pushdata(thread, sizeof(GOMP_parallel_task_arg_t)) 
+        allarg+i
     );
     arg = kaapi_task_getargst( task, GOMP_parallel_task_arg_t );
     arg->numthreads = num_threads;
@@ -166,8 +169,10 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
     arg->fn         = fn;
     arg->data       = data;
     arg->teaminfo   = teaminfo; /* this is the master workshare of the team... */
-    kaapi_thread_pushtask(thread);
+
+    task = kaapi_thread_nexttask(thread, task);
   }
+  kaapi_thread_push_packedtasks(thread, num_threads-1);
 
 #if 0 /* previous lines are equivalents to : */
       kaapic_spawn (4, 
@@ -178,6 +183,9 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
        KAAPIC_MODE_V, data, 1, KAAPIC_TYPE_PTR
     );
 #endif
+
+#endif
+  kaapic_begin_parallel();
 
   /* initialize master context */
   ctxt->numthreads = num_threads;
@@ -190,13 +198,13 @@ GOMP_parallel_end (void)
   kaapi_processor_t* kproc = kaapi_get_current_processor();
 
   /* implicit sync */
-  //kaapic_end_parallel (0);
-  kaapic_sync ();
+  kaapic_end_parallel (0);
+  //kaapic_sync ();
 
   /* restore frame */
   kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc(kproc);
   kaapi_atomic_destroylock(&ctxt->teaminfo->lock);
-  kaapi_thread_restore_frame( kaapi_threadcontext2thread(kproc->thread), &ctxt->frame);
 
+  kaapi_thread_restore_frame( kaapi_threadcontext2thread(kproc->thread), &ctxt->frame);
   ctxt->teaminfo = 0;
 }

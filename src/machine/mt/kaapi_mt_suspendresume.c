@@ -45,7 +45,7 @@
 
 /*
 */
-volatile int kaapi_suspendflag;
+volatile int kaapi_suspendflag __attribute__((aligned(64)));
 
 /*
 */
@@ -70,7 +70,8 @@ void kaapi_mt_suspendresume_init(void)
 void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
 {
   while (kaapi_suspendflag)
-    kaapi_slowdown_cpu();
+    pthread_yield();
+//    kaapi_slowdown_cpu();
     
 //  pthread_mutex_lock(&kproc->suspend_lock);
 //  if (kaapi_suspendflag)
@@ -104,6 +105,7 @@ void kaapi_mt_resume_threads(void)
 {
 //  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );
 
+  kaapi_writemem_barrier();
   kaapi_suspendflag = 0;
 //  KAAPI_ATOMIC_WRITE(&kaapi_suspendedthreads, 0);
 //  pthread_mutex_lock(&wakeupmutex_threads);
