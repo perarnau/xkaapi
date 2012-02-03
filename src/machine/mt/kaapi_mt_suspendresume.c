@@ -70,8 +70,11 @@ void kaapi_mt_suspendresume_init(void)
 void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
 {
   while (kaapi_suspendflag)
+#if defined(__APPLE__)
+    kaapi_slowdown_cpu();
+#else
     pthread_yield();
-//    kaapi_slowdown_cpu();
+#endif
     
 //  pthread_mutex_lock(&kproc->suspend_lock);
 //  if (kaapi_suspendflag)
