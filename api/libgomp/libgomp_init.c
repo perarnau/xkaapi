@@ -99,8 +99,9 @@ initialize_lib (void)
     /* Kaapi inherits OMP_NUM_THREADS */
     setenv ("KAAPI_CPUCOUNT", getenv ("OMP_NUM_THREADS"), 1);
   }
+  /* here to do: convert GOM_AFFINITY to KAAPI_CPUSET */
 
-  kaapic_init (1);
+  kaapic_init (KAAPIC_START_ONLY_MAIN);
 
   gomp_nthreads_var = (env_nthreads > 0) ? env_nthreads : kaapic_get_concurrency ();  
 
