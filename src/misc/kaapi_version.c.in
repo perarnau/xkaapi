@@ -46,6 +46,9 @@
 #include "kaapi_impl.h"
 #include "kaapi_version_githash.h"
 
-// autotools can prompt for this ...
-const char* get_kaapi_version()
+/* autotools can prompt for this ... */
+const char* get_kaapi_version(void)
 { return "@PACKAGE_NAME@-@PACKAGE_VERSION@\nLast git commit: " KAAPI_GIT_HASH "\n"; }
+
+const char* get_kaapi_git_hash(void)
+{ return KAAPI_GIT_HASH; }

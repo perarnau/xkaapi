@@ -169,6 +169,52 @@ Refer to examples/kaapif/foreach\\
 
 
 \newpage
+\section{Library versioning}
+
+\subsection{Synopsis}
+\begin{small}
+\lstset{commentstyle=\color{blue}}
+\lstset{language=C}
+\begin{lstlisting}[frame=tb]
+SUBROUTINE KAAPIF_GET_VERSION(CHARACTER(40) VERSION)
+\end{lstlisting}
+\end{small}
+
+\subsection{Description}
+\paragraph{}
+\textit{KAAPIF\_GET\_VERSION} retrieves a string describing the runtime version.
+Currently, the string is the git last commit hash in base64.
+
+\subsection{Parameters}
+\begin{itemize}
+\item \textit{VERSION}: An array large enough to hold the version.
+\end{itemize}
+
+\subsection{Return value}
+\paragraph{}
+None.
+
+\subsection{Example}
+\paragraph{}
+Refer to examples/kaapif/get\_version\\
+\begin{small}
+\begin{lstlisting}[frame=tb]
+   PROGRAM MAIN
+
+      CHARACTER(40) VERSION
+
+      CALL KAAPIF_INIT(1)
+      CALL KAAPIF_GET_VERSION(VERSION)
+      CALL KAAPIF_FINALIZE()
+
+      WRITE(*, *) 'version: ', VERSION(1:40)
+
+  END PROGRAM MAIN
+\end{lstlisting}
+\end{small}
+
+
+\newpage
 \section{Concurrency}
 
 \subsection{Synopsis}
@@ -321,17 +367,17 @@ Refer to examples/kaapif/foreach\\
 \begin{lstlisting}[frame=tb]
 INTEGER*4 FUNCTION KAAPIF_FOREACH
 (
-  BODY,
   INTEGER*4 FIRST, INTEGER*4 LAST,
   INTEGER*4 NARGS,
+  BODY,
   ...
 )
 
 INTEGER*4 FUNCTION KAAPIF_FOREACH_WITH_FORMAT
 (
-  BODY,
   INTEGER*4 FIRST, INTEGER*4 LAST,
   INTEGER*4 NARGS,
+  BODY,
   ...
 )
 \end{lstlisting}
@@ -356,9 +402,9 @@ SUBROUTINE BODY(I, J, TID, ...)
 
 \subsection{Parameters}
 \begin{itemize}
-\item \textit{BODY}: the function body to be called at each iteration
 \item \textit{FIRST}, \textit{LAST}: the iteration range indices, inclusive.
 \item \textit{NARGS}: the argument count
+\item \textit{BODY}: the function body to be called at each iteration
 \item \textit{...}: the arguments passed to \textit{BODY}. For
 \textit{KAAPIF\_FOREACH\_WITH\_FORMAT}, refer to the \textit{KAAPIF\_SPAWN}
 documentation.
@@ -388,7 +434,7 @@ Refer to examples/kaapif/foreach\_with\_format\\
 
     ...
     ! apply the OP routine on ARRAY[1:SIZE]
-    E = KAAPIF_FOREACH(OP, 1, SIZE, 1, ARRAY)
+    E = KAAPIF_FOREACH(1, SIZE, 1, OP, ARRAY)
 
     ...
     ! version with format
@@ -397,7 +443,7 @@ Refer to examples/kaapif/foreach\_with\_format\\
     E = KAAPIF_FOREACH_WITH_FORMAT
     (
     ! iterated range and argument count are the same as above
-    OP, 1, SIZE, 1,
+    1, SIZE, 1, OP,
     ! ARRAY an array of SIZE double
     ! ARRAY elments are read and written by the task
     ARRAY, KAAPIF_TYPE_DOUBLE, SIZE, KAAPIF_MODE_RW
@@ -417,8 +463,8 @@ Refer to examples/kaapif/foreach\_with\_format\\
 \begin{lstlisting}[frame=tb]
 INTEGER*4 FUNCTION KAAPIF_SPAWN
 (
-  BODY,
   INTEGER*4 NARGS,
+  BODY,
   ...
 )
 \end{lstlisting}
@@ -471,8 +517,8 @@ For a scalar value, it must be set to 1.
 
 \subsection{Parameters}
 \begin{itemize}
-\item \textit{BODY}: the task body.
 \item \textit{NARGS}: the argument count.
+\item \textit{BODY}: the task body.
 \item \textit{...}: the \textit{VALUE}, \textit{TYPE}, \textit{COUNT}, \textit{MODE} tuple list.
 \end{itemize}
 
@@ -497,7 +543,7 @@ Refer to examples/kaapif/dfg
     INTEGER*4 E
     ...
     ! spawn a task implemented by the OP routine
-    E = KAAPIF_SPAWN(OP, 2,
+    E = KAAPIF_SPAWN(2, OP,
     ! argument[0]
      &                42
      &                KAAPIF_TYPE_DOUBLE,

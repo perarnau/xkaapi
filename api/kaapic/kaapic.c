@@ -44,6 +44,7 @@
 
 
 kaapic_foreach_attr_t kaapic_default_attr;
+unsigned int kaapic_do_parallel;
 
 static kaapi_atomic_t kaapic_initcalled = { 0 };
 
@@ -54,9 +55,15 @@ int kaapic_init(int32_t flags)
     return 0;
 
   if (flags ==0)
+  {
+    kaapic_do_parallel = 0;
     err = kaapi_init(1, 0, 0);
-  else 
+  }
+  else /* only the main thread is started */
+  {
+    kaapic_do_parallel = 1;
     err = kaapi_init(0, 0, 0);
+  }
 
   if (err !=0) return err;
   
