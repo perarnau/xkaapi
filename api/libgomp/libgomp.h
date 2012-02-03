@@ -52,6 +52,18 @@
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
 
+/* barrier.c */
+
+#define BAR_CYCLES 3
+#define CACHE_LINE_SIZE 64
+
+typedef struct gomp_barrier {
+  kaapi_atomic_t __attribute__ ((aligned (CACHE_LINE_SIZE))) cycle;
+  unsigned int __attribute__ ((aligned (CACHE_LINE_SIZE))) nthreads;
+  char __attribute__ ((aligned (CACHE_LINE_SIZE))) count[BAR_CYCLES * CACHE_LINE_SIZE];
+} gomp_barrier_t; 
+
+
 struct PerTeamLocalStorage;
 struct WorkShareRep;
 
@@ -65,6 +77,7 @@ typedef struct GlobalTeamInformation {
   kaapi_lock_t                 lock;       /* 1 iff work is init */
   int                          numthreads;
   kaapi_atomic_t               single_state;
+  gomp_barrier_t               barrier;
   struct WorkShareRep*         localinfo[KAAPI_MAX_PROCESSOR];
 } kaapi_libgomp_teaminfo_t;
 
@@ -90,8 +103,23 @@ typedef struct PerTeamLocalStorage {
 } kaapi_libgompctxt_t ;
 
 
-extern kaapi_libgompctxt_t* GOMP_get_ctxtkproc( kaapi_processor_t* kproc );
-extern kaapi_libgompctxt_t* GOMP_get_ctxt();
+static inline kaapi_libgompctxt_t* GOMP_get_ctxtkproc( kaapi_processor_t* kproc )
+{ 
+  if (kproc->libgomp_tls == 0)
+  {
+    kaapi_libgompctxt_t* ctxt = (kaapi_libgompctxt_t*)malloc(sizeof(kaapi_libgompctxt_t));
+    ctxt->threadid   = 0;
+    ctxt->numthreads = 1;
+    kproc->libgomp_tls = ctxt;
+    return ctxt;
+  }
+  return (kaapi_libgompctxt_t*)kproc->libgomp_tls;
+}
+
+static inline kaapi_libgompctxt_t* GOMP_get_ctxt()
+{
+  return GOMP_get_ctxtkproc(kaapi_get_current_processor());
+}
 
 
 enum omp_task_kind
@@ -106,18 +134,6 @@ enum omp_task_kind
 
 extern int gomp_nthreads_var;
 
-/* barrier.c */
-
-#define BAR_CYCLES 3
-#define CACHE_LINE_SIZE 64
-
-typedef struct gomp_barrier {
-  kaapi_atomic_t __attribute__ ((aligned (CACHE_LINE_SIZE))) cycle;
-  unsigned int __attribute__ ((aligned (CACHE_LINE_SIZE))) nthreads;
-  char __attribute__ ((aligned (CACHE_LINE_SIZE))) count[BAR_CYCLES * CACHE_LINE_SIZE];
-} gomp_barrier_t; 
-
-extern gomp_barrier_t global_barrier;
 
 void gomp_barrier_init (struct gomp_barrier *barrier, unsigned int num);
 void gomp_barrier_destroy (struct gomp_barrier *barrier);
