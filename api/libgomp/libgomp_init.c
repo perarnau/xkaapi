@@ -103,10 +103,13 @@ initialize_lib (void)
   kaapic_init (1);
 
   gomp_nthreads_var = (env_nthreads > 0) ? env_nthreads : kaapic_get_concurrency ();  
+
+  kaapic_begin_parallel ();
 }
 
 static void __attribute__ ((destructor))
 finalize_lib (void)
 {
+  kaapic_end_parallel (0);
   kaapic_finalize ();
 }
