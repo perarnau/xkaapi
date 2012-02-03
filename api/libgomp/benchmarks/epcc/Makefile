@@ -1,4 +1,5 @@
-CC = gcc-fsf-4.4
+CC = /usr/local/bin/gcc
+#CC=gcc-fsf-4.4
 CFLAGS = -fopenmp -O3 -g -DOMPCLOCK
 LDFLAGS = -lm -lgomp
 

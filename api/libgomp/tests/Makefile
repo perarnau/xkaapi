@@ -1,4 +1,4 @@
-CC=gcc
+CC=/usr/local/bin/gcc
 #CC=gcc-fsf-4.4
 #CC=gcc
 CFLAGS=-g -fopenmp -fdump-tree-all -O3 -Wall
