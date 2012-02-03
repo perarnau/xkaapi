@@ -22,7 +22,7 @@ kaapi_version_githash.h: $(srcdir)/../gitlastcommit
 $(srcdir)/../gitlastcommit:
 	$(MAKE) -C .. gitlastcommit
 clean-local:
-	$(RM) $(BUILT_SOURCES)
+	$(RM) kaapi_version_githash.h
 
 nodist_libkaapi_la_SOURCES=$(BUILT_SOURCES)
 libkaapi_la_SOURCES=\
