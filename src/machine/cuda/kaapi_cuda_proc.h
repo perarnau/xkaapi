@@ -136,4 +136,15 @@ cudaStream_t kaapi_cuda_DtoH_stream(void);
 
 cudaStream_t kaapi_cuda_DtoD_stream(void);
 
+static inline int
+kaapi_cuda_sync( void )
+{
+    const cudaError_t res = cudaDeviceSynchronize( );
+    if( res != CUDA_SUCCESS ) {
+	    fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
+	    fflush(stdout);
+    }
+    return (int)res;
+}
+
 #endif /* ! KAAPI_CUDA_PROC_H_INCLUDED */

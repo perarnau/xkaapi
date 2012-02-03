@@ -159,11 +159,7 @@ execute_first:
 	    body( pc->sp, kaapi_cuda_kernel_stream() );
 	    kaapi_cuda_data_recv( td->fmt, pc->sp );
 #ifndef KAAPI_CUDA_ASYNC
-	    const cudaError_t res = cudaDeviceSynchronize( );
-	    if( res != CUDA_SUCCESS ) {
-		    fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
-		    fflush(stdout);
-	    }
+	    kaapi_cuda_sync();
 #endif
 	    /* Exit CUDA context */
 	    kaapi_cuda_ctx_pop( );

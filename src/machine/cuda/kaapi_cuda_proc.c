@@ -116,6 +116,7 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
   */
   kaapi_cuda_ctx_push( );
   kaapi_cuda_cublas_init( proc );
+  kaapi_cuda_sync();
 
 #ifdef KAAPI_CUDA_USE_POOL
   kaapi_cuda_pool_init( proc );
