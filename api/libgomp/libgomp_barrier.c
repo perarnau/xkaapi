@@ -44,7 +44,6 @@
 */
 #include "libgomp.h"
 
-gomp_barrier_t global_barrier;
 
 void
 gomp_barrier_init (struct gomp_barrier *barrier, unsigned int num)
@@ -91,7 +90,7 @@ void GOMP_barrier (void)
 {
   kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();
   /* to do: move barrier to the information contained in ctxt->teaminfo */
-  gomp_barrier_wait (&global_barrier);
+  gomp_barrier_wait (&ctxt->teaminfo->barrier);
   
   /* barrier should reset single ? */
   
