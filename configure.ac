@@ -474,6 +474,17 @@ else
 fi
 AC_DEFINE_UNQUOTED([KAAPI_MAX_PROCESSOR],[$enable_max_processors],[Maximum number of processors (0 for generic implementation)])
 
+dnl 
+KAAPI_FEATURE([futex], [use low-level futex synchronisation primitives],
+  [using futex], [check],
+  [HAVE_FUTEX=1],
+  [HAVE_FUTEX=0],
+  [],
+  [
+    AC_CHECK_HEADER([linux/futex.h], [ FEATURE_ENABLE ], [ FEATURE_DISABLE ])
+  ])
+AC_DEFINE_UNQUOTED([HAVE_FUTEX],[$HAVE_FUTEX],[use futex synchronisation primitives])
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
 AC_C_INLINE
