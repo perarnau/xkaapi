@@ -130,7 +130,12 @@ extern int kaapi_mt_finalize(void);
 /** Suspend all threads except the main threads.
     Should be called by the main thread !
 */
-extern void kaapi_mt_suspend_threads(void);
+extern void kaapi_mt_suspend_threads_initiate(void);
+
+/** Wait for all other threads to be suspended.
+    Should be called by the main thread after kaapi_mt_suspend_threads_initiate
+*/
+extern void kaapi_mt_suspend_threads_wait(void);
 
 /** Call by the threads to be put into suspended state
 */
