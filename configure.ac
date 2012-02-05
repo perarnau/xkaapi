@@ -147,6 +147,9 @@ if test $have_cxx = yes ; then
   AX_CXXFLAGS_WARN_ALL([AM_CXXFLAGS])
 fi
 
+# check for __attribute__((visibility("..."))) support
+ACX_VISIBILITY
+
 # check for automatic macros that are used by KAAPI
 AX_MACRO_DEFINED([__SIZEOF_POINTER__],[],[],[
   AC_MSG_WARN([The '__SIZEOF_POINTER__' macro is not defined by the compiler. Support for such old compilers will be removed in a future release])

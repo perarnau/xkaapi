@@ -57,5 +57,13 @@
 #  error No weak symbols defined for this compiler
 #endif
 
+/** symboles used only internally */
+#ifdef HAVE_VISIBILITY_INTERNAL
+#  define __KA_INTERNAL __attribute__((visibility("internal")))
+#elif defined(HAVE_VISIBILITY_HIDDEN)
+#  define __KA_INTERNAL __attribute__((visibility("hidden")))
+#else
+#  define __KA_INTERNAL
+#endif
 
 #endif /* _KAAPI_COMPILER_H_ */
