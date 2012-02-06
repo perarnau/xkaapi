@@ -179,6 +179,8 @@ ACX_LIB_ADD_PUBLIC_FLAGS([KAAPICLIB], [-I\${includedir}])
 ACX_LIB_NEW_LIB([KAAPIFLIB], [-L\${libdir} -lkaapif], [kaapif])
 ACX_LIB_ADD_PUBLIC_FLAGS([KAAPIFLIB], [-I\${includedir}])
 
+ACX_LIB_NEW_LIB([LIBGOMP], [-L\${libdir} -lgomp], [])
+
 ACX_LIB_NEW_PRG([KAAPIPROGS])
 ACX_LIB_NEW_PRG([KAAPIXXPROGS])
 ACX_LIB_NEW_PRG([KAAPICPROGS])
@@ -333,6 +335,24 @@ KAAPI_FEATURE([api-kastl], [compile KaSTL API],
       FEATURE_ENABLE
     fi
   ])
+
+dnl -----------------------------------------------------------------------
+dnl The "--enable-libgomp"
+dnl -----------------------------------------------------------------------
+KAAPI_FEATURE([libgomp], [compile OpenMP libgomp library],
+  [OpenMP libgomp compiled], [check],
+  [],
+  [],
+  [KAAPI_LIBGOMP],
+  [
+    if test "$enable_api_kaapic" != yes ; then
+      AC_MSG_NOTICE([KaapiC API is required for OpenMP libgomp])
+      FEATURE_DISABLE
+    else
+      FEATURE_ENABLE
+    fi
+  ])
+
 
 dnl ----------------------------------------------------------------
 dnl Compilation options
@@ -853,6 +873,8 @@ ACX_LIB_LINK([KAAPIFLIB], [PUBLIC], [KAAPICLIB])
 ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [CUDA])
 dnl ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [HWLOC])
 
+ACX_LIB_LINK([LIBGOMP], [PUBLIC], [KAAPILIB KAAPICLIB])
+
 ACX_LIB_LINK([KAAPIPROGS], [KAAPILIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIPROGS],
 	[-I\$(top_srcdir)/src],[],[],
@@ -863,8 +885,8 @@ ACX_LIB_ADD_BUILD_FLAGS([KAAPICPROGS],
 	[-I\$(top_srcdir)/api/kaapic -I\$(top_srcdir)/src],[],[],
 	[\$(top_builddir)/api/kaapic/libkaapic.la \$(top_builddir)/src/libkaapi.la])
 
-ACX_LIB_LINK([KAAPIFLIB], [KAAPIFLIB])
-ACX_LIB_ADD_BUILD_FLAGS([KAAPICPROGS],
+ACX_LIB_LINK([KAAPIFPROGS], [KAAPIFLIB])
+ACX_LIB_ADD_BUILD_FLAGS([KAAPIFPROGS],
 	[-I\$(top_srcdir)/api/kaapif -I\$(top_srcdir)/src],[],[],
 	[\$(top_builddir)/api/kaapif/libkaapif.la \$(top_builddir)/api/kaapic/libkaapic.la \$(top_builddir)/src/libkaapi.la])
 
@@ -902,13 +924,14 @@ dnl Then   alphabetic order of other files
 AC_CONFIG_FILES([
 	Makefile
 	api/Makefile
+	api/atha/Makefile
 	api/kaapixx/Makefile
 	api/kaapic/Makefile
 	api/kaapif/Makefile
-	api/quark/Makefile
-	api/libgomp/Makefile
 	api/kastl/Makefile
-	api/atha/Makefile
+	api/libgomp/Makefile
+	api/libgomp/tests/Makefile
+	api/quark/Makefile
 	examples/Makefile
 	network/Makefile
 	network/gasnet/Makefile

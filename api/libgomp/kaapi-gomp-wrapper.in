@@ -1,0 +1,66 @@
+#! /bin/bash
+
+usage() {
+    echo "Usage: $(basename $0) [options] program [args...]"
+    echo "  Execute an OpenMP program compiled with GNU (libgomp) with KAAPI runtime"
+    echo "  Options:"
+    echo "    -t|--time: time the program"
+    echo "    -h|--help: display this help"
+}
+
+use_getopt=no
+if `getopt -T >/dev/null 2>&1` ; [ $? = 4 ] ; then
+  # GNU Enhanced getopt available. Using it
+  use_getopt=yes
+fi
+
+if test $use_getopt = yes ; then
+  TEMP=`getopt -o +ht --long time,help \
+        -n $(basename $0) -- "$@"`
+  eval set -- "$TEMP"
+fi
+
+RUN_TIME=
+while test $# -gt 0; do
+    case "$1" in
+    -h|--help)
+	usage
+	exit 0 ;;
+    -t|--time)
+	RUN_TIME=time
+	;;
+    --)
+	shift
+	break ;;
+    *)
+	echo 1>&2 "Internal error, please report this bug ($1)"
+	exit 1 ;;
+    esac
+    shift
+done
+
+if test $# == 0 ; then
+    usage 1>&2
+    exit 1
+fi
+
+wrapper_installed=no
+if [ $wrapper_installed == yes ]; then
+    libdir="@libdir@"
+else
+    libdir="@abs_top_builddir@/api/libgomp/.libs"
+fi
+
+(uname -a | grep Darwin) > /dev/null 2> /dev/null
+DARWIN_SYS=$?
+
+if [ $DARWIN_SYS -eq 0 ]; 
+then
+    export DYLD_FORCE_FLAT_NAMESPACE=1
+    export DYLD_INSERT_LIBRARIES="$libdir/libkaapic.dylib:$libdir/libgomp.dylib"
+else
+    export LD_LIBRARY_PATH="$libdir:$LD_LIBRARY_PATH"
+    export LD_PRELOAD="libgomp.so.1"
+fi
+
+exec $RUN_TIME "$@"
