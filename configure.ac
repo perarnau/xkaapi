@@ -179,6 +179,8 @@ ACX_LIB_ADD_PUBLIC_FLAGS([KAAPICLIB], [-I\${includedir}])
 ACX_LIB_NEW_LIB([KAAPIFLIB], [-L\${libdir} -lkaapif], [kaapif])
 ACX_LIB_ADD_PUBLIC_FLAGS([KAAPIFLIB], [-I\${includedir}])
 
+ACX_LIB_NEW_LIB([LIBGOMP], [-L\${libdir} -lgomp], [])
+
 ACX_LIB_NEW_PRG([KAAPIPROGS])
 ACX_LIB_NEW_PRG([KAAPIXXPROGS])
 ACX_LIB_NEW_PRG([KAAPICPROGS])
@@ -333,6 +335,24 @@ KAAPI_FEATURE([api-kastl], [compile KaSTL API],
       FEATURE_ENABLE
     fi
   ])
+
+dnl -----------------------------------------------------------------------
+dnl The "--enable-libgomp"
+dnl -----------------------------------------------------------------------
+KAAPI_FEATURE([libgomp], [compile OpenMP libgomp library],
+  [OpenMP libgomp compiled], [check],
+  [],
+  [],
+  [KAAPI_LIBGOMP],
+  [
+    if test "$enable_api_kaapic" != yes ; then
+      AC_MSG_NOTICE([KaapiC API is required for OpenMP libgomp])
+      FEATURE_DISABLE
+    else
+      FEATURE_ENABLE
+    fi
+  ])
+
 
 dnl ----------------------------------------------------------------
 dnl Compilation options
@@ -852,6 +872,8 @@ ACX_LIB_LINK([KAAPICLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([KAAPIFLIB], [PUBLIC], [KAAPICLIB])
 ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [CUDA])
 dnl ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [HWLOC])
+
+ACX_LIB_LINK([LIBGOMP], [PUBLIC], [KAAPILIB KAAPICLIB])
 
 ACX_LIB_LINK([KAAPIPROGS], [KAAPILIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIPROGS],
