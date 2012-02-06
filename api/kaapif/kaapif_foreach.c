@@ -41,9 +41,8 @@
  ** terms.
  ** 
  */
-#include "kaapi_impl.h"
-#include "kaapic_impl.h"
 #include "kaapif.h"
+#include "kaapic_impl.h"
 #include <stdarg.h>
 
 

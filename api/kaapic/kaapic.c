@@ -121,3 +121,31 @@ void kaapic_end_parallel(int32_t flags)
   else
     kaapi_end_parallel(KAAPI_SCHEDFLAG_DEFAULT);
 }
+
+
+/* temporary */
+
+#include "kaapi_impl.h"
+
+static kaapi_frame_t saved_fp;
+
+void kaapic_save_frame(void)
+{
+  kaapi_thread_context_t* const thread = kaapi_self_thread_context();
+
+  saved_fp = *(kaapi_frame_t*)thread->stack.sfp;
+  thread->stack.sfp[1] = saved_fp;
+  kaapi_writemem_barrier();
+  ++thread->stack.sfp;
+}
+
+void kaapic_restore_frame(void)
+{
+  kaapi_thread_context_t* const thread = kaapi_self_thread_context();
+
+  kaapi_sched_lock(&thread->stack.lock);
+  thread->stack.sfp->tasklist = 0;
+  --thread->stack.sfp;
+  *thread->stack.sfp = saved_fp;
+  kaapi_sched_unlock(&thread->stack.lock);
+}

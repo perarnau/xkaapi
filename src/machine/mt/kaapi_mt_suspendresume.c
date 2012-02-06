@@ -42,26 +42,34 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include "machine/mt/kaapi_mt_condvar.h"
+
+
+/* Implementaiton note:
+  * KAAPI_USE_SPIN_SUSPEND may be defined in order to use busy waiting
+     implementation of suspend/resume
+  * else the implementaiton relies on futex (for linux) or Pthread (other OS)
+*/
 
 /*
 */
 volatile int kaapi_suspendflag __attribute__((aligned(64)));
 
+static volatile int kaapi_suspend_round=0;
+
 /*
 */
 kaapi_atomic_t kaapi_suspendedthreads;
 
-#define USE_POSIX_CONDITION 1
-
 /*
 */
-static pthread_cond_t   wakeupcond_threads;
-static pthread_mutex_t  wakeupmutex_threads;
+static kproc_condunlock_t   wakeupcond_threads;
+static kproc_mutex_t  wakeupmutex_threads;
 
 void kaapi_mt_suspendresume_init(void)
 {
-  kaapi_assert( 0 == pthread_cond_init(&wakeupcond_threads, 0) );
-  kaapi_assert( 0 == pthread_mutex_init(&wakeupmutex_threads, 0) );
+  kaapi_assert( 0 == kproc_condunlock_init(&wakeupcond_threads, 0) );
+  kaapi_assert( 0 == kproc_mutex_init(&wakeupmutex_threads, 0) );
   kaapi_suspendflag = 0;
   KAAPI_ATOMIC_WRITE(&kaapi_suspendedthreads, 0);
 }
@@ -69,6 +77,7 @@ void kaapi_mt_suspendresume_init(void)
 
 void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
 {
+#if defined(KAAPI_USE_SPIN_SUSPEND)
   while (kaapi_suspendflag)
 #if defined(__APPLE__)
     kaapi_slowdown_cpu();
@@ -85,27 +94,58 @@ void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
 //    memset(&kproc->fnc_selecarg, 0, sizeof(kproc->fnc_selecarg) );
 //  }
 //  pthread_mutex_unlock(&kproc->suspend_lock);
+#else
+  int round, first=1;
+  for(;;) {
+    kproc_mutex_lock(&wakeupmutex_threads);
+    if (! kaapi_suspendflag) {
+      kproc_mutex_unlock(&wakeupmutex_threads);
+      return;
+    }
+    int newround=kaapi_suspend_round;
+    if (first || round!=newround) {
+      /* cond_wait can return without signal/broadcast
+         if this is the case, do not increment again the counter */
+      KAAPI_ATOMIC_INCR( &kaapi_suspendedthreads );
+    }
+    round=newround;
+    kproc_condunlock_wait(&wakeupcond_threads, &wakeupmutex_threads);
+    if (!kaapi_suspendflag) {
+      break ;
+    }
+  }
+  memset(&kproc->fnc_selecarg, 0, sizeof(kproc->fnc_selecarg) );
+#endif
 }
 
 
 /* should always be called by the main thread only
 */
-void kaapi_mt_suspend_threads(void)
+void kaapi_mt_suspend_threads_post(void)
 {
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == 0 );
+  kaapi_writemem_barrier();
+  kaapi_suspend_round++;
   kaapi_writemem_barrier();
   kaapi_suspendflag = 1;
-//  while (KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) != (kaapi_count_kprocessors-1))
-//  {
-//    kaapi_slowdown_cpu();
-//  }
-//  /* here all threads have view suspendflag !=0 and beguns to enter in sleep mode */
-//  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );
 }
+
+void kaapi_mt_suspend_threads_wait(void)
+{
+  kaapi_assert_debug( kaapi_suspendflag >= 1 );
+  kaapi_suspendflag = 2;
+  kaapi_writemem_barrier();
+  while (KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) != (kaapi_count_kprocessors-1))
+  {
+    kaapi_slowdown_cpu();
+  }
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );  
+}
+
 
 /* */
 void kaapi_mt_resume_threads(void)
 {
+#if defined(KAAPI_USE_SPIN_SUSPEND)
 //  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );
 
   kaapi_writemem_barrier();
@@ -114,5 +154,15 @@ void kaapi_mt_resume_threads(void)
 //  pthread_mutex_lock(&wakeupmutex_threads);
 //  pthread_cond_broadcast(&wakeupcond_threads);
 //  pthread_mutex_unlock(&wakeupmutex_threads);  
+#else
+  kaapi_assert_debug( kaapi_suspendflag >= 1 );
+  kaapi_assert_debug( kaapi_suspendflag == 1 
+		      || KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );
+  kproc_mutex_lock(&wakeupmutex_threads);
+  kaapi_suspendflag = 0;
+  KAAPI_ATOMIC_WRITE(&kaapi_suspendedthreads, 0);
+  kproc_condunlock_broadcast(&wakeupcond_threads);
+  kproc_mutex_unlock(&wakeupmutex_threads);  
+#endif
 }
 

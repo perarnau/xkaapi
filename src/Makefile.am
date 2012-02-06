@@ -213,8 +213,9 @@ libkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_machine.h \
   machine/mt/kaapi_mt_bitmap.h \
   machine/mt/kaapi_mt_perf.c \
-  machine/mt/kaapi_mt_register_procs.c\
-  machine/mt/kaapi_mt_suspendresume.c
+  machine/mt/kaapi_mt_register_procs.c \
+  machine/mt/kaapi_mt_suspendresume.c \
+  machine/mt/kaapi_mt_condvar.c
 endif
 
 if KAAPI_TARGET_CUDA
