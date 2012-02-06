@@ -43,7 +43,6 @@
  */
 #include "kaapic_impl.h"
 #include <string.h>
-#include "kaapi.h"
 #include "kaapif.h"
 
 

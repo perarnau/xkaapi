@@ -267,7 +267,7 @@ void kaapi_end_parallel(int flag)
 
   if (KAAPI_ATOMIC_DECR(&kaapi_parallel_stack) == 0)
   {
-    kaapi_mt_suspend_threads();
+    kaapi_mt_suspend_threads_initiate();
   }
 }
 

@@ -102,6 +102,7 @@ int kaapi_tasklist_pushready_td(
 
 
 #if 0 /* desactivate this portion of code if you do not want push on remote queue */
+  int nodeid;
 
   /* if non local -> push on remote queue ? 
      - first find a memory address where to get numa information

@@ -42,11 +42,8 @@
  ** 
  */
 
-#include "kaapi_impl.h"
+#include "kaapif.h"
 #include "kaapic_impl.h"
-#include "kaapif.h"
-#include "kaapif.h"
-#include <string.h>
 #include <stdarg.h>
 
 static void kaapif_dfg_body(void* p, kaapi_thread_t* t)
