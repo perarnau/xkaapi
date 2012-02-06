@@ -7,6 +7,8 @@ AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir) -I$(top_srcdir)/api/ka
 
 if KAAPI_LIBGOMP
 
+SUBDIRS=tests
+
 lib_LTLIBRARIES=libgomp.la
 
 libgomp_la_CPPFLAGS=$(AM_CPPFLAGS) $(LIBGOMP_BUILD_CPPFLAGS)

@@ -924,13 +924,14 @@ dnl Then   alphabetic order of other files
 AC_CONFIG_FILES([
 	Makefile
 	api/Makefile
+	api/atha/Makefile
 	api/kaapixx/Makefile
 	api/kaapic/Makefile
 	api/kaapif/Makefile
-	api/quark/Makefile
-	api/libgomp/Makefile
 	api/kastl/Makefile
-	api/atha/Makefile
+	api/libgomp/Makefile
+	api/libgomp/tests/Makefile
+	api/quark/Makefile
 	examples/Makefile
 	network/Makefile
 	network/gasnet/Makefile
