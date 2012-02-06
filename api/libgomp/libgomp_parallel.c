@@ -68,11 +68,12 @@ static void GOMP_trampoline_parallel
   GOMP_parallel_task_arg_t* taskarg = (GOMP_parallel_task_arg_t*)voidp;
   kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();
   
-  ctxt->numthreads         = taskarg->numthreads;
-  ctxt->threadid           = taskarg->threadid;
+  ctxt->numthreads          = taskarg->numthreads;
+  ctxt->threadid            = taskarg->threadid;
+  ctxt->inside_single       = 0;
   KAAPI_ATOMIC_WRITE(&ctxt->workshare.init, 0);
-  ctxt->workshare.master   = taskarg->teaminfo->localinfo[0];
-  ctxt->teaminfo           = taskarg->teaminfo;
+  ctxt->workshare.master    = taskarg->teaminfo->localinfo[0];
+  ctxt->teaminfo            = taskarg->teaminfo;
 
   /* register thread to the workshare structure */
   KAAPI_ATOMIC_WRITE_BARRIER(&ctxt->workshare.init, 0);
@@ -115,14 +116,16 @@ KAAPI_REGISTER_TASKFORMAT( GOMP_parallel_task_format,
 
 static void GOMP_trampoline_parallel
 (
-  int32_t i, int32_t j, int32_t tid,
+  int32_t                   i, 
+  int32_t                   j, 
+  int32_t                   tid,
   int                       numthreads,
   kaapi_libgomp_teaminfo_t* teaminfo,
   void                    (*fn) (void *),
   void*                     data
 )
 {
-  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();
+  kaapi_libgompctxt_t* ctxt= GOMP_get_ctxt();
   
   ctxt->numthreads         = numthreads;
   KAAPI_ATOMIC_WRITE(&ctxt->workshare.init, 0);
@@ -139,7 +142,11 @@ static void GOMP_trampoline_parallel
 #endif
 
 void 
-GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
+GOMP_parallel_start (
+  void (*fn) (void *), 
+  void *data, 
+  unsigned num_threads
+)
 {
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_t* thread;
@@ -170,7 +177,9 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
 
   teaminfo->numthreads   = num_threads;
   KAAPI_ATOMIC_WRITE(&teaminfo->single_state, 0);
-  memset( teaminfo->localinfo, 0, num_threads*sizeof(kaapi_libgompworkshared_t*) );
+  memset( teaminfo->localinfo, 0, 
+          num_threads*sizeof(kaapi_libgompworkshared_t*) 
+  );
   teaminfo->localinfo[0] = &ctxt->workshare;
   
   /* init workshared construct, assume just one top level ctxt */
@@ -179,8 +188,8 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
   ctxt->workshare.master    = &ctxt->workshare;
   ctxt->teaminfo            = teaminfo;
 
-
 #if (KAAPI_GOMP_USE_TASK == 1)
+
   kaapi_task_t* task;
   GOMP_parallel_task_arg_t* arg;
   GOMP_parallel_task_arg_t* allarg;
@@ -237,6 +246,7 @@ GOMP_parallel_start (void (*fn) (void *), void *data, unsigned num_threads)
     fn,
     data
   );
+
 #endif
 
   kaapic_begin_parallel();
@@ -259,6 +269,9 @@ GOMP_parallel_end (void)
   kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc(kproc);
   kaapi_atomic_destroylock(&ctxt->teaminfo->lock);
 
-  kaapi_thread_restore_frame( kaapi_threadcontext2thread(kproc->thread), &ctxt->frame);
+  kaapi_thread_restore_frame( 
+      kaapi_threadcontext2thread(kproc->thread), 
+      &ctxt->frame
+  );
   ctxt->teaminfo = 0;
 }

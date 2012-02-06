@@ -49,9 +49,9 @@
 bool GOMP_single_start (void)
 {
   kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();
+  ctxt->inside_single = 1;
 #if 1 // ONLY 0 PASS SINGLE
-  if (ctxt->threadid == 0) return 1;
-  return 0;
+  return (ctxt->threadid == 0);
 #else
   if (KAAPI_ATOMIC_READ(&ctxt->teaminfo->single_state) == 1) 
     return 0;
