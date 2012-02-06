@@ -14,7 +14,7 @@ MATPROG_PRGS+=matprod_bloc_kaapi++\
   matcholesky_kaapi++\
   matcholesky_bloc_kaapi++
 else
-all-matrix: no-cblas
+MATPROG_PRGS+= no-cblas
 endif
 endif
   
