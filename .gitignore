@@ -13,6 +13,7 @@
 /api/atha/athapascan_fork.h
 /api/kaapic/kaapic_adaptive_switch.h
 /api/kaapic/kaapic_dfg_switch.h
+/api/kaapic/kaapic_dfg_wh_switch.h
 /api/kaapif/kaapif_adaptive_switch.h
 /api/kaapif/kaapif_dfg_switch.h
 /api/kaapixx/ka_api_tuple.h

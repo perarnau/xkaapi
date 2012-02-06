@@ -175,7 +175,6 @@ void print_body( void* taskarg, kaapi_thread_t* thread )
 
 int main(int argc, char** argv)
 {
-  kaapi_frame_t frame;
   double t0, t1;
   int value_result;
   int n;
