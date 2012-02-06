@@ -15,6 +15,20 @@ libgomp_la_CXXFLAGS=$(AM_CXXFLAGS) $(LIBGOMP_BUILD_CXXFLAGS)
 libgomp_la_LDFLAGS = -version-info 1:0:0 $(LIBGOMP_BUILD_LDFLAGS)
 libgomp_la_LIBADD=../../src/libkaapi.la ../kaapic/libkaapic.la $(LIBGOMP_BUILD_LIBS)
 
+bin_SCRIPTS = kaapi-gomp-wrapper
+CLEANFILES = $(bin_SCRIPTS)
+EXTRA_DIST = kaapi-gomp-wrapper.in
+
+do_subst = sed -e 's,[@]libdir[@],$(libdir),g' \
+               -e 's,[@]abs_top_builddir[@],$(abs_top_builddir),g'
+
+kaapi-gomp-wrapper: kaapi-gomp-wrapper.in Makefile
+	$(do_subst) < $(srcdir)/kaapi-gomp-wrapper.in > $@
+	chmod +x $@
+
+install-exec-hook:
+	sed -i -e '^wrapper_installed=.*/wrapper_installed=yes/'
+
 include_HEADERS=\
     libgomp.h
 
