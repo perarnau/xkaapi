@@ -863,8 +863,8 @@ ACX_LIB_ADD_BUILD_FLAGS([KAAPICPROGS],
 	[-I\$(top_srcdir)/api/kaapic -I\$(top_srcdir)/src],[],[],
 	[\$(top_builddir)/api/kaapic/libkaapic.la \$(top_builddir)/src/libkaapi.la])
 
-ACX_LIB_LINK([KAAPIFLIB], [KAAPIFLIB])
-ACX_LIB_ADD_BUILD_FLAGS([KAAPICPROGS],
+ACX_LIB_LINK([KAAPIFPROGS], [KAAPIFLIB])
+ACX_LIB_ADD_BUILD_FLAGS([KAAPIFPROGS],
 	[-I\$(top_srcdir)/api/kaapif -I\$(top_srcdir)/src],[],[],
 	[\$(top_builddir)/api/kaapif/libkaapif.la \$(top_builddir)/api/kaapic/libkaapic.la \$(top_builddir)/src/libkaapi.la])
 
