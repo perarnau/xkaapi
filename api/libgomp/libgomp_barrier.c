@@ -69,20 +69,35 @@ gomp_barrier_wait (struct gomp_barrier *barrier)
   int next_cycle = (current_cycle + 1) % BAR_CYCLES;
   int nthreads = barrier->nthreads;
 
-  int nb_arrived = KAAPI_ATOMIC_INCR ((kaapi_atomic_t *)&barrier->count[current_cycle * CACHE_LINE_SIZE]);
-
-  if (nb_arrived == nthreads)
+  /* _barrier_ call generated from a _single_ construct: Only the
+     thread performing the single body (creating OpenMP tasks) is
+     waiting for completion of created tasks. */
+  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();
+  if (ctxt->inside_single)
     {
-      int cycle_to_clean = (next_cycle + 1) % BAR_CYCLES;
-
-      KAAPI_ATOMIC_WRITE_BARRIER (&barrier->cycle, next_cycle);
-      KAAPI_ATOMIC_WRITE ((kaapi_atomic_t *)&barrier->count[cycle_to_clean * CACHE_LINE_SIZE], 0);
+      if (ctxt->threadid == 0)
+	{
+	  ctxt->inside_single = 0;
+	  kaapic_sync ();
+	}
     }
   else
     {
-      while (KAAPI_ATOMIC_READ (&barrier->cycle) != next_cycle)
+      int nb_arrived = KAAPI_ATOMIC_INCR ((kaapi_atomic_t *)&barrier->count[current_cycle * CACHE_LINE_SIZE]);
+      
+      if (nb_arrived == nthreads)
 	{
-	  kaapi_slowdown_cpu ();
+	  int cycle_to_clean = (next_cycle + 1) % BAR_CYCLES;
+	  
+	  KAAPI_ATOMIC_WRITE_BARRIER (&barrier->cycle, next_cycle);
+	  KAAPI_ATOMIC_WRITE ((kaapi_atomic_t *)&barrier->count[cycle_to_clean * CACHE_LINE_SIZE], 0);
+	}
+      else
+	{
+	  while (KAAPI_ATOMIC_READ (&barrier->cycle) != next_cycle)
+	    {
+	      kaapi_slowdown_cpu ();
+	    }
 	}
     }
 }

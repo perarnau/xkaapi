@@ -49,9 +49,10 @@ kaapi_libgompctxt_t* GOMP_get_ctxtkproc( kaapi_processor_t* kproc )
   if (kproc->libgomp_tls == 0)
   {
     kaapi_libgompctxt_t* ctxt = (kaapi_libgompctxt_t*)malloc(sizeof(kaapi_libgompctxt_t));
-    ctxt->threadid   = 0;
-    ctxt->numthreads = 1;
-    kproc->libgomp_tls = ctxt;
+    ctxt->threadid           = 0;
+    ctxt->numthreads         = 1;
+    ctxt->inside_single      = 0;
+    kproc->libgomp_tls       = ctxt;
     return ctxt;
   }
   return (kaapi_libgompctxt_t*)kproc->libgomp_tls;
@@ -94,6 +95,7 @@ static void GOMP_trampoline_spawn(
   
   ctxt->numthreads         = taskarg->numthreads;
   ctxt->threadid           = taskarg->threadid;
+  ctxt->inside_single      = 0;
   KAAPI_ATOMIC_WRITE(&ctxt->workshare.init, 0);
   ctxt->workshare.master   = taskarg->teaminfo->localinfo[0];
   ctxt->teaminfo           = taskarg->teaminfo;
