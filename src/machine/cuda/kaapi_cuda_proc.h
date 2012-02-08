@@ -49,6 +49,7 @@
 
 #include <pthread.h>
 #include <sys/types.h>
+
 #include <cuda_runtime_api.h>
 
 #include "cublas_v2.h"
@@ -140,7 +141,7 @@ static inline int
 kaapi_cuda_sync( void )
 {
     const cudaError_t res = cudaDeviceSynchronize( );
-    if( res != CUDA_SUCCESS ) {
+    if( res != cudaSuccess ) {
 	    fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
 	    fflush(stdout);
     }

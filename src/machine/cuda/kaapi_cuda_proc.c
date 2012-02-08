@@ -75,7 +75,7 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
   int i;
   for( i= 0; i < KAAPI_CUDA_MAX_STREAMS; i++ ) {
       res = cudaStreamCreate( &proc->stream[i] );
-      if (res != CUDA_SUCCESS) {
+      if (res != cudaSuccess) {
 		fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
 		fflush(stdout);
 	kaapi_cuda_dev_close( proc );
@@ -84,7 +84,7 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
   }
 #else
   res = cudaStreamCreate( &proc->stream );
-  if (res != CUDA_SUCCESS) {
+  if (res != cudaSuccess) {
 	    fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
 	    fflush(stdout);
     kaapi_cuda_dev_close( proc );
@@ -103,7 +103,7 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
 #endif
 
 #if defined(KAAPI_DEBUG)
-  if (res != CUDA_SUCCESS){
+  if (res != cudaSuccess){
 	fprintf(stdout, "[%s] kid=%lu\n", __FUNCTION__,
 			kaapi_get_current_kid() );
 	fflush( stdout );

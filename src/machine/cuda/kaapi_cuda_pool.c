@@ -18,7 +18,7 @@ static inline void
 kaapi_cuda_pool_new_event( kaapi_cuda_pool_node_t* node )
 {
     const cudaError_t res = cuEventCreate( &node->event, CU_EVENT_DISABLE_TIMING );
-    if( res != CUDA_SUCCESS ) {
+    if( res != cudaSuccess ) {
 	fprintf( stdout, "[%s] ERROR cuEventCreate %d\n",
 		__FUNCTION__, res );
 	fflush(stdout);
@@ -69,7 +69,7 @@ kaapi_cuda_pool_launch_kernel( const kaapi_processor_t* proc,
     body( node->pc->sp, kaapi_cuda_kernel_stream() );
 
     const cudaError_t res = cuEventRecord( node->event, kaapi_cuda_kernel_stream() );
-    if( res != CUDA_SUCCESS ) {
+    if( res != cudaSuccess ) {
 	fprintf( stdout, "[%s] ERROR cuEventCreate (launch) %d\n",
 		__FUNCTION__, res );
 	fflush(stdout);
@@ -118,7 +118,7 @@ kaapi_cuda_pool_submit(
     /* checkpoint to the kernel execution */
     kaapi_cuda_pool_new_event( node );
     res = cuEventRecord( node->event, kaapi_cuda_HtoD_stream() );
-    if( res != CUDA_SUCCESS ) {
+    if( res != cudaSuccess ) {
 	fprintf( stdout, "[%s] ERROR cuEventCreate (HtoD) %d\n",
 		__FUNCTION__, res );
 	fflush(stdout);
@@ -150,7 +150,7 @@ kaapi_cuda_pool_wait( kaapi_thread_context_t* thread )
     do {
 	node= proc->cuda_proc.pool->htod_beg;
         if( ( NULL != node ) &&
-    	        ( CUDA_SUCCESS == cuEventQuery(node->event) ) ){
+    	        ( cudaSuccess == cuEventQuery(node->event) ) ){
 	    proc->cuda_proc.pool->htod_beg= node->next;
 	    if( node->next == NULL )
 		proc->cuda_proc.pool->htod_end= NULL;
@@ -159,7 +159,7 @@ kaapi_cuda_pool_wait( kaapi_thread_context_t* thread )
 
 	node= proc->cuda_proc.pool->kernel_beg;
         if( ( NULL != node ) &&
-    	        ( CUDA_SUCCESS == cuEventQuery(node->event) ) ){
+    	        ( cudaSuccess == cuEventQuery(node->event) ) ){
 	    proc->cuda_proc.pool->kernel_beg= node->next;
 	    if( node->next == NULL )
 		proc->cuda_proc.pool->kernel_end= NULL;

@@ -20,8 +20,8 @@ kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
   cudaError_t res;
   struct cudaDeviceProp prop;
   res = cudaGetDeviceProperties( &prop, index );
-  if (res != CUDA_SUCCESS) {
-	if( res != CUDA_SUCCESS ) {
+  if (res != cudaSuccess) {
+	if( res != cudaSuccess ) {
 		fprintf( stderr, "%s ERROR: %d\n", __FUNCTION__, res );
 		fflush( stderr );
 	}

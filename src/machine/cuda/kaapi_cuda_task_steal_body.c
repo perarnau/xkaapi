@@ -26,19 +26,19 @@ kaapi_cuda_task_steal_body(
 
     kaapi_cuda_data_send_ptr( fmt, sp );
     res = cuCtxSynchronize( );
-    if( res != CUDA_SUCCESS ) {
+    if( res != cudaSuccess ) {
 	    fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
 	    fflush(stdout);
     }
     body( sp, kaapi_cuda_kernel_stream() );
     res = cuCtxSynchronize( );
-    if( res != CUDA_SUCCESS ) {
+    if( res != cudaSuccess ) {
 	    fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
 	    fflush(stdout);
     }
     kaapi_cuda_data_recv_ptr( fmt, sp );
     res = cuCtxSynchronize( );
-    if( res != CUDA_SUCCESS ) {
+    if( res != cudaSuccess ) {
 	    fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
 	    fflush(stdout);
     }
@@ -118,20 +118,20 @@ kaapi_cuda_task_steal_body(
     kaapi_cuda_ctx_push( );
     kaapi_cuda_data_send( fmt, sp );
     res = cuCtxSynchronize( );
-    if( res != CUDA_SUCCESS ) {
+    if( res != cudaSuccess ) {
 	fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
 	fflush(stdout);
     }
     body( sp, kaapi_cuda_kernel_stream() );
     res = cuCtxSynchronize( );
-    if( res != CUDA_SUCCESS ) {
+    if( res != cudaSuccess ) {
 	fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
 	fflush(stdout);
     }
     kaapi_cuda_data_recv( fmt, sp );
     res = cuCtxSynchronize( );
     cuStreamSynchronize( kaapi_cuda_DtoH_stream() );
-    if( res != CUDA_SUCCESS ) {
+    if( res != cudaSuccess ) {
 	fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
 	fflush(stdout);
     }

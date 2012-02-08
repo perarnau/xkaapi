@@ -145,7 +145,7 @@ out_of_memory:
 		goto out_of_memory;
 	}
 #endif
-	if (res != CUDA_SUCCESS) {
+	if (res != cudaSuccess) {
 		fprintf( stdout, "[%s] ERROR cuMemAlloc (%d) size=%lu kid=%lu\n",
 				__FUNCTION__, res, size, 
 		      		(long unsigned int)kaapi_get_current_kid() ); 
@@ -307,7 +307,7 @@ int kaapi_cuda_mem_register( kaapi_pointer_t ptr,
 #endif
 
 #if 0
-	if (res != CUDA_SUCCESS) {
+	if (res != cudaSuccess) {
 		fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
 		fflush(stdout);
 		return -1;
@@ -342,7 +342,7 @@ kaapi_cuda_mem_1dcopy_htod(
 			size,
 			cudaMemcpyHostToDevice );
 #endif
-	if (res != CUDA_SUCCESS) {
+	if (res != cudaSuccess) {
 		fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
 		fflush(stdout);
 	}
@@ -372,7 +372,7 @@ kaapi_cuda_mem_1dcopy_dtoh(
 			size,
 			cudaMemcpyDeviceToHost);
 #endif
-	if (res != CUDA_SUCCESS) {
+	if (res != cudaSuccess) {
 		fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
 		fflush(stdout);
 	}
@@ -421,7 +421,7 @@ kaapi_cuda_mem_2dcopy_htod(
 	    view_dest->size[0],
 	    cudaMemcpyHostToDevice );
 #endif
-	if (res != CUDA_SUCCESS) {
+	if (res != cudaSuccess) {
 		fprintf( stdout, "[%s] ERROR cuMemcpy2D (%d) kid=%lu src=%p dst=%p size=%lu\n",
 				__FUNCTION__, res,
 		      		(long unsigned int)kaapi_get_current_kid(),
@@ -475,7 +475,7 @@ kaapi_cuda_mem_2dcopy_dtoh(
 		view_src->size[0],
 		cudaMemcpyDeviceToHost );
 #endif
-	if (res != CUDA_SUCCESS) {
+	if (res != cudaSuccess) {
 		fprintf( stdout, "[%s] ERROR cuMemcpy2D (%d) kid=%lu src=%p dst=%p size=%lu\n",
 				__FUNCTION__, res,
 		      		(long unsigned int)kaapi_get_current_kid(),
