@@ -28,8 +28,11 @@ kaapi-gomp-wrapper: kaapi-gomp-wrapper.in Makefile
 	$(do_subst) < $(srcdir)/kaapi-gomp-wrapper.in > $@
 	chmod +x $@
 
-install-exec-hook:
-	sed -i -e '^wrapper_installed=.*/wrapper_installed=yes/'
+install-exec-hook: kaapi-gomp-wrapper
+	sed -e '^wrapper_installed=.*/wrapper_installed=yes/' \
+		> $(DESTDIR)$(bindir)/kaapi-gomp-wrapper \
+		< kaapi-gomp-wrapper
+	chmod +x $(DESTDIR)$(bindir)/kaapi-gomp-wrapper
 
 include_HEADERS=\
     libgomp.h
