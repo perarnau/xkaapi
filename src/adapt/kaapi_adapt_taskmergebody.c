@@ -99,6 +99,10 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
 
     /* not a preemptive algorithm. push a finalization task
        to wait for thieves and block until finalization done.
+       
+       TODO: not here task adaptmerge_body is spawn in end_adaptive,
+       and then it spawn taskfinalize_body... seems to be inconsistant
+       and the following task body may be inlined...
     */
     kaapi_task_init(
       kaapi_thread_toptask(thread), 

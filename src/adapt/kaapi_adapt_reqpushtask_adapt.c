@@ -68,9 +68,10 @@ int kaapi_request_pushtask_adaptive(
   kaapi_task_set_unstealable(toptask);
   kaapi_thread_pushtask_adaptive(&request->frame, user_splitter);
 
-  /* here toptask was replaced in pushtask_adaptive by a kaapi_taskadapt_body, 
-     but flags remain equals.
-     Link together the adaptive victim_task's steal context to the newly created task stealcontext
+  /* here toptask was replaced in kaapi_thread_pushtask_adaptive 
+     by a kaapi_taskadapt_body, and flags remain equals.
+     Link together the adaptive victim_task's steal context to the newly 
+     created task stealcontext
   */
   victim_adapt_arg = kaapi_task_getargst(victim_task, kaapi_taskadaptive_arg_t);
   adapt_arg = kaapi_task_getargst(toptask, kaapi_taskadaptive_arg_t);

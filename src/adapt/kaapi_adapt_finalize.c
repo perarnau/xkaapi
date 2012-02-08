@@ -88,7 +88,7 @@ int kaapi_task_end_adaptive( void* arg )
   /* force execution of all previously pushed task of the frame */
   kaapi_sched_sync_(self_thread);
 
-  /* Synchronize with thief 
+  /* Synchronize with thief : why here ? to put inside kaapi_sched_sync ?
   */
 #if 0
   kaapi_synchronize_steal(self_thread->stack.proc);
