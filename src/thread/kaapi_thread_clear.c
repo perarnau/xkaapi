@@ -62,8 +62,7 @@ int kaapi_thread_clear( kaapi_thread_context_t* thread )
   thread->_next      = 0;
   thread->_prev      = 0;
   thread->asid       = 0;
-  thread->affinity[0]= ~0UL;
-  thread->affinity[1]= ~0UL;
+  kaapi_cpuset_full(&thread->affinity);
 
   thread->wcs        = 0;
 
