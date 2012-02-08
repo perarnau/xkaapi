@@ -239,13 +239,13 @@ typedef struct thief_work
 */
 extern int kaapic_foreach_workinit
 (
-  kaapi_thread_context_t* self_thread,
-  kaapic_work_t*          work,
-  kaapi_workqueue_index_t first, 
-  kaapi_workqueue_index_t last,
-  kaapic_foreach_attr_t*  attr,
-  kaapic_foreach_body_t   body_f,
-  kaapic_body_arg_t*      body_args
+  kaapi_thread_context_t*       self_thread,
+  kaapic_work_t*                work,
+  kaapi_workqueue_index_t       first, 
+  kaapi_workqueue_index_t       last,
+  const kaapic_foreach_attr_t*  attr,
+  kaapic_foreach_body_t         body_f,
+  kaapic_body_arg_t*            body_args
 );
 
 

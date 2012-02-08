@@ -501,7 +501,7 @@ int kaapic_foreach_workinit
   kaapic_work_t*          work,
   kaapi_workqueue_index_t first, 
   kaapi_workqueue_index_t last,
-  kaapic_foreach_attr_t*  attr,
+  const kaapic_foreach_attr_t*  attr,
   kaapic_foreach_body_t   body_f,
   kaapic_body_arg_t*      body_args
 )
@@ -565,6 +565,8 @@ int kaapic_foreach_workinit
   /* handle concurrency too high case */
   if (range_size < concurrency) concurrency = 1;
 
+  if (attr == 0) attr = &kaapic_default_attr;
+
   /* round range to be multiple of concurrency 
      master will get the biggest part
   */
@@ -575,7 +577,12 @@ int kaapic_foreach_workinit
   /* set all except the master */
   kaapi_bitmap_value_clear(&map);
   kaapi_bitmap_set_low_bits(&map, concurrency);
-  kaapi_bitmap_value_unset(&map, 0);
+
+  /* mask with specified cpuset */
+  kaapi_bitmap_value_and(&map, (kaapi_bitmap_value_t*)&attr->cpuset);
+
+  /* unset calling thread */
+  kaapi_bitmap_value_unset(&map, self_thread->stack.proc->kid);
 
   /* allocate and init work array */
   work_array_init(&work->_wa, first + off, scale, &map);
@@ -603,7 +610,6 @@ int kaapic_foreach_workinit
 #if CONFIG_MAX_TID
   work->_wi.max_tid = xxx_max_tid;
 #endif
-  if (attr == 0) attr = &kaapic_default_attr;
   work->_wi.par_grain = attr->p_grain;
   work->_wi.seq_grain = attr->s_grain;
 

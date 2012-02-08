@@ -67,7 +67,9 @@ int kaapic_init(int32_t flags)
   }
 
   if (err !=0) return err;
-  
+
+  kaapic_foreach_attr_init( &kaapic_default_attr );
+    
   if (getenv("KAAPI_SEQ_GRAIN") !=0)
     kaapic_default_attr.s_grain = atoi(getenv("KAAPI_SEQ_GRAIN"));
   else
@@ -84,7 +86,10 @@ int kaapic_init(int32_t flags)
 int kaapic_finalize(void)
 {
   if (KAAPI_ATOMIC_DECR(&kaapic_initcalled) == 0)
+  {
+    kaapic_foreach_attr_destroy(&kaapic_default_attr);
     return kaapi_finalize();
+  }
 
   return 0;
 }
