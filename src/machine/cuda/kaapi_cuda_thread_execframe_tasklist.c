@@ -155,6 +155,7 @@ execute_first:
 	    /* Enter CUDA context */
 	    kaapi_cuda_ctx_push( );
 
+	    kaapi_cuda_data_allocate( td->fmt, pc->sp );
 	    kaapi_cuda_data_send( td->fmt, pc->sp );
 	    body( pc->sp, kaapi_cuda_kernel_stream() );
 	    kaapi_cuda_data_recv( td->fmt, pc->sp );

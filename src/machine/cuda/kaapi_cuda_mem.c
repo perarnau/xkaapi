@@ -59,7 +59,7 @@ kaapi_cuda_mem_blk_remove(
 	kaapi_hashentries_t* entry;
 	kaapi_cuda_mem_blk_t *blk;
 	kaapi_cuda_mem_t* cuda_mem = &proc->cuda_proc.memory;
-	const kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
+	kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
 	const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
 	kaapi_mem_data_t *kmd;
 	size_t mem_free= 0;
@@ -76,7 +76,7 @@ kaapi_cuda_mem_blk_remove(
 		ptr = blk->ptr;
 		ptr_size = blk->size;
 		free( blk );
-		kaapi_mem_host_map_find_or_insert( 
+		kaapi_mem_host_map_find_or_insert( cuda_map,
 			(kaapi_mem_addr_t)__kaapi_pointer2void(ptr), &kmd );
 		entry = kaapi_big_hashmap_findinsert( &cuda_mem->kmem,
 			__kaapi_pointer2void(ptr) );
@@ -164,6 +164,12 @@ out_of_memory:
 int
 kaapi_cuda_mem_free( kaapi_pointer_t *ptr )
 {
+#if 1
+    fprintf( stdout, "[%s] ptr=%p kid=%lu\n", __FUNCTION__,
+	    __kaapi_pointer2void(*ptr),
+	    (long unsigned int)kaapi_get_current_kid() ); 
+    fflush( stdout );
+#endif
 	cudaFree( __kaapi_pointer2void(*ptr) );
 	ptr->ptr = 0;
 	ptr->asid = 0;

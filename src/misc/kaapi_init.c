@@ -197,7 +197,6 @@ int kaapi_init(int flag, int* argc, char*** argv)
 #endif
 
   kaapi_memory_init(); /* TODO: not necessary */
-  kaapi_mem_init();
   int err = kaapi_mt_init();
 
   if (flag)
@@ -216,8 +215,6 @@ int kaapi_finalize(void)
 
   kaapi_memory_destroy();
   
-  kaapi_mem_destroy();
-
   kaapi_mt_finalize();
 
 #if defined(KAAPI_USE_NETWORK)

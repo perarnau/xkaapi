@@ -2,8 +2,6 @@
 #include "kaapi_impl.h"
 #include "kaapi_mem.h"
 
-kaapi_big_hashmap_t kmem_hm;
-
 static inline kaapi_mem_data_t* 
 _kaapi_mem_data_alloc( void )
 {
@@ -13,14 +11,14 @@ _kaapi_mem_data_alloc( void )
 }
 
 int
-kaapi_mem_host_map_find(
+kaapi_mem_host_map_find( const kaapi_mem_host_map_t* map, 
 	kaapi_mem_addr_t addr,
 	kaapi_mem_data_t** data
 	)
 {
     kaapi_hashentries_t* entry;
 
-    entry = kaapi_big_hashmap_find( &kmem_hm, (void*)addr );
+    entry = kaapi_big_hashmap_find( &map->hmap, (void*)addr );
     if (entry != 0)
 	*data = entry->u.kmd;
     else
@@ -30,17 +28,17 @@ kaapi_mem_host_map_find(
 }
 
 int
-kaapi_mem_host_map_find_or_insert(
+kaapi_mem_host_map_find_or_insert( const kaapi_mem_host_map_t* map,
 	kaapi_mem_addr_t addr,
 	kaapi_mem_data_t** kmd
 	)
 {
     kaapi_hashentries_t* entry;
-    const int res = kaapi_mem_host_map_find( addr, kmd );
+    const int res = kaapi_mem_host_map_find( map, addr, kmd );
     if( res == 0 )
         return 0;
 
-    entry = kaapi_big_hashmap_findinsert( &kmem_hm, (void*)addr );
+    entry = kaapi_big_hashmap_findinsert( &map->hmap, (void*)addr );
     if (entry->u.kmd == 0)
 	entry->u.kmd = _kaapi_mem_data_alloc();
 
@@ -51,15 +49,15 @@ kaapi_mem_host_map_find_or_insert(
 }
 
 int
-kaapi_mem_host_map_find_or_insert_( 
+kaapi_mem_host_map_find_or_insert_( const kaapi_mem_host_map_t* map,
 	kaapi_mem_addr_t addr, kaapi_mem_data_t** kmd )
 {
     kaapi_hashentries_t* entry;
-    const int res = kaapi_mem_host_map_find( addr, kmd );
+    const int res = kaapi_mem_host_map_find( map, addr, kmd );
     if( res == 0 )
         return 0;
 
-    entry = kaapi_big_hashmap_findinsert( &kmem_hm, (void*)addr );
+    entry = kaapi_big_hashmap_findinsert( &map->hmap, (void*)addr );
     entry->u.kmd = *kmd;
 
     return 0;
@@ -90,7 +88,7 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, void* sp )
 
 	kaapi_access_t access = fmt->get_access_param( fmt, i, sp );
 	kaapi_data_t* kdata = kaapi_data( kaapi_data_t, &access );
-	kaapi_mem_host_map_find_or_insert( 
+	kaapi_mem_host_map_find_or_insert( host_map, 
 		(kaapi_mem_addr_t)kaapi_pointer2void(kdata->ptr),
 		&kmd );
 	if( !kaapi_mem_data_has_addr( kmd, host_asid ) )
@@ -164,7 +162,7 @@ kaapi_mem_host_map_sync_ptr( const kaapi_format_t* fmt, void* sp )
 	    );
     fflush(stdout);
 #endif
-	kaapi_mem_host_map_find_or_insert( 
+	kaapi_mem_host_map_find_or_insert( host_map,
 		(kaapi_mem_addr_t)access.data,
 		&kmd );
 //	kaapi_data_t* kdata = kaapi_data( kaapi_data_t, &access );
