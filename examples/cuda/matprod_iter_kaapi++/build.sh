@@ -1,9 +1,9 @@
 #!/usr/bin/env sh
 
-SCRATCH=$HOME
+SCRATCH=/scratch/jvlima
 XKAAPIDIR=$SCRATCH/install/xkaapi/default
 CUDADIR=$CUDA_HOME
-ATLAS=$SCRATCH/install/atlas3.9.63
+ATLAS=$SCRATCH/install/atlas3.9.47
 
 #CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1 -maxrregcount 32"
 #CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"

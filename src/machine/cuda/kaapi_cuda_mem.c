@@ -164,7 +164,7 @@ out_of_memory:
 int
 kaapi_cuda_mem_free( kaapi_pointer_t *ptr )
 {
-#if 1
+#if 0
     fprintf( stdout, "[%s] ptr=%p kid=%lu\n", __FUNCTION__,
 	    __kaapi_pointer2void(*ptr),
 	    (long unsigned int)kaapi_get_current_kid() ); 

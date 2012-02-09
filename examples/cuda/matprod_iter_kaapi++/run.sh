@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
-SCRATCH=$HOME
-export LD_LIBRARY_PATH=$CUDA_HOME/cuda/lib64:$LD_LIBRARY_PATH
+SCRATCH=/scratch/jvlima
+export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$SCRATCH/install/xkaapi/default/lib:$LD_LIBRARY_PATH
 
 niter=1
@@ -11,11 +11,13 @@ out="$SCRATCH/res/xkaapi-sgemm-4cpu1gpu-${version}.txt"
 
 #export KAAPI_CPUSET='0:3'
 #export KAAPI_CPUSET='0:2'
-export KAAPI_CPUSET='0:1'
+#export KAAPI_CPUSET='0:11'
+export KAAPI_CPUSET='0:5'
 
-#export KAAPI_GPUSET='0~3'
+#export KAAPI_GPUSET='0~6'
 #export KAAPI_GPUSET='1~2'
-export KAAPI_GPUSET='0~3'
+export KAAPI_GPUSET='0~6,3~7,4~8,5~9'
+#export KAAPI_GPUSET='0~6,3~7'
 
 #export KAAPI_DUMP_GRAPH='1'
 
@@ -58,6 +60,7 @@ msizes="10240"
 #msizes="12288" # ouch
 #msizes="16384" # ouch
 #msizes="20480"
+#msizes="40960"
 # bsizes="2 4 8 16"
 
 # bsizes="1 2 4 8 16 32" ;
