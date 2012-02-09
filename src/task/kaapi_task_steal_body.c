@@ -186,7 +186,8 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   {
     /* Execute the orinal body function with the original args.
     */
-#if defined(KAAPI_USE_CUDA)
+#if 0
+//#if defined(KAAPI_USE_CUDA)
     if (kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA)
     {
       if (fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0)
@@ -264,7 +265,8 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 
 
     /* call directly the stolen body function */
-#if defined(KAAPI_USE_CUDA)
+#if 0
+//#if defined(KAAPI_USE_CUDA)
     if (kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA)
     {
       if (fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0)

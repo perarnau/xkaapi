@@ -18,6 +18,7 @@ kaapi_cuda_task_steal_body(
 	void* sp
 	)
 {
+#if 0
     cudaError_t res;
     cuda_task_body_t body = (cuda_task_body_t)
 	fmt->entrypoint_wh[KAAPI_PROC_TYPE_CUDA];
@@ -46,6 +47,8 @@ kaapi_cuda_task_steal_body(
     kaapi_cuda_ctx_pop( );
 
     return res;
+#endif 
+    return 0;
 }
 
 #if 0

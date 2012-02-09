@@ -299,6 +299,10 @@ int kaapi_cuda_data_recv(
     return 0;
 }
 
+#if 0
+
+TODO: no use yet
+
 int kaapi_cuda_data_send_ptr( 
 	kaapi_format_t*		   fmt,
 	void*			sp
@@ -364,6 +368,11 @@ int kaapi_cuda_data_send_ptr(
 
     return 0;
 }
+#endif
+
+#if 0
+
+TODO: no use yet
 
 int kaapi_cuda_data_recv_ptr( 
 	kaapi_format_t*		   fmt,
@@ -413,3 +422,4 @@ int kaapi_cuda_data_recv_ptr(
 
     return 0;
 }
+#endif
