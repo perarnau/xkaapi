@@ -8,6 +8,26 @@
 #include "kaapi_cuda_mem.h"
 #include "kaapi_cuda_data.h"
 
+#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
+static inline void
+xxx_kaapi_cuda_data_inc_use(
+		const kaapi_mem_host_map_t* map,
+		kaapi_mem_data_t* kmd,
+		kaapi_data_t* src
+		)
+{
+	const kaapi_mem_asid_t asid = kaapi_mem_host_map_get_asid(map);
+
+	if( kaapi_mem_data_has_addr( kmd, asid ) ) {
+	    kaapi_data_t* dest= (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
+		     asid );
+	    kaapi_cuda_mem_inc_use( &dest->ptr );
+	}
+
+}
+
+#endif /* KAAPI_CUDA_MEM_ALLOC_MANAGER */
+
 /* here it checks if the CPU pointer is present in the GPU.
  * If not, it allocates.
  * Context: it executes right before a CUDA task (kernel).
@@ -43,7 +63,8 @@ xxx_kaapi_cuda_data_allocate(
 	} else {
 	    kaapi_data_t* dest= (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
 		     asid );
-#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
+//#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
+#if 0
 	    kaapi_cuda_mem_inc_use( &dest->ptr );
 #endif /* KAAPI_CUDA_MEM_ALLOC_MANAGER */
 	return dest;
@@ -138,6 +159,28 @@ int kaapi_cuda_data_send(
 	        (unsigned int long)kaapi_mem_host_map_get_asid(cuda_map) );
 	fflush( stdout );
 #endif
+#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
+	for ( i=0; i < count_params; i++ ) {
+		kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(
+			kaapi_format_get_mode_param( fmt, i, sp) );
+		if (m == KAAPI_ACCESS_MODE_V) 
+			continue;
+
+		kaapi_access_t access = kaapi_format_get_access_param( fmt,
+			       	i, sp );
+		kaapi_data_t* src = kaapi_data( kaapi_data_t, &access );
+		kaapi_mem_host_map_find_or_insert( 
+			(kaapi_mem_addr_t)kaapi_pointer2void(src->ptr),
+			&kmd );
+
+		if( !kaapi_mem_data_has_addr( kmd, host_asid ) )
+		    kaapi_mem_data_set_addr( kmd, host_asid,
+			    (kaapi_mem_addr_t)src );
+
+		xxx_kaapi_cuda_data_inc_use( cuda_map, kmd, src );
+	}
+#endif
+
 	for ( i=0; i < count_params; i++ ) {
 		kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(
 			kaapi_format_get_mode_param( fmt, i, sp) );
