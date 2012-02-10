@@ -27,4 +27,7 @@ int kaapi_cuda_data_recv_ptr(
 	void*	              sp
 );
 
+int 
+kaapi_cuda_data_check( void );
+
 #endif

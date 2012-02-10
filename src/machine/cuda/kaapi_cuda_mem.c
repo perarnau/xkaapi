@@ -119,6 +119,80 @@ __kaapi_cuda_mem_is_full( kaapi_processor_t* proc, const size_t size )
 	else
 	    return 0;
 }
+
+int 
+kaapi_cuda_mem_mgmt_check( kaapi_processor_t* proc )
+{
+	kaapi_cuda_mem_blk_t *blk;
+	kaapi_cuda_mem_t* cuda_mem = &proc->cuda_proc.memory;
+	kaapi_hashentries_t* entry;
+
+
+	if( (cuda_mem->beg == NULL) && (cuda_mem->end == NULL) )
+	    return 0;
+
+	if( (cuda_mem->beg == NULL) && (cuda_mem->end != NULL) ) {
+	    fprintf(stdout, "[%s] kid=%lu ERROR beg != end (%p != %p)\n",
+		__FUNCTION__,
+		(long unsigned int)kaapi_get_current_kid(),
+		(void*)cuda_mem->beg, (void*)cuda_mem->end );
+	    fflush(stdout);
+	    return 1;
+	}
+
+	if( (cuda_mem->beg != NULL) && (cuda_mem->end == NULL) ) {
+	    fprintf(stdout, "[%s] kid=%lu ERROR beg != end (%p != %p)\n",
+		__FUNCTION__,
+		(long unsigned int)kaapi_get_current_kid(),
+		(void*)cuda_mem->beg, (void*)cuda_mem->end );
+	    fflush(stdout);
+	    return 1;
+	}
+
+	/* first check: beg to end */
+	blk = cuda_mem->beg;
+	while( blk->next != NULL )
+	    blk = blk->next;
+	if( blk != cuda_mem->end ){ /* ERROR */
+	    fprintf(stdout, "[%s] kid=%lu ERROR blk != end (%p != %p)\n",
+		__FUNCTION__,
+		(long unsigned int)kaapi_get_current_kid(),
+		(void*)blk, (void*)cuda_mem->end );
+	    fflush(stdout);
+	    return 1;
+	}
+
+	/* second check: end to beg */
+	blk = cuda_mem->end;
+	while( blk->prev != NULL )
+	    blk = blk->prev;
+	if( blk != cuda_mem->beg ) {
+	    fprintf(stdout, "[%s] kid=%lu ERROR blk != beg (%p != %p)\n",
+		__FUNCTION__,
+		(long unsigned int)kaapi_get_current_kid(),
+		(void*)blk, (void*)cuda_mem->beg );
+	    fflush(stdout);
+	    return 1;
+	}
+
+	/* third check: hashmap */
+	blk = cuda_mem->beg;
+	while( blk != NULL ) {
+		entry = kaapi_big_hashmap_findinsert( &cuda_mem->kmem,
+			__kaapi_pointer2void(blk->ptr) );
+		if( entry->u.block != blk) {
+		    fprintf(stdout, "[%s] kid=%lu ERROR hashmap diff from list (%p != %p)\n",
+			__FUNCTION__,
+			(long unsigned int)kaapi_get_current_kid(),
+			(void*)blk, (void*)entry->u.block );
+		    return 1;
+		}
+		blk = blk->next;
+	}
+
+	return 0;
+}
+
 #endif /* KAAPI_CUDA_MEM_ALLOC_MANAGER */
 
 int

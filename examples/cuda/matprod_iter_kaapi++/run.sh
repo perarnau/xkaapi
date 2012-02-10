@@ -10,13 +10,13 @@ niter=1
 version="$(date +%s)"
 out="$SCRATCH/res/xkaapi-sgemm-4cpu1gpu-${version}.txt"
 
-export KAAPI_CPUSET='0:3'
+export KAAPI_CPUSET='0:2'
 #export KAAPI_CPUSET='0:2'
 #export KAAPI_CPUSET='0:11'
 #export KAAPI_CPUSET='0:5'
 
 #export KAAPI_GPUSET='0~6'
-export KAAPI_GPUSET='0~4'
+export KAAPI_GPUSET='0~3'
 #export KAAPI_GPUSET='0~6,3~7,4~8,5~9'
 #export KAAPI_GPUSET='0~6,3~7'
 
@@ -60,8 +60,8 @@ bsizes="1024"
 #msizes="$(seq 64 64 2048) $(seq 3072 1024 10240)"
 #msizes="12288" # ouch
 #msizes="16384" # ouch
-#msizes="20480"
-msizes="40960"
+msizes="20480"
+#msizes="40960"
 # bsizes="2 4 8 16"
 
 # bsizes="1 2 4 8 16 32" ;
