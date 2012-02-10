@@ -48,7 +48,7 @@
 #  define _GNU_SOURCE
 #endif
 
-#if defined(HAVE_FUTEX)
+#if (HAVE_FUTEX==1)
 
 #include <unistd.h>
 #include <sys/syscall.h>
