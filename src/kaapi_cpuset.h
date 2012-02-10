@@ -110,7 +110,7 @@ static inline int kaapi_cpuset_empty(kaapi_cpuset_t* affinity)
 */
 static inline int kaapi_cpuset_set(
     kaapi_cpuset_t* affinity, 
-    int i 
+    unsigned int i 
 )
 {
   kaapi_assert_debug( (i >=0) && (i < sizeof(kaapi_cpuset_t)*8) );
@@ -143,7 +143,7 @@ static inline int kaapi_cpuset_copy(
 */
 static inline int kaapi_cpuset_has(
     kaapi_cpuset_t* affinity, 
-    int i 
+    unsigned int i 
 )
 {
   kaapi_assert_debug( (i >=0) && (i < sizeof(kaapi_cpuset_t)*8) );

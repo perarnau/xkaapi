@@ -131,6 +131,8 @@ typedef struct kaapic_task_info
   kaapic_arg_info_t args[1];
 } kaapic_task_info_t;
 
+/*
+*/
 extern int kaapic_spawn_ti(
   kaapi_thread_t* thread, 
   kaapi_task_body_t body, 
@@ -138,66 +140,72 @@ extern int kaapic_spawn_ti(
 );
 
 
-/* work array. allow for random access. */
+/* work array distribution. allow for random access. 
+   The thread tid has a reserved slice [first, last)
+   where
+     first = tid2pos[tid];
+     last = startindex[tid2pos[tid]+1]-1; 
+*/
 typedef struct work_array
 {
-  kaapi_bitmap_value_t map;
-  long off;
-  long scale;
-} work_array_t;
+  kaapi_bitmap_t       map;
+  uint16_t             tid2pos[KAAPI_MAX_PROCESSOR];
+  long                 startindex[1+KAAPI_MAX_PROCESSOR];
+} work_distribution_t;
 
 
 /* work container */
 typedef struct work_info
 {
-#if CONFIG_MAX_TID
-  /* maximum thread index */
-  unsigned int max_tid;
-#endif
-
   /* grains */
   long par_grain;
   long seq_grain;
 
-} work_info_t;
+} kaapic_work_info_t;
 
 
-/* master work */
-typedef struct work
+/* global work common 
+   Initialized by one thread (the master thread)
+*/
+struct local_work;
+typedef struct global_work
 {
-  kaapi_workqueue_t cr __attribute__((aligned(64)));
-#if defined(USE_KPROC_LOCK)
-#else
-  kaapi_lock_t      lock;
-#endif
-
-#if CONFIG_TERM_COUNTER
-  /* global work counter */
-  kaapi_atomic_t* counter;
-#endif
+  kaapi_atomic64_t workremain __attribute__((aligned(KAAPI_CACHE_LINE)));
+  
+  /* global distribution */
+  work_distribution_t wa  __attribute__((aligned(KAAPI_CACHE_LINE)));
+  struct local_work * volatile lwork[KAAPI_MAX_PROCESSOR];
 
   /* work routine */
   kaapic_foreach_body_t body_f;
   kaapic_body_arg_t*    body_args;
 
-  /* points to next _wa and _wi fields */
-  work_array_t* wa;
-  work_info_t* wi;
-
-  /* split_root_task container */
-  work_array_t _wa;
-
   /* infos container */
-  work_info_t _wi;
-  
+  kaapic_work_info_t wi;
+
   void* context; /* return by begin_adapt */
 
   /* thread context to restore */
   kaapi_frame_t frame;
 
-} kaapic_work_t;
+} kaapic_global_work_t;
 
 
+/* local work */
+typedef struct local_work
+{
+  kaapic_global_work_t*   global;
+  kaapi_workqueue_index_t workdone;
+  int                     tid;
+  kaapi_workqueue_t       cr __attribute__((aligned(64)));
+#if defined(USE_KPROC_LOCK)
+#else
+  kaapi_lock_t            lock;
+#endif
+} kaapic_local_work_t;
+
+
+#if 0 // OLD
 /* thief work: keep reference to initial work array and wi 
    This structure is the same as kaapic_work_t except 
    the container fields _wa and _wi
@@ -229,7 +237,7 @@ typedef struct thief_work
   void* user_data[4];
 
 } kaapic_thief_work_t;
-
+#endif
 
 
 /* Lower level function used by libgomp implementation */
@@ -237,10 +245,9 @@ typedef struct thief_work
 /* init work 
    \retval returns non zero if there is work to do, else returns 0
 */
-extern int kaapic_foreach_workinit
+extern kaapic_local_work_t*  kaapic_foreach_workinit
 (
   kaapi_thread_context_t*       self_thread,
-  kaapic_work_t*                work,
   kaapi_workqueue_index_t       first, 
   kaapi_workqueue_index_t       last,
   const kaapic_foreach_attr_t*  attr,
@@ -256,7 +263,7 @@ extern int kaapic_foreach_workinit
   of work to execute
 */
 extern int kaapic_foreach_worknext(
-  kaapic_work_t*           work,
+  kaapic_local_work_t*    work,
   kaapi_workqueue_index_t* first,
   kaapi_workqueue_index_t* last
 );
@@ -267,7 +274,7 @@ extern int kaapic_foreach_worknext(
 int kaapic_foreach_workend
 (
   kaapi_thread_context_t* self_thread,
-  kaapic_work_t*          work
+  kaapic_local_work_t*    work
 );
 
 #if defined(__cplusplus)

@@ -68,18 +68,28 @@ static void GOMP_trampoline_parallel
   GOMP_parallel_task_arg_t* taskarg = (GOMP_parallel_task_arg_t*)voidp;
   kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();
   
-  ctxt->numthreads          = taskarg->numthreads;
-  ctxt->threadid            = taskarg->threadid;
-  ctxt->inside_single       = 0;
+  int num_threads          = taskarg->numthreads;
+  int thread_id            = taskarg->threadid;
+  kaapi_libgomp_teaminfo_t * team_info = taskarg->teaminfo;
+
+  ctxt->numthreads         = num_threads;
+  ctxt->threadid           = thread_id;
+  ctxt->inside_single      = 0;
   KAAPI_ATOMIC_WRITE(&ctxt->workshare.init, 0);
-  ctxt->workshare.master    = taskarg->teaminfo->localinfo[0];
-  ctxt->teaminfo            = taskarg->teaminfo;
+  ctxt->workshare.master   = team_info->localinfo[0];
+  ctxt->teaminfo           = team_info;
 
   /* register thread to the workshare structure */
   KAAPI_ATOMIC_WRITE_BARRIER(&ctxt->workshare.init, 0);
   taskarg->teaminfo->localinfo[ctxt->threadid] = &ctxt->workshare;
 
   taskarg->fn(taskarg->data);
+
+  /* Restore the initial context values. */
+  ctxt->numthreads         = num_threads;
+  ctxt->threadid           = thread_id;
+  ctxt->workshare.master   = team_info->localinfo[0];
+  ctxt->teaminfo           = team_info;
 }
 
 KAAPI_REGISTER_TASKFORMAT( GOMP_parallel_task_format,

@@ -86,7 +86,7 @@ typedef struct GlobalTeamInformation {
 */
 typedef struct WorkShareRep {
   kaapi_atomic_t               init;       /* 1 iff work is init */
-  kaapic_work_t                work;       /* last foreach loop context */
+  kaapic_local_work_t*         work;       /* last foreach loop context */
   int                          workload;   /* workload */
   struct WorkShareRep*         master;     /* master workshare */
 } kaapi_libgompworkshared_t;

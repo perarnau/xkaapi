@@ -121,8 +121,7 @@ bool GOMP_loop_dynamic_start (
   }
   else {
     /* initialize the master if not already done */
-    retval = kaapic_foreach_workinit(self_thread, 
-          &ctxt->workshare.work, 
+    workshare->work = kaapic_foreach_workinit(self_thread, 
           start, 
           end, 
           0,    /* attr */
@@ -135,7 +134,7 @@ bool GOMP_loop_dynamic_start (
   if (retval ==0) return 0;
   
   return kaapic_foreach_worknext(
-        &ctxt->workshare.work, 
+        workshare->work, 
         istart,
         iend
   );
@@ -149,7 +148,7 @@ bool GOMP_loop_dynamic_next (long *istart, long *iend)
   kaapi_libgompctxt_t* ctxt  = GOMP_get_ctxtkproc( kproc );
 
   return kaapic_foreach_worknext(
-        &ctxt->workshare.work, 
+        ctxt->workshare.work, 
         istart,
         iend
   );
@@ -178,10 +177,12 @@ bool GOMP_loop_ordered_dynamic_start (
 )
 {
   printf("%s:: \n", __FUNCTION__);
+  return 0;
 }
 
 bool GOMP_loop_ordered_dynamic_next (long *istart, long *iend)
 {
   printf("%s:: \n", __FUNCTION__);
+  return 0;
 }
 

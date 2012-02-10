@@ -227,14 +227,27 @@ static inline int kaapi_listrequest_iterator_empty(kaapi_listrequest_iterator_t*
 
 /* clear the bit the at given position
  */
-static inline void kaapi_listrequest_iterator_unset_at
-(kaapi_listrequest_iterator_t* lrrange, int pos)
-{ kaapi_bitmap_value_unset(&lrrange->bitmap, pos); }
+static inline void kaapi_listrequest_iterator_unset_at(
+  kaapi_listrequest_iterator_t* lrrange, 
+  int pos
+)
+{ 
+  kaapi_bitmap_value_unset(&lrrange->bitmap, pos); 
+  if (lrrange->idcurr == pos)
+  {
+    lrrange->idcurr = -1;
+    /* same as _iterator_next */
+    lrrange->idcurr = kaapi_bitmap_first1_and_zero( &lrrange->bitmap )-1;
+  }    
+}
 
 /* return the number of entries in the range
 */
-static inline int kaapi_listrequest_iterator_count(kaapi_listrequest_iterator_t* lrrange)
-{ return kaapi_bitmap_count(lrrange->bitmap) + (lrrange->idcurr == -1 ? 0 : 1); }
+static inline int kaapi_listrequest_iterator_count(
+    kaapi_listrequest_iterator_t* lrrange
+)
+{ return kaapi_bitmap_value_count(&lrrange->bitmap) 
+      + (lrrange->idcurr == -1 ? 0 : 1); }
 
 /* get the first request of the range. range iterator should have been initialized by kaapi_listrequest_iterator_init 
 */
@@ -277,7 +290,7 @@ static inline void kaapi_listrequest_iterator_init(
   kaapi_bitmap_swap0( &lrequests->bitmap, &lrrange->bitmap );
 #if defined(KAAPI_DEBUG)
   kaapi_bitmap_value_copy( &lrrange->bitmap_t0, &lrrange->bitmap );
-  lrrange->count_in  = kaapi_bitmap_count(lrrange->bitmap);
+  lrrange->count_in  = kaapi_bitmap_value_count(&lrrange->bitmap);
   lrrange->count_out = 0;
 #endif
   kaapi_listrequest_iterator_next( lrequests, lrrange );
@@ -328,7 +341,7 @@ static inline void kaapi_listrequest_iterator_update
 
 #if defined(KAAPI_DEBUG)
   kaapi_bitmap_value_or( &lrrange->bitmap_t0, &orig_bitmap );
-  lrrange->count_in  += kaapi_bitmap_count(orig_bitmap);
+  lrrange->count_in  += kaapi_bitmap_value_count(&orig_bitmap);
 #endif
 
   /* check if empty before nexting */

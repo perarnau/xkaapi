@@ -56,10 +56,15 @@ static void GOMP_trampoline_task(
 {
   GOMP_spawn_task_arg_t* taskarg = (GOMP_spawn_task_arg_t*)voidp;
   kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();
+
+  int num_threads  = taskarg->numthreads;
+  int thread_id    = taskarg->threadid;
   
-  ctxt->numthreads = taskarg->numthreads;
-  ctxt->threadid   = taskarg->threadid;
+  ctxt->numthreads = num_threads;
+  ctxt->threadid   = thread_id;
   taskarg->fn(taskarg->data);
+  ctxt->numthreads = num_threads;
+  ctxt->threadid   = thread_id;
 }
 
 KAAPI_REGISTER_TASKFORMAT(GOMP_task_format,
