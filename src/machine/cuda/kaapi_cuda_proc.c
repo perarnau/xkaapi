@@ -68,6 +68,9 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
 
   proc->is_initialized = 0;
 
+  /* Init the device */
+  kaapi_cuda_ctx_push( ); 
+
   if ( kaapi_cuda_dev_open( proc, idev) )
     return -1;
 
@@ -114,7 +117,6 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
      so allow another thread to use it, such
      as the main one with kaapi_mem_synchronize2
   */
-  kaapi_cuda_ctx_push( );
   kaapi_cuda_cublas_init( proc );
   kaapi_cuda_sync();
 
