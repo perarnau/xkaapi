@@ -68,9 +68,6 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
 
   proc->is_initialized = 0;
 
-  /* Init the device */
-  kaapi_cuda_ctx_push( ); 
-
   if ( kaapi_cuda_dev_open( proc, idev) )
     return -1;
 

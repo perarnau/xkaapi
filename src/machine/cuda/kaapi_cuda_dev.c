@@ -7,6 +7,7 @@
 #include "../../kaapi_impl.h"
 #include "kaapi_cuda_proc.h"
 #include "kaapi_cuda_dev.h"
+#include "kaapi_cuda_ctx.h"
 
 int
 kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
@@ -15,6 +16,9 @@ kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
   pthread_mutexattr_init( &proc->ctx.mta );
   pthread_mutexattr_settype( &proc->ctx.mta, PTHREAD_MUTEX_RECURSIVE );
   pthread_mutex_init( &proc->ctx.mutex, &proc->ctx.mta );
+
+  /* Init the device */
+  kaapi_cuda_ctx_push( ); 
 
 #ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
   cudaError_t res;
