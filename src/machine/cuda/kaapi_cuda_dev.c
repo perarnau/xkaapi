@@ -12,16 +12,20 @@
 int
 kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
 {
+  cudaError_t res;
+
   proc->index = index;
   pthread_mutexattr_init( &proc->ctx.mta );
   pthread_mutexattr_settype( &proc->ctx.mta, PTHREAD_MUTEX_RECURSIVE );
   pthread_mutex_init( &proc->ctx.mutex, &proc->ctx.mta );
 
-  /* Init the device */
-  kaapi_cuda_ctx_push( ); 
+    res= cudaSetDevice( index );
+    if( res != cudaSuccess ) {
+	    fprintf( stderr, "%s ERROR: %d\n", __FUNCTION__, res );
+	    fflush( stderr );
+    }
 
 #ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
-  cudaError_t res;
   struct cudaDeviceProp prop;
   res = cudaGetDeviceProperties( &prop, index );
   if (res != cudaSuccess) {
