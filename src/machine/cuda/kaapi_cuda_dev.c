@@ -21,7 +21,7 @@ kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
 
     res= cudaSetDevice( index );
     if( res != cudaSuccess ) {
-	    fprintf( stderr, "%s ERROR: %d\n", __FUNCTION__, res );
+	    fprintf( stderr, "[%s] ERROR: %d\n", __FUNCTION__, res );
 	    fflush( stderr );
     }
 
@@ -30,7 +30,7 @@ kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
   res = cudaGetDeviceProperties( &prop, index );
   if (res != cudaSuccess) {
 	if( res != cudaSuccess ) {
-		fprintf( stderr, "%s ERROR: %d\n", __FUNCTION__, res );
+		fprintf( stderr, "[%s] ERROR: %d\n", __FUNCTION__, res );
 		fflush( stderr );
 	}
     return -1;

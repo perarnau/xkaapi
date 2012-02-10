@@ -49,7 +49,7 @@ kaapi_cuda_mem_blk_insert(
 	return 0;
 }
 
-static int 
+static void* 
 kaapi_cuda_mem_blk_remove( 
 		kaapi_processor_t*	proc,
 		const size_t size
@@ -64,10 +64,11 @@ kaapi_cuda_mem_blk_remove(
 	kaapi_mem_data_t *kmd;
 	size_t mem_free= 0;
 	size_t ptr_size;
+	void* devptr = NULL;
 
 
 	if( cuda_mem->beg == NULL )
-		return -1;
+		return NULL;
 
 	while( NULL != (blk= cuda_mem->beg) ) {
 		cuda_mem->beg = blk->next;
@@ -85,8 +86,10 @@ kaapi_cuda_mem_blk_remove(
 		    kaapi_mem_data_clear_addr( kmd, cuda_asid );
 		    kaapi_mem_data_clear_dirty( kmd, cuda_asid );
 		}
-		/* nor allocated neither valid */
-		kaapi_cuda_mem_free( &ptr );
+		if( ptr_size >= size ) {
+		    devptr = __kaapi_pointer2void(ptr);
+		} else 
+		    kaapi_cuda_mem_free( &ptr );
 		mem_free += ptr_size;
 		if( mem_free >= (size * KAAPI_CUDA_MEM_FREE_FACTOR) )
 			break;
@@ -104,7 +107,7 @@ kaapi_cuda_mem_blk_remove(
 	else
 	    cuda_mem->used -= mem_free;
 
-	return 0;
+	return devptr;
 }
 
 static inline int
@@ -126,34 +129,48 @@ kaapi_cuda_mem_alloc(
 		const int flag
 	)
 {
-	void* devptr;
-	cudaError_t res;
+	void* devptr= NULL;
+	cudaError_t res = cudaSuccess;
 #if	KAAPI_CUDA_MEM_ALLOC_MANAGER
   	kaapi_processor_t* const proc = kaapi_get_current_processor();
 
 	if( __kaapi_cuda_mem_is_full( proc, size) )
-		if( kaapi_cuda_mem_blk_remove( proc, size ) )
-			return -1;
-#endif
+		devptr = kaapi_cuda_mem_blk_remove( proc, size );
 
 out_of_memory:
-	res = cudaMalloc( &devptr, size );
-#if	KAAPI_CUDA_MEM_ALLOC_MANAGER
-	if( res == cudaErrorMemoryAllocation ) {
-		if( kaapi_cuda_mem_blk_remove( proc, size ) )
-			return -1;
-		goto out_of_memory;
+	if( devptr == NULL ){
+	    res = cudaMalloc( &devptr, size );
+	    if( res == cudaErrorMemoryAllocation ) {
+		    devptr = kaapi_cuda_mem_blk_remove( proc, size );
+		    goto out_of_memory;
+	    }
+	    if (res != cudaSuccess) {
+		    fprintf( stdout, "[%s] ERROR cudaMalloc (%d) size=%lu kid=%lu\n",
+				    __FUNCTION__, res, size, 
+				    (long unsigned int)kaapi_get_current_kid() ); 
+		    fflush( stdout );
+	    }
+	}
+#if 0
+	else {
+		    fprintf( stdout, "[%s] oldptr=%p size=%lu kid=%lu\n",
+				    __FUNCTION__, devptr, size, 
+				    (long unsigned int)kaapi_get_current_kid() ); 
+		    fflush( stdout );
 	}
 #endif
+#else
+	res = cudaMalloc( &devptr, size );
 	if (res != cudaSuccess) {
-		fprintf( stdout, "[%s] ERROR cuMemAlloc (%d) size=%lu kid=%lu\n",
+		fprintf( stdout, "[%s] ERROR cudaMalloc (%d) size=%lu kid=%lu\n",
 				__FUNCTION__, res, size, 
-		      		(long unsigned int)kaapi_get_current_kid() ); 
+				(long unsigned int)kaapi_get_current_kid() ); 
 		fflush( stdout );
-	}else {
-		ptr->ptr = (uintptr_t)devptr;
-		ptr->asid = kasid;
 	}
+#endif
+
+	ptr->ptr = (uintptr_t)devptr;
+	ptr->asid = kasid;
 #if	KAAPI_CUDA_MEM_ALLOC_MANAGER
 	kaapi_cuda_mem_blk_insert( proc, ptr, size );
 #endif
@@ -428,7 +445,7 @@ kaapi_cuda_mem_2dcopy_htod(
 	    cudaMemcpyHostToDevice );
 #endif
 	if (res != cudaSuccess) {
-		fprintf( stdout, "[%s] ERROR cuMemcpy2D (%d) kid=%lu src=%p dst=%p size=%lu\n",
+		fprintf( stdout, "[%s] ERROR cudaMemcpy2D (%d) kid=%lu src=%p dst=%p size=%lu\n",
 				__FUNCTION__, res,
 		      		(long unsigned int)kaapi_get_current_kid(),
 				__kaapi_pointer2void(src),
@@ -482,7 +499,7 @@ kaapi_cuda_mem_2dcopy_dtoh(
 		cudaMemcpyDeviceToHost );
 #endif
 	if (res != cudaSuccess) {
-		fprintf( stdout, "[%s] ERROR cuMemcpy2D (%d) kid=%lu src=%p dst=%p size=%lu\n",
+		fprintf( stdout, "[%s] ERROR cudaMemcpy2D (%d) kid=%lu src=%p dst=%p size=%lu\n",
 				__FUNCTION__, res,
 		      		(long unsigned int)kaapi_get_current_kid(),
 				__kaapi_pointer2void(src),
