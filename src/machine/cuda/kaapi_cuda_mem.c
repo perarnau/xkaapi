@@ -139,7 +139,7 @@ kaapi_cuda_mem_alloc(
 out_of_memory:
 	res = cudaMalloc( &devptr, size );
 #if	KAAPI_CUDA_MEM_ALLOC_MANAGER
-	if( res == CUDA_ERROR_OUT_OF_MEMORY ) {
+	if( res == cudaErrorMemoryAllocation ) {
 		if( kaapi_cuda_mem_blk_remove( proc, size ) )
 			return -1;
 		goto out_of_memory;

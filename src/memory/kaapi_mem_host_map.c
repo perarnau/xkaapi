@@ -105,16 +105,16 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, void* sp )
     fflush(stdout);
 #endif
 
+#if 0
 	if( KAAPI_ACCESS_IS_READ(m) ) {
 	    if( kaapi_mem_data_is_dirty( kmd,
 		       	kaapi_mem_host_map_get_asid(host_map) ) ) {
-#if 0
 		fprintf( stdout, "[%s] DIRTY ptr=%p\n", __FUNCTION__,
 		      kaapi_pointer2void(kdata->ptr) );
 		fflush(stdout);
-#endif
 	    }
 	}
+#endif
 
 	if( KAAPI_ACCESS_IS_WRITE(m) ) {
 	    kaapi_mem_data_set_all_dirty_except( kmd, 
