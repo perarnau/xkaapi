@@ -5,6 +5,8 @@
 ##  Copyright 2010 INRIA. All rights reserved.
 ##
 
+CBLAS_WARNING=
+
 MATPROG_PRGS=
 if KAAPI_API_KAAPIXX
 MATPROG_PRGS+=matprod_rec_kaapi++
@@ -14,10 +16,12 @@ MATPROG_PRGS+=matprod_bloc_kaapi++\
   matcholesky_kaapi++\
   matcholesky_bloc_kaapi++
 else
-MATPROG_PRGS+= no-cblas
+CBLAS_WARNING += no-cblas
 endif
 endif
   
+all-matrix: $(CBLAS_WARNING)
+
 check_PROGRAMS+=$(MATPROG_PRGS)
 all-matrix: $(MATPROG_PRGS)
 
