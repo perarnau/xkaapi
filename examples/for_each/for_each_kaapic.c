@@ -72,18 +72,27 @@ static void apply_cos(
 
 /**
  */
-int main(int ac, char** av)
+int main(int argc, char** argv)
 {
   double t0,t1;
   double sum = 0.f;
   size_t i;
   size_t iter;
+  kaapic_foreach_attr_t attr;
+  int sg;
+  
+  sg = 1;
+  if (argc >1)
+    sg = atoi(argv[1]); 
   
 #define ITEM_COUNT 100000
   static double array[ITEM_COUNT];
   
   /* initialize the runtime : start all the worker threads */
   kaapic_init(0);
+
+  kaapic_foreach_attr_init( &attr );
+  kaapic_foreach_attr_set_grains( &attr, sg, sg );
   
   for (iter = 0; iter < 100; ++iter)
   {
@@ -92,7 +101,7 @@ int main(int ac, char** av)
       array[i] = 0.f;
 
     t0 = kaapic_get_time();
-    kaapic_foreach( 0, ITEM_COUNT, 0, 1, apply_cos, array );
+    kaapic_foreach( 0, ITEM_COUNT, &attr, 1, apply_cos, array );
     t1 = kaapic_get_time();
     sum += (t1-t0)*1000; /* ms */
 
@@ -104,7 +113,9 @@ int main(int ac, char** av)
       }
   }
 
-  printf("done: %lf (ms)\n", sum / 100);
+  printf("#-- Grain  time (ms)\n%i  %lf\n", sg, sum / 100);
+
+  kaapic_foreach_attr_destroy( &attr );
 
   /* finalize the runtime */
   kaapic_finalize();

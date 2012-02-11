@@ -151,7 +151,7 @@ typedef struct work_array
   kaapi_bitmap_t       map;
   uint16_t             tid2pos[KAAPI_MAX_PROCESSOR];
   long                 startindex[1+KAAPI_MAX_PROCESSOR];
-} work_distribution_t;
+} kaapic_work_distribution_t;
 
 
 /* work container */
@@ -173,7 +173,7 @@ typedef struct global_work
   kaapi_atomic64_t workremain __attribute__((aligned(KAAPI_CACHE_LINE)));
   
   /* global distribution */
-  work_distribution_t wa  __attribute__((aligned(KAAPI_CACHE_LINE)));
+  kaapic_work_distribution_t wa  __attribute__((aligned(KAAPI_CACHE_LINE)));
   struct local_work * volatile lwork[KAAPI_MAX_PROCESSOR];
 
   /* work routine */
