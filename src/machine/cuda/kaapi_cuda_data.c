@@ -313,11 +313,13 @@ int kaapi_cuda_data_recv(
     return 0;
 }
 
+#if	KAAPI_CUDA_MEM_ALLOC_MANAGER
 int 
 kaapi_cuda_data_check( void )
 {
     return kaapi_cuda_mem_mgmt_check( kaapi_get_current_processor() );
 }
+#endif
 
 #if 0
 

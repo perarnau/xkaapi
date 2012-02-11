@@ -62,7 +62,9 @@ int kaapi_cuda_mem_sync_params_dtoh(
 	kaapi_task_t*              pc
 );
 
+#if	KAAPI_CUDA_MEM_ALLOC_MANAGER
 int 
 kaapi_cuda_mem_mgmt_check( kaapi_processor_t* proc );
+#endif
 
 #endif /* ! KAAPI_CUDA_MEM_H_INCLUDED */

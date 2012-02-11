@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/bin/bash
 
 #SCRATCH=/scratch/jvlima
 SCRATCH=$HOME
@@ -8,15 +8,13 @@ export LD_LIBRARY_PATH=$SCRATCH/install/xkaapi/default/lib:$LD_LIBRARY_PATH
 niter=1
 #niter=30
 version="$(date +%s)"
-out="$SCRATCH/res/xkaapi-sgemm-4cpu1gpu-${version}.txt"
 
-export KAAPI_CPUSET='0:2'
+#export KAAPI_CPUSET='0:2'
 #export KAAPI_CPUSET='0:2'
 #export KAAPI_CPUSET='0:11'
-#export KAAPI_CPUSET='0:5'
 
 #export KAAPI_GPUSET='0~6'
-export KAAPI_GPUSET='0~3'
+#export KAAPI_GPUSET='0~3'
 #export KAAPI_GPUSET='0~6,3~7,4~8,5~9'
 #export KAAPI_GPUSET='0~6,3~7'
 
@@ -44,15 +42,16 @@ export KAAPI_GPUSET='0~3'
 #bsizes="128"
 #bsizes="256"
 #bsizes="512"
-bsizes="1024"
+#bsizes="1024"
 #bsizes="2048"
 
+#bsizes="128 256 512 1024 2048"
+#bsizes="128 256 512 1024"
 
-#msizes="2048"
+#msizes="1024"
 #msizes="128"
 #msizes="256"
 #msizes="512"
-#msizes="1024"
 #msizes="2048"
 #msizes="4096"
 #msizes="8192"
@@ -60,7 +59,7 @@ bsizes="1024"
 #msizes="$(seq 64 64 2048) $(seq 3072 1024 10240)"
 #msizes="12288" # ouch
 #msizes="16384" # ouch
-msizes="20480"
+#msizes="20480"
 #msizes="40960"
 # bsizes="2 4 8 16"
 
@@ -73,16 +72,49 @@ msizes="20480"
 #done
 #echo ;
 
-for m in $msizes ; do
-	for b in $bsizes; do
-#	echo "GEMM $m $b"
-	for i in `seq 1 $niter`
-	do
-	#KAAPI_STACKSIZE=260046848 ./matprod_iter_kaapi++ $m $b $verif >> $out
-#	KAAPI_STACKSIZE=260046848 ./matprod_iter_kaapi++ $m $b $verif
-	KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
-#	KAAPI_STACKSIZE=67108864 ./matprod_iter_kaapi++ $m $b $verif
-#	KAAPI_STACKSIZE=536870912 gdb ./matprod_iter_kaapi++ 
+function run_sgemm {
+    ncpu=6
+    ngpu="$1"
+    gpuset="$2"
+
+    out="$SCRATCH/res/xkaapi-sgemm-${ncpu}cpu${ngpu}gpu-${version}.txt"
+    export KAAPI_GPUSET="$gpuset"
+    export KAAPI_CPUSET='0:5'
+    msizes="1024 2048"
+    bsizes="512"
+    for m in $msizes ; do
+	    for b in $bsizes; do
+	    for i in `seq 1 $niter`
+	    do
+	    echo "$KAAPI_CPUSET $KAAPI_GPUSET KAAPI_STACKSIZE=536870912 \
+		    ./matprod_iter_kaapi++ $m $b $verif >> $out"
+	    #	KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
+	    #	KAAPI_STACKSIZE=536870912 gdb ./matprod_iter_kaapi++ 
+	    done
 	done
     done
+    return
+    bsizes="1024"
+    msizes="$(seq 3072 1024 40960)"
+    for m in $msizes ; do
+	    for b in $bsizes; do
+	    for i in `seq 1 $niter`
+	    do
+	    KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
+    #	KAAPI_STACKSIZE=536870912 gdb ./matprod_iter_kaapi++ 
+	    done
+	done
+    done
+}
+
+GPUSET='3~7 4~8 5~9 6~10 7~11'
+init_gpuset="0~6"
+let 'ngpu=1'
+run_sgemm "$ngpu" "$init_gpuset"
+for gset in $GPUSET
+do
+    init_gpuset="$init_gpuset,$gset"
+    let 'ngpu++'
+    run_sgemm "$ngpu" "$init_gpuset"
 done
+

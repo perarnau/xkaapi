@@ -27,7 +27,9 @@ int kaapi_cuda_data_recv_ptr(
 	void*	              sp
 );
 
+#if	KAAPI_CUDA_MEM_ALLOC_MANAGER
 int 
 kaapi_cuda_data_check( void );
+#endif
 
 #endif
