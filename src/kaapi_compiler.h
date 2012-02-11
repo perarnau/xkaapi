@@ -49,6 +49,7 @@
     - This file is private (should not be included in public headers)
 */
 
+#if 0
 
 /** weak symbols */
 #ifdef __GNUC__
@@ -64,6 +65,11 @@
 #  define __KA_INTERNAL __attribute__((visibility("hidden")))
 #else
 #  define __KA_INTERNAL
+#endif
+
+#else
+#define __KA_COMPILER_WEAK 
+#define __KA_INTERNAL 
 #endif
 
 #endif /* _KAAPI_COMPILER_H_ */

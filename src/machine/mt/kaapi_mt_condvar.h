@@ -104,7 +104,6 @@ int __KA_INTERNAL kproc_condunlock_broadcast(kproc_condunlock_t *c);
 
 #else /* no futex */
 
-#warning "Use Pthread mutex"
 typedef struct {
 	pthread_mutex_t pm;
 } kproc_mutex_t;
