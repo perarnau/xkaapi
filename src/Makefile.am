@@ -22,7 +22,7 @@ kaapi_version_githash.h: $(srcdir)/../gitlastcommit
 $(srcdir)/../gitlastcommit:
 	$(MAKE) -C .. gitlastcommit
 clean-local:
-	$(RM) $(BUILT_SOURCES)
+	$(RM) kaapi_version_githash.h
 
 nodist_libkaapi_la_SOURCES=$(BUILT_SOURCES)
 libkaapi_la_SOURCES=\
@@ -213,8 +213,10 @@ libkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_machine.h \
   machine/mt/kaapi_mt_bitmap.h \
   machine/mt/kaapi_mt_perf.c \
-  machine/mt/kaapi_mt_register_procs.c\
-  machine/mt/kaapi_mt_suspendresume.c
+  machine/mt/kaapi_mt_register_procs.c \
+  machine/mt/kaapi_mt_suspendresume.c \
+  machine/mt/kaapi_mt_condvar.c \
+  machine/mt/kaapi_mt_condvar.h
 endif
 
 if KAAPI_TARGET_CUDA

@@ -15,7 +15,7 @@ all-kaapif: $(KAAPIF_PRGS)
 #For each using C API kaapif_foreach
 foreach_kaapif_SOURCES=kaapif/foreach/foreach_kaapif.f kaapif/foreach/fu.f
 
-foreach_kaapif_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
-foreach_kaapif_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
-foreach_kaapif_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
-foreach_kaapif_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm
+foreach_kaapif_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIFPROGS_BUILD_CPPFLAGS)
+foreach_kaapif_CFLAGS  =$(AM_CFLAGS)   $(KAAPIFPROGS_BUILD_CFLAGS)
+foreach_kaapif_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIFPROGS_BUILD_LDFLAGS)
+foreach_kaapif_LDADD   =$(LIBS)        $(KAAPIFPROGS_BUILD_LIBS) -lm

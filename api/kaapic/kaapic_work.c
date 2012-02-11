@@ -58,7 +58,7 @@ do {						\
   kaapi_set_self_workload(__w);			\
 } while (0)
 #else 
-#define kaapi_SET_SELF_WORKLOAD(__w)
+#define KAAPI_SET_SELF_WORKLOAD(__w)
 #endif
 
 
@@ -611,6 +611,9 @@ static void _kaapic_thief_entrypoint(
 
 
 /* exported foreach interface */
+
+extern unsigned int kaapic_do_parallel;
+
 int kaapic_foreach_common
 (
   int32_t                first, 
@@ -679,6 +682,9 @@ int kaapic_foreach_common
   kaapi_atomic_t counter;
   unsigned long local_counter = 0;
 #endif
+
+  /* begin a parallel region */
+  if (kaapic_do_parallel) kaapic_begin_parallel();
 
   /* save frame */
   kaapi_thread_save_frame(thread, &frame);
@@ -861,6 +867,8 @@ end_adaptive:
 #if CONFIG_FOREACH_STATS
   foreach_time += kaapif_get_time_() - time;
 #endif
+
+  if (kaapic_do_parallel) kaapic_end_parallel(0);
   
   return 0;
 }

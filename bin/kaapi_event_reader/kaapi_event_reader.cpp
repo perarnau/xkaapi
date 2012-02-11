@@ -250,7 +250,7 @@ static void fnc_statistic_task_kid( const char* filename, int fd )
   printf("*** Statistics:\n");
   printf("Ttotal    (s)     : %e\n", t_total);
   printf("Tidle     (s)     : %e\n", 1.0e-9 * (double)t_idle);
-  printf("Count     (#tasks): %llu\n", count);
+  printf("Count     (#tasks): %zu\n", count);
 //  printf("Count     (#tasks): %llu\n", count);
   printf("Tmin      (s)     : %e\n", t_min);
   printf("Tmax      (s)     : %e\n", t_max);

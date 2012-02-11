@@ -43,7 +43,8 @@
 #ifndef KAAPIC_HIMPL_INCLUDED
 # define KAAPIC_HIMPL_INCLUDED
 
-#include "kaapi.h"
+/* kaapic_save,restore_frame */
+#include "kaapi_impl.h"
 #include "kaapic.h"
 
 /* implementation for kaapic API */

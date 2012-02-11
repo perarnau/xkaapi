@@ -42,7 +42,7 @@
  ** 
  */
 
-#include "kaapi.h"
+/* #include "kaapi.h" */
 #include "kaapif.h"
 #include "kaapic_impl.h"
 #include <string.h>

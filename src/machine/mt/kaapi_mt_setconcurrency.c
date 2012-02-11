@@ -200,7 +200,8 @@ int kaapi_setconcurrency(void)
   kaapi_barrier_td_setactive(&barrier_init2, 0);
   
   /* this is the main thread that call this function */
-  kaapi_mt_suspend_threads();
+  kaapi_mt_suspend_threads_initiate();
+  kaapi_mt_suspend_threads_wait();
   
   kaapi_barrier_td_destroy( &barrier_init );
 

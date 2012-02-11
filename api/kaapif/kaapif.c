@@ -41,7 +41,7 @@
  ** terms.
  ** 
  */
-#include "kaapi.h"
+#include <string.h>
 #include "kaapif.h"
 #include "kaapic_impl.h"
 
@@ -165,4 +165,14 @@ int kaapif_end_parallel_(int32_t* flags)
 {
   kaapi_end_parallel(*flags);
   return KAAPIF_SUCCESS;
+}
+
+
+/* kaapi version string */
+extern const char* get_kaapi_git_hash(void);
+
+void kaapif_get_version_(uint8_t* s)
+{
+  /* assume s large enough */
+  memcpy((void*)s, get_kaapi_git_hash(), 40);
 }

@@ -147,6 +147,9 @@ if test $have_cxx = yes ; then
   AX_CXXFLAGS_WARN_ALL([AM_CXXFLAGS])
 fi
 
+# check for __attribute__((visibility("..."))) support
+ACX_VISIBILITY
+
 # check for automatic macros that are used by KAAPI
 AX_MACRO_DEFINED([__SIZEOF_POINTER__],[],[],[
   AC_MSG_WARN([The '__SIZEOF_POINTER__' macro is not defined by the compiler. Support for such old compilers will be removed in a future release])
@@ -470,6 +473,17 @@ else
   AC_MSG_NOTICE([Maximum number of usable processors... $enable_max_processors])
 fi
 AC_DEFINE_UNQUOTED([KAAPI_MAX_PROCESSOR],[$enable_max_processors],[Maximum number of processors (0 for generic implementation)])
+
+dnl 
+KAAPI_FEATURE([futex], [use low-level futex synchronisation primitives],
+  [using futex], [check],
+  [HAVE_FUTEX=1],
+  [HAVE_FUTEX=0],
+  [],
+  [
+    AC_CHECK_HEADER([linux/futex.h], [ FEATURE_ENABLE ], [ FEATURE_DISABLE ])
+  ])
+AC_DEFINE_UNQUOTED([HAVE_FUTEX],[$HAVE_FUTEX],[use futex synchronisation primitives])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
@@ -849,8 +863,8 @@ ACX_LIB_ADD_BUILD_FLAGS([KAAPICPROGS],
 	[-I\$(top_srcdir)/api/kaapic -I\$(top_srcdir)/src],[],[],
 	[\$(top_builddir)/api/kaapic/libkaapic.la \$(top_builddir)/src/libkaapi.la])
 
-ACX_LIB_LINK([KAAPIFLIB], [KAAPIFLIB])
-ACX_LIB_ADD_BUILD_FLAGS([KAAPICPROGS],
+ACX_LIB_LINK([KAAPIFPROGS], [KAAPIFLIB])
+ACX_LIB_ADD_BUILD_FLAGS([KAAPIFPROGS],
 	[-I\$(top_srcdir)/api/kaapif -I\$(top_srcdir)/src],[],[],
 	[\$(top_builddir)/api/kaapif/libkaapif.la \$(top_builddir)/api/kaapic/libkaapic.la \$(top_builddir)/src/libkaapi.la])
 
