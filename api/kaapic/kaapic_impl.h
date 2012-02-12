@@ -85,11 +85,11 @@ extern kaapic_foreach_attr_t kaapic_default_attr;
 */
 extern int kaapic_foreach_common
 (
-  int32_t                first, 
-  int32_t                last,
-  kaapic_foreach_attr_t* attr,
-  kaapic_foreach_body_t  body_f,
-  kaapic_body_arg_t*     body_args
+  kaapi_workqueue_index_t first,
+  kaapi_workqueue_index_t last,
+  kaapic_foreach_attr_t*  attr,
+  kaapic_foreach_body_t   body_f,
+  kaapic_body_arg_t*      body_args
 );
 
 
@@ -219,6 +219,18 @@ extern kaapic_local_work_t*  kaapic_foreach_workinit(
 );
 
 
+/*
+*/
+extern kaapic_global_work_t* kaapic_foreach_global_workinit
+(
+  kaapi_thread_context_t* self_thread,
+  kaapi_workqueue_index_t first, 
+  kaapi_workqueue_index_t last,
+  const kaapic_foreach_attr_t*  attr,
+  kaapic_foreach_body_t   body_f,
+  kaapic_body_arg_t*      body_args
+);
+
 /* init local work if know global work.
    May be called by each runing threads that decide to cooperate together
    to execute in common a global work.
@@ -227,6 +239,22 @@ extern kaapic_local_work_t*  kaapic_foreach_workinit(
 extern kaapic_local_work_t* kaapic_foreach_local_workinit(
   kaapi_thread_context_t* self_thread,
   kaapic_global_work_t*   gwork
+);
+
+
+extern int kaapic_global_work_pop
+(
+  kaapic_global_work_t* gw,
+  kaapi_processor_id_t tid, 
+  kaapi_workqueue_index_t* i, 
+  kaapi_workqueue_index_t* j
+);
+
+/* To be called by the caller of kaapic_foreach_local_workinit
+   that returns success
+*/
+extern int kaapic_foreach_local_workend(
+  kaapic_local_work_t*    lwork
 );
 
 
