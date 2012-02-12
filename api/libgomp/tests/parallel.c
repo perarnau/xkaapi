@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <omp.h>
 
 void f(int a, int b)
 {
@@ -13,6 +14,7 @@ main (int argc, char **argv)
   {
     int b;
     printf ("Hello world! %i\n", omp_get_thread_num());
+    sleep(1);
   }
 
   return 0;
