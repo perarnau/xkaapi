@@ -35,7 +35,6 @@ kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
 	}
     return -1;
   }
-  /* 80% of total memory */
   proc->memory.total = prop.totalGlobalMem;
   proc->memory.used= 0;
   proc->memory.beg = proc->memory.end = NULL;

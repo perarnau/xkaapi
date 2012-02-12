@@ -47,7 +47,6 @@
 
 
 /* top level include file */
-#include "kaapi_cuda_func.h"
 #include "kaapi_cuda_execframe.h"
 
 

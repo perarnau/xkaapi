@@ -102,14 +102,6 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
   );
 #endif
 
-#if defined(KAAPI_DEBUG)
-  if (res != cudaSuccess){
-	fprintf(stdout, "[%s] kid=%lu\n", __FUNCTION__,
-			kaapi_get_current_kid() );
-	fflush( stdout );
-  }
-#endif
-
   /* pop the context to make it floating. doing
      so allow another thread to use it, such
      as the main one with kaapi_mem_synchronize2
@@ -183,7 +175,7 @@ cudaStream_t kaapi_cuda_kernel_stream(void)
 #ifdef KAAPI_CUDA_ASYNC
   return self_proc->cuda_proc.stream[KAAPI_CUDA_KERNEL_STREAM];
 #else
-  return self_proc->cuda_proc.stream;
+    return 0;
 #endif
 }
 
@@ -194,7 +186,7 @@ cudaStream_t kaapi_cuda_HtoD_stream(void)
 #if KAAPI_CUDA_ASYNC
   return self_proc->cuda_proc.stream[KAAPI_CUDA_HTOD_STREAM];
 #else
-  return self_proc->cuda_proc.stream;
+  return 0;
 #endif
 }
 
@@ -205,7 +197,7 @@ cudaStream_t kaapi_cuda_DtoH_stream(void)
 #if KAAPI_CUDA_ASYNC
   return self_proc->cuda_proc.stream[KAAPI_CUDA_DTOH_STREAM];
 #else
-  return self_proc->cuda_proc.stream;
+  return 0;
 #endif
 }
 
@@ -216,7 +208,7 @@ cudaStream_t kaapi_cuda_DtoD_stream(void)
 #if KAAPI_CUDA_ASYNC
   return self_proc->cuda_proc.stream[KAAPI_CUDA_DTOD_STREAM];
 #else
-  return self_proc->cuda_proc.stream;
+  return 0;
 #endif
 }
 

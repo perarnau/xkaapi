@@ -17,11 +17,13 @@ int kaapi_cuda_cublas_init( kaapi_cuda_proc_t *proc )
 	//cublasSetPointerMode(cublas_handle, CUBLAS_POINTER_MODE_DEVICE);
 	cublasSetPointerMode( proc->ctx.handle, CUBLAS_POINTER_MODE_HOST);
 	
+#if KAAPI_CUDA_ASYNC
 	status= cublasSetStream( proc->ctx.handle, kaapi_cuda_kernel_stream() );
 	if (status != CUBLAS_STATUS_SUCCESS) {
 		fprintf( stderr, "[%s] CUBLAS ERROR: %u\n", __FUNCTION__, status);
 		return -1;
 	}
+#endif
 
 	return 0;
 }

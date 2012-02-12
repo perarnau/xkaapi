@@ -158,6 +158,9 @@ execute_first:
 	    kaapi_cuda_data_allocate( td->fmt, pc->sp );
 	    kaapi_cuda_data_send( td->fmt, pc->sp );
 	    body( pc->sp, kaapi_cuda_kernel_stream() );
+#ifndef KAAPI_CUDA_ASYNC
+	    kaapi_cuda_sync();
+#endif
 	    kaapi_cuda_data_recv( td->fmt, pc->sp );
 #if 0
 	    kaapi_cuda_data_check();

@@ -451,13 +451,13 @@ template<> struct TaskBodyGPU<TaskDGEMM>
 			beta,
 			c, ldc
 		);
-#elif CONFIG_USE_VOLKOV
+#endif
+#if 0
     volkov_sgemm
     (
      (CUstream)stream.stream,
      c, a, b, lda, ldb, ldc
     );
-#else
     size_t mm = m * m;
     const int mnk = m;
     const size_t thread_count = mm < 512 ? mm : 512;
@@ -606,6 +606,7 @@ template<> struct TaskBodyGPU<TaskDGETRF>
    ka::range1d_w<int> piv
   )
   {
+#if CONFIG_USE_MAGMA
     const int m        = A.dim(0); 
     const int n        = A.dim(1); 
 //    const int lda      = A.lda();
@@ -618,7 +619,6 @@ template<> struct TaskBodyGPU<TaskDGETRF>
 		m, n, lda, (void*)a, ipiv ); fflush(stdout);
 #endif
 
-#if CONFIG_USE_MAGMA
 	/* TODO: MAGMA assumes that a(from A) is in GPU and ipiv is in CPU */
     int* const h_ipiv = (int*) calloc( piv.size(), sizeof(int) );
 
@@ -642,6 +642,7 @@ template<> struct TaskBodyGPU<TaskDGETRFNoPiv>
    ka::range2d_rw<double_type> A
   )
   {
+#if CONFIG_USE_MAGMA
     const int m        = A.dim(0); 
     const int n        = A.dim(1); 
 //    const int lda      = A.lda();
@@ -653,7 +654,6 @@ template<> struct TaskBodyGPU<TaskDGETRFNoPiv>
 		m, n, lda, (void*)a ); fflush(stdout);
 #endif
 
-#if CONFIG_USE_MAGMA
     magma_int_t info = 0;
     magma_getrf_nopiv( m, n, a, lda, &info );
     if (info){
@@ -675,6 +675,7 @@ template<> struct TaskBodyGPU<TaskDPOTRF>
    ka::range2d_rw<double_type> A
   )
   {
+#if CONFIG_USE_MAGMA
     const int n     = A.dim(0); 
     //const int lda   = A.lda();
     const int lda   = A.dim(1);
@@ -684,8 +685,6 @@ template<> struct TaskBodyGPU<TaskDPOTRF>
     fprintf(stdout, "TaskGPU DPOTRF m=%d A=%p lda=%d\n", n, (void*)a, lda ); fflush(stdout);
 #endif
 
-//#if CONFIG_USE_MAGMA
-#if 1
     magma_int_t info = 0;
     const char uplo_ = (uplo == CblasUpper) ? 'U' : 'L';
     magma_potrf( uplo_, n, a, lda, &info );

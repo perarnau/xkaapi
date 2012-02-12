@@ -53,10 +53,6 @@ kaapi_mem_host_map_find_or_insert_( const kaapi_mem_host_map_t* map,
 	kaapi_mem_addr_t addr, kaapi_mem_data_t** kmd )
 {
     kaapi_hashentries_t* entry;
-    const int res = kaapi_mem_host_map_find( map, addr, kmd );
-    if( res == 0 )
-        return 0;
-
     entry = kaapi_big_hashmap_findinsert( &map->hmap, (void*)addr );
     entry->u.kmd = *kmd;
 

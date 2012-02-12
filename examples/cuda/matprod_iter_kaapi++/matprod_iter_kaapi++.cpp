@@ -69,7 +69,7 @@ static int do_check
     for (j = 0; j < n; ++j)
     {
       k = i * n + j;
-      if (fabsf(c[k] - tmp[k]) >= 0.001)
+      if (fabsf(c[k] - tmp[k]) >= 0.01)
       {
 	printf("ERROR invalid @%lx,%u,%u %f != %f\n", (uintptr_t)c, i, j, c[k], tmp[k]);
 	goto on_error;

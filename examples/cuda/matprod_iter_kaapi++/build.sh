@@ -7,7 +7,7 @@ CUDADIR=$CUDA_HOME
 ATLAS=$SCRATCH/install/atlas3.9.47
 
 #CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1 -maxrregcount 32"
-#CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"
+CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"
 #CUBLAS_CFLAGS="-DCONFIG_USE_FLOAT=1"
 CUBLAS_LDFLAGS="-lcublas"
 
@@ -18,7 +18,8 @@ CBLAS_CPPFLAGS="-I$ATLAS/include
 -DCONFIG_USE_FLOAT=1
 "
 
-MAGMA_CFLAGS="-I${SCRATCH}/install/magma_1.0.0/include -DCONFIG_USE_MAGMA=1"
+#MAGMA_CFLAGS="-I${SCRATCH}/install/magma_1.0.0/include -DCONFIG_USE_MAGMA=1"
+MAGMA_CFLAGS="-I${SCRATCH}/install/magma_1.0.0/include"
 MAGMA_LDFLAGS="-L${SCRATCH}/install/magma_1.0.0/lib -lmagma -lmagmablas -llapack -lf77blas -lgfortran"
 
 # use this flag for atomic instruction 

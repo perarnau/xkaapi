@@ -4,6 +4,7 @@
 SCRATCH=$HOME
 export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$SCRATCH/install/xkaapi/default/lib:$LD_LIBRARY_PATH
+#export LD_LIBRARY_PATH=$SCRATCH/adonis/xkaapi/default/lib:$LD_LIBRARY_PATH
 
 niter=1
 #niter=30
@@ -71,6 +72,34 @@ version="$(date +%s)"
 #    echo -n " m=$m" ;
 #done
 #echo ;
+
+function run_test {
+    export KAAPI_CPUSET="0:2"
+    #export KAAPI_GPUSET="0~6,1~7"
+    export KAAPI_GPUSET="0~6"
+#    msizes="2048"
+    msizes="1024"
+    bsizes="128"
+    niter=1
+    verif=1
+    for m in $msizes ; do
+	    for b in $bsizes; do
+	    for i in `seq 1 $niter`
+	    do
+	    echo "$KAAPI_CPUSET $KAAPI_GPUSET \
+		    ./matprod_iter_kaapi++ $m $b $verif"
+	    KAAPI_STACKSIZE=536870912 \
+		    ./matprod_iter_kaapi++ $m $b $verif
+	    #	KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
+	    #	KAAPI_STACKSIZE=536870912 gdb ./matprod_iter_kaapi++ 
+	    done
+	done
+    done
+}
+
+run_test
+
+exit 0
 
 function run_sgemm {
     ncpu=6

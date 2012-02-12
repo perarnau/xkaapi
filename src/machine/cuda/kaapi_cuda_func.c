@@ -48,10 +48,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stddef.h>
-#include <cuda.h>
-#include "kaapi_cuda_func.h"
+//#include <cuda.h>
+//#include "kaapi_cuda_func.h"
 //#include "kaapi_cuda_error.h"
 
+#if 0
 
 /* exported */
 
@@ -212,3 +213,5 @@ int kaapi_cuda_func_wait(kaapi_cuda_func_t* fn, CUstream stream)
   return 0;
 
 }
+
+#endif

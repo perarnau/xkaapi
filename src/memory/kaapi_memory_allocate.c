@@ -45,7 +45,7 @@
 
 #if defined(KAAPI_USE_CUDA)
 
-//#include "../machine/cuda/kaapi_cuda_error.h"
+#include <cuda.h>
 
 /* in kaapi_memory_copy.c */
 

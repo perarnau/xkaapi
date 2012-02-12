@@ -48,6 +48,7 @@
 #ifndef KAAPI_CUDA_FUNC_H_INCLUDED
 # define KAAPI_CUDA_FUNC_H_INCLUDED
 
+#if 0
 
 #include <cuda.h>
 
@@ -85,5 +86,6 @@ int kaapi_cuda_func_call_async
 (kaapi_cuda_func_t*, CUstream, const kaapi_cuda_dim2_t*, const kaapi_cuda_dim3_t*);
 int kaapi_cuda_func_wait(kaapi_cuda_func_t*, CUstream);
 
+#endif
 
 #endif /* ! KAAPI_CUDA_FUNC_H_INCLUDED */

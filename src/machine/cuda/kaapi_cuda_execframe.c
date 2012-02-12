@@ -991,8 +991,9 @@ int kaapi_cuda_exectask
 
   return res;
 }
+#endif
 
-#elif 0 /* NEW_WIP */
+#if 0 /* NEW_WIP */
 
 #include "kaapi_tasklist.h"
 
@@ -1121,7 +1122,9 @@ int kaapi_cuda_exectask
   return res;
 }
 
-#elif 0 /* NEW_WIP2 */
+#endif 
+
+#if 0 /* NEW_WIP2 */
 
 static int cast_memory_view
 (kaapi_memory_view_t* dview, const kaapi_memory_view_t* sview)
