@@ -46,11 +46,18 @@
 
 void GOMP_loop_end (void)
 {
-  kaapi_sched_sync();
-  printf("%s:: \n", __FUNCTION__);
+//  printf("%s:: \n", __FUNCTION__);
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  kaapi_thread_context_t* const self_thread = kproc->thread;
+  kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
+  kaapic_foreach_workend( self_thread, ctxt->workshare.lwork);
 }
 
 void GOMP_loop_end_nowait (void)
 {
-  printf("%s:: \n", __FUNCTION__);
+//  printf("%s:: \n", __FUNCTION__);
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  kaapi_thread_context_t* const self_thread = kproc->thread;
+  kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
+  kaapic_foreach_workend( self_thread, ctxt->workshare.lwork);
 }

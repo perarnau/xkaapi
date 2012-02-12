@@ -44,20 +44,42 @@
 #include "libgomp.h"
 
 
-bool GOMP_loop_runtime_start (long, long, long, long, long *, long *)
+bool GOMP_loop_runtime_start (
+  long start, long end, long incr, 
+  long chunk_size, 
+  long *istart, 
+  long *iend
+)
 {
-  printf("%s:: \n", __FUNCTION__);
+  return GOMP_loop_dynamic_start(
+              start, end, incr,
+              chunk_size,
+              istart, 
+              iend );
 }
 
-bool GOMP_loop_runtime_next (long *, long *)
+bool GOMP_loop_runtime_next (
+  long *istart, 
+  long *iend
+)
 {
-  printf("%s:: \n", __FUNCTION__);
+  return GOMP_loop_dynamic_next(istart, iend);
 }
 
-void GOMP_parallel_loop_runtime_start (void (*)(void *), void *,
-					     unsigned, long, long, long, long)
+void GOMP_parallel_loop_runtime_start 
+    void (*fn) (void *), 
+    void *data,
+    unsigned num_threads, 
+    long start, long end, long incr, long chunk_size
+)
 {
-  printf("%s:: \n", __FUNCTION__);
+  GOMP_parallel_loop_dynamic_start( 
+          fn, data,
+          num_threads, 
+          start, 
+          end,
+          incr,
+          chunk_size );
 }
 
 bool GOMP_loop_ordered_runtime_start (long, long, long, long,

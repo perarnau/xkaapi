@@ -48,7 +48,7 @@
 /* return true if the thread success to get single */
 bool GOMP_single_start (void)
 {
-  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();
+  kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
   ctxt->inside_single = 1;
 #if 1 // ONLY 0 PASS SINGLE
   return (ctxt->threadid == 0);

@@ -61,7 +61,7 @@ typedef struct gomp_barrier {
   kaapi_atomic_t __attribute__ ((aligned (CACHE_LINE_SIZE))) cycle;
   unsigned int __attribute__ ((aligned (CACHE_LINE_SIZE))) nthreads;
   char __attribute__ ((aligned (CACHE_LINE_SIZE))) count[BAR_CYCLES * CACHE_LINE_SIZE];
-} gomp_barrier_t; 
+} komp_barrier_t; 
 
 
 struct PerTeamLocalStorage;
@@ -77,9 +77,9 @@ typedef struct GlobalTeamInformation {
   kaapi_lock_t                 lock;       /* 1 iff work is init */
   int                          numthreads;
   kaapi_atomic_t               single_state;
-  gomp_barrier_t               barrier;
+  komp_barrier_t               barrier;
   kaapic_global_work_t*        volatile gwork;      /* last foreach loop context */
-} kaapi_libgomp_teaminfo_t;
+} kaapi_libkomp_teaminfo_t;
 
 
 /* Workshare structure
@@ -88,39 +88,44 @@ typedef struct WorkShareRep {
   kaapic_local_work_t*         lwork;      /* last foreach loop context */
   long                         incr;       /* scaling factor between Kaapi/GOMP slice*/
   int                          workload;   /* workload */
-} kaapi_libgompworkshared_t;
+} kaapi_libkompworkshared_t;
 
 
 /** Pre-historic TLS  support for OMP */
 typedef struct PerTeamLocalStorage {
-  kaapi_libgompworkshared_t    workshare;  /* team workshare */
-  kaapi_libgomp_teaminfo_t*    teaminfo;   /* team information */
+  kaapi_libkompworkshared_t    workshare;  /* team workshare */
+  kaapi_libkomp_teaminfo_t*    teaminfo;   /* team information */
   
   int                          threadid;
   int                          numthreads;
   int                          inside_single;
   kaapi_frame_t                frame;
-} kaapi_libgompctxt_t ;
+} kaapi_libkompctxt_t ;
 
 
-static inline kaapi_libgompctxt_t* GOMP_get_ctxtkproc( kaapi_processor_t* kproc )
+static inline kaapi_libkompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc )
 { 
   if (kproc->libgomp_tls == 0)
   {
-    kaapi_libgompctxt_t* ctxt = (kaapi_libgompctxt_t*)malloc(sizeof(kaapi_libgompctxt_t));
+    kaapi_libkompctxt_t* ctxt = (kaapi_libkompctxt_t*)malloc(sizeof(kaapi_libkompctxt_t));
     ctxt->threadid   = 0;
     ctxt->numthreads = 1;
     kproc->libgomp_tls = ctxt;
     return ctxt;
   }
-  return (kaapi_libgompctxt_t*)kproc->libgomp_tls;
+  return (kaapi_libkompctxt_t*)kproc->libgomp_tls;
 }
 
-static inline kaapi_libgompctxt_t* GOMP_get_ctxt()
+static inline kaapi_libkompctxt_t* komp_get_ctxt()
 {
-  return GOMP_get_ctxtkproc(kaapi_get_current_processor());
+  return komp_get_ctxtkproc(kaapi_get_current_processor());
 }
 
+extern
+kaapi_libkomp_teaminfo_t*  komp_init_parallel_start (
+  kaapi_processor_t* kproc,
+  unsigned num_threads
+);
 
 enum omp_task_kind
 {

@@ -69,14 +69,6 @@ becomes
        GOMP_parallel_end ();
 */
 
-static void gomp_foreach_wrapper(
-  int32_t i, int32_t j, int32_t tid, 
-  kaapic_body_arg_t* call
-)
-{
-//TODO
-}
-
 /* */
 bool GOMP_loop_static_start (
   long start, long end, long incr, 
@@ -85,37 +77,19 @@ bool GOMP_loop_static_start (
   long *iend
 )
 {
-#if 0
-  kaapi_thread_t* thread = kaapi_self_thread();
-  kaapic_foreach_attr_t attr;
-  kaapic_foreach_attr_init(&attr);
-  kaapic_foreach_attr_set_grains(&attr, chunk_size, chunk_size);
-  kaapic_work_t* work = kaapi_thread_pushdata(thread, sizeof(kaapic_work_t));
-  kaapic_body_arg_t* fnc_arg = kaapi_thread_pushdata(thread, 
-      offsetof(kaapic_body_arg_t, args)+4*sizeof(void*)
-  );
-//TODO  fnc_arg->u.f_c   = gomp_foreach_wrapper;
-  fnc_arg->nargs   = 4;
-  fnc_arg->args[0] = 0; /* where is the entry point... not needed */
-  fnc_arg->args[1] = 0;
-  fnc_arg->args[2] = (void*)start;
-  fnc_arg->args[3] = (void*)incr;
-
-  /* normalize iteration: to 0,M */
-  kaapic_foreach_workinit( work, 0, (end-start)/incr, attr, gomp_foreach_wrapper, fnc_arg );
-
-  printf("%s:: \n", __FUNCTION__);
-#endif
-
-  return (bool)0;
+  return GOMP_loop_dynamic_start(
+              start, end, incr,
+              chunk_size,
+              istart, 
+              iend );
 }
 
-bool GOMP_loop_static_next (long *istart, long *iend)
+bool GOMP_loop_static_next (
+  long *istart, 
+  long *iend
+)
 {
-  /* seems never called except through runtime selection ? */
-  printf("%s:: \n", __FUNCTION__);
-
-  return (bool)0;
+  return GOMP_loop_dynamic_next(istart, iend);
 }
 
 
@@ -126,7 +100,12 @@ void GOMP_parallel_loop_static_start(
     long start, long end, long incr, long chunk_size
 )
 {
-  /* seems never called except through runtime selection ? */
-  printf("%s:: \n", __FUNCTION__);
+  GOMP_parallel_loop_dynamic_start( 
+          fn, data,
+          num_threads, 
+          start, 
+          end,
+          incr,
+          chunk_size );
 }
 

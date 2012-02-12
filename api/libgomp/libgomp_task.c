@@ -55,7 +55,7 @@ static void GOMP_trampoline_task(
 )
 {
   GOMP_spawn_task_arg_t* taskarg = (GOMP_spawn_task_arg_t*)voidp;
-  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxt();
+  kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
 
   int num_threads  = taskarg->numthreads;
   int thread_id    = taskarg->threadid;
@@ -120,7 +120,7 @@ void GOMP_task(
   }
 
   kaapi_processor_t* kproc = kaapi_get_current_processor();
-  kaapi_libgompctxt_t* ctxt = GOMP_get_ctxtkproc(kproc);
+  kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
   kaapi_thread_t* thread =  kaapi_threadcontext2thread(kproc->thread);
   kaapi_task_t* task = kaapi_thread_toptask(thread);
   kaapi_task_init( 

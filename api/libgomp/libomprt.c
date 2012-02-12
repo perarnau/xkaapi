@@ -47,13 +47,13 @@
 int
 omp_get_num_threads (void)
 {
-  return GOMP_get_ctxt()->numthreads;
+  return komp_get_ctxt()->numthreads;
 }
 
 int
 omp_get_thread_num (void)
 {
-  return GOMP_get_ctxt()->threadid;
+  return komp_get_ctxt()->threadid;
 }
 
 
