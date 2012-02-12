@@ -458,277 +458,6 @@ static int _kaapic_split_task
   return 0;
 }
 
-#if 0 // OLD CODE
-static int _kaapic_split_common(
-  struct kaapi_task_t*                 victim_task,
-  void*                                args,
-  struct kaapi_listrequest_t*          lr,
-  struct kaapi_listrequest_iterator_t* lri,
-  unsigned int                         do_root_task
-);
-#endif
-
-
-#if 0 // OLD CODE
-/* thief splitter */
-static int _kaapic_split_local_task
-(
-  struct kaapi_task_t*                 task,
-  void*                                arg,
-  struct kaapi_listrequest_t*          lr,
-  struct kaapi_listrequest_iterator_t* lri
-)
-{
-  return _kaapic_split_common(task, arg, lr, lri, 0);
-}
-#endif
-
-#if 0 // OLD CODE
-/* main splitter */
-static int _kaapic_split_global_task
-(
-  struct kaapi_task_t*                 task,
-  void*                                arg,
-  struct kaapi_listrequest_t*          lr,
-  struct kaapi_listrequest_iterator_t* lri
-)
-{
-  return _kaapic_split_common(task, arg, lr, lri, 1);
-}
-#endif
-
-#if 0 // OLD CODE
-/* parallel work splitters */
-static int _kaapic_split_common(
-  struct kaapi_task_t*                 victim_task,
-  void*                                args,
-  struct kaapi_listrequest_t*          lr,
-  struct kaapi_listrequest_iterator_t* lri,
-  unsigned int                         do_root_task
-)
-{
-  /* victim and thief works */
-  kaapic_local_work_t* const vw = (kaapic_local_work_t*)args;
-  kaapic_local_work_t* tw;
-
-  /* stolen range */
-  kaapi_workqueue_index_t i;
-  kaapi_workqueue_index_t j = 0;
-  kaapi_workqueue_index_t p;
-  kaapi_workqueue_index_t q;
-  kaapi_workqueue_index_t range_size;
-
-  /* size per request */
-  kaapi_workqueue_index_t unit_size = 0;
-
-  /* max workqueue pop count failure */
-  unsigned int trials = 2;
-
-  /* requests served from work array */
-  unsigned int root_count = 0;
-
-  /* requests served from workqueue */
-  unsigned int leaf_count = 0;
-
-  /* root tasks stored in work array */
-  kaapic_work_distribution_t* wa = &vw->global->wa;
-
-  /* root tasks stored in work array */
-  const work_info_t* const wi = &vw->global->wi;
-
-  int nreq = kaapi_listrequest_iterator_count(lri);
-
-  /* skip root task */
-  if ((do_root_task == 0) || work_array_is_empty(wa))
-    goto skip_work_array;
-
-  /* count requests that will be served by root tasks 
-     may be computed by mask + bit count
-  */
-  kaapi_listrequest_iterator_t cpy_lri;
-
-  /* make a copy of the iterator state */
-  cpy_lri = *lri;
-  for (; !kaapi_listrequest_iterator_empty(&cpy_lri); ) 
-  {
-    kaapi_request_t* req = kaapi_listrequest_iterator_get(lr, &cpy_lri);
-    if (work_array_is_set(wa, (long)req->ident))
-      ++root_count;
-    kaapi_listrequest_iterator_next(lr, &cpy_lri);
-  }
-
-skip_work_array:
-  /* todo: request preprocessing should be done in one pass.
-     this will be no longer necessary with new splitter interface
-   */
-
-#if CONFIG_MAX_TID
-  /* exclude req->kid > max_tid from requests. note that a
-     root request cannot be in the > max_tid request set
-  */
-  for (k = nreq - 1; k >= 0; --k)
-  {
-    if (req[k].kid > wi->max_tid)
-      --nreq;
-  }
-#endif /* CONFIG_MAX_TID */
-
-  if (root_count == nreq) 
-    goto skip_workqueue;
-
-redo_steal:
-
-  /* do not steal if range size <= par_grain */
-  range_size = kaapi_workqueue_size(&vw->cr);
-  if (range_size <= wi->par_grain)
-  {
-    leaf_count = 0;
-    goto skip_workqueue;
-  }
-
-  leaf_count = nreq - root_count;
-
-  /* how much per non root req */
-  unit_size = range_size / (leaf_count + 1);
-  if (unit_size < wi->par_grain)
-  {
-    leaf_count = (range_size / wi->par_grain) - 1;
-    unit_size = wi->par_grain;
-    if (leaf_count ==0)
-      goto skip_workqueue;
-  }
-
-  /* perform the actual steal. if the range
-     changed size in between, redo the steal
-  */
-#if defined(USE_KPROC_LOCK)
-  kaapi_assert_debug( vw->cr.lock 
-    == &kaapi_get_current_processor()->victim_kproc->lock );
-#  if defined(KAAPI_DEBUG)
-  if (vw->cr.lock != &kaapi_get_current_processor()->victim_kproc->lock )
-  {
-    kaapi_processor_t* kproc = kaapi_get_current_processor();
-    printf("@lock victim:%p, kid combiner:%i, victim_kproc:%i\n",
-      (void*)vw->cr.lock,
-      kproc->kid,
-      kproc->victim_kproc->kid
-    );
-  }
-#  endif
-  kaapi_assert_debug( kaapi_atomic_assertlocked(vw->cr.lock) );
-#else
-  _kaapi_workqueue_lock(&vw->cr);
-#endif
-
-  if (kaapi_workqueue_steal(&vw->cr, &i, &j, leaf_count * unit_size))
-  {
-#if defined(USE_KPROC_LOCK)
-#else
-    _kaapi_workqueue_unlock(&vw->cr);
-#endif
-    if ((trials--) == 0)
-    {
-      leaf_count = 0;
-      goto skip_workqueue;
-    }
-
-    goto redo_steal;
-  }
-  
-#if defined(USE_KPROC_LOCK)
-#else
-  else
-    _kaapi_workqueue_unlock(&vw->cr);
-#endif
-    
-
-skip_workqueue:
-  for ( /* void */; 
-        !kaapi_listrequest_iterator_empty(lri) && (root_count || leaf_count); 
-        kaapi_listrequest_iterator_next(lr, lri)
-      )
-  {
-    kaapi_request_t* req = kaapi_listrequest_iterator_get(lr, lri);
-    
-#if CONFIG_MAX_TID
-    if (req->kid > wi->max_tid)
-      /* skip kid > max_tid requests */
-      continue;
-#endif /* CONFIG_MAX_TID */
-
-    if (root_count && work_array_is_set(wa, (long)req->ident))
-    {
-      /* serve from work array */
-      tw = kaapi_request_pushdata(req, sizeof(kaapic_thief_work_t) );
-      work_array_pop(wa, (long)req->ident, &p, &q);
-      kaapi_assert_debug( q-p > 0 );
-      --root_count;
-    }
-    else if (leaf_count)
-    {
-      /* serve from the workqueue */
-      tw = kaapi_request_pushdata(req, sizeof(kaapic_thief_work_t) );
-
-      /* stolen indices */
-      p = j - unit_size;
-      q = j;
-
-      j -= unit_size;
-
-      kaapi_assert_debug( unit_size >= 1 );
-      kaapi_assert_debug( q-p > 0 );
-      --leaf_count;
-    }
-    else
-    {
-      /* dont reply, neither root nor leaf 
-      */
-      /* This is a bug in the current version: all next to iterator
-         must be replied
-      */
-      kaapi_request_replytask(req, KAAPI_REQUEST_S_NOK);
-      KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( lri ) );
-      continue ;
-    }
-
-    /* finish work init and reply the request */
-#if defined(USE_KPROC_LOCK)
-    kaapi_workqueue_init_with_lock
-      (&tw->cr, p, q, &kaapi_all_kprocessors[req->ident]->lock);
-#else
-    kaapi_atomic_initlock(&tw->lock);
-    kaapi_workqueue_init_with_lock
-      (&tw->cr, p, q, &tw->lock);
-#endif
-
-    tw->body_f    = vw->body_f;
-    tw->body_args = vw->body_args;
-    tw->wi        = wi;
-
-    kaapi_task_init_with_flag(
-      kaapi_request_toptask(req), 
-      (kaapi_task_body_t)_kaapic_thief_entrypoint, 
-      tw,
-      KAAPI_TASK_UNSTEALABLE
-    );
-#if 1 /* comment this line if you do not want thief to be thief by other */
-    kaapi_request_pushtask_adaptive_tail( 
-      req, 
-      victim_task,
-      _kaapic_split_leaf_task 
-    );
-#else // unstealable task 
-    kaapi_request_pushtask(
-      req,
-      victim_task
-    );
-#endif
-    kaapi_request_committask(req);
-  }
-
-  return 0;
-}
-#endif
 
 /* thief entrypoint, lwork is already initialized */
 static void _kaapic_thief_entrypoint(
@@ -910,37 +639,19 @@ kaapic_global_work_t* kaapic_foreach_global_workinit
 }  
 
 
+
 /* Initialize the local work + the global work
    Return a pointer to the local work to execute. 
 */
-kaapic_local_work_t* kaapic_foreach_workinit
+kaapic_local_work_t* kaapic_foreach_local_workinit
 (
   kaapi_thread_context_t* self_thread,
-  kaapi_workqueue_index_t first, 
-  kaapi_workqueue_index_t last,
-  const kaapic_foreach_attr_t*  attr,
-  kaapic_foreach_body_t   body_f,
-  kaapic_body_arg_t*      body_args
+  kaapic_global_work_t*   gwork
 )
 {
-  kaapic_global_work_t* gwork;
-  kaapic_local_work_t* lwork;
-
-
-  /* if empty gwork 
-  */
-  if (first >= last) 
-    return 0;
-
-//  printf("\n----------Work init\n");
-  gwork = kaapic_foreach_global_workinit(
-      self_thread, 
-      first, 
-      last, 
-      attr, 
-      body_f, 
-      body_args
-  );
+  kaapi_workqueue_index_t first;
+  kaapi_workqueue_index_t last;
+  kaapic_local_work_t*    lwork;
   
   /* is_format true if called from kaapif_foreach_with_format */
   kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
@@ -977,7 +688,7 @@ kaapic_local_work_t* kaapic_foreach_workinit
     if (kaapic_do_parallel) kaapic_begin_parallel();
 
     /* start adaptive region */
-    gwork->context = kaapi_task_begin_adaptive(
+    lwork->context = kaapi_task_begin_adaptive(
        thread, 
        KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION,
        _kaapic_split_task,
@@ -986,6 +697,41 @@ kaapic_local_work_t* kaapic_foreach_workinit
     return lwork;
   }
   return 0;
+}  
+
+
+/* Initialize the local work + the global work
+   Return a pointer to the local work to execute. 
+*/
+kaapic_local_work_t* kaapic_foreach_workinit
+(
+  kaapi_thread_context_t* self_thread,
+  kaapi_workqueue_index_t first, 
+  kaapi_workqueue_index_t last,
+  const kaapic_foreach_attr_t*  attr,
+  kaapic_foreach_body_t   body_f,
+  kaapic_body_arg_t*      body_args
+)
+{
+  kaapic_global_work_t* gwork;
+
+  /* if empty gwork 
+  */
+  if (first >= last) 
+    return 0;
+
+//  printf("\n----------Work init\n");
+  gwork = kaapic_foreach_global_workinit(
+      self_thread, 
+      first, 
+      last, 
+      attr, 
+      body_f, 
+      body_args
+  );
+  
+  if (gwork ==0) return 0;
+  return kaapic_foreach_local_workinit( self_thread, gwork );
 }  
 
 
@@ -1000,7 +746,7 @@ int kaapic_foreach_workend
   KAAPI_SET_SELF_WORKLOAD(0);
 
   /* wait for thieves */
-  kaapi_task_end_adaptive(lwork->global->context);
+  kaapi_task_end_adaptive(lwork->context);
 
 #if defined(USE_KPROC_LOCK)
 #else

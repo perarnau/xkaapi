@@ -78,17 +78,16 @@ typedef struct GlobalTeamInformation {
   int                          numthreads;
   kaapi_atomic_t               single_state;
   gomp_barrier_t               barrier;
-  struct WorkShareRep*         localinfo[KAAPI_MAX_PROCESSOR];
+  kaapic_global_work_t*        volatile gwork;      /* last foreach loop context */
 } kaapi_libgomp_teaminfo_t;
 
 
 /* Workshare structure
 */
 typedef struct WorkShareRep {
-  kaapi_atomic_t               init;       /* 1 iff work is init */
-  kaapic_local_work_t*         work;       /* last foreach loop context */
+  kaapic_local_work_t*         lwork;      /* last foreach loop context */
+  long                         incr;       /* scaling factor between Kaapi/GOMP slice*/
   int                          workload;   /* workload */
-  struct WorkShareRep*         master;     /* master workshare */
 } kaapi_libgompworkshared_t;
 
 

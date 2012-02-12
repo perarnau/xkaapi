@@ -2,7 +2,7 @@
 AM_CFLAGS=-fopenmp -fdump-tree-all
 AM_LDFLAGS=-lgomp
 
-PROGS= parallel shared critical nested barrier single fibo task-firstprivate
+PROGS= parallel shared critical nested barrier single fibo task-firstprivate loop
 
 check_PROGRAMS=$(PROGS)
 
@@ -18,6 +18,7 @@ nested_SOURCES=nested.c $(TOOLBOX_SRC)
 barrier_SOURCES=barrier.c $(TOOLBOX_SRC)
 single_SOURCES=single.c $(TOOLBOX_SRC)
 fibo_SOURCES=fibo.c $(TOOLBOX_SRC)
+loop_SOURCES=loop.c $(TOOLBOX_SRC)
 task_firstprivate_SOURCES=task-firstprivate.c $(TOOLBOX_SRC)
 
 clean-local:

@@ -183,8 +183,6 @@ typedef struct global_work
   /* infos container */
   kaapic_work_info_t wi;
 
-  void* context; /* return by begin_adapt */
-
   /* thread context to restore */
   kaapi_frame_t frame;
 
@@ -194,6 +192,7 @@ typedef struct global_work
 /* local work */
 typedef struct local_work
 {
+  void*                   context; /* return by begin_adapt */
   kaapic_global_work_t*   global;
   kaapi_workqueue_index_t workdone;
   int                     tid;
@@ -205,48 +204,12 @@ typedef struct local_work
 } kaapic_local_work_t;
 
 
-#if 0 // OLD
-/* thief work: keep reference to initial work array and wi 
-   This structure is the same as kaapic_work_t except 
-   the container fields _wa and _wi
-*/
-typedef struct thief_work
-{
-  kaapi_workqueue_t cr __attribute__((aligned(64)));
-#if defined(USE_KPROC_LOCK)
-#else
-  kaapi_lock_t      lock;
-#endif
-
-#if CONFIG_TERM_COUNTER
-  /* global work counter */
-  kaapi_atomic_t* counter;
-#endif
-
-  /* work routine */
-  kaapic_foreach_body_t body_f;
-  kaapic_body_arg_t*    body_args;
-
-
-  /* split_root_task */
-  work_array_t* wa;
-
-  /* infos */
-  const work_info_t* wi;
-  void* context_adapt;
-  void* user_data[4];
-
-} kaapic_thief_work_t;
-#endif
-
-
 /* Lower level function used by libgomp implementation */
 
 /* init work 
    \retval returns non zero if there is work to do, else returns 0
 */
-extern kaapic_local_work_t*  kaapic_foreach_workinit
-(
+extern kaapic_local_work_t*  kaapic_foreach_workinit(
   kaapi_thread_context_t*       self_thread,
   kaapi_workqueue_index_t       first, 
   kaapi_workqueue_index_t       last,
@@ -256,6 +219,15 @@ extern kaapic_local_work_t*  kaapic_foreach_workinit
 );
 
 
+/* init local work if know global work.
+   May be called by each runing threads that decide to cooperate together
+   to execute in common a global work.
+   \retval returns non zero if there is work to do, else returns 0
+*/
+extern kaapic_local_work_t* kaapic_foreach_local_workinit(
+  kaapi_thread_context_t* self_thread,
+  kaapic_global_work_t*   gwork
+);
 
 
 /* 
