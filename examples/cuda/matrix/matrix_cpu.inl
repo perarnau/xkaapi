@@ -319,8 +319,9 @@ struct TaskBodyCPU<TaskDGETRFNoPiv> {
     const int ione   = 1;
     int* piv = (int*) calloc(m, sizeof(int));
 
-	clapack_getrf( order, m, n, a, lda, piv );
-	LAPACKE_laswp( order, m, a, lda, ione, n, piv, ione);
+    clapack_getrf( order, m, n, a, lda, piv );
+    LAPACKE_laswp( order, m, a, lda, ione, n, piv, ione);
+    free( piv );
   }
 };
 

@@ -11,20 +11,14 @@ CUBLAS_LDFLAGS="-lcublas"
 CBLAS_LDFLAGS="-L$SCRATCH/install/atlas3.9.47/lib -llapack -lcblas -latlas
 -lf77blas
 -L$SCRATCH/install/lapacke-3.3.0/lib -llapacke
+-llapack -lf77blas -lgfortran
 "
 CBLAS_CPPFLAGS="-I$SCRATCH/install/atlas3.9.47/include
 -I$SCRATCH/install/lapacke-3.3.0/include
 -DCONFIG_USE_FLOAT=1"
 
-#MAGMA_CFLAGS="-I${SCRATCH}/install/magma_1.0.0-rc5/include -DCONFIG_USE_MAGMA=1"
-#MAGMA_LDFLAGS="-L${SCRATCH}/install/magma_1.0.0-rc5/lib -lmagma -lmagmablas
-#-llapack -lf77blas -lgfortran"
 MAGMA_CFLAGS="-I${SCRATCH}/install/magma_1.0.0/include -DCONFIG_USE_MAGMA=1"
 MAGMA_LDFLAGS="-L${SCRATCH}/install/magma_1.0.0/lib -lmagma -lmagmablas -llapack -lf77blas -lgfortran"
-
-# use this flag for atomic instruction 
-# does not work on gtx280
-# -arch=compute_20
 
 #$CUDADIR/bin/nvcc -g -w \
 g++ -g -Wall \

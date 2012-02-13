@@ -50,7 +50,8 @@
 
 #include "kaapi++"
 #include <stdio.h>
-#include <cuda.h>
+
+#include <cuda_runtime_api.h>
 
 // needed for flags
 #include <cblas.h>
@@ -642,7 +643,6 @@ template<> struct TaskBodyGPU<TaskDGETRFNoPiv>
    ka::range2d_rw<double_type> A
   )
   {
-#if CONFIG_USE_MAGMA
     const int m        = A.dim(0); 
     const int n        = A.dim(1); 
 //    const int lda      = A.lda();
@@ -654,12 +654,28 @@ template<> struct TaskBodyGPU<TaskDGETRFNoPiv>
 		m, n, lda, (void*)a ); fflush(stdout);
 #endif
 
+#if CONFIG_USE_MAGMA
     magma_int_t info = 0;
     magma_getrf_nopiv( m, n, a, lda, &info );
     if (info){
 	fprintf( stdout, "TaskDGETRF::magma_getrf_nopiv() ERROR %d\n", info );
 	fflush(stdout);
 	}
+#else
+    const int ione   = 1;
+    int* piv = (int*) calloc(m, sizeof(int));
+    double_type* work = (double_type*) calloc( n*lda, sizeof(double_type));
+
+    cudaMemcpy2D( work, lda*sizeof(double_type), a,
+	    lda*sizeof(double_type), n, lda, 
+	    cudaMemcpyDeviceToHost );
+    clapack_getrf( order, m, n, work, lda, piv );
+    LAPACKE_laswp( order, m, work, lda, ione, n, piv, ione);
+    cudaMemcpy2D( a, lda*sizeof(double_type), work,
+	    lda*sizeof(double_type), n, lda,
+	    cudaMemcpyHostToDevice );
+    free( piv );
+    free( work );
 #endif
   }
 };
@@ -675,7 +691,6 @@ template<> struct TaskBodyGPU<TaskDPOTRF>
    ka::range2d_rw<double_type> A
   )
   {
-#if CONFIG_USE_MAGMA
     const int n     = A.dim(0); 
     //const int lda   = A.lda();
     const int lda   = A.dim(1);
@@ -684,7 +699,7 @@ template<> struct TaskBodyGPU<TaskDPOTRF>
 #if KAAPI_VERBOSE
     fprintf(stdout, "TaskGPU DPOTRF m=%d A=%p lda=%d\n", n, (void*)a, lda ); fflush(stdout);
 #endif
-
+#if CONFIG_USE_MAGMA
     magma_int_t info = 0;
     const char uplo_ = (uplo == CblasUpper) ? 'U' : 'L';
     magma_potrf( uplo_, n, a, lda, &info );
@@ -692,9 +707,7 @@ template<> struct TaskBodyGPU<TaskDPOTRF>
 	fprintf( stdout, "TaskDPOTRF::magma_potrf() ERROR %d\n", info );
 	fflush(stdout);
 	}
-#endif
-
-#if 0
+#else
     double_type* work = (double_type*) calloc( n*lda, sizeof(double_type));
     cudaMemcpy2D( work, lda*sizeof(double_type), a,
 	    lda*sizeof(double_type), n, lda, 
@@ -703,6 +716,7 @@ template<> struct TaskBodyGPU<TaskDPOTRF>
     cudaMemcpy2D( a, lda*sizeof(double_type), work,
 	    lda*sizeof(double_type), n, lda,
 	    cudaMemcpyHostToDevice );
+    free( work );
 #endif
 
   }

@@ -482,10 +482,10 @@ struct doit {
     else
       sd = sqrt((sumgf2 - (sumgf*sumgf)/niter)/niter);
     
-    printf("%6d %5d %5d %9.10f %9.6f\n",
+    printf("POTRF %6d %5d %5d %9.10f %9.6f\n",
 	    (int)n,
+	    (int)global_blocsize,
 	    (int)kaapi_getconcurrency(),
-	    (int)(n/global_blocsize),
 	    sumt/niter, gflops );
 
     free(dA);
@@ -513,7 +513,7 @@ struct doit {
     if (argc >4)
       verif = atoi(argv[4]);
 
-    printf("# size   #threads #bs    time      GFlop/s\n");
+    printf("# size  blocksize  #threads   time      GFlop/s\n");
     for (int k=0; k<1; ++k, ++n )
     {
       doone_exp( n, block_size, niter, verif );

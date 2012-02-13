@@ -263,13 +263,10 @@ struct TaskBodyCPU<TaskLU> {
     size_t N = A.dim(0);
     size_t blocsize = global_blocsize;
 
-
     for (size_t k=0; k<N; k += blocsize)
     {
       ka::rangeindex rk(k, k+blocsize);
       // A(rk,rk) = L(rk,rk) * U(rk,rk) <- LU( A(rk,rk) 
-     // ka::range1d<int> kpiv(Piv.ptr()+k, blocsize);
-      //ka::Spawn<TaskDGETRF>()( A(rk,rk), kpiv );
       ka::Spawn<TaskDGETRFNoPiv>()( CblasColMajor, A(rk,rk) );
 
       for (size_t j=k+blocsize; j<N; j += blocsize)
@@ -365,15 +362,10 @@ struct doit {
     }
 #endif
 
-    std::cout << "# Start LU with " 
-              << block_size << 'x' << block_size 
-              << " blocs of matrix of size " << n << 'x' << n 
-              << std::endl;
-              
     // LU factorization of A using ka::
     double ggflops = 0;
     double gtime = 0;
-    fprintf( stdout, "# size #threads #bs time Gflops\n" );
+    fprintf( stdout, "# size blocksize #threads time Gflops\n" );
     for (int i=0; i<niter; ++i)
     {
       t0 = kaapi_get_elapsedtime();
@@ -389,10 +381,10 @@ struct doit {
       double gflops = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / (t1-t0);
       gtime += t1-t0;
       ggflops += gflops;
-	fprintf( stdout, "%6d %5d %5d %9.10f %9.6f\n",
+	fprintf( stdout, "GETRF %6d %5d %5d %9.10f %9.6f\n",
 	    (int)n,
+	    (int)global_blocsize,
 	    (int)kaapi_getconcurrency(),
-	    (int)(n/global_blocsize),
 	    t1-t0, gflops );
 	fflush(stdout);
     }
