@@ -90,49 +90,6 @@ xxx_kaapi_cuda_data_allocate(
 #endif /* KAAPI_CUDA_MODE_BASIC */
 }
 
-/* The function checks if the dest memory is valid on GPU 
- * */
-static inline int
-xxx_kaapi_cuda_data_send_ro(
-		const kaapi_mem_host_map_t* map,
-		kaapi_mem_data_t* kmd,
-		kaapi_data_t* dest,
-		kaapi_data_t* src
-		)
-{
-	const kaapi_mem_asid_t host_asid= kaapi_mem_host_map_get_asid(map);
-#ifndef KAAPI_CUDA_MODE_BASIC
-	if ( kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
-		kaapi_cuda_mem_copy_htod( dest->ptr, &dest->view,
-			src->ptr, &src->view );
-		kaapi_mem_data_clear_dirty( kmd, host_asid );
-	}
-#else
-	kaapi_cuda_mem_copy_htod( dest->ptr, &dest->view,
-		src->ptr, &src->view );
-#endif
-
-	return 0;
-}
-
-/*
- * The function sets the current GPU thread as a writter 
- */
-static inline int
-xxx_kaapi_cuda_data_send_wr(
-		const kaapi_mem_host_map_t* host_map,
-		kaapi_mem_data_t* kmd,
-		kaapi_data_t* dest, 
-	       	kaapi_data_t* src
-		)
-{
-#ifndef KAAPI_CUDA_MODE_BASIC
-        kaapi_mem_data_set_all_dirty_except( kmd, 
-	    kaapi_mem_host_map_get_asid(host_map) );
-#endif
-	return 0;
-}
-
 int kaapi_cuda_data_allocate( 
 	kaapi_format_t*		   fmt,
 	void*              sp
@@ -174,6 +131,49 @@ int kaapi_cuda_data_allocate(
 		xxx_kaapi_cuda_data_allocate( cuda_map, kmd, src );
 	}
 
+	return 0;
+}
+
+/* The function checks if the dest memory is valid on GPU 
+ * */
+static inline int
+xxx_kaapi_cuda_data_send_ro(
+		const kaapi_mem_host_map_t* map,
+		kaapi_mem_data_t* kmd,
+		kaapi_data_t* dest,
+		kaapi_data_t* src
+		)
+{
+	const kaapi_mem_asid_t host_asid= kaapi_mem_host_map_get_asid(map);
+#ifndef KAAPI_CUDA_MODE_BASIC
+	if ( kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
+		kaapi_cuda_mem_copy_htod( dest->ptr, &dest->view,
+			src->ptr, &src->view );
+		kaapi_mem_data_clear_dirty( kmd, host_asid );
+	}
+#else
+	kaapi_cuda_mem_copy_htod( dest->ptr, &dest->view,
+		src->ptr, &src->view );
+#endif
+
+	return 0;
+}
+
+/*
+ * The function sets the current GPU thread as a writter 
+ */
+static inline int
+xxx_kaapi_cuda_data_send_wr(
+		const kaapi_mem_host_map_t* host_map,
+		kaapi_mem_data_t* kmd,
+		kaapi_data_t* dest, 
+	       	kaapi_data_t* src
+		)
+{
+#ifndef KAAPI_CUDA_MODE_BASIC
+        kaapi_mem_data_set_all_dirty_except( kmd, 
+	    kaapi_mem_host_map_get_asid(host_map) );
+#endif
 	return 0;
 }
 

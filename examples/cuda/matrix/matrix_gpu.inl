@@ -413,8 +413,8 @@ template<> struct TaskBodyGPU<TaskDGEMM>
 		status = cublasGemm
 		      (
 		       kaapi_cuda_cublas_handle(),
-		       convertToOp(transA),
 		       convertToOp(transB),
+		       convertToOp(transA),
 		       n, m, k,
 		       &alpha,
 		       b, ldb, 

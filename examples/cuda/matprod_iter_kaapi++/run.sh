@@ -16,9 +16,10 @@ function run_test {
     export KAAPI_CPUSET="0:2"
     #export KAAPI_GPUSET="0~6,1~7"
     export KAAPI_GPUSET="0~6"
-#    msizes="2048"
-    msizes="1024"
-    bsizes="128"
+#    msizes="10240"
+#    msizes="16384"
+    msizes="20480"
+    bsizes="1024"
     niter=1
 #    verif=1
     for m in $msizes ; do
