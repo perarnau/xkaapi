@@ -58,7 +58,6 @@ xxx_kaapi_cuda_data_allocate(
 		kaapi_mem_host_map_find_or_insert_(  cuda_map,
 		    (kaapi_mem_addr_t)kaapi_pointer2void(dest->ptr),
 		    &kmd );
-		kaapi_cuda_mem_register( src->ptr, &src->view );
 		return dest;
 	} else {
 	    kaapi_data_t* dest= (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,

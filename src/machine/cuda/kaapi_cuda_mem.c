@@ -388,32 +388,22 @@ on_error:
 	return -1;
 }
 
-//#endif /* KAAPI_CUDA_ASYNC */
-
 int kaapi_cuda_mem_register( kaapi_pointer_t ptr, 
 		const kaapi_memory_view_t *view )
 {
-#if 0
-	const cudaError_t res = 
-#endif
-#if KAAPI_CUDA_ASYNC
-	cudaHostRegister(
+	cudaError_t res = cudaHostRegister(
 		(void*)__kaapi_pointer2void(ptr),
 		kaapi_memory_view_size(view),
 		cudaHostRegisterPortable );
-#endif
-
-#if 0
 	if (res != cudaSuccess) {
-		fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
-		fflush(stdout);
-		return -1;
+		fprintf( stdout, "[%s] ERROR (%d) ptr=%p size=%lu kid=%lu\n",
+				__FUNCTION__, res,
+				(void*)__kaapi_pointer2void(ptr),
+				kaapi_memory_view_size(view), 
+				(long unsigned int)kaapi_get_current_kid() ); 
+		fflush( stdout );
 	}
-	else {
-		fprintf(stdout, "[%s] OK: %d\n", __FUNCTION__, res );
-		fflush(stdout);
-	}
-#endif
+
 	return 0;
 }
 

@@ -183,6 +183,11 @@ struct doit {
     ka::Spawn<TaskDLARNV>()( C );
     ka::Sync();
 
+    /* register memory to Xkaapi runtime */
+    kaapi_memory_register( dA, n*n*sizeof(double_type) );
+    kaapi_memory_register( dB, n*n*sizeof(double_type) );
+    kaapi_memory_register( dC, n*n*sizeof(double_type) );
+
 #if CONFIG_DO_CHECK
     if( verif ){
 	dC_old= (double_type*) calloc(n* n, sizeof(double_type));

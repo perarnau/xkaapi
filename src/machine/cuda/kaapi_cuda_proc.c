@@ -71,18 +71,7 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
   if ( kaapi_cuda_dev_open( proc, idev) )
     return -1;
 
-#ifdef KAAPI_CUDA_ASYNC
-  int i;
-  for( i= 0; i < KAAPI_CUDA_MAX_STREAMS; i++ ) {
-      res = cudaStreamCreate( &proc->stream[i] );
-      if (res != cudaSuccess) {
-		fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
-		fflush(stdout);
-	kaapi_cuda_dev_close( proc );
-	return -1;
-      }
-  }
-#else
+#if KAAPI_CUDA_ASYNC
   res = cudaStreamCreate( &proc->stream );
   if (res != cudaSuccess) {
 	    fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
@@ -140,10 +129,6 @@ int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t* proc)
 #endif
   kaapi_cuda_cublas_finalize( proc );
 #ifdef KAAPI_CUDA_ASYNC
-  int i;
-  for( i= 0; i < KAAPI_CUDA_MAX_STREAMS; i++ ) 
-      cudaStreamDestroy( proc->stream[i] );
-#else
    cudaStreamDestroy( proc->stream );
 #endif
 
@@ -170,10 +155,10 @@ size_t kaapi_cuda_get_proc_count(void)
 
 cudaStream_t kaapi_cuda_kernel_stream(void)
 {
-  kaapi_processor_t* const self_proc =
-    kaapi_get_current_processor();
-#ifdef KAAPI_CUDA_ASYNC
-  return self_proc->cuda_proc.stream[KAAPI_CUDA_KERNEL_STREAM];
+#if KAAPI_CUDA_ASYNC
+    kaapi_processor_t* const self_proc =
+	kaapi_get_current_processor();
+    return self_proc->cuda_proc.stream;
 #else
     return 0;
 #endif
@@ -181,34 +166,34 @@ cudaStream_t kaapi_cuda_kernel_stream(void)
 
 cudaStream_t kaapi_cuda_HtoD_stream(void)
 {
-  kaapi_processor_t* const self_proc =
-    kaapi_get_current_processor();
 #if KAAPI_CUDA_ASYNC
-  return self_proc->cuda_proc.stream[KAAPI_CUDA_HTOD_STREAM];
+    kaapi_processor_t* const self_proc =
+	kaapi_get_current_processor();
+    return self_proc->cuda_proc.stream;
 #else
-  return 0;
+    return 0;
 #endif
 }
 
 cudaStream_t kaapi_cuda_DtoH_stream(void)
 {
-  kaapi_processor_t* const self_proc =
-    kaapi_get_current_processor();
 #if KAAPI_CUDA_ASYNC
-  return self_proc->cuda_proc.stream[KAAPI_CUDA_DTOH_STREAM];
+    kaapi_processor_t* const self_proc =
+	kaapi_get_current_processor();
+    return self_proc->cuda_proc.stream;
 #else
-  return 0;
+    return 0;
 #endif
 }
 
 cudaStream_t kaapi_cuda_DtoD_stream(void)
 {
-  kaapi_processor_t* const self_proc =
-    kaapi_get_current_processor();
 #if KAAPI_CUDA_ASYNC
-  return self_proc->cuda_proc.stream[KAAPI_CUDA_DTOD_STREAM];
+    kaapi_processor_t* const self_proc =
+	kaapi_get_current_processor();
+    return self_proc->cuda_proc.stream;
 #else
-  return 0;
+    return 0;
 #endif
 }
 

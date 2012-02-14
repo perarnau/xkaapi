@@ -377,6 +377,7 @@ struct doit {
     }
 
     ka::array<2,double_type> A(dA, n, n, n);
+    kaapi_memory_register( dA, n*n*sizeof(double_type) );
 
 #if 0
     std::cout << "Start Cholesky with " 

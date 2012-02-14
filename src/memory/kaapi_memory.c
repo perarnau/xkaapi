@@ -41,6 +41,7 @@
 ** terms.
 ** 
 */
+
 #include "kaapi_impl.h"
 
 
@@ -106,4 +107,5 @@ int kaapi_memory_address_space_fprintf( FILE* file, kaapi_address_space_id_t kas
     kaapi_memory_address_space_getgid(kasid)
   );
 }
+
 

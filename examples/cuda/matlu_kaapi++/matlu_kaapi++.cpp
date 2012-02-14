@@ -339,6 +339,7 @@ struct doit {
     ka::array<2,double_type> A(dA, n, n, n);
     ka::Spawn<TaskDLARNV>()( A );
     ka::Sync();
+    kaapi_memory_register( dA, n*n*sizeof(double_type) );
 
     if (verif) {
 	/* copy the matrix to compute the norm */

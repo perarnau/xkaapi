@@ -137,6 +137,7 @@ libkaapi_la_SOURCES=\
   memory/kaapi_memory_allocate.c \
   memory/kaapi_memory_bind.c \
   memory/kaapi_memory_find_writer.c \
+  memory/kaapi_memory_register.c \
   memory/kaapi_numa.c \
   memory/kaapi_mem_init.c \
   memory/kaapi_mem_destroy.c \

@@ -501,5 +501,4 @@ static inline struct kaapi_version_t** _kaapi_metadata_info_copy_data(
   return &kmdi->version[lid];
 }
 
-
 #endif /*_KAAPI_DATA_H_*/

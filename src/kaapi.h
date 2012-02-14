@@ -1555,6 +1555,12 @@ typedef kaapi_data_t* kaapi_handle_t;
 */
 extern int kaapi_memory_synchronize(void);
 
+/* Register memory for Xkaapi optimizations */
+extern int kaapi_memory_register( void* ptr, const size_t size );
+
+/* Register memory for Xkaapi optimizations */
+extern void kaapi_memory_unregister( void* ptr );
+
 /** Create a thread group with size threads. 
     Mapping function should be set at creation step. 
     For each thread tid of the group, the function mapping is called with:

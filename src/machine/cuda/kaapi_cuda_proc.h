@@ -54,7 +54,7 @@
 
 #include "cublas_v2.h"
 
-//#define KAAPI_CUDA_ASYNC	1
+#define KAAPI_CUDA_ASYNC	1
 #define KAAPI_CUDA_MEM_ALLOC_MANAGER	1
 #define KAAPI_CUDA_MEM_FREE_FACTOR	1
 //#define	KAAPI_CUDA_MODE_BASIC	1
@@ -99,8 +99,6 @@ typedef struct kaapi_cuda_proc
 {
     unsigned int index;
 #ifdef KAAPI_CUDA_ASYNC
-    cudaStream_t stream[KAAPI_CUDA_MAX_STREAMS];
-#else
     cudaStream_t stream;
 #endif
     kaapi_cuda_ctx_t ctx;
