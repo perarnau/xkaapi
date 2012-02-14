@@ -78,11 +78,11 @@ int kaapif_spawn_
   */
 
   total_size = offsetof(kaapic_task_info_t, args) +
-    ((*nargs) * sizeof(kaapic_arg_info_t) + sizeof(uintptr_t));
+    ((*nargs) * (sizeof(kaapic_arg_info_t) + sizeof(uintptr_t)));
   ti = kaapi_thread_pushdata_align(thread, total_size, sizeof(void*));
 
-  values = (uintptr_t*)(uintptr_t)
-    (ti + offsetof(kaapic_task_info_t, args) + *nargs * sizeof(kaapic_arg_info_t));
+  /* last arg_info is actually the first value */
+  values = (uintptr_t*)(&ti->args[*nargs]);
 
   ti->body  = body;
   ti->nargs = *nargs;
