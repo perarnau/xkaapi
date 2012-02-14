@@ -110,10 +110,13 @@ int kaapif_spawn_
         break;
       case KAAPIC_MODE_V:  
         if (count >1) return KAAPIF_ERR_EINVAL;
-	/* save into value space and change to TYPE_PTR */
-	memcpy(values + k, addr, sizeof(uintptr_t));
-	addr = (void*)(values + k);
-	type = KAAPIC_TYPE_PTR;
+	if (type != KAAPIC_TYPE_PTR)
+	{
+	  /* save into value space and change to TYPE_PTR */
+	  memcpy(values + k, addr, sizeof(uintptr_t));
+	  addr = (void*)(values + k);
+	  type = KAAPIC_TYPE_PTR;
+	}
         ai->mode = KAAPI_ACCESS_MODE_V;
         break;
       default: 
