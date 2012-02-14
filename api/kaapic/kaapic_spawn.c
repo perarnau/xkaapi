@@ -45,7 +45,8 @@
 #include <string.h>
 
 
-static void kaapic_dfg_body(void* p, kaapi_thread_t* t)
+/* extern function, required by kaapif_spawn */
+void kaapic_dfg_body(void* p, kaapi_thread_t* t)
 {
   kaapic_task_info_t* const ti = (kaapic_task_info_t*)p;
 
