@@ -4,6 +4,7 @@
 
 #include "../../kaapi.h"
 #include "kaapi_cuda_proc.h"
+#include <cuda_runtime_api.h>
 
 int kaapi_cuda_mem_free( kaapi_pointer_t *ptr );
 
@@ -66,5 +67,32 @@ int kaapi_cuda_mem_sync_params_dtoh(
 int 
 kaapi_cuda_mem_mgmt_check( kaapi_processor_t* proc );
 #endif
+
+static inline int
+kaapi_cuda_mem_register_( void* ptr, const size_t size )
+{
+#if KAAPI_CUDA_ASYNC
+    const cudaError_t res= cudaHostRegister( ptr, size, cudaHostRegisterPortable );
+    if (res != cudaSuccess) {
+	    fprintf( stdout, "[%s] ERROR (%d) ptr=%p size=%lu kid=%lu\n",
+			    __FUNCTION__, res,
+			    ptr, size,
+			    (long unsigned int)kaapi_get_current_kid() ); 
+	    fflush( stdout );
+    }
+
+    return res;
+#else
+    return 0;
+#endif
+}
+
+static inline void
+kaapi_cuda_mem_unregister_( void* ptr )
+{
+#if KAAPI_CUDA_ASYNC
+    cudaHostUnregister( ptr );
+#endif
+}
 
 #endif /* ! KAAPI_CUDA_MEM_H_INCLUDED */
