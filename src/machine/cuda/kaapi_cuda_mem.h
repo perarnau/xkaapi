@@ -73,6 +73,7 @@ kaapi_cuda_mem_register_( void* ptr, const size_t size )
 {
 #if KAAPI_CUDA_ASYNC
     const cudaError_t res= cudaHostRegister( ptr, size, cudaHostRegisterPortable );
+#if 0
     if (res != cudaSuccess) {
 	    fprintf( stdout, "[%s] ERROR (%d) ptr=%p size=%lu kid=%lu\n",
 			    __FUNCTION__, res,
@@ -80,6 +81,7 @@ kaapi_cuda_mem_register_( void* ptr, const size_t size )
 			    (long unsigned int)kaapi_get_current_kid() ); 
 	    fflush( stdout );
     }
+#endif
 
     return res;
 #else
