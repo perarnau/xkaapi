@@ -27,5 +27,7 @@ int kaapi_memory_register( void* ptr, const size_t size )
 
 void kaapi_memory_unregister( void* ptr )
 {
+#if defined(KAAPI_USE_CUDA)
     cudaHostUnregister( ptr );
+#endif
 }
