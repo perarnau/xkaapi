@@ -53,6 +53,13 @@ static int do_check
 
 //  for (i = 0; i < n * n; ++i) tmp[i] = 0.;
 
+    cblas_gemm
+    (
+	CblasRowMajor, CblasNoTrans, CblasNoTrans,
+	n, n, n, 1.0, a, n, b, n, 1.0, tmp, n
+    );
+
+#if 0
   for (i = 0; i < n; ++i)
   {
     for (j = 0; j < n; ++j)
@@ -61,13 +68,12 @@ static int do_check
 	tmp[i * n +  j] += a[i * n + k] * b[k * n + j];
     }
   }
+#endif
 
   int res = -1;
 
-  for (i = 0; i < n; ++i)
-  {
-    for (j = 0; j < n; ++j)
-    {
+  for (i = 0; i < n; ++i) {
+    for (j = 0; j < n; ++j) {
       k = i * n + j;
       if (fabsf(c[k] - tmp[k]) >= 0.01)
       {
