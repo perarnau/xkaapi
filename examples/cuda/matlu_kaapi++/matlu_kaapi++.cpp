@@ -436,6 +436,7 @@ struct doit {
 	free(dAcopy);
 	}
 
+    kaapi_memory_unregister( dA );
     free(dA);
     free(dPiv);
   }

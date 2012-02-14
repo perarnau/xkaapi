@@ -489,6 +489,7 @@ struct doit {
 	    (int)kaapi_getconcurrency(),
 	    sumt/niter, gflops );
 
+    kaapi_memory_unregister( dA );
     free(dA);
   }
 

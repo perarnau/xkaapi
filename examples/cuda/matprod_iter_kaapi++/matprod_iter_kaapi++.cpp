@@ -239,6 +239,9 @@ struct doit {
     }
 #endif
 
+    kaapi_memory_unregister( dA );
+    kaapi_memory_unregister( dB );
+    kaapi_memory_unregister( dC );
     free(dA);
     free(dB);
     free(dC);
