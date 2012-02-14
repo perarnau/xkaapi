@@ -21,6 +21,7 @@ function run_test {
     msizes="16384"
 #    msizes="20480"
     bsizes="1024"
+#    bsizes="256"
     niter=1
 #    verif=1
     for m in $msizes ; do
