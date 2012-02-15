@@ -43,6 +43,18 @@
 ** 
 */
 #include "libgomp.h"
+#include <stdio.h>
+
+void
+omp_set_num_threads (int n)
+{
+  if (n >0)
+  {
+    char numthreads_str[8];
+    sprintf(numthreads_str, "%i", n );
+    setenv ("KAAPI_CPUCOUNT", numthreads_str, 1);
+  }
+}
 
 int
 omp_get_num_threads (void)
