@@ -400,8 +400,8 @@ AS_CASE([$enable_mode],
     AM_CPPFLAGS="$AM_CPPFLAGS"
     CFLAGS=""
     CXXFLAGS=""
-    AM_CFLAGS="$AM_CFLAGS -O4 -DNDEBUG"
-    AM_CXXFLAGS="$AM_CXXFLAGS -O4 -DNDEBUG"
+    AM_CFLAGS="$AM_CFLAGS -O3 -DNDEBUG"
+    AM_CXXFLAGS="$AM_CXXFLAGS -O3 -DNDEBUG"
   ], [dnl
     AC_MSG_ERROR([Unknown compilation mode '$enable_mode'. Aborting.])
   ])
