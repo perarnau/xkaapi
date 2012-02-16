@@ -55,7 +55,7 @@ static int do_check
 
     cblas_gemm
     (
-	CblasRowMajor, CblasNoTrans, CblasNoTrans,
+	CblasColMajor, CblasNoTrans, CblasNoTrans,
 	n, n, n, 1.0, a, n, b, n, 1.0, tmp, n
     );
 
@@ -122,12 +122,14 @@ struct TaskBodyCPU<TaskMatProduct> {
     size_t N = B.dim(1);
     int bloc = BLOCSIZE;
     
-    for (size_t i=0; i<M; i += bloc)
+//    for (size_t i=0; i<M; i += bloc)
+    for (size_t j=0; j<M; j += bloc)
     {
-      ka::rangeindex ri(i, i+bloc);
-      for (size_t j=0; j<N; j += bloc)
+      ka::rangeindex rj(j, j+bloc);
+//      for (size_t j=0; j<N; j += bloc)
+      for (size_t i=0; i<N; i += bloc)
       {
-        ka::rangeindex rj(j, j+bloc);
+        ka::rangeindex ri(i, i+bloc);
         for (size_t k=0; k<K; k += bloc)
         {
           ka::rangeindex rk(k, k+bloc);
@@ -138,7 +140,9 @@ struct TaskBodyCPU<TaskMatProduct> {
 		 );
 	  fflush(stdout);
 #endif
-          ka::Spawn<TaskDGEMM>()(  CblasRowMajor, CblasNoTrans, CblasNoTrans, 1.0, A(ri,rk), B(rk,rj), 1.0, C(ri,rj) );
+//          ka::Spawn<TaskDGEMM>()(  CblasColMajor, CblasNoTrans, CblasNoTrans, 1.0, A(ri,rk), B(rk,rj), 1.0, C(ri,rj) );
+          ka::Spawn<TaskDGEMM>()(  CblasColMajor, CblasNoTrans, CblasNoTrans, 1.0, 
+		   B(rk,rj), A(ri,rk), 1.0, C(ri,rj) );
         }
       }
     }

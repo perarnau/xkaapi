@@ -18,15 +18,43 @@
 static int
 kaapi_mem_sync_transfer( const int dev, kaapi_data_t* dest, kaapi_data_t* src )
 {
+    cudaError_t res;
+    cudaStream_t stream;
 
     kaapi_cuda_ctx_set( dev );
-    cudaStream_t stream;
-    cudaError_t res = cudaStreamCreate( &stream );
+    res = cudaStreamCreate( &stream );
     if (res != cudaSuccess) {
 	fprintf(stderr, "[%s] ERROR: %d\n", __FUNCTION__, res );
 	fflush(stderr);
 	return res;
     }
+#if 0
+    struct cudaPointerAttributes attr;
+    res = cudaPointerGetAttributes( &attr, kaapi_pointer2void(dest->ptr) );
+    fprintf( stdout, "[%s] attr host(%p)  type=%s dev=%d devptr=%p hostptr=%p\n",
+	    __FUNCTION__,
+	    kaapi_pointer2void(dest->ptr),
+	    ((attr.memoryType == cudaMemoryTypeHost) ? "Host" : "Device"),
+	    attr.device,
+	    attr.devicePointer,
+	    attr.hostPointer );
+    res = cudaPointerGetAttributes( &attr, kaapi_pointer2void(src->ptr) );
+    fprintf( stdout, "[%s] attr dev(%p) type=%s dev=%d devptr=%p hostptr=%p\n",
+	    __FUNCTION__,
+	    kaapi_pointer2void(src->ptr),
+	    ((attr.memoryType == cudaMemoryTypeHost) ? "Host" : "Device"),
+	    attr.device,
+	    attr.devicePointer,
+	    attr.hostPointer );
+    void *devptr;
+    res = cudaHostGetDevicePointer( &devptr, kaapi_pointer2void(dest->ptr), 0 );
+    if (res != cudaSuccess) {
+	fprintf(stderr, "[%s] cudaHostGetDevicePointer ERROR: %d\n", __FUNCTION__, res );
+	fflush(stderr);
+    }
+    fprintf( stdout, "[%s] dev=%d devptr=%p\n", __FUNCTION__, dev, devptr );
+    fflush(stdout);
+#endif
     kaapi_cuda_mem_copy_dtoh_( dest->ptr, &dest->view, src->ptr, &src->view, stream );
     res = cudaStreamSynchronize( stream );
     if (res != cudaSuccess) {
@@ -56,15 +84,16 @@ kaapi_mem_sync_ptr( kaapi_data_t* kdata )
 	if ( kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
 	    valid_asid = kaapi_mem_data_get_nondirty_asid( kmd );
 	    kaapi_data_t* valid_data = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd, valid_asid );
-	    /* TODO here */
+#if 0
 	    fprintf( stdout, "[%s] dirty asid=%lu(%p) valid=%lu(%p) kid=%lu\n",
 		    __FUNCTION__,
 		    host_asid, kaapi_pointer2void(kdata->ptr),
 		    valid_asid, kaapi_pointer2void(valid_data->ptr),
 		    (unsigned long)kaapi_get_current_kid() );
 	    fflush(stdout);
+#endif
 #if defined(KAAPI_USE_CUDA)
-	    kaapi_mem_sync_transfer( valid_asid, kdata, valid_data );
+	    kaapi_mem_sync_transfer( valid_asid-1, kdata, valid_data );
 #endif
 	    kaapi_mem_data_clear_dirty( kmd, host_asid );
 	}

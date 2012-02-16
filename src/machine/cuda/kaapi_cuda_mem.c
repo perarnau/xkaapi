@@ -352,7 +352,7 @@ int kaapi_cuda_mem_copy_dtoh(
 	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
 		)
 {
-#if 0
+#if KAAPI_VERBOSE
 		fprintf(stdout, "[%s] src=%p dst=%p size=%ld\n", __FUNCTION__,
 				__kaapi_pointer2void(src),
 				__kaapi_pointer2void(dest),
@@ -651,7 +651,7 @@ kaapi_cuda_mem_2dcopy_dtoh_(
 {
 	cudaError_t res;
 
-#if 1
+#if KAAPI_VERBOSE
 		fprintf(stdout, "[%s] src=%p %ldx%ld lda=%ld dst=%p %ldx%ld lda=%ld size=%ld\n",
 				__FUNCTION__,
 				__kaapi_pointer2void(src),

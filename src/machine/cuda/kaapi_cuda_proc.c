@@ -122,17 +122,17 @@ int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t* proc)
   if (proc->is_initialized == 0)
     return -1;
 
-#if defined(KAAPI_VERBOSE)
-    fprintf(stdout, "[%s] kid=%lu\n", __FUNCTION__,
-		    kaapi_get_current_kid() );
+#if 0
+    fprintf(stdout, "[%s] kid=%lu\n", __FUNCTION__, 
+	  proc->index );
     fflush( stdout );
-#endif
   kaapi_cuda_cublas_finalize( proc );
 #ifdef KAAPI_CUDA_ASYNC
    cudaStreamDestroy( proc->stream );
 #endif
 
 //  kaapi_cuda_ctx_pop( );
+#endif
   kaapi_cuda_dev_close( proc );
   proc->is_initialized = 0;
 

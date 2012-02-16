@@ -21,18 +21,20 @@ kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
 
     res= cudaSetDevice( index );
     if( res != cudaSuccess ) {
-	    fprintf( stderr, "[%s] ERROR: %d\n", __FUNCTION__, res );
-	    fflush( stderr );
+	    fprintf( stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
+	    fflush( stdout );
     }
 
 #ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
   struct cudaDeviceProp prop;
   res = cudaGetDeviceProperties( &prop, index );
   if (res != cudaSuccess) {
-    fprintf( stderr, "[%s] ERROR: %d\n", __FUNCTION__, res );
-    fflush( stderr );
+    fprintf( stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
+    fflush( stdout );
     return -1;
   }
+
+  /* 80% of total memory */
   proc->memory.total = 0.8*prop.totalGlobalMem;
   proc->memory.used= 0;
   proc->memory.beg = proc->memory.end = NULL;

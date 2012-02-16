@@ -383,12 +383,12 @@ template<> struct TaskBodyGPU<TaskDGEMM>
     const int k = Akj.dim(1); 
 
 
-    const int lda = Aik.dim(1); 
-    const int ldb = Aik.dim(1);
-    const int ldc = Akj.dim(1); 
-    //const int lda = Aik.lda();
-    //const int ldb = Akj.lda();
-    //const int ldc = Aij.lda();
+//    const int lda = Aik.dim(1); 
+//    const int ldb = Aik.dim(1);
+//    const int ldc = Akj.dim(1); 
+    const int lda = Aik.lda();
+    const int ldb = Akj.lda();
+    const int ldc = Aij.lda();
 
 
 #if 0

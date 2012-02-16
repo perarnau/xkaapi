@@ -29,8 +29,8 @@ _kaapi_cuda_ctx_pop( kaapi_processor_t* proc )
 #if 0
 	const cudaError_t res = cuCtxSetCurrent( NULL );
 	if( res != cudaSuccess ) {
-		fprintf( stderr, "%s ERROR: %d\n", __FUNCTION__, res );
-		fflush( stderr );
+		fprintf( stdout, "%s ERROR: %d\n", __FUNCTION__, res );
+		fflush( stdout );
 	}
 #endif
 	pthread_mutex_unlock( &proc->cuda_proc.ctx.mutex );

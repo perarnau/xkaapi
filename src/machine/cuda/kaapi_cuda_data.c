@@ -301,6 +301,7 @@ xxx_kaapi_cuda_data_recv(
 {
 	kaapi_cuda_mem_copy_dtoh( h_dest->ptr, &h_dest->view,
 		d_src->ptr, &h_dest->view );
+	return 0; /* TODO */
 	/* TODO: look here the problem with views after kernel execution */
 #ifndef KAAPI_CUDA_MODE_BASIC
 	kaapi_mem_data_clear_all_dirty( kmd );

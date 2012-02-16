@@ -72,8 +72,8 @@ int kaapi_cuda_func_load_ptx
   if (res != CUDA_SUCCESS)
   {
 	if( res != CUDA_SUCCESS ) {
-		fprintf( stderr, "%s ERROR: %d\n", __FUNCTION__, res );
-		fflush( stderr );
+		fprintf( stdout, "%s ERROR: %d\n", __FUNCTION__, res );
+		fflush( stdout );
 	}
     goto on_error0;
   }
@@ -82,8 +82,8 @@ int kaapi_cuda_func_load_ptx
   if (res != CUDA_SUCCESS)
   {
 	if( res != CUDA_SUCCESS ) {
-		fprintf( stderr, "%s ERROR: %d\n", __FUNCTION__, res );
-		fflush( stderr );
+		fprintf( stdout, "%s ERROR: %d\n", __FUNCTION__, res );
+		fflush( stdout );
 	}
     goto on_error1;
   }
