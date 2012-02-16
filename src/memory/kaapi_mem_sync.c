@@ -79,7 +79,7 @@ kaapi_mem_sync_ptr( kaapi_data_t* kdata )
 */
 int kaapi_memory_synchronize( void )
 {
-    const kaapi_mem_host_map_t* host_map = 
+    kaapi_mem_host_map_t* host_map = 
 	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
     const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
     static const uint32_t map_size = KAAPI_HASHMAP_BIG_SIZE;
@@ -88,7 +88,7 @@ int kaapi_memory_synchronize( void )
     uint32_t i;
 
     for (i = 0; i < map_size; ++i) {
-	for (entry = hmap.entries[i]; entry != NULL; entry = entry->next) {
+	for (entry = hmap->entries[i]; entry != NULL; entry = entry->next) {
 	    const kaapi_mem_data_t *kmd = entry->u.kmd;
 	    if ( kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
 		kaapi_data_t *kdata = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
