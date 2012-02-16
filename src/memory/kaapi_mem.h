@@ -180,7 +180,7 @@ kaapi_mem_host_map_sync_ptr( const kaapi_format_t* , void* );
 
 /*****************************************************************************/
 
-int kaapi_mem_sync_ptr( kaapi_access_t access );
+int kaapi_mem_sync_ptr( kaapi_data_t* kdata );
 
 #if 0
 /* kaapi_mem_mapping is the set of the remote addr
