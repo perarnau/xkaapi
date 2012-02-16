@@ -290,7 +290,8 @@ void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser )
 {
   kaapi_perf_counter_t date;
   
-  kaapi_assert( (isuser ==KAAPI_PERF_SCHEDULE_STATE)||(isuser==KAAPI_PERF_USER_STATE) );
+  kaapi_assert_debug( (isuser ==KAAPI_PERF_SCHEDULE_STATE)
+                   || (isuser ==KAAPI_PERF_USER_STATE) );
   if (kproc->curr_perf_regs != kproc->perf_regs[isuser])
   { /* doit only iff real swap */
     kaapi_assert_debug( kproc->start_t[1-isuser] != 0 ); /* else none started */
@@ -303,8 +304,8 @@ void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser )
     if (papi_event_count)
     {
       /* we accumulate papi counter in previous mode
-	 do not reset as in kaapi_perf_thread_start
-	 because PAPI_accum does that
+         do not reset as in kaapi_perf_thread_start
+         because PAPI_accum does that
       */
       const int err = PAPI_accum
       (
