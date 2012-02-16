@@ -47,9 +47,6 @@
 #ifndef _GNU_SOURCE
 #  define _GNU_SOURCE
 #endif
-
-#if (HAVE_FUTEX==1)
-
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <linux/futex.h>
@@ -60,6 +57,7 @@
 
 #include "machine/mt/kaapi_mt_condvar.h"
 
+#if defined(HAVE_FUTEX)
 
 #define atomic_xadd(P, V) __sync_fetch_and_add((P), (V))
 #define cmpxchg(P, O, N) __sync_val_compare_and_swap((P), (O), (N))
@@ -69,7 +67,12 @@
 #define atomic_set_bit(P, V) __sync_or_and_fetch((P), 1<<(V))
 #define atomic_clear_bit(P, V) __sync_and_and_fetch((P), ~(1<<(V)))
 
+/* Compile read-write barrier */
+#define barrier() __sync_synchronize()
+
 #if defined(__i386__) || defined(__x86_64__)
+/* Pause instruction to prevent excess processor bus usage */ 
+#define cpu_relax() asm volatile("pause\n": : :"memory")
 
 /* Atomic exchange of 32 bits */
 static inline unsigned xchg_32(void *ptr, unsigned x)
@@ -86,14 +89,7 @@ static inline unsigned xchg_32(void *ptr, unsigned x)
 #  error or disable futex use
 #endif
 
-static inline int sys_futex(
-  void *addr1, 
-  int op, 
-  int val1, 
-  struct timespec *timeout, 
-  void *addr2, 
-  int val3
-)
+static inline int sys_futex(void *addr1, int op, int val1, struct timespec *timeout, void *addr2, int val3)
 {
 	return syscall(SYS_futex, addr1, op, val1, timeout, addr2, val3);
 }
@@ -123,7 +119,7 @@ int kproc_mutex_lock(kproc_mutex_t *m)
 		if ( (u&1) == 0 &&
 		     cmpxchg(&m->st.u, u, u|1)==u) return 0;
 
-		kaapi_slowdown_cpu();
+		cpu_relax();
 	}
 
 	/* Have to sleep */
@@ -145,14 +141,14 @@ int kproc_mutex_unlock(kproc_mutex_t *m)
 	/* Unlock */
 	m->st.b.locked = 0;
 	
-	kaapi_mem_barrier();
+	barrier();
 	
 	/* Spin and hope someone takes the lock */
 	for (i = 0; i < 200; i++)
 	{
 		if (m->st.b.locked) return 0;
 		
-		kaapi_slowdown_cpu();
+		cpu_relax();
 	}
 	
 	/* We need to wake someone up */

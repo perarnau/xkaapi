@@ -57,8 +57,6 @@ long long fib_seq (int n)
 	return x + y;
 }
 
-
-
 /* Kaapi Fibo task.
    A Task is a type with respect a given signature. The signature specifies the number of arguments (2),
    and the type and access mode for each parameters.
@@ -72,7 +70,7 @@ struct TaskFibo : public ka::Task<3>::Signature<ka::W<long long>, int, int > {};
 template<>
 struct TaskBodyCPU<TaskFibo>
 {
-  void operator() ( ka::pointer_w<long long> ptr, int n, int d )
+  void operator() ( ka::Thread* thread, ka::pointer_w<long long> ptr, int n, int d )
   {  
     long long x, y;
 
@@ -84,10 +82,9 @@ struct TaskBodyCPU<TaskFibo>
 
     if ( d < cutoff ) 
     {
-      ka::Spawn<TaskFibo>()( &x, n-1, d+1 );
-      ka::Spawn<TaskFibo>()( &y, n-2, d+1 );
+      thread->Spawn<TaskFibo>()( &x, n-1, d+1 );
+      thread->Spawn<TaskFibo>()( &y, n-2, d+1 );
       ka::Sync();
-
     } else {
       x = fib_seq(n-1);
       y = fib_seq(n-2);

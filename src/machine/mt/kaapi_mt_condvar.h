@@ -47,8 +47,7 @@
 #include "kaapi_compiler.h"
 #include "config.h"
 
-#if (HAVE_FUTEX == 1)
-
+#if defined(HAVE_FUTEX)
 typedef struct kproc_mutex kproc_mutex_t;
 struct kproc_mutex {
 	union {
@@ -102,7 +101,7 @@ int __KA_INTERNAL kproc_condunlock_wait(kproc_condunlock_t *c, kproc_mutex_t *m)
 int __KA_INTERNAL kproc_condunlock_signal(kproc_condunlock_t *c);
 int __KA_INTERNAL kproc_condunlock_broadcast(kproc_condunlock_t *c);
 
-#else /* no futex */
+#else
 
 typedef struct {
 	pthread_mutex_t pm;
