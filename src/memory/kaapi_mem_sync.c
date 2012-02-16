@@ -16,11 +16,11 @@
  * TODO see the effects without device stream synchronization
  * */
 static int
-kaapi_mem_sync_transfer( const int dev, kaapi_data_t* dest, kaapi_data_t* src,  )
+kaapi_mem_sync_transfer( const int dev, kaapi_data_t* dest, kaapi_data_t* src )
 {
 
     kaapi_cuda_ctx_set( dev );
-    kaapi_cuda_mem_copy_dtoh( &dest->ptr, &dest->view, &src->ptr, src->view );
+    kaapi_cuda_mem_copy_dtoh( dest->ptr, &dest->view, src->ptr, &src->view );
 #if 0
     cudaStream_t stream;
     cudaError_t res = cudaStreamCreate( &stream );
@@ -38,7 +38,7 @@ kaapi_mem_sync_transfer( const int dev, kaapi_data_t* dest, kaapi_data_t* src,  
     cudaStreamDestroy( stream );
     return res;
 #endif
-    return 0
+    return 0;
 }
 #endif
 
@@ -59,7 +59,7 @@ kaapi_mem_sync_ptr( kaapi_access_t access )
     if( kaapi_mem_data_has_addr( kmd, host_asid ) ) {
 	if ( kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
 	    valid_asid = kaapi_mem_data_get_nondirty_asid( kmd );
-	    kaapi_data_t* valid_data = kaapi_mem_data_get_addr( kmd, valid_asid );
+	    kaapi_data_t* valid_data = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd, valid_asid );
 	    /* TODO here */
 	    fprintf( stdout, "[%s] dirty asid=%lu(%p) valid=%lu(%p) kid=%lu\n",
 		    __FUNCTION__,
