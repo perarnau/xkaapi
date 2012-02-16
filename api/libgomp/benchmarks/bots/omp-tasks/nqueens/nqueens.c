@@ -37,20 +37,20 @@
 /* Checking information */
 
 static int solutions[] = {
-        1,
-        0,
-        0,
-        2,
-        10, /* 5 */
-        4,
-        40,
-        92,
-        352,
-        724, /* 10 */
-        2680,
-        14200,
-        73712,
-        365596,
+  1,
+  0,
+  0,
+  2,
+  10, /* 5 */
+  4,
+  40,
+  92,
+  352,
+  724, /* 10 */
+  2680,
+  14200,
+  73712,
+  365596,
 };
 #define MAX_SOLUTIONS sizeof(solutions)/sizeof(int)
 
@@ -68,19 +68,19 @@ int total_count;
  */
 int ok(int n, char *a)
 {
-     int i, j;
-     char p, q;
-
-     for (i = 0; i < n; i++) {
+  int i, j;
+  char p, q;
+  
+  for (i = 0; i < n; i++) {
 	  p = a[i];
-
+    
 	  for (j = i + 1; j < n; j++) {
-	       q = a[j];
-	       if (q == p || q == p - (j - i) || q == p + (j - i))
+      q = a[j];
+      if (q == p || q == p - (j - i) || q == p + (j - i))
 		    return 0;
 	  }
-     }
-     return 1;
+  }
+  return 1;
 }
 
 #ifndef FORCE_TIED_TASKS
@@ -93,7 +93,7 @@ void nqueens_ser (int n, int j, char *a)
 	int res;
 #endif
 	int i;
-
+  
 	if (n == j) {
 		/* good solution, count it */
 #ifndef FORCE_TIED_TASKS
@@ -103,22 +103,22 @@ void nqueens_ser (int n, int j, char *a)
 #endif
 		return;
 	}
-
+  
 #ifndef FORCE_TIED_TASKS
 	*solutions = 0;
 #endif
-
-     	/* try each possible position for queen <j> */
+  
+  /* try each possible position for queen <j> */
 	for (i = 0; i < n; i++) {
 		{
-	  		/* allocate a temporary array and copy <a> into it */
-	  		a[j] = (char) i;
-	  		if (ok(j + 1, a)) {
+      /* allocate a temporary array and copy <a> into it */
+      a[j] = (char) i;
+      if (ok(j + 1, a)) {
 #ifndef FORCE_TIED_TASKS
-	       			nqueens_ser(n, j + 1, a,&res);
+        nqueens_ser(n, j + 1, a,&res);
 				*solutions += res;
 #else
-	       			nqueens_ser(n, j + 1, a);
+        nqueens_ser(n, j + 1, a);
 #endif
 			}
 		}
@@ -137,7 +137,7 @@ void nqueens(int n, int j, char *a, int depth)
 	int *csols;
 #endif
 	int i;
-
+  
 	if (n == j) {
 		/* good solution, count it */
 #ifndef FORCE_TIED_TASKS
@@ -147,32 +147,32 @@ void nqueens(int n, int j, char *a, int depth)
 #endif
 		return;
 	}
-
-
+  
+  
 #ifndef FORCE_TIED_TASKS
 	*solutions = 0;
 	csols = alloca(n*sizeof(int));
 	memset(csols,0,n*sizeof(int));
 #endif
-
-     	/* try each possible position for queen <j> */
+  
+  /* try each possible position for queen <j> */
 	for (i = 0; i < n; i++) {
- 		#pragma omp task untied if(depth < bots_cutoff_value)
+#pragma omp task untied if(depth < bots_cutoff_value)
 		{
-	  		/* allocate a temporary array and copy <a> into it */
-	  		char * b = alloca(n * sizeof(char));
-	  		memcpy(b, a, j * sizeof(char));
-	  		b[j] = (char) i;
-	  		if (ok(j + 1, b))
+      /* allocate a temporary array and copy <a> into it */
+      char * b = alloca(n * sizeof(char));
+      memcpy(b, a, j * sizeof(char));
+      b[j] = (char) i;
+      if (ok(j + 1, b))
 #ifndef FORCE_TIED_TASKS
-	       			nqueens(n, j + 1, b,&csols[i],depth+1);
+        nqueens(n, j + 1, b,&csols[i],depth+1);
 #else
-	       			nqueens(n, j + 1, b,depth+1);
+      nqueens(n, j + 1, b,depth+1);
 #endif
 		}
 	}
-
-	#pragma omp taskwait
+  
+#pragma omp taskwait
 #ifndef FORCE_TIED_TASKS
 	for ( i = 0; i < n; i++) *solutions += csols[i];
 #endif
@@ -190,8 +190,8 @@ void nqueens(int n, int j, char *a, int depth)
 	int *csols;
 #endif
 	int i;
-
-
+  
+  
 	if (n == j) {
 		/* good solution, count it */
 #ifndef FORCE_TIED_TASKS
@@ -201,51 +201,51 @@ void nqueens(int n, int j, char *a, int depth)
 #endif
 		return;
 	}
-
-
+  
+  
 #ifndef FORCE_TIED_TASKS
-        char final = omp_in_final();
-        if ( !final ) {
+  char final = omp_in_final();
+  if ( !final ) {
 	  *solutions = 0;
 	  csols = alloca(n*sizeof(int));
 	  memset(csols,0,n*sizeof(int));
-        }
+  }
 #endif
-
-     	/* try each possible position for queen <j> */
+  
+  /* try each possible position for queen <j> */
 	for (i = 0; i < n; i++) {
- 		#pragma omp task untied final(depth+1 >= bots_cutoff_value) mergeable
+#pragma omp task untied final(depth+1 >= bots_cutoff_value) mergeable
 		{
-                        char *b;
-                        int *sol;
+      char *b;
+      int *sol;
 			if ( omp_in_final() && depth+1 > bots_cutoff_value ) {
-		           b = a;
+        b = a;
 #ifndef FORCE_TIED_TASKS
-                           sol = solutions;
+        sol = solutions;
 #endif
-                        } else {
+      } else {
 	  		/* allocate a temporary array and copy <a> into it */
-	  		   b = alloca(n * sizeof(char));
-	  		   memcpy(b, a, j * sizeof(char));
+        b = alloca(n * sizeof(char));
+        memcpy(b, a, j * sizeof(char));
 #ifndef FORCE_TIED_TASKS
-                           sol = &csols[i];
+        sol = &csols[i];
 #endif
-                        } 
-	  		b[j] = i;
-	  		if (ok(j + 1, b))
+      } 
+      b[j] = i;
+      if (ok(j + 1, b))
 #ifndef FORCE_TIED_TASKS
-	       			nqueens(n, j + 1, b,sol,depth+1);
+        nqueens(n, j + 1, b,sol,depth+1);
 #else
-	       			nqueens(n, j + 1, b,depth+1);
+      nqueens(n, j + 1, b,depth+1);
 #endif
 		}
 	}
-
-	#pragma omp taskwait
+  
+#pragma omp taskwait
 #ifndef FORCE_TIED_TASKS
-       if ( !final ) {
-	for ( i = 0; i < n; i++) *solutions += csols[i];
-       }
+  if ( !final ) {
+    for ( i = 0; i < n; i++) *solutions += csols[i];
+  }
 #endif
 }
 
@@ -261,8 +261,8 @@ void nqueens(int n, int j, char *a, int depth)
 	int *csols;
 #endif
 	int i;
-
-
+  
+  
 	if (n == j) {
 		/* good solution, count it */
 #ifndef FORCE_TIED_TASKS
@@ -272,42 +272,42 @@ void nqueens(int n, int j, char *a, int depth)
 #endif
 		return;
 	}
-
-
+  
+  
 #ifndef FORCE_TIED_TASKS
 	*solutions = 0;
 	csols = alloca(n*sizeof(int));
 	memset(csols,0,n*sizeof(int));
 #endif
-
-     	/* try each possible position for queen <j> */
+  
+  /* try each possible position for queen <j> */
 	for (i = 0; i < n; i++) {
 		if ( depth < bots_cutoff_value ) {
- 			#pragma omp task untied
+#pragma omp task untied
 			{
-	  			/* allocate a temporary array and copy <a> into it */
-	  			char * b = alloca(n * sizeof(char));
-	  			memcpy(b, a, j * sizeof(char));
-	  			b[j] = (char) i;
-	  			if (ok(j + 1, b))
+        /* allocate a temporary array and copy <a> into it */
+        char * b = alloca(n * sizeof(char));
+        memcpy(b, a, j * sizeof(char));
+        b[j] = (char) i;
+        if (ok(j + 1, b))
 #ifndef FORCE_TIED_TASKS
-	       				nqueens(n, j + 1, b,&csols[i],depth+1);
+          nqueens(n, j + 1, b,&csols[i],depth+1);
 #else
-		       			nqueens(n, j + 1, b,depth+1);
+        nqueens(n, j + 1, b,depth+1);
 #endif
 			}
 		} else {
-  			a[j] = (char) i;
-  			if (ok(j + 1, a))
+      a[j] = (char) i;
+      if (ok(j + 1, a))
 #ifndef FORCE_TIED_TASKS
-       				nqueens_ser(n, j + 1, a,&csols[i]);
+        nqueens_ser(n, j + 1, a,&csols[i]);
 #else
-	       			nqueens_ser(n, j + 1, a);
+      nqueens_ser(n, j + 1, a);
 #endif
 		}
 	}
-
-	#pragma omp taskwait
+  
+#pragma omp taskwait
 #ifndef FORCE_TIED_TASKS
 	for ( i = 0; i < n; i++) *solutions += csols[i];
 #endif
@@ -326,8 +326,8 @@ void nqueens(int n, int j, char *a, int depth)
 	int *csols;
 #endif
 	int i;
-
-
+  
+  
 	if (n == j) {
 		/* good solution, count it */
 #ifndef FORCE_TIED_TASKS
@@ -337,32 +337,32 @@ void nqueens(int n, int j, char *a, int depth)
 #endif
 		return;
 	}
-
-
+  
+  
 #ifndef FORCE_TIED_TASKS
 	*solutions = 0;
 	csols = alloca(n*sizeof(int));
 	memset(csols,0,n*sizeof(int));
 #endif
-
-     	/* try each possible position for queen <j> */
+  
+  /* try each possible position for queen <j> */
 	for (i = 0; i < n; i++) {
- 		#pragma omp task untied
+#pragma omp task untied
 		{
-	  		/* allocate a temporary array and copy <a> into it */
-	  		char * b = alloca(n * sizeof(char));
-	  		memcpy(b, a, j * sizeof(char));
-	  		b[j] = (char) i;
-	  		if (ok(j + 1, b))
+      /* allocate a temporary array and copy <a> into it */
+      char * b = alloca(n * sizeof(char));
+      memcpy(b, a, j * sizeof(char));
+      b[j] = (char) i;
+      if (ok(j + 1, b))
 #ifndef FORCE_TIED_TASKS
-       				nqueens(n, j + 1, b,&csols[i],depth); //FIXME: depth or depth+1 ???
+        nqueens(n, j + 1, b,&csols[i],depth); //FIXME: depth or depth+1 ???
 #else
-	       			nqueens(n, j + 1, b,depth); //FIXME: see above
+      nqueens(n, j + 1, b,depth); //FIXME: see above
 #endif
 		}
 	}
-
-	#pragma omp taskwait
+  
+#pragma omp taskwait
 #ifndef FORCE_TIED_TASKS
 	for ( i = 0; i < n; i++) *solutions += csols[i];
 #endif
@@ -373,14 +373,14 @@ void nqueens(int n, int j, char *a, int depth)
 void find_queens (int size)
 {
 	total_count=0;
-
-        bots_message("Computing N-Queens algorithm (n=%d) ", size);
-	#pragma omp parallel
+  
+  bots_message("Computing N-Queens algorithm (n=%d) ", size);
+#pragma omp parallel
 	{
-		#pragma omp single
+#pragma omp single
 		{
 			char *a;
-
+      
 			a = alloca(size * sizeof(char));
 #ifndef FORCE_TIED_TASKS
 			nqueens(size, 0, a, &total_count,0);
@@ -389,8 +389,8 @@ void find_queens (int size)
 #endif
 		}
 #ifdef FORCE_TIED_TASKS
-		#pragma omp atomic
-			total_count += mycount;
+#pragma omp atomic
+    total_count += mycount;
 #endif
 	}
 	bots_message(" completed!\n");
