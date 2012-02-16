@@ -138,9 +138,9 @@ cudaStream_t kaapi_cuda_DtoD_stream(void);
 static inline int
 kaapi_cuda_sync( void )
 {
-//    const cudaError_t res = cudaDeviceSynchronize( );
+    const cudaError_t res = cudaDeviceSynchronize( );
     /* TODO Segmentation fault here */
-    const cudaError_t res = cudaStreamSynchronize( kaapi_cuda_kernel_stream() );
+//    const cudaError_t res = cudaStreamSynchronize( kaapi_cuda_kernel_stream() );
     if( res != cudaSuccess ) {
 	    fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
 	    fflush(stdout);

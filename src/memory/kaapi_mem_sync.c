@@ -4,6 +4,44 @@
 #include "kaapi_impl.h"
 #include "memory/kaapi_mem.h"
 
+#if defined(KAAPI_USE_CUDA)
+#include <cuda_runtime_api.h>
+
+#include "machine/cuda/kaapi_cuda_ctx.h"
+#include "machine/cuda/kaapi_cuda_mem.h"
+#endif
+
+#if defined(KAAPI_USE_CUDA)
+/*
+ * TODO see the effects without device stream synchronization
+ * */
+static int
+kaapi_mem_sync_transfer( const int dev, kaapi_data_t* dest, kaapi_data_t* src,  )
+{
+
+    kaapi_cuda_ctx_set( dev );
+    kaapi_cuda_mem_copy_dtoh( &dest->ptr, &dest->view, &src->ptr, src->view );
+#if 0
+    cudaStream_t stream;
+    cudaError_t res = cudaStreamCreate( &stream );
+    if (res != cudaSuccess) {
+	fprintf(stderr, "[%s] ERROR: %d\n", __FUNCTION__, res );
+	fflush(stderr);
+	return res;
+    }
+    res = cudaStreamSynchronize( stream );
+    if (res != cudaSuccess) {
+	fprintf(stderr, "[%s] ERROR: %d\n", __FUNCTION__, res );
+	fflush(stderr);
+	return res;
+    }
+    cudaStreamDestroy( stream );
+    return res;
+#endif
+    return 0
+}
+#endif
+
 int
 kaapi_mem_sync_ptr( kaapi_access_t access )
 {
@@ -22,13 +60,17 @@ kaapi_mem_sync_ptr( kaapi_access_t access )
 	if ( kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
 	    valid_asid = kaapi_mem_data_get_nondirty_asid( kmd );
 	    kaapi_data_t* valid_data = kaapi_mem_data_get_addr( kmd, valid_asid );
+	    /* TODO here */
 	    fprintf( stdout, "[%s] dirty asid=%lu(%p) valid=%lu(%p) kid=%lu\n",
 		    __FUNCTION__,
 		    host_asid, kaapi_pointer2void(kdata->ptr),
 		    valid_asid, kaapi_pointer2void(valid_data->ptr),
 		    (unsigned long)kaapi_get_current_kid() );
 	    fflush(stdout);
-//	    kaapi_mem_data_clear_dirty( kmd, host_asid );
+#if defined(KAAPI_USE_CUDA)
+	    kaapi_mem_sync_transfer( valid_asid, kdata, valid_data );
+#endif
+	    kaapi_mem_data_clear_dirty( kmd, host_asid );
 	}
     } else {
 	    kaapi_mem_data_set_addr( kmd, host_asid,
