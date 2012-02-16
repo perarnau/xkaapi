@@ -651,7 +651,7 @@ kaapi_cuda_mem_2dcopy_dtoh_(
 {
 	cudaError_t res;
 
-#if KAAPI_VERBOSE
+#if 1
 		fprintf(stdout, "[%s] src=%p %ldx%ld lda=%ld dst=%p %ldx%ld lda=%ld size=%ld\n",
 				__FUNCTION__,
 				__kaapi_pointer2void(src),
