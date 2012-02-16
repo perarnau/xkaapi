@@ -97,4 +97,24 @@ kaapi_cuda_mem_unregister_( void* ptr )
 #endif
 }
 
+#if KAAPI_CUDA_ASYNC
+int kaapi_cuda_mem_copy_dtoh_(
+	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
+	cudaStream_t stream
+		);
+
+int kaapi_cuda_mem_1dcopy_dtoh_(
+	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
+	cudaStream_t stream
+	);
+
+int kaapi_cuda_mem_2dcopy_dtoh_( 
+	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
+	cudaStream_t stream
+	);
+#endif
+
 #endif /* ! KAAPI_CUDA_MEM_H_INCLUDED */

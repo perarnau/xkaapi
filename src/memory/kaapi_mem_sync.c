@@ -20,8 +20,6 @@ kaapi_mem_sync_transfer( const int dev, kaapi_data_t* dest, kaapi_data_t* src )
 {
 
     kaapi_cuda_ctx_set( dev );
-    kaapi_cuda_mem_copy_dtoh( dest->ptr, &dest->view, src->ptr, &src->view );
-#if 0
     cudaStream_t stream;
     cudaError_t res = cudaStreamCreate( &stream );
     if (res != cudaSuccess) {
@@ -29,6 +27,7 @@ kaapi_mem_sync_transfer( const int dev, kaapi_data_t* dest, kaapi_data_t* src )
 	fflush(stderr);
 	return res;
     }
+    kaapi_cuda_mem_copy_dtoh_( dest->ptr, &dest->view, src->ptr, &src->view, stream );
     res = cudaStreamSynchronize( stream );
     if (res != cudaSuccess) {
 	fprintf(stderr, "[%s] ERROR: %d\n", __FUNCTION__, res );
@@ -37,8 +36,6 @@ kaapi_mem_sync_transfer( const int dev, kaapi_data_t* dest, kaapi_data_t* src )
     }
     cudaStreamDestroy( stream );
     return res;
-#endif
-    return 0;
 }
 #endif
 
