@@ -82,7 +82,7 @@ int kaapif_spawn_
   ti = kaapi_thread_pushdata_align(thread, total_size, sizeof(void*));
 
   /* last arg_info is actually the first value */
-  values = (uintptr_t*)(&ti->args[*nargs]);
+  values = (uintptr_t*)&ti->args[*nargs];
 
   ti->body  = body;
   ti->nargs = *nargs;
@@ -113,11 +113,10 @@ int kaapif_spawn_
 	if (type != KAAPIC_TYPE_PTR)
 	{
 	  /* save into value space and change to TYPE_PTR */
-	  memcpy(values + k, addr, sizeof(uintptr_t));
-	  addr = (void*)(values + k);
+	  values[k] = *(uintptr_t*)addr;
 	  type = KAAPIC_TYPE_PTR;
+	  addr = (void*)(values + k);
 	}
-        ai->mode = KAAPI_ACCESS_MODE_V;
         break;
       default: 
         return KAAPIF_ERR_EINVAL;
@@ -157,9 +156,7 @@ int kaapif_spawn_
     kaapi_access_init( &ai->access, addr );
     if (mode == KAAPIC_MODE_V)
     {
-      /* can only pass exactly by value the size of a uintptr_t */
-      kaapi_assert_debug( wordsize*count == sizeof(uintptr_t) );
-      memcpy(&ai->access.version, &addr, wordsize*count );  /* but count == 1 here */
+      ai->access.version = (void*)(uintptr_t)addr;
     }
 
     ai->view = kaapi_memory_view_make1d(count, wordsize);
