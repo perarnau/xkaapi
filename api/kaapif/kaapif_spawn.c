@@ -115,8 +115,13 @@ int kaapif_spawn_
 	  /* save into value space and change to TYPE_PTR */
 	  values[k] = *(uintptr_t*)addr;
 	  type = KAAPIC_TYPE_PTR;
-	  addr = (void*)(values + k);
 	}
+	else
+	{
+	  /* FORTRAN pointer is passed, but &ptr must be given to task */
+	  values[k] = (uintptr_t)addr;
+	}
+	addr = (void*)(values + k);
 	ai->mode = KAAPI_ACCESS_MODE_V;
         break;
       default: 
