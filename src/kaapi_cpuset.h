@@ -150,11 +150,11 @@ static inline int kaapi_cpuset_has(
   if (i <32)
     return (affinity->bits32[0] & ((uint32_t)1)<<i) !=0;
   else if (i <64)
-    return (affinity->bits32[0] & ((uint32_t)1)<<(i-32)) !=0;
+    return (affinity->bits32[1] & ((uint32_t)1)<<(i-32)) !=0;
   else if (i <96)
-    return (affinity->bits32[0] & ((uint32_t)1)<<(i-64)) !=0;
+    return (affinity->bits32[2] & ((uint32_t)1)<<(i-64)) !=0;
   else
-    return (affinity->bits32[0] & ((uint32_t)1)<<(i-96)) !=0;
+    return (affinity->bits32[3] & ((uint32_t)1)<<(i-96)) !=0;
 }
 
 /** Return *dest &= mask
