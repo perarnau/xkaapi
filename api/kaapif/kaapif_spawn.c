@@ -117,6 +117,7 @@ int kaapif_spawn_
 	  type = KAAPIC_TYPE_PTR;
 	  addr = (void*)(values + k);
 	}
+	ai->mode = KAAPI_ACCESS_MODE_V;
         break;
       default: 
         return KAAPIF_ERR_EINVAL;
