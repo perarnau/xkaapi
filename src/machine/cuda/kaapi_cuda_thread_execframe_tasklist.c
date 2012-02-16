@@ -170,7 +170,7 @@ execute_first:
 #ifndef KAAPI_CUDA_ASYNC
 	    kaapi_cuda_sync();
 #endif
-//	    kaapi_cuda_sync();
+	    kaapi_cuda_sync();
 	    /* Exit CUDA context */
 	    kaapi_cuda_ctx_pop( );
 
