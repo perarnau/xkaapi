@@ -216,6 +216,7 @@ struct doit {
     //ka::Spawn<TaskMatProduct>()( A, B, C );
     ka::Spawn<TaskMatProduct>(ka::SetStaticSched())( A, B, C );
     ka::Sync();
+    ka::MemorySync();
 
     // dont time memory sync for the benchmarks since
     // it does not reflect the execution pipeline

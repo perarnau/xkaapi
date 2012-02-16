@@ -40,7 +40,7 @@ kaapi_mem_sync_transfer( const int dev, kaapi_data_t* dest, kaapi_data_t* src )
 #endif
 
 int
-kaapi_mem_sync_ptr( kaapi_access_t access )
+kaapi_mem_sync_ptr( kaapi_data_t* kdata )
 {
     //const kaapi_mem_host_map_t* host_map = kaapi_get_current_mem_host_map();
     const kaapi_mem_host_map_t* host_map = 
@@ -49,7 +49,6 @@ kaapi_mem_sync_ptr( kaapi_access_t access )
     kaapi_mem_data_t *kmd;
     kaapi_mem_asid_t valid_asid;
 
-    kaapi_data_t* kdata = kaapi_data( kaapi_data_t, &access );
     kaapi_mem_host_map_find_or_insert( host_map,
 	    (kaapi_mem_addr_t)kaapi_pointer2void(kdata->ptr),
 	    &kmd );
@@ -75,3 +74,30 @@ kaapi_mem_sync_ptr( kaapi_access_t access )
     }
     return 0;
 }
+
+/**
+*/
+int kaapi_memory_synchronize( void )
+{
+    const kaapi_mem_host_map_t* host_map = 
+	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
+    const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
+    static const uint32_t map_size = KAAPI_HASHMAP_BIG_SIZE;
+    kaapi_big_hashmap_t* hmap = &host_map->hmap;
+    kaapi_hashentries_t* entry;
+    uint32_t i;
+
+    for (i = 0; i < map_size; ++i) {
+	for (entry = hmap.entries[i]; entry != NULL; entry = entry->next) {
+	    const kaapi_mem_data_t *kmd = entry->u.kmd;
+	    if ( kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
+		kaapi_data_t *kdata = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
+			host_asid );
+		kaapi_mem_sync_ptr( kdata );
+	    }
+	}
+    }
+
+    return 0;
+}
+

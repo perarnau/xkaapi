@@ -88,7 +88,7 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, void* sp )
 	    continue;
 
 	kaapi_access_t access = fmt->get_access_param( fmt, i, sp );
-	kaapi_mem_sync_ptr( access );
+	kaapi_mem_sync_ptr( kaapi_data( kaapi_data_t, &access ) );
 #if 0
 	kaapi_data_t* kdata = kaapi_data( kaapi_data_t, &access );
 	kaapi_mem_host_map_find_or_insert( host_map, 
