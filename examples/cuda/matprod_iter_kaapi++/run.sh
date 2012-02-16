@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#SCRATCH=/scratch/jvlima
-SCRATCH=$HOME
+SCRATCH=/scratch/jvlima
+#SCRATCH=$HOME
 export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$SCRATCH/install/xkaapi/default/lib:$LD_LIBRARY_PATH
 #export LD_LIBRARY_PATH=$SCRATCH/adonis/xkaapi/default/lib:$LD_LIBRARY_PATH
@@ -13,16 +13,16 @@ version="$(date +%s)"
 #export KAAPI_DUMP_GRAPH='1'
 
 function run_test {
-    export KAAPI_CPUSET="0:1"
-#   export KAAPI_GPUSET="0~6,1~7"
-    export KAAPI_GPUSET="0~6"
+    export KAAPI_CPUSET="0:5"
+#    export KAAPI_GPUSET="0~6"
+    export KAAPI_GPUSET="0~6,3~7"
 #    msizes="10240"
-#    msizes="1024"
-    msizes="16384"
+    msizes="2048"
+#    msizes="16384"
 #    msizes="20480"
-    bsizes="1024"
+    bsizes="128"
     niter=1
-#    verif=1
+    verif=1
     for m in $msizes ; do
 	    for b in $bsizes; do
 	    for i in `seq 1 $niter`
@@ -32,7 +32,7 @@ function run_test {
 	    KAAPI_STACKSIZE=536870912 \
 		    ./matprod_iter_kaapi++ $m $b $verif
 	    #	KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
-	    #	KAAPI_STACKSIZE=536870912 gdb ./matprod_iter_kaapi++ 
+#    KAAPI_STACKSIZE=536870912 gdb ./matprod_iter_kaapi++ 
 	    done
 	done
     done

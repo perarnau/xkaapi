@@ -142,6 +142,7 @@ libkaapi_la_SOURCES=\
   memory/kaapi_mem_init.c \
   memory/kaapi_mem_destroy.c \
   memory/kaapi_mem_data.c \
+  memory/kaapi_mem_sync.c \
   memory/kaapi_mem_host_map.c \
   memory/kaapi_mem.c \
   memory/kaapi_mem.h \

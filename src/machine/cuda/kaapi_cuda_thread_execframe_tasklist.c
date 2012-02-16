@@ -146,7 +146,9 @@ execute_first:
 
 //printf("%i:: Exec td:%p, date:%lu\n", kaapi_get_self_kid(), td, td->u.acl.date );
         /* get the correct body for the proc type */
-        if ( td->fmt == 0 ) { /* currently some internal tasks do not have format */
+        if ( (td->fmt == 0) ||
+		(td->fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 2) ) {
+	    /* currently some internal tasks do not have format */
 	    kaapi_task_body_t body = kaapi_task_getbody( pc );
 	    body( pc->sp, (kaapi_thread_t*)stack->sfp );
         } else {
@@ -168,6 +170,7 @@ execute_first:
 #ifndef KAAPI_CUDA_ASYNC
 	    kaapi_cuda_sync();
 #endif
+//	    kaapi_cuda_sync();
 	    /* Exit CUDA context */
 	    kaapi_cuda_ctx_pop( );
 

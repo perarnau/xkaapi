@@ -157,13 +157,9 @@ redo_exec:
     state = kaapi_task_markexec( pc );
     if (likely(state ==0)) {
 	kaapi_format_t* fmt = kaapi_format_resolvebybody( pc->body );
-	if( fmt == 0 ) {
+	if( (fmt == 0) ||
+		(fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0)) {
 	    ((kaapi_task_body_internal_t)pc->body)( pc->sp, fp, pc );
-#if 0
-	    fprintf( stdout, "[%s] INTERNAL kid=%lu\n", __FUNCTION__, 
-		(unsigned long)kaapi_get_current_kid() );
-	    fflush(stdout);
-#endif
 	}
 #if 1
 	else {

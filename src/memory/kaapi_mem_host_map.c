@@ -5,7 +5,8 @@
 static inline kaapi_mem_data_t* 
 _kaapi_mem_data_alloc( void )
 {
-    kaapi_mem_data_t* kmd = malloc( sizeof(kaapi_mem_data_t) );
+//    kaapi_mem_data_t* kmd = malloc( sizeof(kaapi_mem_data_t) );
+    kaapi_mem_data_t* kmd = calloc( 1, sizeof(kaapi_mem_data_t) );
     kaapi_mem_data_init( kmd );
     return kmd;
 }
@@ -34,9 +35,11 @@ kaapi_mem_host_map_find_or_insert( const kaapi_mem_host_map_t* map,
 	)
 {
     kaapi_hashentries_t* entry;
+#if 0
     const int res = kaapi_mem_host_map_find( map, addr, kmd );
     if( res == 0 )
         return 0;
+#endif
 
     entry = kaapi_big_hashmap_findinsert( &map->hmap, (void*)addr );
     if (entry->u.kmd == 0)
@@ -65,7 +68,9 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, void* sp )
     size_t count_params = kaapi_format_get_count_params( fmt, sp );
     size_t i;
     kaapi_mem_data_t *kmd;
-    const kaapi_mem_host_map_t* host_map = kaapi_get_current_mem_host_map();
+//    const kaapi_mem_host_map_t* host_map = kaapi_get_current_mem_host_map();
+    const kaapi_mem_host_map_t* host_map = 
+	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
     const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
 
 #if 0
@@ -83,6 +88,7 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, void* sp )
 	    continue;
 
 	kaapi_access_t access = fmt->get_access_param( fmt, i, sp );
+//	kaapi_mem_sync_ptr( access );
 	kaapi_data_t* kdata = kaapi_data( kaapi_data_t, &access );
 	kaapi_mem_host_map_find_or_insert( host_map, 
 		(kaapi_mem_addr_t)kaapi_pointer2void(kdata->ptr),
@@ -131,7 +137,7 @@ kaapi_mem_host_map_sync_ptr( const kaapi_format_t* fmt, void* sp )
     const kaapi_mem_host_map_t* host_map = kaapi_get_current_mem_host_map();
     const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
 
-#if 0
+#if 1
     fprintf( stdout, "[%s] asid=%lu task=%s stack=%p params=%lu\n",
 	    __FUNCTION__,
 	    (unsigned long int)kaapi_mem_host_map_get_asid(host_map),

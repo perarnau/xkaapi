@@ -198,8 +198,8 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     else
 #endif
     {
-#if KAAPI_VERBOSE
-    fprintf( stdout, "[%s] task=%p stack=%p kid=%lu\n", __FUNCTION__,
+#if 1
+    fprintf( stdout, "[%s] task=%s stack=%p kid=%lu\n", __FUNCTION__,
 	    fmt->name, orig_task_args, kaapi_get_current_kid() );
     fflush(stdout);
 #endif

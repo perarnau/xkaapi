@@ -184,10 +184,10 @@ struct doit {
     ka::array<2,double_type> B( dB, n, n, n);
     ka::array<2,double_type> C( dC, n, n, n);
 
-    ka::Spawn<TaskDLARNV>()( A );
-    ka::Spawn<TaskDLARNV>()( B );
-    ka::Spawn<TaskDLARNV>()( C );
-    ka::Sync();
+//    ka::Spawn<TaskDLARNV>()( A );
+    TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(A) );
+    TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(B) );
+    TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(C) );
 
     /* register memory to Xkaapi runtime */
     kaapi_memory_register( dA, n*n*sizeof(double_type) );
