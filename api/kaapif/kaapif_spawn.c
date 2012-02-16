@@ -92,10 +92,10 @@ int kaapif_spawn_
   {
     kaapic_arg_info_t* const ai = &ti->args[k];
 
-    const uint32_t mode  = *va_arg(va_args, int32_t*);
+    const int32_t mode  = *va_arg(va_args, int32_t*);
     void* addr		 = va_arg(va_args, void*);
-    const uint32_t count = *va_arg(va_args, int32_t*);
-    uint32_t type        = *va_arg(va_args, int32_t*);
+    const int32_t count = *va_arg(va_args, int32_t*);
+    int32_t type        = *va_arg(va_args, int32_t*);
 
     switch (mode)
     {
@@ -115,8 +115,12 @@ int kaapif_spawn_
 	  /* save into value space and change to TYPE_PTR */
 	  values[k] = *(uintptr_t*)addr;
 	  type = KAAPIC_TYPE_PTR;
-	  addr = (void*)(values + k);
 	}
+	else
+	{
+	  values[k] = (uintptr_t)addr;
+	}
+	addr = (void*)(values + k);
 	ai->mode = KAAPI_ACCESS_MODE_V;
         break;
       default: 
@@ -148,6 +152,14 @@ int kaapif_spawn_
       case KAAPIC_TYPE_PTR:
         wordsize = sizeof(void*);
         ai->format = kaapi_voidp_format;
+        break ;
+
+      case KAAPIC_TYPE_ID:
+        if (mode == KAAPIC_MODE_V) return KAAPIF_ERR_EINVAL;
+	/* should not have any format... fix the runtime to handle this case */
+	wordsize = sizeof(void*);
+	ai->format = kaapi_voidp_format;
+	addr = *(void**)addr;
         break ;
 
       default:
