@@ -21,8 +21,11 @@ kaapi_mem_sync_ptr( kaapi_access_t access )
     if( kaapi_mem_data_has_addr( kmd, host_asid ) ) {
 	if ( kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
 	    valid_asid = kaapi_mem_data_get_nondirty_asid( kmd );
-	    fprintf( stdout, "[%s] dirty asid=%lu valid=%lu kid=%lu\n",
-		    __FUNCTION__, host_asid, valid_asid,
+	    kaapi_data_t* valid_data = kaapi_mem_data_get_addr( kmd, valid_asid );
+	    fprintf( stdout, "[%s] dirty asid=%lu(%p) valid=%lu(%p) kid=%lu\n",
+		    __FUNCTION__,
+		    host_asid, kaapi_pointer2void(kdata->ptr),
+		    valid_asid, kaapi_pointer2void(valid_data->ptr),
 		    (unsigned long)kaapi_get_current_kid() );
 	    fflush(stdout);
 //	    kaapi_mem_data_clear_dirty( kmd, host_asid );
