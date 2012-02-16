@@ -14,7 +14,7 @@ lib_LTLIBRARIES=libgomp.la
 libgomp_la_CPPFLAGS=$(AM_CPPFLAGS) $(LIBGOMP_BUILD_CPPFLAGS)
 libgomp_la_CFLAGS=$(AM_CFLAGS) $(LIBGOMP_BUILD_CFLAGS)
 libgomp_la_CXXFLAGS=$(AM_CXXFLAGS) $(LIBGOMP_BUILD_CXXFLAGS)
-libgomp_la_LDFLAGS = -version-info 1:0:0 $(LIBGOMP_BUILD_LDFLAGS)
+libgomp_la_LDFLAGS = -version-info 1:0:1 $(LIBGOMP_BUILD_LDFLAGS)
 libgomp_la_LIBADD=../../src/libkaapi.la ../kaapic/libkaapic.la $(LIBGOMP_BUILD_LIBS)
 
 bin_SCRIPTS = kaapi-gomp-wrapper
