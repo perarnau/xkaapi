@@ -88,7 +88,8 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, void* sp )
 	    continue;
 
 	kaapi_access_t access = fmt->get_access_param( fmt, i, sp );
-//	kaapi_mem_sync_ptr( access );
+	kaapi_mem_sync_ptr( access );
+#if 0
 	kaapi_data_t* kdata = kaapi_data( kaapi_data_t, &access );
 	kaapi_mem_host_map_find_or_insert( host_map, 
 		(kaapi_mem_addr_t)kaapi_pointer2void(kdata->ptr),
@@ -96,6 +97,7 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, void* sp )
 	if( !kaapi_mem_data_has_addr( kmd, host_asid ) )
 	    kaapi_mem_data_set_addr( kmd, host_asid,
 		    (kaapi_mem_addr_t)kdata  );
+#endif
 #if 0
     fprintf( stdout, "[%s] asid=%lu task=%s params=%lu ptr=%p kmd=%p\n",
 	    __FUNCTION__,
@@ -116,12 +118,12 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, void* sp )
 		fflush(stdout);
 	    }
 	}
-#endif
-
 	if( KAAPI_ACCESS_IS_WRITE(m) ) {
 	    kaapi_mem_data_set_all_dirty_except( kmd, 
 		    kaapi_mem_host_map_get_asid(host_map) );
 	}
+
+#endif
 
     }
 
