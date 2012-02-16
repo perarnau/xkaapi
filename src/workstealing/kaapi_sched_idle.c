@@ -141,8 +141,8 @@ redo_execute:
         err = kaapi_thread_execframe_tasklist( kproc->thread );
     
 #if defined(KAAPI_USE_PERFCOUNTER)
-    kaapi_event_push0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
+    kaapi_event_push0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
 #endif
     
     if (err == EWOULDBLOCK) 
