@@ -57,7 +57,7 @@
 
 #include "machine/mt/kaapi_mt_condvar.h"
 
-#if defined(HAVE_FUTEX)
+#if (HAVE_FUTEX !=0)
 
 #define atomic_xadd(P, V) __sync_fetch_and_add((P), (V))
 #define cmpxchg(P, O, N) __sync_val_compare_and_swap((P), (O), (N))
