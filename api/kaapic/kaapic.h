@@ -57,7 +57,8 @@ enum kaapic_type
   KAAPIC_TYPE_INT,
   KAAPIC_TYPE_REAL,
   KAAPIC_TYPE_DOUBLE,
-  KAAPIC_TYPE_PTR
+  KAAPIC_TYPE_PTR,
+  KAAPIC_TYPE_ID /* for FORTRAN only */
 };
 
 enum kaapic_mode

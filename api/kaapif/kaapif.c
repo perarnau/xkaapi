@@ -206,17 +206,17 @@ void kaapif_get_version_(uint8_t* s)
    we choose i * n4 + j as a factice address.
  */
 
-void* kaapif_dim2_to_linear_(int64_t* i, int64_t* j, int64_t* ld)
+int64_t kaapif_make_id2_(int64_t* i, int64_t* j, int64_t* ld)
 {
-  return (void*)(uintptr_t)(*i * *ld + *j);
+  return *i * *ld + *j;
 }
 
-int64_t kaapif_linear_to_row2_(int64_t* lin, int64_t* ld)
+int64_t kaapif_get_id2_row_(int64_t* id, int64_t* ld)
 {
-  return *lin / *ld;
+  return ((int64_t)(uintptr_t)id) / *ld;
 }
 
-int64_t kaapif_linear_to_col2_(int64_t* lin, int64_t* ld)
+int64_t kaapif_get_id2_col_(int64_t* id, int64_t* ld)
 {
-  return *lin % *ld;
+  return ((int64_t)(uintptr_t)id) % *ld;
 }
