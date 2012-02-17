@@ -83,7 +83,15 @@ extern void kaapi_abort(void);
       { int __kaapi_cond = cond; \
         if (!__kaapi_cond) \
         { \
-          printf("[%s]: LINE: %u FILE: %s, ", msg, __LINE__, __FILE__);\
+          printf("Bad assertion, line:%i, file:'%s', msg:'%s'", __LINE__, __FILE__, msg);\
+          kaapi_abort();\
+        }\
+      }
+#  define kaapi_assert_debug_fmt(cond, fmt, msg) \
+      { int __kaapi_cond = cond; \
+        if (!__kaapi_cond) \
+        { \
+          printf("Bad assertion, line:%i, file:'%s', msg:'" fmt "'", __LINE__, __FILE__, msg);\
           kaapi_abort();\
         }\
       }
@@ -100,6 +108,7 @@ extern void kaapi_abort(void);
 #else
 
 #  define kaapi_assert_debug_m(cond, msg)
+#  define kaapi_assert_debug_fmt(cond, fmt, msg)
 #  define KAAPI_LOG(l, fmt, ...) 
 #  define KAAPI_DEBUG_INST(inst)
 #if defined(kaapi_assert_debug) /* definition from kaapi_error.h (public interface)*/
