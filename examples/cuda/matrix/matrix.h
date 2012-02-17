@@ -3,15 +3,13 @@
 
 #include "kaapi++"
 
-#ifndef CONFIG_USE_FLOAT
-#define CONFIG_USE_FLOAT 1
-#endif
-
 #if CONFIG_USE_FLOAT
 typedef float double_type;
-#else
+#elif CONFIG_USE_DOUBLE
 typedef double double_type;
-#endif // CONFIG_USE_FLOAT
+#else
+typedef float double_type;
+#endif
 
 
 // required by some signatures
