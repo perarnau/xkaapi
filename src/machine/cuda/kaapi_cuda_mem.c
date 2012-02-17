@@ -228,7 +228,6 @@ kaapi_cuda_mem_alloc(
 {
 	void* devptr= NULL;
 	cudaError_t res = cudaSuccess;
-#if	KAAPI_CUDA_MEM_ALLOC_MANAGER
   	kaapi_processor_t* const proc = kaapi_get_current_processor();
 
 	if( __kaapi_cuda_mem_is_full( proc, size) )
