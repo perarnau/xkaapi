@@ -92,7 +92,10 @@ int kaapi_sched_select_victim_hwsn(
         arg->index   = 0;
       }
       if (arg->depth == kproc->hlevel.depth) 
+      {
         arg->depth = kproc->hlevel.depth;
+        arg->index   = 0;
+      }
     }
     return 0;
   }
