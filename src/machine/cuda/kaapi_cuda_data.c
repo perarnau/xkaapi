@@ -210,11 +210,21 @@ kaapi_cuda_data_sync_device_transfer(
     const int dest_dev = dest_asid - 1;
     const int src_dev = src_asid - 1;
 
+#if 0
+    fprintf( stdout, "[%s] dest_asid=%lu dest_dev=%lu src_asid=%lu src_dev=%lu\n", 
+	    __FUNCTION__,
+	    dest_asid, dest_dev,
+	    src_asid, src_dev );
+    fflush(stdout);
+#endif
     if( src_asid == 0 ) {
 	kaapi_cuda_mem_copy_htod( dest->ptr, &dest->view,
 		src->ptr, &src->view );
     } else {
 	int canAccessPeer;
+	cudaDeviceCanAccessPeer( &canAccessPeer,
+		dest_dev, src_dev );
+#if 0
 	cudaError_t res = cudaDeviceCanAccessPeer( &canAccessPeer,
 		dest_dev, src_dev );
 	if (res != cudaSuccess) {
@@ -222,6 +232,7 @@ kaapi_cuda_data_sync_device_transfer(
 	    fflush(stderr);
 	    return res;
 	}
+#endif
 	if( canAccessPeer ) {
 	    fprintf( stdout, "[%s] GPU%d to GPU%d (OK) \n", __FUNCTION__, dest_dev,
 		src_dev );

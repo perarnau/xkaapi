@@ -136,8 +136,33 @@ kaapi_mem_data_clear_addr( kaapi_mem_data_t* m, kaapi_mem_asid_t asid )
   m->addr_bits &= ~(1 << asid);
 }
 
-kaapi_mem_asid_t
-kaapi_mem_data_get_nondirty_asid( const kaapi_mem_data_t* );
+/* It returns the first asid non-dirty of kmd data */
+static inline kaapi_mem_asid_t
+kaapi_mem_data_get_nondirty_asid( const kaapi_mem_data_t* kmd )
+{
+    kaapi_mem_asid_t asid= 0;
+
+    for (asid = 0; asid < KAAPI_MEM_ASID_MAX; ++asid)
+	if( !kaapi_mem_data_is_dirty( kmd, asid ) )
+	    break;
+
+    return asid;
+}
+
+/* It returns a non-dirty asid but different of current_asid */
+static inline kaapi_mem_asid_t
+kaapi_mem_data_get_nondirty_asid_( const kaapi_mem_data_t* kmd,
+       kaapi_mem_asid_t current_asid )
+{
+    kaapi_mem_asid_t asid= 0;
+
+    for (asid = 0; asid < KAAPI_MEM_ASID_MAX; ++asid)
+	if( (!kaapi_mem_data_is_dirty( kmd, asid )) &&
+		(current_asid != asid) )
+	    break;
+
+    return asid;
+}
 
 typedef struct kaapi_mem_host_map_t {
     kaapi_mem_asid_t asid;
