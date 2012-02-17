@@ -383,6 +383,7 @@ int kaapi_mt_finalize(void)
 void kaapi_collect_trace(void)
 {
 #if defined(KAAPI_USE_PERFCOUNTER)
+  int i;
   uint64_t cnt_tasks;
   uint64_t cnt_stealreqok;
   uint64_t cnt_stealreq;
