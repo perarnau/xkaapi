@@ -21,35 +21,117 @@ int
 kaapi_cuda_mem_inc_use( kaapi_pointer_t *ptr );
 #endif
 
-int kaapi_cuda_mem_copy_htod(
-	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
-	       	);
+/*****************************************************************************/
+/* Memory copy functions */
 
-int kaapi_cuda_mem_copy_dtoh(
+int kaapi_cuda_mem_copy_htod_(
 	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
+	cudaStream_t stream
+	);
+
+int kaapi_cuda_mem_copy_dtoh_(
+	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
+	cudaStream_t stream
 		);
 
-int kaapi_cuda_mem_1dcopy_htod(
+int kaapi_cuda_mem_1dcopy_htod_(
 	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
+	cudaStream_t stream
 	);
 
-int kaapi_cuda_mem_1dcopy_dtoh(
+int kaapi_cuda_mem_1dcopy_dtoh_(
 	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
+	cudaStream_t stream
 	);
 
-int kaapi_cuda_mem_2dcopy_htod(
+int kaapi_cuda_mem_2dcopy_htod_( 
 	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
+	cudaStream_t stream
 	);
 
-int kaapi_cuda_mem_2dcopy_dtoh( 
+int kaapi_cuda_mem_2dcopy_dtoh_( 
+	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
+	cudaStream_t stream
+	);
+
+static inline int
+kaapi_cuda_mem_copy_htod(
+	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src)
+{
+    return kaapi_cuda_mem_copy_htod_(
+	    dest, view_dest, 
+	    src, view_src,
+	    kaapi_cuda_HtoD_stream() );
+}
+
+static inline int
+kaapi_cuda_mem_copy_dtoh(
 	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
 	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
-	);
+		)
+{
+    return kaapi_cuda_mem_copy_dtoh_(
+	    dest, view_dest, 
+	    src, view_src,
+	    kaapi_cuda_DtoH_stream() );
+}
+
+static inline int
+kaapi_cuda_mem_1dcopy_htod(
+	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
+	)
+{
+    return kaapi_cuda_mem_1dcopy_htod_(
+	    dest, view_dest, 
+	    src, view_src,
+	    kaapi_cuda_HtoD_stream() );
+}
+
+static inline int
+kaapi_cuda_mem_1dcopy_dtoh(
+	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
+	)
+{
+    return kaapi_cuda_mem_1dcopy_dtoh_(
+	    dest, view_dest, 
+	    src, view_src,
+	    kaapi_cuda_DtoH_stream() );
+}
+
+static inline int
+kaapi_cuda_mem_2dcopy_htod(
+	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
+	)
+{
+    return kaapi_cuda_mem_2dcopy_htod_(
+	    dest, view_dest, 
+	    src, view_src,
+	    kaapi_cuda_HtoD_stream() );
+}
+
+static inline int
+kaapi_cuda_mem_2dcopy_dtoh( 
+	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
+	)
+{
+    return kaapi_cuda_mem_2dcopy_dtoh_( 
+	    dest, view_dest, 
+	    src, view_src,
+	    kaapi_cuda_DtoH_stream() );
+}
+
+/*****************************************************************************/
 
 int kaapi_cuda_mem_sync_params( 
 	kaapi_thread_context_t* thread,
@@ -97,24 +179,12 @@ kaapi_cuda_mem_unregister_( void* ptr )
 #endif
 }
 
-#if KAAPI_CUDA_ASYNC
-int kaapi_cuda_mem_copy_dtoh_(
+int
+kaapi_cuda_mem_copy_dtod_buffer(
 	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+	const int dest_dev,
 	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
-	cudaStream_t stream
-		);
-
-int kaapi_cuda_mem_1dcopy_dtoh_(
-	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
-	cudaStream_t stream
-	);
-
-int kaapi_cuda_mem_2dcopy_dtoh_( 
-	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
-	cudaStream_t stream
-	);
-#endif
+	const int src_dev
+       	);
 
 #endif /* ! KAAPI_CUDA_MEM_H_INCLUDED */

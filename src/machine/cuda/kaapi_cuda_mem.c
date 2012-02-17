@@ -5,6 +5,7 @@
 #include "kaapi_impl.h"
 #include "../../src/machine/mt/kaapi_mt_machine.h"
 #include "kaapi_cuda_mem.h"
+#include "kaapi_cuda_ctx.h"
 
 
 #if	KAAPI_CUDA_MEM_ALLOC_MANAGER
@@ -306,9 +307,10 @@ kaapi_cuda_mem_inc_use( kaapi_pointer_t *ptr )
 }
 #endif /* KAAPI_CUDA_MEM_ALLOC_MANAGER */
 
-int kaapi_cuda_mem_copy_htod(
+int kaapi_cuda_mem_copy_htod_(
 	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
+	cudaStream_t stream
 		)
 {
 #if 0
@@ -321,15 +323,15 @@ int kaapi_cuda_mem_copy_htod(
 	switch (view_src->type) {
 	case KAAPI_MEMORY_VIEW_1D:
 	{
-		return kaapi_cuda_mem_1dcopy_htod( dest, view_dest,
-			       src, view_src );
+		return kaapi_cuda_mem_1dcopy_htod_( dest, view_dest,
+			       src, view_src, stream );
 		break;
 	}
 
 	case KAAPI_MEMORY_VIEW_2D:
 	{
-		return kaapi_cuda_mem_2dcopy_htod( dest, view_dest,
-				src, view_src );
+		return kaapi_cuda_mem_2dcopy_htod_( dest, view_dest,
+				src, view_src, stream  );
 		break;
 	}
 
@@ -347,9 +349,10 @@ on_error:
 	return -1;
 }
 
-int kaapi_cuda_mem_copy_dtoh(
+int kaapi_cuda_mem_copy_dtoh_(
 	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
+	cudaStream_t stream
 		)
 {
 #if KAAPI_VERBOSE
@@ -362,15 +365,15 @@ int kaapi_cuda_mem_copy_dtoh(
 	switch (view_src->type) {
 	case KAAPI_MEMORY_VIEW_1D:
 	{
-		return kaapi_cuda_mem_1dcopy_dtoh( dest, view_dest,
-			       src, view_src );
+		return kaapi_cuda_mem_1dcopy_dtoh_( dest, view_dest,
+			       src, view_src, stream );
 		break;
 	}
 
 	case KAAPI_MEMORY_VIEW_2D:
 	{
-		return kaapi_cuda_mem_2dcopy_dtoh( dest, view_dest,
-				src, view_src );
+		return kaapi_cuda_mem_2dcopy_dtoh_( dest, view_dest,
+				src, view_src, stream );
 		break;
 	}
 
@@ -408,9 +411,10 @@ int kaapi_cuda_mem_register( kaapi_pointer_t ptr,
 }
 
 int
-kaapi_cuda_mem_1dcopy_htod(
+kaapi_cuda_mem_1dcopy_htod_(
 	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
+	cudaStream_t stream
 	)
 {
 	const size_t size = kaapi_memory_view_size( view_src );
@@ -421,7 +425,7 @@ kaapi_cuda_mem_1dcopy_htod(
 			__kaapi_pointer2void(src),
 			size,
 			cudaMemcpyHostToDevice,
-			kaapi_cuda_HtoD_stream() );
+			stream );
 #else
 	const cudaError_t res = cudaMemcpy(
 			 __kaapi_pointer2void(dest),
@@ -438,9 +442,10 @@ kaapi_cuda_mem_1dcopy_htod(
 }
 
 int
-kaapi_cuda_mem_1dcopy_dtoh(
+kaapi_cuda_mem_1dcopy_dtoh_(
 	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
+	cudaStream_t stream
 	)
 {
 	const size_t size = kaapi_memory_view_size( view_src );
@@ -451,7 +456,7 @@ kaapi_cuda_mem_1dcopy_dtoh(
 			__kaapi_pointer2void(src),
 			size,
 			cudaMemcpyDeviceToHost,
-			kaapi_cuda_DtoH_stream() );
+			stream );
 #else
 	const cudaError_t res = cudaMemcpy(
 			 __kaapi_pointer2void(dest),
@@ -468,9 +473,10 @@ kaapi_cuda_mem_1dcopy_dtoh(
 }
 
 int
-kaapi_cuda_mem_2dcopy_htod(
+kaapi_cuda_mem_2dcopy_htod_(
 	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
+	cudaStream_t stream
 	)
 {
 	cudaError_t res;
@@ -497,7 +503,7 @@ kaapi_cuda_mem_2dcopy_htod(
 	    view_dest->size[1] * view_dest->wordsize,
 	    view_dest->size[0],
 	    cudaMemcpyHostToDevice,
-	   kaapi_cuda_HtoD_stream() );
+	    stream );
 #else
 	res = cudaMemcpy2D(
 	    __kaapi_pointer2void(dest),
@@ -516,127 +522,6 @@ kaapi_cuda_mem_2dcopy_htod(
 				__kaapi_pointer2void(dest),
 				kaapi_memory_view_size(view_src) ); 
 		fflush( stdout );
-	}
-
-	return res;
-}
-
-int
-kaapi_cuda_mem_2dcopy_dtoh(
-	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src
-	)
-{
-	cudaError_t res;
-
-#if KAAPI_VERBOSE
-		fprintf(stdout, "[%s] src=%p %ldx%ld lda=%ld dst=%p %ldx%ld lda=%ld size=%ld\n",
-				__FUNCTION__,
-				__kaapi_pointer2void(src),
-				view_src->size[0], view_src->size[1],
-				view_src->lda,
-				__kaapi_pointer2void(dest),
-				view_dest->size[0], view_dest->size[1],
-				view_dest->lda,
-			       	kaapi_memory_view_size( view_src ));
-		fflush(stdout);
-#endif
-
-#if KAAPI_CUDA_ASYNC
-	res = cudaMemcpy2DAsync(
-		__kaapi_pointer2void(dest),
-		view_dest->lda * view_dest->wordsize,
-		__kaapi_pointer2void(src),
-		view_src->size[1] * view_src->wordsize,
-		view_src->size[1] * view_src->wordsize,
-		view_src->size[0],
-		cudaMemcpyDeviceToHost,
-	       kaapi_cuda_DtoH_stream()	);
-#else
-	res = cudaMemcpy2D(
-		__kaapi_pointer2void(dest),
-		view_dest->lda * view_dest->wordsize,
-		__kaapi_pointer2void(src),
-		view_src->size[1] * view_src->wordsize,
-		view_src->size[1] * view_src->wordsize,
-		view_src->size[0],
-		cudaMemcpyDeviceToHost );
-#endif
-	if (res != cudaSuccess) {
-		fprintf( stdout, "[%s] ERROR cudaMemcpy2D (%d) kid=%lu src=%p dst=%p size=%lu\n",
-				__FUNCTION__, res,
-		      		(long unsigned int)kaapi_get_current_kid(),
-				__kaapi_pointer2void(src),
-				__kaapi_pointer2void(dest),
-				kaapi_memory_view_size(view_src) ); 
-		fflush( stdout );
-		  return EINVAL;
-	}
-
-	return res;
-}
-
-#if KAAPI_CUDA_ASYNC
-int kaapi_cuda_mem_copy_dtoh_(
-	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
-	cudaStream_t stream
-		)
-{
-#if 0
-		fprintf(stdout, "[%s] src=%p dst=%p size=%ld\n", __FUNCTION__,
-				__kaapi_pointer2void(src),
-				__kaapi_pointer2void(dest),
-			       	kaapi_memory_view_size( view_src ));
-		fflush(stdout);
-#endif
-	switch (view_src->type) {
-	case KAAPI_MEMORY_VIEW_1D:
-	{
-		return kaapi_cuda_mem_1dcopy_dtoh_( dest, view_dest,
-			       src, view_src, stream );
-		break;
-	}
-
-	case KAAPI_MEMORY_VIEW_2D:
-	{
-		return kaapi_cuda_mem_2dcopy_dtoh_( dest, view_dest,
-				src, view_src, stream );
-		break;
-	}
-
-	/* not supported */
-	default:
-	{
-		kaapi_assert(0);
-		goto on_error;
-		break ;
-	}
-	}
-
-	return 0;
-on_error:
-	return -1;
-}
-
-int
-kaapi_cuda_mem_1dcopy_dtoh_(
-	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
-	cudaStream_t stream
-	)
-{
-	const size_t size = kaapi_memory_view_size( view_src );
-
-	const cudaError_t res = cudaMemcpyAsync(
-			 __kaapi_pointer2void(dest),
-			__kaapi_pointer2void(src),
-			size,
-			cudaMemcpyDeviceToHost,
-			 stream );
-	if (res != cudaSuccess) {
-		fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
-		fflush(stdout);
 	}
 
 	return res;
@@ -664,6 +549,7 @@ kaapi_cuda_mem_2dcopy_dtoh_(
 		fflush(stdout);
 #endif
 
+#if KAAPI_CUDA_ASYNC
 	res = cudaMemcpy2DAsync(
 		__kaapi_pointer2void(dest),
 		view_dest->lda * view_dest->wordsize,
@@ -672,7 +558,17 @@ kaapi_cuda_mem_2dcopy_dtoh_(
 		view_src->size[1] * view_src->wordsize,
 		view_src->size[0],
 		cudaMemcpyDeviceToHost,
-	        stream );
+		stream );
+#else
+	res = cudaMemcpy2D(
+		__kaapi_pointer2void(dest),
+		view_dest->lda * view_dest->wordsize,
+		__kaapi_pointer2void(src),
+		view_src->size[1] * view_src->wordsize,
+		view_src->size[1] * view_src->wordsize,
+		view_src->size[0],
+		cudaMemcpyDeviceToHost );
+#endif
 	if (res != cudaSuccess) {
 		fprintf( stdout, "[%s] ERROR cudaMemcpy2D (%d) kid=%lu src=%p dst=%p size=%lu\n",
 				__FUNCTION__, res,
@@ -687,4 +583,81 @@ kaapi_cuda_mem_2dcopy_dtoh_(
 	return res;
 }
 
+int
+kaapi_cuda_mem_copy_dtod_buffer(
+	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+	const int dest_dev,
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
+	const int src_dev
+       	)
+{
+    cudaError_t res;
+    cudaStream_t stream;
+    void *host_buffer;
+
+    host_buffer = malloc( kaapi_memory_view_size(view_src) );
+    kaapi_assert_debug( host_buffer != NULL );
+#if 0
+    res = cudaHostAlloc( &host_buffer, kaapi_memory_view_size(view_src),
+	   cudaHostAllocPortable );
+    if( res != cudaSuccess ) {
+	fprintf( stdout, "ERROR %d\n", res );
+	fflush(stdout);
+    }
+    //kaapi_assert_debug( res != cudaSuccess );
 #endif
+    kaapi_cuda_mem_register_( host_buffer, kaapi_memory_view_size(view_src) );
+    kaapi_pointer_t hostptr = kaapi_make_pointer( 0, host_buffer );
+
+#if 0
+    fprintf( stdout, "[%s] dest(dev=%lu ptr=%p size=%lu) src(dev=%lu ptr=%p size=%lu) buffer=%p kid=%lu\n",
+	    __FUNCTION__,
+	    dest_dev, kaapi_pointer2void(dest),
+		    kaapi_memory_view_size(view_dest),
+	    src_dev, kaapi_pointer2void(src),
+		    kaapi_memory_view_size(view_src),
+	    host_buffer,
+	    (long unsigned int)kaapi_get_current_kid()
+	    );
+    fflush(stdout);
+#endif
+
+    /* GPU to CPU (temporary) */
+    kaapi_cuda_ctx_set( src_dev );
+    res = cudaStreamCreate( &stream );
+    if (res != cudaSuccess) {
+	fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
+	fflush(stdout);
+	return res;
+    }
+    kaapi_cuda_mem_copy_dtoh_( hostptr, view_src, src, view_src, stream );
+    res = cudaStreamSynchronize( stream );
+    if (res != cudaSuccess) {
+	fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
+	fflush(stdout);
+	return res;
+    }
+    cudaStreamDestroy( stream );
+
+    /* CPU to GPU (definitive) */
+    kaapi_cuda_ctx_set( dest_dev );
+    res = cudaStreamCreate( &stream );
+    if (res != cudaSuccess) {
+	fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
+	fflush(stdout);
+	return res;
+    }
+    kaapi_cuda_mem_copy_htod_( dest, view_dest, hostptr, view_src, stream );
+    res = cudaStreamSynchronize( stream );
+    if (res != cudaSuccess) {
+	fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
+	fflush(stdout);
+	return res;
+    }
+    cudaStreamDestroy( stream );
+
+    kaapi_cuda_mem_unregister_( host_buffer );
+    free( host_buffer );
+//    cudaFreeHost( host_buffer );
+    return res;
+}

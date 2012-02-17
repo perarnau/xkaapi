@@ -103,8 +103,8 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
 #endif
 
 #if KAAPI_VERBOSE
-	fprintf(stdout, "[%s] kid=%lu\n", __FUNCTION__,
-			kaapi_get_current_kid() );
+	fprintf(stdout, "[%s] dev=%lu kid=%lu\n", __FUNCTION__,
+			idev, kaapi_get_current_kid() );
 	fflush( stdout );
 #endif
   proc->kasid_user = KAAPI_CUDA_KASID_USER_BASE + idev;

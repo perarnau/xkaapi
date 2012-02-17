@@ -147,7 +147,7 @@ execute_first:
 //printf("%i:: Exec td:%p, date:%lu\n", kaapi_get_self_kid(), td, td->u.acl.date );
         /* get the correct body for the proc type */
         if ( (td->fmt == 0) ||
-		(td->fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 2) ) {
+		(td->fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0) ) {
 	    /* currently some internal tasks do not have format */
 	    kaapi_task_body_t body = kaapi_task_getbody( pc );
 	    body( pc->sp, (kaapi_thread_t*)stack->sfp );
@@ -164,16 +164,12 @@ execute_first:
 	    kaapi_cuda_sync();
 #endif
 #if 0
-	    kaapi_cuda_data_recv( td->fmt, pc->sp );
 	    kaapi_cuda_data_check();
 #endif
 #ifndef KAAPI_CUDA_ASYNC
 	    kaapi_cuda_sync();
 #endif
-//	    kaapi_cuda_sync();
-	    /* Exit CUDA context */
 	    kaapi_cuda_ctx_pop( );
-
         }
         kaapi_event_push1(stack->proc, thread, KAAPI_EVT_TASK_END, pc );  
         KAAPI_DEBUG_INST( td->u.acl.exec_date = kaapi_get_elapsedns() );

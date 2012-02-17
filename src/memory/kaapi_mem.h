@@ -175,9 +175,6 @@ kaapi_mem_host_map_find_or_insert_( const kaapi_mem_host_map_t*,
 int
 kaapi_mem_host_map_sync( const kaapi_format_t* , void* );
 
-int
-kaapi_mem_host_map_sync_ptr( const kaapi_format_t* , void* );
-
 /*****************************************************************************/
 
 int kaapi_mem_sync_ptr( kaapi_data_t* kdata );

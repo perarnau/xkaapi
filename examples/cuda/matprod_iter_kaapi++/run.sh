@@ -13,16 +13,16 @@ version="$(date +%s)"
 #export KAAPI_DUMP_GRAPH='1'
 
 function run_test {
-    export KAAPI_CPUSET="0:5"
+    export KAAPI_CPUSET="0:1"
 #    export KAAPI_GPUSET=""
 #    export KAAPI_GPUSET="0~6"
-    export KAAPI_GPUSET="0~6,3~7"
-#    export KAAPI_GPUSET="0~2,1~3"
+#    export KAAPI_GPUSET="0~6,3~7"
+    export KAAPI_GPUSET="0~6,1~7"
 #    msizes="10240"
     msizes="2048"
 #    msizes="16384"
 #    msizes="20480"
-    bsizes="512"
+    bsizes="256"
     niter=1
     verif=1
     for m in $msizes ; do

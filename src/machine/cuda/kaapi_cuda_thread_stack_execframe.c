@@ -163,13 +163,14 @@ redo_exec:
 	}
 #if 1
 	else {
-	    cudaError_t res;
-	    cuda_task_body_t body =
-		    (cuda_task_body_t)fmt->entrypoint_wh[KAAPI_PROC_TYPE_CUDA];
 	    fprintf( stdout, "[%s] stack=%p task=%s kid=%lu\n", __FUNCTION__, stack,
 		fmt->name,
 		(unsigned long)kaapi_get_current_kid() );
 	    fflush(stdout);
+#if 0
+	    cudaError_t res;
+	    cuda_task_body_t body =
+		    (cuda_task_body_t)fmt->entrypoint_wh[KAAPI_PROC_TYPE_CUDA];
 	    /* Enter CUDA context */
 	    kaapi_cuda_ctx_push( );
 
@@ -195,6 +196,7 @@ redo_exec:
 	    }
 	    /* Exit CUDA context */
 	    kaapi_cuda_ctx_pop( );
+#endif
 	}
 #endif
     } else {
