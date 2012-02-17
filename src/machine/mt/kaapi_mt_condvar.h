@@ -47,7 +47,7 @@
 #include "kaapi_compiler.h"
 #include "config.h"
 
-#if (HAVE_FUTEX!=0)
+#if 0 /* (HAVE_FUTEX!=0) */
 typedef struct kproc_mutex kproc_mutex_t;
 struct kproc_mutex {
 	union {
