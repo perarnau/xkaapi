@@ -529,22 +529,45 @@ extern kaapi_processor_t* kaapi_get_current_processor(void);
 /** \ingroup WS
     Select a victim for next steal request using uniform random selection over all cores.
 */
-extern int kaapi_sched_select_victim_rand( kaapi_processor_t* kproc, kaapi_victim_t* victim, kaapi_selecvictim_flag_t flag );
+extern int kaapi_sched_select_victim_rand( 
+    kaapi_processor_t* kproc, 
+    kaapi_victim_t* victim, 
+    kaapi_selecvictim_flag_t flag 
+);
 
 /** \ingroup WS
     Select a victim for next steal request using workload then uniform random selection over all cores.
 */
-extern int kaapi_sched_select_victim_workload_rand( kaapi_processor_t* kproc, kaapi_victim_t* victim, kaapi_selecvictim_flag_t flag );
+extern int kaapi_sched_select_victim_workload_rand( 
+    kaapi_processor_t* kproc, 
+    kaapi_victim_t* victim, 
+    kaapi_selecvictim_flag_t flag 
+);
 
 /** \ingroup WS
     First steal is 0 then select a victim for next steal request using uniform random selection over all cores.
 */
-extern int kaapi_sched_select_victim_rand_first0( kaapi_processor_t* kproc, kaapi_victim_t* victim, kaapi_selecvictim_flag_t flag );
+extern int kaapi_sched_select_victim_rand_first0( 
+    kaapi_processor_t* kproc, 
+    kaapi_victim_t* victim, 
+    kaapi_selecvictim_flag_t flag 
+);
 
 /** \ingroup WS
     Select victim using the memory hierarchy
 */
-extern int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_t* victim, kaapi_selecvictim_flag_t flag );
+extern int kaapi_sched_select_victim_hierarchy( 
+    kaapi_processor_t* kproc, 
+    kaapi_victim_t* victim, 
+    kaapi_selecvictim_flag_t flag 
+);
+
+/* experimental: */
+extern int kaapi_sched_select_victim_hwsn( 
+    kaapi_processor_t* kproc, 
+    kaapi_victim_t* victim, 
+    kaapi_selecvictim_flag_t flag 
+);
 
 /** \ingroup WS
     Enter in the infinite loop of trying to steal work.
