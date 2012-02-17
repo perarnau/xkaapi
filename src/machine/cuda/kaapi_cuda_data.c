@@ -210,13 +210,6 @@ kaapi_cuda_data_sync_device_transfer(
     const int dest_dev = dest_asid - 1;
     const int src_dev = src_asid - 1;
 
-#if 0
-    fprintf( stdout, "[%s] dest_asid=%lu dest_dev=%lu src_asid=%lu src_dev=%lu\n", 
-	    __FUNCTION__,
-	    dest_asid, dest_dev,
-	    src_asid, src_dev );
-    fflush(stdout);
-#endif
     if( src_asid == 0 ) {
 	kaapi_cuda_mem_copy_htod( dest->ptr, &dest->view,
 		src->ptr, &src->view );
@@ -224,19 +217,11 @@ kaapi_cuda_data_sync_device_transfer(
 	int canAccessPeer;
 	cudaDeviceCanAccessPeer( &canAccessPeer,
 		dest_dev, src_dev );
-#if 0
-	cudaError_t res = cudaDeviceCanAccessPeer( &canAccessPeer,
-		dest_dev, src_dev );
-	if (res != cudaSuccess) {
-	    fprintf(stderr, "[%s] ERROR: %d\n", __FUNCTION__, res );
-	    fflush(stderr);
-	    return res;
-	}
-#endif
 	if( canAccessPeer ) {
-	    fprintf( stdout, "[%s] GPU%d to GPU%d (OK) \n", __FUNCTION__, dest_dev,
-		src_dev );
-	    fflush( stdout );
+	    kaapi_cuda_mem_copy_dtod_peer( 
+		dest->ptr, &dest->view,	dest_dev,
+		src->ptr, &src->view, src_dev
+		);
 	} else {
 	    kaapi_cuda_mem_copy_dtod_buffer(
 		dest->ptr, &dest->view,	dest_dev,
@@ -287,47 +272,20 @@ kaapi_cuda_data_sync_host_transfer(
     kaapi_cuda_ctx_set( src_asid-1 );
     res = cudaStreamCreate( &stream );
     if (res != cudaSuccess) {
-	fprintf(stderr, "[%s] ERROR: %d\n", __FUNCTION__, res );
-	fflush(stderr);
+	fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
+	fflush(stdout);
 	return res;
     }
     kaapi_cuda_sync();
     kaapi_cuda_mem_copy_dtoh_( dest->ptr, &dest->view, src->ptr, &src->view, stream );
     res = cudaStreamSynchronize( stream );
     if (res != cudaSuccess) {
-	fprintf(stderr, "[%s] ERROR: %d\n", __FUNCTION__, res );
-	fflush(stderr);
+	fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
+	fflush(stdout);
 	return res;
     }
     cudaStreamDestroy( stream );
     return res;
-#if 0
-    struct cudaPointerAttributes attr;
-    res = cudaPointerGetAttributes( &attr, kaapi_pointer2void(dest->ptr) );
-    fprintf( stdout, "[%s] attr host(%p)  type=%s dev=%d devptr=%p hostptr=%p\n",
-	    __FUNCTION__,
-	    kaapi_pointer2void(dest->ptr),
-	    ((attr.memoryType == cudaMemoryTypeHost) ? "Host" : "Device"),
-	    attr.device,
-	    attr.devicePointer,
-	    attr.hostPointer );
-    res = cudaPointerGetAttributes( &attr, kaapi_pointer2void(src->ptr) );
-    fprintf( stdout, "[%s] attr dev(%p) type=%s dev=%d devptr=%p hostptr=%p\n",
-	    __FUNCTION__,
-	    kaapi_pointer2void(src->ptr),
-	    ((attr.memoryType == cudaMemoryTypeHost) ? "Host" : "Device"),
-	    attr.device,
-	    attr.devicePointer,
-	    attr.hostPointer );
-    void *devptr;
-    res = cudaHostGetDevicePointer( &devptr, kaapi_pointer2void(dest->ptr), 0 );
-    if (res != cudaSuccess) {
-	fprintf(stderr, "[%s] cudaHostGetDevicePointer ERROR: %d\n", __FUNCTION__, res );
-	fflush(stderr);
-    }
-    fprintf( stdout, "[%s] dev=%d devptr=%p\n", __FUNCTION__, dev, devptr );
-    fflush(stdout);
-#endif
 }
 
 int

@@ -90,25 +90,20 @@ kaapi_cuda_mem_blk_remove(
 			const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
 			kaapi_mem_asid_t valid_asid =
 			    kaapi_mem_data_get_nondirty_asid_( kmd, cuda_asid );
+
 			/* copy memory to host and deallocate */
 			if( valid_asid == KAAPI_MEM_ASID_MAX ) {
-#if 0
-			fprintf(stdout, "[%s] OUPS unique valid ptr=%p asid=%lu\n",
-				__FUNCTION__,
-				__kaapi_pointer2void(ptr),
-				cuda_asid );
-			fflush(stdout);
-#endif
-			kaapi_data_t* src =
-			    (kaapi_data_t*)kaapi_mem_data_get_addr( kmd,
-				    cuda_asid );
-			kaapi_data_t* dest = 
-			    (kaapi_data_t*)kaapi_mem_data_get_addr( kmd,
-				    host_asid );
-			kaapi_cuda_mem_copy_dtoh( dest->ptr, &dest->view, 
-				src->ptr, &src->view );
-			kaapi_mem_data_clear_dirty( kmd, host_asid );
+			    kaapi_data_t* src =
+				(kaapi_data_t*)kaapi_mem_data_get_addr( kmd,
+					cuda_asid );
+			    kaapi_data_t* dest = 
+				(kaapi_data_t*)kaapi_mem_data_get_addr( kmd,
+					host_asid );
+			    kaapi_cuda_mem_copy_dtoh( dest->ptr, &dest->view, 
+				    src->ptr, &src->view );
+			    kaapi_mem_data_clear_dirty( kmd, host_asid );
 			}
+
 		    }
 		    /* TODO: see dirty/valid addresses and use */
 		    kaapi_mem_data_clear_addr( kmd, cuda_asid );
@@ -253,15 +248,6 @@ out_of_memory:
 		    fflush( stdout );
 	    }
 	}
-#if 0
-	else {
-		    fprintf( stdout, "[%s] oldptr=%p size=%lu kid=%lu\n",
-				    __FUNCTION__, devptr, size, 
-				    (long unsigned int)kaapi_get_current_kid() ); 
-		    fflush( stdout );
-	}
-#endif
-#else
 	res = cudaMalloc( &devptr, size );
 	if (res != cudaSuccess) {
 		fprintf( stdout, "[%s] ERROR cudaMalloc (%d) size=%lu kid=%lu\n",
@@ -269,7 +255,6 @@ out_of_memory:
 				(long unsigned int)kaapi_get_current_kid() ); 
 		fflush( stdout );
 	}
-#endif
 
 	ptr->ptr = (uintptr_t)devptr;
 	ptr->asid = kasid;
@@ -651,6 +636,7 @@ kaapi_cuda_mem_copy_dtod_buffer(
 
     /* GPU to CPU (temporary) */
     kaapi_cuda_ctx_set( src_dev );
+    kaapi_cuda_sync();
     res = cudaStreamCreate( &stream );
     if (res != cudaSuccess) {
 	fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
@@ -687,4 +673,41 @@ kaapi_cuda_mem_copy_dtod_buffer(
     free( host_buffer );
 //    cudaFreeHost( host_buffer );
     return res;
+}
+
+int
+kaapi_cuda_mem_copy_dtod_peer(
+	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+	const int dest_dev,
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
+	const int src_dev
+       	)
+{
+    cudaError_t res;
+
+    res = cudaDeviceEnablePeerAccess( src_dev, 0 );
+    if( (res != cudaSuccess) && (res !=  cudaErrorPeerAccessAlreadyEnabled) ) {
+	fprintf(stdout, "[%s] cudaDeviceEnablePeerAccess ERROR: %d\n", __FUNCTION__, res );
+	fflush(stdout);
+	return res;
+    }
+
+    res = cudaMemcpyPeerAsync(
+	    kaapi_pointer2void(dest), dest_dev,
+	    kaapi_pointer2void(src), src_dev,
+	    kaapi_memory_view_size(view_src),
+	    kaapi_cuda_DtoD_stream() );
+    if( res != cudaSuccess ) {
+	fprintf(stdout, "[%s] cudaMemcpyPeerAsync ERROR: %d\n", __FUNCTION__, res );
+	fflush(stdout);
+    }
+
+    res = cudaStreamSynchronize( kaapi_cuda_DtoD_stream() );
+    if( res != cudaSuccess ) {
+	fprintf(stdout, "[%s] cudaStreamSynchronize ERROR: %d\n", __FUNCTION__, res );
+	fflush(stdout);
+    }
+
+    cudaDeviceDisablePeerAccess( src_dev );
+    return 0;
 }
