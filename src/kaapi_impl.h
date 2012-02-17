@@ -116,6 +116,7 @@ extern volatile int kaapi_suspendflag;
 extern kaapi_atomic_t kaapi_suspendedthreads;
 
 
+
 /* ================== Library initialization/terminaison ======================= */
 /** Initialize the machine level runtime.
     Return 0 in case of success. Else an error code.
@@ -821,6 +822,10 @@ extern void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuse
 extern int kaapi_perf_thread_state(kaapi_processor_t* kproc);
 /* */
 extern uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
+
+/** Collect and display trace */
+extern void kaapi_collect_trace(void);
+
 
 /* */
 extern void kaapi_set_workload( kaapi_processor_t*, unsigned long workload );

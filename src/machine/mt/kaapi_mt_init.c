@@ -319,17 +319,6 @@ int kaapi_mt_init(void)
 int kaapi_mt_finalize(void)
 {
   unsigned int i;
-#if defined(KAAPI_USE_PERFCOUNTER)
-  uint64_t cnt_tasks;
-  uint64_t cnt_stealreqok;
-  uint64_t cnt_stealreq;
-  uint64_t cnt_stealop;
-  uint64_t cnt_suspend;
-  double t_sched;
-  double t_preempt;
-  double t_1;
-  double t_tasklist;
-#endif
 
   static kaapi_atomic_t iscalled = {1};
   if (KAAPI_ATOMIC_DECR(&iscalled) !=0) 
@@ -364,6 +353,46 @@ int kaapi_mt_finalize(void)
   kaapi_perf_thread_fini(kaapi_all_kprocessors[0]);
   kaapi_perf_global_fini();
   
+  kaapi_collect_trace();
+#endif
+
+
+  for (i=0; i<kaapi_count_kprocessors; ++i)
+  {
+#if defined(KAAPI_USE_CUDA)
+    /* initialize cuda processor */
+    if (kaapi_all_kprocessors[i]->proc_type == KAAPI_PROC_TYPE_CUDA)
+      kaapi_cuda_proc_cleanup(&kaapi_all_kprocessors[i]->cuda_proc);
+#endif /* KAAPI_USE_CUDA */
+    kaapi_wsqueuectxt_destroy(&kaapi_all_kprocessors[i]->lsuspend);
+    kaapi_processor_free(kaapi_all_kprocessors[i]);
+    kaapi_all_kprocessors[i]= 0;
+  }
+  free( kaapi_all_kprocessors );
+  kaapi_all_kprocessors =0;
+
+#if KAAPI_USE_HWLOC
+  kaapi_hws_fini_global();
+#endif
+  
+  /* TODO: destroy topology data structure */
+  return 0;
+}
+
+
+void kaapi_collect_trace(void)
+{
+#if defined(KAAPI_USE_PERFCOUNTER)
+  uint64_t cnt_tasks;
+  uint64_t cnt_stealreqok;
+  uint64_t cnt_stealreq;
+  uint64_t cnt_stealop;
+  uint64_t cnt_suspend;
+  double t_sched;
+  double t_preempt;
+  double t_1;
+  double t_tasklist;
+
   cnt_tasks       = 0;
   cnt_stealreqok  = 0;
   cnt_stealreq    = 0;
@@ -374,11 +403,9 @@ int kaapi_mt_finalize(void)
   t_preempt       = 0;
   t_1             = 0;
   t_tasklist      = 0;
-#endif
 
   for (i=0; i<kaapi_count_kprocessors; ++i)
   {
-#if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_event_closebuffer( kaapi_all_kprocessors[i] );
     
     cnt_tasks +=      KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS);
@@ -423,21 +450,8 @@ int kaapi_mt_finalize(void)
          1e-9*(KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i],KAAPI_PERF_ID_T1)
        + KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i],KAAPI_PERF_ID_TPREEMPT)) );
     }
-#endif
-
-#if defined(KAAPI_USE_CUDA)
-    /* initialize cuda processor */
-    if (kaapi_all_kprocessors[i]->proc_type == KAAPI_PROC_TYPE_CUDA)
-      kaapi_cuda_proc_cleanup(&kaapi_all_kprocessors[i]->cuda_proc);
-#endif /* KAAPI_USE_CUDA */
-    kaapi_wsqueuectxt_destroy(&kaapi_all_kprocessors[i]->lsuspend);
-    kaapi_processor_free(kaapi_all_kprocessors[i]);
-    kaapi_all_kprocessors[i]= 0;
   }
-  free( kaapi_all_kprocessors );
-  kaapi_all_kprocessors =0;
 
-#if defined(KAAPI_USE_PERFCOUNTER)
   /* */
   if (kaapi_default_param.display_perfcounter)
   {
@@ -454,14 +468,7 @@ int kaapi_mt_finalize(void)
     printf("   preemption idle time            : %e\n", t_preempt);
     printf("Average steal requests aggregation : %e\n", ((double)cnt_stealreq)/(double)cnt_stealop);
   }
-#endif  
-
-#if KAAPI_USE_HWLOC
-  kaapi_hws_fini_global();
 #endif
-  
-  /* TODO: destroy topology data structure */
-  return 0;
 }
 
 

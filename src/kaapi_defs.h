@@ -77,18 +77,20 @@ extern "C" {
 #define KAAPI_LOG_LEVEL 10
 
 #if defined(KAAPI_DEBUG)
+extern void kaapi_abort(void);
+
 #  define kaapi_assert_debug_m(cond, msg) \
       { int __kaapi_cond = cond; \
         if (!__kaapi_cond) \
         { \
           printf("[%s]: LINE: %u FILE: %s, ", msg, __LINE__, __FILE__);\
-          abort();\
+          kaapi_abort();\
         }\
       }
 #if defined(kaapi_assert_debug) /* definition from kaapi_error.h (public interface)*/
 # undef kaapi_assert_debug
 #endif
-#  define kaapi_assert_debug( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); abort(); }
+#  define kaapi_assert_debug( cond ) if (!(cond)) { printf("Bad assertion, line:%i, file:'%s'\n", __LINE__, __FILE__ ); kaapi_abort(); }
 
 #  define KAAPI_LOG(l, fmt, ...) \
       do { if (l<= KAAPI_LOG_LEVEL) { printf("%i:"fmt, kaapi_get_current_processor()->kid, ##__VA_ARGS__); fflush(0); } } while (0)
