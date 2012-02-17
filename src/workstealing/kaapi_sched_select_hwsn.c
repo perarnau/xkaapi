@@ -82,16 +82,21 @@ int kaapi_sched_select_victim_hwsn(
     ++arg->nfailed;
 
     /* failed: try on not self set before go up */
-    if  (arg->nfailed >= 1+nset/4)
+    if  (arg->nfailed >= 4)
     {
       arg->nfailed = 0;
       if (arg->index ==0)
-        arg->index   = 1;
+      {
+        if (level->nnotself == 0)
+          ++arg->depth;
+        else
+          arg->index   = 1;
+      }
       else {
         ++arg->depth;
         arg->index   = 0;
       }
-      if (arg->depth == kproc->hlevel.depth) 
+      if (arg->depth >= 3) //kproc->hlevel.depth) 
       {
         arg->depth = kproc->hlevel.depth;
         arg->index   = 0;

@@ -392,7 +392,7 @@ int kaapi_mt_finalize(void)
     t_tasklist +=     1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKLISTCALC); 
 
     /* */
-    if (kaapi_default_param.display_perfcounter && (kaapi_count_kprocessors <4))
+    if (kaapi_default_param.display_perfcounter) //( && (kaapi_count_kprocessors <4))
     {
 
       printf("----- Performance counters, core   : %i\n", i);

@@ -89,9 +89,11 @@ redo_select:
     goto redo_select;
   }
 
+#if 0 // TG: test, steal also allow to steal stack from myself. Else only wakeup
   /* never pass by this function for a processor to steal itself */
   if (kproc == victim.kproc) 
     return KAAPI_REQUEST_S_NOK;
+#endif
 
 #if 0 // to avoid lock
   /* quick test to detect if thread has work */

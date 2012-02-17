@@ -67,6 +67,9 @@ long long fib_seq (int n)
 struct TaskFibo : public ka::Task<3>::Signature<ka::W<long long>, int, int > {};
 
 
+size_t cnt_spawn;
+size_t cnt_exec;
+
 /* Implementation for CPU machine 
 */
 template<>
@@ -75,7 +78,7 @@ struct TaskBodyCPU<TaskFibo>
   void operator() ( ka::pointer_w<long long> ptr, int n, int d )
   {  
     long long x, y;
-
+++cnt_exec;
     if (n < 2) 
     {
       *ptr = n;
@@ -85,7 +88,9 @@ struct TaskBodyCPU<TaskFibo>
     if ( d < cutoff ) 
     {
       ka::Spawn<TaskFibo>()( &x, n-1, d+1 );
+++cnt_spawn;
       ka::Spawn<TaskFibo>()( &y, n-2, d+1 );
+++cnt_spawn;
       ka::Sync();
 
     } else {
@@ -113,6 +118,7 @@ struct doit {
     {
       res_value = 0;
       ka::Spawn<TaskFibo>()( res, n, 0 );
+++cnt_spawn;
       /* */
       ka::Sync();
       start_time= ka::WallTimer::gettime();
@@ -120,6 +126,7 @@ struct doit {
       {   
         res_value = 0;
         ka::Spawn<TaskFibo>()( res, n, 0 );
+++cnt_spawn;
         /* */
         ka::Sync();
       }
@@ -129,6 +136,8 @@ struct doit {
       ka::logfile() << ": Res  = " << res_value << std::endl;
       ka::logfile() << ": Time(s): " << (stop_time-start_time)/iter << std::endl;
       ka::logfile() << ": -----------------------------------------" << std::endl;
+ka::logfile() << "Cnt exec:" << cnt_exec << std::endl;
+ka::logfile() << "Cnt spawn:" << cnt_spawn << std::endl;
     }
   }
 
