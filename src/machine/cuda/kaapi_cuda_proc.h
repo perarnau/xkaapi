@@ -61,13 +61,7 @@
 
 //#define KAAPI_CUDA_USE_POOL	1
 
-#if 0
-#define KAAPI_CUDA_MAX_STREAMS		4
-#define KAAPI_CUDA_HTOD_STREAM		0
-#define KAAPI_CUDA_KERNEL_STREAM        1
-#define KAAPI_CUDA_DTOH_STREAM		2
-#define KAAPI_CUDA_DTOD_STREAM		3
-#endif /* KAAPI_CUDA_ASYNC */
+#define KAAPI_CUDA_MAX_STREAMS		8
 
 typedef struct kaapi_cuda_ctx
 {
@@ -76,7 +70,6 @@ typedef struct kaapi_cuda_ctx
 	pthread_mutexattr_t mta;
 } kaapi_cuda_ctx_t;
 
-#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
 struct kaapi_cuda_mem_blk_t;
 
 typedef struct kaapi_cuda_mem
@@ -89,27 +82,23 @@ typedef struct kaapi_cuda_mem
 	/* all GPU allocated pointers */
 	kaapi_big_hashmap_t kmem;
 } kaapi_cuda_mem_t;
-#endif
-
-#ifdef KAAPI_CUDA_USE_POOL
-struct kaapi_cuda_pool;
-#endif
 
 typedef struct kaapi_cuda_proc
 {
     unsigned int index;
-#ifdef KAAPI_CUDA_ASYNC
-    cudaStream_t stream;
-#endif
+    struct cudaDeviceProp  deviceProp;
+
+    /* WARNING: some old devices get errors on multiple stream */
+    cudaStream_t stream[KAAPI_CUDA_MAX_STREAMS];
+    cudaStream_t streamDtoH;
+    cudaStream_t streamDtoD;
+    int stream_idx; /* stream ID to tranfer/execute */
+    int stream_max; /* maximum number of streams */
+
     kaapi_cuda_ctx_t ctx;
 
-#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
     kaapi_cuda_mem_t memory;
-#endif
 
-#ifdef KAAPI_CUDA_USE_POOL
-    struct kaapi_cuda_pool* pool;
-#endif
     int is_initialized;
 
     /* cached attribtues */
@@ -135,12 +124,12 @@ cudaStream_t kaapi_cuda_DtoH_stream(void);
 
 cudaStream_t kaapi_cuda_DtoD_stream(void);
 
+void kaapi_cuda_stream_next(void);
+
 static inline int
 kaapi_cuda_sync( void )
 {
     const cudaError_t res = cudaDeviceSynchronize( );
-    /* TODO Segmentation fault here */
-//    const cudaError_t res = cudaStreamSynchronize( kaapi_cuda_kernel_stream() );
     if( res != cudaSuccess ) {
 	    fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
 	    fflush(stdout);

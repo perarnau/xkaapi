@@ -154,21 +154,16 @@ execute_first:
         } else {
 	    cuda_task_body_t body =
 		(cuda_task_body_t) td->fmt->entrypoint_wh[proc_type];
-	    /* Enter CUDA context */
-	    kaapi_cuda_ctx_push( );
 
+	    kaapi_cuda_ctx_push( );
 	    kaapi_cuda_data_allocate( td->fmt, pc->sp );
 	    kaapi_cuda_data_send( td->fmt, pc->sp );
+	    kaapi_cuda_cublas_set_stream( );
 	    body( pc->sp, kaapi_cuda_kernel_stream() );
-#ifndef KAAPI_CUDA_ASYNC
-	    kaapi_cuda_sync();
-#endif
 #if 0
 	    kaapi_cuda_data_check();
 #endif
-#ifndef KAAPI_CUDA_ASYNC
-	    kaapi_cuda_sync();
-#endif
+	    kaapi_cuda_stream_next();
 	    kaapi_cuda_ctx_pop( );
         }
         kaapi_event_push1(stack->proc, thread, KAAPI_EVT_TASK_END, pc );  

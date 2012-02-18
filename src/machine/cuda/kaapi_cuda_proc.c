@@ -71,25 +71,43 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
   if ( kaapi_cuda_dev_open( proc, idev) )
     return -1;
 
-#if KAAPI_CUDA_ASYNC
-  res = cudaStreamCreate( &proc->stream );
+  proc->stream_idx= 0;
+  if( proc->deviceProp.concurrentKernels ) {
+      int i;
+      proc->stream_max = KAAPI_CUDA_MAX_STREAMS;
+      for( i = 0; i < KAAPI_CUDA_MAX_STREAMS; i++ ) {
+	  res = cudaStreamCreate( &proc->stream[i] );
+	  if (res != cudaSuccess) {
+		    fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
+		    fflush(stdout);
+	    kaapi_cuda_dev_close( proc );
+	    return -1;
+	  }
+      }
+  } else {
+      proc->stream_max = 1;
+      res = cudaStreamCreate( &proc->stream[0] );
+      if (res != cudaSuccess) {
+		fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
+		fflush(stdout);
+	kaapi_cuda_dev_close( proc );
+	return -1;
+    }
+  }
+  res = cudaStreamCreate( &proc->streamDtoH );
   if (res != cudaSuccess) {
 	    fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
 	    fflush(stdout);
     kaapi_cuda_dev_close( proc );
     return -1;
   }
-#endif
-
-  /* TODO */
-#if 0
-  res = cuDeviceGetAttribute
-  (
-   (int*)&proc->attr_concurrent_kernels,
-   CU_DEVICE_ATTRIBUTE_CONCURRENT_KERNELS,
-   proc->dev
-  );
-#endif
+  res = cudaStreamCreate( &proc->streamDtoD );
+  if (res != cudaSuccess) {
+	    fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
+	    fflush(stdout);
+    kaapi_cuda_dev_close( proc );
+    return -1;
+  }
 
   /* pop the context to make it floating. doing
      so allow another thread to use it, such
@@ -155,45 +173,37 @@ size_t kaapi_cuda_get_proc_count(void)
 
 cudaStream_t kaapi_cuda_kernel_stream(void)
 {
-#if KAAPI_CUDA_ASYNC
     kaapi_processor_t* const self_proc =
 	kaapi_get_current_processor();
-    return self_proc->cuda_proc.stream;
-#else
-    return 0;
-#endif
+    return self_proc->cuda_proc.stream[self_proc->cuda_proc.stream_idx];
 }
 
 cudaStream_t kaapi_cuda_HtoD_stream(void)
 {
-#if KAAPI_CUDA_ASYNC
     kaapi_processor_t* const self_proc =
 	kaapi_get_current_processor();
-    return self_proc->cuda_proc.stream;
-#else
-    return 0;
-#endif
+    return self_proc->cuda_proc.stream[self_proc->cuda_proc.stream_idx];
 }
 
 cudaStream_t kaapi_cuda_DtoH_stream(void)
 {
-#if KAAPI_CUDA_ASYNC
     kaapi_processor_t* const self_proc =
 	kaapi_get_current_processor();
-    return self_proc->cuda_proc.stream;
-#else
-    return 0;
-#endif
+    return self_proc->cuda_proc.streamDtoH;
 }
 
 cudaStream_t kaapi_cuda_DtoD_stream(void)
 {
-#if KAAPI_CUDA_ASYNC
     kaapi_processor_t* const self_proc =
 	kaapi_get_current_processor();
-    return self_proc->cuda_proc.stream;
-#else
-    return 0;
-#endif
+    return self_proc->cuda_proc.streamDtoD;
+}
+
+void kaapi_cuda_stream_next(void)
+{
+    kaapi_processor_t* const self_proc =
+	kaapi_get_current_processor();
+    self_proc->cuda_proc.stream_idx = (self_proc->cuda_proc.stream_idx + 1)%
+	self_proc->cuda_proc.stream_max;
 }
 
