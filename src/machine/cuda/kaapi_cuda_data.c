@@ -276,6 +276,7 @@ kaapi_cuda_data_sync_host_transfer(
 	fflush(stdout);
 	return res;
     }
+    /* Synchronize everything since we dont know about its execution */
     kaapi_cuda_sync();
     kaapi_cuda_mem_copy_dtoh_( dest->ptr, &dest->view, src->ptr, &src->view, stream );
     res = cudaStreamSynchronize( stream );

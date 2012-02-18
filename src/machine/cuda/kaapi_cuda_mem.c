@@ -267,12 +267,6 @@ out_of_memory:
 int
 kaapi_cuda_mem_free( kaapi_pointer_t *ptr )
 {
-#if 0
-    fprintf( stdout, "[%s] ptr=%p kid=%lu\n", __FUNCTION__,
-	    __kaapi_pointer2void(*ptr),
-	    (long unsigned int)kaapi_get_current_kid() ); 
-    fflush( stdout );
-#endif
 	cudaFree( __kaapi_pointer2void(*ptr) );
 	ptr->ptr = 0;
 	ptr->asid = 0;
@@ -620,19 +614,6 @@ kaapi_cuda_mem_copy_dtod_buffer(
     kaapi_cuda_mem_register_( host_buffer, kaapi_memory_view_size(view_src) );
     kaapi_pointer_t hostptr = kaapi_make_pointer( 0, host_buffer );
 
-#if 0
-    fprintf( stdout, "[%s] dest(dev=%lu ptr=%p size=%lu) src(dev=%lu ptr=%p size=%lu) buffer=%p kid=%lu\n",
-	    __FUNCTION__,
-	    dest_dev, kaapi_pointer2void(dest),
-		    kaapi_memory_view_size(view_dest),
-	    src_dev, kaapi_pointer2void(src),
-		    kaapi_memory_view_size(view_src),
-	    host_buffer,
-	    (long unsigned int)kaapi_get_current_kid()
-	    );
-    fflush(stdout);
-#endif
-
     /* GPU to CPU (temporary) */
     kaapi_cuda_ctx_set( src_dev );
     kaapi_cuda_sync();
@@ -706,7 +687,7 @@ kaapi_cuda_mem_copy_dtod_peer(
 	fprintf(stdout, "[%s] cudaStreamSynchronize ERROR: %d\n", __FUNCTION__, res );
 	fflush(stdout);
     }
-
     cudaDeviceDisablePeerAccess( src_dev );
+
     return 0;
 }
