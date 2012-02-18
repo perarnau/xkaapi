@@ -247,9 +247,8 @@ struct TaskBodyCPU<TaskNormMatrix> {
 
 /* Block LU factorization
 */
-struct TaskLU: public ka::Task<2>::Signature<
-      ka::RPWP<ka::range2d<double_type> >,  /* A */
-      ka::W<ka::range1d<int> > /* pivot */
+struct TaskLU: public ka::Task<1>::Signature<
+      ka::RPWP<ka::range2d<double_type> >  /* A */ 
 >{};
 
 static size_t global_blocsize = 2;
@@ -257,8 +256,7 @@ static size_t global_blocsize = 2;
 template<>
 struct TaskBodyCPU<TaskLU> {
   void operator()( 
-		  ka::range2d_rpwp<double_type> A,
-		  ka::range1d_w<int> Piv )
+		  ka::range2d_rpwp<double_type> A )
   {
     size_t N = A.dim(0);
     size_t blocsize = global_blocsize;
@@ -328,7 +326,6 @@ struct doit {
 
     double t0, t1;
     double_type* dA = (double_type*) calloc(n* n, sizeof(double_type));
-    int *dPiv = (int*) calloc( n, sizeof(int) );
     double_type* dAcopy;
     if (0 == dA) {
       std::cout << "Fatal Error. Cannot allocate matrices A, "
@@ -352,8 +349,6 @@ struct doit {
 	    }
     }
 
-    ka::array<1,int> Piv(dPiv, n);
-
 #if 0
     if (n <= 32) 
     {
@@ -370,7 +365,7 @@ struct doit {
     for (int i=0; i<niter; ++i)
     {
       t0 = kaapi_get_elapsedtime();
-      ka::Spawn<TaskLU>(ka::SetStaticSched())( A, Piv );
+      ka::Spawn<TaskLU>(ka::SetStaticSched())( A );
       ka::Sync();
       t1 = kaapi_get_elapsedtime();
 
@@ -418,8 +413,8 @@ struct doit {
 		<< std::endl;
 
 	t0 = kaapi_get_elapsedtime();
-	clapack_getrf( CblasColMajor, n, n, A2.ptr(), A2.lda(), dPiv );
-//	ka::Spawn<TaskNormMatrix>()( &norm, ka::array<2,double_type>(dAcopy2, n, n, n), A2 );
+	TaskBodyCPU<TaskDGETRFNoPiv>() ( CblasColMajor,
+		ka::range2d_rw<double_type>(A2) );
 #if 1
 	ka::Spawn<TaskNormMatrix>()( CblasColMajor, CblasUpper, 
 		&norm, ka::array<2,double_type>(dAcopy2, n, n, n), A2 );
@@ -438,7 +433,6 @@ struct doit {
 
     kaapi_memory_unregister( dA );
     free(dA);
-    free(dPiv);
   }
 };
 

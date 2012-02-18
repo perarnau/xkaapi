@@ -17,7 +17,7 @@ function run_test {
     msizes="2048"
     bsizes="512"
     niter=1
-#    verif=1
+    verif=1
     for m in $msizes ; do
 	    for b in $bsizes; do
 	    for i in `seq 1 $niter`
