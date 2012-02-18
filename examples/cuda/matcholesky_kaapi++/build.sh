@@ -1,6 +1,7 @@
-#!/usr/bin/env sh
+#!/bin/bash
 
 SCRATCH=$HOME
+#SCRATCH=/scratch/jvlima
 XKAAPIDIR=$SCRATCH/install/xkaapi/default
 CUDADIR=$CUDA_HOME
 
@@ -23,7 +24,7 @@ MAGMA_LDFLAGS="-L${SCRATCH}/install/magma_1.0.0/lib -lmagma -lmagmablas
 -llapack -lf77blas -lgfortran"
 
 #$CUDADIR/bin/nvcc -g -w \
-g++ -Wall \
+g++ -g -Wall \
     -I$XKAAPIDIR/include \
     -I$CUDADIR/include \
     $CBLAS_CPPFLAGS \

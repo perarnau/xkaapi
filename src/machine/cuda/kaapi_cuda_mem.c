@@ -247,13 +247,6 @@ out_of_memory:
 		    fflush( stdout );
 	    }
 	}
-	res = cudaMalloc( &devptr, size );
-	if (res != cudaSuccess) {
-		fprintf( stdout, "[%s] ERROR cudaMalloc (%d) size=%lu kid=%lu\n",
-				__FUNCTION__, res, size, 
-				(long unsigned int)kaapi_get_current_kid() ); 
-		fflush( stdout );
-	}
 
 	ptr->ptr = (uintptr_t)devptr;
 	ptr->asid = kasid;

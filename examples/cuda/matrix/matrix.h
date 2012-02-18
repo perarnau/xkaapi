@@ -109,7 +109,7 @@ struct TaskDLACPY: public ka::Task<4>::Signature
 <
   CBLAS_ORDER,			/* row / col */
   CBLAS_UPLO,                  /* upper / lower */
-  ka::R<ka::range2d<double_type> >, /* A */
+  ka::RW<ka::range2d<double_type> >, /* A */
   ka::RW<ka::range2d<double_type> > /* B */
 >{};
 

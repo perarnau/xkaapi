@@ -61,16 +61,40 @@
    - it will be also interesting to generate symetric diagonally dominant 
    matrices which are known to be definite postive.
 */
-static void generate_matrix(double_type* A, size_t m)
+static void
+generate_matrix( double_type* A, size_t N )
 {
+#if 0
+    size_t i, j;
+
+    double_type* dtmp = (double_type*) malloc( N*N*sizeof(double_type) );
+    ka::array<2,double_type> tmp( dtmp, N, N, N );
+    TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(tmp)  );
+    for( i = 0; i < N; i++ ) {
+	dtmp[ i*N+i ] = dtmp[i*N+i] + 1.*N;
+	for( j = 0; j < N; j++ ) {
+	    dtmp[i*N+j] = dtmp[j*N+i];
+	}
+    }
+    ka::array<2,double_type> a( A, N, N, N );
+    TaskBodyCPU<TaskDLACPY>()(
+	    CblasColMajor, CblasLower,
+	    ka::range2d_rw<double_type>( tmp ),
+	    ka::range2d_rw<double_type>( a )
+	);
+    free( dtmp );
+#endif
+#if 1
   // 
-  for (size_t i = 0; i< m; ++i)
+  for (size_t i = 0; i< N; ++i)
   {
-    for (size_t j = 0; j< m; ++j)
-      A[i*m+j] = 1.0 / (1.0+i+j);
-    A[i*m+i] = m*1.0; 
+    for (size_t j = 0; j< N; ++j)
+      A[i*N+j] = 1.0 / (1.0+i+j);
+    A[i*N+i] = N*1.0; 
   }
+#endif
 }
+
 #else
 /* Generate a random matrix symetric definite positive matrix of size m x m 
 */
@@ -193,25 +217,23 @@ struct TaskBodyCPU<TaskNormMatrix> {
 		for (j = 0; j < N; j++)
 		   Residual[j*N+i] = L2[j*N+i] - Residual[j*N+i];
 
-		char infnorm[]= "";
+		char infnorm[]= "Infinity";
 		Rnorm = LAPACKE_lange( order, infnorm[0], N, N, Residual, N, work);
 		Anorm = LAPACKE_lange( order, infnorm[0], N, N, A.ptr(),
 			       A.lda(), work);
 
 		//printf("============\n");
 		//printf("Checking the Cholesky Factorization \n");
-#if 0
+#if 1
 		fprintf( stdout, "# ||L'L-A||_oo/(||A||_oo.N.eps) = %e\n",
 			    Rnorm/(Anorm*N*eps));
 		fflush(stdout);
 
 		if ( isnan(Rnorm/(Anorm*N*eps)) || (Rnorm/(Anorm*N*eps) > 10.0) ){
 		printf("# ERRO Factorization is suspicious ! \n");
-		info_factorization = 1;
 		}
 		else{
-		//printf("-- Factorization is CORRECT ! \n");
-		info_factorization = 0;
+		printf("-- Factorization is CORRECT ! \n");
 		}
 #endif
 
@@ -417,7 +439,7 @@ struct doit {
       t1 = kaapi_get_elapsedtime();
 
 #if CONFIG_INVERSE_ORDERING
-      transpose_inplace(dA, n);
+ //     transpose_inplace(dA, n);
 #endif
 
       gflops = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / (t1-t0);

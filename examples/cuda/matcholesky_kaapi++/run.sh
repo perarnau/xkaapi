@@ -12,11 +12,13 @@ out="$SCRATCH/res/xkaapi-spotrf-4cpu1gpu-${version}.txt"
 function run_test {
     export KAAPI_CPUSET="0:2"
     #export KAAPI_GPUSET="0~6,1~7"
-    export KAAPI_GPUSET="0~6"
-    msizes="10240"
-#    msizes="1024"
-    bsizes="1024"
+#    export KAAPI_GPUSET="0~6"
+    export KAAPI_GPUSET=""
+#    msizes="10240"
+    msizes="4096"
+#    bsizes="1024"
 #    bsizes="2048"
+    bsizes="512"
     niter=1
 #    verif=1
     for m in $msizes ; do
