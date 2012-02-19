@@ -388,6 +388,7 @@ void kaapi_collect_trace(void)
   uint64_t cnt_stealreqok;
   uint64_t cnt_stealreq;
   uint64_t cnt_stealop;
+  uint64_t cnt_stealin;
   uint64_t cnt_suspend;
   double t_sched;
   double t_preempt;
@@ -398,6 +399,7 @@ void kaapi_collect_trace(void)
   cnt_stealreqok  = 0;
   cnt_stealreq    = 0;
   cnt_stealop     = 0;
+  cnt_stealin     = 0;
   cnt_suspend     = 0;
 
   t_sched         = 0;
@@ -413,6 +415,7 @@ void kaapi_collect_trace(void)
     cnt_stealreqok += KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK);
     cnt_stealreq +=   KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQ);
     cnt_stealop +=    KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALOP);
+    cnt_stealin +=    KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALIN);
     cnt_suspend +=    KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_SUSPEND);
     t_sched +=        1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_T1);
     t_preempt +=      1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TPREEMPT);
@@ -437,6 +440,9 @@ void kaapi_collect_trace(void)
       );
       printf("Total number of steal operations   : %"PRIi64"\n",
         KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALOP)
+      );
+      printf("Total number of input steal request: %"PRIi64"\n",
+        KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALIN)
       );
       printf("Total number of suspend operations : %"PRIi64"\n",
         KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_SUSPEND)

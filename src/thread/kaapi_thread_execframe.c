@@ -126,7 +126,7 @@ push_frame: /* here assume fp current frame where to execute task */
   /* push and update the current frame */
   stack->sfp = ++fp;
   kaapi_assert_debug_fmt( stack->sfp - stack->stackframe <KAAPI_MAX_RECCALL,
-       "reccall limit: %i", KAAPI_MAX_RECCALL);
+       "reccall limit: %i\n", KAAPI_MAX_RECCALL);
   
   /* stack of task growth down ! */
   for (; pc != sp; --pc)

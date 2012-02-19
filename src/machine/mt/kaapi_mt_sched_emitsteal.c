@@ -130,6 +130,7 @@ redo_select:
   
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
+  KAAPI_ATOMIC_INCR64( (kaapi_atomic64_t*)&KAAPI_PERF_REG(victim.kproc, KAAPI_PERF_ID_STEALIN) );
 #endif
 
   /* (2)

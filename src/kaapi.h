@@ -1977,13 +1977,17 @@ int kaapi_splitter_default
 #define KAAPI_PERF_ID_USER(I) KAAPI_PERF_ID(1, I)
 #define KAAPI_PERF_ID_PRIV(I) KAAPI_PERF_ID(0, I)
 
+
 #define KAAPI_PERF_ID_TASKS         0  /* count number of executed tasks */
 #define KAAPI_PERF_ID_STEALREQOK    1  /* count number of successful steal requests */
-#define KAAPI_PERF_ID_STEALREQ      2  /* count number of steal requests */
+#define KAAPI_PERF_ID_STEALREQ      2  /* count number of steal requests emitted */
 #define KAAPI_PERF_ID_STEALOP       3  /* count number of steal operation to reply to requests */
-#define KAAPI_PERF_ID_SUSPEND       4  /* count number of suspended thread */
-#define KAAPI_PERF_ID_T1            5  /* nano second of compte time */
+#define KAAPI_PERF_ID_STEALIN       4  /* count number of receive steal requests */
+
+#define KAAPI_PERF_ID_SUSPEND       5  /* count number of suspended thread */
+#define KAAPI_PERF_ID_T1            6  /* nano second of compte time */
 /*#define KAAPI_PERF_ID_TIDLE         6  / * nano second of idle time */ 
+
 #define KAAPI_PERF_ID_TPREEMPT      7  /* nano second of preempt time */
 #define KAAPI_PERF_ID_ALLOCTHREAD   8  /* count number of allocated thread */
 #define KAAPI_PERF_ID_FREETHREAD    9  /* count number of free thread */
