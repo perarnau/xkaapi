@@ -165,7 +165,7 @@ redo_select:
   {
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_assert_debug( sizeof(kaapi_atomic64_t) <= sizeof(kaapi_perf_counter_t) );
-    KAAPI_ATOMIC_SUB64( 
+    KAAPI_ATOMIC_ADD64( 
       (kaapi_atomic64_t*)&KAAPI_PERF_REG(victim.kproc, KAAPI_PERF_ID_STEALIN),
       kaapi_listrequest_iterator_count(&lri)
     );
