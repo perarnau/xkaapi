@@ -66,8 +66,6 @@
 typedef struct kaapi_cuda_ctx
 {
 	cublasHandle_t handle;
-	pthread_mutex_t mutex;
-	pthread_mutexattr_t mta;
 } kaapi_cuda_ctx_t;
 
 struct kaapi_cuda_mem_blk_t;

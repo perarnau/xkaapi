@@ -143,7 +143,6 @@ get_cu_context( void )
   	 cu_proc = kaapi_get_current_processor();
   
   
-  _kaapi_cuda_ctx_push( cu_proc );
   return cu_proc;
 }
 
@@ -151,18 +150,15 @@ static kaapi_processor_t*
 xxx_get_cu_context( kaapi_address_space_id_t asid )
 {
 	kaapi_processor_t* proc = kaapi_cuda_get_proc_by_asid( asid );
-	_kaapi_cuda_ctx_push( proc );
 	return proc;
 }
 
 static void xxx_put_cu_context( kaapi_processor_t* proc )
 {
-	_kaapi_cuda_ctx_pop( proc );
 }
 
 void put_cu_context( kaapi_processor_t* cu_proc)
 {
-	_kaapi_cuda_ctx_pop( cu_proc );
 }
 
 static inline int kaapi_memory_write_cu2cpu

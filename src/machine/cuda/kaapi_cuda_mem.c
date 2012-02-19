@@ -593,18 +593,20 @@ kaapi_cuda_mem_copy_dtod_buffer(
     cudaStream_t stream;
     void *host_buffer;
 
+#if 0
     host_buffer = malloc( kaapi_memory_view_size(view_src) );
     kaapi_assert_debug( host_buffer != NULL );
-#if 0
+    kaapi_cuda_mem_register_( host_buffer, kaapi_memory_view_size(view_src) );
+    kaapi_cuda_mem_unregister_( host_buffer );
+    free( host_buffer );
+#endif
     res = cudaHostAlloc( &host_buffer, kaapi_memory_view_size(view_src),
 	   cudaHostAllocPortable );
     if( res != cudaSuccess ) {
-	fprintf( stdout, "ERROR %d\n", res );
+	fprintf( stdout, "ERROR cudaHostAlloc %d\n", res );
 	fflush(stdout);
+	return res;
     }
-    //kaapi_assert_debug( res != cudaSuccess );
-#endif
-    kaapi_cuda_mem_register_( host_buffer, kaapi_memory_view_size(view_src) );
     kaapi_pointer_t hostptr = kaapi_make_pointer( 0, host_buffer );
 
     /* GPU to CPU (temporary) */
@@ -642,10 +644,8 @@ kaapi_cuda_mem_copy_dtod_buffer(
     }
     cudaStreamDestroy( stream );
 
-    kaapi_cuda_mem_unregister_( host_buffer );
-    free( host_buffer );
-//    cudaFreeHost( host_buffer );
-    return res;
+    cudaFreeHost( host_buffer );
+    return 0;
 }
 
 int

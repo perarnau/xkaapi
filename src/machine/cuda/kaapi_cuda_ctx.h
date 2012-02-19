@@ -6,22 +6,16 @@
 
 #include "kaapi_cuda_proc.h"
 
-void
-_kaapi_cuda_ctx_push( kaapi_processor_t* proc );
-
-void
-_kaapi_cuda_ctx_pop( kaapi_processor_t* proc );
-
 static inline void
 kaapi_cuda_ctx_push( void )
 {
-    _kaapi_cuda_ctx_push( kaapi_get_current_processor() );
+    /* TODO future usage. */
 }
 
 static inline void
 kaapi_cuda_ctx_pop( void )
 {
-    _kaapi_cuda_ctx_pop( kaapi_get_current_processor() );
+    /* TODO future usage */
 }
 
 static inline void
