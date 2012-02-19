@@ -104,6 +104,15 @@ void GOMP_task(
                unsigned flags __attribute__((unused))
                )
 {
+#if defined(KAAPI_USE_PERFCOUNTER)
+  /* try to force sequential degeneration is no steal request */
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  kaapi_perf_counter_t rcntsi = KAAPI_PERF_REG_READALL(kproc, KAAPI_PERF_ID_STEALIN);
+  if (rcntsi == kproc->lastcounter)
+    if_clause = 0;
+  else
+    kproc->lastcounter = rcntsi;
+#endif
   if (!if_clause) 
   {
     if (cpyfn)
@@ -118,8 +127,9 @@ void GOMP_task(
       fn (data);
     return;
   }
-
+#if !defined(KAAPI_USE_PERFCOUNTER)
   kaapi_processor_t* kproc = kaapi_get_current_processor();
+#endif
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
   kaapi_thread_t* thread =  kaapi_threadcontext2thread(kproc->thread);
   kaapi_task_t* task = kaapi_thread_toptask(thread);
@@ -140,17 +150,6 @@ void GOMP_task(
   arg->fn         = fn;
   arg->data       = userarg;
   kaapi_thread_pushtask(thread);
-
-#if OLD
-    /* todo: create a runtime task without using kaapic API */    
-    kaapic_spawn( 4,
-                 GOMP_trampoline_task,
-                 KAAPIC_MODE_V, ctxt->numthreads, 1, KAAPIC_TYPE_INT,
-                 KAAPIC_MODE_V, ctxt->threadid, 1, KAAPIC_TYPE_INT,
-                 KAAPIC_MODE_V, fn, 1, KAAPIC_TYPE_PTR,
-                 KAAPIC_MODE_V, argtask, 1, KAAPIC_TYPE_PTR
-    );
-#endif
 }
 
 void GOMP_taskwait (void)

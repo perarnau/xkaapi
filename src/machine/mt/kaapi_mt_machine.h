@@ -442,6 +442,10 @@ typedef struct kaapi_processor_t {
   /* event buffer */
   struct kaapi_event_buffer_t* eventbuffer;
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_perf_counter_t     lastcounter; /* used by libgomp */
+#endif
+
   /* workload */
   kaapi_atomic64_t	        workload;
 

@@ -170,6 +170,53 @@ typedef struct kaapi_stack_t {
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_stack_t;
 
 
+/* experimental: to debug. Only call by libkomp */
+static inline void kaapi_push_frame( kaapi_stack_t* stack)
+{
+  kaapi_frame_t* fp = (kaapi_frame_t*)stack->sfp;
+  kaapi_task_t* sp = fp->sp;
+
+  /* init new frame for the next task to execute */
+  fp[1].pc        = sp;
+  fp[1].sp        = sp;
+  fp[1].sp_data   = fp->sp_data;
+
+  kaapi_writemem_barrier();
+  stack->sfp = ++fp;
+  kaapi_assert_debug_fmt( stack->sfp - stack->stackframe <KAAPI_MAX_RECCALL,
+       "reccall limit: %i\n", KAAPI_MAX_RECCALL);
+}
+
+/* experimental: to debug. Only call by libkomp */
+static inline void kaapi_pop_frame( kaapi_stack_t* stack )
+{
+  kaapi_frame_t* fp = (kaapi_frame_t*)stack->sfp;
+#if defined(KAAPI_USE_LOCKTOPOP_FRAME)
+  /* lock based pop */
+  int tolock = 0;
+
+  /* pop the frame */
+  --fp;
+  /* finish to execute child tasks, pop current task of the frame */
+  stack->sfp = fp;
+  tolock = (fp <= stack->thieffp);
+
+  if (tolock)
+    kaapi_atomic_lock(&stack->lock);
+
+
+  if (tolock)
+    kaapi_sched_unlock(&stack->lock);
+
+#else //---------#if defined(KAAPI_USE_LOCKTOPOP_FRAME)
+  /* THE based pop */
+  --fp;
+  stack->sfp = fp;
+  if (fp <= stack->thieffp)
+    kaapi_atomic_waitlock(&stack->lock);
+#endif
+}
+
 
 /* ===================== Initialization of adaptive part =============================== */
 extern void kaapi_init_adaptive(void);
