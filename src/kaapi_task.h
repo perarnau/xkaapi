@@ -64,7 +64,7 @@ extern "C" {
    If an assertion is thrown at runtime, and if this macro appears then
    it is necessary to increase the maximal number of frames in a stack.
 */
-#define KAAPI_MAX_RECCALL 16384
+#define KAAPI_MAX_RECCALL 131072
 
 struct kaapi_listrequest_iterator_t;
 struct kaapi_listrequest_t;

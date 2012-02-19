@@ -130,7 +130,6 @@ redo_select:
   
 #if defined(KAAPI_USE_PERFCOUNTER)
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
-  KAAPI_ATOMIC64_INCR( &KAAPI_PERF_REG(victim.kproc, KAAPI_PERF_ID_STEALIN) );
 #endif
 
   /* (2)
@@ -164,6 +163,13 @@ redo_select:
   */
   if (!kaapi_listrequest_iterator_empty(&lri) ) 
   {
+#if defined(KAAPI_USE_PERFCOUNTER)
+    kaapi_assert_debug( sizeof(kaapi_atomic64_t) <= sizeof(kaapi_perf_counter_t) );
+    KAAPI_ATOMIC_SUB64( 
+      (kaapi_atomic64_t*)&KAAPI_PERF_REG(victim.kproc, KAAPI_PERF_ID_STEALIN),
+      kaapi_listrequest_iterator_count(&lri)
+    );
+#endif
     kaapi_sched_stealprocessor( victim.kproc, &victim_stealctxt->lr, &lri );
     KAAPI_DEBUG_INST(path0= 1); 
     KAAPI_DEBUG_INST(save_lri = lri);   
