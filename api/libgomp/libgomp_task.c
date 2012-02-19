@@ -43,6 +43,8 @@
  */
 #include "libgomp.h"
 
+
+
 typedef struct GOMP_spawn_task_arg {
   int                       numthreads;
   int                       threadid;
@@ -54,6 +56,13 @@ static void GOMP_trampoline_task(
   void* voidp, kaapi_thread_t* thread
 )
 {
+#if defined(USE_WORKLOAD)
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  kaapi_set_workload( kproc, 
+    kproc->thread->stack.sfp - kproc->thread->stack.stackframe
+  );
+#endif
+
   GOMP_spawn_task_arg_t* taskarg = (GOMP_spawn_task_arg_t*)voidp;
   kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
 
@@ -104,18 +113,21 @@ void GOMP_task(
                unsigned flags __attribute__((unused))
                )
 {
-#if 0//defined(KAAPI_USE_PERFCOUNTER)
-  /* try to force sequential degeneration is no steal request */
-  kaapi_processor_t* kproc = kaapi_get_current_processor();
-  int seqdeg = 0;
-  kaapi_perf_counter_t rcntsi = KAAPI_PERF_REG_READALL(kproc, KAAPI_PERF_ID_STEALIN);
-  if (rcntsi == kproc->lastcounter)
+#if 0// EXPERIMENTAL defined(KAAPI_USE_PERFCOUNTER)
+  if (if_clause) 
   {
-    seqdeg = 1;
-    kaapi_push_frame(&kproc->thread->stack);
+    /* try to force sequential degeneration is no steal request */
+    kaapi_processor_t* kproc = kaapi_get_current_processor();
+    int seqdeg = 0;
+    kaapi_perf_counter_t rcntsi = KAAPI_PERF_REG_READALL(kproc, KAAPI_PERF_ID_STEALIN);
+    if (rcntsi == kproc->lastcounter)
+    {
+      seqdeg = 1;
+      kaapi_push_frame(&kproc->thread->stack);
+    }
+    else
+      kproc->lastcounter = rcntsi;
   }
-  else
-    kproc->lastcounter = rcntsi;
   if (!if_clause || seqdeg) 
 #else
   if (!if_clause) 
@@ -131,12 +143,12 @@ void GOMP_task(
     }
     else
       fn (data);
-#if 0//defined(KAAPI_USE_PERFCOUNTER)
+#if 0// EXPERIMENTAL//defined(KAAPI_USE_PERFCOUNTER)
     kaapi_pop_frame(&kproc->thread->stack);
 #endif
     return;
   }
-#if 1//!defined(KAAPI_USE_PERFCOUNTER)
+#if 1// EXPERIMENTAL//!defined(KAAPI_USE_PERFCOUNTER)
   kaapi_processor_t* kproc = kaapi_get_current_processor();
 #endif
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
