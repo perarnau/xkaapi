@@ -17,14 +17,14 @@ function run_test {
 #    export KAAPI_GPUSET=""
 #    export KAAPI_GPUSET="1~6"
 #    export KAAPI_GPUSET="0~6,3~7"
-    export KAAPI_GPUSET="0~6,1~7"
+    export KAAPI_GPUSET="0~6"
 #    msizes="10240"
-#    msizes="2048"
+    msizes="20480"
 #    msizes="16384"
-    msizes="2048"
-    bsizes="512"
+#    msizes="2048"
+    bsizes="2048"
     niter=1
-    verif=1
+#    verif=1
     for m in $msizes ; do
 	    for b in $bsizes; do
 	    for i in `seq 1 $niter`

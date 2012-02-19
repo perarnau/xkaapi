@@ -694,8 +694,8 @@ kaapi_cuda_mem_destroy( kaapi_cuda_proc_t* proc )
     /* first check: beg to end */
     blk = cuda_mem->beg;
     while( blk != NULL ) {
-	if( blk->ptr != 0 ) 
-	    cudaFree( blk->ptr );
+	if( kaapi_pointer2void(blk->ptr) != NULL ) 
+	    kaapi_cuda_mem_free( &blk->ptr );
 	p = blk;
 	blk = blk->next;
 	free( p );
