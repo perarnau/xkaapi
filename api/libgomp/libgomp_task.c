@@ -104,7 +104,7 @@ void GOMP_task(
                unsigned flags __attribute__((unused))
                )
 {
-#if defined(KAAPI_USE_PERFCOUNTER)
+#if 0//defined(KAAPI_USE_PERFCOUNTER)
   /* try to force sequential degeneration is no steal request */
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   int seqdeg = 0;
@@ -112,7 +112,7 @@ void GOMP_task(
   if (rcntsi == kproc->lastcounter)
   {
     seqdeg = 1;
-    kaapi_push_frame(&kproc->thread.stack);
+    kaapi_push_frame(&kproc->thread->stack);
   }
   else
     kproc->lastcounter = rcntsi;
@@ -131,12 +131,12 @@ void GOMP_task(
     }
     else
       fn (data);
-#if defined(KAAPI_USE_PERFCOUNTER)
-    kaapi_pop_frame(&kproc->thread.stack);
+#if 0//defined(KAAPI_USE_PERFCOUNTER)
+    kaapi_pop_frame(&kproc->thread->stack);
 #endif
     return;
   }
-#if !defined(KAAPI_USE_PERFCOUNTER)
+#if 1//!defined(KAAPI_USE_PERFCOUNTER)
   kaapi_processor_t* kproc = kaapi_get_current_processor();
 #endif
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
