@@ -68,10 +68,11 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
 
   proc->is_initialized = 0;
 
-  if ( kaapi_cuda_dev_open( proc, idev) )
-    return -1;
+  if ( (res = kaapi_cuda_dev_open( proc, idev)) != cudaSuccess )
+    return res;
 
   proc->stream_idx= 0;
+  kaapi_cuda_sync();
   if( proc->deviceProp.concurrentKernels ) {
       int i;
       proc->stream_max = KAAPI_CUDA_MAX_STREAMS;
@@ -81,7 +82,7 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
 		    fprintf(stdout, "[%s] cudaStreamCreate ERROR: %d\n", __FUNCTION__, res );
 		    fflush(stdout);
 	    kaapi_cuda_dev_close( proc );
-	    return -1;
+	    return res;
 	  }
       }
   } else {
@@ -147,6 +148,7 @@ int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t* proc)
 
 //  kaapi_cuda_ctx_pop( );
 #endif
+   kaapi_cuda_mem_destroy( proc );
   kaapi_cuda_dev_close( proc );
   proc->is_initialized = 0;
 

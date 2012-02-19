@@ -150,6 +150,9 @@ int
 kaapi_cuda_mem_mgmt_check( kaapi_processor_t* proc );
 #endif
 
+int 
+kaapi_cuda_mem_destroy( kaapi_cuda_proc_t* proc );
+
 static inline int
 kaapi_cuda_mem_register_( void* ptr, const size_t size )
 {

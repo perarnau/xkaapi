@@ -684,3 +684,25 @@ kaapi_cuda_mem_copy_dtod_peer(
 
     return 0;
 }
+
+int 
+kaapi_cuda_mem_destroy( kaapi_cuda_proc_t* proc )
+{
+    kaapi_cuda_mem_blk_t *blk, *p;
+    kaapi_cuda_mem_t* cuda_mem = &proc->memory;
+
+    /* first check: beg to end */
+    blk = cuda_mem->beg;
+    while( blk != NULL ) {
+	if( blk->ptr != 0 ) 
+	    cudaFree( blk->ptr );
+	p = blk;
+	blk = blk->next;
+	free( p );
+    }
+    kaapi_big_hashmap_destroy( &cuda_mem->kmem );  
+    cuda_mem->beg = cuda_mem->end = NULL;
+
+    return 0;
+}
+

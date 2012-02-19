@@ -42,9 +42,6 @@ kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
 void
 kaapi_cuda_dev_close( kaapi_cuda_proc_t* proc )
 {
-#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
-    kaapi_big_hashmap_destroy( &proc->memory.kmem );  
-#endif
 #if (CUDART_VERSION >= 4010)
 	cudaDeviceReset();
 #endif
