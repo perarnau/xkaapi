@@ -107,13 +107,19 @@ void GOMP_task(
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* try to force sequential degeneration is no steal request */
   kaapi_processor_t* kproc = kaapi_get_current_processor();
+  int seqdeg = 0;
   kaapi_perf_counter_t rcntsi = KAAPI_PERF_REG_READALL(kproc, KAAPI_PERF_ID_STEALIN);
   if (rcntsi == kproc->lastcounter)
-    if_clause = 0;
+  {
+    seqdeg = 1;
+    kaapi_push_frame(&kproc->thread.stack);
+  }
   else
     kproc->lastcounter = rcntsi;
-#endif
+  if (!if_clause || seqdeg) 
+#else
   if (!if_clause) 
+#endif
   {
     if (cpyfn)
     {
@@ -125,6 +131,9 @@ void GOMP_task(
     }
     else
       fn (data);
+#if defined(KAAPI_USE_PERFCOUNTER)
+    kaapi_pop_frame(&kproc->thread.stack);
+#endif
     return;
   }
 #if !defined(KAAPI_USE_PERFCOUNTER)
