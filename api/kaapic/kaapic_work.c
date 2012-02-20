@@ -634,7 +634,9 @@ kaapic_global_work_t* kaapic_foreach_global_workinit
 kaapic_local_work_t* kaapic_foreach_local_workinit
 (
   kaapi_thread_context_t* self_thread, /* for storage */
-  kaapic_global_work_t*   gwork
+  kaapic_global_work_t*   gwork,
+  kaapi_workqueue_index_t first,
+  kaapi_workqueue_index_t last
 )
 {
   kaapic_local_work_t*    lwork;
@@ -647,8 +649,27 @@ kaapic_local_work_t* kaapic_foreach_local_workinit
   kaapi_assert_debug(lwork !=0);
   lwork->workdone = 0;
 
+  /* initialize the lwork */
+#if defined(USE_KPROC_LOCK)
+  kaapi_workqueue_init_with_lock(
+    &lwork->cr,
+    first, last,
+    &kaapi_all_kprocessors[tid]->lock
+  );
+#else
+  kaapi_atomic_initlock(&lwork->lock);
+  kaapi_workqueue_init_with_lock(
+    &lwork->cr, 
+    first, last,
+    &lwork->lock
+  );
+#endif
+
+  /* publish new local work */
   lwork->global     = gwork;
   lwork->tid        = tid;
+
+  kaapi_writemem_barrier();
   gwork->lwork[tid] = lwork;
 
   /* begin a parallel region */
@@ -692,22 +713,9 @@ kaapic_local_work_t* kaapic_foreach_workinit
   );
   
   if (gwork ==0) return 0;
-  lwork = kaapic_foreach_local_workinit( self_thread, gwork );
+  if (kaapic_global_work_pop( gwork, tid, &first, &last))
+    lwork = kaapic_foreach_local_workinit( self_thread, gwork, first, last );
 
-#if defined(USE_KPROC_LOCK)
-  kaapi_workqueue_init_with_lock(
-    &lwork->cr,
-    0, 0,
-    &kaapi_all_kprocessors[tid]->lock
-  );
-#else
-  kaapi_atomic_initlock(&lwork->lock);
-  kaapi_workqueue_init_with_lock(
-    &lwork->cr, 
-    0, 0,
-    &lwork->lock
-  );
-#endif
   return lwork;
 }  
 
@@ -870,36 +878,27 @@ int kaapic_foreach_common
   );
   kaapi_assert_debug(gwork !=0);
 
-  /* */
-  lwork = kaapic_foreach_local_workinit( 
-                  self_thread, 
-                  gwork 
-  );
-  kaapi_assert_debug(lwork !=0);
-
-  /* initialize the lwork */
-
   /* initialize the local workqueue with the first poped state */
   if (kaapic_global_work_pop( gwork, tid, &first, &last))
   {    
-#if defined(USE_KPROC_LOCK)
-    kaapi_workqueue_init_with_lock(
-      &lwork->cr,
-      first, last,
-      &kaapi_all_kprocessors[tid]->lock
+    /* */
+    lwork = kaapic_foreach_local_workinit( 
+                    self_thread, 
+                    gwork,
+                    first,
+                    last
     );
-#else
-    kaapi_atomic_initlock(&lwork->lock);
-    kaapi_workqueue_init_with_lock(
-      &lwork->cr, 
-      first, last,
-      &lwork->lock
-    );
-#endif
-    lwork->global   = gwork;
-    lwork->tid      = tid;
-    gwork->lwork[tid] = lwork;
   }
+  else {
+    /* */
+    lwork = kaapic_foreach_local_workinit( 
+                    self_thread, 
+                    gwork,
+                    0,
+                    0
+    );
+  }
+  kaapi_assert_debug(lwork !=0);
 
   /* start adaptive region */
   lwork->context = kaapi_task_begin_adaptive(

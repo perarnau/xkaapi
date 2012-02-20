@@ -139,9 +139,16 @@ bool GOMP_loop_dynamic_start (
       kaapi_slowdown_cpu();
     kaapi_readmem_barrier();
     
-    workshare->lwork = kaapic_foreach_local_workinit( 
-                            self_thread,
-                            teaminfo->gwork );    
+    if (kaapic_global_work_pop( teaminfo->gwork, kproc->kid, istart, iend))
+      workshare->lwork = kaapic_foreach_local_workinit( 
+                              self_thread,
+                              teaminfo->gwork,
+                              *istart, *iend );    
+    else
+      workshare->lwork = kaapic_foreach_local_workinit( 
+                              self_thread,
+                              teaminfo->gwork,
+                              0, 0 );    
   }
 
   /* pop next slice */
@@ -249,8 +256,24 @@ void GOMP_parallel_loop_dynamic_start (
       0      /* arg */
   );
 
-  workshare->lwork = kaapic_foreach_local_workinit(self_thread, teaminfo->gwork );
   /* initialize the local workqueue with the first poped state */
+  if (kaapic_global_work_pop(ctxt->teaminfo->gwork, kproc->kid, &start, &end))
+  {    
+    workshare->lwork = kaapic_foreach_local_workinit(
+        self_thread, 
+        teaminfo->gwork,
+        start,
+        end
+    );
+  }
+  else {
+    workshare->lwork = kaapic_foreach_local_workinit(
+        self_thread, 
+        teaminfo->gwork,
+        start,
+        end
+    );
+  }
 
   if (kaapic_global_work_pop(teaminfo->gwork, kproc->kid, &start, &end))
   {    
@@ -340,30 +363,25 @@ static void komp_trampoline_task_parallelfor
 
   kaapi_libkompworkshared_t* workshare = &ctxt->workshare;
   workshare->incr = taskarg->incr;
-  /* only main thread of the team has initialized global work */
-  workshare->lwork = kaapic_foreach_local_workinit( 
-                          kproc->thread,
-                          ctxt->teaminfo->gwork );    
 
   if (kaapic_global_work_pop(ctxt->teaminfo->gwork, kproc->kid, &start, &end))
-  {    
-#if defined(USE_KPROC_LOCK)
-    kaapi_workqueue_init_with_lock(
-      &workshare->lwork->cr,
-      start, end,
-      &kaapi_all_kprocessors[kproc->kid]->lock
+  {
+    /* only main thread of the team has initialized global work */
+    workshare->lwork = kaapic_foreach_local_workinit( 
+                            kproc->thread,
+                            ctxt->teaminfo->gwork,
+                            start,
+                            end
     );
-#else
-    kaapi_atomic_initlock(&workshare->lwork->lock);
-    kaapi_workqueue_init_with_lock(
-      &workshare->lwork->cr, 
-      start, end,
-      &workshare->lwork->lock
+  }
+  else {
+    /* only main thread of the team has initialized global work */
+    workshare->lwork = kaapic_foreach_local_workinit( 
+                            kproc->thread,
+                            ctxt->teaminfo->gwork,
+                            0,
+                            0
     );
-#endif
-    workshare->lwork->global     = ctxt->teaminfo->gwork;
-    workshare->lwork->tid        = kproc->kid;
-    ctxt->teaminfo->gwork->lwork[kproc->kid] = workshare->lwork;
   }
 
 //printf("In %s: begin call user code \n", __PRETTY_FUNCTION__ );

@@ -238,7 +238,9 @@ extern kaapic_global_work_t* kaapic_foreach_global_workinit
 */
 extern kaapic_local_work_t* kaapic_foreach_local_workinit(
   kaapi_thread_context_t* self_thread,
-  kaapic_global_work_t*   gwork
+  kaapic_global_work_t*   gwork,
+  kaapi_workqueue_index_t first,
+  kaapi_workqueue_index_t last
 );
 
 
