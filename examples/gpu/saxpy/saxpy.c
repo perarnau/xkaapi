@@ -413,6 +413,9 @@ void saxpy( float A, float *x, float *y, unsigned int N )
 	while( next_seq(work) != -1 ) ;
 
 	kaapi_task_end_adaptive( ksc );
+
+  /* wait for thieves */
+  kaapi_sched_sync();
 }
 
 int main( int argc, char *argv[] )

@@ -668,8 +668,10 @@ main_adaptive_entry(unsigned int* base, unsigned int nelem)
     while (next_seq(work) != -1)
       ;
 
-    /* wait for thieves */
     kaapi_task_end_adaptive(ksc);
+
+    /* wait for thieves */
+    kaapi_sched_sync();
   }
 
   /* add1 adaptive task */
@@ -686,6 +688,9 @@ main_adaptive_entry(unsigned int* base, unsigned int nelem)
       ;
 
     kaapi_task_end_adaptive(ksc);
+
+    /* wait for thieves */
+    kaapi_sched_sync();
   }
 
   /* mul2 adaptive task */
@@ -702,6 +707,9 @@ main_adaptive_entry(unsigned int* base, unsigned int nelem)
       ;
 
     kaapi_task_end_adaptive(ksc);
+
+    /* wait for thieves */
+    kaapi_sched_sync();
   }
 }
 
