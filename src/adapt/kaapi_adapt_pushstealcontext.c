@@ -128,6 +128,7 @@ void* kaapi_task_begin_adaptive
 
 #if defined(KAAPI_DEBUG)
   sc->version = ++global_version; // assume only main thread incr global_version
+  sc->state = 1;
 #endif
 
 /*
