@@ -44,37 +44,45 @@
 
 #include "kaapif.h"
 #include "kaapic_impl.h"
+#include "kaapic_dfg_switch.h"
+#include <string.h>
 #include <stdarg.h>
+#include <stddef.h>
+#include <stdint.h>
 
-static void kaapif_dfg_body(void* p, kaapi_thread_t* t)
-{
-  kaapic_task_info_t* const ti = (kaapic_task_info_t*)p;
-
-#include "kaapif_dfg_switch.h"
-  KAAPIF_DFG_SWITCH(ti);
-}
+extern void kaapic_dfg_body(void* p, kaapi_thread_t* t);
 
 /* dataflow interface */
-int kaapif_spawn_(
-    int32_t* nargs,
-    void (*body)(), 
-    ...
+int kaapif_spawn_
+(
+ int32_t* nargs,
+ void (*body)(), 
+ ...
 )
 {
-  kaapi_thread_t* thread = kaapi_self_thread();
+  kaapi_thread_t* const thread = kaapi_self_thread();
+  size_t total_size;
   kaapic_task_info_t* ti;
   va_list va_args;
   size_t wordsize;
   unsigned int k;
+  uintptr_t* values;
 
-  if (*nargs > KAAPIF_MAX_ARGS) 
-    return KAAPIF_ERR_EINVAL;
-    
-  /* cast into task_info_t */
+  if (*nargs > KAAPIC_MAX_ARGS) return KAAPIF_ERR_EINVAL;
 
-  ti = kaapi_thread_pushdata_align( thread, 
-    sizeof(kaapic_task_info_t)+ *nargs * sizeof(kaapic_arg_info_t), sizeof(void*)
-  );
+  /* fortran values are actually pointers and must be saved
+     since they are no longer valid past this function.
+     a slot is thus allocated for each eventual value in the
+     thread stack and the type is converted into a TYPE_PTR.
+  */
+
+  total_size = offsetof(kaapic_task_info_t, args) +
+    ((*nargs) * (sizeof(kaapic_arg_info_t) + sizeof(uintptr_t)));
+  ti = kaapi_thread_pushdata_align(thread, total_size, sizeof(void*));
+
+  /* last arg_info is actually the first value */
+  values = (uintptr_t*)&ti->args[*nargs];
+
   ti->body  = body;
   ti->nargs = *nargs;
 
@@ -83,10 +91,10 @@ int kaapif_spawn_(
   {
     kaapic_arg_info_t* const ai = &ti->args[k];
 
-    const uint32_t mode  = va_arg(va_args, int);
-    void* const addr     = va_arg(va_args, void*);
-    const uint32_t count = va_arg(va_args, int);
-    const uint32_t type  = va_arg(va_args, int);
+    const int32_t mode  = *va_arg(va_args, int32_t*);
+    void* addr		 = va_arg(va_args, void*);
+    const int32_t count = *va_arg(va_args, int32_t*);
+    int32_t type        = *va_arg(va_args, int32_t*);
 
     switch (mode)
     {
@@ -100,9 +108,20 @@ int kaapif_spawn_(
         ai->mode = KAAPI_ACCESS_MODE_RW; 
         break;
       case KAAPIC_MODE_V:  
-        if (count >1) 
-          return KAAPIF_ERR_EINVAL;
-        ai->mode = KAAPI_ACCESS_MODE_V; 
+        if (count >1) return KAAPIF_ERR_EINVAL;
+	if (type != KAAPIC_TYPE_PTR)
+	{
+	  /* save into value space and change to TYPE_PTR */
+	  values[k] = *(uintptr_t*)addr;
+	  type = KAAPIC_TYPE_PTR;
+	}
+	else
+	{
+	  /* FORTRAN pointer is passed, but &ptr must be given to task */
+	  values[k] = (uintptr_t)addr;
+	}
+	addr = (void*)(values + k);
+	ai->mode = KAAPI_ACCESS_MODE_V;
         break;
       default: 
         return KAAPIF_ERR_EINVAL;
@@ -135,16 +154,22 @@ int kaapif_spawn_(
         ai->format = kaapi_voidp_format;
         break ;
 
-      default: 
+      case KAAPIC_TYPE_ID:
+        if (mode == KAAPIC_MODE_V) return KAAPIF_ERR_EINVAL;
+	/* should not have any format... fix the runtime to handle this case */
+	wordsize = sizeof(void*);
+	ai->format = kaapi_voidp_format;
+	addr = *(void**)addr;
+        break ;
+
+      default:
         return KAAPIF_ERR_EINVAL;
     }
     
     kaapi_access_init( &ai->access, addr );
     if (mode == KAAPIC_MODE_V)
     {
-      /* can only pass exactly by value the size of a uintptr_t */
-      kaapi_assert_debug( wordsize*count == sizeof(uintptr_t) );
-      memcpy(&ai->access.version, &addr, wordsize*count );  /* but count == 1 here */
+      ai->access.version = (void*)(uintptr_t)addr;
     }
 
     ai->view = kaapi_memory_view_make1d(count, wordsize);
@@ -152,7 +177,7 @@ int kaapif_spawn_(
   va_end(va_args);
 
   /* spawn the task */
-  if (0== kaapic_spawn_ti( thread, kaapif_dfg_body, ti ))
+  if (0== kaapic_spawn_ti( thread, kaapic_dfg_body, ti ))
     return KAAPIF_SUCCESS;
   return KAAPIF_ERR_FAILURE;
 }
