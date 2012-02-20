@@ -89,7 +89,8 @@ int kaapi_sched_select_victim_aff(
 
 redo_select:
   /* first: select in self set */
-  victim->kproc = kaapi_all_kprocessors[ arg->lastvictim % kaapi_count_kprocessors ];
+  //victim->kproc = kaapi_all_kprocessors[ arg->lastvictim % kaapi_count_kprocessors ];
+  victim->kproc = kaapi_all_kprocessors[ 0 ];
   if (victim->kproc ==0) 
     goto redo_select;
   return 0;
