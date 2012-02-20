@@ -715,6 +715,8 @@ kaapic_local_work_t* kaapic_foreach_workinit
   if (gwork ==0) return 0;
   if (kaapic_global_work_pop( gwork, tid, &first, &last))
     lwork = kaapic_foreach_local_workinit( self_thread, gwork, first, last );
+  else 
+    lwork = 0;
 
   return lwork;
 }  

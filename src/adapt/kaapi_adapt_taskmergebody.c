@@ -88,6 +88,9 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
      */
     while (KAAPI_ATOMIC_READ(&sc->thieves.count))
       kaapi_slowdown_cpu();
+#if defined(KAAPI_DEBUG)
+    sc->state = 0;
+#endif
 
 #if 0 //OLD: inline this call just above 
     /* TG: NOT REQUIRED HERE ? */
@@ -141,6 +144,7 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
 #if defined(KAAPI_DEBUG)
     kaapi_assert(sc->version == sc->msc->version );
     kaapi_assert(sc->msc->state == 1);
+    sc->state = 0;
     kaapi_mem_barrier();
 #endif
 

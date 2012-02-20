@@ -97,11 +97,5 @@ int kaapi_task_end_adaptive(
   kaapi_task_markterm(task_adapt); 
 #endif
 
-#if defined(KAAPI_DEBUG)
-  kaapi_stealcontext_t* sc = (kaapi_stealcontext_t*)merge_arg->shared_sc.data;
-  kaapi_assert_debug( KAAPI_ATOMIC_READ( &sc->thieves.count ) == 0 );
-  sc->state = 0;
-#endif
-
   return 0;
 }
