@@ -143,15 +143,18 @@ static int kaapi_adaptivetask_wrapper_splitter(
   /* - pc is kaapi_taskadapt_body 
   */
   kaapi_taskadaptive_arg_t* arg = (kaapi_taskadaptive_arg_t*)sp;
+  kaapi_adaptivetask_splitter_t splitter = arg->user_splitter;
   kaapi_assert_debug( pc !=0 );
 
   /* call the splitter */
-  return arg->user_splitter( 
-      pc,
-      arg->user_sp,
-      lrequests,
-      lrrange
-  );
+  if (splitter !=0)
+    return splitter( 
+        pc,
+        arg->user_sp,
+        lrequests,
+        lrrange
+    );
+  return EINVAL;
 }
 
 static kaapi_adaptivetask_splitter_t 

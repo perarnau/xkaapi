@@ -58,5 +58,8 @@ void kaapi_taskadapt_body(void* sp, kaapi_thread_t* thread, kaapi_task_t* pc)
 #endif
   
   /* here invariant thread->stack.sfp->pc == pc ??? */
-  ((kaapi_task_body_internal_t)arg->user_body)( arg->user_sp, thread, pc );    
+  ((kaapi_task_body_internal_t)arg->user_body)( arg->user_sp, thread, pc );
+  
+  /* once finished: mark unsplittable the task */
+  kaapi_task_unset_splittable(pc);
 }

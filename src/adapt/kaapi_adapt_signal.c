@@ -50,7 +50,7 @@
 void kaapi_tasksignaladapt_body(void* sp, kaapi_thread_t* thread)
 {
   kaapi_stealcontext_t* const msc  = (kaapi_stealcontext_t*)sp;
-
+printf("TO TEST\n");
   kaapi_assert_debug( msc->flag != KAAPI_SC_PREEMPTION );
 
   /* Then flush memory & signal master context

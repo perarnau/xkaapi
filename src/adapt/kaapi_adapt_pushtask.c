@@ -87,6 +87,10 @@ int kaapi_thread_pushtask_adaptive(
     /* ... otherwise thief count */
     KAAPI_ATOMIC_WRITE(&sc->thieves.count, 0);
   }
+#if defined(KAAPI_DEBUG)
+  sc->version = -1; /* version used only during steal operation */
+  sc->state   = 1;  /* it is initialized now */
+#endif
 
   /* initialize the taskadapt_body args */
   kaapi_access_init(&arg->shared_sc, sc);
