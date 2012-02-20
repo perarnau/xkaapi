@@ -69,7 +69,6 @@
    map field can steal the initial slice.
    T.G.
 */
-
 #define USE_KPROC_LOCK 1 /* defined to use kprocessor lock, else use local lock */
  
 #include "kaapi_impl.h"
@@ -398,10 +397,12 @@ static int _kaapic_split_task
 #if defined(USE_KPROC_LOCK)
     kaapi_workqueue_init_with_lock
       (&tw->cr, first, last, &kaapi_all_kprocessors[tw->tid]->lock);
+    kaapi_assert_debug(first < last);
 #else
     kaapi_atomic_initlock(&tw->lock);
     kaapi_workqueue_init_with_lock
       (&tw->cr, last-unit_size, last, &tw->lock);
+    kaapi_assert_debug(unitsize > 0);
 #endif    
     gwork->lwork[req->ident] = tw;
     kaapi_task_init_with_flag(
