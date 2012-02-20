@@ -88,6 +88,9 @@ int kaapi_task_end_adaptive( void* arg )
   /* force execution of all previously pushed task of the frame */
   kaapi_sched_sync_(self_thread);
 
+  /* force execution of all previously pushed task of the frame */
+  kaapi_task_markterm(task_adapt); 
+
 #if defined(KAAPI_DEBUG)
   kaapi_stealcontext_t* sc = (kaapi_stealcontext_t*)merge_arg->shared_sc.data;
   kaapi_assert_debug( KAAPI_ATOMIC_READ( &sc->thieves.count ) == 0 );

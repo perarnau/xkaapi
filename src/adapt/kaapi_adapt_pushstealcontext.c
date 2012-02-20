@@ -83,7 +83,7 @@ static int volatile global_version = 0;
 */
 void* kaapi_task_begin_adaptive
 (
-  kaapi_thread_t*              thread,
+  kaapi_thread_t*               thread,
   int                           flag,
   kaapi_adaptivetask_splitter_t splitter,
   void*                         argsplitter
@@ -94,7 +94,7 @@ void* kaapi_task_begin_adaptive
     
   /* */
   kaapi_taskbegendadaptive_arg_t* adap_arg;
-    
+      
   /* allocated tasks' args */
   adap_arg = (kaapi_taskbegendadaptive_arg_t*)kaapi_thread_pushdata
     (thread, sizeof(kaapi_taskbegendadaptive_arg_t));
