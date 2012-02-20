@@ -476,7 +476,11 @@ redo_local_work:
   /* */
   KAAPI_SET_SELF_WORKLOAD(0);
 //  printf("Work finish: work done:%i\n", lwork->workdone);
-  kaapi_assert_debug(lwork->workdone >=0);
+#if defined(KAAPI_DEBUG)
+  kaapi_assert(lwork->workdone >=0);
+  uint64_t gwr = KAAPI_ATOMIC_READ(&gwork->workremain);
+  kaapi_assert( gwr >= lwork->workdone );
+#endif
   KAAPI_ATOMIC_SUB(&gwork->workremain, lwork->workdone);
   kaapi_assert_debug(KAAPI_ATOMIC_READ(&gwork->workremain) >=0);
   lwork->workdone = 0;
@@ -812,7 +816,11 @@ int kaapic_foreach_worknext(
   /* Empty local work: try to steal from global work 
      After updating the workremain of the global work
   */
-  kaapi_assert_debug(lwork->workdone >=0);
+#if defined(KAAPI_DEBUG)
+  kaapi_assert(lwork->workdone >=0);
+  uint64_t gwr = KAAPI_ATOMIC_READ(&gwork->workremain);
+  kaapi_assert( gwr >= lwork->workdone );
+#endif
   KAAPI_ATOMIC_SUB(&gwork->workremain, lwork->workdone);
   kaapi_assert_debug(KAAPI_ATOMIC_READ(&gwork->workremain) >=0);
   lwork->workdone = 0;
@@ -918,7 +926,11 @@ redo_local_work:
   /* */
   KAAPI_SET_SELF_WORKLOAD(0);
 //  printf("Master finish: work done:%i\n", lwork->workdone);
-  kaapi_assert_debug(lwork->workdone >=0);
+#if defined(KAAPI_DEBUG)
+  kaapi_assert(lwork->workdone >=0);
+  uint64_t gwr = KAAPI_ATOMIC_READ(&gwork->workremain);
+  kaapi_assert( gwr >= lwork->workdone );
+#endif
   KAAPI_ATOMIC_SUB(&gwork->workremain, lwork->workdone);
   kaapi_assert_debug(KAAPI_ATOMIC_READ(&gwork->workremain) >=0);
   lwork->workdone = 0;
