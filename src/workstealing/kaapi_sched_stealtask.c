@@ -68,6 +68,9 @@ int kaapi_sched_steal_task
   /* if map == history of visited access, then compute readiness */
   if (map !=0)
   {
+#if 0
+wc = 0;
+#else
     wc = kaapi_task_computeready( 
       task,
       kaapi_task_getargs(task), 
@@ -76,6 +79,7 @@ int kaapi_sched_steal_task
       &cw_param,
       map
     );
+#endif
   }
 
   if (wc !=0)

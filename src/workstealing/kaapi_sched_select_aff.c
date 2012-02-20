@@ -66,6 +66,7 @@ int kaapi_sched_select_victim_aff(
 
   if (flag == KAAPI_STEAL_FAILED)
   {
+    arg->nextvictim = rand_r( (unsigned int*)&arg->seed );
     arg->lastvictim = arg->nextvictim;
     return 0;
   }
@@ -74,19 +75,22 @@ int kaapi_sched_select_victim_aff(
   {
     /* success: try next to time initial depth */
     arg->nextvictim = arg->lastvictim;
+    //arg->lastvictim = arg->nextvictim;
     return 0;
   }
 
   kaapi_assert_debug (flag == KAAPI_SELECT_VICTIM);
 
   if (arg->seed == 0) 
+  {
     arg->seed = (uintptr_t)(long)rand();
+    arg->lastvictim = rand_r( (unsigned int*)&arg->seed );
+  }
 
 redo_select:
   /* first: select in self set */
-  victim->kproc = kaapi_all_kprocessors[ arg->lastvictim ];
+  victim->kproc = kaapi_all_kprocessors[ arg->lastvictim % kaapi_count_kprocessors ];
   if (victim->kproc ==0) 
     goto redo_select;
-  arg->nextvictim = rand_r( (unsigned int*)&arg->seed ) % kaapi_count_kprocessors;
   return 0;
 }

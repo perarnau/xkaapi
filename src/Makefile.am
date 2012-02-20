@@ -145,6 +145,7 @@ libkaapi_la_SOURCES=\
   workstealing/kaapi_sched_select_workload_rand.c \
   workstealing/kaapi_sched_select_hierarchy.c\
   workstealing/kaapi_sched_select_hwsn.c\
+  workstealing/kaapi_sched_select_aff.c \
   workstealing/kaapi_sched_stealprocessor.c \
   workstealing/kaapi_sched_stealstack.c \
   workstealing/kaapi_sched_stealframe.c \

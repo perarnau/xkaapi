@@ -121,11 +121,12 @@ int main(int ac, char** av)
   stop = kaapic_get_time();
 #endif
   
-  kaapic_finalize();
   
 #if CONFIG_BENCH
   printf("time: %lf\n", stop - start);
 #endif
   
+  kaapic_finalize();
+
   return 0;
 }
