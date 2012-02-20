@@ -51,6 +51,11 @@
 void kaapi_taskadapt_body(void* sp, kaapi_thread_t* thread, kaapi_task_t* pc)
 {
   kaapi_taskadaptive_arg_t* arg = (kaapi_taskadaptive_arg_t*)sp;
+
+#if defined(KAAPI_DEBUG)
+  kaapi_stealcontext_t* sc = (kaapi_stealcontext_t*)arg->shared_sc.data;
+  kaapi_assert( KAAPI_ATOMIC_READ(&sc->thieves.count) >= 0 ); /* may be steal... */
+#endif
   
   /* here invariant thread->stack.sfp->pc == pc ??? */
   ((kaapi_task_body_internal_t)arg->user_body)( arg->user_sp, thread, pc );

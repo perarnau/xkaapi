@@ -66,8 +66,8 @@ void kaapi_taskfinalize_body( void* sp, kaapi_thread_t* thread )
 */
 void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
 {
-  kaapi_taskmerge_arg_t* const arg = (kaapi_taskmerge_arg_t*)sp;
-  kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)arg->shared_sc.data;
+  kaapi_taskmerge_arg_t* const arg    = (kaapi_taskmerge_arg_t*)sp;
+  kaapi_stealcontext_t* const sc      = (kaapi_stealcontext_t*)arg->shared_sc.data;
   kaapi_processor_t* const self_kproc = kaapi_get_current_processor();
 
   /* Synchronize with the theft on the current thread.
@@ -114,10 +114,7 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
   }
   
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->thieves.count) == 0);
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->msc->thieves.count) >= 0);
-
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->thieves.count) == 0);
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->msc->thieves.count) >= 0);
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->msc->thieves.count) > 0);
 
   /* Else finalization of a thief: signal the master */
   if ( sc->flag == KAAPI_SC_PREEMPTION)

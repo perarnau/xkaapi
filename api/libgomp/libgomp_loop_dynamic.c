@@ -45,6 +45,7 @@
 
 
 #define KAAPI_GOMP_USE_TASK 1
+#define USE_KPROC_LOCK 1
 
 
 /* General comment on: http://gcc.gnu.org/onlinedocs/libgomp/Implementing-FOR-construct.html
