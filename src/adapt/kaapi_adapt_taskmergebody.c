@@ -97,6 +97,7 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
       return;
     }
 
+    /* TG: NOT REQUIRED HERE ? */
     /* not a preemptive algorithm. push a finalization task
        to wait for thieves and block until finalization done.
        
@@ -104,10 +105,11 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
        and then it spawn taskfinalize_body... seems to be inconsistant
        and the following task body may be inlined...
     */
-    kaapi_task_init(
+    kaapi_task_init_with_flag(
       kaapi_thread_toptask(thread), 
       kaapi_taskfinalize_body, 
-      sp
+      sp,
+      KAAPI_TASK_UNSTEALABLE
     );
     kaapi_thread_pushtask(thread);
     return;
