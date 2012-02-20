@@ -1073,8 +1073,13 @@ void* kaapi_task_begin_adaptive(
 
 /** \ingroup ADAPTIVE
     Mark the end of the adaptive section of code.
-    After the call to this function, all thieves have finish to compute in parallel,
-    and memory location produced in concurrency may be read by the calling thread.
+    After the call to this function, the runtime pushed task to wait completion
+    of all thieves. This function is non blocking instructio.
+    The caller that want to wait for real completion must call kaapi_sched_sync
+    or derivative function.
+    Atfer sync, all memory location produced in concurrency may be read 
+    by the calling thread. Before synchronization, the runtime does not guarantee
+    anything.
     \param context [IN] should be the context returned by kaapi_task_begin_adaptive
     \retval EAGAIN iff at least one thief was not preempted.
     \retval 0 iff all the thieves haved finished.

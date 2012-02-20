@@ -83,6 +83,12 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
       return;
     }
 
+    /* ensure all working thieves are done.
+     */
+    while (KAAPI_ATOMIC_READ(&sc->thieves.count))
+      kaapi_slowdown_cpu();
+
+#if 0 //OLD: inline this call just above 
     /* TG: NOT REQUIRED HERE ? */
     /* not a preemptive algorithm. push a finalization task
        to wait for thieves and block until finalization done.
@@ -98,6 +104,7 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
       KAAPI_TASK_UNSTEALABLE
     );
     kaapi_thread_pushtask(thread);
+#endif
     return;
   }
 
