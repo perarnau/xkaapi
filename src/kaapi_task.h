@@ -816,6 +816,9 @@ typedef struct kaapi_stealcontext_t {
       kaapi_thiefadaptcontext_t* tail __attribute__((aligned(sizeof(void*))));
     } list;
   } thieves;
+#if defined(KAAPI_DEBUG)
+  int version;
+#endif
 
 } kaapi_stealcontext_t __attribute__((aligned(sizeof(intptr_t))));
 

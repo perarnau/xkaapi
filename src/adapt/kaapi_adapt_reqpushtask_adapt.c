@@ -78,6 +78,10 @@ int kaapi_request_pushtask_adaptive(
   sc = (kaapi_stealcontext_t*)adapt_arg->shared_sc.data;
   sc->msc  = ((kaapi_stealcontext_t*)victim_adapt_arg->shared_sc.data)->msc;
 
+#if defined(KAAPI_DEBUG)
+  sc->version = sc->msc->version; 
+#endif
+
   if (kaapi_task_is_withpreemption(victim_task) && !kaapi_task_is_withpreemption(toptask))
   {
     toptask->u.s.flag = KAAPI_TASK_S_PREEMPTION;

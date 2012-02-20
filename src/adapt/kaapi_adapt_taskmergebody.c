@@ -137,10 +137,15 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
     */
     kaapi_writemem_barrier();
 
+#if defined(KAAPI_DEBUG)
+    kaapi_assert(sc->version == sc->msc->version );
+#endif
+
     /* here a remote read of sc->msc->thieves may be avoided if
        sc stores a  pointer to the master count.
     */
     kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->msc->thieves.count) > 0);
     KAAPI_ATOMIC_DECR(&sc->msc->thieves.count);
+
   }
 }
