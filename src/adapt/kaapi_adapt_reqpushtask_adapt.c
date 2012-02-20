@@ -78,8 +78,12 @@ int kaapi_request_pushtask_adaptive(
   sc = (kaapi_stealcontext_t*)adapt_arg->shared_sc.data;
   sc->msc  = ((kaapi_stealcontext_t*)victim_adapt_arg->shared_sc.data)->msc;
 
+  KAAPI_ATOMIC_INCR(&sc->msc->thieves.count);
+
 #if defined(KAAPI_DEBUG)
   sc->version = sc->msc->version; 
+  kaapi_assert(sc->msc->state == 1);
+  sc->state = 1;
 #endif
 
   if (kaapi_task_is_withpreemption(victim_task) && !kaapi_task_is_withpreemption(toptask))
@@ -134,7 +138,6 @@ int kaapi_request_pushtask_adaptive(
   else
   {
     sc->ktr = 0;
-    KAAPI_ATOMIC_INCR(&sc->msc->thieves.count);
   }
   
   return 0;
