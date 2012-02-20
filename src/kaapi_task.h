@@ -342,7 +342,7 @@ static inline void kaapi_task_set_splittable(kaapi_task_t* task)
 
 static inline void kaapi_task_unset_splittable(kaapi_task_t* task)
 { 
-  task->u.s.flag &= KAAPI_TASK_SPLITTABLE_MASK; 
+  task->u.s.flag &= ~KAAPI_TASK_SPLITTABLE_MASK; 
 }
 
 static inline int kaapi_task_is_withpreemption(kaapi_task_t* task)
