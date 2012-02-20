@@ -68,6 +68,10 @@ static int kaapi_adaptivetask_splitter_2_usersplitter(
   );
 }
 
+#if defined(KAAPI_DEBUG)
+static int volatile global_version = 0;
+#endif
+
 
 /* Ancienne interface basee sur la nouvelle api des taches adaptatives.
    - la creation d'une tache adaptative cree 2 taches
@@ -121,6 +125,10 @@ void* kaapi_task_begin_adaptive
     /* ... otherwise thief count */
     KAAPI_ATOMIC_WRITE(&sc->thieves.count, 0);
   }
+
+#if defined(KAAPI_DEBUG)
+  sc->version = ++global_version; // assume only main thread incr global_version
+#endif
 
 /*
   ICI mettre le code de 'split before publishing the task'
