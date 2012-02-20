@@ -142,6 +142,8 @@ static int kaapi_setup_param()
       kaapi_default_param.wsselect = &kaapi_sched_select_victim_hierarchy;
     else if (strcmp(wsselect, "hws") ==0)
       kaapi_default_param.wsselect = &kaapi_sched_select_victim_hwsn;
+    else if (strcmp(wsselect, "aff") ==0)
+      kaapi_default_param.wsselect = &kaapi_sched_select_victim_aff;
 
     else {
       fprintf(stderr, "***Kaapi: bad value for variable KAAPI_WSSELECT\n");

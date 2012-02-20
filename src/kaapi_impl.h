@@ -570,6 +570,13 @@ extern int kaapi_sched_select_victim_hwsn(
     kaapi_selecvictim_flag_t flag 
 );
 
+/* experimental: */
+extern int kaapi_sched_select_victim_aff( 
+    kaapi_processor_t* kproc, 
+    kaapi_victim_t* victim, 
+    kaapi_selecvictim_flag_t flag 
+);
+
 /** \ingroup WS
     Enter in the infinite loop of trying to steal work.
     Never return from this function...
