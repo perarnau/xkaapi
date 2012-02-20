@@ -44,13 +44,20 @@
 #include "libgomp.h"
 #include <stdio.h>
 
+/* Implementation note.
+    This functions are called by all threads.
+    Only the master thread call kaapic_foreach_workend in order
+    to destroy global team information...
+   TG.
+*/
 void GOMP_loop_end (void)
 {
 //  printf("%s:: \n", __FUNCTION__);
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_context_t* const self_thread = kproc->thread;
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
-  kaapic_foreach_workend( self_thread, ctxt->workshare.lwork);
+  if (ctxt->threadid == 0)
+    kaapic_foreach_workend( self_thread, ctxt->workshare.lwork);
 }
 
 void GOMP_loop_end_nowait (void)
@@ -59,5 +66,6 @@ void GOMP_loop_end_nowait (void)
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_context_t* const self_thread = kproc->thread;
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
-  kaapic_foreach_workend( self_thread, ctxt->workshare.lwork);
+  if (ctxt->threadid == 0)
+    kaapic_foreach_workend( self_thread, ctxt->workshare.lwork);
 }

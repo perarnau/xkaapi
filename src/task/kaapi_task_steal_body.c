@@ -273,7 +273,9 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     body( copy_task_args, thread);
   }
 
-  /* push task that will be executed after all created task by the user task */
+  /* push task that will be executed after all created tasks spawned
+     by the user task 'body'
+  */
   task = kaapi_thread_toptask( thread );
   kaapi_task_init( task, (kaapi_task_body_t)kaapi_taskwrite_body, arg );
   kaapi_thread_pushtask( thread );
