@@ -138,7 +138,14 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
     /* here a remote read of sc->msc->thieves may be avoided if
        sc stores a  pointer to the master count.
     */
+#if 0
+    int v0 = KAAPI_ATOMIC_READ(&sc->msc->thieves.count);
     kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->msc->thieves.count) > 0);
+#endif
     KAAPI_ATOMIC_DECR(&sc->msc->thieves.count);
+#if 0
+    int v1 = KAAPI_ATOMIC_READ(&sc->msc->thieves.count);
+    printf("%i end, cnt=%i -> cnt=%i\n", self_kproc->kid, v0, v1);
+#endif
   }
 }
