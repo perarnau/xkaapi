@@ -61,8 +61,8 @@ int kaapi_task_end_adaptive( void* arg )
 
 /* TODO: clear task stealable & splittable attribute first ? 
 */
-  kaapi_task_set_unstealable( task_adapt );
-  kaapi_task_unset_splittable( task_adapt ); 
+//  kaapi_task_set_unstealable( task_adapt );
+//  kaapi_task_unset_splittable( task_adapt ); 
   
   /* create the merge task : avoid to push the task_adapt in order
      to avoid its visibility before creation of the merge task.
