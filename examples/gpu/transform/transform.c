@@ -668,7 +668,7 @@ main_adaptive_entry(unsigned int* base, unsigned int nelem)
     while (next_seq(work) != -1)
       ;
 
-    kaapi_task_end_adaptive(ksc);
+    kaapi_task_end_adaptive( thread, ksc);
 
     /* wait for thieves */
     kaapi_sched_sync();
@@ -687,7 +687,7 @@ main_adaptive_entry(unsigned int* base, unsigned int nelem)
     while (next_seq(work) != -1)
       ;
 
-    kaapi_task_end_adaptive(ksc);
+    kaapi_task_end_adaptive(thread, ksc);
 
     /* wait for thieves */
     kaapi_sched_sync();
@@ -706,7 +706,7 @@ main_adaptive_entry(unsigned int* base, unsigned int nelem)
     while (next_seq(work) != -1)
       ;
 
-    kaapi_task_end_adaptive(ksc);
+    kaapi_task_end_adaptive(thread, ksc);
 
     /* wait for thieves */
     kaapi_sched_sync();

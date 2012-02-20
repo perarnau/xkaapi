@@ -192,7 +192,7 @@ static void for_each( double* array, size_t size, void (*op)(double*) )
   while (!extract_seq(&work, &pos, &end))
     common_entry(pos, end, op);
   
-  kaapi_task_end_adaptive(sc);
+  kaapi_task_end_adaptive(thread, sc);
 
   /* wait for thieves */
   kaapi_sched_sync();

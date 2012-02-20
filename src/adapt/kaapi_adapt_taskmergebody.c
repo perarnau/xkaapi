@@ -42,6 +42,7 @@
  */
 #include "kaapi_impl.h"
 
+#if 0// OLD: code was inlined
 /**
 */
 void kaapi_taskfinalize_body( void* sp, kaapi_thread_t* thread )
@@ -57,7 +58,7 @@ void kaapi_taskfinalize_body( void* sp, kaapi_thread_t* thread )
     kaapi_slowdown_cpu();
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->thieves.count) == 0);
 }
-
+#endif
 
 /* Merge body task: arg is the steal context
 */

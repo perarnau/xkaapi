@@ -1074,7 +1074,7 @@ void* kaapi_task_begin_adaptive(
 /** \ingroup ADAPTIVE
     Mark the end of the adaptive section of code.
     After the call to this function, the runtime pushed task to wait completion
-    of all thieves. This function is non blocking instructio.
+    of all thieves. This function is non blocking instruction.
     The caller that want to wait for real completion must call kaapi_sched_sync
     or derivative function.
     Atfer sync, all memory location produced in concurrency may be read 
@@ -1084,7 +1084,10 @@ void* kaapi_task_begin_adaptive(
     \retval EAGAIN iff at least one thief was not preempted.
     \retval 0 iff all the thieves haved finished.
 */
-extern int kaapi_task_end_adaptive( void* context );
+extern int kaapi_task_end_adaptive( 
+    kaapi_thread_t* thread,
+    void*           context 
+);
 
 /** \ingroup ADAPTIVE
     The function kaapi_request_taskarg() return the pointer to the thief task arguments.

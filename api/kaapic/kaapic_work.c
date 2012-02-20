@@ -948,7 +948,10 @@ redo_local_work:
   }
 
   /* push task to wait for thieves */
-  kaapi_task_end_adaptive(lwork->context);
+  kaapi_task_end_adaptive(
+    kaapi_threadcontext2thread(self_thread), 
+    lwork->context
+  );
   
   /* wait non blocking task spawn in end_adaptive */
   kaapi_sched_sync_(self_thread);

@@ -396,6 +396,7 @@ int main(int argc, char **argv)
               SageBuilder::buildVoidType(),
               SageBuilder::buildFunctionParameterList( 
                   SageBuilder::buildFunctionParameterTypeList( 
+                    SageBuilder::buildPointerType(kaapi_thread_ROSE_type),
                     SageBuilder::buildPointerType(kaapi_stealcontext_ROSE_type)
                   )
               ),

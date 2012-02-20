@@ -47,14 +47,20 @@
 
 /**
 */
-int kaapi_task_end_adaptive( void* arg )
+int kaapi_task_end_adaptive( 
+    kaapi_thread_t* thread,
+    void* arg 
+)
 {
   kaapi_task_t* task_merge;
   kaapi_task_t* task_adapt;
   kaapi_taskbegendadaptive_arg_t* adap_arg;
   kaapi_taskmerge_arg_t* merge_arg;
+
+#if 0 // OLD: see below
   kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
   kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
+#endif
 
   task_adapt = (kaapi_task_t*)arg;
   adap_arg = kaapi_task_getargst(task_adapt, kaapi_taskbegendadaptive_arg_t);

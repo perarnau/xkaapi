@@ -340,7 +340,7 @@ static void prefix(const double* iarray, double* oarray, size_t size)
   kaapi_sched_sync();
 #endif
 
-  kaapi_task_end_adaptive(sc);
+  kaapi_task_end_adaptive(thread, sc);
 
   /* wait for thieves */
   kaapi_sched_sync();
