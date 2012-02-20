@@ -452,6 +452,9 @@ static void _kaapic_thief_entrypoint(
   /* work info */
   const kaapic_work_info_t* const wi = &gwork->wi;
 
+  /* extra init */
+  lwork->workdone = 0;
+
   /* retrieve tid */
   kaapi_assert_debug(kaapi_get_self_kid() == lwork->tid);
 
