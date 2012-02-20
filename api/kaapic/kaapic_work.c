@@ -472,6 +472,7 @@ redo_local_work:
     gwork->body_f((int)i, (int)j, (int)lwork->tid, gwork->body_args);
   }
 
+  kaapi_writemem_barrier();
   /* */
   KAAPI_SET_SELF_WORKLOAD(0);
 //  printf("Work finish: work done:%i\n", lwork->workdone);
