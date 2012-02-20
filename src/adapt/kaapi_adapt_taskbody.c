@@ -59,26 +59,5 @@ printf("%s\n", __PRETTY_FUNCTION__ );
 #endif
   
   /* here invariant thread->stack.sfp->pc == pc ??? */
-  ((kaapi_task_body_internal_t)arg->user_body)( arg->user_sp, thread, pc );
-  
-  /* once finished: mark unsplittable the task */
-  kaapi_task_unset_splittable(pc);
-  
-  /* if preemption, mark task as finished */
-  if (kaapi_task_is_withpreemption(pc))
-  {
-    kaapi_stealcontext_t* sc = (kaapi_stealcontext_t*)arg->shared_sc.data;
-    kaapi_thiefadaptcontext_t* ktr = sc->ktr;
-    if (ktr !=0)
-    {
-      kaapi_atomic_lock( &ktr->lock );
-      ktr->thief_of_the_thief_head = sc->thieves.list.head;
-      ktr->thief_of_the_thief_tail = sc->thieves.list.tail;
-      ktr->arg_from_thief = arg->user_sp;
-      kaapi_atomic_unlock( &ktr->lock );
-    }
-    else {
-      kaapi_assert_debug( sc == sc->msc );
-    }
-  }
+  ((kaapi_task_body_internal_t)arg->user_body)( arg->user_sp, thread, pc );    
 }
