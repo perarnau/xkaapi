@@ -62,4 +62,5 @@ void kaapi_tasksignaladapt_body(void* sp, kaapi_thread_t* thread)
   */
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&msc->thieves.count) > 0);
   KAAPI_ATOMIC_DECR(&msc->thieves.count);
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&msc->thieves.count) >= 0);
 }
