@@ -446,6 +446,9 @@ static void _kaapic_thief_entrypoint(
   kaapic_local_work_t* const lwork = (kaapic_local_work_t*)arg;
   kaapic_global_work_t* const gwork = lwork->global;
   
+  /* extra init: */
+  lwork->workdone = 0;
+  
   /* work info */
   const kaapic_work_info_t* const wi = &gwork->wi;
 
@@ -464,6 +467,7 @@ static void _kaapic_thief_entrypoint(
   /* while there is sequential work to do in local work */
   while (kaapi_workqueue_pop(&lwork->cr, &i, &j, wi->seq_grain) ==0)
   {
+    kaapi_assert_debug(i < j);
     KAAPI_SET_SELF_WORKLOAD(kaapi_workqueue_size(&lwork->cr));
     lwork->workdone += j-i;
 redo_local_work:
