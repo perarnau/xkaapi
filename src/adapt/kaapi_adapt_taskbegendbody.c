@@ -48,4 +48,5 @@
 */
 void kaapi_taskbegendadapt_body( void* sp, kaapi_thread_t* thread, kaapi_task_t* task)
 {
+  kaapi_task_unset_splittable(task);
 }
