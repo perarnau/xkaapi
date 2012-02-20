@@ -51,7 +51,6 @@
 void kaapi_taskadapt_body(void* sp, kaapi_thread_t* thread, kaapi_task_t* pc)
 {
   kaapi_taskadaptive_arg_t* arg = (kaapi_taskadaptive_arg_t*)sp;
-printf("%s\n", __PRETTY_FUNCTION__ );
 
 #if defined(KAAPI_DEBUG)
   kaapi_stealcontext_t* sc = (kaapi_stealcontext_t*)arg->shared_sc.data;
