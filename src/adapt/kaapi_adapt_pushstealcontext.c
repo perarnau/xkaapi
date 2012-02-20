@@ -94,6 +94,9 @@ void* kaapi_task_begin_adaptive
     
   /* */
   kaapi_taskbegendadaptive_arg_t* adap_arg;
+
+  /* new frame for all tasks between begin..end */
+  kaapi_thread_push_frame();
       
   /* allocated tasks' args */
   adap_arg = (kaapi_taskbegendadaptive_arg_t*)kaapi_thread_pushdata

@@ -63,7 +63,8 @@ kaapi_thread_t* kaapi_thread_push_frame( void )
 kaapi_thread_t*  kaapi_thread_pop_frame( void )
 {
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
-  return (kaapi_thread_t*)--thread->stack.sfp;
-  return 0;  
+  kaapi_thread_t* retval = (kaapi_thread_t*)--thread->stack.sfp;
+  kaapi_synchronize_steal_thread( thread );
+  return retval;  
 }
 
