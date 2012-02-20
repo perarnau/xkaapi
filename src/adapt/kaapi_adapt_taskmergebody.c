@@ -67,9 +67,6 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
   kaapi_stealcontext_t* const sc      = (kaapi_stealcontext_t*)arg->shared_sc.data;
   kaapi_processor_t* const self_kproc = kaapi_get_current_processor();
 
-  /* once finished: mark unsplittable the task */
-  kaapi_task_unset_splittable(pc);
-
   /* If master thread */
   if (sc->msc == sc )
   {

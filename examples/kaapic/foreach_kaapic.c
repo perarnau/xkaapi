@@ -89,7 +89,9 @@ int main(int ac, char** av)
     for (i = 0; i < 10; ++i)
 #endif
     {
-     if (i % 100 ==0) printf("------------%i\n", i);
+     if (i % 10 ==0) fputc('.',stdout);
+     if (i % 100 ==0) fflush(stdout);
+     if (i % 1000 ==0) printf("%i\n", i);
 #if CONFIG_TERM_BUG
       global_check = (void*)(uintptr_t)i;
       //OLD    kaapic_foreach(fu, 0, size - 1, 3, array, &one, global_check);
