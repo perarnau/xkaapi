@@ -818,6 +818,7 @@ typedef struct kaapi_stealcontext_t {
   } thieves;
 #if defined(KAAPI_DEBUG)
   int version;
+  int volatile state;   /* 0 term */
 #endif
 
 } kaapi_stealcontext_t __attribute__((aligned(sizeof(intptr_t))));

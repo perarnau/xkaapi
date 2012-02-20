@@ -50,9 +50,6 @@ void kaapi_taskfinalize_body( void* sp, kaapi_thread_t* thread )
   kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)merge_arg->shared_sc.data;
   kaapi_assert_debug(!(sc->flag & KAAPI_SC_PREEMPTION));
   
-  /* avoid read reordering */
-  kaapi_writemem_barrier();
-
   /* ensure all working thieves are done. the steal
      sync has been done in kaapi_task_end_adaptive
    */
@@ -139,6 +136,8 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
 
 #if defined(KAAPI_DEBUG)
     kaapi_assert(sc->version == sc->msc->version );
+    kaapi_assert(sc->msc->state == 1);
+    kaapi_mem_barrier();
 #endif
 
     /* here a remote read of sc->msc->thieves may be avoided if

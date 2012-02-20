@@ -64,14 +64,6 @@ int kaapi_task_end_adaptive( void* arg )
   kaapi_task_set_unstealable( task_adapt );
   kaapi_task_unset_splittable( task_adapt ); 
   
-  /* Synchronize with thief : why here ? to put inside kaapi_sched_sync ?
-  */
-#if 0
-  kaapi_synchronize_steal(self_thread->stack.proc);
-#else
-  kaapi_synchronize_steal_thread(self_thread);
-#endif
-
   /* create the merge task : avoid to push the task_adapt in order
      to avoid its visibility before creation of the merge task.
      - the merge task has the SC structure as parameter, not the task_adapt
@@ -99,6 +91,7 @@ int kaapi_task_end_adaptive( void* arg )
 #if defined(KAAPI_DEBUG)
   kaapi_stealcontext_t* sc = (kaapi_stealcontext_t*)merge_arg->shared_sc.data;
   kaapi_assert_debug( KAAPI_ATOMIC_READ( &sc->thieves.count ) == 0 );
+  sc->state = 0;
 #endif
 
   return 0;
