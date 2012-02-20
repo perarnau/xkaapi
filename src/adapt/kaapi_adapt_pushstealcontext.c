@@ -95,8 +95,10 @@ void* kaapi_task_begin_adaptive
   /* */
   kaapi_taskbegendadaptive_arg_t* adap_arg;
 
+#if 0 //OLD is user spawns tasks, then he should call sync
   /* new frame for all tasks between begin..end */
   kaapi_thread_push_frame();
+#endif
       
   /* allocated tasks' args */
   adap_arg = (kaapi_taskbegendadaptive_arg_t*)kaapi_thread_pushdata

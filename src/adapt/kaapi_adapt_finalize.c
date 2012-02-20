@@ -59,9 +59,6 @@ int kaapi_task_end_adaptive( void* arg )
   task_adapt = (kaapi_task_t*)arg;
   adap_arg = kaapi_task_getargst(task_adapt, kaapi_taskbegendadaptive_arg_t);
 
-/* TODO: clear task stealable & splittable attribute first ? 
-*/
-  kaapi_task_set_unstealable( task_adapt );
   kaapi_task_unset_splittable( task_adapt ); 
   
   /* create the merge task : avoid to push the task_adapt in order
@@ -85,12 +82,14 @@ int kaapi_task_end_adaptive( void* arg )
   /* memory barrier done by kaapi_thread_pushtask */
   kaapi_thread_pushtask(thread);
 
+#if 0 //OLD is user spawns tasks, then he should call sync
   /* force execution of all previously pushed task of the frame */
   kaapi_sched_sync_(self_thread);
   kaapi_thread_pop_frame();
 
   /* force execution of all previously pushed task of the frame */
   kaapi_task_markterm(task_adapt); 
+#endif
 
 #if defined(KAAPI_DEBUG)
   kaapi_stealcontext_t* sc = (kaapi_stealcontext_t*)merge_arg->shared_sc.data;
