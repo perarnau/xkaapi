@@ -45,7 +45,7 @@
 #include "kaapi_impl.h"
 
 
-/**
+/** WARNING: non blocking call !!
 */
 int kaapi_task_end_adaptive( 
     kaapi_thread_t* thread,
@@ -56,11 +56,6 @@ int kaapi_task_end_adaptive(
   kaapi_task_t* task_adapt;
   kaapi_taskbegendadaptive_arg_t* adap_arg;
   kaapi_taskmerge_arg_t* merge_arg;
-
-#if 0 // OLD: see below
-  kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
-  kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
-#endif
 
   task_adapt = (kaapi_task_t*)arg;
   adap_arg = kaapi_task_getargst(task_adapt, kaapi_taskbegendadaptive_arg_t);
@@ -87,15 +82,6 @@ int kaapi_task_end_adaptive(
 
   /* memory barrier done by kaapi_thread_pushtask */
   kaapi_thread_pushtask(thread);
-
-#if 0 //OLD is user spawns tasks, then he should call sync
-  /* force execution of all previously pushed task of the frame */
-  kaapi_sched_sync_(self_thread);
-  kaapi_thread_pop_frame();
-
-  /* force execution of all previously pushed task of the frame */
-  kaapi_task_markterm(task_adapt); 
-#endif
 
   return 0;
 }

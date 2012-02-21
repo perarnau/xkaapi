@@ -60,6 +60,7 @@ void kaapi_taskfinalize_body( void* sp, kaapi_thread_t* thread )
 }
 #endif
 
+
 /* Merge body task: arg is the steal context
 */
 void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
@@ -68,11 +69,23 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
   kaapi_stealcontext_t* const sc      = (kaapi_stealcontext_t*)arg->shared_sc.data;
   kaapi_processor_t* const self_kproc = kaapi_get_current_processor();
 
-  /* If master thread */
+  /* Not a master thread... 
+    - merge task > adapt body task
+    - adapt body task has setted unsplittable on it self
+    - no theft is under stealing after synchronize point 
+    - master counter or list of thief is correctly setted.
+  */
+#if 0
+  kaapi_synchronize_steal(self_kproc);
+#else
+  kaapi_synchronize_steal_thread(self_kproc->thread);
+#endif
+
+  /* If I'm the master task */
   if (sc->msc == sc )
   {
     /* if this is a preemptive algorithm, it is assumed the
-       user has preempted all the children (not doing so is
+       user has preempted all the thieves (not doing so is
        an error). we restore the frame and return without
        waiting for anyting.
      */
@@ -84,7 +97,8 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
       return;
     }
 
-    /* ensure all working thieves are done.
+    /* Ensure all thieves are done.
+       Optimization: this mergetask must becomes steal when
      */
     while (KAAPI_ATOMIC_READ(&sc->thieves.count))
       kaapi_slowdown_cpu();
@@ -92,39 +106,13 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
     sc->state = 0;
 #endif
 
-#if 0 //OLD: inline this call just above 
-    /* TG: NOT REQUIRED HERE ? */
-    /* not a preemptive algorithm. push a finalization task
-       to wait for thieves and block until finalization done.
-       
-       TODO: not here task adaptmerge_body is spawn in end_adaptive,
-       and then it spawn taskfinalize_body... seems to be inconsistant
-       and the following task body may be inlined...
-    */
-    kaapi_task_init_with_flag(
-      kaapi_thread_toptask(thread), 
-      kaapi_taskfinalize_body, 
-      sp,
-      KAAPI_TASK_UNSTEALABLE
-    );
-    kaapi_thread_pushtask(thread);
-#endif
     return;
   }
-
-  /* Not a master thread... 
-     - no more theft is under stealing 
-     - master counter or list of thief is correctly setted.
-  */
-#if 0
-  kaapi_synchronize_steal(self_kproc);
-#else
-  kaapi_synchronize_steal_thread(self_kproc->thread);
-#endif
     
   /* Else finalization of a thief: signal the master */
   if ( sc->flag == KAAPI_SC_PREEMPTION)
   {
+    kaapi_assert_debug( 0 );
     kaapi_assert_debug( sc->ktr != 0);
     /* report local list of thief to the remote ktr and finish */
     kaapi_atomic_lock(&sc->ktr->lock);
@@ -136,10 +124,6 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
   else 
   {
     kaapi_assert_debug( sc->ktr == 0);
-
-    /* Then flush memory & signal master context
-    */
-    kaapi_writemem_barrier();
 
 #if defined(KAAPI_DEBUG)
     kaapi_assert(sc->version == sc->msc->version );
@@ -155,6 +139,10 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
     int v0 = KAAPI_ATOMIC_READ(&sc->msc->thieves.count);
     kaapi_assert_debug( v0 >0 );
 #endif
+
+    /* Then flush memory & signal master context
+    */
+    kaapi_writemem_barrier();
     KAAPI_ATOMIC_DECR(&sc->msc->thieves.count);
 
 #if defined(KAAPI_DEBUG)

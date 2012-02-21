@@ -44,6 +44,7 @@
 */
 #include "kaapi_impl.h"
 
+/* exported function to user land... */
 int kaapi_api_listrequest_iterator_count(
   struct kaapi_listrequest_iterator_t* lrrange
 )
