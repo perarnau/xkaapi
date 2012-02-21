@@ -158,10 +158,10 @@ komp_init_parallel_start (
   /* do not save the ctxt, assume just one top level ctxt */
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
 
-  thread = kaapi_threadcontext2thread(kproc->thread);
-
   /* push a new frame */
   kaapi_thread_push_frame_( kproc->thread );
+
+  thread = kaapi_threadcontext2thread(kproc->thread);
   
   /* init team information */
   kaapi_libkomp_teaminfo_t* teaminfo = 
