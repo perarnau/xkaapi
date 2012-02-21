@@ -164,6 +164,7 @@ int kaapic_global_work_pop
   kaapi_assert_debug(tid<KAAPI_MAX_PROCESSOR);
   int pos = gw->wa.tid2pos[tid];
   kaapi_assert_debug( pos >= 0 );
+  kaapi_assert_debug( pos<KAAPI_MAX_PROCESSOR );
   
   *i = gw->wa.startindex[pos];
   *j = gw->wa.startindex[pos+1];
@@ -205,8 +206,10 @@ static int kaapic_global_work_steal
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
-      kaapi_assert_debug( i< j );
+      kaapi_assert_debug( *i< *j );
+
 //      printf("Tid0 steal slice of %i\n",tidpos-1);
+
       /* success */
       return 1;
     }
@@ -461,7 +464,8 @@ static int _kaapic_split_task
 }
 
 
-/* thief entrypoint, lwork is already initialized */
+/* thief entrypoint, lwork is already initialized 
+*/
 static void _kaapic_thief_entrypoint(
   void*                 arg, 
   kaapi_thread_t*       thread,
@@ -471,6 +475,8 @@ static void _kaapic_thief_entrypoint(
   /* range to process */
   kaapi_workqueue_index_t i;
   kaapi_workqueue_index_t j;
+
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
 
   /* process the work */
   kaapic_local_work_t* const lwork = (kaapic_local_work_t*)arg;
@@ -489,9 +495,6 @@ static void _kaapic_thief_entrypoint(
   /* retrieve tid */
   kaapi_assert_debug(kaapi_get_self_kid() == lwork->tid);
 
-#if defined(KAAPI_DEBUG)
-  kaapi_processor_t* kproc = kaapi_get_current_processor();
-#endif
 #if defined(USE_KPROC_LOCK)
   kaapi_assert_debug( &kproc->lock == lwork->cr.lock );
 #else
@@ -513,23 +516,28 @@ redo_local_work:
   kaapi_writemem_barrier();
   /* */
   KAAPI_SET_SELF_WORKLOAD(0);
-//  printf("Work finish: work done:%i\n", lwork->workdone);
+
 #if defined(KAAPI_DEBUG)
   kaapi_assert(lwork->workdone >=0);
   uint64_t gwr = KAAPI_ATOMIC_READ(&gwork->workremain);
   kaapi_assert( gwr >= lwork->workdone );
 #endif
+
   KAAPI_ATOMIC_SUB(&gwork->workremain, lwork->workdone);
   kaapi_assert_debug(KAAPI_ATOMIC_READ(&gwork->workremain) >=0);
   lwork->workdone = 0;
+
   if (kaapic_foreach_globalwork_next( lwork, &i, &j ))
-  {
-//    printf("Master steal [%i, %i)\n", i, j);
     goto redo_local_work;
-  }
   
   /* suppress lwork reference */
   gwork->lwork[lwork->tid] = 0;
+  kaapi_task_unset_splittable(pc);
+  kaapi_synchronize_steal_thread(kproc->thread);
+
+  /* bypass scheduler: do the same things (unset/synch/membarrier) */
+  kaapi_writemem_barrier();
+  
   KAAPI_ATOMIC_DECR(&gwork->workerdone);
   
 #if defined(USE_KPROC_LOCK)
@@ -545,7 +553,7 @@ extern unsigned int kaapic_do_parallel;
 
 
 /* Initialize the global work:
-   - save the frame of the calling thread
+   - push a frame of the calling thread
    - allocate the global work into the stack
 */
 kaapic_global_work_t* kaapic_foreach_global_workinit
@@ -560,7 +568,6 @@ kaapic_global_work_t* kaapic_foreach_global_workinit
 {
   kaapic_global_work_t* gwork;
   kaapi_bitmap_value_t mask;
-  kaapi_frame_t save_frame;
   int sizemap;
 
   /* if empty gwork 
@@ -568,17 +575,19 @@ kaapic_global_work_t* kaapic_foreach_global_workinit
   if (first >= last) 
     return 0;
 
+  /* push a new frame.
+     will be poped at the terminaison 
+  */
   kaapi_thread_push_frame_( self_thread );
   
   /* is_format true if called from kaapif_foreach_with_format */
   kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
   int localtid = self_thread->stack.proc->kid;
 
-  /* save frame */
-//  kaapi_thread_save_frame(thread, &save_frame);
+  /* allocate the gwork */
   gwork = kaapi_thread_pushdata(thread, sizeof(kaapic_global_work_t));
   kaapi_assert_debug(gwork !=0);
-  gwork->frame = save_frame;
+  KAAPI_DEBUG_INST( memset(gwork, 0, sizeof(kaapic_global_work_t)) );
   
   /* work array, reserve range in [first,last) for each thief */
   if (attr == 0) attr = &kaapic_default_attr;
@@ -682,7 +691,13 @@ kaapic_local_work_t* kaapic_foreach_local_workinit
 
   lwork = kaapi_thread_pushdata(thread, sizeof(kaapic_local_work_t));
   kaapi_assert_debug(lwork !=0);
+  KAAPI_DEBUG_INST( memset(lwork, 0, sizeof(kaapic_local_work_t)) );
+
+  /* publish new local work */
+  lwork->context  = 0;
+  lwork->global     = gwork;
   lwork->workdone = 0;
+  lwork->tid        = tid;
 
   /* initialize the lwork */
 #if defined(USE_KPROC_LOCK)
@@ -700,15 +715,8 @@ kaapic_local_work_t* kaapic_foreach_local_workinit
   );
 #endif
 
-  /* publish new local work */
-  lwork->global     = gwork;
-  lwork->tid        = tid;
-
-  kaapi_writemem_barrier();
+  /* publish write */
   gwork->lwork[tid] = lwork;
-
-  /* begin a parallel region */
-  if (kaapic_do_parallel) kaapic_begin_parallel();
 
   return lwork;
 }  
@@ -729,15 +737,8 @@ kaapic_local_work_t* kaapic_foreach_workinit
 {
   kaapic_global_work_t* gwork;
   kaapic_local_work_t*  lwork;
-
-  /* if empty gwork 
-  */
-  if (first >= last) 
-    return 0;
-
   const int tid = self_thread->stack.proc->kid;
 
-//  printf("\n----------Work init\n");
   gwork = kaapic_foreach_global_workinit(
       self_thread, 
       first, 
@@ -746,21 +747,53 @@ kaapic_local_work_t* kaapic_foreach_workinit
       body_f, 
       body_args
   );
-  
-  if (gwork ==0) return 0;
+  kaapi_assert_debug(gwork !=0);
+
+  /* initialize the local workqueue with the first poped state */
   if (kaapic_global_work_pop( gwork, tid, &first, &last))
-    lwork = kaapic_foreach_local_workinit( self_thread, gwork, first, last );
-  else 
-    lwork = 0;
+  {    
+    /* */
+    lwork = kaapic_foreach_local_workinit( 
+                    self_thread, 
+                    gwork,
+                    first,
+                    last
+    );
+  }
+  else {
+    /* */
+    lwork = kaapic_foreach_local_workinit( 
+                    self_thread, 
+                    gwork,
+                    0,
+                    0
+    );
+  }
+  kaapi_assert_debug(lwork !=0);
+
+  /* start adaptive region */
+  lwork->context = kaapi_task_begin_adaptive(
+     kaapi_threadcontext2thread(self_thread), 
+     KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION,
+     _kaapic_split_task,
+     lwork
+  );
+
+  /* begin a parallel region */
+  if (kaapic_do_parallel) kaapic_begin_parallel();
 
   return lwork;
 }  
 
 
 int kaapic_foreach_local_workend(
+  kaapi_thread_context_t* self_thread,
   kaapic_local_work_t*    lwork
 )
 {
+  /* exec: task and wait end of adaptive task */
+  kaapi_sched_sync_(self_thread);
+
 #if defined(USE_KPROC_LOCK)
 #else
   kaapi_atomic_destroylock(&lwork->cr.lock);
@@ -768,25 +801,35 @@ int kaapic_foreach_local_workend(
   return 0;
 }
 
+/* Symetric of kaapic_foreach_workinit */
 int kaapic_foreach_workend
 (
   kaapi_thread_context_t* self_thread,
   kaapic_local_work_t*    lwork
 )
 {
-  memset((void*)&lwork->global->lwork, 0, sizeof(lwork->global->lwork));
-  kaapi_sched_sync_(self_thread);
+  /* push task to wait for thieves */
+  kaapi_task_end_adaptive(
+    kaapi_threadcontext2thread(self_thread), 
+    lwork->context
+  );
   
-  while (KAAPI_ATOMIC_READ(&lwork->global->workerdone) >0)
-    kaapi_slowdown_cpu();
+  /* exec: task and wait end of adaptive task */
+  kaapi_sched_sync_(self_thread);
 
   if (kaapic_do_parallel) 
     kaapic_end_parallel(KAAPI_SCHEDFLAG_DEFAULT);
-  else
+  
+  memset((void*)&lwork->global->lwork, 0, sizeof(lwork->global->lwork));
+
+  /* wait worker */
+  while (KAAPI_ATOMIC_READ(&lwork->global->workerdone) >0)
+    kaapi_slowdown_cpu();
+
+  /* after this instruction: global + local work disapear */
   kaapi_thread_pop_frame_( self_thread );
 
   /* must the thread that initialize the global work */
-//OLD  kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
   KAAPI_SET_SELF_WORKLOAD(0);
 
 #if defined(USE_KPROC_LOCK)
@@ -794,10 +837,6 @@ int kaapic_foreach_workend
   kaapi_atomic_destroylock(&lwork->cr.lock);
 #endif  
 
-/* restore frame */
-//  kaapi_thread_restore_frame(thread, &lwork->global->frame);
-
-//  printf("\n----------Work end\n");
   return 0;
 }
 
@@ -900,59 +939,22 @@ int kaapic_foreach_common
   kaapic_body_arg_t*      body_args
 )
 {
+  kaapic_global_work_t* gwork;
+  kaapic_local_work_t*  lwork;
+
   /* is_format true if called from kaapif_foreach_with_format */
   kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
   const int tid = self_thread->stack.proc->kid;
 
-  int seq_grain;
-  
-  /* warning: interval includes j */
-  kaapi_workqueue_index_t i;
-  kaapi_workqueue_index_t j;
-  
-  /* local work */
-  kaapic_local_work_t*  lwork;
-  kaapic_global_work_t* gwork;
-
-  gwork = kaapic_foreach_global_workinit(
-      self_thread, 
-      first, 
-      last, 
+  lwork = kaapic_foreach_workinit(
+      self_thread,
+      first,
+      last,
       attr, 
-      body_f, 
+      body_f,
       body_args
   );
-  kaapi_assert_debug(gwork !=0);
-
-  /* initialize the local workqueue with the first poped state */
-  if (kaapic_global_work_pop( gwork, tid, &first, &last))
-  {    
-    /* */
-    lwork = kaapic_foreach_local_workinit( 
-                    self_thread, 
-                    gwork,
-                    first,
-                    last
-    );
-  }
-  else {
-    /* */
-    lwork = kaapic_foreach_local_workinit( 
-                    self_thread, 
-                    gwork,
-                    0,
-                    0
-    );
-  }
   kaapi_assert_debug(lwork !=0);
-
-  /* start adaptive region */
-  lwork->context = kaapi_task_begin_adaptive(
-     kaapi_threadcontext2thread(self_thread), 
-     KAAPI_SC_CONCURRENT | KAAPI_SC_NOPREEMPTION,
-     _kaapic_split_task,
-     lwork
-  );
   
   /* process locally */
 #if defined(KAAPI_DEBUG)
@@ -961,43 +963,38 @@ int kaapic_foreach_common
 #endif
 
   gwork = lwork->global;
-  seq_grain = gwork->wi.seq_grain;
+  int seq_grain = gwork->wi.seq_grain;
   
   /* while there is sequential work to do in local work */
-  while (kaapi_workqueue_pop(&lwork->cr, &i, &j, seq_grain) ==0)
+  while (kaapi_workqueue_pop(&lwork->cr, 
+                &first, &last, seq_grain) ==0)
   {
     KAAPI_SET_SELF_WORKLOAD(kaapi_workqueue_size(&lwork->cr));
-    lwork->workdone += j-i;
+    lwork->workdone += last-first;
 redo_local_work:
-    kaapi_assert_debug( i < j );
+    kaapi_assert_debug( first < last );
     /* apply w->f on [i, j[ */
-    body_f((int)i, (int)j, (int)tid, body_args);
+    body_f((int)first, (int)last, (int)tid, body_args);
   }
   kaapi_assert_debug( kaapi_workqueue_isempty(&lwork->cr) );
 
   /* */
   KAAPI_SET_SELF_WORKLOAD(0);
-//  printf("Master finish: work done:%i\n", lwork->workdone);
+
 #if defined(KAAPI_DEBUG)
   kaapi_assert(lwork->workdone >=0);
   uint64_t gwr = KAAPI_ATOMIC_READ(&gwork->workremain);
   kaapi_assert( gwr >= lwork->workdone );
 #endif
+
+  /* update workload information */
   KAAPI_ATOMIC_SUB(&gwork->workremain, lwork->workdone);
   kaapi_assert_debug(KAAPI_ATOMIC_READ(&gwork->workremain) >=0);
   lwork->workdone = 0;
-  if (kaapic_foreach_globalwork_next( lwork, &i, &j ))
-  {
-//    printf("Master steal [%i, %i)\n", i, j);
-    goto redo_local_work;
-  }
 
-  /* push task to wait for thieves */
-  kaapi_task_end_adaptive(
-    kaapi_threadcontext2thread(self_thread), 
-    lwork->context
-  );
-  
+  if (kaapic_foreach_globalwork_next( lwork, &first, &last ))
+    goto redo_local_work;
+
   kaapic_foreach_workend( self_thread, lwork );
 
 #if CONFIG_FOREACH_STATS

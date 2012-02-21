@@ -131,6 +131,7 @@ typedef struct kaapic_task_info
   kaapic_arg_info_t args[1];
 } kaapic_task_info_t;
 
+
 /*
 */
 extern int kaapic_spawn_ti(
@@ -142,9 +143,11 @@ extern int kaapic_spawn_ti(
 
 /* work array distribution. allow for random access. 
    The thread tid has a reserved slice [first, last)
-   where
+   where:
      first = tid2pos[tid];
      last = startindex[tid2pos[tid]+1]-1; 
+  
+   tid2pos is a permutation to specify slice of each tid
 */
 typedef struct work_array
 {
@@ -183,10 +186,6 @@ typedef struct global_work
 
   /* infos container */
   kaapic_work_info_t wi;
-
-  /* thread context to restore */
-  kaapi_frame_t frame;
-
 } kaapic_global_work_t;
 
 
@@ -232,6 +231,7 @@ extern kaapic_global_work_t* kaapic_foreach_global_workinit
   kaapic_body_arg_t*      body_args
 );
 
+
 /* init local work if know global work.
    May be called by each runing threads that decide to cooperate together
    to execute in common a global work.
@@ -253,14 +253,6 @@ extern int kaapic_global_work_pop
   kaapi_workqueue_index_t* j
 );
 
-/* To be called by the caller of kaapic_foreach_local_workinit
-   that returns success
-*/
-extern int kaapic_foreach_local_workend(
-  kaapic_local_work_t*    lwork
-);
-
-
 /* 
   Return !=0 iff first and last have been filled for the next piece
   of work to execute
@@ -269,6 +261,15 @@ extern int kaapic_foreach_worknext(
   kaapic_local_work_t*    work,
   kaapi_workqueue_index_t* first,
   kaapi_workqueue_index_t* last
+);
+
+
+/* To be called by the caller of kaapic_foreach_local_workinit
+   that returns success
+*/
+extern int kaapic_foreach_local_workend(
+  kaapi_thread_context_t* self_thread,
+  kaapic_local_work_t*    lwork
 );
 
 

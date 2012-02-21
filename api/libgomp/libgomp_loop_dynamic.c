@@ -105,7 +105,6 @@ bool GOMP_loop_dynamic_start (
   long *iend
 )
 {  
-//  printf("%s:: \n", __FUNCTION__);
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_context_t* const self_thread = kproc->thread;
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
@@ -118,6 +117,9 @@ bool GOMP_loop_dynamic_start (
 
   if (ctxt->threadid ==0)
   {
+    /* TODO: automatic adaptation on the chunksize here
+       or (better) automatic adaptation in libkaapic
+    */
     kaapic_foreach_attr_t attr;
     kaapic_foreach_attr_init(&attr);
     if (1) { //(chunk_size == -1) {
@@ -140,10 +142,12 @@ bool GOMP_loop_dynamic_start (
     teaminfo->gwork = workshare->lwork->global;
   }
   else {
+    /* wait global work becomes ready */
     while (teaminfo->gwork ==0)
       kaapi_slowdown_cpu();
     kaapi_readmem_barrier();
     
+    /* get own slice */
     if (kaapic_global_work_pop( teaminfo->gwork, kproc->kid, istart, iend))
       workshare->lwork = kaapic_foreach_local_workinit( 
                               self_thread,
@@ -156,7 +160,7 @@ bool GOMP_loop_dynamic_start (
                               0, 0 );    
   }
 
-  /* pop next slice */
+  /* pop next range and start execution (on return...) */
   if (kaapic_foreach_worknext(
         workshare->lwork, 
         istart,
@@ -170,10 +174,11 @@ bool GOMP_loop_dynamic_start (
   return 0;
 }
 
+
+/*
+*/
 bool GOMP_loop_dynamic_next (long *istart, long *iend)
 {
-//  printf("%s:: \n", __FUNCTION__);
-
   kaapi_processor_t*   kproc = kaapi_get_current_processor();
   kaapi_libkompctxt_t* ctxt  = komp_get_ctxtkproc( kproc );
 
@@ -212,10 +217,6 @@ static void komp_trampoline_task_parallelfor
 
 
 /* TODO:
-   - this form may be used to avoid initial synchronisation at 
-   the expense of a longer critical path...
-   Only the main thread call it. All thread uses first 
-   GOMP_loop_dynamic_next to get initial range.
 */
 void GOMP_parallel_loop_dynamic_start (
           void (*fn) (void *), 
@@ -230,12 +231,11 @@ void GOMP_parallel_loop_dynamic_start (
   if (num_threads == 0)
     num_threads = gomp_nthreads_var;
 
-//  printf("%s:: numthread:%i \n", __FUNCTION__, num_threads);
-
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_context_t* const self_thread = kproc->thread;
   kaapi_thread_t* thread;
 
+  /* push a frame as parallel do it */
   kaapi_libkomp_teaminfo_t* teaminfo = 
       komp_init_parallel_start( kproc, num_threads );
 
@@ -257,55 +257,17 @@ void GOMP_parallel_loop_dynamic_start (
   kaapic_foreach_attr_set_grains( &attr, chunk_size, 1 );
   //kaapic_foreach_attr_set_grains( &attr, 256, 256); 
   
-  /* initialize the master work */
-  teaminfo->gwork = kaapic_foreach_global_workinit(
-      self_thread, 
+  workshare->lwork = kaapic_foreach_workinit(
+      self_thread,
       ka_start, 
       ka_end, 
       &attr, 
       0,     /* body */
       0      /* arg */
   );
-
-  /* initialize the local workqueue with the first poped state */
-  if (kaapic_global_work_pop(ctxt->teaminfo->gwork, kproc->kid, &start, &end))
-  {    
-    workshare->lwork = kaapic_foreach_local_workinit(
-        self_thread, 
-        teaminfo->gwork,
-        start,
-        end
-    );
-  }
-  else {
-    workshare->lwork = kaapic_foreach_local_workinit(
-        self_thread, 
-        teaminfo->gwork,
-        start,
-        end
-    );
-  }
-
-  if (kaapic_global_work_pop(teaminfo->gwork, kproc->kid, &start, &end))
-  {    
-#if defined(USE_KPROC_LOCK)
-    kaapi_workqueue_init_with_lock(
-      &workshare->lwork->cr,
-      start, end,
-      &kaapi_all_kprocessors[kproc->kid]->lock
-    );
-#else
-    kaapi_atomic_initlock(&workshare->lwork->lock);
-    kaapi_workqueue_init_with_lock(
-      &workshare->lwork->cr, 
-      start, end,
-      &workshare->lwork->lock
-    );
-#endif
-    workshare->lwork->global     = teaminfo->gwork;
-    workshare->lwork->tid        = kproc->kid;
-    teaminfo->gwork->lwork[kproc->kid] = workshare->lwork;
-  }
+  
+  /* initialize the master work */
+  teaminfo->gwork = workshare->lwork->global;
 
   /* create each task, as in GOMP_parallel_start 
      + arguments to initialize local context
@@ -362,7 +324,7 @@ static void komp_trampoline_task_parallelfor
   
   /* save context information */
   int save_numthreads = ctxt->numthreads;
-  int save_threadid = ctxt->threadid;
+  int save_threadid   = ctxt->threadid;
   kaapi_libkomp_teaminfo_t* save_teaminfo = ctxt->teaminfo;
   
   ctxt->numthreads         = taskarg->numthreads;
@@ -375,40 +337,31 @@ static void komp_trampoline_task_parallelfor
   kaapi_libkompworkshared_t* workshare = &ctxt->workshare;
   workshare->incr = taskarg->incr;
 
-  if (kaapic_global_work_pop(ctxt->teaminfo->gwork, kproc->kid, &start, &end))
-  {
-    /* only main thread of the team has initialized global work */
-    workshare->lwork = kaapic_foreach_local_workinit( 
-                            kproc->thread,
-                            ctxt->teaminfo->gwork,
-                            start,
-                            end
-    );
-  }
-  else {
-    /* only main thread of the team has initialized global work */
-    workshare->lwork = kaapic_foreach_local_workinit( 
-                            kproc->thread,
-                            ctxt->teaminfo->gwork,
-                            0,
-                            0
-    );
-  }
+  if (!kaapic_global_work_pop(ctxt->teaminfo->gwork, kproc->kid, &start, &end))
+    start = end = 0;
 
-//printf("In %s: begin call user code \n", __PRETTY_FUNCTION__ );
+  /* only main thread of the team has initialized global work */
+  workshare->lwork = kaapic_foreach_local_workinit( 
+                          kproc->thread,
+                          ctxt->teaminfo->gwork,
+                          start,
+                          end
+  );
+
   /* GCC compiled code */
   taskarg->fn(taskarg->data);
-//printf("In %s: end call user code \n", __PRETTY_FUNCTION__ );
 
-  if (ctxt->threadid !=0)
-  {
-    kaapic_foreach_local_workend( ctxt->workshare.lwork );
-    
-    /* Restore the initial context values. */
-    ctxt->numthreads         = save_numthreads;
-    ctxt->threadid           = save_threadid;
-    ctxt->teaminfo           = save_teaminfo;
-  }
+  kaapi_assert_debug(ctxt->threadid !=0);
+
+  kaapic_foreach_local_workend( 
+      kproc->thread,
+      ctxt->workshare.lwork 
+  );
+  
+  /* Restore the initial context values. */
+  ctxt->numthreads         = save_numthreads;
+  ctxt->threadid           = save_threadid;
+  ctxt->teaminfo           = save_teaminfo;
 }
 
 KAAPI_REGISTER_TASKFORMAT( komp_parallelfor_task_format,
