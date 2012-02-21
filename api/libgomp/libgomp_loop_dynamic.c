@@ -120,6 +120,10 @@ bool GOMP_loop_dynamic_start (
   {
     kaapic_foreach_attr_t attr;
     kaapic_foreach_attr_init(&attr);
+    if (chunk_size == -1) {
+      chunk_size=(ka_end-ka_start)/8*kaapi_getconcurrency();
+      if (chunk_size ==0) chunk_size = 1;
+    }
     kaapic_foreach_attr_set_grains( &attr, chunk_size, chunk_size );
         
     /* initialize the master if not already done */

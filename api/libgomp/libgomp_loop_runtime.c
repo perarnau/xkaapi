@@ -46,14 +46,13 @@
 
 bool GOMP_loop_runtime_start (
   long start, long end, long incr, 
-  long chunk_size, 
   long *istart, 
   long *iend
 )
 {
   return GOMP_loop_dynamic_start(
               start, end, incr,
-              chunk_size,
+              -1,
               istart, 
               iend );
 }
@@ -66,11 +65,11 @@ bool GOMP_loop_runtime_next (
   return GOMP_loop_dynamic_next(istart, iend);
 }
 
-void GOMP_parallel_loop_runtime_start 
+void GOMP_parallel_loop_runtime_start (
     void (*fn) (void *), 
     void *data,
     unsigned num_threads, 
-    long start, long end, long incr, long chunk_size
+    long start, long end, long incr
 )
 {
   GOMP_parallel_loop_dynamic_start( 
@@ -79,17 +78,25 @@ void GOMP_parallel_loop_runtime_start
           start, 
           end,
           incr,
-          chunk_size );
+          -1 );
 }
 
-bool GOMP_loop_ordered_runtime_start (long, long, long, long,
-					     long *, long *)
+bool GOMP_loop_ordered_runtime_start (
+  long start, long end, long incr, 
+  long *istart, 
+  long *iend
+)
 {
   printf("%s:: \n", __FUNCTION__);
+  return false;
 }
 
-bool GOMP_loop_ordered_runtime_next (long *, long *)
+bool GOMP_loop_ordered_runtime_next (
+  long *istart, 
+  long *iend
+)
 {
   printf("%s:: \n", __FUNCTION__);
+  return false;
 }
 
