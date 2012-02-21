@@ -206,8 +206,7 @@ static int kaapic_global_work_steal
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
-      kaapi_assert_debug( *i< *j );
-
+      kaapi_assert_debug( *i < *j );
 //      printf("Tid0 steal slice of %i\n",tidpos-1);
 
       /* success */
