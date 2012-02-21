@@ -328,6 +328,9 @@ static int _kaapic_split_task
   while ((tid = kaapi_bitmap_value_first1_and_zero(&replymask)) != 0)
   {
     --tid;
+
+    KAAPI_ATOMIC_INCR(&gwork->workerdone);
+
     /* use only get: the bitmap gwork->wa.map was updated atomically above */
     kaapic_global_getwork( gwork, tid, &first, &last );
     
@@ -369,6 +372,9 @@ static int _kaapic_split_task
   if (kaapi_listrequest_iterator_empty(lri))
     return 0;
   
+/* never executed !!! */
+kaapi_assert_debug(0);
+
   /* else: remaining requests in lri was already steal their replied  
      here is code to reply to thread that do not have reserved slice
   */
@@ -479,6 +485,7 @@ static void _kaapic_thief_entrypoint(
   /* extra init */
   lwork->workdone = 0;
 
+
   /* retrieve tid */
   kaapi_assert_debug(kaapi_get_self_kid() == lwork->tid);
 
@@ -523,6 +530,7 @@ redo_local_work:
   
   /* suppress lwork reference */
   gwork->lwork[lwork->tid] = 0;
+  KAAPI_ATOMIC_DECR(&gwork->workerdone);
   
 #if defined(USE_KPROC_LOCK)
 #else
@@ -597,6 +605,7 @@ kaapic_global_work_t* kaapic_foreach_global_workinit
   /* split the range in equal slices */
   range_size = last - first;
   KAAPI_ATOMIC_WRITE(&gwork->workremain, range_size);
+  KAAPI_ATOMIC_WRITE(&gwork->workerdone, 0);
 
   /* handle concurrency too high case */
   if (range_size < sizemap) sizemap = range_size;
@@ -767,9 +776,14 @@ int kaapic_foreach_workend
 {
   memset((void*)&lwork->global->lwork, 0, sizeof(lwork->global->lwork));
   kaapi_sched_sync_(self_thread);
+  
+  while (KAAPI_ATOMIC_READ(&lwork->global->workerdone) >0)
+    kaapi_slowdown_cpu();
 
   if (kaapic_do_parallel) 
     kaapic_end_parallel(KAAPI_SCHEDFLAG_DEFAULT);
+  else
+
   kaapi_thread_pop_frame_( self_thread );
 
   /* must the thread that initialize the global work */
@@ -985,9 +999,6 @@ redo_local_work:
     lwork->context
   );
   
-  /* wait non blocking task spawn in end_adaptive */
-  kaapi_sched_sync_(self_thread);
-
   kaapic_foreach_workend( self_thread, lwork );
 
 #if CONFIG_FOREACH_STATS
