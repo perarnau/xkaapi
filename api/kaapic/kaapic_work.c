@@ -559,13 +559,15 @@ kaapic_global_work_t* kaapic_foreach_global_workinit
   */
   if (first >= last) 
     return 0;
+
+  kaapi_thread_push_frame_( self_thread );
   
   /* is_format true if called from kaapif_foreach_with_format */
   kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
   int localtid = self_thread->stack.proc->kid;
 
   /* save frame */
-  kaapi_thread_save_frame(thread, &save_frame);
+//  kaapi_thread_save_frame(thread, &save_frame);
   gwork = kaapi_thread_pushdata(thread, sizeof(kaapic_global_work_t));
   kaapi_assert_debug(gwork !=0);
   gwork->frame = save_frame;
@@ -763,19 +765,22 @@ int kaapic_foreach_workend
   kaapic_local_work_t*    lwork
 )
 {
+  kaapi_sched_sync_(self_thread);
+  kaapi_thread_pop_frame_( self_thread );
+
   /* must the thread that initialize the global work */
-  kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
+//OLD  kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
   KAAPI_SET_SELF_WORKLOAD(0);
 
   if (kaapic_do_parallel) kaapic_end_parallel(0);
-  
+
 #if defined(USE_KPROC_LOCK)
 #else
   kaapi_atomic_destroylock(&lwork->cr.lock);
 #endif  
 
-  /* restore frame */
-  kaapi_thread_restore_frame(thread, &lwork->global->frame);
+/* restore frame */
+//  kaapi_thread_restore_frame(thread, &lwork->global->frame);
 
 //  printf("\n----------Work end\n");
   return 0;
