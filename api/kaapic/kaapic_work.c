@@ -765,14 +765,15 @@ int kaapic_foreach_workend
   kaapic_local_work_t*    lwork
 )
 {
-  kaapi_sched_sync_(self_thread);
+  if (kaapic_do_parallel) 
+    kaapic_end_parallel(KAAPI_SCHEDFLAG_DEFAULT);
+  else
+    kaapi_sched_sync_(self_thread);
   kaapi_thread_pop_frame_( self_thread );
 
   /* must the thread that initialize the global work */
 //OLD  kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
   KAAPI_SET_SELF_WORKLOAD(0);
-
-  if (kaapic_do_parallel) kaapic_end_parallel(0);
 
 #if defined(USE_KPROC_LOCK)
 #else

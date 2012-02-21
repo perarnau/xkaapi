@@ -158,7 +158,7 @@ komp_init_parallel_start (
   /* do not save the ctxt, assume just one top level ctxt */
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
 
-  /* push a new frame */
+  /* push a new frame before any push_data */
   kaapi_thread_push_frame_( kproc->thread );
 
   thread = kaapi_threadcontext2thread(kproc->thread);
@@ -271,11 +271,10 @@ GOMP_parallel_end (void)
 {
   kaapi_processor_t* kproc = kaapi_get_current_processor();
 
-  kaapi_sched_sync_(kproc->thread);
-  kaapi_thread_pop_frame_(kproc->thread);
-
   /* implicit sync */
-  kaapic_end_parallel (0);
+  kaapic_end_parallel (KAAPI_SCHEDFLAG_DEFAULT);
+
+  kaapi_thread_pop_frame_(kproc->thread);
 
   /* restore frame */
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
