@@ -410,6 +410,7 @@ static int _kaapic_split_task
 #endif
     return 0;
   }
+  kaapi_assert_debug(first < last);
   
 #if defined(USE_KPROC_LOCK)
 #else
@@ -426,8 +427,7 @@ static int _kaapic_split_task
     tw->tid = req->ident;
 #if defined(USE_KPROC_LOCK)
     kaapi_workqueue_init_with_lock
-      (&tw->cr, first, last, &kaapi_all_kprocessors[tw->tid]->lock);
-    kaapi_assert_debug(first < last);
+      (&tw->cr, last-unit_size, last, &kaapi_all_kprocessors[tw->tid]->lock);
 #else
     kaapi_atomic_initlock(&tw->lock);
     kaapi_workqueue_init_with_lock
