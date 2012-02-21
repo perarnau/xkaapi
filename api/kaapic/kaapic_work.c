@@ -187,12 +187,19 @@ static int kaapic_global_work_steal
      - any try to pop a slice closed to the tid of the thread
      - only 0 can pop a non poped slice
   */
-#if 0 /* caller has already pop and finish its slice */
+#if 1
+  /* caller has already pop and finish its slice, if it is 0 then may pop
+     the next non null entry
+  */
   int tid = kproc->kid;
-  kaapi_assert_debug(tid<KAAPI_MAX_PROCESSOR);
-  if (kaapic_global_work_pop(gwork, tid, i, j ))
-    /* success */
-    return 1;
+  if (tid == 0)
+  {
+    kaapi_assert_debug(tid<KAAPI_MAX_PROCESSOR);
+    int tidpos = kaapi_bitmap_first1_32( &gwork->wa.map );
+    if ((tidpos !=0) && kaapic_global_work_pop(gwork, tidpos-1, i, j ))
+      /* success */
+      return 1;
+  }
 #endif
     
   /* try to steal from a random selected local workqueue */
@@ -301,7 +308,7 @@ static int _kaapic_split_task
   kaapi_bitmap_value_and(&replymask, &mask);
   
   /* reply for first time to thread with reserved request (if !=0) */
-  while ((tid = kaapi_bitmap_first1_and_zero(&replymask)) != 0)
+  while ((tid = kaapi_bitmap_value_first1_and_zero(&replymask)) != 0)
   {
     --tid;
     /* use only get: the bitmap gwork->wa.map was updated atomically above */
