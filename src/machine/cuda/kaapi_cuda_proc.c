@@ -71,34 +71,40 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
   if ( (res = kaapi_cuda_dev_open( proc, idev)) != cudaSuccess )
     return res;
 
-  proc->stream_idx= 0;
+  proc->stream_htod_idx= 0;
   kaapi_cuda_sync();
-  if( proc->deviceProp.concurrentKernels ) {
-      int i;
-      proc->stream_max = KAAPI_CUDA_MAX_STREAMS;
-      for( i = 0; i < KAAPI_CUDA_MAX_STREAMS; i++ ) {
-	  res = cudaStreamCreate( &proc->stream[i] );
+    if( proc->deviceProp.concurrentKernels ) {
+	int i;
+	proc->stream_max = KAAPI_CUDA_MAX_STREAMS;
+	for( i = 0; i < KAAPI_CUDA_MAX_STREAMS; i++ ) {
+	    res = cudaStreamCreate( &proc->stream[i] );
 	    if (res != cudaSuccess) {
 		fprintf(stdout, "%s: cudaStreamCreate ERROR %d\n", __FUNCTION__, res );
 		fflush(stdout);
 		abort();
 	    }
-      }
-  } else {
-      proc->stream_max = 1;
-      res = cudaStreamCreate( &proc->stream[0] );
-      if (res != cudaSuccess) {
+	    res = cudaStreamCreate( &proc->stream_DtoH[i] );
+	    if (res != cudaSuccess) {
+		fprintf(stdout, "%s: cudaStreamCreate ERROR %d\n", __FUNCTION__, res );
+		fflush(stdout);
+		abort();
+	    }
+	}
+    } else {
+	proc->stream_max = 1;
+	res = cudaStreamCreate( &proc->stream[0] );
+	if (res != cudaSuccess) {
 	    fprintf(stdout, "%s: cudaStreamCreate ERROR %d\n", __FUNCTION__, res );
 	    fflush(stdout);
 	    abort();
+	}
+	res = cudaStreamCreate( &proc->stream_DtoH[0] );
+	if (res != cudaSuccess) {
+	    fprintf(stdout, "%s: cudaStreamCreate ERROR %d\n", __FUNCTION__, res );
+	    fflush(stdout);
+	    abort();
+	}
     }
-  }
-  res = cudaStreamCreate( &proc->streamDtoH );
-  if (res != cudaSuccess) {
-	    fprintf(stdout, "%s: cudaStreamCreate ERROR %d\n", __FUNCTION__, res );
-	    fflush(stdout);
-	    abort();
-  }
   res = cudaStreamCreate( &proc->streamDtoD );
   if (res != cudaSuccess) {
 	    fprintf(stdout, "%s: cudaStreamCreate ERROR %d\n", __FUNCTION__, res );
@@ -169,21 +175,21 @@ cudaStream_t kaapi_cuda_kernel_stream(void)
 {
     kaapi_processor_t* const self_proc =
 	kaapi_get_current_processor();
-    return self_proc->cuda_proc.stream[self_proc->cuda_proc.stream_idx];
+    return self_proc->cuda_proc.stream[self_proc->cuda_proc.stream_htod_idx];
 }
 
 cudaStream_t kaapi_cuda_HtoD_stream(void)
 {
     kaapi_processor_t* const self_proc =
 	kaapi_get_current_processor();
-    return self_proc->cuda_proc.stream[self_proc->cuda_proc.stream_idx];
+    return self_proc->cuda_proc.stream[self_proc->cuda_proc.stream_htod_idx];
 }
 
 cudaStream_t kaapi_cuda_DtoH_stream(void)
 {
     kaapi_processor_t* const self_proc =
 	kaapi_get_current_processor();
-    return self_proc->cuda_proc.streamDtoH;
+    return self_proc->cuda_proc.stream[self_proc->cuda_proc.stream_dtoh_idx];
 }
 
 cudaStream_t kaapi_cuda_DtoD_stream(void)
@@ -193,11 +199,19 @@ cudaStream_t kaapi_cuda_DtoD_stream(void)
     return self_proc->cuda_proc.streamDtoD;
 }
 
-void kaapi_cuda_stream_next(void)
+void kaapi_cuda_stream_HtoD_next(void)
 {
     kaapi_processor_t* const self_proc =
 	kaapi_get_current_processor();
-    self_proc->cuda_proc.stream_idx = (self_proc->cuda_proc.stream_idx + 1)%
+    self_proc->cuda_proc.stream_htod_idx = (self_proc->cuda_proc.stream_htod_idx + 1)%
+	self_proc->cuda_proc.stream_max;
+}
+
+void kaapi_cuda_stream_DtoH_next(void)
+{
+    kaapi_processor_t* const self_proc =
+	kaapi_get_current_processor();
+    self_proc->cuda_proc.stream_dtoh_idx = (self_proc->cuda_proc.stream_dtoh_idx + 1)%
 	self_proc->cuda_proc.stream_max;
 }
 

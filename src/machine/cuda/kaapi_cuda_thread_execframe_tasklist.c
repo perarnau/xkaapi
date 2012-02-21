@@ -163,7 +163,7 @@ execute_first:
 #if 0
 	    kaapi_cuda_data_check();
 #endif
-	    kaapi_cuda_stream_next();
+	    kaapi_cuda_stream_HtoD_next();
 	    kaapi_cuda_ctx_pop( );
         }
         kaapi_event_push1(stack->proc, thread, KAAPI_EVT_TASK_END, pc );  

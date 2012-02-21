@@ -99,6 +99,7 @@ kaapi_cuda_mem_blk_remove(
 					host_asid );
 			    kaapi_cuda_mem_copy_dtoh( dest->ptr, &dest->view, 
 				    src->ptr, &src->view );
+			    kaapi_cuda_stream_DtoH_next();
 			    kaapi_mem_data_clear_dirty( kmd, host_asid );
 			}
 

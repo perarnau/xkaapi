@@ -88,9 +88,10 @@ typedef struct kaapi_cuda_proc
 
     /* WARNING: some old devices get errors on multiple stream */
     cudaStream_t stream[KAAPI_CUDA_MAX_STREAMS];
-    cudaStream_t streamDtoH;
     cudaStream_t streamDtoD;
-    int stream_idx; /* stream ID to tranfer/execute */
+    cudaStream_t stream_DtoH[KAAPI_CUDA_MAX_STREAMS];
+    int stream_htod_idx; /* stream ID to tranfer/execute */
+    int stream_dtoh_idx; /* stream ID to tranfer/execute */
     int stream_max; /* maximum number of streams */
 
     kaapi_cuda_ctx_t ctx;
@@ -122,7 +123,9 @@ cudaStream_t kaapi_cuda_DtoH_stream(void);
 
 cudaStream_t kaapi_cuda_DtoD_stream(void);
 
-void kaapi_cuda_stream_next(void);
+void kaapi_cuda_stream_HtoD_next(void);
+
+void kaapi_cuda_stream_DtoH_next(void);
 
 static inline int
 kaapi_cuda_sync( void )
