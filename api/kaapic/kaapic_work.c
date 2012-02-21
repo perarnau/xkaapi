@@ -121,7 +121,7 @@ int kaapic_foreach_globalwork_next(
   kaapi_workqueue_index_t* last
 );
 
-/* */
+/* return !=0 iff successful steal op */
 static int kaapic_local_work_steal
 (
   kaapic_local_work_t* lwork,
@@ -171,7 +171,7 @@ int kaapic_global_work_pop
 }
 
 
-/* */
+/* return !=0 iff successful steal op */
 static int kaapic_global_work_steal
 (
   kaapic_global_work_t* gwork,
@@ -182,6 +182,10 @@ static int kaapic_global_work_steal
 {
   kaapi_workqueue_index_t unit_size;
   kaapi_workqueue_index_t range_size;
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
+#endif
 
   /* here to do / to test:
      - any try to pop a slice closed to the tid of the thread
@@ -197,8 +201,13 @@ static int kaapic_global_work_steal
     kaapi_assert_debug(tid<KAAPI_MAX_PROCESSOR);
     int tidpos = kaapi_bitmap_first1_32( &gwork->wa.map );
     if ((tidpos !=0) && kaapic_global_work_pop(gwork, tidpos-1, i, j ))
+    {
+#if defined(KAAPI_USE_PERFCOUNTER)
+      ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
+#endif
       /* success */
       return 1;
+    }
   }
 #endif
     
@@ -235,14 +244,20 @@ redo_select:
     return 0;
   unit_size = range_size / 2;
 
-  return kaapic_local_work_steal(
+  if (kaapic_local_work_steal(
     lwork,
     kproc, 
     i,
     j,
     unit_size
-  );
-  
+  ))
+  {
+#if defined(KAAPI_USE_PERFCOUNTER)
+    ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
+#endif
+    return 1;
+  }
+
   return 0;
 }
 
