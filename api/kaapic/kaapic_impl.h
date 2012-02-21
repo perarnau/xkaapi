@@ -171,6 +171,7 @@ struct local_work;
 typedef struct global_work
 {
   kaapi_atomic64_t workremain __attribute__((aligned(KAAPI_CACHE_LINE)));
+  kaapi_atomic32_t workerdone __attribute__((aligned(KAAPI_CACHE_LINE)));
   
   /* global distribution */
   kaapic_work_distribution_t wa  __attribute__((aligned(KAAPI_CACHE_LINE)));
