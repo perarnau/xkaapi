@@ -78,36 +78,32 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
       proc->stream_max = KAAPI_CUDA_MAX_STREAMS;
       for( i = 0; i < KAAPI_CUDA_MAX_STREAMS; i++ ) {
 	  res = cudaStreamCreate( &proc->stream[i] );
-	  if (res != cudaSuccess) {
-		    fprintf(stdout, "[%s] cudaStreamCreate ERROR: %d\n", __FUNCTION__, res );
-		    fflush(stdout);
-	    kaapi_cuda_dev_close( proc );
-	    return res;
-	  }
+	    if (res != cudaSuccess) {
+		fprintf(stdout, "%s: cudaStreamCreate ERROR %d\n", __FUNCTION__, res );
+		fflush(stdout);
+		abort();
+	    }
       }
   } else {
       proc->stream_max = 1;
       res = cudaStreamCreate( &proc->stream[0] );
       if (res != cudaSuccess) {
-		fprintf(stdout, "[%s] cudaStreamCreate ERROR: %d\n", __FUNCTION__, res );
-		fflush(stdout);
-	kaapi_cuda_dev_close( proc );
-	return res;
+	    fprintf(stdout, "%s: cudaStreamCreate ERROR %d\n", __FUNCTION__, res );
+	    fflush(stdout);
+	    abort();
     }
   }
   res = cudaStreamCreate( &proc->streamDtoH );
   if (res != cudaSuccess) {
-	    fprintf(stdout, "[%s] cudaStreamCreate ERROR: %d\n", __FUNCTION__, res );
+	    fprintf(stdout, "%s: cudaStreamCreate ERROR %d\n", __FUNCTION__, res );
 	    fflush(stdout);
-    kaapi_cuda_dev_close( proc );
-    return res;
+	    abort();
   }
   res = cudaStreamCreate( &proc->streamDtoD );
   if (res != cudaSuccess) {
-	    fprintf(stdout, "[%s] cudaStreamCreate ERROR: %d\n", __FUNCTION__, res );
+	    fprintf(stdout, "%s: cudaStreamCreate ERROR %d\n", __FUNCTION__, res );
 	    fflush(stdout);
-    kaapi_cuda_dev_close( proc );
-    return res;
+	    abort();
   }
 
   /* pop the context to make it floating. doing
@@ -118,7 +114,7 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
   kaapi_cuda_sync();
 
 #if KAAPI_VERBOSE
-	fprintf(stdout, "[%s] dev=%lu kid=%lu\n", __FUNCTION__,
+	fprintf(stdout, "%s: dev=%lu kid=%lu\n", __FUNCTION__,
 			idev, kaapi_get_current_kid() );
 	fflush( stdout );
 #endif

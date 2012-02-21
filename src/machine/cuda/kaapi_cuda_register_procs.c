@@ -57,12 +57,17 @@ int kaapi_cuda_register_procs(kaapi_procinfo_list_t* kpl)
   unsigned int kid = kpl->count;
   int devcount;
   int err;
+  cudaError_t res;
 
   if (gpuset_str == NULL)
     return 0;
 
-  if ( cudaGetDeviceCount(&devcount) != cudaSuccess )
-    return -1;
+  if ( (res = cudaGetDeviceCount(&devcount)) != cudaSuccess ) {
+	fprintf( stdout, "%s: cudaGetDeviceCount ERROR %d\n",
+			__FUNCTION__, res );
+	fflush( stdout );
+	abort();
+  }
   
   if (devcount == 0)
     return 0;

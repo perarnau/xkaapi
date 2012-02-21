@@ -129,7 +129,7 @@ kaapi_cuda_sync( void )
 {
     const cudaError_t res = cudaDeviceSynchronize( );
     if( res != cudaSuccess ) {
-	    fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
+	    fprintf( stdout, "%s: cudaDeviceSynchronize ERROR %d\n", __FUNCTION__, res);
 	    fflush(stdout);
     }
     return (int)res;

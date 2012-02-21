@@ -23,7 +23,7 @@ kaapi_cuda_ctx_set( const int dev )
 {
     const cudaError_t res= cudaSetDevice( dev );
     if( res != cudaSuccess ) {
-	fprintf( stderr, "[%s] ERROR: %d\n", __FUNCTION__, res );
+	fprintf( stderr, "%s: ERROR %d\n", __FUNCTION__, res );
 	fflush( stderr );
     }
 }

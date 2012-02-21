@@ -64,7 +64,6 @@ xxx_kaapi_cuda_data_allocate(
 {
 	const kaapi_mem_asid_t asid = kaapi_mem_host_map_get_asid(cuda_map);
 
-#ifndef KAAPI_CUDA_MODE_BASIC
 	if( !kaapi_mem_data_has_addr( kmd, asid ) ) {
 		kaapi_data_t* dest = (kaapi_data_t*)calloc( 1, sizeof(kaapi_data_t) );
 		kaapi_cuda_mem_alloc( &dest->ptr, 0UL, 
@@ -79,22 +78,11 @@ xxx_kaapi_cuda_data_allocate(
 	} else {
 	    kaapi_data_t* dest= (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
 		     asid );
-#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
 	    kaapi_cuda_mem_inc_use( &dest->ptr );
-#endif /* KAAPI_CUDA_MEM_ALLOC_MANAGER */
-	return dest;
+	    return dest;
 	}
-#else /* KAAPI_CUDA_MODE_BASIC */
-	kaapi_data_t* dest = (kaapi_data_t*)malloc(sizeof(kaapi_data_t));
-	kaapi_cuda_mem_alloc( &dest->ptr, 0UL, 
-	    kaapi_memory_view_size(&src->view), 0 );
-	kaapi_cuda_data_view_convert( &dest->view, &src->view );
-	kaapi_mem_data_set_addr( kmd, asid, (kaapi_mem_addr_t)dest );
-	kaapi_mem_host_map_find_or_insert_(  cuda_map,
-	    (kaapi_mem_addr_t)kaapi_pointer2void(dest->ptr),
-	    &kmd );
-	return dest;
-#endif /* KAAPI_CUDA_MODE_BASIC */
+
+	return NULL;
 }
 
 int kaapi_cuda_data_allocate( 
@@ -272,20 +260,21 @@ kaapi_cuda_data_sync_host_transfer(
     kaapi_cuda_ctx_set( src_asid-1 );
     res = cudaStreamCreate( &stream );
     if (res != cudaSuccess) {
-	fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
+	fprintf(stdout, "%s: cudaStreamCreate ERROR %d\n", __FUNCTION__, res );
 	fflush(stdout);
-	return res;
+	abort();
     }
     /* Synchronize everything since we dont know about its execution */
     kaapi_cuda_sync();
     kaapi_cuda_mem_copy_dtoh_( dest->ptr, &dest->view, src->ptr, &src->view, stream );
     res = cudaStreamSynchronize( stream );
     if (res != cudaSuccess) {
-	fprintf(stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
+	fprintf(stdout, "%s: cudaStreamSynchronize ERROR %d\n", __FUNCTION__, res );
 	fflush(stdout);
-	return res;
+	abort();
     }
     cudaStreamDestroy( stream );
+
     return res;
 }
 

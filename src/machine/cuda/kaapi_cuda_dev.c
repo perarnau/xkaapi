@@ -12,39 +12,39 @@
 int
 kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
 {
-  cudaError_t res;
+    cudaError_t res;
 
-  proc->index = index;
+    proc->index = index;
 
+    cudaSetDevice( index );
+    cudaDeviceReset();
     res= cudaSetDevice( index );
     if( res != cudaSuccess ) {
-	    fprintf( stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
-	    fflush( stdout );
-	    return res;
+	fprintf( stdout, "%s: cudaSetDevice ERROR %d\n", __FUNCTION__, res );
+	fflush( stdout );
+	abort();
     }
 
-  res = cudaGetDeviceProperties( &proc->deviceProp, index );
-  if (res != cudaSuccess) {
-    fprintf( stdout, "[%s] ERROR: %d\n", __FUNCTION__, res );
-    fflush( stdout );
-    return res;
-  }
+    res = cudaGetDeviceProperties( &proc->deviceProp, index );
+    if (res != cudaSuccess) {
+	fprintf( stdout, "%s: cudaGetDeviceProperties ERROR %d\n", __FUNCTION__, res );
+	fflush( stdout );
+	abort();
+    }
 
-  /* 80% of total memory */
-  proc->memory.total = 0.8*proc->deviceProp.totalGlobalMem;
-  proc->memory.used= 0;
-  proc->memory.beg = proc->memory.end = NULL;
-  kaapi_big_hashmap_init( &proc->memory.kmem, 0 );  
+    /* 80% of total memory */
+    proc->memory.total = 0.8*proc->deviceProp.totalGlobalMem;
+    proc->memory.used= 0;
+    proc->memory.beg = proc->memory.end = NULL;
+    kaapi_big_hashmap_init( &proc->memory.kmem, 0 );  
 
-  return 0;
+    return 0;
 }
 
 void
 kaapi_cuda_dev_close( kaapi_cuda_proc_t* proc )
 {
-#if (CUDART_VERSION >= 4010)
-	cudaDeviceReset();
-#endif
+    cudaDeviceReset();
 }
 
 kaapi_processor_t*
