@@ -300,6 +300,9 @@ static int _kaapic_split_task
   kaapi_request_t* req;
   kaapic_local_work_t* tw;
 
+  if (KAAPI_ATOMIC_READ(&gwork->workremain) ==0) 
+    return 0;
+  
   /* count requests that will be served by root tasks.
   */
 #if defined(KAAPI_DEBUG)
@@ -372,9 +375,6 @@ static int _kaapic_split_task
   if (kaapi_listrequest_iterator_empty(lri))
     return 0;
   
-/* never executed !!! */
-kaapi_assert_debug(0);
-
   /* else: remaining requests in lri was already steal their replied  
      here is code to reply to thread that do not have reserved slice
   */
