@@ -84,7 +84,7 @@ int main(int ac, char** av)
 #endif
   
 #if CONFIG_TERM_BUG
-  for (i = 0; i < 100000; ++i)
+  for (i = 0; i < 100; ++i)
 #else
     for (i = 0; i < 10; ++i)
 #endif

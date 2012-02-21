@@ -431,9 +431,15 @@ void kaapi_collect_trace(void)
         KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS),
         KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS)
       );
+      printf("Total number of steal OK requests   : %"PRIi64 ", %" PRIi64 "\n",
+        KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK),
+        KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK)
+      );
+#if 0
       printf("Total number of steal OK requests   : %"PRIi64"\n",
         KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK)
       );
+#endif
       printf("Total number of steal BAD requests  : %"PRIi64"\n",
         KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQ)-
         KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK)
