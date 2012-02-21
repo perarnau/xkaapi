@@ -205,7 +205,7 @@ static int kaapic_global_work_steal
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
-      kaapi_assert_debug( i< j );
+      kaapi_assert_debug( *i < *j );
 //      printf("Tid0 steal slice of %i\n",tidpos-1);
       /* success */
       return 1;
@@ -765,10 +765,11 @@ int kaapic_foreach_workend
   kaapic_local_work_t*    lwork
 )
 {
+  memset((void*)&lwork->global->lwork, 0, sizeof(lwork->global->lwork));
+  kaapi_sched_sync_(self_thread);
+
   if (kaapic_do_parallel) 
     kaapic_end_parallel(KAAPI_SCHEDFLAG_DEFAULT);
-  else
-    kaapi_sched_sync_(self_thread);
   kaapi_thread_pop_frame_( self_thread );
 
   /* must the thread that initialize the global work */
