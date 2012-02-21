@@ -160,8 +160,8 @@ komp_init_parallel_start (
 
   thread = kaapi_threadcontext2thread(kproc->thread);
 
-  /* save frame */
-  kaapi_thread_save_frame( thread, &ctxt->frame );
+  /* push a new frame */
+  kaapi_thread_push_frame_( kproc->thread );
   
   /* init team information */
   kaapi_libkomp_teaminfo_t* teaminfo = 
@@ -271,9 +271,11 @@ GOMP_parallel_end (void)
 {
   kaapi_processor_t* kproc = kaapi_get_current_processor();
 
+  kaapi_sched_sync_(kproc->thread);
+  kaapi_thread_pop_frame_(kproc->thread);
+
   /* implicit sync */
   kaapic_end_parallel (0);
-  //kaapic_sync ();
 
   /* restore frame */
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);

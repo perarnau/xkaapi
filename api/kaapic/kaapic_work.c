@@ -199,12 +199,14 @@ static int kaapic_global_work_steal
   if (tid == 0)
   {
     kaapi_assert_debug(tid<KAAPI_MAX_PROCESSOR);
-    int tidpos = kaapi_bitmap_first1_32( &gwork->wa.map );
+    int tidpos = kaapi_bitmap_first1( &gwork->wa.map );
     if ((tidpos !=0) && kaapic_global_work_pop(gwork, tidpos-1, i, j ))
     {
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
+      kaapi_assert_debug( i< j );
+//      printf("Tid0 steal slice of %i\n",tidpos-1);
       /* success */
       return 1;
     }

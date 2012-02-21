@@ -514,6 +514,27 @@ extern kaapi_ws_queue_t* kaapi_hws_queue_atlevel (
 );
 
 
+static inline
+kaapi_thread_t* kaapi_thread_push_frame_( kaapi_thread_context_t* thread )
+{
+  kaapi_frame_t* fp = (kaapi_frame_t*)thread->stack.sfp;
+  /* save the top frame */
+  fp[1].sp_data   = fp->sp_data;
+  fp[1].pc        = fp->sp;
+  fp[1].sp        = fp->sp;
+  /* push a new frame */
+  return (kaapi_thread_t*)++thread->stack.sfp;
+}
+
+
+static inline
+kaapi_thread_t*  kaapi_thread_pop_frame_( kaapi_thread_context_t* thread )
+{
+  kaapi_thread_t* retval = (kaapi_thread_t*)--thread->stack.sfp;
+  kaapi_synchronize_steal_thread( thread );
+  return retval;  
+}
+
 /**
 */
 extern int kaapi_thread_clear( kaapi_thread_context_t* thread );
