@@ -110,7 +110,7 @@ static void kaapi_quark_helper_delete_scratch( kaapi_quark_task_t* arg )
   kaapi_bitmap_value32_t bits = { arg->scratchbit };
   while (!kaapi_bitmap_value_empty_32( &bits ))
   {
-    int ith = kaapi_bitmap_first1_and_zero_32( &bits );
+    int ith = kaapi_bitmap_value_first1_and_zero_32( &bits );
     kaapi_assert_debug(ith != 0);
     quark_one_param_t* param = &arg->param[ith-1];
     if (param->addr.data !=0) free(param->addr.data);

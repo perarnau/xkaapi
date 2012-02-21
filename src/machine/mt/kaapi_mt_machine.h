@@ -237,7 +237,7 @@ static inline void kaapi_listrequest_iterator_unset_at(
   {
     lrrange->idcurr = -1;
     /* same as _iterator_next */
-    lrrange->idcurr = kaapi_bitmap_first1_and_zero( &lrrange->bitmap )-1;
+    lrrange->idcurr = kaapi_bitmap_value_first1_and_zero( &lrrange->bitmap )-1;
   }    
 }
 
@@ -264,7 +264,7 @@ static inline kaapi_request_t* kaapi_listrequest_iterator_getkid_andnext(
 { 
   kaapi_assert_debug( (kid >=0) && (kid < (int)kaapi_default_param.cpucount) );
   if (kid == lrrange->idcurr)
-    lrrange->idcurr = kaapi_bitmap_first1_and_zero( &lrrange->bitmap )-1;
+    lrrange->idcurr = kaapi_bitmap_value_first1_and_zero( &lrrange->bitmap )-1;
   else 
     kaapi_bitmap_value_unset( &lrrange->bitmap, kid );
   return &kaapi_global_requests_list[kid]; 
@@ -276,7 +276,7 @@ static inline kaapi_request_t* kaapi_listrequest_iterator_next(
   kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange 
 )
 {
-  lrrange->idcurr = kaapi_bitmap_first1_and_zero( &lrrange->bitmap )-1;
+  lrrange->idcurr = kaapi_bitmap_value_first1_and_zero( &lrrange->bitmap )-1;
   kaapi_request_t* retval = (lrrange->idcurr == -1 ? 0 : &kaapi_global_requests_list[lrrange->idcurr]);
   return retval;
 } 

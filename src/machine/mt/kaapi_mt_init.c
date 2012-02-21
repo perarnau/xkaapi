@@ -111,7 +111,7 @@ void (*kaapi_bitmap_value_copy)( kaapi_bitmap_value_t* retval, kaapi_bitmap_valu
 void (*kaapi_bitmap_swap0)( kaapi_bitmap_t* b, kaapi_bitmap_value_t* v );
 int (*kaapi_bitmap_set)( kaapi_bitmap_t* b, int i );
 int (*kaapi_bitmap_count)( kaapi_bitmap_value_t b );
-int (*kaapi_bitmap_first1_and_zero)( kaapi_bitmap_value_t* b );
+int (*kaapi_bitmap_value_first1_and_zero)( kaapi_bitmap_value_t* b );
 #endif
 
 
@@ -171,7 +171,7 @@ int kaapi_mt_init(void)
     kaapi_bitmap_swap0           = &kaapi_bitmap_swap0_32;
     kaapi_bitmap_set             = &kaapi_bitmap_set_32;
     kaapi_bitmap_count           = &kaapi_bitmap_count_32;
-    kaapi_bitmap_first1_and_zero = &kaapi_bitmap_first1_and_zero_32;
+    kaapi_bitmap_value_first1_and_zero = &kaapi_bitmap_value_first1_and_zero_32;
   } else
 #  endif
 #  ifdef KAAPI_MAX_PROCESSOR_64
@@ -183,7 +183,7 @@ int kaapi_mt_init(void)
     kaapi_bitmap_swap0           = &kaapi_bitmap_swap0_64;
     kaapi_bitmap_set             = &kaapi_bitmap_set_64;
     kaapi_bitmap_count           = &kaapi_bitmap_count_64;
-    kaapi_bitmap_first1_and_zero = &kaapi_bitmap_first1_and_zero_64;
+    kaapi_bitmap_value_first1_and_zero = &kaapi_bitmap_value_first1_and_zero_64;
   } else
 #  endif
 #  ifdef KAAPI_MAX_PROCESSOR_128
@@ -195,7 +195,7 @@ int kaapi_mt_init(void)
     kaapi_bitmap_swap0           = &kaapi_bitmap_swap0_128;
     kaapi_bitmap_set             = &kaapi_bitmap_set_128;
     kaapi_bitmap_count           = &kaapi_bitmap_count_128;
-    kaapi_bitmap_first1_and_zero = &kaapi_bitmap_first1_and_zero_128;
+    kaapi_bitmap_value_first1_and_zero = &kaapi_bitmap_value_first1_and_zero_128;
   } else
 #  endif
 #  ifdef KAAPI_MAX_PROCESSOR_LARGE
@@ -207,7 +207,7 @@ int kaapi_mt_init(void)
     kaapi_bitmap_swap0           = &kaapi_bitmap_swap0_large;
     kaapi_bitmap_set             = &kaapi_bitmap_set_large;
     kaapi_bitmap_count           = &kaapi_bitmap_count_large;
-    kaapi_bitmap_first1_and_zero = &kaapi_bitmap_first1_and_zero_large;
+    kaapi_bitmap_value_first1_and_zero = &kaapi_bitmap_value_first1_and_zero_large;
   } else
 #  endif
   {

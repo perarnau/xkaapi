@@ -236,7 +236,7 @@ static inline int kaapi_bitmap_count_32( const kaapi_bitmap32_t* b )
    Else return the number of trailing zero (from to least significant
    bit to the most significant bit). And set to 0 the bit.
 */
-static inline int kaapi_bitmap_first1_and_zero_32( kaapi_bitmap_value32_t* b )
+static inline int kaapi_bitmap_value_first1_and_zero_32( kaapi_bitmap_value32_t* b )
 {
   /* Note: for WIN32, to have a look at _BitScanForward */
   int fb = __builtin_ffs( b->proc32 );
@@ -262,10 +262,16 @@ static inline void kaapi_bitmap_set_low_bits_32( kaapi_bitmap32_t* b, unsigned i
 }
 
 
-static inline int kaapi_bitmap_first1_32( const kaapi_bitmap_value32_t* b )
+static inline int kaapi_bitmap_value_first1_32( const kaapi_bitmap_value32_t* b )
 {
   /* Note: for WIN32, to have a look at _BitScanForward */
   return __builtin_ffs( b->proc32 );
+}
+
+static inline int kaapi_bitmap_first1_32( const kaapi_bitmap32_t* b )
+{
+  /* Note: for WIN32, to have a look at _BitScanForward */
+  return __builtin_ffs( b->proc32._counter );
 }
 
 static inline void kaapi_bitmap_clear_64( kaapi_bitmap64_t* b ) 
@@ -402,7 +408,7 @@ static inline int kaapi_bitmap_count_64( const kaapi_bitmap64_t* b )
    Else return the number of trailing zero (from to least significant
    bit to the most significant bit). And set to 0 the bit.
 */
-static inline int kaapi_bitmap_first1_and_zero_64( kaapi_bitmap_value64_t* b )
+static inline int kaapi_bitmap_value_first1_and_zero_64( kaapi_bitmap_value64_t* b )
 {
   /* Note: for WIN32, to have a look at _BitScanForward */
   int fb = __builtin_ffsl( b->proc64 );
@@ -411,10 +417,16 @@ static inline int kaapi_bitmap_first1_and_zero_64( kaapi_bitmap_value64_t* b )
   return fb;
 }
 
-static inline int kaapi_bitmap_first1_64( const kaapi_bitmap_value64_t* b )
+static inline int kaapi_bitmap_value_first1_64( const kaapi_bitmap_value64_t* b )
 {
   /* Note: for WIN32, to have a look at _BitScanForward */
   return __builtin_ffsl( b->proc64 );
+}
+
+static inline int kaapi_bitmap_first1_64( const kaapi_bitmap64_t* b )
+{
+  /* Note: for WIN32, to have a look at _BitScanForward */
+  return __builtin_ffsl( b->proc64._counter );
 }
 
 static inline void kaapi_bitmap_value_set_low_bits_64( kaapi_bitmap_value64_t* b, unsigned int i)
@@ -599,7 +611,7 @@ static inline int kaapi_bitmap_count_128( const kaapi_bitmap128_t* b )
    Else return the number of trailing zero (from to least significant
    bit to the most significant bit). And set to 0 the bit.
 */
-static inline int kaapi_bitmap_first1_and_zero_128( kaapi_bitmap_value128_t* b )
+static inline int kaapi_bitmap_value_first1_and_zero_128( kaapi_bitmap_value128_t* b )
 {
   /* Note: for WIN32, to have a look at _BitScanForward */
   int fb = __builtin_ffsl( (b->proc128)[0] );
@@ -613,7 +625,7 @@ static inline int kaapi_bitmap_first1_and_zero_128( kaapi_bitmap_value128_t* b )
   return 64+fb;
 }
 
-static inline int kaapi_bitmap_first1_128( const kaapi_bitmap_value128_t* b )
+static inline int kaapi_bitmap_value_first1_128( const kaapi_bitmap_value128_t* b )
 {
   /* Note: for WIN32, to have a look at _BitScanForward */
   if (b->proc128[0] != 0)
@@ -622,6 +634,17 @@ static inline int kaapi_bitmap_first1_128( const kaapi_bitmap_value128_t* b )
   if (b->proc128[1] == 0) 
     return 0;
   return 64+ __builtin_ffsl( (b->proc128)[1] );
+}
+
+static inline int kaapi_bitmap_first1_128( const kaapi_bitmap128_t* b )
+{
+  /* Note: for WIN32, to have a look at _BitScanForward */
+  if (b->proc128[0]._counter != 0)
+    return __builtin_ffsl( (b->proc128)[0]._counter );
+
+  if (b->proc128[1]._counter == 0) 
+    return 0;
+  return 64+ __builtin_ffsl( (b->proc128)[1]._counter );
 }
 
 static inline void kaapi_bitmap_value_set_low_bits_128( kaapi_bitmap_value128_t* b, unsigned int i)
@@ -680,7 +703,7 @@ extern int (*kaapi_bitmap_set)( kaapi_bitmap_t* b, int i );
 extern int (*kaapi_bitmap_get)( const kaapi_bitmap_t* b, int i );
 extern int (*kaapi_bitmap_unset)( kaapi_bitmap_t* b, int i );
 extern int (*kaapi_bitmap_count)( const kaapi_bitmap_t* b );
-extern int (*kaapi_bitmap_first1_and_zero)( kaapi_bitmap_value_t* b );
+extern int (*kaapi_bitmap_value_first1_and_zero)( kaapi_bitmap_value_t* b );
 #  else
 #    if defined(KAAPI_MAX_PROCESSOR_32)
 #      define KAAPI_MAX_PROCESSOR_SUFFIX(f) f##_32
@@ -720,7 +743,8 @@ typedef kaapi_bitmap_value128_t kaapi_bitmap_value_t;
 #    define kaapi_bitmap_get(b, i) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_get)((b), (i))
 #    define kaapi_bitmap_unset(b, i) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_unset)((b), (i))
 #    define kaapi_bitmap_count(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_count)(b)
-#    define kaapi_bitmap_first1_and_zero(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_first1_and_zero)(b)
+#    define kaapi_bitmap_value_first1_and_zero(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_first1_and_zero)(b)
+#    define kaapi_bitmap_value_first1(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_first1)(b)
 #    define kaapi_bitmap_first1(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_first1)(b)
 #    define kaapi_bitmap_value_set_low_bits(b,i) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_set_low_bits)(b,i)
 #    define kaapi_bitmap_set_low_bits(b,i) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_set_low_bits)(b,i)
