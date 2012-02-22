@@ -10,6 +10,7 @@ if KAAPI_LIBGOMP
 SUBDIRS=tests
 
 pkglib_LTLIBRARIES=libgomp.la
+lib_LTLIBRARIES=libkomp.la
 
 libgomp_version_script = -Wl,--version-script,$(srcdir)/libgomp.map
 libgomp_version_dep = $(srcdir)/libgomp.map
@@ -22,6 +23,12 @@ libgomp_la_LDFLAGS = -version-info 1:0:0 $(libgomp_version_script) \
 libgomp_la_LIBADD=../../src/libkaapi.la ../kaapic/libkaapic.la \
 	$(LIBGOMP_BUILD_LIBS)
 libgomp_la_DEPENDENCIES = $(libgomp_version_dep)
+
+libkomp_la_CPPFLAGS=$(AM_CPPFLAGS) $(LIBGOMP_BUILD_CPPFLAGS) -DLIBKOMP
+libkomp_la_CFLAGS=$(AM_CFLAGS) $(LIBGOMP_BUILD_CFLAGS)
+libkomp_la_CXXFLAGS=$(AM_CXXFLAGS) $(LIBGOMP_BUILD_CXXFLAGS)
+libkomp_la_LDFLAGS = -version-info 1:0:0 $(LIBGOMP_BUILD_LDFLAGS)
+libkomp_la_LIBADD=../../src/libkaapi.la ../kaapic/libkaapic.la $(LIBGOMP_BUILD_LIBS)
 
 bin_SCRIPTS = kaapi-gomp-wrapper
 CLEANFILES = $(bin_SCRIPTS)
@@ -59,5 +66,8 @@ libgomp_la_SOURCES=\
     libgomp_init.c \
     libomprt.c\
     $(include_HEADERS)
+
+libkomp_la_SOURCES=\
+	$(libgomp_la_SOURCES)
 
 endif
