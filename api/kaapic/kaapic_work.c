@@ -161,6 +161,14 @@ int kaapic_global_work_pop
   kaapi_workqueue_index_t* j
 )
 {
+  /* Here, because work may have been finished  
+  */
+  if (KAAPI_ATOMIC_READ(&gw->workremain) ==0)
+  {
+    *i = *j = 0;
+    return 0;
+  }
+
   kaapi_assert_debug(tid<KAAPI_MAX_PROCESSOR);
   int pos = gw->wa.tid2pos[tid];
   kaapi_assert_debug( pos >= 0 );
