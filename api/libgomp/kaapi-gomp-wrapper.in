@@ -46,9 +46,11 @@ fi
 
 wrapper_installed=no
 if [ $wrapper_installed == yes ]; then
-    libdir="@libdir@"
+    libgomp_libdir="@pkglibdir@"
+    kaapic_libdir="@libdir@"
 else
-    libdir="@abs_top_builddir@/api/libgomp/.libs"
+    libgomp_libdir="@abs_top_builddir@/api/libgomp/.libs"
+    kaapic_libdir="@abs_top_builddir@/api/kaapic/.libs"
 fi
 
 (uname -a | grep Darwin) > /dev/null 2> /dev/null
@@ -57,10 +59,10 @@ DARWIN_SYS=$?
 if [ $DARWIN_SYS -eq 0 ]; 
 then
     export DYLD_FORCE_FLAT_NAMESPACE=1
-    export DYLD_INSERT_LIBRARIES="$libdir/libkaapic.dylib:$libdir/libgomp.dylib"
+    export DYLD_INSERT_LIBRARIES="$kaapic_libdir/libkaapic.dylib:$libgomp_libdir/libgomp.dylib"
 else
-    export LD_LIBRARY_PATH="$libdir:$LD_LIBRARY_PATH"
-    export LD_PRELOAD="libgomp.so.1"
+    export LD_LIBRARY_PATH="$libgomp_libdir:$LD_LIBRARY_PATH"
+    export LD_PRELOAD="libgomp.so.0"
 fi
 
 exec $RUN_TIME "$@"

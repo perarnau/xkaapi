@@ -9,7 +9,7 @@ if KAAPI_LIBGOMP
 
 SUBDIRS=tests
 
-lib_LTLIBRARIES=libgomp.la
+pkglib_LTLIBRARIES=libgomp.la
 
 libgomp_la_CPPFLAGS=$(AM_CPPFLAGS) $(LIBGOMP_BUILD_CPPFLAGS)
 libgomp_la_CFLAGS=$(AM_CFLAGS) $(LIBGOMP_BUILD_CFLAGS)
@@ -22,6 +22,7 @@ CLEANFILES = $(bin_SCRIPTS)
 EXTRA_DIST = kaapi-gomp-wrapper.in
 
 do_subst = sed -e 's,[@]libdir[@],$(libdir),g' \
+               -e 's,[@]pkglibdir[@],$(pkglibdir),g' \
                -e 's,[@]abs_top_builddir[@],$(abs_top_builddir),g'
 
 kaapi-gomp-wrapper: kaapi-gomp-wrapper.in Makefile
