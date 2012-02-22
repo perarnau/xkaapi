@@ -62,7 +62,6 @@ then
     export DYLD_INSERT_LIBRARIES="$kaapic_libdir/libkaapic.dylib:$libgomp_libdir/libgomp.dylib"
 else
     export LD_LIBRARY_PATH="$libgomp_libdir:$LD_LIBRARY_PATH"
-    export LD_PRELOAD="libgomp.so.0"
 fi
 
 exec $RUN_TIME "$@"

@@ -49,6 +49,11 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#ifdef HAVE_VISIBILITY_HIDDEN
+# pragma GCC visibility push(hidden)
+#endif
+/* all things defined in this visibility section are private to our library */
+
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
 
@@ -135,10 +140,14 @@ enum omp_task_kind
   GOMP_TASK_TIED
 };
 
-/* init.c */
-
 extern int gomp_nthreads_var;
 
+/* going back to the previous visibility, ie "default" */
+#ifdef HAVE_ATTRIBUTE_VISIBILITY
+# pragma GCC visibility pop
+#endif
+
+/* init.c */
 
 void gomp_barrier_init (struct gomp_barrier *barrier, unsigned int num);
 void gomp_barrier_destroy (struct gomp_barrier *barrier);
