@@ -12,8 +12,13 @@ SUBDIRS=tests
 pkglib_LTLIBRARIES=libgomp.la
 lib_LTLIBRARIES=libkomp.la
 
+if HAVE_VERSION_SCRIPT
 libgomp_version_script = -Wl,--version-script,$(srcdir)/libgomp.map
 libgomp_version_dep = $(srcdir)/libgomp.map
+else
+libgomp_version_script =
+libgomp_version_dep =
+endif
 
 libgomp_la_CPPFLAGS=$(AM_CPPFLAGS) $(LIBGOMP_BUILD_CPPFLAGS)
 libgomp_la_CFLAGS=$(AM_CFLAGS) $(LIBGOMP_BUILD_CFLAGS)

@@ -141,6 +141,9 @@ if test $have_cxx = yes ; then
 fi
 AM_CONDITIONAL([KAAPI_CXX_HAS_LAMBDA],[test x"$ac_cv_cxx_lambda" = x"yes"])
 
+# TODO: better check for this feature
+AM_CONDITIONAL([HAVE_VERSION_SCRIPT],[test x"$with_gnu_ld" = xyes])
+
 # add warning flags to the C and C++ compilers
 AX_CFLAGS_WARN_ALL([AM_CFLAGS])
 if test $have_cxx = yes ; then
