@@ -88,7 +88,7 @@ int main(int ac, char** av)
 #if CONFIG_TERM_BUG
   for (i = 0; i < 10000; ++i)
 #else
-    for (i = 0; i < 1000; ++i)
+    for (i = 0; i < 100000; ++i)
 #endif
     {
      if (i % 10 ==0) fputc('.',stdout);
