@@ -924,6 +924,11 @@ int kaapic_foreach_worknext(
 )
 {
   kaapic_global_work_t* gwork = lwork->global;
+  if (KAAPI_ATOMIC_READ(&gwork->workremain) ==0)
+  {
+    KAAPI_DEBUG_INST(*first = *last = 0);
+    return 0;
+  }
 
   if (kaapi_workqueue_pop(&lwork->cr, first, last, gwork->wi.seq_grain) == 0)
   {
