@@ -146,7 +146,7 @@ bool GOMP_loop_dynamic_start (
     while (teaminfo->gwork ==0)
       kaapi_slowdown_cpu();
     kaapi_readmem_barrier();
-    
+          
     /* get own slice */
     if (kaapic_global_work_pop( teaminfo->gwork, kproc->kid, istart, iend))
       workshare->lwork = kaapic_foreach_local_workinit( 
@@ -216,7 +216,7 @@ static void komp_trampoline_task_parallelfor
 #endif
 
 
-/* TODO:
+/* 
 */
 void GOMP_parallel_loop_dynamic_start (
           void (*fn) (void *), 
