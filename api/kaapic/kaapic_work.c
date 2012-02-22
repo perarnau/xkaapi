@@ -323,6 +323,10 @@ static int _kaapic_split_task
 
   if (KAAPI_ATOMIC_READ(&gwork->workremain) ==0) 
     return 0;
+
+  /* no attached body: return (typically case of OpenMP)*/
+  if (gwork->body_f ==0)
+    return 0;
   
   /* count requests that will be served by root tasks.
   */
