@@ -12,7 +12,7 @@
  */
 
 
-#define CONFIG_TERM_BUG 1
+#define CONFIG_TERM_BUG 0
 #define CONFIG_CHECK_RES 0
 #define CONFIG_BENCH 1
 
@@ -46,6 +46,8 @@ static void fu (
 #endif
     
     array[k] += *value;
+    array[k] += sqrt(sin(*value * *value) + cos(*value * *value));
+    array[k] += sin(*value * *value) + sqrt(cos(*value * *value));
   }
   
 #if CONFIG_TERM_BUG
@@ -84,9 +86,9 @@ int main(int ac, char** av)
 #endif
   
 #if CONFIG_TERM_BUG
-  for (i = 0; i < 100000; ++i)
+  for (i = 0; i < 10000; ++i)
 #else
-    for (i = 0; i < 10; ++i)
+    for (i = 0; i < 1000; ++i)
 #endif
     {
      if (i % 10 ==0) fputc('.',stdout);
