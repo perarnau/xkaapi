@@ -376,6 +376,10 @@ static int _kaapic_split_task
   }
   if (kaapi_listrequest_iterator_empty(lri))
     return 0;
+
+  /* no attached body: return (typically case of OpenMP)*/
+  if (gwork->body_f ==0)
+    return 0;
   
   /* else: remaining requests in lri was already steal their replied  
      here is code to reply to thread that do not have reserved slice
