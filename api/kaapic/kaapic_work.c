@@ -924,7 +924,8 @@ int kaapic_foreach_worknext(
 )
 {
   kaapic_global_work_t* gwork = lwork->global;
-  if (KAAPI_ATOMIC_READ(&gwork->workremain) ==0)
+  int iszero = (KAAPI_ATOMIC_READ(&gwork->workremain) ==0);
+  if ( iszero )
   {
     KAAPI_DEBUG_INST(*first = *last = 0);
     return 0;
