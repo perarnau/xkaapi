@@ -925,13 +925,15 @@ int kaapic_foreach_worknext(
 {
   kaapic_global_work_t* gwork = lwork->global;
   int iszero = (KAAPI_ATOMIC_READ(&gwork->workremain) ==0);
-  if ( iszero )
+  int sgrain = gwork->wi.seq_grain;
+  if ( iszero || (sgrain == 0))
   {
     KAAPI_DEBUG_INST(*first = *last = 0);
     return 0;
   }
 
-  if (kaapi_workqueue_pop(&lwork->cr, first, last, gwork->wi.seq_grain) == 0)
+
+  if (kaapi_workqueue_pop(&lwork->cr, first, last, sgrain) == 0)
   {
     KAAPI_SET_SELF_WORKLOAD(
         kaapi_workqueue_size(&lwork->cr)
