@@ -58,6 +58,8 @@ void GOMP_loop_end (void)
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
   if (ctxt->threadid == 0)
     kaapic_foreach_workend( self_thread, ctxt->workshare.lwork);
+  else
+    kaapic_foreach_local_workend( self_thread, ctxt->workshare.lwork );
 }
 
 void GOMP_loop_end_nowait (void)
@@ -68,4 +70,6 @@ void GOMP_loop_end_nowait (void)
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
   if (ctxt->threadid == 0)
     kaapic_foreach_workend( self_thread, ctxt->workshare.lwork);
+  else
+    kaapic_foreach_local_workend( self_thread, ctxt->workshare.lwork );
 }

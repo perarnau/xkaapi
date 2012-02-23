@@ -137,7 +137,7 @@ static int kaapic_local_work_steal
   return retval;
 }
 
-static void kaapic_global_getwork
+static int kaapic_global_getwork
 (
   kaapic_global_work_t* gw,
   kaapi_processor_id_t tid, 
@@ -146,11 +146,21 @@ static void kaapic_global_getwork
 )
 {
   kaapi_assert_debug(tid<KAAPI_MAX_PROCESSOR);
+
+  /* Here, because work may have been finished  
+  */
+  if (KAAPI_ATOMIC_READ(&gw->workremain) ==0)
+  {
+    *i = *j = 0;
+    return 0;
+  }
+
   int pos = gw->wa.tid2pos[tid];
   kaapi_assert_debug( pos > 0 );
   
   *i = gw->wa.startindex[pos];
   *j = gw->wa.startindex[pos+1];
+  return 1;
 }
 
 int kaapic_global_work_pop
@@ -161,6 +171,8 @@ int kaapic_global_work_pop
   kaapi_workqueue_index_t* j
 )
 {
+  kaapi_assert_debug(tid<KAAPI_MAX_PROCESSOR);
+
   /* Here, because work may have been finished  
   */
   if (KAAPI_ATOMIC_READ(&gw->workremain) ==0)
@@ -169,7 +181,6 @@ int kaapic_global_work_pop
     return 0;
   }
 
-  kaapi_assert_debug(tid<KAAPI_MAX_PROCESSOR);
   int pos = gw->wa.tid2pos[tid];
   kaapi_assert_debug( pos >= 0 );
   kaapi_assert_debug( pos<KAAPI_MAX_PROCESSOR );
@@ -312,6 +323,10 @@ static int _kaapic_split_task
 
   if (KAAPI_ATOMIC_READ(&gwork->workremain) ==0) 
     return 0;
+
+  /* no attached body: return (typically case of OpenMP)*/
+  if (gwork->body_f ==0)
+    return 0;
   
   /* count requests that will be served by root tasks.
   */
@@ -342,45 +357,46 @@ static int _kaapic_split_task
   {
     --tid;
 
-    KAAPI_ATOMIC_INCR(&gwork->workerdone);
-
     /* use only get: the bitmap gwork->wa.map was updated atomically above */
-    kaapic_global_getwork( gwork, tid, &first, &last );
-    
-    req = &kaapi_global_requests_list[tid];
-    tw = kaapi_request_pushdata(req, sizeof(kaapic_local_work_t) );
-    tw->global = gwork;
-    tw->tid    = tid;
+    if (kaapic_global_getwork( gwork, tid, &first, &last ))
+    {
+      req = &kaapi_global_requests_list[tid];
+      
+      KAAPI_ATOMIC_INCR(&gwork->workerdone);
+      tw = kaapi_request_pushdata(req, sizeof(kaapic_local_work_t) );
+      tw->global = gwork;
+      tw->tid    = tid;
 #if defined(USE_KPROC_LOCK)
-    kaapi_workqueue_init_with_lock
-      (&tw->cr, first, last, &kaapi_all_kprocessors[tid]->lock);
+      kaapi_workqueue_init_with_lock
+        (&tw->cr, first, last, &kaapi_all_kprocessors[tid]->lock);
 #else
-    kaapi_atomic_initlock(&tw->lock);
-    kaapi_workqueue_init_with_lock
-      (&tw->cr, first, last, &tw->lock);
+      kaapi_atomic_initlock(&tw->lock);
+      kaapi_workqueue_init_with_lock
+        (&tw->cr, first, last, &tw->lock);
 #endif    
-    gwork->lwork[tid] = tw;
+      gwork->lwork[tid] = tw;
 
-    kaapi_task_init_with_flag(
-      kaapi_request_toptask(req), 
-      (kaapi_task_body_t)_kaapic_thief_entrypoint, 
-      tw,
-      KAAPI_TASK_UNSTEALABLE
-    );
+      kaapi_task_init_with_flag(
+        kaapi_request_toptask(req), 
+        (kaapi_task_body_t)_kaapic_thief_entrypoint, 
+        tw,
+        KAAPI_TASK_UNSTEALABLE
+      );
 #if 1 /* comment this line if you do not want thief to be thief by other */
-    kaapi_request_pushtask_adaptive_tail( 
-      req, 
-      victim_task,
-      _kaapic_split_task 
-    );
+      kaapi_request_pushtask_adaptive_tail( 
+        req, 
+        victim_task,
+        _kaapic_split_task 
+      );
 #else // unstealable task 
-    kaapi_request_pushtask(
-      req,
-      victim_task
-    );
+      kaapi_request_pushtask(
+        req,
+        victim_task
+      );
 #endif
-    kaapi_request_committask(req);
-    kaapi_listrequest_iterator_unset_at( lri, tid );
+      kaapi_request_committask(req);
+      kaapi_listrequest_iterator_unset_at( lri, tid );
+    } /* else: no work to done, will be reply failed by the runtime */
   }
   if (kaapi_listrequest_iterator_empty(lri))
     return 0;
@@ -908,8 +924,16 @@ int kaapic_foreach_worknext(
 )
 {
   kaapic_global_work_t* gwork = lwork->global;
+  int iszero = (KAAPI_ATOMIC_READ(&gwork->workremain) ==0);
+  int sgrain = gwork->wi.seq_grain;
+  if ( iszero || (sgrain == 0))
+  {
+    KAAPI_DEBUG_INST(*first = *last = 0);
+    return 0;
+  }
 
-  if (kaapi_workqueue_pop(&lwork->cr, first, last, gwork->wi.seq_grain) == 0)
+
+  if (kaapi_workqueue_pop(&lwork->cr, first, last, sgrain) == 0)
   {
     KAAPI_SET_SELF_WORKLOAD(
         kaapi_workqueue_size(&lwork->cr)
