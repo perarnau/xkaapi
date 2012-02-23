@@ -525,7 +525,11 @@ printf("IN/OUT %s\n", __PRETTY_FUNCTION__);
 /* Cancel a specific task */
 int QUARK_Cancel_Task(Quark *quark, unsigned long long taskid)
 {
+#if (SIZEOF_VOIDP==4)
+  kaapi_task_t* task = (kaapi_task_t*)(uintptr_t)taskid;
+#else
   kaapi_task_t* task = (kaapi_task_t*)taskid;
+#endif
   uintptr_t state = kaapi_task_getstate(task);
   if (state == KAAPI_TASK_STATE_INIT)
     kaapi_task_casstate(task, KAAPI_TASK_STATE_INIT, KAAPI_TASK_STATE_TERM);
