@@ -167,18 +167,34 @@ typedef struct work_info
 } kaapic_work_info_t;
 
 
+/* local work */
+typedef struct local_work
+{
+  kaapi_workqueue_t       cr;
+#if defined(USE_KPROC_LOCK)
+#else
+  kaapi_lock_t            lock;
+#endif
+
+  void*                   context __attribute__((aligned(KAAPI_CACHE_LINE)));
+  struct global_work*     global;
+  kaapi_workqueue_index_t workdone;
+  int                     tid;
+  int volatile            init; /* !=0 iff init */
+} kaapic_local_work_t __attribute__ ((aligned (KAAPI_CACHE_LINE)));
+
+
 /* global work common 
    Initialized by one thread (the master thread)
 */
-struct local_work;
 typedef struct global_work
 {
   kaapi_atomic64_t workremain __attribute__((aligned(KAAPI_CACHE_LINE)));
-  kaapi_atomic32_t workerdone __attribute__((aligned(KAAPI_CACHE_LINE)));
+  kaapi_atomic32_t workerdone;
   
   /* global distribution */
   kaapic_work_distribution_t wa  __attribute__((aligned(KAAPI_CACHE_LINE)));
-  struct local_work * volatile lwork[KAAPI_MAX_PROCESSOR];
+  kaapic_local_work_t lwork[KAAPI_MAX_PROCESSOR];
 
   /* work routine */
   kaapic_foreach_body_t body_f;
@@ -188,20 +204,6 @@ typedef struct global_work
   kaapic_work_info_t wi;
 } kaapic_global_work_t;
 
-
-/* local work */
-typedef struct local_work
-{
-  void*                   context; /* return by begin_adapt */
-  kaapic_global_work_t*   global;
-  kaapi_workqueue_index_t workdone;
-  int                     tid;
-  kaapi_workqueue_t       cr __attribute__((aligned(64)));
-#if defined(USE_KPROC_LOCK)
-#else
-  kaapi_lock_t            lock;
-#endif
-} kaapic_local_work_t;
 
 
 /* Lower level function used by libgomp implementation */
@@ -238,7 +240,8 @@ extern kaapic_global_work_t* kaapic_foreach_global_workinit
    \retval returns non zero if there is work to do, else returns 0
 */
 extern kaapic_local_work_t* kaapic_foreach_local_workinit(
-  kaapi_thread_context_t* self_thread,
+  kaapic_local_work_t*    lwork,
+  int                     tid, 
   kaapic_global_work_t*   gwork,
   kaapi_workqueue_index_t first,
   kaapi_workqueue_index_t last

@@ -46,8 +46,8 @@ static void fu (
 #endif
     
     array[k] += *value;
-    array[k] += sqrt(sin(*value * *value) + cos(*value * *value));
-    array[k] += sin(*value * *value) + sqrt(cos(*value * *value));
+//    array[k] += sqrt(sin(*value * *value) + cos(*value * *value));
+//    array[k] += sin(*value * *value) + sqrt(cos(*value * *value));
   }
   
 #if CONFIG_TERM_BUG

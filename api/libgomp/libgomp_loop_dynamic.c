@@ -148,16 +148,15 @@ bool GOMP_loop_dynamic_start (
     kaapi_readmem_barrier();
           
     /* get own slice */
-    if (kaapic_global_work_pop( teaminfo->gwork, kproc->kid, istart, iend))
-      workshare->lwork = kaapic_foreach_local_workinit( 
-                              self_thread,
-                              teaminfo->gwork,
-                              *istart, *iend );    
-    else
-      workshare->lwork = kaapic_foreach_local_workinit( 
-                              self_thread,
-                              teaminfo->gwork,
-                              0, 0 );    
+    if (!kaapic_global_work_pop( teaminfo->gwork, kproc->kid, istart, iend))
+    {
+      *istart = *iend = 0;
+    }
+    workshare->lwork = kaapic_foreach_local_workinit( 
+                            &teaminfo->gwork->lwork[kproc->kid],
+                            kproc->kid,
+                            teaminfo->gwork,
+                            *istart, *iend );
   }
 
   /* pop next range and start execution (on return...) */
@@ -341,8 +340,9 @@ static void komp_trampoline_task_parallelfor
     start = end = 0;
 
   /* only main thread of the team has initialized global work */
-  workshare->lwork = kaapic_foreach_local_workinit( 
-                          kproc->thread,
+  workshare->lwork = kaapic_foreach_local_workinit(
+                          &ctxt->teaminfo->gwork->lwork[kproc->kid],
+                          kproc->kid,
                           ctxt->teaminfo->gwork,
                           start,
                           end

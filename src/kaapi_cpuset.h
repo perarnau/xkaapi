@@ -113,7 +113,7 @@ static inline int kaapi_cpuset_set(
     unsigned int i 
 )
 {
-  kaapi_assert_debug( (i >=0) && (i < sizeof(kaapi_cpuset_t)*8) );
+  kaapi_assert_debug( i < sizeof(kaapi_cpuset_t)*8 );
   if (i <32)
     affinity->bits32[0] |= ((uint32_t)1)<<i;
   else if (i <64)
@@ -146,7 +146,7 @@ static inline int kaapi_cpuset_has(
     unsigned int i 
 )
 {
-  kaapi_assert_debug( (i >=0) && (i < sizeof(kaapi_cpuset_t)*8) );
+  kaapi_assert_debug( i < sizeof(kaapi_cpuset_t)*8 );
   if (i <32)
     return (affinity->bits32[0] & ((uint32_t)1)<<i) !=0;
   else if (i <64)
