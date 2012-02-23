@@ -123,7 +123,7 @@ AC_DEFUN([KAAPI_FEATURE], [dnl
     m4_pushdef([FEATURE_ENABLE],[VAR=yes])
     m4_pushdef([FEATURE_SET],m4_defn([_KAAPI_FEATURE_SET]))
     m4_pushdef([FEATURE_DISABLE],[VAR=no])
-    m4_if([$8],[],[ENABLE_FEATURE],[
+    m4_if([$8],[],[FEATURE_ENABLE],[
       # Checking if $1 must be enabled
       $8
     ])
