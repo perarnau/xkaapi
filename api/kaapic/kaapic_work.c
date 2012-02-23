@@ -753,7 +753,7 @@ kaapic_local_work_t* kaapic_foreach_workinit
 )
 {
   kaapic_global_work_t* gwork;
-  kaapic_local_work_t*  lwork;
+  kaapic_local_work_t*  lwork = 0;
   const int tid = self_thread->stack.proc->kid;
 
   gwork = kaapic_foreach_global_workinit(

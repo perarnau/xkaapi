@@ -49,6 +49,7 @@
   * KAAPI_USE_SPIN_SUSPEND may be defined in order to use busy waiting
      implementation of suspend/resume
   * else the implementaiton relies on futex (for linux) or Pthread (other OS)
+  #define KAAPI_USE_SPIN_SUSPEND 0
 */
 
 /*
@@ -78,23 +79,16 @@ void kaapi_mt_suspendresume_init(void)
 void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
 {
 #if defined(KAAPI_USE_SPIN_SUSPEND)
-  while (kaapi_suspendflag)
-#if defined(__APPLE__)
+#warning "to do"
+  int i;
+  for(i=0; i<10000; ++i) 
+  {
+    if (!kaapi_suspendflag) 
+       return;
     kaapi_slowdown_cpu();
-#else
-    pthread_yield();
+  }
 #endif
     
-//  pthread_mutex_lock(&kproc->suspend_lock);
-//  if (kaapi_suspendflag)
-//  {
-//
-//    pthread_cond_wait(&wakeupcond_threads, &kproc->suspend_lock);
-//    /* reset steal history ? */
-//    memset(&kproc->fnc_selecarg, 0, sizeof(kproc->fnc_selecarg) );
-//  }
-//  pthread_mutex_unlock(&kproc->suspend_lock);
-#else
   int round, first=1;
   for(;;) {
     kproc_mutex_lock(&wakeupmutex_threads);
@@ -114,8 +108,8 @@ void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
       break ;
     }
   }
+  /* reset steal history ? */
   memset(&kproc->fnc_selecarg, 0, sizeof(kproc->fnc_selecarg) );
-#endif
 }
 
 
@@ -145,16 +139,6 @@ void kaapi_mt_suspend_threads_wait(void)
 /* */
 void kaapi_mt_resume_threads(void)
 {
-#if defined(KAAPI_USE_SPIN_SUSPEND)
-//  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );
-
-  kaapi_writemem_barrier();
-  kaapi_suspendflag = 0;
-//  KAAPI_ATOMIC_WRITE(&kaapi_suspendedthreads, 0);
-//  pthread_mutex_lock(&wakeupmutex_threads);
-//  pthread_cond_broadcast(&wakeupcond_threads);
-//  pthread_mutex_unlock(&wakeupmutex_threads);  
-#else
   kaapi_assert_debug( kaapi_suspendflag >= 1 );
   kaapi_assert_debug( kaapi_suspendflag == 1 
 		      || KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );
@@ -163,6 +147,5 @@ void kaapi_mt_resume_threads(void)
   KAAPI_ATOMIC_WRITE(&kaapi_suspendedthreads, 0);
   kproc_condunlock_broadcast(&wakeupcond_threads);
   kproc_mutex_unlock(&wakeupmutex_threads);  
-#endif
 }
 
