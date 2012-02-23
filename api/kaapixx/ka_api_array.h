@@ -498,7 +498,11 @@ public:
   { return array_storage<2,T,s2dc>::operator()(i,j); }
 
   /** */
-  reference_t operator()(size_t i, size_t j)
+  reference_t operator()(long i, long j)
+  { return array_storage<2,T,s2dc>::operator()(i,j); }
+
+  /** */
+  reference_t operator()(unsigned long i, unsigned long j)
   { return array_storage<2,T,s2dc>::operator()(i,j); }
 
   /** */
@@ -510,7 +514,11 @@ public:
   { return array_storage<2,T,s2dc>::operator()(i,j); }
 
   /** */
-  const_reference_t operator()(size_t i, size_t j) const
+  const_reference_t operator()(long i, long j) const
+  { return array_storage<2,T,s2dc>::operator()(i,j); }
+
+  /** */
+  const_reference_t operator()(unsigned long i, unsigned long j) const
   { return array_storage<2,T,s2dc>::operator()(i,j); }
    
   /* return the view in word */

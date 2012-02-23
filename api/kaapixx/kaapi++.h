@@ -1524,14 +1524,14 @@ namespace ka {
     const T* end() const { return array<1,T>::ptr()+array<1,T>::size(); }
 
     const T& operator[](int i) const { return array<1,T>::operator[](i); }
-    const T& operator[](unsigned i) const { return array<1,T>::operator[](i); }
+    const T& operator[](unsigned int i) const { return array<1,T>::operator[](i); }
     const T& operator[](long i) const { return array<1,T>::operator[](i); }
-    const T& operator[](difference_type i) const { return array<1,T>::operator[](i); }
+    const T& operator[](unsigned long i) const { return array<1,T>::operator[](i); }
 
     const T& operator()(int i) const { return array<1,T>::operator[](i); }
     const T& operator()(unsigned i) const { return array<1,T>::operator[](i); }
     const T& operator()(long i) const { return array<1,T>::operator[](i); }
-    const T& operator()(difference_type i) const { return array<1,T>::operator[](i); }
+    const T& operator()(unsigned long i) const { return array<1,T>::operator[](i); }
   };
 
   /* alias: ka::range1d_r<T> in place of pointer_r<array<1,T> > */
@@ -1583,12 +1583,12 @@ namespace ka {
     T& operator[](int i)  { return array<1,T>::operator[](i); }
     T& operator[](unsigned i)  { return array<1,T>::operator[](i); }
     T& operator[](long i) { return array<1,T>::operator[](i); }
-    T& operator[](difference_type i) { return array<1,T>::operator[](i); }
+    T& operator[](unsigned long i) { return array<1,T>::operator[](i); }
 
     T& operator()(int i)  { return array<1,T>::operator[](i); }
     T& operator()(unsigned i)  { return array<1,T>::operator[](i); }
     T& operator()(long i) { return array<1,T>::operator[](i); }
-    T& operator()(difference_type i) { return array<1,T>::operator[](i); }
+    T& operator()(unsigned long i) { return array<1,T>::operator[](i); }
 
     Self_t operator[] (const rangeindex& r) const 
     { return pointer_w( array<1,T>::operator()(r) ); }
@@ -1644,12 +1644,12 @@ namespace ka {
     T& operator[](int i)  { return array<1,T>::operator[](i); }
     T& operator[](unsigned i)  { return array<1,T>::operator[](i); }
     T& operator[](long i) { return array<1,T>::operator[](i); }
-    T& operator[](difference_type i) { return array<1,T>::operator[](i); }
+    T& operator[](unsigned long i) { return array<1,T>::operator[](i); }
 
     T& operator()(int i)  { return array<1,T>::operator[](i); }
     T& operator()(unsigned i)  { return array<1,T>::operator[](i); }
     T& operator()(long i) { return array<1,T>::operator[](i); }
-    T& operator()(difference_type i) { return array<1,T>::operator[](i); }
+    T& operator()(unsigned long i) { return array<1,T>::operator[](i); }
 
     Self_t operator[] (const rangeindex& r) const 
     { return pointer_rw( array<1,T>::operator()(r) ); }
@@ -1757,12 +1757,12 @@ namespace ka {
     T& operator[](int i)  { return array<1,T>::operator[](i); }
     T& operator[](unsigned i)  { return array<1,T>::operator[](i); }
     T& operator[](long i) { return array<1,T>::operator[](i); }
-    T& operator[](difference_type i) { return array<1,T>::operator[](i); }
+    T& operator[](unsigned long i) { return array<1,T>::operator[](i); }
 
     T& operator()(int i)  { return array<1,T>::operator[](i); }
     T& operator()(unsigned i)  { return array<1,T>::operator[](i); }
     T& operator()(long i) { return array<1,T>::operator[](i); }
-    T& operator()(difference_type i) { return array<1,T>::operator[](i); }
+    T& operator()(unsigned long i) { return array<1,T>::operator[](i); }
 
     Self_t operator[] (const rangeindex& r) const 
     { return pointer_cw( array<1,T>::operator()(r) ); }
