@@ -43,12 +43,13 @@
 ** 
 */
 
+#include "config.h"
+#if HAVE_FUTEX
+
 #include <time.h>
 #ifndef _GNU_SOURCE
 #  define _GNU_SOURCE
 #endif
-
-#if 0 /*(HAVE_FUTEX !=0) */
 
 #include <unistd.h>
 #include <sys/syscall.h>
@@ -59,7 +60,6 @@
 #include <limits.h>
 
 #include "machine/mt/kaapi_mt_condvar.h"
-
 
 #define atomic_xadd(P, V) __sync_fetch_and_add((P), (V))
 #define cmpxchg(P, O, N) __sync_val_compare_and_swap((P), (O), (N))
