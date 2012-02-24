@@ -5,6 +5,7 @@
 ##  Copyright 2010 INRIA. All rights reserved.
 ##
 
+## Add poti support
 BIN_PRGS=kaapi_event_reader
 bin_PROGRAMS=$(BIN_PRGS)
 check_PROGRAMS=$(BIN_PRGS)
