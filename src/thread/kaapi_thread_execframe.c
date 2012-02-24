@@ -137,9 +137,9 @@ redo_exec:
     state = kaapi_task_markexec( pc );
     if (likely(state ==0))
     {
-      KAAPI_EVENT_PUSH1(stack->proc, stack->proc->thread, KAAPI_EVT_TASK_BEG, pc );
+      KAAPI_EVENT_PUSH1(stack->proc, stack->proc->thread, KAAPI_EVT_TASK_BEG, pc);
       ((kaapi_task_body_internal_t)pc->body)( pc->sp, fp, pc );
-      KAAPI_EVENT_PUSH1(stack->proc, stack->proc->thread, KAAPI_EVT_TASK_END, pc );  
+      KAAPI_EVENT_PUSH0(stack->proc, stack->proc->thread, KAAPI_EVT_TASK_END);  
     }
     else 
     {

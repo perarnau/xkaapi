@@ -763,7 +763,10 @@ redo_local_work:
   lwork->init = 0;
   kaapi_writemem_barrier();
 
-  if (kaapic_foreach_globalwork_next( lwork, &i, &j ))
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
+  int retval = kaapic_foreach_globalwork_next( lwork, &i, &j );
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
+  if (retval)
     goto redo_local_work;
   
 return_label:
@@ -834,6 +837,13 @@ kaapic_local_work_t* kaapic_foreach_workinit
      _kaapic_split_task,
      lwork
   );
+  KAAPI_EVENT_PUSH1(
+      self_thread->stack.proc,
+      self_thread,
+      KAAPI_EVT_TASK_BEG,
+      lwork->context
+  );
+
 
   /* begin a parallel region */
   if (kaapic_do_parallel) kaapic_begin_parallel();
@@ -874,6 +884,12 @@ int kaapic_foreach_workend
     kaapi_threadcontext2thread(self_thread), 
     lwork->context
   );
+  KAAPI_EVENT_PUSH0(
+      kaapi_get_current_processor(),
+      kaapi_get_current_processor()->thread,
+      KAAPI_EVT_TASK_END
+  );
+
   
   /* exec: task and wait end of adaptive task */
   kaapi_sched_sync_(self_thread);
@@ -917,6 +933,8 @@ int kaapic_foreach_globalwork_next(
   kaapic_global_work_t* gwork = lwork->global;
   kaapi_processor_t* kproc = kaapi_get_current_processor();
 
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
+
   while (KAAPI_ATOMIC_READ(&gwork->workremain) !=0)
   {
     kaapi_assert_debug(KAAPI_ATOMIC_READ(&gwork->workremain) >=0);
@@ -946,10 +964,12 @@ int kaapic_foreach_globalwork_next(
     }
     kaapi_slowdown_cpu();
   }
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
   return 0; /* means global is terminated */
 
 retval1:
   lwork->workdone += *last - *first;
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
   return 1;
 }
 
@@ -965,15 +985,18 @@ int kaapic_foreach_worknext(
   kaapi_workqueue_index_t* last
 )
 {
+  int retval;
   kaapic_global_work_t* gwork = lwork->global;
   int iszero = (KAAPI_ATOMIC_READ(&gwork->workremain) ==0);
   int sgrain = gwork->wi.seq_grain;
+
   if ( iszero || (sgrain == 0))
   {
     KAAPI_DEBUG_INST(*first = *last = 0);
     return 0;
   }
 
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), 0, KAAPI_EVT_SCHED_IDLE_BEG );
 
   if (kaapi_workqueue_pop(&lwork->cr, first, last, sgrain) == 0)
   {
@@ -982,7 +1005,8 @@ int kaapic_foreach_worknext(
     );
 
     lwork->workdone += *last-*first;
-    return 1;
+    retval = 1;
+    goto return_value;
   }
   kaapi_assert_debug( kaapi_workqueue_isempty(&lwork->cr) );
 
@@ -998,7 +1022,11 @@ int kaapic_foreach_worknext(
   kaapi_assert_debug(KAAPI_ATOMIC_READ(&gwork->workremain) >=0);
   lwork->workdone = 0;
 
-  return kaapic_foreach_globalwork_next( lwork, first, last );
+  retval = kaapic_foreach_globalwork_next( lwork, first, last );
+
+return_value:
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), 0, KAAPI_EVT_SCHED_IDLE_END );
+  return retval;
 }
 
 
@@ -1068,13 +1096,17 @@ redo_local_work:
   kaapi_assert_debug(KAAPI_ATOMIC_READ(&gwork->workremain) >=0);
   lwork->workdone = 0;
 
-  if (kaapic_foreach_globalwork_next( lwork, &first, &last ))
+  KAAPI_EVENT_PUSH0(self_thread->stack.proc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
+  int retval = kaapic_foreach_globalwork_next( lwork, &first, &last );
+  KAAPI_EVENT_PUSH0(self_thread->stack.proc, 0, KAAPI_EVT_SCHED_IDLE_END );
+  if (retval)
     goto redo_local_work;
  
 return_label:
   lwork->workdone = 0;
   lwork->init = 0;
   kaapi_writemem_barrier();
+
   kaapic_foreach_workend( self_thread, lwork );
 
 #if CONFIG_FOREACH_STATS
