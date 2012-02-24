@@ -143,21 +143,22 @@ extern int kaapic_spawn_ti(
 
 /* work array distribution. allow for random access. 
    The thread tid has a reserved slice [first, last)
-   where:
-     first = tid2pos[tid];
-     last = startindex[tid2pos[tid]+1]-1; 
+   iff map[tid] != 0.
+   Then it should process work on its slice, where:
+     first = startindex[tid2pos[tid]]   (inclusive)
+     last  = startindex[tid2pos[tid]+1] (exclusive)
   
    tid2pos is a permutation to specify slice of each tid
 */
 typedef struct work_array
 {
   kaapi_bitmap_t       map;
-  uint16_t             tid2pos[KAAPI_MAX_PROCESSOR];
+  uint8_t              tid2pos[KAAPI_MAX_PROCESSOR];
   long                 startindex[1+KAAPI_MAX_PROCESSOR];
 } kaapic_work_distribution_t;
 
 
-/* work container */
+/* work container information */
 typedef struct work_info
 {
   /* grains */
@@ -167,7 +168,7 @@ typedef struct work_info
 } kaapic_work_info_t;
 
 
-/* local work */
+/* local work: used by each worker to process its work */
 typedef struct local_work
 {
   kaapi_workqueue_t       cr;
@@ -177,15 +178,18 @@ typedef struct local_work
 #endif
 
   void*                   context __attribute__((aligned(KAAPI_CACHE_LINE)));
-  struct global_work*     global;
-  kaapi_workqueue_index_t workdone;
-  int                     tid;
-  int volatile            init; /* !=0 iff init */
+  struct global_work*     global;    /* go up to all local information */
+  kaapi_workqueue_index_t workdone;  /* to compute completion */
+  int                     tid;       /* identifier : ==kid */
+  int volatile            init;      /* !=0 iff init */
 } kaapic_local_work_t __attribute__ ((aligned (KAAPI_CACHE_LINE)));
 
 
 /* global work common 
-   Initialized by one thread (the master thread)
+   Initialized by one thread (the master thread).
+   Contains all local works and global information to compute completion.
+   - wa: the work distribution structure 
+   - lwork[tid]; the work for the thread tid
 */
 typedef struct global_work
 {
@@ -241,8 +245,6 @@ extern kaapic_global_work_t* kaapic_foreach_global_workinit
 */
 extern kaapic_local_work_t* kaapic_foreach_local_workinit(
   kaapic_local_work_t*    lwork,
-  int                     tid, 
-  kaapic_global_work_t*   gwork,
   kaapi_workqueue_index_t first,
   kaapi_workqueue_index_t last
 );

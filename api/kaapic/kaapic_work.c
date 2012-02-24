@@ -134,6 +134,7 @@ static int kaapic_local_work_steal
   _kaapi_workqueue_lock(&lwork->cr);
   retval = kaapi_workqueue_steal(&lwork->cr, i, j, unit_size) ==0;
   _kaapi_workqueue_unlock(&lwork->cr);
+  kaapi_assert_debug( (retval==0) || (*i < *j) );
   return retval;
 }
 
@@ -194,8 +195,8 @@ int kaapic_global_work_pop
 /* return !=0 iff successful steal op */
 static int kaapic_global_work_steal
 (
-  kaapic_global_work_t* gwork,
-  kaapi_processor_t*    kproc, 
+  kaapic_global_work_t*    gwork,
+  kaapi_processor_t*       kproc, 
   kaapi_workqueue_index_t* i, 
   kaapi_workqueue_index_t* j
 )
@@ -226,7 +227,6 @@ static int kaapic_global_work_steal
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
       kaapi_assert_debug( *i < *j );
-//      printf("Tid0 steal slice of %i\n",tidpos-1);
 
       /* success */
       return 1;
@@ -257,7 +257,7 @@ redo_select:
   /* do not steal if range size <= par_grain */
   kaapic_local_work_t* lwork = &gwork->lwork[victim.kproc->kid];
 
-  /* because object lwork may exist without thread, test if initialized */
+  /* because object lwork may exist without beging initialized, return if not */
   if (lwork->init == 0)
     goto redo_select;
 
@@ -270,12 +270,12 @@ redo_select:
   unit_size = range_size / 2;
 
   if (kaapic_local_work_steal(
-    lwork,
-    kproc, 
-    i,
-    j,
-    unit_size
-  ))
+            lwork,
+            kproc, 
+            i,
+            j,
+            unit_size
+    ))
   {
 #if defined(KAAPI_USE_PERFCOUNTER)
     ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
@@ -296,6 +296,217 @@ static inline unsigned long work_array_size(const kaapic_work_distribution_t* wa
 
 /* fwd decl */
 static void _kaapic_thief_entrypoint(void*, kaapi_thread_t*,  kaapi_task_t* );
+
+
+
+/* Used to start parallel region if required */
+extern unsigned int kaapic_do_parallel;
+
+
+/* Initial work distribution wa.
+   - self_tid is the thread that initial the globalwork
+   - cpuset is the mask of kid on which work will be distributed
+   - concurrency is the concurrency level
+   - [first,last) the slice to distribute
+*/
+static void _kaapic_foreach_initwa(
+  kaapic_work_distribution_t* wa,
+  int                         self_tid,
+  const kaapi_bitmap_value_t* cpuset,
+  int                         concurrency,
+  kaapi_workqueue_index_t     first, 
+  kaapi_workqueue_index_t     last
+)
+{
+  kaapi_bitmap_value_t mask;
+  kaapi_workqueue_index_t range_size;
+  long off;
+  long scale;
+  int sizemap;
+
+  kaapi_assert_debug(KAAPI_MAX_PROCESSOR < ~(uint8_t)0 );
+
+  /* compute the map of kid where to pre-reserve local work. Exclude the calling kproc */
+  kaapi_bitmap_value_clear(&mask);
+  kaapi_bitmap_value_set_low_bits(&mask, concurrency);
+
+  /* mask with specified cpuset */
+  kaapi_bitmap_value_and(&mask, cpuset);
+  kaapi_bitmap_init( &wa->map, &mask );
+
+  /* concurrency now = size of the set */
+  sizemap = kaapi_bitmap_value_count(&mask);
+
+  /* split the range in equal slices */
+  range_size = last - first;
+
+  /* handle concurrency too high case */
+  if (range_size < sizemap) 
+    sizemap = range_size;
+
+  /* round range to be multiple of concurrency 
+     tid with indexes 0 will get the biggest part
+     Here it is an uniform block distribution. An other distribution should be used.
+  */
+  off = range_size % sizemap;
+  range_size -= off;
+  scale = range_size / sizemap;
+  
+  /* init logical mapping from tid to [0, ..., n] such that localtid is attached to 0 if
+     is in the set.
+     Initialize also all the localwork to empty (but lock is initialized !)
+  */
+  uint16_t localcount = 0;
+  if (kaapi_bitmap_value_get(&mask, self_tid))
+    wa->tid2pos[self_tid] = localcount++;
+  int i;
+  for (i=0; i<concurrency; ++i)
+  {
+    if (i == self_tid) 
+      continue;
+      
+    if (kaapi_bitmap_value_get(&mask, i)  && (localcount < sizemap))
+      wa->tid2pos[i] = localcount++;
+    else 
+      wa->tid2pos[i] = (uint8_t)-1; /* not in the set */
+  }
+  
+  /* fill the start indexes: here it should be important to
+     allocate slices depending of the futur thread id... ?
+  */
+  wa->startindex[0] = first;
+  wa->startindex[1] = first+off+scale;
+  for (i=1; i<sizemap; ++i)
+    wa->startindex[i+1] = wa->startindex[i]+scale;
+
+  kaapi_assert_debug(wa->startindex[sizemap] == last);
+}
+
+
+/* Initialize the global work:
+   - push a frame of the calling thread
+   - allocate the global work into the stack
+*/
+kaapic_global_work_t* kaapic_foreach_global_workinit
+(
+  kaapi_thread_context_t* self_thread,
+  kaapi_workqueue_index_t first, 
+  kaapi_workqueue_index_t last,
+  const kaapic_foreach_attr_t*  attr,
+  kaapic_foreach_body_t   body_f,
+  kaapic_body_arg_t*      body_args
+)
+{
+  kaapic_global_work_t* gwork;
+  kaapic_local_work_t* lwork;
+  int i;
+
+  /* if empty gwork 
+  */
+  if (first >= last) 
+    return 0;
+
+  /* push a new frame.
+     will be poped at the terminaison 
+  */
+  kaapi_thread_push_frame_( self_thread );
+  
+  /* is_format true if called from kaapif_foreach_with_format */
+  kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
+  int localtid = self_thread->stack.proc->kid;
+
+  /* allocate the gwork */
+  gwork = kaapi_thread_pushdata(thread, sizeof(kaapic_global_work_t));
+  kaapi_assert_debug(gwork !=0);
+  
+  /* work array, reserve range in [first,last) for each thief */
+  if (attr == 0) attr = &kaapic_default_attr;
+  int concurrency = kaapi_getconcurrency();
+
+  /* initialize work distribution 
+     - this function should a policy of the foreach attribut
+  */
+  _kaapic_foreach_initwa(
+      &gwork->wa, 
+      localtid, 
+      (kaapi_bitmap_value_t*)&attr->cpuset, 
+      concurrency,
+      first, last
+  );
+
+  /* reset the work remain/wokerdone field */
+  KAAPI_ATOMIC_WRITE(&gwork->workremain, last - first);
+  KAAPI_ATOMIC_WRITE(&gwork->workerdone, 0);
+
+  /* Initialize all the localwork to empty (but lock is initialized !)
+  */
+  for (i=0; i<concurrency; ++i)
+  {
+    lwork = &gwork->lwork[i];
+  /* initialize the lwork */
+#if defined(USE_KPROC_LOCK)
+    kaapi_workqueue_init_with_lock(
+      &lwork->cr,
+      0, 0,
+      &kaapi_all_kprocessors[i]->lock
+    );
+#else
+    kaapi_atomic_initlock(&lwork->lock);
+    kaapi_workqueue_init_with_lock(
+      &lwork->cr, 
+      0, 0,
+      &lwork->lock
+    );
+#endif
+    lwork->context  = 0;
+    lwork->global   = gwork;
+    lwork->workdone = 0;
+    lwork->tid      = i;
+    lwork->init     = 0;
+  }
+  
+  gwork->wi.par_grain = attr->p_grain;
+  gwork->wi.seq_grain = attr->s_grain;
+
+  gwork->body_f    = body_f;
+  gwork->body_args = body_args;
+
+  KAAPI_SET_SELF_WORKLOAD(last-first);
+
+  return gwork;
+}  
+
+
+
+/* Initialize the local work + the global work
+   Return a pointer to the local work to execute. 
+   Do not require that reset is protected:
+   - steal cannot occurs on local work while ->init ==0. 
+*/
+kaapic_local_work_t* kaapic_foreach_local_workinit
+(
+  kaapic_local_work_t*    lwork,
+  kaapi_workqueue_index_t first,
+  kaapi_workqueue_index_t last
+)
+{  
+  kaapi_assert_debug(lwork !=0);
+  kaapi_assert_debug(lwork->workdone == 0);
+  kaapi_assert_debug(lwork->init == 0);
+
+  kaapi_workqueue_reset(
+    &lwork->cr, 
+    first,
+    last
+  );
+
+  /* publish new local work */
+  kaapi_writemem_barrier();
+  lwork->init        = 1;
+
+  return lwork;
+}  
+
 
 
 /* task splitter: interface between scheduler and kaapic works. 
@@ -365,12 +576,7 @@ static int _kaapic_split_task
       
       KAAPI_ATOMIC_INCR(&gwork->workerdone);
       tw = &gwork->lwork[tid];
-      kaapi_workqueue_reset(&tw->cr, first, last);
-
-      /* serialization with previous write */
-      kaapi_assert_debug(tw->init == 0); /* else may be visible through global entry */
-      kaapi_writemem_barrier();
-      tw->init = 1;
+      kaapic_foreach_local_workinit(tw, first, last);
 
       kaapi_task_init_with_flag(
         kaapi_request_toptask(req), 
@@ -441,25 +647,22 @@ static int _kaapic_split_task
 #endif
     return 0;
   }
-  kaapi_assert_debug(first < last);
-  
 #if defined(USE_KPROC_LOCK)
 #else
   _kaapi_workqueue_unlock(&lwork->cr);
 #endif
+
+  kaapi_assert_debug(first < last);  
+  kaapi_assert_debug(unit_size*nreq == last-first);  
+
   for ( /* void */; 
         !kaapi_listrequest_iterator_empty(lri);
         kaapi_listrequest_iterator_next(lr, lri)
       )
-  {
+  { 
     req = kaapi_listrequest_iterator_get(lr, lri);
     tw = &gwork->lwork[req->ident];
-    kaapi_workqueue_reset( &tw->cr, last-unit_size, last);
-
-    /* serialization with previous write */
-    kaapi_assert_debug(tw->init == 0); /* else may be visible through global entry */
-    kaapi_writemem_barrier();
-    tw->init = 1; 
+    kaapic_foreach_local_workinit(tw, last-unit_size, last);
 
     kaapi_task_init_with_flag(
       kaapi_request_toptask(req), 
@@ -523,14 +726,17 @@ static void _kaapic_thief_entrypoint(
   {
     kaapi_assert_debug(i < j);
     KAAPI_SET_SELF_WORKLOAD(kaapi_workqueue_size(&lwork->cr));
-    lwork->workdone += j-i;
 redo_local_work:
     kaapi_assert_debug( i < j );
+    lwork->workdone += j-i;
     /* apply w->f on [i, j[ */
     gwork->body_f((int)i, (int)j, (int)lwork->tid, gwork->body_args);
   }
 
+  /* finish: nothing to steal */
+  lwork->init = 0;
   kaapi_writemem_barrier();
+
   /* */
   KAAPI_SET_SELF_WORKLOAD(0);
 
@@ -548,7 +754,6 @@ redo_local_work:
     goto redo_local_work;
   
   /* suppress lwork reference */
-  lwork->init = 0;
   kaapi_task_unset_splittable(pc);
   kaapi_synchronize_steal_thread(kproc->thread);
 
@@ -561,182 +766,6 @@ redo_local_work:
 }
 
 
-
-/* Used to start parallel region if required */
-extern unsigned int kaapic_do_parallel;
-
-
-/* Initialize the global work:
-   - push a frame of the calling thread
-   - allocate the global work into the stack
-*/
-kaapic_global_work_t* kaapic_foreach_global_workinit
-(
-  kaapi_thread_context_t* self_thread,
-  kaapi_workqueue_index_t first, 
-  kaapi_workqueue_index_t last,
-  const kaapic_foreach_attr_t*  attr,
-  kaapic_foreach_body_t   body_f,
-  kaapic_body_arg_t*      body_args
-)
-{
-  kaapic_global_work_t* gwork;
-  kaapic_local_work_t* lwork;
-  kaapi_bitmap_value_t mask;
-  int sizemap;
-
-  /* if empty gwork 
-  */
-  if (first >= last) 
-    return 0;
-
-  /* push a new frame.
-     will be poped at the terminaison 
-  */
-  kaapi_thread_push_frame_( self_thread );
-  
-  /* is_format true if called from kaapif_foreach_with_format */
-  kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
-  int localtid = self_thread->stack.proc->kid;
-
-  /* allocate the gwork */
-  gwork = kaapi_thread_pushdata(thread, sizeof(kaapic_global_work_t));
-  kaapi_assert_debug(gwork !=0);
-  
-  /* work array, reserve range in [first,last) for each thief */
-  if (attr == 0) attr = &kaapic_default_attr;
-  int concurrency = kaapi_getconcurrency();
-  kaapi_workqueue_index_t range_size;
-  long off;
-  long scale;
-
-#if CONFIG_FOREACH_STATS
-  const double time = kaapif_get_time_();
-#endif
-
-  /* compute the map of kid where to pre-reserve local work. Exclude the calling kproc */
-  kaapi_bitmap_value_clear(&mask);
-  kaapi_bitmap_value_set_low_bits(&mask, concurrency);
-
-  /* mask with specified cpuset */
-  kaapi_bitmap_value_and(&mask, (kaapi_bitmap_value_t*)&attr->cpuset);
-  kaapi_bitmap_init( &gwork->wa.map, &mask );
-
-  /* concurrency now = size of the set */
-  sizemap = kaapi_bitmap_value_count(&mask);
-
-  /* split the range in equal slices */
-  range_size = last - first;
-  KAAPI_ATOMIC_WRITE(&gwork->workremain, range_size);
-  KAAPI_ATOMIC_WRITE(&gwork->workerdone, 0);
-
-  /* handle concurrency too high case */
-  if (range_size < sizemap) sizemap = range_size;
-
-  /* round range to be multiple of concurrency 
-     tid with indexes 0 will get the biggest part
-     Here it is an uniform block distribution. An other distribution should be used.
-  */
-  off = range_size % sizemap;
-  range_size -= off;
-  scale = range_size / sizemap;
-  
-  /* init logical mapping from tid to [0, ..., n] such that localtid is attached to 0 if
-     is in the set.
-     Initialize also all the localwork to empty (but lock is initialized !)
-  */
-  uint16_t localcount = 0;
-  if (kaapi_bitmap_value_get(&mask, localtid))
-    gwork->wa.tid2pos[localtid] = localcount++;
-  int i;
-  for (i=0; i<concurrency; ++i)
-  {
-    lwork = &gwork->lwork[i];
-  /* initialize the lwork */
-#if defined(USE_KPROC_LOCK)
-    kaapi_workqueue_init_with_lock(
-      &lwork->cr,
-      0, 0,
-      &kaapi_all_kprocessors[i]->lock
-    );
-#else
-    kaapi_atomic_initlock(&lwork->lock);
-    kaapi_workqueue_init_with_lock(
-      &lwork->cr, 
-      0, 0,
-      &lwork->lock
-    );
-#endif
-    lwork->context  = 0;
-    lwork->global   = gwork;
-    lwork->workdone = 0;
-    lwork->tid      = i;
-    lwork->init     = 0;
-
-    if (i == localtid) 
-      continue;
-      
-    if (kaapi_bitmap_value_get(&mask, i)  && (localcount < sizemap))
-      gwork->wa.tid2pos[i] = localcount++;
-    else 
-      gwork->wa.tid2pos[i] = (uint16_t)-1; /* not in the set */
-  }
-  
-  /* fill the start indexes: here it should be important to
-     allocate slices depending of the futur thread id... ?
-  */
-  gwork->wa.startindex[0] = first;
-  gwork->wa.startindex[1] = first+off+scale;
-  for (i=1; i<sizemap; ++i)
-    gwork->wa.startindex[i+1] = gwork->wa.startindex[i]+scale;
-
-  kaapi_assert_debug(gwork->wa.startindex[sizemap] == last);
-
-  gwork->wi.par_grain = attr->p_grain;
-  gwork->wi.seq_grain = attr->s_grain;
-
-  gwork->body_f    = body_f;
-  gwork->body_args = body_args;
-
-  KAAPI_SET_SELF_WORKLOAD(range_size);
-
-  return gwork;
-}  
-
-
-
-/* Initialize the local work + the global work
-   Return a pointer to the local work to execute. 
-   Do not require that reset is protected:
-   - steal cannot occurs on local work while ->init ==0. 
-*/
-kaapic_local_work_t* kaapic_foreach_local_workinit
-(
-  kaapic_local_work_t*    lwork,
-  int                     tid, 
-  kaapic_global_work_t*   gwork,
-  kaapi_workqueue_index_t first,
-  kaapi_workqueue_index_t last
-)
-{  
-  kaapi_assert_debug(lwork !=0);
-
-  kaapi_workqueue_reset(
-    &lwork->cr, 
-    first,
-    last
-  );
-
-  /* publish new local work */
-  lwork->context  = 0;
-  lwork->workdone = 0;
-  lwork->tid        = tid;
-
-  kaapi_writemem_barrier();
-  lwork->global     = gwork;
-
-  return lwork;
-}  
 
 
 /* Initialize the local work + the global work
@@ -772,11 +801,12 @@ kaapic_local_work_t* kaapic_foreach_workinit
     /* */
     lwork = kaapic_foreach_local_workinit( 
                     &gwork->lwork[tid],
-                    tid, 
-                    gwork,
                     first,
                     last
     );
+    /* from here lwork is visible to be steal, but it cannot until
+       the adaptive task is spawned 
+    */
   }
   kaapi_assert_debug(lwork !=0);
 
@@ -800,6 +830,8 @@ int kaapic_foreach_local_workend(
   kaapic_local_work_t*    lwork
 )
 {
+  lwork->init = 0;
+  
   /* exec: task and wait end of adaptive task */
   kaapi_sched_sync_(self_thread);
 
@@ -871,6 +903,7 @@ int kaapic_foreach_globalwork_next(
   while (KAAPI_ATOMIC_READ(&gwork->workremain) !=0)
   {
     kaapi_assert_debug(KAAPI_ATOMIC_READ(&gwork->workremain) >=0);
+
     if (kaapic_global_work_steal(
           gwork,
           kproc,
@@ -878,22 +911,19 @@ int kaapic_foreach_globalwork_next(
        )
     {
       if (*last - *first <= gwork->wi.seq_grain) 
-      {
-        lwork->workdone += *last-*first;
         return 1;
-      }
+
+      /* refill the global work data structure */
       _kaapi_workqueue_lock( &lwork->cr );
-      kaapi_workqueue_reset(
-        &lwork->cr, 
-        *first+gwork->wi.seq_grain, 
-        *last
+      kaapic_foreach_local_workinit( 
+          lwork,
+          *first+gwork->wi.seq_grain, 
+          *last
       );
       _kaapi_workqueue_unlock( &lwork->cr );
       KAAPI_SET_SELF_WORKLOAD(
           kaapi_workqueue_size(&lwork->cr)
       );
-      *last = *first + gwork->wi.seq_grain;
-      lwork->workdone += *last-*first;
       return 1;
     }
   }

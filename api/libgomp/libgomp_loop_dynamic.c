@@ -154,8 +154,6 @@ bool GOMP_loop_dynamic_start (
     }
     workshare->lwork = kaapic_foreach_local_workinit( 
                             &teaminfo->gwork->lwork[kproc->kid],
-                            kproc->kid,
-                            teaminfo->gwork,
                             *istart, *iend );
   }
 
@@ -342,8 +340,6 @@ static void komp_trampoline_task_parallelfor
   /* only main thread of the team has initialized global work */
   workshare->lwork = kaapic_foreach_local_workinit(
                           &ctxt->teaminfo->gwork->lwork[kproc->kid],
-                          kproc->kid,
-                          ctxt->teaminfo->gwork,
                           start,
                           end
   );
