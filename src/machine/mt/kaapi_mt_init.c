@@ -276,6 +276,8 @@ int kaapi_mt_init(void)
     printf("[KAAPI::INIT] use #physical cpu:%u, start time:%15f\n", kaapi_default_param.cpucount,kaapi_get_elapsedtime());
     fflush( stdout );
   }
+
+  KAAPI_EVENT_PUSH1(kproc, kproc->thread, KAAPI_EVT_TASK_BEG, task );
   
 
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -326,14 +328,19 @@ int kaapi_mt_init(void)
 int kaapi_mt_finalize(void)
 {
   unsigned int i;
+  kaapi_processor_t* kproc;
 
   static kaapi_atomic_t iscalled = {1};
   if (KAAPI_ATOMIC_DECR(&iscalled) !=0) 
     return EALREADY;
 
-  if (kaapi_count_kprocessors ==0) 
-    return 0;
-  
+  kaapi_assert(kaapi_count_kprocessors >0);
+
+  kproc = kaapi_get_current_processor();
+  kaapi_assert(kaapi_all_kprocessors[0] == kproc);  
+
+  KAAPI_EVENT_PUSH0( kproc, kproc->thread, KAAPI_EVT_TASK_END );
+
   /* if thread suspended, then resume all threads
   */
   if (kaapi_suspendflag)
