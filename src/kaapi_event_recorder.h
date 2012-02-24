@@ -72,7 +72,7 @@ static inline void KAAPI_EVENT_PUSH0_(
 )
 {
 #if defined(KAAPI_USE_PERFCOUNTER)
-  uint64_t tclock = kaapi_get_elapsedns();
+  uint64_t tclock = kaapi_get_elapsedns() - kaapi_default_param.startuptime;
   kaapi_event_t* evt = &kproc->eventbuffer->buffer[kproc->eventbuffer->pos++];
   evt->evtno   = eventno;
   evt->type    = 0;
@@ -98,7 +98,7 @@ static inline void KAAPI_EVENT_PUSH1_(
 )
 {
 #if defined(KAAPI_USE_PERFCOUNTER)
-  uint64_t tclock = kaapi_get_elapsedns();
+  uint64_t tclock = kaapi_get_elapsedns() - kaapi_default_param.startuptime;
   kaapi_event_t* evt = &kproc->eventbuffer->buffer[kproc->eventbuffer->pos++];
   evt->evtno   = eventno;
   evt->type    = 0;
@@ -126,7 +126,7 @@ static inline void KAAPI_EVENT_PUSH2_(
 )
 {
 #if defined(KAAPI_USE_PERFCOUNTER)
-  uint64_t tclock = kaapi_get_elapsedns();
+  uint64_t tclock = kaapi_get_elapsedns() - kaapi_default_param.startuptime;
   kaapi_event_t* evt = &kproc->eventbuffer->buffer[kproc->eventbuffer->pos++];
   evt->evtno   = eventno;
   evt->type    = 0;

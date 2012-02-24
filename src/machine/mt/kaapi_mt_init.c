@@ -129,6 +129,7 @@ static inline void kaapi_request_init( struct kaapi_request_t* pkr, uintptr_t id
 */
 int kaapi_mt_init(void)
 {
+  kaapi_processor_t*      kproc;
   kaapi_thread_context_t* thread;
   kaapi_task_t*           task;
   const char* volatile    version __attribute__((unused));
@@ -223,6 +224,8 @@ int kaapi_mt_init(void)
 #else
   kaapi_assert( 0 == pthread_key_create( &kaapi_current_processor_key, 0 ) );
 #endif
+
+  kaapi_default_param.startuptime = kaapi_get_elapsedns();
     
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* call prior setconcurrency */
@@ -230,8 +233,13 @@ int kaapi_mt_init(void)
   /* kaapi_perf_thread_init(); */
 #endif
     
-  /* set the kprocessor AFTER topology !!! */
+  /* create the kprocessor AFTER topology !!! */
   kaapi_assert_m( 0 == kaapi_setconcurrency(), "kaapi_setconcurrency" );
+  kproc = kaapi_get_current_processor();
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_KPROC_START);
+#endif
 
   /* initialize before destroying procinfo */
 #if KAAPI_USE_HWLOC
@@ -269,7 +277,6 @@ int kaapi_mt_init(void)
     fflush( stdout );
   }
   
-  kaapi_default_param.startuptime = kaapi_get_elapsedns();
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   if (getenv("KAAPI_RECORD_TRACE") !=0)
@@ -350,6 +357,7 @@ int kaapi_mt_finalize(void)
   kaapi_barrier_td_waitterminated(&kaapi_term_barrier);
 
 #if defined(KAAPI_USE_PERFCOUNTER)
+  KAAPI_EVENT_PUSH0(kaapi_all_kprocessors[0], 0, KAAPI_EVT_KPROC_STOP);
   kaapi_perf_thread_fini(kaapi_all_kprocessors[0]);
   kaapi_perf_global_fini();
   

@@ -31,11 +31,6 @@ public :
     void decCpt    (int proc    , int var  , double time);
     //! End the container and close the file
     void endTrace  ()                                    ;
-
-
 };
 
-
 #endif
-
-

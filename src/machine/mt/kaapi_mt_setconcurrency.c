@@ -241,6 +241,7 @@ void* kaapi_sched_run_processor( void* arg )
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
   kaapi_perf_thread_init(kproc, KAAPI_PERF_SCHEDULE_STATE);
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_KPROC_START );
 #endif
   kaapi_assert( kproc->thread != 0 );
 
@@ -282,6 +283,7 @@ void* kaapi_sched_run_processor( void* arg )
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
   kaapi_perf_thread_stop(kproc);
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_KPROC_STOP );
 #endif
 
   /* kprocessor correctly initialize */

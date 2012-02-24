@@ -119,7 +119,7 @@ redo_select:
   kaapi_stack_reset( &kproc->thread->stack );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-  KAAPI_EVENT_PUSH1(kproc, 0, KAAPI_EVT_STEAL_OP, victim.kproc->kid );
+  KAAPI_EVENT_PUSH1(kproc, 0, KAAPI_EVT_STEAL_OP, (uintptr_t)victim.kproc->kid );
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
 #endif
 
@@ -171,6 +171,7 @@ redo_select:
       (kaapi_atomic64_t*)&KAAPI_PERF_REG(victim.kproc, KAAPI_PERF_ID_STEALIN),
       kaapi_listrequest_iterator_count(&lri)
     );
+    KAAPI_EVENT_PUSH1(kproc, 0, KAAPI_EVT_REQUESTS_BEG, (uintptr_t)victim.kproc->kid );
 #endif
     kaapi_sched_stealprocessor( victim.kproc, &victim_stealctxt->lr, &lri );
     KAAPI_DEBUG_INST(path0= 1); 
@@ -187,6 +188,9 @@ redo_select:
       request = kaapi_listrequest_iterator_next( &victim_stealctxt->lr, &lri );
       kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
     }
+#if defined(KAAPI_USE_PERFCOUNTER)
+    KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_REQUESTS_END );
+#endif
   }
 
   KAAPI_DEBUG_INST(kproc->victim_kproc = 0;)
