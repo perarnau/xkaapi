@@ -543,8 +543,7 @@ static int _kaapic_split_task
   /* count requests that will be served by root tasks.
   */
 #if defined(KAAPI_DEBUG)
-  kaapi_listrequest_iterator_t save_lri;
-  save_lri __attribute__((unused)) = *lri;
+  kaapi_listrequest_iterator_t save_lri __attribute__((unused)) = *lri;
 #endif
   kaapi_listrequest_iterator_t cpy_lri;
   cpy_lri = *lri;
