@@ -527,6 +527,7 @@ static int _kaapic_split_task
   kaapic_local_work_t* const lwork = (kaapic_local_work_t*)arg;
   kaapic_global_work_t* const gwork = lwork->global;
   kaapi_bitmap_value_t mask;
+  kaapi_bitmap_value_t intersect;
   kaapi_bitmap_value_t negmask;
   kaapi_bitmap_value_t replymask;  
   kaapi_workqueue_index_t first, last;
@@ -557,6 +558,12 @@ static int _kaapic_split_task
   }
   kaapi_bitmap_value_neg( &negmask, &mask );
 
+  intersect = mask;
+  kaapi_bitmap_value_and( &intersect, (kaapi_bitmap_value_t*)&gwork->wa.map );
+
+  if (kaapi_bitmap_value_empty(&intersect))
+    goto skip_global;
+    
   /* Steal toplevel request: mark to 0 all entries of a incomming request */
   kaapi_bitmap_and( &replymask, &gwork->wa.map, &negmask );
   
@@ -599,14 +606,15 @@ static int _kaapic_split_task
       kaapi_listrequest_iterator_unset_at( lri, tid );
     } /* else: no work to done, will be reply failed by the runtime */
   }
-  
+
+  if (kaapi_listrequest_iterator_empty(lri))
+    return 0;
+
+skip_global:  
   /* because object lwork may exist without thread, test if initialized */
   if (lwork->init == 0)
     return 0;
     
-  if (kaapi_listrequest_iterator_empty(lri))
-    return 0;
-
 
   /* */
   kaapi_workqueue_index_t range_size, unit_size;
@@ -736,9 +744,6 @@ redo_local_work:
     gwork->body_f((int)i, (int)j, (int)lwork->tid, gwork->body_args);
   }
 
-  /* finish: nothing to steal */
-  lwork->init = 0;
-  kaapi_writemem_barrier();
 
   /* */
   KAAPI_SET_SELF_WORKLOAD(0);
@@ -752,6 +757,10 @@ redo_local_work:
   KAAPI_ATOMIC_SUB(&gwork->workremain, lwork->workdone);
   kaapi_assert_debug(KAAPI_ATOMIC_READ(&gwork->workremain) >=0);
   lwork->workdone = 0;
+
+  /* finish: nothing to steal */
+  lwork->init = 0;
+  kaapi_writemem_barrier();
 
   if (kaapic_foreach_globalwork_next( lwork, &i, &j ))
     goto redo_local_work;
