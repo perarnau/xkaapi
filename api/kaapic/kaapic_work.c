@@ -544,7 +544,7 @@ static int _kaapic_split_task
   */
 #if defined(KAAPI_DEBUG)
   kaapi_listrequest_iterator_t save_lri;
-  save_lri = *lri;
+  save_lri __attribute__((unused)) = *lri;
 #endif
   kaapi_listrequest_iterator_t cpy_lri;
   cpy_lri = *lri;
@@ -654,6 +654,10 @@ static int _kaapic_split_task
 
   kaapi_assert_debug(first < last);  
   kaapi_assert_debug(unit_size*nreq == last-first);  
+#if defined(KAAPI_DEBUG)
+  int sfirst __attribute__((unused)) = first;
+  int slast __attribute__((unused))  = last;
+#endif
 
   for ( /* void */; 
         !kaapi_listrequest_iterator_empty(lri);
