@@ -1009,6 +1009,7 @@ int kaapic_foreach_worknext(
     goto return_value;
   }
   kaapi_assert_debug( kaapi_workqueue_isempty(&lwork->cr) );
+  lwork->init = 0;
 
   /* Empty local work: try to steal from global work 
      After updating the workremain of the global work
