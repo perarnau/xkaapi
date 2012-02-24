@@ -44,23 +44,16 @@
 #include "kaapi_impl.h"
 #include "machine/mt/kaapi_mt_condvar.h"
 
-
-/* Implementaiton note:
-  * KAAPI_USE_SPIN_SUSPEND may be defined in order to use busy waiting
-     implementation of suspend/resume
-  * else the implementaiton relies on futex (for linux) or Pthread (other OS)
-  #define KAAPI_USE_SPIN_SUSPEND 0
-*/
-
 /*
 */
-volatile int kaapi_suspendflag __attribute__((aligned(64)));
+volatile int kaapi_suspendflag;
 
 static volatile int kaapi_suspend_round=0;
 
 /*
 */
 kaapi_atomic_t kaapi_suspendedthreads;
+
 
 /*
 */
@@ -78,17 +71,6 @@ void kaapi_mt_suspendresume_init(void)
 
 void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
 {
-#if defined(KAAPI_USE_SPIN_SUSPEND)
-#warning "to do"
-  int i;
-  for(i=0; i<10000; ++i) 
-  {
-    if (!kaapi_suspendflag) 
-       return;
-    kaapi_slowdown_cpu();
-  }
-#endif
-    
   int round, first=1;
   for(;;) {
     kproc_mutex_lock(&wakeupmutex_threads);
@@ -99,7 +81,7 @@ void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
     int newround=kaapi_suspend_round;
     if (first || round!=newround) {
       /* cond_wait can return without signal/broadcast
-         if this is the case, do not increment again the counter */
+	 if this is the case, do not increment again the counter */
       KAAPI_ATOMIC_INCR( &kaapi_suspendedthreads );
     }
     round=newround;
@@ -108,7 +90,6 @@ void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
       break ;
     }
   }
-  /* reset steal history ? */
   memset(&kproc->fnc_selecarg, 0, sizeof(kproc->fnc_selecarg) );
 }
 
@@ -121,6 +102,7 @@ void kaapi_mt_suspend_threads_post(void)
   kaapi_suspend_round++;
   kaapi_writemem_barrier();
   kaapi_suspendflag = 1;
+  kaapi_writemem_barrier();
 }
 
 void kaapi_mt_suspend_threads_wait(void)
@@ -135,8 +117,8 @@ void kaapi_mt_suspend_threads_wait(void)
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );  
 }
 
-
-/* */
+/*
+*/
 void kaapi_mt_resume_threads(void)
 {
   kaapi_assert_debug( kaapi_suspendflag >= 1 );
