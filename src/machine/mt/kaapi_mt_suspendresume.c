@@ -72,6 +72,10 @@ void kaapi_mt_suspendresume_init(void)
 void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
 {
   int round, first=1;
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_perf_thread_stop(kproc);
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_SUSPEND_BEG );
+#endif
   for(;;) {
     kproc_mutex_lock(&wakeupmutex_threads);
     if (! kaapi_suspendflag) {
