@@ -324,7 +324,7 @@ static void _kaapic_foreach_initwa(
   long scale;
   int sizemap;
 
-  kaapi_assert_debug(KAAPI_MAX_PROCESSOR < ~(uint8_t)0 );
+  kaapi_assert_debug(KAAPI_MAX_PROCESSOR < (uint8_t)~0 );
 
   /* compute the map of kid where to pre-reserve local work. Exclude the calling kproc */
   kaapi_bitmap_value_clear(&mask);
@@ -735,7 +735,6 @@ redo_local_work:
 
   /* finish: nothing to steal */
   lwork->init = 0;
-  kaapi_writemem_barrier();
 
   /* */
   KAAPI_SET_SELF_WORKLOAD(0);
@@ -1026,6 +1025,7 @@ redo_local_work:
     /* apply w->f on [i, j[ */
     body_f((int)first, (int)last, (int)tid, body_args);
   }
+  lwork->init = 0;
   kaapi_assert_debug( kaapi_workqueue_isempty(&lwork->cr) );
 
   /* */
@@ -1044,7 +1044,8 @@ redo_local_work:
 
   if (kaapic_foreach_globalwork_next( lwork, &first, &last ))
     goto redo_local_work;
-
+ 
+  kaapi_writemem_barrier();
   kaapic_foreach_workend( self_thread, lwork );
 
 #if CONFIG_FOREACH_STATS
