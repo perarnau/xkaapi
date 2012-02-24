@@ -359,33 +359,6 @@ extern kaapi_rtparam_t kaapi_default_param;
     sizeof(kaapi_tasksteal_arg_t).
 */
 
-/** \ingroup TASK
-    Reply to a steal request.
-    Return !=0 if the request cannot be replied.
-*/
-static inline int kaapi_request_replytask
-( 
-  kaapi_request_t*        request, 
-  kaapi_request_status_t  value
-)
-{
-  kaapi_atomic_t* const status = request->status;
-  request->status = 0;
-  if (value == KAAPI_REQUEST_S_OK)
-  {
-    /* even if tasks will be preempted, reply ok. On remote side, the processor will abort
-       preempted tasks
-    */
-    KAAPI_ATOMIC_WRITE_BARRIER(status, KAAPI_REQUEST_S_OK);
-  }
-  else
-  {
-    /* failed to steal: avoid unnecessary memory barrier */
-    KAAPI_ATOMIC_WRITE(status, KAAPI_REQUEST_S_NOK);
-  }
-  return 0;
-}
-
 
 /* ============================= Simple C API for network ============================ */
 #include "kaapi_network.h"
@@ -865,6 +838,35 @@ extern void kaapi_set_self_workload( unsigned long workload );
 
 #include "kaapi_partition.h"
 #include "kaapi_event_recorder.h"
+
+/** \ingroup TASK
+    Reply to a steal request.
+    Return !=0 if the request cannot be replied.
+*/
+static inline int kaapi_request_replytask
+( 
+  kaapi_request_t*        request, 
+  kaapi_request_status_t  value
+)
+{
+  kaapi_atomic_t* const status = request->status;
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), 0, KAAPI_EVT_SEND_REPLY );
+  request->status = 0;
+  if (value == KAAPI_REQUEST_S_OK)
+  {
+    /* even if tasks will be preempted, reply ok. On remote side, the processor will abort
+       preempted tasks
+    */
+    KAAPI_ATOMIC_WRITE_BARRIER(status, KAAPI_REQUEST_S_OK);
+  }
+  else
+  {
+    /* failed to steal: avoid unnecessary memory barrier */
+    KAAPI_ATOMIC_WRITE(status, KAAPI_REQUEST_S_NOK);
+  }
+  return 0;
+}
+
 
 
 /*** TO BE MOVED INTO kaapi_task.h once tasklist.h could be included... */

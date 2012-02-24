@@ -72,7 +72,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_SUSPEND);
-  kaapi_event_push0( kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
+  KAAPI_EVENT_PUSH0( kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
 #endif
 
   /* here is the reason of suspension */
@@ -88,7 +88,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     {
 #if defined(KAAPI_USE_PERFCOUNTER)
       kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
-      kaapi_event_push0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
+      KAAPI_EVENT_PUSH0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
 #endif
       return 0;
     }
@@ -99,7 +99,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     {
 #if defined(KAAPI_USE_PERFCOUNTER)
       kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
-      kaapi_event_push0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
+      KAAPI_EVENT_PUSH0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
 #endif
       return 0;
     }
@@ -145,7 +145,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
         kaapi_assert((tasklist !=0) || (thread->stack.sfp->pc == task_condition));
 #if defined(KAAPI_USE_PERFCOUNTER)
         kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
-        kaapi_event_push0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
+        KAAPI_EVENT_PUSH0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
 #endif
         return 0;
       }
@@ -179,7 +179,7 @@ redo_execution:
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
-    kaapi_event_push0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
+    KAAPI_EVENT_PUSH0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
 #endif
 
 #if defined(KAAPI_USE_CUDA)
@@ -199,7 +199,7 @@ redo_execution:
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
-    kaapi_event_push0( kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
+    KAAPI_EVENT_PUSH0( kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
 #endif
     kaapi_assert( err != EINVAL);
 

@@ -118,6 +118,11 @@ redo_select:
     
   kaapi_stack_reset( &kproc->thread->stack );
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+  KAAPI_EVENT_PUSH1(kproc, 0, KAAPI_EVT_STEAL_OP, victim.kproc->kid );
+  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
+#endif
+
   self_request = &kaapi_global_requests_list[kproc->kid];
   kaapi_assert_debug( self_request->ident == kproc->kid );
   KAAPI_DEBUG_INST(kproc->victim_kproc = victim.kproc;)
@@ -128,9 +133,6 @@ redo_select:
     &kproc->thread->stack.stackframe[0] 
   );
   
-#if defined(KAAPI_USE_PERFCOUNTER)
-  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
-#endif
 
   /* (2)
      lock and re-test if they are yet posted requests on victim or not 
@@ -236,6 +238,8 @@ redo_select:
   return KAAPI_REQUEST_S_NOK;
   
 return_value:
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_RECV_REPLY );
+
   /* mark current processor as no stealing anymore */
   kaapi_assert_debug( (kaapi_request_status_get(&status) != KAAPI_REQUEST_S_POSTED) ); 
 

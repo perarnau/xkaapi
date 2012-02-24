@@ -79,7 +79,7 @@ int main(int ac, char** av)
   kaapic_init(1);
   
   kaapic_foreach_attr_init(&attr);
-  kaapic_foreach_attr_set_grains(&attr, 128, 128);
+  kaapic_foreach_attr_set_grains(&attr, 1024, 1024);
   
 #if CONFIG_BENCH
   start = kaapic_get_time();

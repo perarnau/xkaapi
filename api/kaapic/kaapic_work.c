@@ -212,7 +212,7 @@ static int kaapic_global_work_steal
      - any try to pop a slice closed to the tid of the thread
      - only 0 can pop a non poped slice
   */
-#if 1
+#if 0
   /* caller has already pop and finish its slice, if it is 0 then may pop
      the next non null entry
   */
@@ -744,7 +744,6 @@ redo_local_work:
     gwork->body_f((int)i, (int)j, (int)lwork->tid, gwork->body_args);
   }
 
-
   /* */
   KAAPI_SET_SELF_WORKLOAD(0);
 
@@ -754,7 +753,9 @@ redo_local_work:
   kaapi_assert( gwr >= lwork->workdone );
 #endif
 
-  KAAPI_ATOMIC_SUB(&gwork->workremain, lwork->workdone);
+  if (KAAPI_ATOMIC_SUB(&gwork->workremain, lwork->workdone) ==0) 
+    goto return_label;
+
   kaapi_assert_debug(KAAPI_ATOMIC_READ(&gwork->workremain) >=0);
   lwork->workdone = 0;
 
@@ -765,6 +766,10 @@ redo_local_work:
   if (kaapic_foreach_globalwork_next( lwork, &i, &j ))
     goto redo_local_work;
   
+return_label:
+  lwork->workdone = 0;
+  lwork->init = 0;
+
   /* suppress lwork reference */
   kaapi_task_unset_splittable(pc);
   kaapi_synchronize_steal_thread(kproc->thread);
@@ -939,6 +944,7 @@ int kaapic_foreach_globalwork_next(
       *last = *first + gwork->wi.seq_grain;
       goto retval1;
     }
+    kaapi_slowdown_cpu();
   }
   return 0; /* means global is terminated */
 
@@ -1056,13 +1062,19 @@ redo_local_work:
 #endif
 
   /* update workload information */
-  KAAPI_ATOMIC_SUB(&gwork->workremain, lwork->workdone);
+  if (KAAPI_ATOMIC_SUB(&gwork->workremain, lwork->workdone) ==0) 
+    goto return_label;
+
   kaapi_assert_debug(KAAPI_ATOMIC_READ(&gwork->workremain) >=0);
   lwork->workdone = 0;
 
   if (kaapic_foreach_globalwork_next( lwork, &first, &last ))
     goto redo_local_work;
-
+ 
+return_label:
+  lwork->workdone = 0;
+  lwork->init = 0;
+  kaapi_writemem_barrier();
   kaapic_foreach_workend( self_thread, lwork );
 
 #if CONFIG_FOREACH_STATS

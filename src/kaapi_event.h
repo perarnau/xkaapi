@@ -52,15 +52,15 @@
 extern "C" {
 #endif
 
-/** Definition of internal KAAPI event.
-    Not that any extension or modification of the events list should
-    be reflected in the utility bin/kaapi_event_reader file.
+/** Definition of internal KAAPI events.
+    Not that any extension or modification of the events must
+    be reflected in the utility bin/kaapi_event_reader.
 */
 #define KAAPI_EVT_TASK_BEG        1     /* begin execution of task */
 #define KAAPI_EVT_TASK_END        2     /* end execution of task */
 
-#define KAAPI_EVT_FRAME_TL_BEG    3     /* begin execution of frame tasklist */
-#define KAAPI_EVT_FRAME_TL_END    4     /* end execution of frame tasklist */
+#define KAAPI_EVT_FRAME_TL_BEG    3     /* begin execution using frame tasklist */
+#define KAAPI_EVT_FRAME_TL_END    4     /* end execution using frame tasklist */
 
 #define KAAPI_EVT_STATIC_BEG      5     /* begin of static schedule computation */
 #define KAAPI_EVT_STATIC_END      6     /* end of static schedule computation */
@@ -68,10 +68,21 @@ extern "C" {
 #define KAAPI_EVT_STATIC_TASK_BEG 7     /* begin of sub task exec for static schedule */
 #define KAAPI_EVT_STATIC_TASK_END 8     /* end of sub task exec for static schedule */
 
-#define KAAPI_EVT_SCHED_IDLE_BEG  9     /* begin when k-processor starts to be idle */
-#define KAAPI_EVT_SCHED_IDLE_END  10    /* end when k-processor starts to be idle */
+#define KAAPI_EVT_SCHED_IDLE_BEG  9     /* begin when k-processor starts to steal */
+#define KAAPI_EVT_SCHED_IDLE_END  10    /* end when k-processor starts to steal */
 
-#define KAAPI_EVT_NUMBER          10    /* total number of event ! */
+#define KAAPI_EVT_SCHED_SUSPEND_BEG  11 /* when k-processor is suspending */
+#define KAAPI_EVT_SCHED_SUSPEND_END  12 /* when k-processor wakeup */
+
+#define KAAPI_EVT_REQUESTS_BEG    12 /* when k-processor begin to process requests, data=victim.id */
+#define KAAPI_EVT_REQUESTS_END    13 /* when k-processor end to process requests */
+
+#define KAAPI_EVT_STEAL_OP        14 /* when k-processor emit a steal request data=victimid*/
+#define KAAPI_EVT_SEND_REPLY      15 /* when k-processor emit a steal request data=victimid*/
+#define KAAPI_EVT_RECV_REPLY      16 /* when k-processor emit a steal request data=victimid*/
+
+#define KAAPI_STATE_NUMBER        6  /* total number of state ! */
+#define KAAPI_EVT_NUMBER          1  /* total number of event ! */
 
 /* ........................................ Implementation notes ........................................*/
 

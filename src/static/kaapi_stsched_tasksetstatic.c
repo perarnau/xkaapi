@@ -73,7 +73,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   kaapi_assert( thread->stack.sfp == (kaapi_frame_t*)uthread );
 
   /* here... begin execute frame tasklist*/
-  kaapi_event_push0(thread->stack.proc, thread, KAAPI_EVT_STATIC_BEG );
+  KAAPI_EVENT_PUSH0(thread->stack.proc, thread, KAAPI_EVT_STATIC_BEG );
   
   /* Push a new frame */
   fp = (kaapi_frame_t*)thread->stack.sfp;
@@ -144,12 +144,12 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
         + arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU];
   }
 
-  kaapi_event_push0(thread->stack.proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
+  KAAPI_EVENT_PUSH0(thread->stack.proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
 
   /* the embedded task cannot be steal because it was not visible to thieves */
   arg->sub_body( arg->sub_sp, uthread, pc );
 
-  kaapi_event_push0(thread->stack.proc, thread, KAAPI_EVT_STATIC_TASK_END );
+  KAAPI_EVENT_PUSH0(thread->stack.proc, thread, KAAPI_EVT_STATIC_TASK_END );
 
   /* allocate the tasklist for this task
   */
@@ -159,7 +159,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   /* currently: that all, do not compute other things */
   kaapi_thread_computereadylist(thread, tasklist);
   KAAPI_ATOMIC_WRITE(&tasklist->count_thief, 0);
-  kaapi_event_push0(thread->stack.proc, thread, KAAPI_EVT_STATIC_END );
+  KAAPI_EVENT_PUSH0(thread->stack.proc, thread, KAAPI_EVT_STATIC_END );
 
   /* populate tasklist with initial ready tasks */
   kaapi_thread_tasklistready_push_init( tasklist, &tasklist->readylist );
