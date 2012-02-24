@@ -48,7 +48,7 @@ kaapi-gomp-wrapper: kaapi-gomp-wrapper.in Makefile
 	chmod +x $@
 
 install-exec-hook: kaapi-gomp-wrapper
-	sed -e 's/^wrapper_installed=.*/wrapper_installed=yes/' \
+	sed -e '/^# BEGIN REMOVE ONCE INSTALLED$$/,/^# END REMOVE ONCE INSTALLED$$/d' \
 		> $(DESTDIR)$(bindir)/kaapi-gomp-wrapper \
 		< kaapi-gomp-wrapper
 	chmod +x $(DESTDIR)$(bindir)/kaapi-gomp-wrapper
