@@ -614,13 +614,13 @@ static int _kaapic_split_task
   /* else: remaining requests in lri was already steal their replied  
      here is code to reply to thread that do not have reserved slice
   */
-  int nreq = kaapi_listrequest_iterator_count(lri);
   range_size = kaapi_workqueue_size(&lwork->cr);
   if (range_size <= gwork->wi.par_grain)
     /* no enough work: stop stealing this task */
     return 0;
 
   /* how much per non root req */
+  int nreq = kaapi_listrequest_iterator_count(lri);
   unit_size = range_size / (nreq + 1);
   if (unit_size < gwork->wi.par_grain)
   {
@@ -659,8 +659,8 @@ static int _kaapic_split_task
 #endif
 
   for ( /* void */; 
-        !kaapi_listrequest_iterator_empty(lri);
-        kaapi_listrequest_iterator_next(lr, lri)
+        !kaapi_listrequest_iterator_empty(lri) && (nreq >0);
+        kaapi_listrequest_iterator_next(lr, lri), --nreq
       )
   { 
     req = kaapi_listrequest_iterator_get(lr, lri);
