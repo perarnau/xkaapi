@@ -324,7 +324,7 @@ static void _kaapic_foreach_initwa(
   long scale;
   int sizemap;
 
-  kaapi_assert_debug(KAAPI_MAX_PROCESSOR < ~(uint8_t)0 );
+  kaapi_assert_debug(KAAPI_MAX_PROCESSOR < (uint8_t)~0 );
 
   /* compute the map of kid where to pre-reserve local work. Exclude the calling kproc */
   kaapi_bitmap_value_clear(&mask);
@@ -726,9 +726,9 @@ static void _kaapic_thief_entrypoint(
   {
     kaapi_assert_debug(i < j);
     KAAPI_SET_SELF_WORKLOAD(kaapi_workqueue_size(&lwork->cr));
+    lwork->workdone += j-i;
 redo_local_work:
     kaapi_assert_debug( i < j );
-    lwork->workdone += j-i;
     /* apply w->f on [i, j[ */
     gwork->body_f((int)i, (int)j, (int)lwork->tid, gwork->body_args);
   }
@@ -911,9 +911,9 @@ int kaapic_foreach_globalwork_next(
        )
     {
       if (*last - *first <= gwork->wi.seq_grain) 
-        return 1;
+        goto retval1;
 
-      /* refill the global work data structure */
+      /* refill the global work data structure without seq_grain */
       _kaapi_workqueue_lock( &lwork->cr );
       kaapic_foreach_local_workinit( 
           lwork,
@@ -924,10 +924,15 @@ int kaapic_foreach_globalwork_next(
       KAAPI_SET_SELF_WORKLOAD(
           kaapi_workqueue_size(&lwork->cr)
       );
-      return 1;
+      *last = *first + gwork->wi.seq_grain;
+      goto retval1;
     }
   }
   return 0; /* means global is terminated */
+
+retval1:
+  lwork->workdone += *last - *first;
+  return 1;
 }
 
 
@@ -1026,6 +1031,7 @@ redo_local_work:
     /* apply w->f on [i, j[ */
     body_f((int)first, (int)last, (int)tid, body_args);
   }
+  lwork->init = 0;
   kaapi_assert_debug( kaapi_workqueue_isempty(&lwork->cr) );
 
   /* */
