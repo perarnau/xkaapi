@@ -126,15 +126,15 @@ static void fnc_print_evt( const char* filename, int fd )
       switch (e[i].evtno) {
         case KAAPI_EVT_KPROC_START:
           std::cout << e[i].kid;
-          break;
+        break;
 
         case KAAPI_EVT_KPROC_STOP:
           std::cout << e[i].kid;
-          break;
+        break;
 
         /* standard task exec */
         case KAAPI_EVT_TASK_BEG:
-          break;
+        break;
 
         case KAAPI_EVT_TASK_END:
         break;
@@ -280,7 +280,7 @@ static void fnc_statistic_task_kid( const char* filename, int fd )
           task = e[i].d0.p;
           break;
         case KAAPI_EVT_TASK_END:
-          if (e[i].d0.p != task)
+          if (0) //e[i].d0.p != task
           {
             printf("*** invalid events format, ignore time for task: %p\n", task );
           }
@@ -602,6 +602,7 @@ static void fnc_paje_gantt( const char* filename, int fd )
         case KAAPI_EVT_STEAL_OP:
           d0   = 1e-9*(double)e[i].date;
           kid = e[i].d0.i;
+          pajeNewEvent(d0, name, "STEAL", "so");
         break;
 
         /* emit reply */
@@ -650,6 +651,9 @@ int fnc_paje_gantt_header()
 
   /* execution of static task to unroll graph */
   pajeDefineEntityValue("st", "STATE", "unroll", "0.5 1.0 0.0");
+
+  /* steal operation */
+  pajeDefineEntityValue("so", "STEAL", "steal", "1.0 0.1 0.1");
 
   /* create the root container */
   pajeCreateContainer (0.00, "root", "ROOT", "0", "root");
