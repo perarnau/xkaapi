@@ -114,7 +114,7 @@ static volatile unsigned int xxx_max_tid;
 #endif
 
 
-int kaapic_foreach_globalwork_next(
+static int kaapic_foreach_globalwork_next(
   kaapic_local_work_t*     lwork,
   kaapi_workqueue_index_t* first,
   kaapi_workqueue_index_t* last
@@ -921,7 +921,7 @@ int kaapic_foreach_workend
   The function try to steal from registered lwork in the global work.
   The local workqueue is fill by poped range.
 */
-int kaapic_foreach_globalwork_next(
+static int kaapic_foreach_globalwork_next(
   kaapic_local_work_t*     lwork,
   kaapi_workqueue_index_t* first,
   kaapi_workqueue_index_t* last
@@ -929,8 +929,6 @@ int kaapic_foreach_globalwork_next(
 {
   kaapic_global_work_t* gwork = lwork->global;
   kaapi_processor_t* kproc = kaapi_get_current_processor();
-
-  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
 
   while (KAAPI_ATOMIC_READ(&gwork->workremain) !=0)
   {
@@ -961,12 +959,10 @@ int kaapic_foreach_globalwork_next(
     }
     kaapi_slowdown_cpu();
   }
-  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
   return 0; /* means global is terminated */
 
 retval1:
   lwork->workdone += *last - *first;
-  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
   return 1;
 }
 
