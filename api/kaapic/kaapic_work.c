@@ -69,7 +69,6 @@
    map field can steal the initial slice.
    T.G.
 */
-#define USE_KPROC_LOCK 1 /* defined to use kprocessor lock, else use local lock */
  
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
@@ -444,7 +443,7 @@ kaapic_global_work_t* kaapic_foreach_global_workinit
   {
     lwork = &gwork->lwork[i];
   /* initialize the lwork */
-#if defined(USE_KPROC_LOCK)
+#if defined(KAAPIC_USE_KPROC_LOCK)
     kaapi_workqueue_init_with_lock(
       &lwork->cr,
       0, 0,
@@ -638,7 +637,7 @@ skip_global:
       return 0;
   }
 
-#if defined(USE_KPROC_LOCK)
+#if defined(KAAPIC_USE_KPROC_LOCK)
   kaapi_assert_debug( lwork->cr.lock 
     == &kaapi_get_current_processor()->victim_kproc->lock );
   kaapi_assert_debug( kaapi_atomic_assertlocked(lwork->cr.lock) );
@@ -648,13 +647,13 @@ skip_global:
 
   if (kaapi_workqueue_steal(&lwork->cr, &first, &last, nreq * unit_size))
   {
-#if defined(USE_KPROC_LOCK)
+#if defined(KAAPIC_USE_KPROC_LOCK)
 #else
     _kaapi_workqueue_unlock(&lwork->cr);
 #endif
     return 0;
   }
-#if defined(USE_KPROC_LOCK)
+#if defined(KAAPIC_USE_KPROC_LOCK)
 #else
   _kaapi_workqueue_unlock(&lwork->cr);
 #endif
@@ -726,7 +725,7 @@ static void _kaapic_thief_entrypoint(
   /* asserts */
   kaapi_assert_debug(lwork->workdone == 0);
   kaapi_assert_debug(kaapi_get_self_kid() == lwork->tid);
-#if defined(USE_KPROC_LOCK)
+#if defined(KAAPIC_USE_KPROC_LOCK)
   kaapi_assert_debug( &kproc->lock == lwork->cr.lock );
 #else
 #endif
@@ -862,9 +861,9 @@ int kaapic_foreach_local_workend(
   /* exec: task and wait end of adaptive task */
   kaapi_sched_sync_(self_thread);
 
-#if defined(USE_KPROC_LOCK)
+#if defined(KAAPIC_USE_KPROC_LOCK)
 #else
-  kaapi_atomic_destroylock(&lwork->cr.lock);
+  kaapi_atomic_destroylock(&lwork->lock);
 #endif
   return 0;
 }
@@ -897,8 +896,6 @@ int kaapic_foreach_workend
   if (kaapic_do_parallel) 
     kaapic_end_parallel(KAAPI_SCHEDFLAG_DEFAULT);
   
-  memset(gwork->lwork, 0, sizeof(gwork->lwork));
-
   /* wait worker */
   while (KAAPI_ATOMIC_READ(&gwork->workerdone) >0)
     kaapi_slowdown_cpu();
@@ -909,7 +906,7 @@ int kaapic_foreach_workend
   /* must the thread that initialize the global work */
   KAAPI_SET_SELF_WORKLOAD(0);
 
-#if defined(USE_KPROC_LOCK)
+#if defined(KAAPIC_USE_KPROC_LOCK)
 #else
   kaapi_atomic_destroylock(&lwork->cr.lock);
 #endif  

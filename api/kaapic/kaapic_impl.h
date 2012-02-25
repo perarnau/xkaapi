@@ -52,6 +52,8 @@
 extern "C" {
 #endif
 
+#define KAAPIC_USE_KPROC_LOCK 1
+
 extern void _kaapic_register_task_format(void);
 
 /* closure for the body of the for each */
@@ -172,7 +174,7 @@ typedef struct work_info
 typedef struct local_work
 {
   kaapi_workqueue_t       cr;
-#if defined(USE_KPROC_LOCK)
+#if defined(KAAPIC_USE_KPROC_LOCK)
 #else
   kaapi_lock_t            lock;
 #endif
