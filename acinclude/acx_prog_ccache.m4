@@ -51,14 +51,14 @@
 AC_DEFUN([ACX_PROG_CCACHE], [
   AC_ARG_WITH(
     [ccache],
-    [AS_HELP_STRING([--with-ccache=yes|no|check], [use ccache for compiling (default check)])],
+    [AS_HELP_STRING([--with-ccache=yes|no|check], [use ccache for compiling (default no)])],
     [ case "x$with_ccache" in
 	xy*) with_ccache=yes ;;
 	xn*) with_ccache=no ;;
 	*) with_ccache=check ;;
       esac
     ],
-    [with_ccache=check]
+    [with_ccache=no]
   )
   have_ccache=no
   AS_IF([ test $with_ccache != no ], [
