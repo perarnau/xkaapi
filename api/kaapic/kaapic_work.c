@@ -847,7 +847,7 @@ kaapic_local_work_t* kaapic_foreach_workinit
 #endif
 
   /* begin a parallel region */
-  if (kaapic_do_parallel) kaapic_begin_parallel();
+  if (kaapic_do_parallel) kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
 
   return lwork;
 }  
