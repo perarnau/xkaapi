@@ -184,16 +184,17 @@ static void fnc_print_evt( const char* filename, int fd )
 
         /* emit steal */
         case KAAPI_EVT_STEAL_OP:
-          std::cout << " victimid:" << e[i].d0.i;
+          std::cout << " victimid:" << e[i].d0.i << ", serial:" << e[i].d1.i;
         break;
 
         /* emit reply */
         case KAAPI_EVT_SEND_REPLY:
-          std::cout << " thiefid:" << e[i].d0.i;
+          std::cout << " thiefid:" << e[i].d0.i << ", serial:" << e[i].d1.i;
         break;
 
         /* recv reply */
         case KAAPI_EVT_RECV_REPLY:
+          std::cout << " combinorid:" << e[i].d0.i << ", serial:" << e[i].d1.i;
         break;
 
         default:
@@ -486,6 +487,8 @@ static double tmax = DBL_MIN;
 static void fnc_paje_gantt( const char* filename, int fd )
 {
   char name[128];
+  char tmp[128];
+  char key[128];
   static int core  = 0; 
   int kid;
   kaapi_event_buffer_t evb;
@@ -602,18 +605,36 @@ static void fnc_paje_gantt( const char* filename, int fd )
         case KAAPI_EVT_STEAL_OP:
           d0   = 1e-9*(double)e[i].date;
           kid = e[i].d0.i;
-          pajeNewEvent(d0, name, "STEAL", "so");
+//          pajeNewEvent(d0, name, "STEAL", "so");
+          if (kid != e[i].kid)
+          {
+            sprintf(key,"%i",e[i].d1.i*100000+e[i].kid);
+            pajeEndLink(d0, name, "LINK", name, "li", key);
+            sprintf(tmp,"thread-%i",kid);
+            pajeStartLink(d0, name, "LINK", tmp, "li", key);
+          }
         break;
 
         /* emit reply */
         case KAAPI_EVT_SEND_REPLY:
           d0   = 1e-9*(double)e[i].date;
-          kid = e[i].d0.i; /* kid that emit steal */
+          kid = e[i].d0.i; /* kid that will recv the reply */
+          if (kid != e[i].kid)
+          {
+            sprintf(key,"%i",e[i].d1.i*100000+kid);
+            pajeEndLink(d0, "root", "LINK", name, "ri", key);
+          }
         break;
 
         /* recv reply */
         case KAAPI_EVT_RECV_REPLY:
           d0   = 1e-9*(double)e[i].date;
+          kid = e[i].d0.i; /* kid that send the reply */
+          if (kid != e[i].kid)
+          {
+            sprintf(key,"%i",e[i].d1.i*100000+kid);
+            pajeStartLink(d0, "root", "LINK", name, "ri", key);
+          }
         break;
 
         default:
@@ -636,6 +657,7 @@ int fnc_paje_gantt_header()
   pajeDefineStateType("STATE", "THREAD", "STATE");
 
   pajeDefineEventType("STEAL", "THREAD", "STEAL", "blue");
+  pajeDefineLinkType("LINK", "ROOT", "THREAD", "THREAD", "LINK");
 
   /* actif state */
   pajeDefineEntityValue("a", "STATE", "running", "0;0 0.5 0.25");
@@ -654,6 +676,12 @@ int fnc_paje_gantt_header()
 
   /* steal operation */
   pajeDefineEntityValue("so", "STEAL", "steal", "1.0 0.1 0.1");
+
+  /* link  */
+  pajeDefineEntityValue("li", "LINK", "link", "1.0 0.1 0.1");
+
+  /* link  */
+  pajeDefineEntityValue("ri", "LINK", "reply", "0.2 0.2 0.2");
 
   /* create the root container */
   pajeCreateContainer (0.00, "root", "ROOT", "0", "root");

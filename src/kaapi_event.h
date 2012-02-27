@@ -59,8 +59,8 @@ extern "C" {
 #define KAAPI_EVT_KPROC_START     0     /* kproc begins */
 #define KAAPI_EVT_KPROC_STOP      1     /* kproc ends */
 
-#define KAAPI_EVT_TASK_BEG        2     /* begin execution of task */
-#define KAAPI_EVT_TASK_END        3     /* end execution of task */
+#define KAAPI_EVT_TASK_BEG        2     /* begin execution of tasks */
+#define KAAPI_EVT_TASK_END        3     /* end execution of tasks */
 
 #define KAAPI_EVT_FRAME_TL_BEG    4     /* begin execution using frame tasklist */
 #define KAAPI_EVT_FRAME_TL_END    5     /* end execution using frame tasklist */
@@ -80,9 +80,9 @@ extern "C" {
 #define KAAPI_EVT_REQUESTS_BEG    14 /* when k-processor begin to process requests, data=victim.id */
 #define KAAPI_EVT_REQUESTS_END    15 /* when k-processor end to process requests */
 
-#define KAAPI_EVT_STEAL_OP        16 /* when k-processor emit a steal request data=victimid*/
-#define KAAPI_EVT_SEND_REPLY      17 /* when k-processor send a reply request data=victimid*/
-#define KAAPI_EVT_RECV_REPLY      18 /* when k-processor recv reply */
+#define KAAPI_EVT_STEAL_OP        16 /* when k-processor emit a steal request data=victimid, serial*/
+#define KAAPI_EVT_SEND_REPLY      17 /* when k-processor send a reply request data=victimid, serial */
+#define KAAPI_EVT_RECV_REPLY      18 /* when k-processor recv reply, serial */
 
 
 /* ........................................ Implementation notes ........................................*/

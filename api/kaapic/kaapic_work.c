@@ -836,13 +836,14 @@ kaapic_local_work_t* kaapic_foreach_workinit
      _kaapic_split_task,
      lwork
   );
+#if 0
   KAAPI_EVENT_PUSH1(
       self_thread->stack.proc,
       self_thread,
       KAAPI_EVT_TASK_BEG,
       lwork->context
   );
-
+#endif
 
   /* begin a parallel region */
   if (kaapic_do_parallel) kaapic_begin_parallel();
@@ -883,12 +884,13 @@ int kaapic_foreach_workend
     kaapi_threadcontext2thread(self_thread), 
     lwork->context
   );
+#if 0
   KAAPI_EVENT_PUSH0(
       kaapi_get_current_processor(),
       kaapi_get_current_processor()->thread,
       KAAPI_EVT_TASK_END
   );
-
+#endif
   
   /* exec: task and wait end of adaptive task */
   kaapi_sched_sync_(self_thread);

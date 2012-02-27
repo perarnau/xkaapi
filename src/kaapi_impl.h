@@ -850,7 +850,17 @@ static inline int kaapi_request_replytask
 )
 {
   kaapi_atomic_t* const status = request->status;
-  KAAPI_EVENT_PUSH1(kaapi_get_current_processor(), 0, KAAPI_EVT_SEND_REPLY, request->ident );
+#if defined(KAAPI_USE_PERFCOUNTER)
+  {
+    kaapi_processor_t* kproc = kaapi_get_current_processor();
+    KAAPI_IFUSE_TRACE(kproc,
+      request->who = kproc->kid;
+      kaapi_writemem_barrier();
+      KAAPI_EVENT_PUSH2(kproc, 0, KAAPI_EVT_SEND_REPLY, 
+                        request->ident, request->serial );
+    );
+  }
+#endif
   request->status = 0;
   if (value == KAAPI_REQUEST_S_OK)
   {

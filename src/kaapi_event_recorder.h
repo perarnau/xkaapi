@@ -142,6 +142,8 @@ static inline void KAAPI_EVENT_PUSH2_(
 }
 
 #if defined(KAAPI_USE_PERFCOUNTER)
+#  define KAAPI_IFUSE_TRACE(kproc,inst) \
+    if (kproc->eventbuffer) { inst; }
 #  define KAAPI_EVENT_PUSH0(kproc, kthread, eventno ) \
     if (kproc->eventbuffer) KAAPI_EVENT_PUSH0_(kproc, kthread, eventno )
 #  define KAAPI_EVENT_PUSH1(kproc, kthread, eventno, p1 ) \
@@ -149,6 +151,7 @@ static inline void KAAPI_EVENT_PUSH2_(
 #  define KAAPI_EVENT_PUSH2(kproc, kthread, eventno, p1, p2 ) \
     if (kproc->eventbuffer) KAAPI_EVENT_PUSH2_(kproc, kthread, eventno, (void*)(p1), (void*)(p2))
 #else
+#  define KAAPI_IFUSE_TRACE(kproc,inst)
 #  define KAAPI_EVENT_PUSH0(kproc, kthread, eventno ) 
 #  define KAAPI_EVENT_PUSH1(kproc, kthread, eventno, p1 )
 #  define KAAPI_EVENT_PUSH2(kproc, kthread, eventno, p1, p2 )

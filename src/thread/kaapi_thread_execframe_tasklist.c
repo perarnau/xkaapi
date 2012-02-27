@@ -151,9 +151,7 @@ execute_first:
         
         /* start execution of the user body of the task */
         KAAPI_DEBUG_INST(kaapi_assert( td->u.acl.exec_date == 0 ));
-        KAAPI_EVENT_PUSH1(stack->proc, thread, KAAPI_EVT_TASK_BEG, pc );
         body( pc->sp, (kaapi_thread_t*)stack->sfp );
-        KAAPI_EVENT_PUSH1(stack->proc, thread, KAAPI_EVT_TASK_END, pc );  
         KAAPI_DEBUG_INST( td->u.acl.exec_date = kaapi_get_elapsedns() );
         ++cnt_exec;
 

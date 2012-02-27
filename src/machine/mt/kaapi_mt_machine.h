@@ -443,6 +443,7 @@ typedef struct kaapi_processor_t {
   struct kaapi_event_buffer_t* eventbuffer;
 
 #if defined(KAAPI_USE_PERFCOUNTER)
+  uintptr_t                serial;      /* serial number of generated steal */
   kaapi_perf_counter_t     lastcounter; /* used by libgomp */
 #endif
 

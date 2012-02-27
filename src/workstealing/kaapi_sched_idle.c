@@ -123,6 +123,7 @@ redo_execute:
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
     KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
+    KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_TASK_BEG );
 #endif
 
 #if defined(KAAPI_USE_CUDA)
@@ -141,6 +142,7 @@ redo_execute:
         err = kaapi_thread_execframe_tasklist( kproc->thread );
     
 #if defined(KAAPI_USE_PERFCOUNTER)
+    KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_TASK_END );  
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
     KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
 #endif

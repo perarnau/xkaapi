@@ -617,8 +617,9 @@ typedef struct kaapi_request_t {
   kaapi_atomic_t*               status;         /* request status */
   uintptr_t                     ident;          /* system wide id of the queue */
   kaapi_frame_t                 frame;          /* where to store theft tasks/data */
-#if defined(KAAPI_DEBUG)
-  volatile uintptr_t            version;
+#if defined(KAAPI_USE_PERFCOUNTER)
+  uintptr_t                     who;            /* who has replied */
+  uintptr_t                     serial;         /* serial number */
 #endif
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_request_t;
 
