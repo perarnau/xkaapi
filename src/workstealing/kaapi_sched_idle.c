@@ -68,7 +68,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
-  kaapi_event_push0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
 #endif
 
   do 
@@ -82,7 +82,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     /* terminaison ? */
     if (kaapi_isterminated())
     {
-      kaapi_event_push0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
+      KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
       return;
     }
     
@@ -122,7 +122,8 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
 redo_execute:    
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
-    kaapi_event_push0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
+    KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
+    KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_TASK_BEG );
 #endif
 
 #if defined(KAAPI_USE_CUDA)
@@ -141,8 +142,9 @@ redo_execute:
         err = kaapi_thread_execframe_tasklist( kproc->thread );
     
 #if defined(KAAPI_USE_PERFCOUNTER)
+    KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_TASK_END );  
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
-    kaapi_event_push0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
+    KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
 #endif
     
     if (err == EWOULDBLOCK) 

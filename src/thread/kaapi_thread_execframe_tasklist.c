@@ -76,7 +76,7 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   kaapi_assert_debug( tasklist != 0 );
 
   /* here... begin execute frame tasklist*/
-  kaapi_event_push0(stack->proc, thread, KAAPI_EVT_FRAME_TL_BEG );
+  KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_FRAME_TL_BEG );
 
   /* get the processor type to select correct entry point */
   proc_type = stack->proc->proc_type;
@@ -151,9 +151,7 @@ execute_first:
         
         /* start execution of the user body of the task */
         KAAPI_DEBUG_INST(kaapi_assert( td->u.acl.exec_date == 0 ));
-        kaapi_event_push1(stack->proc, thread, KAAPI_EVT_TASK_BEG, pc );
         body( pc->sp, (kaapi_thread_t*)stack->sfp );
-        kaapi_event_push1(stack->proc, thread, KAAPI_EVT_TASK_END, pc );  
         KAAPI_DEBUG_INST( td->u.acl.exec_date = kaapi_get_elapsedns() );
         ++cnt_exec;
 
@@ -212,7 +210,7 @@ printf("EWOULDBLOCK case 1\n");
   } /* while */
 
   /* here... end execute frame tasklist*/
-  kaapi_event_push0(stack->proc, thread, KAAPI_EVT_FRAME_TL_END );
+  KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_FRAME_TL_END );
   
   KAAPI_ATOMIC_ADD(&tasklist->cnt_exec, cnt_exec);
 

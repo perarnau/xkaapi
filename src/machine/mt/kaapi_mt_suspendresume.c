@@ -44,22 +44,16 @@
 #include "kaapi_impl.h"
 #include "machine/mt/kaapi_mt_condvar.h"
 
-
-/* Implementaiton note:
-  * KAAPI_USE_SPIN_SUSPEND may be defined in order to use busy waiting
-     implementation of suspend/resume
-  * else the implementaiton relies on futex (for linux) or Pthread (other OS)
-*/
-
 /*
 */
-volatile int kaapi_suspendflag __attribute__((aligned(64)));
+volatile int kaapi_suspendflag;
 
 static volatile int kaapi_suspend_round=0;
 
 /*
 */
 kaapi_atomic_t kaapi_suspendedthreads;
+
 
 /*
 */
@@ -77,45 +71,38 @@ void kaapi_mt_suspendresume_init(void)
 
 void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
 {
-#if defined(KAAPI_USE_SPIN_SUSPEND)
-  while (kaapi_suspendflag)
-#if defined(__APPLE__)
-    kaapi_slowdown_cpu();
-#else
-    pthread_yield();
-#endif
-    
-//  pthread_mutex_lock(&kproc->suspend_lock);
-//  if (kaapi_suspendflag)
-//  {
-//
-//    pthread_cond_wait(&wakeupcond_threads, &kproc->suspend_lock);
-//    /* reset steal history ? */
-//    memset(&kproc->fnc_selecarg, 0, sizeof(kproc->fnc_selecarg) );
-//  }
-//  pthread_mutex_unlock(&kproc->suspend_lock);
-#else
   int round, first=1;
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_perf_thread_stop(kproc);
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_SUSPEND_BEG );
+#endif
   for(;;) {
     kproc_mutex_lock(&wakeupmutex_threads);
     if (! kaapi_suspendflag) {
       kproc_mutex_unlock(&wakeupmutex_threads);
-      return;
+      goto return_from;
     }
     int newround=kaapi_suspend_round;
     if (first || round!=newround) {
       /* cond_wait can return without signal/broadcast
-         if this is the case, do not increment again the counter */
+	 if this is the case, do not increment again the counter */
       KAAPI_ATOMIC_INCR( &kaapi_suspendedthreads );
     }
     round=newround;
     kproc_condunlock_wait(&wakeupcond_threads, &wakeupmutex_threads);
     if (!kaapi_suspendflag) {
-      break ;
+      goto return_from;
     }
   }
-  memset(&kproc->fnc_selecarg, 0, sizeof(kproc->fnc_selecarg) );
+
+return_from:
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_perf_thread_start(kproc);
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_SUSPEND_END );
 #endif
+
+  /* reset steal history ? */
+  memset(&kproc->fnc_selecarg, 0, sizeof(kproc->fnc_selecarg) );
 }
 
 
@@ -127,6 +114,7 @@ void kaapi_mt_suspend_threads_post(void)
   kaapi_suspend_round++;
   kaapi_writemem_barrier();
   kaapi_suspendflag = 1;
+  kaapi_writemem_barrier();
 }
 
 void kaapi_mt_suspend_threads_wait(void)
@@ -141,20 +129,10 @@ void kaapi_mt_suspend_threads_wait(void)
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );  
 }
 
-
-/* */
+/*
+*/
 void kaapi_mt_resume_threads(void)
 {
-#if defined(KAAPI_USE_SPIN_SUSPEND)
-//  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );
-
-  kaapi_writemem_barrier();
-  kaapi_suspendflag = 0;
-//  KAAPI_ATOMIC_WRITE(&kaapi_suspendedthreads, 0);
-//  pthread_mutex_lock(&wakeupmutex_threads);
-//  pthread_cond_broadcast(&wakeupcond_threads);
-//  pthread_mutex_unlock(&wakeupmutex_threads);  
-#else
   kaapi_assert_debug( kaapi_suspendflag >= 1 );
   kaapi_assert_debug( kaapi_suspendflag == 1 
 		      || KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );
@@ -163,6 +141,5 @@ void kaapi_mt_resume_threads(void)
   KAAPI_ATOMIC_WRITE(&kaapi_suspendedthreads, 0);
   kproc_condunlock_broadcast(&wakeupcond_threads);
   kproc_mutex_unlock(&wakeupmutex_threads);  
-#endif
 }
 

@@ -104,7 +104,6 @@ typedef struct PerTeamLocalStorage {
   int                          threadid;
   int                          numthreads;
   int                          inside_single;
-  kaapi_frame_t                frame;
 } kaapi_libkompctxt_t ;
 
 
@@ -113,6 +112,8 @@ static inline kaapi_libkompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc 
   if (kproc->libgomp_tls == 0)
   {
     kaapi_libkompctxt_t* ctxt = (kaapi_libkompctxt_t*)malloc(sizeof(kaapi_libkompctxt_t));
+    ctxt->workshare.lwork = 0;
+    ctxt->teaminfo   = 0;
     ctxt->threadid   = 0;
     ctxt->numthreads = 1;
     kproc->libgomp_tls = ctxt;

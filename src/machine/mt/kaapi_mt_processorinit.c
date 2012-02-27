@@ -117,6 +117,7 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   kproc->eventbuffer     = 0;
 
 #if defined(KAAPI_USE_PERFCOUNTER)
+  kproc->serial          = 0;
   kproc->lastcounter     = 0;
 #endif
   
