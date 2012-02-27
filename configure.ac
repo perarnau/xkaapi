@@ -923,6 +923,7 @@ AC_CONFIG_FILES([
 	api/kastl/Makefile
 	api/libgomp/Makefile
 	api/libgomp/tests/Makefile
+	api/libgomp/testsuite/Makefile
 	api/quark/Makefile
 	examples/Makefile
 	network/Makefile

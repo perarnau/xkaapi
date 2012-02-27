@@ -7,7 +7,7 @@ AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir) -I$(top_srcdir)/api/ka
 
 if KAAPI_LIBGOMP
 
-SUBDIRS=tests
+SUBDIRS=tests testsuite
 
 pkglib_LTLIBRARIES=libgomp.la
 lib_LTLIBRARIES=libkomp.la
