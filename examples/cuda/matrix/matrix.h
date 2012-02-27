@@ -120,6 +120,9 @@ struct TaskDLARNV: public ka::Task<1>::Signature
 
 // task definitions
 # include "matrix_cpu.inl"
+
+#if CONFIG_USE_CUDA
 # include "matrix_gpu.inl"
+#endif
 
 #endif // MATRIX_H_INCLUDED

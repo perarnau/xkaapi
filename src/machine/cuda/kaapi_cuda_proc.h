@@ -59,9 +59,11 @@
 #define KAAPI_CUDA_MEM_FREE_FACTOR	1
 //#define	KAAPI_CUDA_MODE_BASIC	1
 
+//#define KAAPI_CUDA_TIME	    1
+
 //#define KAAPI_CUDA_USE_POOL	1
 
-#define KAAPI_CUDA_MAX_STREAMS		8
+#define KAAPI_CUDA_MAX_STREAMS		1
 
 typedef struct kaapi_cuda_ctx
 {

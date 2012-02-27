@@ -4,9 +4,11 @@ SCRATCH=$HOME
 XKAAPIDIR=$SCRATCH/install/xkaapi/default
 CUDADIR=$CUDA_HOME
 
-#CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1 -maxrregcount 32"
 #CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"
-CUBLAS_LDFLAGS="-lcublas"
+#CUBLAS_LDFLAGS="-lcublas"
+
+#CUDA_CFLAGS="-DCONFIG_USE_CUDA=1 -I$CUDADIR/include"
+#CUDA_LDFLAGS="-L$CUDADIR/lib64 -lcuda"
 
 CBLAS_LDFLAGS="-L$SCRATCH/install/atlas3.9.47/lib -llapack -lcblas -latlas
 -lf77blas
@@ -17,13 +19,13 @@ CBLAS_CPPFLAGS="-I$SCRATCH/install/atlas3.9.47/include
 -I$SCRATCH/install/lapacke-3.3.0/include
 -DCONFIG_USE_FLOAT=1"
 
-MAGMA_CFLAGS="-I${SCRATCH}/install/magma_1.0.0/include -DCONFIG_USE_MAGMA=1"
-MAGMA_LDFLAGS="-L${SCRATCH}/install/magma_1.0.0/lib -lmagma -lmagmablas -llapack -lf77blas -lgfortran"
+#MAGMA_CFLAGS="-I${SCRATCH}/install/magma_1.0.0/include -DCONFIG_USE_MAGMA=1"
+#MAGMA_LDFLAGS="-L${SCRATCH}/install/magma_1.0.0/lib -lmagma -lmagmablas -llapack -lf77blas -lgfortran"
 
 #$CUDADIR/bin/nvcc -g -w \
 g++ -g -Wall \
     -I$XKAAPIDIR/include \
-    -I$CUDADIR/include \
+    $CUDA_CFLAGS \
     $CBLAS_CPPFLAGS \
     $CUBLAS_CFLAGS \
     $MAGMA_CFLAGS \
@@ -32,7 +34,7 @@ g++ -g -Wall \
 	-o matlu_kaapi++ \
 	matlu_kaapi++.cpp \
     -L$XKAAPIDIR/lib -lkaapi -lkaapi++ \
-    -L$CUDADIR/lib64 -lcuda \
+    $CUDA_LDFLAGS \
     $CBLAS_LDFLAGS \
     $CUBLAS_LDFLAGS \
     $MAGMA_LDFLAGS 

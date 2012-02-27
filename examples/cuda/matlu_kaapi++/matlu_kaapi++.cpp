@@ -403,8 +403,11 @@ struct doit {
 	t0 = kaapi_get_elapsedtime();
 //	ka::Spawn<TaskNormMatrix>()( &norm, ka::array<2,double_type>(dAcopy, n, n, n), A );
 #if 1
-	ka::Spawn<TaskNormMatrix>()( CblasColMajor, CblasUpper,
-		&norm, ka::array<2,double_type>(dAcopy, n, n, n), A );
+	TaskBodyCPU<TaskNormMatrix>()( CblasColMajor, CblasUpper,
+		&norm,
+		ka::range2d_rw<double_type>(ka::array<2,double_type>(dAcopy, n,
+			n, n)),
+		ka::range2d_rw<double_type>(A) );
 #endif
 	ka::Sync();
 	t1 = kaapi_get_elapsedtime();
@@ -416,8 +419,11 @@ struct doit {
 	TaskBodyCPU<TaskDGETRFNoPiv>() ( CblasColMajor,
 		ka::range2d_rw<double_type>(A2) );
 #if 1
-	ka::Spawn<TaskNormMatrix>()( CblasColMajor, CblasUpper, 
-		&norm, ka::array<2,double_type>(dAcopy2, n, n, n), A2 );
+	TaskBodyCPU<TaskNormMatrix>()( CblasColMajor, CblasUpper, 
+		&norm,
+		ka::range2d_rw<double_type>(ka::array<2,double_type>(dAcopy2, n,
+			n, n)),
+		ka::range2d_rw<double_type>(A2) );
 #endif
 	ka::Sync();
 	t1 = kaapi_get_elapsedtime();

@@ -12,7 +12,7 @@ niter=1
 function run_test {
     export KAAPI_CPUSET="0:2"
     #export KAAPI_GPUSET="0~6,1~7"
-    export KAAPI_GPUSET="0~3"
+#    export KAAPI_GPUSET="0~3"
 #    msizes="2048"
     msizes="2048"
     bsizes="512"
@@ -20,14 +20,11 @@ function run_test {
     verif=1
     for m in $msizes ; do
 	    for b in $bsizes; do
-	    for i in `seq 1 $niter`
-	    do
 	    echo "$KAAPI_CPUSET $KAAPI_GPUSET \
 		    ./matlu_kaapi++ $m $b $verif"
 	    KAAPI_STACKSIZE=260046848 ./matlu_kaapi++ $m $b 1 $verif 
 #	    KAAPI_STACKSIZE=260046848 gdb ./matlu_kaapi++
 	    done
-	done
     done
 }
 

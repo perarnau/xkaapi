@@ -47,7 +47,6 @@
 #endif
 
 #if defined(KAAPI_USE_CUDA)
-
 #include "../cuda/kaapi_cuda.h"
 #include "../machine/cuda/kaapi_cuda_mem.h"
 #include "../machine/cuda/kaapi_cuda_ctx.h"
@@ -57,12 +56,6 @@
 /* basic function to write contiguous block of memory */
 typedef int (*contiguous_write_func_t)(void*, void*, const void*, size_t);
 
-
-/* Generic memcpy 
-   The function takes into arguments the dest and src informations
-   to made copy as well as the basic memcpy for contiguous memory region.
-   Used by cuda memcpy code or 
-*/
 static int kaapi_memory_write_view
 (
    kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
@@ -80,13 +73,13 @@ static int kaapi_memory_write_view
       if (view_dest->size[0] != view_src->size[0]) 
         return EINVAL;
 
-      error = kaapi_cuda_mem_1dcopy_dtoh( dest, view_dest, src, view_src );
+      //error = kaapi_cuda_mem_1dcopy_dtoh( dest, view_dest, src, view_src );
       break;
     } 
       
     case KAAPI_MEMORY_VIEW_2D:
     {
-      error = kaapi_cuda_mem_2dcopy_dtoh( dest, view_dest, src, view_src );
+      //error = kaapi_cuda_mem_2dcopy_dtoh( dest, view_dest, src, view_src );
 
 #if KAAPI_VERBOSE
   kaapi_processor_t* const proc = kaapi_get_current_processor();
@@ -114,10 +107,13 @@ static int kaapi_memory_write_view
   return error;
 }
 
-
-
 #if defined(KAAPI_USE_CUDA)
 
+/* Generic memcpy 
+   The function takes into arguments the dest and src informations
+   to made copy as well as the basic memcpy for contiguous memory region.
+   Used by cuda memcpy code or 
+*/
 #if 0
 static inline unsigned int is_self_cu_proc
 (kaapi_cuda_proc_t* cu_proc)
@@ -318,6 +314,7 @@ typedef int (*kaapi_signature_memcpy_func_t)(
 #define kaapi_memory_write_cu2cpu 0
 #define kaapi_memory_write_cu2cu  0
 #endif
+
 #if !defined(KAAPI_USE_NETWORK)
 #define kaapi_memory_write_rdma 0
 #else

@@ -153,11 +153,20 @@ execute_first:
         /* start execution of the user body of the task */
         KAAPI_DEBUG_INST(kaapi_assert( td->u.acl.exec_date == 0 ));
         kaapi_event_push1(stack->proc, thread, KAAPI_EVT_TASK_BEG, pc );
-#if 1
+#if defined(KAAPI_USE_CUDA)
 	if ( td->fmt != 0 )
 		kaapi_mem_host_map_sync( td->fmt, pc->sp );
 #endif
+#if KAAPI_CUDA_TIME
+    uint64_t t0 = kaapi_get_elapsedns();
+#endif
         body( pc->sp, (kaapi_thread_t*)stack->sfp );
+#if KAAPI_CUDA_TIME
+    uint64_t t1 = kaapi_get_elapsedns();
+    if ( td->fmt != 0 )
+    fprintf( stdout, "%lu:%x:TaskBodyCPU:%s:%d\n", kaapi_get_current_kid(),
+	    kaapi_get_current_processor()->proc_type, td->fmt->name, t1-t0);
+#endif
         kaapi_event_push1(stack->proc, thread, KAAPI_EVT_TASK_END, pc );  
         KAAPI_DEBUG_INST( td->u.acl.exec_date = kaapi_get_elapsedns() );
         ++cnt_exec;

@@ -203,7 +203,7 @@ struct TaskBodyCPU<TaskDGEMM> {
     const int ldb = Akj.lda();
     const int ldc = Aij.lda();
 
-#if KAAPI_VERBOSE
+#if 0
     fprintf(stdout, "TaskCPU GEMM m=%d n=%d k=%d A=%p B=%p C=%p\n", m, n, k, (void*)a, (void*)b, (void*)c ); fflush(stdout);
 #endif
 

@@ -55,6 +55,7 @@
 
 #include "kaapi_cuda_ctx.h"
 #include "kaapi_cuda_data.h"
+#include "kaapi_cuda_cublas.h"
 
 /* cuda task body */
 typedef void (*cuda_task_body_t)(void*, cudaStream_t);
@@ -159,7 +160,15 @@ execute_first:
 	    kaapi_cuda_data_allocate( td->fmt, pc->sp );
 	    kaapi_cuda_data_send( td->fmt, pc->sp );
 	    kaapi_cuda_cublas_set_stream( );
+#if KAAPI_CUDA_TIME
+    uint64_t t0 = kaapi_get_elapsedns();
+#endif
 	    body( pc->sp, kaapi_cuda_kernel_stream() );
+#if KAAPI_CUDA_TIME
+    uint64_t t1 = kaapi_get_elapsedns();
+    fprintf( stdout, "%lu:%x:TaskBodyGPU:%s:%d\n", kaapi_get_current_kid(),
+	    kaapi_get_current_processor()->proc_type, td->fmt->name, t1-t0);
+#endif
 #if 0
 	    kaapi_cuda_data_check();
 #endif

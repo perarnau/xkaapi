@@ -6,9 +6,10 @@ XKAAPIDIR=$SCRATCH/install/xkaapi/default
 CUDADIR=$CUDA_HOME
 ATLAS=$SCRATCH/install/atlas3.9.47
 
-#CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1 -maxrregcount 32"
+CUDA_CFLAGS="-DCONFIG_USE_CUDA=1 -I$CUDADIR/include"
+CUDA_LDFLAGS="-L$CUDADIR/lib64 -lcuda"
+
 CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"
-#CUBLAS_CFLAGS="-DCONFIG_USE_FLOAT=1"
 CUBLAS_LDFLAGS="-lcublas"
 
 CBLAS_LDFLAGS="-L$ATLAS/lib -llapack -lcblas -latlas
@@ -29,7 +30,7 @@ CBLAS_CPPFLAGS="-I$ATLAS/include
 #$CUDADIR/bin/nvcc -g -w \
 g++ -g -Wall \
     -I$XKAAPIDIR/include \
-    -I$CUDADIR/include \
+    $CUDA_CFLAGS \
     $CBLAS_CPPFLAGS \
     $CUBLAS_CFLAGS \
     $MAGMA_CFLAGS \
@@ -38,7 +39,7 @@ g++ -g -Wall \
     -o matprod_iter_kaapi++ \
     matprod_iter_kaapi++.cpp \
     -L$XKAAPIDIR/lib -lkaapi -lkaapi++ \
-    -L$CUDADIR/lib64 -lcuda \
+    $CUDA_LDFLAGS \
     $CUBLAS_LDFLAGS \
     $CBLAS_LDFLAGS \
     $MAGMA_LDFLAGS

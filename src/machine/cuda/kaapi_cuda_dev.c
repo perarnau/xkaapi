@@ -25,6 +25,7 @@ kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
 	abort();
     }
 
+    cudaFree(0);
     res = cudaGetDeviceProperties( &proc->deviceProp, index );
     if (res != cudaSuccess) {
 	fprintf( stdout, "%s: cudaGetDeviceProperties ERROR %d\n", __FUNCTION__, res );

@@ -30,7 +30,7 @@
 #include <iomanip>
 #include <string>
 #include <cstring>
-#include <cuda.h>
+#include <math.h>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
 #include "../matrix/matrix.h"
@@ -51,24 +51,11 @@ static int do_check
   unsigned int i, j, k;
   double_type* const tmp = c_old;
 
-//  for (i = 0; i < n * n; ++i) tmp[i] = 0.;
-
     cblas_gemm
     (
 	CblasColMajor, CblasNoTrans, CblasNoTrans,
 	n, n, n, 1.0, a, n, b, n, 1.0, tmp, n
     );
-
-#if 0
-  for (i = 0; i < n; ++i)
-  {
-    for (j = 0; j < n; ++j)
-    {
-      for (k = 0; k < n; ++k)
-	tmp[i * n +  j] += a[i * n + k] * b[k * n + j];
-    }
-  }
-#endif
 
   int res = -1;
 

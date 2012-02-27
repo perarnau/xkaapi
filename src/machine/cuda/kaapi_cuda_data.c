@@ -90,6 +90,9 @@ int kaapi_cuda_data_allocate(
 	void*              sp
 )
 {
+#if KAAPI_CUDA_TIME
+    uint64_t t0 = kaapi_get_elapsedns();
+#endif
     const size_t count_params = kaapi_format_get_count_params(fmt, sp );
     size_t i;
     const kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
@@ -131,6 +134,14 @@ int kaapi_cuda_data_allocate(
 		kaapi_format_set_access_param( fmt, i, sp, &access );
 	}
 
+#if KAAPI_CUDA_TIME
+    uint64_t t1 = kaapi_get_elapsedns();
+    fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
+	    kaapi_get_current_processor()->proc_type,
+	    __FUNCTION__,
+	    fmt->name,
+	    t1-t0);
+#endif
 	return 0;
 }
 
@@ -144,6 +155,9 @@ int kaapi_cuda_data_send(
 	void*              sp
 )
 {
+#if KAAPI_CUDA_TIME
+    uint64_t t0 = kaapi_get_elapsedns();
+#endif
     const size_t count_params = kaapi_format_get_count_params(fmt, sp );
     size_t i;
     const kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
@@ -178,6 +192,14 @@ int kaapi_cuda_data_send(
 	    }
     }
 
+#if KAAPI_CUDA_TIME
+    uint64_t t1 = kaapi_get_elapsedns();
+    fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
+	    kaapi_get_current_processor()->proc_type,
+	    __FUNCTION__,
+	    fmt->name,
+	    t1-t0);
+#endif
     return 0;
 }
 
@@ -224,6 +246,9 @@ kaapi_cuda_data_sync_device_transfer(
 int
 kaapi_cuda_data_sync_device( kaapi_data_t* kdata )
 {
+#if KAAPI_CUDA_TIME
+    uint64_t t0 = kaapi_get_elapsedns();
+#endif
     const kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
     const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
     kaapi_mem_data_t *kmd;
@@ -244,6 +269,14 @@ kaapi_cuda_data_sync_device( kaapi_data_t* kdata )
 	    kaapi_mem_data_set_addr( kmd, cuda_asid,
 		    (kaapi_mem_addr_t)kdata  );
     }
+#if KAAPI_CUDA_TIME
+    uint64_t t1 = kaapi_get_elapsedns();
+    fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
+	    kaapi_get_current_processor()->proc_type,
+	    __FUNCTION__,
+	    "",
+	    t1-t0);
+#endif
 
     return 0;
 }
@@ -256,6 +289,10 @@ kaapi_cuda_data_sync_host_transfer(
 {
     cudaError_t res;
     cudaStream_t stream;
+
+#if KAAPI_CUDA_TIME
+    uint64_t t0 = kaapi_get_elapsedns();
+#endif
 
     kaapi_cuda_ctx_set( src_asid-1 );
     res = cudaStreamCreate( &stream );
@@ -274,6 +311,14 @@ kaapi_cuda_data_sync_host_transfer(
 	abort();
     }
     cudaStreamDestroy( stream );
+#if KAAPI_CUDA_TIME
+    uint64_t t1 = kaapi_get_elapsedns();
+    fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
+	    kaapi_get_current_processor()->proc_type,
+	    __FUNCTION__,
+	    "",
+	    t1-t0);
+#endif
 
     return res;
 }
@@ -282,6 +327,9 @@ int
 kaapi_cuda_data_sync_host( kaapi_data_t* kdata )
 {
     //const kaapi_mem_host_map_t* host_map = kaapi_get_current_mem_host_map();
+#if KAAPI_CUDA_TIME
+    uint64_t t0 = kaapi_get_elapsedns();
+#endif
     const kaapi_mem_host_map_t* host_map = 
 	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
     const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
@@ -303,6 +351,15 @@ kaapi_cuda_data_sync_host( kaapi_data_t* kdata )
 	    kaapi_mem_data_set_addr( kmd, host_asid,
 		    (kaapi_mem_addr_t)kdata  );
     }
+#if KAAPI_CUDA_TIME
+    uint64_t t1 = kaapi_get_elapsedns();
+    fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
+	    kaapi_get_current_processor()->proc_type,
+	    __FUNCTION__,
+	    "",
+	    t1-t0);
+#endif
+
     return 0;
 }
 

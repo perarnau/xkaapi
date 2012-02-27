@@ -5,7 +5,9 @@ SCRATCH=$HOME
 XKAAPIDIR=$SCRATCH/install/xkaapi/default
 CUDADIR=$CUDA_HOME
 
-#CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1 -maxrregcount 32"
+CUDA_CFLAGS="-DCONFIG_USE_CUDA=1 -I$CUDADIR/include"
+CUDA_LDFLAGS="-L$CUDADIR/lib64 -lcuda"
+
 #CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"
 CUBLAS_LDFLAGS="-lcublas"
 
@@ -26,7 +28,7 @@ MAGMA_LDFLAGS="-L${SCRATCH}/install/magma_1.0.0/lib -lmagma -lmagmablas
 #$CUDADIR/bin/nvcc -g -w \
 g++ -g -Wall \
     -I$XKAAPIDIR/include \
-    -I$CUDADIR/include \
+    $CUDA_CFLAGS \
     $CBLAS_CPPFLAGS \
     $CUBLAS_CFLAGS \
     $MAGMA_CFLAGS \
@@ -35,7 +37,7 @@ g++ -g -Wall \
 	-o matcholesky_kaapi++ \
 	matcholesky_kaapi++.cpp \
     -L$XKAAPIDIR/lib -lkaapi -lkaapi++ \
-    -L$CUDADIR/lib64 -lcuda \
+    $CUDA_LDFLAGS \
     $CBLAS_LDFLAGS \
     $CUBLAS_LDFLAGS \
     $MAGMA_LDFLAGS 
