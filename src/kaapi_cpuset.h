@@ -49,14 +49,11 @@
 extern "C" {
 #endif
 
-#include "config.h"
-
 
 /* ========================================================================= */
 /* Implementation note: kaapi_cpuset_t is the public type.
    It should possible to cast a kaapi_cpuset_t* to a kaapi_bitmap_value_t*.
-   It means that bit must match.
-   
+   It means that bit must match.   
 */
 typedef union {
     uint32_t     bits32[4];

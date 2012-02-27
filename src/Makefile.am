@@ -242,6 +242,7 @@ include_HEADERS=\
   kaapi.h \
   kaapi_defs.h \
   kaapi_atomic.h\
+  kaapi_cpuset.h\
   kaapi_error.h
 
 if KAAPI_TARGET_CUDA
