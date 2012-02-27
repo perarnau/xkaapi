@@ -156,7 +156,7 @@ static int kaapic_global_getwork
   }
 
   int pos = gw->wa.tid2pos[tid];
-  kaapi_assert_debug( pos > 0 );
+  kaapi_assert_debug( (pos > 0) && (pos<kaapi_getconcurrency()) );
   
   *i = gw->wa.startindex[pos];
   *j = gw->wa.startindex[pos+1];
@@ -183,7 +183,7 @@ int kaapic_global_work_pop
 
   int pos = gw->wa.tid2pos[tid];
   kaapi_assert_debug( pos >= 0 );
-  kaapi_assert_debug( pos<KAAPI_MAX_PROCESSOR );
+  kaapi_assert_debug( pos<kaapi_getconcurrency() );
   
   *i = gw->wa.startindex[pos];
   *j = gw->wa.startindex[pos+1];
@@ -356,6 +356,7 @@ static void _kaapic_foreach_initwa(
      Initialize also all the localwork to empty (but lock is initialized !)
   */
   uint16_t localcount = 0;
+  kaapi_assert_debug( (self_tid>=0) && (self_tid < concurrency));
   if (kaapi_bitmap_value_get(&mask, self_tid))
     wa->tid2pos[self_tid] = localcount++;
   int i;
