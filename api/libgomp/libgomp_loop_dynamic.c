@@ -122,11 +122,11 @@ bool GOMP_loop_dynamic_start (
     kaapic_foreach_attr_t attr;
     kaapic_foreach_attr_init(&attr);
     if (1) { //(chunk_size == -1) {
-      chunk_size=(ka_end-ka_start)/64*kaapi_getconcurrency();
+      chunk_size=(ka_end-ka_start)/1024*kaapi_getconcurrency();
       if (chunk_size ==0) chunk_size = 1;
     }
-    kaapic_foreach_attr_set_grains( &attr, chunk_size, 1 );
-    //kaapic_foreach_attr_set_grains( &attr, 256, 256); 
+    //kaapic_foreach_attr_set_grains( &attr, chunk_size, 1 );
+    kaapic_foreach_attr_set_grains( &attr, 8, 1); 
         
     /* initialize the master if not already done */
     workshare->lwork = kaapic_foreach_workinit(self_thread, 
@@ -247,11 +247,11 @@ void GOMP_parallel_loop_dynamic_start (
   kaapic_foreach_attr_t attr;
   kaapic_foreach_attr_init(&attr);
   if (1) { //(chunk_size == -1) {
-    chunk_size=(ka_end-ka_start)/64*kaapi_getconcurrency();
+    chunk_size=(ka_end-ka_start)/1024*kaapi_getconcurrency();
     if (chunk_size ==0) chunk_size = 1;
   }
-  kaapic_foreach_attr_set_grains( &attr, chunk_size, 1 );
-  //kaapic_foreach_attr_set_grains( &attr, 256, 256); 
+  //kaapic_foreach_attr_set_grains( &attr, chunk_size, 1 );
+  kaapic_foreach_attr_set_grains( &attr, 8, 1); 
   
   workshare->lwork = kaapic_foreach_workinit(
       self_thread,
