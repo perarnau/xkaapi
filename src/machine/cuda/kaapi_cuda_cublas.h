@@ -1,6 +1,6 @@
 
-#ifndef KAAPI_CUDA_MEM_H_INCLUDED
-#define KAAPI_CUDA_MEM_H_INCLUDED
+#ifndef KAAPI_CUDA_CUBLAS_H_INCLUDED
+#define KAAPI_CUDA_CUBLAS_H_INCLUDED
 
 #include "../../kaapi.h"
 #include "kaapi_cuda_proc.h"
@@ -14,4 +14,4 @@ void kaapi_cuda_cublas_finalize( kaapi_cuda_proc_t *proc );
 
 cublasHandle_t kaapi_cuda_cublas_handle( void );
 
-#endif /* ! KAAPI_CUDA_MEM_H_INCLUDED */
+#endif /* ! KAAPI_CUDA_CUBLAS_H_INCLUDED */

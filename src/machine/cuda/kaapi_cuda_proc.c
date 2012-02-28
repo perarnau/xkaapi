@@ -53,6 +53,7 @@
 #include "kaapi_cuda_dev.h"
 #include "kaapi_cuda_ctx.h"
 #include "kaapi_cuda_cublas.h"
+#include "kaapi_cuda_mem.h"
 
 #ifdef KAAPI_CUDA_USE_POOL
 #include "kaapi_cuda_pool.h"
@@ -150,7 +151,7 @@ int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t* proc)
 
 //  kaapi_cuda_ctx_pop( );
 #endif
-   kaapi_cuda_mem_destroy( proc );
+  kaapi_cuda_mem_destroy( proc );
   kaapi_cuda_dev_close( proc );
   proc->is_initialized = 0;
 

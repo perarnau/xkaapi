@@ -3,6 +3,8 @@
 
 #include "kaapi_impl.h"
 #include "memory/kaapi_mem.h"
+#include "memory/kaapi_mem_data.h"
+#include "memory/kaapi_mem_host_map.h"
 
 #if defined(KAAPI_USE_CUDA)
 #include "machine/cuda/kaapi_cuda_data.h"

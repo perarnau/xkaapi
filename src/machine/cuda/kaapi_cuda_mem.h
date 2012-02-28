@@ -13,13 +13,16 @@ int kaapi_cuda_mem_alloc(
 		const kaapi_address_space_id_t kasid,
 		const size_t size, const int flag );
 
+int kaapi_cuda_mem_alloc_(
+		kaapi_mem_addr_t* addr,
+		const size_t size
+	);
+
 int kaapi_cuda_mem_register( kaapi_pointer_t ptr, 
 		const kaapi_memory_view_t *view );
 
-#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
 int
 kaapi_cuda_mem_inc_use( kaapi_pointer_t *ptr );
-#endif
 
 /*****************************************************************************/
 /* Memory copy functions */
@@ -145,13 +148,10 @@ int kaapi_cuda_mem_sync_params_dtoh(
 	kaapi_task_t*              pc
 );
 
-#if	KAAPI_CUDA_MEM_ALLOC_MANAGER
 int 
 kaapi_cuda_mem_mgmt_check( kaapi_processor_t* proc );
-#endif
 
-int 
-kaapi_cuda_mem_destroy( kaapi_cuda_proc_t* proc );
+int kaapi_cuda_mem_destroy( kaapi_cuda_proc_t* proc );
 
 static inline int
 kaapi_cuda_mem_register_( void* ptr, const size_t size )
@@ -197,5 +197,32 @@ kaapi_cuda_mem_copy_dtod_peer(
 	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
 	const int src_dev
        	);
+
+static inline int
+kaapi_cuda_mem_copy_htod__(
+	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
+	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src)
+{
+    cudaError_t res;
+    cudaStream_t stream;
+    res = cudaStreamCreate( &stream );
+    if (res != cudaSuccess) {
+	fprintf(stdout, "%s: cudaStreamCreate ERROR %d\n", __FUNCTION__, res );
+	fflush(stdout);
+	abort();
+    }
+    res = kaapi_cuda_mem_copy_htod_(
+	    dest, view_dest, 
+	    src, view_src,
+	    stream );
+    if (res != cudaSuccess) {
+	fprintf(stdout, "%s: kaapi_cuda_mem_copy_htod_ ERROR %d\n", __FUNCTION__, res );
+	fflush(stdout);
+	abort();
+    }
+    cudaStreamSynchronize( stream );
+    cudaStreamDestroy( stream );
+    return res;
+}
 
 #endif /* ! KAAPI_CUDA_MEM_H_INCLUDED */

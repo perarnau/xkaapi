@@ -43,7 +43,8 @@
 */
 #include "kaapi_impl.h"
 #include "kaapi_tasklist.h"
-#include "../memory/kaapi_mem.h"
+#include "memory/kaapi_mem.h"
+#include "memory/kaapi_mem_host_map.h"
 
 /** Use the readylist and list of task to execute tasks.
     If the list doesnot have ready tasks but all the tasks

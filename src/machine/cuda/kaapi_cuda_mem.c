@@ -3,7 +3,10 @@
 #include <cuda_runtime_api.h>
 
 #include "kaapi_impl.h"
-#include "../../src/machine/mt/kaapi_mt_machine.h"
+#include "machine/mt/kaapi_mt_machine.h"
+#include "memory/kaapi_mem.h"
+#include "memory/kaapi_mem_data.h"
+#include "memory/kaapi_mem_host_map.h"
 #include "kaapi_cuda_mem.h"
 #include "kaapi_cuda_ctx.h"
 
@@ -213,6 +216,39 @@ kaapi_cuda_mem_mgmt_check( kaapi_processor_t* proc )
 	}
 
 	return 0;
+}
+
+int
+kaapi_cuda_mem_alloc_(
+		kaapi_mem_addr_t* addr,
+		const size_t size
+	)
+{
+	void* devptr= NULL;
+	cudaError_t res ;
+#if KAAPI_CUDA_TIME
+    uint64_t t0 = kaapi_get_elapsedns();
+#endif
+
+    res = cudaMalloc( &devptr, size );
+    if (res != cudaSuccess) {
+	    fprintf( stdout, "%s: ERROR cudaMalloc (%d) size=%lu kid=%lu\n",
+			    __FUNCTION__, res, size, 
+			    (long unsigned int)kaapi_get_current_kid() ); 
+	    fflush( stdout );
+	    abort();
+    }
+    *addr = (kaapi_mem_addr_t)devptr;
+
+#if KAAPI_CUDA_TIME
+    uint64_t t1 = kaapi_get_elapsedns();
+    fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
+	    kaapi_get_current_processor()->proc_type,
+	    __FUNCTION__,
+	    "",
+	    t1-t0);
+#endif
+    return res;
 }
 
 int

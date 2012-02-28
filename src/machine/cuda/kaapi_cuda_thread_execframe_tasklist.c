@@ -157,7 +157,6 @@ execute_first:
 		(cuda_task_body_t) td->fmt->entrypoint_wh[proc_type];
 
 	    kaapi_cuda_ctx_push( );
-	    kaapi_cuda_data_allocate( td->fmt, pc->sp );
 	    kaapi_cuda_data_send( td->fmt, pc->sp );
 	    kaapi_cuda_cublas_set_stream( );
 #if KAAPI_CUDA_TIME

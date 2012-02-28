@@ -1,6 +1,8 @@
 
 #include "kaapi_impl.h"
 #include "kaapi_mem.h"
+#include "kaapi_mem_data.h"
+#include "kaapi_mem_host_map.h"
 
 static inline kaapi_mem_data_t* 
 _kaapi_mem_data_alloc( void )

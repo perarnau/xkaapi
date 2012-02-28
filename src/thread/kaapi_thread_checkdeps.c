@@ -42,7 +42,10 @@
  ** 
  */
 #include "kaapi_impl.h"
-#include "../memory/kaapi_mem.h"
+#include "kaapi_memory.h"
+#include "memory/kaapi_mem.h"
+#include "memory/kaapi_mem_data.h"
+#include "memory/kaapi_mem_host_map.h"
 
 static inline uint64_t _kaapi_max(uint64_t d1, uint64_t d2)
 { return (d1 < d2 ? d2 : d1); }
@@ -79,6 +82,14 @@ int kaapi_thread_computedep_task(
   kaapi_handle_t          handle;
   kaapi_version_t*        version;
   int                     islocal;
+
+#if KAAPI_DEBUG
+    uint64_t t0 = kaapi_get_elapsedns();
+#endif
+    const kaapi_mem_host_map_t* host_map = 
+	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
+    const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
+    kaapi_mem_data_t *kmd;
 
   /* assume task list  */
   kaapi_assert( tasklist != 0 );
@@ -157,6 +168,18 @@ int kaapi_thread_computedep_task(
     */
     handle = kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
 
+    kaapi_mem_host_map_find_or_insert( host_map,
+	    (kaapi_mem_addr_t)access.data,
+	    &kmd );
+    kaapi_mem_data_set_addr( kmd, host_asid, (kaapi_mem_addr_t)handle );
+    fprintf( stdout, "%s: to find ptr=%p\n",
+	    __FUNCTION__,
+	    access.data );
+    fflush(stdout);
+    kaapi_mem_data_t *host_kmd = kaapi_memory_register_find(
+	    (kaapi_mem_addr_t)access.data );
+    kaapi_mem_data_set_parent( kmd, host_kmd );
+
     /* replace the pointer to the data in the task argument by the pointer to the global data */
     access.data = handle;
     kaapi_format_set_access_param(task_fmt, i, task->sp, &access);
@@ -188,6 +211,15 @@ int kaapi_thread_computedep_task(
   /* if wc ==0, push the task into the ready list */
   if (taskdescr->wc == 0)
     kaapi_tasklist_pushback_ready(tasklist, taskdescr);
+
+#if KAAPI_DEBUG
+    uint64_t t1 = kaapi_get_elapsedns();
+    fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
+	    kaapi_get_current_processor()->proc_type,
+	    __FUNCTION__,
+	    "",
+	    t1-t0);
+#endif
 
   return 0;
 }

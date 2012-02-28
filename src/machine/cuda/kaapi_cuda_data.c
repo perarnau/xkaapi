@@ -2,8 +2,10 @@
 #include <stdio.h>
 
 #include "kaapi_impl.h"
-#include "../../kaapi_memory.h" /* TODO: remove this */
-#include "../../memory/kaapi_mem.h"
+#include "kaapi_memory.h" /* TODO: remove this */
+#include "memory/kaapi_mem.h"
+#include "memory/kaapi_mem_data.h"
+#include "memory/kaapi_mem_host_map.h"
 #include "kaapi_cuda_proc.h"
 #include "kaapi_cuda_mem.h"
 #include "kaapi_cuda_ctx.h"
@@ -47,8 +49,9 @@ kaapi_cuda_data_view_convert( kaapi_memory_view_t* dest_view, const
       kaapi_assert(0);
       break;
   }
-	dest_view->wordsize = src_view->wordsize;
-	dest_view->type = src_view->type;
+    dest_view->wordsize = src_view->wordsize;
+    dest_view->type = src_view->type;
+    dest_view->lda = src_view->lda;
 }
 
 /* here it checks if the CPU pointer is present in the GPU.
@@ -145,6 +148,44 @@ int kaapi_cuda_data_allocate(
 	return 0;
 }
 
+static inline void 
+kaapi_cuda_data_convert_ptr( kaapi_data_t* dev_data,
+	kaapi_mem_asid_t cuda_asid, 
+	kaapi_mem_asid_t host_asid,
+	kaapi_mem_data_t* kmd 
+	)
+{
+    kaapi_mem_addr_t d_addr = kaapi_memory_register_convert (
+	cuda_asid, host_asid, kmd );
+    dev_data->ptr = kaapi_make_pointer( 0, (void*)d_addr );
+}
+
+static inline kaapi_data_t* 
+kaapi_cuda_data_register_ptr( kaapi_data_t* host_data, 
+	kaapi_mem_data_t* kmd,
+	kaapi_mem_host_map_t* cuda_map,
+	kaapi_mem_asid_t cuda_asid,
+	kaapi_mem_asid_t host_asid
+	)
+{
+    kaapi_data_t* dev_data;
+
+    if( !kaapi_mem_data_has_addr( kmd, cuda_asid ) ) {
+	dev_data = (kaapi_data_t*)calloc( 1, sizeof(kaapi_data_t) );
+	kaapi_cuda_data_view_convert( &dev_data->view, &host_data->view );
+	kaapi_cuda_data_convert_ptr( dev_data, cuda_asid, host_asid, kmd );
+	kaapi_mem_data_set_addr( kmd, cuda_asid, (kaapi_mem_addr_t)dev_data );
+	kaapi_mem_host_map_find_or_insert_(  cuda_map,
+	    (kaapi_mem_addr_t)kaapi_pointer2void(dev_data->ptr),
+	    &kmd );
+    } else {
+	dev_data = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
+		 cuda_asid );
+//	kaapi_cuda_mem_inc_use( &dest->ptr );
+    }
+    return dev_data;
+}
+
 /* 
  * Context: it executes right before a CUDA task (kernel).
  * The function goes through every parameter and checks if it is allocated and
@@ -160,7 +201,12 @@ int kaapi_cuda_data_send(
 #endif
     const size_t count_params = kaapi_format_get_count_params(fmt, sp );
     size_t i;
-    const kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
+    kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
+    const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
+    const kaapi_mem_host_map_t* host_map = 
+	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
+    const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
+    kaapi_mem_data_t *kmd;
 
 #if KAAPI_VERBOSE
 	fprintf(stdout, "[%s] CUDA params=%ld kid=%lu asid=%lu\n", __FUNCTION__,
@@ -178,18 +224,21 @@ int kaapi_cuda_data_send(
 
 	    kaapi_access_t access = kaapi_format_get_access_param( fmt,
 			    i, sp );
-	    kaapi_data_t* kdata = kaapi_data( kaapi_data_t, &access );
-
-	    kaapi_cuda_data_sync_device( kdata );
+	    kaapi_data_t* host_data = kaapi_data( kaapi_data_t, &access );
+	    kaapi_mem_host_map_find_or_insert( host_map,
+		    (kaapi_mem_addr_t)kaapi_pointer2void(host_data->ptr),
+		    &kmd );
+	    kaapi_data_t* dev_data = kaapi_cuda_data_register_ptr( host_data,
+		   kmd, cuda_map, cuda_asid, host_asid );
+	    kaapi_cuda_data_sync_device( dev_data );
 
 	    if( KAAPI_ACCESS_IS_WRITE(m) ) {
-		kaapi_mem_data_t *kmd;
-		kaapi_mem_host_map_find_or_insert( cuda_map,
-			(kaapi_mem_addr_t)kaapi_pointer2void(kdata->ptr),
-			&kmd );
 		kaapi_mem_data_set_all_dirty_except( kmd, 
 		    kaapi_mem_host_map_get_asid(cuda_map) );
 	    }
+
+	    access.data = dev_data;
+	    kaapi_format_set_access_param(fmt, i, sp, &access);
     }
 
 #if KAAPI_CUDA_TIME
@@ -293,6 +342,11 @@ kaapi_cuda_data_sync_host_transfer(
 #if KAAPI_CUDA_TIME
     uint64_t t0 = kaapi_get_elapsedns();
 #endif
+    fprintf(stdout,"%s: dest_asid=%lu src_asid=%lu\n", 
+	    __FUNCTION__,
+	    dest_asid,
+	    src_asid );
+    fflush(stdout);
 
     kaapi_cuda_ctx_set( src_asid-1 );
     res = cudaStreamCreate( &stream );

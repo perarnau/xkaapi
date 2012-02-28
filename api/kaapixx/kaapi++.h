@@ -3919,6 +3919,18 @@ namespace ka {
   extern void MemorySync(const T& a)
   { MemorySyncFuncClass<typename TraitFormalParam<T>::mode_t, T>::doit(&a); }
 
+  namespace Memory {
+    template<typename T>
+      void Register( T& a ) {
+	  kaapi_memory_register( a.ptr(), a.get_view() );
+      }
+
+    template<typename T>
+      void Unregister( T& a ) {
+	  kaapi_memory_unregister( a.ptr() );
+      }
+  }
+
   // --------------------------------------------------------------------
   /* Main task */
   template<class TASK>

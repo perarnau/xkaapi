@@ -1556,7 +1556,7 @@ typedef kaapi_data_t* kaapi_handle_t;
 extern int kaapi_memory_synchronize(void);
 
 /* Register memory for Xkaapi optimizations */
-extern int kaapi_memory_register( void* ptr, const size_t size );
+extern int kaapi_memory_register( void* ptr, kaapi_memory_view_t view );
 
 /* Register memory for Xkaapi optimizations */
 extern void kaapi_memory_unregister( void* ptr );

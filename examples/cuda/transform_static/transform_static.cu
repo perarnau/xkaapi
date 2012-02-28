@@ -109,7 +109,6 @@ struct doit {
 	verif = atoi( argv[3] );
     
     double_type* array = (double_type*) calloc(size, sizeof(double_type));
-    kaapi_memory_register( array, size*sizeof(double_type) );
     fprintf(stdout,"MAIN array=%p\n", array);fflush(stdout);
     global_block_size = block_size;
 
@@ -120,6 +119,7 @@ struct doit {
     double t0 = kaapi_get_elapsedtime();
 
 	ka::range1d<double_type> range(array, size);
+	ka::Memory::Register( range );
 	ka::Spawn<TaskAddoneMain>( ka::SetStaticSched() )( range );
 	ka::Sync();
 	ka::MemorySync();
@@ -135,6 +135,7 @@ struct doit {
 	    }
 	  }
       }
+    ka::Memory::Unregister( range );
 
     fprintf( stdout, "transform_static %d %d %d %.10f\n", size, block_size,
 		    kaapi_getconcurrency(), tdelta );

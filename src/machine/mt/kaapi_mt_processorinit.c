@@ -45,6 +45,8 @@
 */
 #include "kaapi_impl.h"
 #include "../common/kaapi_procinfo.h"
+#include "memory/kaapi_mem.h"
+#include "memory/kaapi_mem_host_map.h"
 
 
 #if defined(KAAPI_USE_CUDA)
