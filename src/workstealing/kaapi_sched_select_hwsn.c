@@ -77,14 +77,14 @@ int kaapi_sched_select_victim_hwsn(
 
   if (flag == KAAPI_STEAL_FAILED)
   {
-    arg->islocal = (arg->islocal ? 0 :1);
-//    arg->islocal = 0;
+//    arg->islocal = (arg->islocal ? 0 :1);
+    arg->islocal = 0;
     return 0;
   }
 
   if (flag == KAAPI_STEAL_SUCCESS)
   {
-    arg->islocal = (arg->islocal ? 0 :1);
+    arg->islocal = 1; //(arg->islocal ? 0 :1);
     /* success: try next to time initial depth */
     arg->nfailed = 0;
     return 0;
@@ -93,6 +93,7 @@ int kaapi_sched_select_victim_hwsn(
   kaapi_assert_debug (flag == KAAPI_SELECT_VICTIM);
   if (arg->init ==0)
   {
+    arg->init    = 1;
     arg->islocal = 0;
     arg->seed    = rand();
     arg->depth   = 0; /* must the first shared level */
