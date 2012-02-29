@@ -75,23 +75,33 @@ kaapi_mem_register_data_cuda( kaapi_processor_t* cuda_proc,
 	kaapi_mem_host_map_t* host_map,
 	kaapi_mem_asid_t host_asid  )
 {
+#if KAAPI_DEBUG
+    uint64_t t0 = kaapi_get_elapsedns();
+#endif
     const kaapi_mem_host_map_t* cuda_map = 
 	kaapi_processor_get_mem_host_map(cuda_proc);
     const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
     kaapi_mem_addr_t addr;
     kaapi_cuda_ctx_set( cuda_proc->cuda_proc.index );
     kaapi_cuda_mem_alloc_( &addr, kaapi_memory_view_size(&item->view) );
-#if 1
-    kaapi_cuda_mem_copy_htod__(
+    kaapi_cuda_mem_register_( (void*)kaapi_mem_data_get_addr( &item->kmd,
+		    host_asid), kaapi_memory_view_size(&item->view) );
+    /* TODO: check this again */
+    kaapi_cuda_mem_copy_htod(
 	    kaapi_make_pointer(0, (void*)addr), &item->view,
 	    kaapi_make_pointer(0, (void*)kaapi_mem_data_get_addr( &item->kmd,
 		    host_asid)), &item->view );
-#endif
     kaapi_mem_data_set_addr( &item->kmd, cuda_asid, addr );
     kaapi_mem_data_set_all_dirty_except( &item->kmd, host_asid );
-    fprintf( stdout, "%s: dev=%d devptr=%p\n", 
-	    __FUNCTION__, cuda_proc->cuda_proc.index, (void*)addr );
     fflush(stdout);
+#if KAAPI_DEBUG
+    uint64_t t1 = kaapi_get_elapsedns();
+    fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
+	    kaapi_get_current_processor()->proc_type,
+	    __FUNCTION__,
+	    "",
+	    t1-t0);
+#endif
     return 0;
 }
 
@@ -148,7 +158,6 @@ int kaapi_memory_register( void* ptr, kaapi_memory_view_t view )
     item = kaapi_mem_reg_data_add( &host_map->data, host_asid, ptr, &view );
 
 #if defined(KAAPI_USE_CUDA)
-    kaapi_cuda_mem_register_( ptr, kaapi_memory_view_size(&view) );
     kaapi_mem_alloc_data( item, host_map, host_asid );
 #endif
     return 0;
@@ -177,9 +186,6 @@ void kaapi_memory_unregister( void* ptr )
 	    item != NULL; item = kaapi_mem_reg_data_next(item) ){
 	if( kaapi_mem_data_get_addr( &item->kmd, host_asid ) ==
 		(kaapi_mem_addr_t)ptr ) {
-	    fprintf(stdout, "%s: found ptr=%p\n", 
-		    __FUNCTION__, ptr );
-	    fflush(stdout);
 	    kaapi_mem_reg_data_remove( &host_map->data, item );
 #if defined(KAAPI_USE_CUDA)
 	    kaapi_cuda_mem_unregister_(
@@ -204,6 +210,7 @@ kaapi_memory_register_find( kaapi_mem_addr_t addr )
     for( item = kaapi_mem_reg_data_begin(host_map);
 	    item != NULL; item = kaapi_mem_reg_data_next(item) ){
 	item_addr = kaapi_mem_data_get_addr( &item->kmd, host_asid );
+#if 0
 	fprintf(stdout, "%s: search addr=%p min=%p max=%p size=%lu\n",
 		__FUNCTION__,
 		(void*)addr,
@@ -211,20 +218,19 @@ kaapi_memory_register_find( kaapi_mem_addr_t addr )
 		(void*)(item_addr+kaapi_memory_view_size(&item->view)),
 	      kaapi_memory_view_size(&item->view) );
 	fflush(stdout);
+#endif
 	if(	( addr >= item_addr ) &&
 		( addr < ( item_addr+kaapi_memory_view_size(&item->view) )  )
 	     ) {
+#if 0
 	    fprintf(stdout, "%s: found addr=%p\n",
 		__FUNCTION__,
 		    (void*)addr);
 	    fflush(stdout);
+#endif
 	    return &item->kmd;
 	}
     }
-    fprintf(stdout, "%s: not found addr=%p\n",
-		__FUNCTION__,
-	    (void*)addr);
-    fflush(stdout);
 
     return NULL;
 }

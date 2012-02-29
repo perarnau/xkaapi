@@ -112,6 +112,12 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
 	    fflush(stdout);
 	    abort();
   }
+  res = cudaEventCreate( &proc->event );
+  if (res != cudaSuccess) {
+	    fprintf(stdout, "%s: cudaEventCreate ERROR %d\n", __FUNCTION__, res );
+	    fflush(stdout);
+	    abort();
+  }
 
   /* pop the context to make it floating. doing
      so allow another thread to use it, such
@@ -214,5 +220,33 @@ void kaapi_cuda_stream_DtoH_next(void)
 	kaapi_get_current_processor();
     self_proc->cuda_proc.stream_dtoh_idx = (self_proc->cuda_proc.stream_dtoh_idx + 1)%
 	self_proc->cuda_proc.stream_max;
+}
+
+int
+kaapi_cuda_proc_sync_all( void )
+{
+    kaapi_processor_t** pos = kaapi_all_kprocessors;
+    size_t i;
+
+    for (i = 0; i < kaapi_count_kprocessors; ++i, ++pos)
+	if ((*pos)->proc_type == KAAPI_PROC_TYPE_CUDA) {
+	    kaapi_cuda_ctx_set( (*pos)->cuda_proc.index );
+	    kaapi_cuda_sync();
+	}
+    return 0;
+}
+
+void kaapi_cuda_event_record( void )
+{
+    kaapi_processor_t* const self_proc =
+	kaapi_get_current_processor();
+    const cudaError_t res = cudaEventRecord( self_proc->cuda_proc.event, 
+	   kaapi_cuda_kernel_stream() );
+    if( res != cudaSuccess ) {
+	    fprintf( stdout, "%s: cudaEventRecord ERROR %d\n", __FUNCTION__, res);
+	    fflush(stdout);
+    }
+    cudaStreamWaitEvent( kaapi_cuda_kernel_stream(), self_proc->cuda_proc.event,
+	    0 );
 }
 

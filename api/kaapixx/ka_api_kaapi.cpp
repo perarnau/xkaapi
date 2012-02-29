@@ -213,7 +213,9 @@ void Sync()
 // --------------------------------------------------------------------
 void MemorySync()
 {
+  kaapi_cuda_proc_sync_all();
   kaapi_memory_synchronize();
+  kaapi_cuda_proc_sync_all();
 }
 
 

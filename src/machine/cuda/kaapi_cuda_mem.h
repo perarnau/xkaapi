@@ -198,31 +198,4 @@ kaapi_cuda_mem_copy_dtod_peer(
 	const int src_dev
        	);
 
-static inline int
-kaapi_cuda_mem_copy_htod__(
-	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src)
-{
-    cudaError_t res;
-    cudaStream_t stream;
-    res = cudaStreamCreate( &stream );
-    if (res != cudaSuccess) {
-	fprintf(stdout, "%s: cudaStreamCreate ERROR %d\n", __FUNCTION__, res );
-	fflush(stdout);
-	abort();
-    }
-    res = kaapi_cuda_mem_copy_htod_(
-	    dest, view_dest, 
-	    src, view_src,
-	    stream );
-    if (res != cudaSuccess) {
-	fprintf(stdout, "%s: kaapi_cuda_mem_copy_htod_ ERROR %d\n", __FUNCTION__, res );
-	fflush(stdout);
-	abort();
-    }
-    cudaStreamSynchronize( stream );
-    cudaStreamDestroy( stream );
-    return res;
-}
-
 #endif /* ! KAAPI_CUDA_MEM_H_INCLUDED */

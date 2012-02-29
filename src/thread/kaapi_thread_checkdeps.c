@@ -83,7 +83,7 @@ int kaapi_thread_computedep_task(
   kaapi_version_t*        version;
   int                     islocal;
 
-#if KAAPI_DEBUG
+#if 0
     uint64_t t0 = kaapi_get_elapsedns();
 #endif
     const kaapi_mem_host_map_t* host_map = 
@@ -172,10 +172,6 @@ int kaapi_thread_computedep_task(
 	    (kaapi_mem_addr_t)access.data,
 	    &kmd );
     kaapi_mem_data_set_addr( kmd, host_asid, (kaapi_mem_addr_t)handle );
-    fprintf( stdout, "%s: to find ptr=%p\n",
-	    __FUNCTION__,
-	    access.data );
-    fflush(stdout);
     kaapi_mem_data_t *host_kmd = kaapi_memory_register_find(
 	    (kaapi_mem_addr_t)access.data );
     kaapi_mem_data_set_parent( kmd, host_kmd );
@@ -212,7 +208,7 @@ int kaapi_thread_computedep_task(
   if (taskdescr->wc == 0)
     kaapi_tasklist_pushback_ready(tasklist, taskdescr);
 
-#if KAAPI_DEBUG
+#if 0
     uint64_t t1 = kaapi_get_elapsedns();
     fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
 	    kaapi_get_current_processor()->proc_type,

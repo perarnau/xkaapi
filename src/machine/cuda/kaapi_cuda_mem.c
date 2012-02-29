@@ -585,7 +585,7 @@ kaapi_cuda_mem_2dcopy_htod_(
 #if KAAPI_CUDA_ASYNC
 	res = cudaMemcpy2DAsync(
 	    __kaapi_pointer2void(dest),
-	    view_dest->size[1] * view_dest->wordsize,
+	    view_dest->lda * view_dest->wordsize,
 	    __kaapi_pointer2void(src),
 	    view_src->lda * view_src->wordsize,
 	    view_dest->size[1] * view_dest->wordsize,
@@ -595,7 +595,7 @@ kaapi_cuda_mem_2dcopy_htod_(
 #else
 	res = cudaMemcpy2D(
 	    __kaapi_pointer2void(dest),
-	    view_dest->size[1] * view_dest->wordsize,
+	    view_dest->lda * view_dest->wordsize,
 	    __kaapi_pointer2void(src),
 	    view_src->lda * view_src->wordsize,
 	    view_dest->size[1] * view_dest->wordsize,
@@ -654,7 +654,7 @@ kaapi_cuda_mem_2dcopy_dtoh_(
 		__kaapi_pointer2void(dest),
 		view_dest->lda * view_dest->wordsize,
 		__kaapi_pointer2void(src),
-		view_src->size[1] * view_src->wordsize,
+		view_src->lda * view_src->wordsize,
 		view_src->size[1] * view_src->wordsize,
 		view_src->size[0],
 		cudaMemcpyDeviceToHost,
@@ -664,7 +664,7 @@ kaapi_cuda_mem_2dcopy_dtoh_(
 		__kaapi_pointer2void(dest),
 		view_dest->lda * view_dest->wordsize,
 		__kaapi_pointer2void(src),
-		view_src->size[1] * view_src->wordsize,
+		view_src->lda * view_src->wordsize,
 		view_src->size[1] * view_src->wordsize,
 		view_src->size[0],
 		cudaMemcpyDeviceToHost );

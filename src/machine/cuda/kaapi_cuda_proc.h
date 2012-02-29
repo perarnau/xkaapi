@@ -51,7 +51,6 @@
 #include <sys/types.h>
 
 #include <cuda_runtime_api.h>
-
 #include "cublas_v2.h"
 
 #define KAAPI_CUDA_ASYNC	1
@@ -63,7 +62,7 @@
 
 //#define KAAPI_CUDA_USE_POOL	1
 
-#define KAAPI_CUDA_MAX_STREAMS		1
+#define KAAPI_CUDA_MAX_STREAMS		8
 
 typedef struct kaapi_cuda_ctx
 {
@@ -90,6 +89,7 @@ typedef struct kaapi_cuda_proc
 
     /* WARNING: some old devices get errors on multiple stream */
     cudaStream_t stream[KAAPI_CUDA_MAX_STREAMS];
+    cudaEvent_t event;
     cudaStream_t streamDtoD;
     cudaStream_t stream_DtoH[KAAPI_CUDA_MAX_STREAMS];
     int stream_htod_idx; /* stream ID to tranfer/execute */
@@ -128,6 +128,8 @@ cudaStream_t kaapi_cuda_DtoD_stream(void);
 void kaapi_cuda_stream_HtoD_next(void);
 
 void kaapi_cuda_stream_DtoH_next(void);
+
+void kaapi_cuda_event_record( void );
 
 static inline int
 kaapi_cuda_sync( void )

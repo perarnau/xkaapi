@@ -175,15 +175,14 @@ struct doit {
     ka::array<2,double_type> B( dB, n, n, n);
     ka::array<2,double_type> C( dC, n, n, n);
 
-//    ka::Spawn<TaskDLARNV>()( A );
     TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(A) );
     TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(B) );
     TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(C) );
 
     /* register memory to Xkaapi runtime */
-    kaapi_memory_register( dA, n*n*sizeof(double_type) );
-    kaapi_memory_register( dB, n*n*sizeof(double_type) );
-    kaapi_memory_register( dC, n*n*sizeof(double_type) );
+    ka::Memory::Register( A );
+    ka::Memory::Register( B );
+    ka::Memory::Register( C );
 
 #if CONFIG_DO_CHECK
     if( verif ){
@@ -237,9 +236,9 @@ struct doit {
     }
 #endif
 
-    kaapi_memory_unregister( dA );
-    kaapi_memory_unregister( dB );
-    kaapi_memory_unregister( dC );
+    ka::Memory::Unregister( A );
+    ka::Memory::Unregister( B );
+    ka::Memory::Unregister( C );
     free(dA);
     free(dB);
     free(dC);
