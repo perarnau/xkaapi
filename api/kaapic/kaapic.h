@@ -69,6 +69,7 @@ enum kaapic_mode
   KAAPIC_MODE_R = 0,
   KAAPIC_MODE_W,
   KAAPIC_MODE_RW,
+  KAAPIC_MODE_CW,
   KAAPIC_MODE_V
 };
 
@@ -156,6 +157,10 @@ extern void kaapic_foreach_with_format(
   /* void (*body)(int32_t, int32_t, int32_t, ...), */
   ...
 );
+
+/* Allocate a data with the same scope as a task, ie. in the Kaapi'thread stack
+*/
+extern void* kaapic_alloca( size_t sz );
 
 /* Create a task that may be steal.
    See documentation for restriction on by value passing rule.
