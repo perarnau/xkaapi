@@ -46,8 +46,10 @@
 typedef struct kaapi_hier_arg {
   short         init;     /* 0 iff not init  */
   short         depth;     /* current depth where to select : 0 is the first level with shared memory (typically L3 cache or NUMA node) */
-  short         islocal;   /* 1 iff next steal must be in local set */
-  short         nfailed;   /* number of failed tentatives */
+  short         priority;  /* 1: local, 2: last victim ok, rand */
+  short         laststeal; /* last sucessful steal victim */
+  short         lastsok;   /* last sucessful steal victim */
+  int           nfailed;   /* number of failed tentatives */
   unsigned int  seed;
 } kaapi_hier_arg;
 
@@ -78,25 +80,26 @@ int kaapi_sched_select_victim_hwsn(
   if (flag == KAAPI_STEAL_FAILED)
   {
 //    arg->islocal = (arg->islocal ? 0 :1);
-    arg->islocal = 0;
+      ++arg->priority;
     return 0;
   }
 
   if (flag == KAAPI_STEAL_SUCCESS)
   {
-    arg->islocal = 1; //(arg->islocal ? 0 :1);
+    arg->priority = 1; //(arg->islocal ? 0 :1);
     /* success: try next to time initial depth */
-    arg->nfailed = 0;
+    arg->nfailed  = 0;
+    arg->lastsok  = arg->laststeal;
     return 0;
   }
 
   kaapi_assert_debug (flag == KAAPI_SELECT_VICTIM);
   if (arg->init ==0)
   {
-    arg->init    = 1;
-    arg->islocal = 0;
-    arg->seed    = rand();
-    arg->depth   = 0; /* must the first shared level */
+    arg->init     = 1;
+    arg->priority = 3;
+    arg->seed     = rand();
+    arg->depth    = 0; /* must the first shared level */
   }
 
   nbproc = kaapi_count_kprocessors;
@@ -105,16 +108,20 @@ int kaapi_sched_select_victim_hwsn(
 
 redo_select:
   /* first: select in self set */
-  if (arg->islocal ==0)
-    victimid = rand_r( (unsigned int*)&arg->seed ) % nbproc;
-  else
+  if (arg->priority ==1)
   {
     level = &kproc->hlevel.levels[arg->depth];
     victimid = level->notself[ rand_r(&arg->seed) % level->nnotself];
   }
+  else if (arg->priority == 2)
+    victimid = arg->lastsok;
+  else
+    victimid = rand_r( (unsigned int*)&arg->seed ) % nbproc;
 
   victim->kproc = kaapi_all_kprocessors[ victimid ];
   if (victim->kproc ==0) 
     goto redo_select;
+
+  arg->laststeal = victimid;
   return 0;
 }
