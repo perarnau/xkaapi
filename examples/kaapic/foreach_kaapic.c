@@ -88,12 +88,14 @@ int main(int ac, char** av)
 #if CONFIG_TERM_BUG
   for (i = 0; i < 10000; ++i)
 #else
-    for (i = 0; i < 100000; ++i)
+    for (i = 0; i < 1000; ++i)
 #endif
     {
+#if 0
      if (i % 10 ==0) fputc('.',stdout);
      if (i % 100 ==0) fflush(stdout);
      if (i % 1000 ==0) printf("%i\n", i);
+#endif
 #if CONFIG_TERM_BUG
       global_check = (void*)(uintptr_t)i;
       //OLD    kaapic_foreach(fu, 0, size - 1, 3, array, &one, global_check);
