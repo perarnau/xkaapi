@@ -74,18 +74,18 @@ int kaapi_sched_select_victim_hwsn(
     return kaapi_sched_select_victim_rand(kproc, victim, flag );
   }
 
+
   if (flag == KAAPI_STEAL_FAILED)
   {
-    ++arg->nfailed;
-    if (arg->nfailed >=2)
-      arg->islocal = 0;
+    arg->islocal = (arg->islocal ? 0 :1);
+//    arg->islocal = 0;
     return 0;
   }
 
   if (flag == KAAPI_STEAL_SUCCESS)
   {
+    arg->islocal = (arg->islocal ? 0 :1);
     /* success: try next to time initial depth */
-    arg->islocal = 1;
     arg->nfailed = 0;
     return 0;
   }
