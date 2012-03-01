@@ -52,6 +52,8 @@
 
 #include "kaapi_impl.h"
 
+#define KAAPI_PRINT_TOPO 1
+
 /* Return the size of the kids array
 */
 static int kaapi_cpuset2kids( 
@@ -82,7 +84,7 @@ static int kaapi_cpuset2kids(
   return j;
 }
 
-#if 0 //defined(KAAPI_DEBUG)
+#if defined(KAAPI_PRINT_TOPO)
 static kaapi_lock_t print_lock = KAAPI_LOCK_INITIALIZER;
 
 // warning about buffer overflow: buffer should has at least 1024 entries
@@ -362,7 +364,7 @@ int kaapi_processor_computetopo(kaapi_processor_t* kproc)
   }
   kproc->hlevel.depth = final_depth;
   
-#if 0 //defined(KAAPI_DEBUG)
+#if defined(KAAPI_PRINT_TOPO)
   kaapi_sched_lock( &print_lock );
   char buffer1[1024];
   char buffer2[1024];

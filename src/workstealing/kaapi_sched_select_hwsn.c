@@ -45,11 +45,8 @@
 
 typedef struct kaapi_hier_arg {
   short         init;     /* 0 iff not init  */
-  short         depth;     /* current depth where to select : 0 is the first level with shared memory (typically L3 cache or NUMA node) */
   short         priority;  /* 1: local, 2: last victim ok, rand */
-  short         laststeal; /* last sucessful steal victim */
-  short         lastsok;   /* last sucessful steal victim */
-  int           nfailed;   /* number of failed tentatives */
+  int           nfailed;
   unsigned int  seed;
 } kaapi_hier_arg;
 
@@ -71,7 +68,7 @@ int kaapi_sched_select_victim_hwsn(
 
   arg = (kaapi_hier_arg*)&kproc->fnc_selecarg;
 
-  if ((kproc->hlevel.depth ==0) || (arg->depth ==-1))
+  if ((kproc->hlevel.depth ==0) || (arg->init ==-1))
   { /* no hierarchy: like random flat selection */
     return kaapi_sched_select_victim_rand(kproc, victim, flag );
   }
@@ -79,17 +76,23 @@ int kaapi_sched_select_victim_hwsn(
 
   if (flag == KAAPI_STEAL_FAILED)
   {
-//    arg->islocal = (arg->islocal ? 0 :1);
-      ++arg->priority;
+    if (arg->priority == 1)
+    {
+      if (++arg->nfailed == 1)
+      {
+        arg->priority = 10;
+        arg->nfailed  = 0;
+      }
+    }
     return 0;
   }
 
   if (flag == KAAPI_STEAL_SUCCESS)
   {
-    arg->priority = 1; //(arg->islocal ? 0 :1);
+    if (arg->priority !=1) arg->priority =1; 
+
     /* success: try next to time initial depth */
     arg->nfailed  = 0;
-    arg->lastsok  = arg->laststeal;
     return 0;
   }
 
@@ -97,9 +100,9 @@ int kaapi_sched_select_victim_hwsn(
   if (arg->init ==0)
   {
     arg->init     = 1;
-    arg->priority = 3;
+    arg->priority = 10;
+    arg->nfailed  = 0;
     arg->seed     = rand();
-    arg->depth    = 0; /* must the first shared level */
   }
 
   nbproc = kaapi_count_kprocessors;
@@ -110,11 +113,13 @@ redo_select:
   /* first: select in self set */
   if (arg->priority ==1)
   {
-    level = &kproc->hlevel.levels[arg->depth];
+    level = &kproc->hlevel.levels[0];
     victimid = level->notself[ rand_r(&arg->seed) % level->nnotself];
   }
+#if 0
   else if (arg->priority == 2)
     victimid = arg->lastsok;
+#endif
   else
     victimid = rand_r( (unsigned int*)&arg->seed ) % nbproc;
 
@@ -122,6 +127,5 @@ redo_select:
   if (victim->kproc ==0) 
     goto redo_select;
 
-  arg->laststeal = victimid;
   return 0;
 }
