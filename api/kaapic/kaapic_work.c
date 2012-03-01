@@ -265,7 +265,8 @@ redo_select:
 
   range_size = kaapi_workqueue_size(&lwork->cr);
   if (range_size <= wi->par_grain)
-    return 0;
+    goto redo_select;
+
   unit_size = range_size / 2;
 
   if (kaapic_local_work_steal(
@@ -282,7 +283,7 @@ redo_select:
     return 1;
   }
 
-  return 0;
+  goto redo_select;
 }
 
 
