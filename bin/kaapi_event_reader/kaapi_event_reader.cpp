@@ -606,6 +606,22 @@ static void fnc_paje_gantt( const char* filename, int fd )
         break;
 
 
+        case KAAPI_EVT_FOREACH_STEAL:
+          d0   = 1e-9*(double)e[i].date;
+          pajeNewEvent(d0, name, "STEAL", "fo");
+        break;
+
+        case KAAPI_EVT_FOREACH_BEG:
+          d0   = 1e-9*(double)e[i].date;
+          pajePushState (d0, name, "STATE", "f");          
+        break;
+
+        case KAAPI_EVT_FOREACH_END:
+          d1   = 1e-9*(double)e[i].date;
+          pajePopState (d1, name, "STATE", "f");          
+        break;
+
+
         /* processing request */
         case KAAPI_EVT_REQUESTS_BEG:
           d0   = 1e-9*(double)e[i].date;
@@ -680,6 +696,7 @@ int fnc_paje_gantt_header()
 
   pajeDefineEventType("STEAL", "THREAD", "STEAL", "blue");
   pajeDefineEventType("SUSPEND", "THREAD", "SUSPEND", "blue");
+  pajeDefineEventType("FSTEAL", "THREAD", "FSTEAL", "blue");
 
   pajeDefineLinkType("LINK", "ROOT", "THREAD", "THREAD", "LINK");
 
@@ -695,6 +712,9 @@ int fnc_paje_gantt_header()
   /* execution of steal request */
   pajeDefineEntityValue("r", "STATE", "request", "0.0 0.5 1.0");
 
+  /* execution of foreach code */
+  pajeDefineEntityValue("f", "STATE", "foreach", "0.5 0.5 0");
+
   /* execution of static task to unroll graph */
   pajeDefineEntityValue("st", "STATE", "unroll", "0.5 1.0 0.0");
 
@@ -703,6 +723,9 @@ int fnc_paje_gantt_header()
 
   /* suspend post operation */
   pajeDefineEntityValue("su", "SUSPEND", "suspend", "0.8 0.8 0.8");
+
+  /* foreach steal event */
+  pajeDefineEntityValue("fo", "STEAL", "foreachsteal", "0.5 0.5 0.0");
 
   /* link  */
   pajeDefineEntityValue("li", "LINK", "link", "1.0 0.1 0.1");

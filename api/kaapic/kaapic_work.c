@@ -717,6 +717,8 @@ static void _kaapic_thief_entrypoint(
 
   kaapi_processor_t* kproc = kaapi_get_current_processor();
 
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_FOREACH_BEG );
+
   /* process the work */
   kaapic_local_work_t* const lwork = (kaapic_local_work_t*)arg;
   kaapic_global_work_t* const gwork = lwork->global;
@@ -771,6 +773,8 @@ redo_local_work:
     goto redo_local_work;
   
 return_label:
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_FOREACH_END );
+
   lwork->workdone = 0;
   lwork->init = 0;
 
@@ -1042,8 +1046,11 @@ int kaapic_foreach_common
   kaapic_local_work_t*  lwork;
 
   /* is_format true if called from kaapif_foreach_with_format */
-  kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
+  kaapi_processor_t* const kproc = kaapi_get_current_processor();
+  kaapi_thread_context_t* const self_thread = kproc->thread;
   const int tid = self_thread->stack.proc->kid;
+
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_FOREACH_BEG );
 
   lwork = kaapic_foreach_workinit(
       self_thread,
@@ -1101,6 +1108,8 @@ redo_local_work:
     goto redo_local_work;
  
 return_label:
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_FOREACH_END );
+
   lwork->workdone = 0;
   lwork->init = 0;
   kaapi_writemem_barrier();
