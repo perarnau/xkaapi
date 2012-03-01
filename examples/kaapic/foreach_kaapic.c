@@ -46,8 +46,8 @@ static void fu (
 #endif
     
     array[k] += *value;
-//    array[k] += sqrt(sin(*value * *value) + cos(*value * *value));
-//    array[k] += sin(*value * *value) + sqrt(cos(*value * *value));
+    array[k] += sqrt(sin(*value * *value) + cos(*value * *value));
+    array[k] += sin(*value * *value) + sqrt(cos(*value * *value));
   }
   
 #if CONFIG_TERM_BUG
@@ -64,8 +64,8 @@ static void fu (
 
 int main(int ac, char** av)
 {
-  static double array[10000 * 48];
-  static const int32_t size = 10000 * 48;
+  static double array[100000 * 48];
+  static const int32_t size = 100000 * 48;
   static const double one = 1;
   int32_t i;
   kaapic_foreach_attr_t attr;
@@ -88,10 +88,10 @@ int main(int ac, char** av)
 #if CONFIG_TERM_BUG
   for (i = 0; i < 10000; ++i)
 #else
-    for (i = 0; i < 100000; ++i)
+    for (i = 0; i < 10; ++i)
 #endif
     {
-     if (i % 10 ==0) fputc('.',stdout);
+     if (i % 1 ==0) fputc('.',stdout);
      if (i % 100 ==0) fflush(stdout);
      if (i % 1000 ==0) printf("%i\n", i);
 #if CONFIG_TERM_BUG
