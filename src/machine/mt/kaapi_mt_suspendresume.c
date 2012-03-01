@@ -110,6 +110,10 @@ return_from:
 */
 void kaapi_mt_suspend_threads_post(void)
 {
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_SUSPEND_POST );
+#endif
   kaapi_writemem_barrier();
   kaapi_suspend_round++;
   kaapi_writemem_barrier();
@@ -119,14 +123,24 @@ void kaapi_mt_suspend_threads_post(void)
 
 void kaapi_mt_suspend_threads_wait(void)
 {
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_SUSPWAIT_BEG );
+#endif
+
   kaapi_assert_debug( kaapi_suspendflag >= 1 );
   kaapi_suspendflag = 2;
   kaapi_writemem_barrier();
+
   while (KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) != (kaapi_count_kprocessors-1))
   {
     kaapi_slowdown_cpu();
   }
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );  
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_SUSPWAIT_END );
+#endif
 }
 
 /*

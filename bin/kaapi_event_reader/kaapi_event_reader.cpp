@@ -590,6 +590,22 @@ static void fnc_paje_gantt( const char* filename, int fd )
           pajePopState (d1, name, "STATE");          
         break;
 
+        case KAAPI_EVT_SCHED_SUSPEND_POST:
+          d0   = 1e-9*(double)e[i].date;
+          pajeNewEvent(d0, name, "SUSPEND", "su");
+        break;
+
+        case KAAPI_EVT_SCHED_SUSPWAIT_BEG:
+          d0   = 1e-9*(double)e[i].date;
+          pajePushState (d0, name, "STATE", "s");          
+        break;
+
+        case KAAPI_EVT_SCHED_SUSPWAIT_END:
+          d1   = 1e-9*(double)e[i].date;
+          pajePopState (d1, name, "STATE", "s");          
+        break;
+
+
         /* processing request */
         case KAAPI_EVT_REQUESTS_BEG:
           d0   = 1e-9*(double)e[i].date;
@@ -605,7 +621,8 @@ static void fnc_paje_gantt( const char* filename, int fd )
         case KAAPI_EVT_STEAL_OP:
           d0   = 1e-9*(double)e[i].date;
           kid = e[i].d0.i;
-//          pajeNewEvent(d0, name, "STEAL", "so");
+          pajeNewEvent(d0, name, "STEAL", "so");
+#if 0
           if (kid != e[i].kid)
           {
             sprintf(key,"%i",e[i].d1.i*100000+e[i].kid);
@@ -613,28 +630,33 @@ static void fnc_paje_gantt( const char* filename, int fd )
             sprintf(tmp,"thread-%i",kid);
             pajeStartLink(d0, name, "LINK", tmp, "li", key);
           }
+#endif
         break;
 
         /* emit reply */
         case KAAPI_EVT_SEND_REPLY:
           d0   = 1e-9*(double)e[i].date;
+#if 0
           kid = e[i].d0.i; /* kid that will recv the reply */
           if (kid != e[i].kid)
           {
             sprintf(key,"%i",e[i].d1.i*100000+kid);
             pajeEndLink(d0, "root", "LINK", name, "ri", key);
           }
+#endif
         break;
 
         /* recv reply */
         case KAAPI_EVT_RECV_REPLY:
           d0   = 1e-9*(double)e[i].date;
+#if 0
           kid = e[i].d0.i; /* kid that send the reply */
           if (kid != e[i].kid)
           {
             sprintf(key,"%i",e[i].d1.i*100000+kid);
             pajeStartLink(d0, "root", "LINK", name, "ri", key);
           }
+#endif
         break;
 
         default:
@@ -657,6 +679,8 @@ int fnc_paje_gantt_header()
   pajeDefineStateType("STATE", "THREAD", "STATE");
 
   pajeDefineEventType("STEAL", "THREAD", "STEAL", "blue");
+  pajeDefineEventType("SUSPEND", "THREAD", "SUSPEND", "blue");
+
   pajeDefineLinkType("LINK", "ROOT", "THREAD", "THREAD", "LINK");
 
   /* actif state */
@@ -676,6 +700,9 @@ int fnc_paje_gantt_header()
 
   /* steal operation */
   pajeDefineEntityValue("so", "STEAL", "steal", "1.0 0.1 0.1");
+
+  /* suspend post operation */
+  pajeDefineEntityValue("su", "SUSPEND", "suspend", "0.8 0.8 0.8");
 
   /* link  */
   pajeDefineEntityValue("li", "LINK", "link", "1.0 0.1 0.1");

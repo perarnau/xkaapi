@@ -77,12 +77,16 @@ extern "C" {
 #define KAAPI_EVT_SCHED_SUSPEND_BEG 12 /* when k-processor is suspending */
 #define KAAPI_EVT_SCHED_SUSPEND_END 13 /* when k-processor wakeup */
 
-#define KAAPI_EVT_REQUESTS_BEG    14 /* when k-processor begin to process requests, data=victim.id */
-#define KAAPI_EVT_REQUESTS_END    15 /* when k-processor end to process requests */
+#define KAAPI_EVT_SCHED_SUSPEND_POST 14 /* when k-processor is suspending */
+#define KAAPI_EVT_SCHED_SUSPWAIT_BEG 15 /* when k-processor wakeup */
+#define KAAPI_EVT_SCHED_SUSPWAIT_END 16 /* when k-processor wakeup */
 
-#define KAAPI_EVT_STEAL_OP        16 /* when k-processor emit a steal request data=victimid, serial*/
-#define KAAPI_EVT_SEND_REPLY      17 /* when k-processor send a reply request data=victimid, serial */
-#define KAAPI_EVT_RECV_REPLY      18 /* when k-processor recv reply, serial */
+#define KAAPI_EVT_REQUESTS_BEG    17 /* when k-processor begin to process requests, data=victim.id */
+#define KAAPI_EVT_REQUESTS_END    18 /* when k-processor end to process requests */
+
+#define KAAPI_EVT_STEAL_OP        19 /* when k-processor emit a steal request data=victimid, serial*/
+#define KAAPI_EVT_SEND_REPLY      20 /* when k-processor send a reply request data=victimid, serial */
+#define KAAPI_EVT_RECV_REPLY      21 /* when k-processor recv reply, serial */
 
 
 /* ........................................ Implementation notes ........................................*/
