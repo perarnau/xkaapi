@@ -52,7 +52,7 @@
 
 #include "kaapi_impl.h"
 
-#define KAAPI_PRINT_TOPO 1
+//#define KAAPI_PRINT_TOPO 1
 
 /* Return the size of the kids array
 */

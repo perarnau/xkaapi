@@ -597,24 +597,24 @@ static void fnc_paje_gantt( const char* filename, int fd )
 
         case KAAPI_EVT_SCHED_SUSPWAIT_BEG:
           d0   = 1e-9*(double)e[i].date;
-          pajePushState (d0, name, "STATE", "s");          
+          pajePushState (d0, name, "STATE", "s"); 
         break;
 
         case KAAPI_EVT_SCHED_SUSPWAIT_END:
           d1   = 1e-9*(double)e[i].date;
-          pajePopState (d1, name, "STATE", "s");          
+          pajePopState (d1, name, "STATE"); 
         break;
 
 
         /* processing request */
         case KAAPI_EVT_REQUESTS_BEG:
           d0   = 1e-9*(double)e[i].date;
-          pajePushState (d0, name, "STATE", "r");          
+          pajePushState (d0, name, "STATE", "r"); 
         break;
 
         case KAAPI_EVT_REQUESTS_END:
           d1   = 1e-9*(double)e[i].date;
-          pajePopState (d1, name, "STATE");          
+          pajePopState (d1, name, "STATE");
         break;
 
         /* emit steal */
