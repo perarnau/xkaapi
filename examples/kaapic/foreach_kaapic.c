@@ -64,8 +64,8 @@ static void fu (
 
 int main(int ac, char** av)
 {
-  static double array[10000 * 48];
-  static const int32_t size = 10000 * 48;
+  static double array[100000 * 48];
+  static const int32_t size = 100000 * 48;
   static const double one = 1;
   int32_t i;
   kaapic_foreach_attr_t attr;
