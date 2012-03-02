@@ -558,6 +558,13 @@ extern int kaapi_sched_select_victim_hierarchy(
 );
 
 /* experimental: */
+extern int kaapi_sched_select_victim_pws( 
+    kaapi_processor_t* kproc, 
+    kaapi_victim_t* victim, 
+    kaapi_selecvictim_flag_t flag 
+);
+
+/* experimental: */
 extern int kaapi_sched_select_victim_hwsn( 
     kaapi_processor_t* kproc, 
     kaapi_victim_t* victim, 
