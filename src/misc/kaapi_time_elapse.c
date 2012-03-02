@@ -44,14 +44,25 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include <sys/time.h>
+#if defined(HAVE_CLOCK_GETTIME)
+# include <time.h>
+#else
+# include <sys/time.h>
+#endif
 
 /**
 */
 double kaapi_get_elapsedtime(void)
 {
+#if defined(HAVE_CLOCK_GETTIME)
+  struct timespec ts;
+  int err = clock_gettime( CLOCK_REALTIME, &ts );
+  if (err !=0) return 0;
+  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
+#else
   struct timeval tv;
   int err = gettimeofday( &tv, 0);
   if (err  !=0) return 0;
-  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
+  return (double)tv.tv_sec + 1e-9*(double)tv.tv_usec;
+#endif
 }
