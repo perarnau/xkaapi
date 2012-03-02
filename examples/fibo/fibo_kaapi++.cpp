@@ -175,9 +175,11 @@ struct doit {
 
     for (cutoff=2; cutoff<3; ++cutoff)
     {
+      /* first run without getting time */
       ka::Spawn<TaskFibo>()( res2, n );
       /* */
       ka::Sync();
+      
       start_time= ka::WallTimer::gettime();
       for (unsigned int i = 0 ; i < iter ; ++i)
       {   
