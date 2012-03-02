@@ -44,21 +44,22 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include <sys/time.h>
 
-#if 0//defined(__linux__)
-#  include <time.h>
+#if defined(HAVE_CLOCK_GETTIME)
+# include <time.h>
+#else
+# include <sys/time.h>
 #endif
 
 /**
 */
 uint64_t kaapi_get_elapsedns(void)
 {
-#if 0//defined(__linux__)
+#if defined(HAVE_CLOCK_GETTIME)
   uint64_t retval;
   struct timespec tp;
   int err = clock_gettime(CLOCK_REALTIME, &tp);
-  if (err != 0) return (uint64_t)-1UL;
+  if (err != 0) return (uint64_t)0UL;
   retval = tp.tv_sec;
   retval *= 1000000000ULL + tp.tv_nsec;
   return retval;
