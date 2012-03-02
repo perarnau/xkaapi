@@ -613,12 +613,12 @@ static void fnc_paje_gantt( const char* filename, int fd )
 
         case KAAPI_EVT_FOREACH_BEG:
           d0   = 1e-9*(double)e[i].date;
-          pajePushState (d0, name, "STATE", "f");          
+          pajePushState (d0, name, "STATE", "f");
         break;
 
         case KAAPI_EVT_FOREACH_END:
           d1   = 1e-9*(double)e[i].date;
-          pajePopState (d1, name, "STATE", "f");          
+          pajePopState (d1, name, "STATE"); 
         break;
 
 
@@ -725,7 +725,7 @@ int fnc_paje_gantt_header()
   pajeDefineEntityValue("su", "SUSPEND", "suspend", "0.8 0.8 0.8");
 
   /* foreach steal event */
-  pajeDefineEntityValue("fo", "STEAL", "foreachsteal", "0.5 0.5 0.0");
+  pajeDefineEntityValue("fo", "STEAL", "foreachsteal", "0.5 0.25 0.0");
 
   /* link  */
   pajeDefineEntityValue("li", "LINK", "link", "1.0 0.1 0.1");
