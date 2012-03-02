@@ -90,8 +90,8 @@ extern "C" {
 
 
 #define KAAPI_EVT_FOREACH_BEG     25 /* */
-#define KAAPI_EVT_FOREACH_END     20 /* */
-#define KAAPI_EVT_FOREACH_STEAL   21 /* */
+#define KAAPI_EVT_FOREACH_END     26 /* */
+#define KAAPI_EVT_FOREACH_STEAL   27 /* */
 
 
 /* ........................................ Implementation notes ........................................*/

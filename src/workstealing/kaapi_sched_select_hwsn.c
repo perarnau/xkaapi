@@ -78,7 +78,7 @@ int kaapi_sched_select_victim_hwsn(
   {
     if (arg->priority == 1)
     {
-      if (++arg->nfailed == 1)
+      if (++arg->nfailed == 4)
       {
         arg->priority = 10;
         arg->nfailed  = 0;

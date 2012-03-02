@@ -211,7 +211,7 @@ static int kaapic_global_work_steal
      - any try to pop a slice closed to the tid of the thread
      - only 0 can pop a non poped slice
   */
-#if 1
+#if 0
   /* caller has already pop and finish its slice, if it is 0 then may pop
      the next non null entry
   */
@@ -243,9 +243,11 @@ redo_select:
   */
   if (KAAPI_ATOMIC_READ(&gwork->workremain) ==0) 
     return 0;
+  kaapi_slowdown_cpu();
 
   /* select the victim processor */
   err = (*kproc->fnc_select)( kproc, &victim, KAAPI_SELECT_VICTIM );
+  //err = kaapi_sched_select_victim_hwsn( kproc, &victim, KAAPI_SELECT_VICTIM );
   if (unlikely(err !=0)) 
     goto redo_select;
 
@@ -611,12 +613,12 @@ static int _kaapic_split_task
   if (kaapi_listrequest_iterator_empty(lri))
     return 0;
 
+
 skip_global:  
   /* because object lwork may exist without thread, test if initialized */
   if (lwork->init == 0)
     return 0;
     
-
   /* */
   kaapi_workqueue_index_t range_size, unit_size;
 
@@ -738,7 +740,6 @@ static void _kaapic_thief_entrypoint(
   /* while there is sequential work to do in local work */
   while (kaapi_workqueue_pop(&lwork->cr, &i, &j, wi->seq_grain) ==0)
   {
-    kaapi_assert_debug(i < j);
     KAAPI_SET_SELF_WORKLOAD(kaapi_workqueue_size(&lwork->cr));
     lwork->workdone += j-i;
 redo_local_work:
@@ -746,6 +747,7 @@ redo_local_work:
     /* apply w->f on [i, j[ */
     gwork->body_f((int)i, (int)j, (int)lwork->tid, gwork->body_args);
   }
+  lwork->init = 0;
 
   /* */
   KAAPI_SET_SELF_WORKLOAD(0);
@@ -763,7 +765,6 @@ redo_local_work:
   lwork->workdone = 0;
 
   /* finish: nothing to steal */
-  lwork->init = 0;
   kaapi_writemem_barrier();
 
   KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
@@ -1072,8 +1073,7 @@ int kaapic_foreach_common
   int seq_grain = gwork->wi.seq_grain;
   
   /* while there is sequential work to do in local work */
-  while (kaapi_workqueue_pop(&lwork->cr, 
-                &first, &last, seq_grain) ==0)
+  while (kaapi_workqueue_pop(&lwork->cr, &first, &last, seq_grain) ==0)
   {
     KAAPI_SET_SELF_WORKLOAD(kaapi_workqueue_size(&lwork->cr));
     lwork->workdone += last-first;
@@ -1121,3 +1121,4 @@ return_label:
 #endif
   return 0;
 }
+
