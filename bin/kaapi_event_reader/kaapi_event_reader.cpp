@@ -638,13 +638,13 @@ static void fnc_paje_gantt( const char* filename, int fd )
           d0   = 1e-9*(double)e[i].date;
           kid = e[i].d0.i;
           pajeNewEvent(d0, name, "STEAL", "so");
-#if 0
+#if 1
           if (kid != e[i].kid)
           {
             sprintf(key,"%i",e[i].d1.i*100000+e[i].kid);
-            pajeEndLink(d0, name, "LINK", name, "li", key);
+            pajeEndLink(d0, "root", "LINK", name, "li", key);
             sprintf(tmp,"thread-%i",kid);
-            pajeStartLink(d0, name, "LINK", tmp, "li", key);
+            pajeStartLink(d0, "root", "LINK", tmp, "li", key);
           }
 #endif
         break;
@@ -652,7 +652,7 @@ static void fnc_paje_gantt( const char* filename, int fd )
         /* emit reply */
         case KAAPI_EVT_SEND_REPLY:
           d0   = 1e-9*(double)e[i].date;
-#if 0
+#if 1
           kid = e[i].d0.i; /* kid that will recv the reply */
           if (kid != e[i].kid)
           {
@@ -665,7 +665,7 @@ static void fnc_paje_gantt( const char* filename, int fd )
         /* recv reply */
         case KAAPI_EVT_RECV_REPLY:
           d0   = 1e-9*(double)e[i].date;
-#if 0
+#if 1
           kid = e[i].d0.i; /* kid that send the reply */
           if (kid != e[i].kid)
           {
