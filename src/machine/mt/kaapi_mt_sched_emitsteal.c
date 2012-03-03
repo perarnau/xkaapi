@@ -73,12 +73,16 @@ kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
   kaapi_request_t*             request;
   int                          err;
   kaapi_listrequest_iterator_t lri;
-  
+#if defined(KAAPI_USE_PERFCOUNTER)
+  uintptr_t serial;
+#endif
+
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc->thread !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
   
-  if (kaapi_count_kprocessors <2) return KAAPI_REQUEST_S_NOK;
+  if (kaapi_count_kprocessors <2) 
+    return KAAPI_REQUEST_S_NOK;
     
 redo_select:
   /* select the victim processor */
@@ -124,7 +128,7 @@ redo_select:
 #if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_IFUSE_TRACE(kproc,
     self_request->who    = (uintptr_t)-1;
-    self_request->serial = ++kproc->serial;
+    self_request->serial = serial = ++kproc->serial;
     KAAPI_EVENT_PUSH2(kproc, 0, KAAPI_EVT_STEAL_OP, 
         (uintptr_t)victim.kproc->kid, 
         self_request->serial
@@ -156,6 +160,10 @@ redo_select:
 #endif
     kaapi_slowdown_cpu();
   }
+#if defined(KAAPI_USE_PERFCOUNTER)
+  KAAPI_EVENT_PUSH2(kproc, 0, KAAPI_EVT_REQUESTS_BEG, 
+                    (uintptr_t)victim.kproc->kid, serial );
+#endif
 
   /* here becomes an aggregator... the trylock has synchronized memory */
   kaapi_listrequest_iterator_init(&victim_stealctxt->lr, &lri);
@@ -179,7 +187,6 @@ redo_select:
       (kaapi_atomic64_t*)&KAAPI_PERF_REG(victim.kproc, KAAPI_PERF_ID_STEALIN),
       kaapi_listrequest_iterator_count(&lri)
     );
-    KAAPI_EVENT_PUSH1(kproc, 0, KAAPI_EVT_REQUESTS_BEG, (uintptr_t)victim.kproc->kid );
 #endif
     kaapi_sched_stealprocessor( victim.kproc, &victim_stealctxt->lr, &lri );
     KAAPI_DEBUG_INST(path0= 1); 
@@ -196,13 +203,15 @@ redo_select:
       request = kaapi_listrequest_iterator_next( &victim_stealctxt->lr, &lri );
       kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
     }
-#if defined(KAAPI_USE_PERFCOUNTER)
-    KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_REQUESTS_END );
-#endif
   }
 
   KAAPI_DEBUG_INST(kproc->victim_kproc = 0;)
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+  KAAPI_EVENT_PUSH2(kproc, 0, KAAPI_EVT_REQUESTS_END, 
+            (uintptr_t)victim.kproc->kid, serial
+  );
+#endif
   /* unlock the victim kproc after processing the steal operation */
   kaapi_sched_unlock( &victim.kproc->lock );
 

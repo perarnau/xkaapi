@@ -173,6 +173,7 @@ int kaapi_setconcurrency(void)
 #if defined(KAAPI_USE_PERFCOUNTER)
       /*  */
       kaapi_perf_thread_init(kproc, KAAPI_PERF_USER_STATE);
+      KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_KPROC_START);
 #endif
 
       /* register the processor */

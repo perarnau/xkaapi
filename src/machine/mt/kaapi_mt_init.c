@@ -237,10 +237,6 @@ int kaapi_mt_init(void)
   kaapi_assert_m( 0 == kaapi_setconcurrency(), "kaapi_setconcurrency" );
   kproc = kaapi_get_current_processor();
 
-#if defined(KAAPI_USE_PERFCOUNTER)
-  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_KPROC_START);
-#endif
-
   /* initialize before destroying procinfo */
 #if KAAPI_USE_HWLOC
   kaapi_hws_init_global();
@@ -367,7 +363,6 @@ int kaapi_mt_finalize(void)
   KAAPI_EVENT_PUSH0(kaapi_all_kprocessors[0], 0, KAAPI_EVT_KPROC_STOP);
   kaapi_perf_thread_fini(kaapi_all_kprocessors[0]);
   kaapi_perf_global_fini();
-  
   kaapi_collect_trace();
 #endif
 
