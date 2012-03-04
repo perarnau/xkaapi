@@ -485,7 +485,7 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
     break;
 
     case KAAPI_EVT_STATIC_END:
-      d1   = (double)event->date;
+      d1   = 1e-9*(double)event->date;
       pajePopState (d1, name, "STATE");
     break;
 
@@ -558,32 +558,38 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
       d0  = 1e-9*(double)event->date;
       kid = event->d0.i;
       serial = event->d1.i;
-      sprintf(key,"b%i-%i-%i",event->kid, kid, serial);
-
-      pajeStartLink(d0, "root", "LINK", name, "li", key);
+#if 0
       sprintf(tmp,"steal-%i",kid);
+#if 0
+      sprintf(key,"b%i-%i-%i",event->kid, kid, serial);
+      pajeStartLink(d0, "root", "LINK", name, "li", key);
       pajeEndLink(d0, "root", "LINK", tmp, "li", key);
+#endif
       pajePushState (d0, tmp, "STATE", "r"); 
+#endif
     break;
 
     case KAAPI_EVT_REQUESTS_END:
       d1  = 1e-9*(double)event->date;
       kid = event->d0.i;
       serial = event->d1.i;
-      sprintf(key,"e%i-%i-%i",event->kid, kid, serial);
-
+#if 0
       sprintf(tmp,"steal-%i",kid);
       pajePopState (d1, tmp, "STATE");
+#if 0
+      sprintf(key,"e%i-%i-%i",event->kid, kid, serial);
       pajeStartLink(d1, "root", "LINK", tmp, "li", key);
       pajeEndLink(d1, "root", "LINK", name, "li", key);
+#endif
+#endif
     break;
 
     /* emit steal */
     case KAAPI_EVT_STEAL_OP:
       d0  = 1e-9*(double)event->date;
       kid = event->d0.i;
-      pajeNewEvent(d0, name, "STEAL", "so");
 #if 0
+      pajeNewEvent(d0, name, "STEAL", "so");
       if (kid != event->kid)
       {
         sprintf(key,"%i",event->d1.i*100000+event->kid);
@@ -714,7 +720,7 @@ static void fnc_paje_gantt( int count, const char** filenames )
 
     /* insert date of first event in queue */
     eventqueue.push( next_event_t(fdset[c].addr->date, c) );
-    std::cout << "Push date:" << fdset[c].addr->date << " file:" << c << std::endl;
+//    std::cout << "Push date:" << fdset[c].addr->date << " file:" << c << std::endl;
 
     /* */
     ++c;
@@ -733,12 +739,12 @@ static void fnc_paje_gantt( int count, const char** filenames )
   {
     next_event_t ne = eventqueue.top();
     eventqueue.pop();
-    std::cout << "Pop date:" << ne.date << " file:" << ne.fds << std::endl;
+ //   std::cout << "Pop date:" << ne.date << " file:" << ne.fds << std::endl;
     file_event* fe = &fdset[ne.fds];
     fnc_paje_event( fe->name, &fe->addr[fe->rpos++] );
     if (fe->rpos < fe->size)
     {
-      std::cout << "Push date:" << fe->addr[fe->rpos].date << " file:" << ne.fds << std::endl;
+  //    std::cout << "Push date:" << fe->addr[fe->rpos].date << " file:" << ne.fds << std::endl;
       eventqueue.push( next_event_t(fe->addr[fe->rpos].date, ne.fds) );
     }
   }

@@ -118,7 +118,7 @@ typedef struct kaapi_event_t {
 
 /** Event Buffer 
 */
-#define KAAPI_EVENT_BUFFER_SIZE 1024
+#define KAAPI_EVENT_BUFFER_SIZE 8190
 typedef struct kaapi_event_buffer_t {
   uint32_t      pos;
   int           fd;
