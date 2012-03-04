@@ -68,8 +68,8 @@ extern "C" {
 #define KAAPI_EVT_STATIC_BEG      6     /* begin of static schedule computation */
 #define KAAPI_EVT_STATIC_END      7     /* end of static schedule computation */
 
-#define KAAPI_EVT_STATIC_TASK_BEG 8     /* begin of sub task exec for static schedule */
-#define KAAPI_EVT_STATIC_TASK_END 9     /* end of sub task exec for static schedule */
+#define KAAPI_EVT_STATIC_TASK_BEG 8     /* begin of task after static schedule, param:  */
+#define KAAPI_EVT_STATIC_TASK_END 9     /* end of task after static schedule */
 
 #define KAAPI_EVT_SCHED_IDLE_BEG  10     /* begin when k-processor starts to steal */
 #define KAAPI_EVT_SCHED_IDLE_END  11    /* end when k-processor starts to steal */
@@ -118,7 +118,7 @@ typedef struct kaapi_event_t {
 
 /** Event Buffer 
 */
-#define KAAPI_EVENT_BUFFER_SIZE 1024
+#define KAAPI_EVENT_BUFFER_SIZE 8192
 typedef struct kaapi_event_buffer_t {
   uint32_t      pos;
   int           fd;
