@@ -45,6 +45,7 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include "kaapi_util.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -69,7 +70,8 @@ kaapi_rtparam_t kaapi_default_param = {
    .cpucount    = 0,
    .kproc_list  = 0,
    .kid2cpu     = 0,
-   .cpu2kid     = 0
+   .cpu2kid     = 0,
+   .eventmask   = ~(uint64_t)0
 };
 
 
@@ -85,6 +87,7 @@ static int kaapi_setup_param()
 {
   const char* wsselect;
   const char* emitsteal;
+  int err;
     
   /* compute the number of cpu of the system */
 #if defined(__linux__)
@@ -176,6 +179,41 @@ static int kaapi_setup_param()
       return EINVAL;
     }
   }
+  
+  /* event mask */
+#if defined(KAAPI_USE_PERFCOUNTER)
+  if (getenv("KAAPI_RECORD_TRACE") !=0)
+  {
+    if (getenv("KAAPI_RECORD_MASK") !=0)
+    {
+      /* actual grammar:
+         eventno[,eventno]*
+         eventno is an integer less than 2^sizeof(kaapi_event_mask_type_t)
+         grammar must be more complex using predefined set
+      */
+      uint64_t mask = 0;
+      err = kaapi_util_parse_list( &mask, getenv("KAAPI_RECORD_MASK"), ',',
+         3,
+           "COMPUTE", (uint64_t)KAAPI_EVT_MASK_COMPUTE,
+           "IDLE",    (uint64_t)KAAPI_EVT_MASK_IDLE,
+           "STEAL",   (uint64_t)KAAPI_EVT_MASK_STEALOP
+      );
+      if (err !=0)
+      {
+        fprintf(stderr, "***Kaapi: mal formed mask list 'KAAPI_RECORD_MASK': '%s'\n",
+          getenv("KAAPI_RECORD_MASK")
+        );
+        return EINVAL;
+      }
+            
+      /* always add startup set */
+      kaapi_default_param.eventmask = mask | KAAPI_EVT_MASK_STARTUP;
+    }
+    
+    /* push back eventmask: downcast to event mask with may be fewer bits */
+    kaapi_event_mask = (kaapi_event_mask_type_t)kaapi_default_param.eventmask;
+  }
+#endif  
   
   return 0;
 }

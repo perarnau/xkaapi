@@ -1,4 +1,5 @@
 /*
+** kaapi_error.h
 ** xkaapi
 ** 
 **
@@ -6,6 +7,7 @@
 **
 ** Contributors :
 **
+** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -41,65 +43,26 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#ifndef _KAAPI_UTIL_H_
+#define _KAAPI_UTIL_H_ 1
 
+#include <stdint.h>
 
-uint64_t kaapi_event_mask;
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
-/**
+/* parse list of integer separated by sep 
+   return the union of (1<<i) if i is the integer in the list
 */
-void kaapi_event_flushbuffer( kaapi_processor_t* kproc )
-{
-  kaapi_event_buffer_t* evb = kproc->eventbuffer;
-  if (kproc->eventbuffer ==0) return;
-  
-  /* open if not yet opened */
-  if (evb->fd == -1)
-  {
-    char filename[128]; 
-    if (getenv("USER") !=0)
-      sprintf(filename,"/tmp/events.%s.%i.evt", getenv("USER"), kproc->kid );
-    else
-      sprintf(filename,"/tmp/events.%i.evt", kproc->kid );
+int kaapi_util_parse_list( 
+  uint64_t* mask, const char* str, char sep,
+  int count_constants,
+  ...
+);
 
-    /* open it */
-    evb->fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC);
-    kaapi_assert( evb->fd != -1 );
-    fchmod( evb->fd, S_IRUSR|S_IWUSR);
-  }
-  
-  /* write the buffer [0, pos) */
-  ssize_t sz_write = write(evb->fd, evb->buffer, sizeof(kaapi_event_t)*evb->pos);
-  kaapi_assert( sz_write == (ssize_t)(sizeof(kaapi_event_t)*evb->pos) );
-  evb->pos = 0;
+#if defined(__cplusplus)
 }
+#endif
 
-
-/*
-*/
-void kaapi_event_closebuffer( kaapi_processor_t* kproc )
-{
-  kaapi_event_buffer_t* evb = kproc->eventbuffer;
-  if (evb ==0) return;
-
-  kaapi_event_flushbuffer(kproc);
-  if (evb->fd != -1) close(evb->fd);
-  evb->fd = -1;
-}
-
-
-/**
-*/
-void _kaapi_signal_dump_counters(int xxdummy)
-{
-  for (uint32_t i=0; i<kaapi_count_kprocessors; ++i)
-  {
-    kaapi_event_closebuffer( kaapi_all_kprocessors[i] );
-  }
-  _exit(0);
-}
-
+#endif

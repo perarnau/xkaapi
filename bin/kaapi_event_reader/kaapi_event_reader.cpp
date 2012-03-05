@@ -257,9 +257,9 @@ static void fnc_print_evt( int count, const char** filenames )
 static void fnc_print_map_task_kid( int count, const char** filenames )
 {
   kaapi_event_buffer_t evb;
-  kaapi_event_t* e = evb.buffer;
 
 #if 0
+  kaapi_event_t* e = evb.buffer;
   while (1)
   {
     ssize_t sz_read = read(fd, evb.buffer, KAAPI_EVENT_BUFFER_SIZE*sizeof(kaapi_event_t) );
@@ -553,7 +553,6 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
       pajePopState (d1, name, "STATE"); 
     break;
 
-#if 0//NO STEAL info
     /* processing request */
     case KAAPI_EVT_REQUESTS_BEG:
       d0  = 1e-9*(double)event->date;
@@ -625,7 +624,6 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
     default:
       printf("***Unkown event number: %i\n", event->evtno);
       break;
-#endif
   }
 }
 

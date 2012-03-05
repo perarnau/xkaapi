@@ -88,6 +88,7 @@ extern "C" {
 #include "kaapi_memory.h"
 #include "kaapi_task.h"
 #include "kaapi_format.h"
+#include "kaapi_event.h"
 
 #include <string.h>
 
@@ -319,23 +320,24 @@ typedef struct kaapi_hierarchy_t {
 /** Definition of parameters for the runtime system
 */
 typedef struct kaapi_rtparam_t {
-  size_t                   stacksize;                       /* default stack size */
-  size_t                   stacksize_master;                /* stack size for the master thread */
-  unsigned int             syscpucount;                     /* number of physical cpus of the system */
-  unsigned int             cpucount;                        /* number of physical cpu used for execution */
-  kaapi_selectvictim_fnc_t wsselect;                        /* default method to select a victim */
+  size_t                   stacksize;           /* default stack size */
+  size_t                   stacksize_master;    /* stack size for the master thread */
+  unsigned int             syscpucount;         /* number of physical cpus of the system */
+  unsigned int             cpucount;            /* number of physical cpu used for execution */
+  kaapi_selectvictim_fnc_t wsselect;            /* default method to select a victim */
   kaapi_emitsteal_fnc_t	   emitsteal;
-  kaapi_emitsteal_init_t   emitsteal_initctxt;              /* call to initialize the emitsteal ctxt */
-  unsigned int		       use_affinity;                    /* use cpu affinity */
-  int                      display_perfcounter;             /* set to 1 iff KAAPI_DISPLAY_PERF */
-  uint64_t                 startuptime;                     /* time at the end of kaapi_init */
-  int                      alarmperiod;                     /* period for alarm */
+  kaapi_emitsteal_init_t   emitsteal_initctxt;  /* call to initialize the emitsteal ctxt */
+  unsigned int		         use_affinity;        /* use cpu affinity */
+  int                      display_perfcounter; /* set to 1 iff KAAPI_DISPLAY_PERF */
+  uint64_t                 startuptime;         /* time at the end of kaapi_init */
+  int                      alarmperiod;         /* period for alarm */
+  uint64_t                 eventmask;           /* event mask */
 
-  struct kaapi_procinfo_list_t* kproc_list;                 /* list of kprocessors to initialized */
-  kaapi_cpuset_t           usedcpu;                         /* cpuset of used physical ressources */
-  kaapi_hierarchy_t        memory;                          /* memory hierarchy */
-  unsigned int*	           kid2cpu;                        /* mapping: kid->phys cpu  */
-  unsigned int*  	       cpu2kid;                        /* mapping: phys cpu -> kid */
+  struct kaapi_procinfo_list_t* kproc_list;     /* list of kprocessors to initialized */
+  kaapi_cpuset_t           usedcpu;             /* cpuset of used physical ressources */
+  kaapi_hierarchy_t        memory;              /* memory hierarchy */
+  unsigned int*	           kid2cpu;             /* mapping: kid->phys cpu  */
+  unsigned int*  	         cpu2kid;             /* mapping: phys cpu -> kid */
 } kaapi_rtparam_t;
 
 extern kaapi_rtparam_t kaapi_default_param;
