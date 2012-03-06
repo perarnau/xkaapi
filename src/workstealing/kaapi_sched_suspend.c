@@ -53,7 +53,9 @@
 
 
 /* this version is close to the kaapi_sched_idle, except that a condition of
-   wakeup is to test that suspended condition is false
+   wakeup is to test that suspended condition is false.
+   The main reason of this function is because we have no yet reported
+   context switch to scheduler code as in C++ Kaapi.   
 */
 int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 {
@@ -116,6 +118,9 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   /* put context in the list of suspended contexts: no critical section with respect of thieves */
   kaapi_setcontext(kproc, 0);
   kaapi_wsqueuectxt_push( kproc, thread_condition );
+  
+  /* ok now we can mark that the kproc is idle */
+  kproc->isidle = 1;
 
   do {
 #if defined(KAAPI_USE_NETWORK)
@@ -148,6 +153,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
         kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
         KAAPI_EVENT_PUSH0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
 #endif
+        kproc->isidle = 0;
         return 0;
       }
 
@@ -177,7 +183,6 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       continue;
 
 redo_execution:
-
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
     KAAPI_EVENT_PUSH0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
@@ -205,6 +210,7 @@ redo_execution:
     KAAPI_EVENT_PUSH0( kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
 #endif
     kaapi_assert( err != EINVAL);
+    kproc->isidle = 1;
 
     if (err == EWOULDBLOCK) 
     {
@@ -235,6 +241,7 @@ redo_execution:
       kaapi_synchronize_steal(kproc);
     }
 #endif
+    kproc->isidle = 1;
 
   } while (1);
   
