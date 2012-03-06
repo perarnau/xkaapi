@@ -400,10 +400,10 @@ typedef struct kaapi_processor_t {
   kaapi_lock_t             lock                           /* all requests attached to each kprocessor ordered by increasing level */
     __attribute__((aligned(KAAPI_CACHE_LINE)));
 
-  int volatile             isidle                         /* true if kproc is idle */
-        __attribute__((aligned(KAAPI_CACHE_LINE)));       
-  kaapi_wsqueuectxt_t      lsuspend;                      /* list of suspended context */
-
+  int volatile             isidle;                        /* true if kproc is idle */
+        ;       
+  kaapi_wsqueuectxt_t      lsuspend                       /* list of suspended context */
+      __attribute__((aligned(KAAPI_CACHE_LINE)));
   /* free list */
   kaapi_lfree_t		         lfree;                         /* queue of free context */
   int                      sizelfree;                     /* size of the queue */
