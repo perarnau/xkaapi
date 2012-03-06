@@ -99,6 +99,7 @@ redo_select:
     return KAAPI_REQUEST_S_NOK;
 #endif
 
+#if 1
   /* quick test to detect if thread has no work */
   if (kaapi_processor_has_nowork(victim.kproc))
   {
@@ -106,6 +107,7 @@ redo_select:
     goto redo_select;
   }
   kaapi_assert_debug( (victim.kproc->kid >=0) && (victim.kproc->kid <kaapi_count_kprocessors));
+#endif
 
 
   /* (1) 

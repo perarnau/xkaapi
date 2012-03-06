@@ -401,7 +401,7 @@ typedef struct kaapi_processor_t {
     __attribute__((aligned(KAAPI_CACHE_LINE)));
 
   int volatile             isidle;                        /* true if kproc is idle */
-        ;       
+
   kaapi_wsqueuectxt_t      lsuspend                       /* list of suspended context */
       __attribute__((aligned(KAAPI_CACHE_LINE)));
   /* free list */

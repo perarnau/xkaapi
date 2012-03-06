@@ -178,6 +178,9 @@ int kaapi_setconcurrency(void)
 
       /* register the processor */
       kaapi_barrier_td_setactive(&kaapi_term_barrier, 1);
+     
+      /* master kproc is not idle at the begining */
+      kproc->isidle = 0;
     }
   }
 
