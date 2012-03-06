@@ -41,22 +41,25 @@
 ** terms.
 ** 
 */
+
+#define __STDC_FORMAT_MACROS 
+#include <inttypes.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include "kaapi_impl.h"
 #include <iostream>
 #include <fcntl.h>
 #include <unistd.h>
-#include <stdio.h>
 #include <string.h>
-#include <inttypes.h>
 #include <math.h>
 #include <float.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 
 #include <queue>
+#include "kaapi_impl.h"
 
 #include "poti.h"
+
 
 /** see kaapi_event.h for coding of event name */
 static const char* kaapi_event_name[] = {
@@ -256,9 +259,9 @@ static void fnc_print_evt( int count, const char** filenames )
 */
 static void fnc_print_map_task_kid( int count, const char** filenames )
 {
-  kaapi_event_buffer_t evb;
 
 #if 0
+  kaapi_event_buffer_t evb;
   kaapi_event_t* e = evb.buffer;
   while (1)
   {
@@ -558,73 +561,59 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
       d0  = 1e-9*(double)event->date;
       kid = event->d0.i;
       serial = event->d1.i;
-#if 0
       sprintf(tmp,"steal-%i",kid);
-#if 0
       sprintf(key,"b%i-%i-%i",event->kid, kid, serial);
       pajeStartLink(d0, "root", "LINK", name, "li", key);
       pajeEndLink(d0, "root", "LINK", tmp, "li", key);
-#endif
       pajePushState (d0, tmp, "STATE", "r"); 
-#endif
     break;
 
     case KAAPI_EVT_REQUESTS_END:
       d1  = 1e-9*(double)event->date;
       kid = event->d0.i;
       serial = event->d1.i;
-#if 0
       sprintf(tmp,"steal-%i",kid);
       pajePopState (d1, tmp, "STATE");
-#if 0
       sprintf(key,"e%i-%i-%i",event->kid, kid, serial);
       pajeStartLink(d1, "root", "LINK", tmp, "li", key);
       pajeEndLink(d1, "root", "LINK", name, "li", key);
-#endif
-#endif
     break;
 
     /* emit steal */
     case KAAPI_EVT_STEAL_OP:
       d0  = 1e-9*(double)event->date;
       kid = event->d0.i;
-#if 0
       pajeNewEvent(d0, name, "STEAL", "so");
       if (kid != event->kid)
       {
-        sprintf(key,"%i",event->d1.i*100000+event->kid);
+        sprintf(key,"%" PRIu64,event->d1.i*100000+event->kid);
         pajeStartLink(d0, "root", "LINK", name, "li", key);
         sprintf(tmp,"steal-%i",kid);
         pajeEndLink(d0, "root", "LINK", tmp, "li", key);
       }
-#endif
     break;
 
     /* emit reply */
     case KAAPI_EVT_SEND_REPLY:
       d0  = 1e-9*(double)event->date;
-#if 0
       kid = event->d0.i; /* kid that will recv the reply */
       if (kid != event->kid)
       {
         sprintf(tmp,"steal-%i",event->kid);
-        sprintf(key,"%i",event->d1.i*100000+kid);
+        sprintf(key,"%" PRIu64,event->d1.i*100000+kid);
         pajeStartLink(d0, "root", "LINK", tmp, "ri", key);
       }
-#endif
     break;
 
     /* recv reply */
     case KAAPI_EVT_RECV_REPLY:
       d0  = 1e-9*(double)event->date;
-#if 0
       kid = event->d0.i; /* kid that send the reply */
       if (kid != event->kid)
       {
-        sprintf(key,"%i",event->d1.i*100000+kid);
+        sprintf(key,"%"PRIu64,event->d1.i*100000+kid);
         pajeEndLink(d0, "root", "LINK", name, "ri", key);
       }
-#endif
     break;
 
     default:
