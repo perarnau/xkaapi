@@ -66,8 +66,8 @@ static const char* kaapi_event_name[] = {
 /* 3 */  "TaskEnd",
 /* 4 */  "BeginFrame",
 /* 5 */  "EndFrame",
-/* 6 */  "StaticUnrollBeg",
-/* 7 */  "StaticUnrollEnd",
+/* 6 */  "StaticScheduleBeg",
+/* 7 */  "StaticScheduleEnd",
 /* 8 */  "StaticTaskBeg",
 /* 9 */  "StaticTaskEnd",
 /*10 */  "IdleBeg",
@@ -492,7 +492,7 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
     /* exec task in static graph partitioning */
     case KAAPI_EVT_STATIC_TASK_BEG:
       d0   = 1e-9*(double)event->date;
-      pajePushState (d0, name, "STATE", "a");
+      pajePushState (d0, name, "STATE", "b");
     break;
 
     case KAAPI_EVT_STATIC_TASK_END:
@@ -553,6 +553,7 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
       pajePopState (d1, name, "STATE"); 
     break;
 
+#if 0//NO STEAL info
     /* processing request */
     case KAAPI_EVT_REQUESTS_BEG:
       d0  = 1e-9*(double)event->date;
@@ -630,6 +631,7 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
     default:
       printf("***Unkown event number: %i\n", event->evtno);
       break;
+#endif
   }
 }
 
@@ -739,14 +741,10 @@ static void fnc_paje_gantt( int count, const char** filenames )
   {
     next_event_t ne = eventqueue.top();
     eventqueue.pop();
- //   std::cout << "Pop date:" << ne.date << " file:" << ne.fds << std::endl;
     file_event* fe = &fdset[ne.fds];
     fnc_paje_event( fe->name, &fe->addr[fe->rpos++] );
     if (fe->rpos < fe->size)
-    {
-  //    std::cout << "Push date:" << fe->addr[fe->rpos].date << " file:" << ne.fds << std::endl;
       eventqueue.push( next_event_t(fe->addr[fe->rpos].date, ne.fds) );
-    }
   }
 
   /* close output file */
@@ -780,6 +778,9 @@ static int fnc_paje_gantt_header()
 
   /* actif state */
   pajeDefineEntityValue("a", "STATE", "running", "0.0 0.0 1.0");
+
+  /* actif state when executing static task */
+  pajeDefineEntityValue("b", "STATE", "running", "0.6 0.0 1.0");
 
   /* idle (stealing) state */
   pajeDefineEntityValue("i", "STATE", "stealing", "1 0.5 0.0");
