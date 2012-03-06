@@ -56,6 +56,7 @@
 #include <sys/mman.h>
 
 #include <queue>
+#include <set>
 #include "kaapi_impl.h"
 
 #include "poti.h"
@@ -105,10 +106,10 @@ typedef void (*kaapi_fnc_event)( int, const char** );
 static void print_usage()
 {
   fprintf(stderr, "Merge and convert internal Kaapi trace format to human readeable formats\n");
-  fprintf(stderr, "*** options: -a | -m | -s | -p. Only one of the options may be selected at a time.\n");
+  fprintf(stderr, "*** options: -a | -p. Only one of the options may be selected at a time.\n");
   fprintf(stderr, "  -a: display all data associated to each events\n");
-  fprintf(stderr, "  -m: display the mapping of tasks\n");
-  fprintf(stderr, "  -s: display stats about runtime of all the tasks\n");
+//  fprintf(stderr, "  -m: display the mapping of tasks\n");
+//  fprintf(stderr, "  -s: display stats about runtime of all the tasks\n");
   fprintf(stderr, "  -p: output Paje format for Gantt diagram, one row per core\n");
   fprintf(stderr, "      Output filename is gantt.paje\n");
   exit(1);
@@ -225,12 +226,12 @@ static void fnc_print_evt( int count, const char** filenames )
 
           /* emit reply */
           case KAAPI_EVT_SEND_REPLY:
-            std::cout << " thiefid:" << e[i].d0.i << ", serial:" << e[i].d1.i;
+            std::cout << " victimid:" << e[i].d0.i << ", thiefid:" << e[i].d1.i << ", serial:" << e[i].d2.i;
           break;
 
           /* recv reply */
           case KAAPI_EVT_RECV_REPLY:
-            std::cout << " combinorid:" << e[i].d0.i << ", serial:" << e[i].d1.i;
+            std::cout << " victimid:" << e[i].d0.i << ", serial:" << e[i].d1.i << ", status: " << e[i].d2.i;
           break;
 
           default:
@@ -257,7 +258,8 @@ static void fnc_print_evt( int count, const char** filenames )
 
 /*
 */
-static void fnc_print_map_task_kid( int count, const char** filenames )
+__attribute__((unused))
+static void fnc_print_map_task_kid( int count, const char** filenames )  
 {
 
 #if 0
@@ -293,9 +295,10 @@ static void fnc_print_map_task_kid( int count, const char** filenames )
 
 /*
 */
+__attribute__((unused))
 static void fnc_statistic_task_kid( int count, const char** filenames )
 {
-#if 0
+#if 0 /* simulator of states should be adapted to new events */
   double   t_min   = 0.0;
   double   t_max   = 0.0;
   double   t_total = 0.0;
@@ -418,6 +421,85 @@ static void fnc_statistic_task_kid( int count, const char** filenames )
   printf("Tstd_dev  (s)     : %e\n", stddev);
   printf("IC, 95%%   (s)     : %e\n", delta);  
 #endif
+}
+
+/* */
+struct file_event {
+  int                  fd;
+  char                 name[128]; /* container name */
+  size_t               rpos; /* next position to read */
+  kaapi_event_t*       addr; /* memory mapped file */
+  size_t               size;
+};
+
+/* double
+*/
+double tmax = 0;
+
+/* Compare (less) for priority queue
+*/
+struct next_event_t {
+  next_event_t( uint64_t d=0, int f=0 )
+   : date(d), fds(f) 
+  {}
+
+  uint64_t date;
+  int      fds;  /* index in file_event set */
+  
+};
+struct compare_event {
+  bool operator()( const next_event_t& e1, const next_event_t& e2)
+  { return e1.date > e2.date; }
+};
+
+/* set of successfull steal request, one entry per processor kid
+*/
+static std::vector<std::set<uint64_t> > gantt_steal_op_issuccess;
+
+/* current event is stealop: search if reply status is success or not 
+   Each processor that emits steal request has the following order of event:
+   - KAAPI_EVT_STEAL_OP
+   - KAAPI_EVT_RECV_REPLY
+   And the combinator processor that has processed the request generate:
+   - KAAPI_EVT_SEND_REPLY
+*/
+static void paje_mark_steal_status( file_event* fe )
+{
+  size_t rpos = fe->rpos;
+  kaapi_event_t* curr;
+  uint64_t serial;
+
+  curr = &fe->addr[rpos];
+  if ( curr->evtno != KAAPI_EVT_STEAL_OP)
+  {
+    fprintf(stderr,"[internal error]: Bad call to paje_mark_steal_status\n");
+    exit(1);
+  }
+  serial = curr->d1.i;
+
+  while (rpos < fe->size)
+  {
+    if (curr->evtno == KAAPI_EVT_RECV_REPLY)
+    {
+      if (curr->d1.i != serial)
+      {
+        fprintf(stderr,"Trace is corrupted, RECV_REPLY event does not match STEAL_OP event\n");
+        exit(1);
+      }
+      int status = (curr->d2.i !=0);
+      if (gantt_steal_op_issuccess.size() <= curr->kid)
+        gantt_steal_op_issuccess.resize(1+curr->kid);
+      if (status)
+        gantt_steal_op_issuccess[curr->kid].insert( serial );
+      return;
+    }
+    ++rpos;
+    curr = &fe->addr[rpos];
+  }
+  fprintf(stderr,
+    "Trace is corrupted, STEAL_OP is does not matched a RECV_REPLY event\n"
+  );
+  exit(1);
 }
 
 
@@ -562,9 +644,11 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
       kid = event->d0.i;
       serial = event->d1.i;
       sprintf(tmp,"steal-%i",kid);
+#if 0 /* do no pollute gantt diagram */
       sprintf(key,"b%i-%i-%i",event->kid, kid, serial);
       pajeStartLink(d0, "root", "LINK", name, "li", key);
       pajeEndLink(d0, "root", "LINK", tmp, "li", key);
+#endif
       pajePushState (d0, tmp, "STATE", "r"); 
     break;
 
@@ -574,45 +658,79 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
       serial = event->d1.i;
       sprintf(tmp,"steal-%i",kid);
       pajePopState (d1, tmp, "STATE");
+#if 0
       sprintf(key,"e%i-%i-%i",event->kid, kid, serial);
       pajeStartLink(d1, "root", "LINK", tmp, "li", key);
       pajeEndLink(d1, "root", "LINK", name, "li", key);
+#endif
     break;
 
     /* emit steal */
     case KAAPI_EVT_STEAL_OP:
       d0  = 1e-9*(double)event->date;
-      kid = event->d0.i;
+      kid = event->d0.i; /* victim id */
       pajeNewEvent(d0, name, "STEAL", "so");
       if (kid != event->kid)
       {
-        sprintf(key,"%" PRIu64,event->d1.i*100000+event->kid);
-        pajeStartLink(d0, "root", "LINK", name, "li", key);
+        sprintf(key,"s-%" PRIuPTR,event->d1.i*100000+event->kid);
         sprintf(tmp,"steal-%i",kid);
-        pajeEndLink(d0, "root", "LINK", tmp, "li", key);
+
+        if (   gantt_steal_op_issuccess[event->kid].find(event->d1.i) 
+             != gantt_steal_op_issuccess[event->kid].end()
+           )
+        {
+          pajeStartLink(d0, "root", "LINK", name, "riok", key);
+          pajeEndLink(d0, "root", "LINK", tmp, "riok", key);
+        }
+#if 0 /* do no pollute gantt diagram */
+        else {
+          pajeStartLink(d0, "root", "LINK", name, "li", key);
+          pajeEndLink(d0, "root", "LINK", tmp, "li", key);
+        }
+#endif
       }
     break;
 
     /* emit reply */
     case KAAPI_EVT_SEND_REPLY:
       d0  = 1e-9*(double)event->date;
-      kid = event->d0.i; /* kid that will recv the reply */
-      if (kid != event->kid)
+      kid = event->d0.i; /* victimid */
+      if (kid != (uint16_t)event->d1.i) /* thief id */
       {
-        sprintf(tmp,"steal-%i",event->kid);
-        sprintf(key,"%" PRIu64,event->d1.i*100000+kid);
-        pajeStartLink(d0, "root", "LINK", tmp, "ri", key);
+        /* key using (serial, thiefid) */
+        sprintf(tmp,"steal-%i",kid);
+        sprintf(key,"r-%" PRIuPTR,event->d2.i*100000+event->d1.i);
+
+        if (   gantt_steal_op_issuccess[event->d1.i].find(event->d2.i) 
+             != gantt_steal_op_issuccess[event->d1.i].end()
+           )
+          pajeStartLink(d0, "root", "LINK", tmp, "riok", key);
+#if 0 /* do no pollute gantt diagram */
+        else
+          pajeStartLink(d0, "root", "LINK", tmp, "ri", key);
+#endif
       }
     break;
 
     /* recv reply */
     case KAAPI_EVT_RECV_REPLY:
       d0  = 1e-9*(double)event->date;
-      kid = event->d0.i; /* kid that send the reply */
+      kid = event->d0.i; /* kid of the victim */
       if (kid != event->kid)
       {
-        sprintf(key,"%"PRIu64,event->d1.i*100000+kid);
-        pajeEndLink(d0, "root", "LINK", name, "ri", key);
+        /* key using (serial, thiefid) */
+        sprintf(key,"r-%"PRIuPTR,event->d1.i*100000+event->kid);
+        if (   gantt_steal_op_issuccess[event->kid].find(event->d1.i) 
+             != gantt_steal_op_issuccess[event->kid].end()
+           )
+          pajeEndLink(d0, "root", "LINK", name, "riok", key);
+#if 0 /* do no pollute gantt diagram */
+        else
+          pajeEndLink(d0, "root", "LINK", name, "ri", key);
+#endif        
+        /* do not reset entry, because event may have same date and recv may be processed before send... 
+        gantt_steal_op_issuccess[event->kid].first = (uint64_t)-1;
+        */
       }
     break;
 
@@ -622,33 +740,8 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
   }
 }
 
-/* */
-struct file_event {
-  int                  fd;
-  char                 name[128]; /* container name */
-  size_t               rpos; /* next position to read */
-  kaapi_event_t*       addr; /* memory mapped file */
-  size_t               size;
-};
-
-/* Compare (less) for priority queue
+/*
 */
-struct next_event_t {
-  next_event_t( uint64_t d=0, int f=0 )
-   : date(d), fds(f) 
-  {}
-
-  uint64_t date;
-  int      fds;  /* index in file_event set */
-  
-};
-struct compare_event {
-  bool operator()( const next_event_t& e1, const next_event_t& e2)
-  { return e1.date > e2.date; }
-};
-
-static double tmin = DBL_MAX;
-static double tmax = DBL_MIN;
 static void fnc_paje_gantt( int count, const char** filenames )
 {
   int err;
@@ -661,6 +754,8 @@ static void fnc_paje_gantt( int count, const char** filenames )
                       std::vector<next_event_t>,
                       compare_event
   > eventqueue;
+  
+  gantt_steal_op_issuccess.resize( 256 );
 
   /* open all files */
   int c = 0;
@@ -729,6 +824,14 @@ static void fnc_paje_gantt( int count, const char** filenames )
     next_event_t ne = eventqueue.top();
     eventqueue.pop();
     file_event* fe = &fdset[ne.fds];
+    
+    if (tmax < fe->addr[fe->rpos].date)
+      tmax = fe->addr[fe->rpos].date;
+
+    /* if KAAPI_EVT_STEAL_OP: lookup in next events, is steal was success */
+    if (fe->addr[fe->rpos].evtno == KAAPI_EVT_STEAL_OP)
+      paje_mark_steal_status( fe );
+
     fnc_paje_event( fe->name, &fe->addr[fe->rpos++] );
     if (fe->rpos < fe->size)
       eventqueue.push( next_event_t(fe->addr[fe->rpos].date, ne.fds) );
@@ -787,6 +890,9 @@ static int fnc_paje_gantt_header()
   /* steal operation */
   pajeDefineEntityValue("so", "STEAL", "steal", "1.0 0.1 0.1");
 
+  /* successful steal operation */
+  pajeDefineEntityValue("sok", "STEAL", "steal", "0.0 1.0 0.1");
+
   /* suspend post operation */
   pajeDefineEntityValue("su", "SUSPEND", "suspend", "0.8 0.8 0.8");
 
@@ -799,6 +905,9 @@ static int fnc_paje_gantt_header()
   /* link  */
   pajeDefineEntityValue("ri", "LINK", "reply", "0.2 0.2 0.2");
 
+  /* link: successfull steal  */
+  pajeDefineEntityValue("riok", "LINK", "steal", "0.0 1.0 0.2");
+
   /* create the root container */
   pajeCreateContainer (0.00, "root", "ROOT", "0", "root");
 
@@ -810,7 +919,7 @@ static int fnc_paje_gantt_close()
 {
   pajeDestroyContainer (1e-9*tmax, "ROOT", "root");
   pajeClose();
-  fprintf(stdout, "*** Paje interval [%f,%f]\n", tmin,tmax);
+  fprintf(stdout, "*** Paje file 'gant.paje' closed\n");
   return 0;
 }
 
@@ -827,10 +936,12 @@ static kaapi_fnc_event parse_option( const char* arg)
   
   if (strcmp(arg, "-a") ==0)
     option = 'a';
+#if 0
   if (strcmp(arg, "-m") ==0)
     option = 'm';
   if (strcmp(arg, "-s") ==0)
     option = 's';
+#endif
   if (strcmp(arg, "-p") ==0)
     option = 'p';
   
@@ -838,11 +949,13 @@ static kaapi_fnc_event parse_option( const char* arg)
   case 'a':
     return fnc_print_evt;
 
+#if 0
   case 'm':
     return fnc_print_map_task_kid;
 
   case 's':
     return fnc_statistic_task_kid;
+#endif
 
   case 'p':
     return fnc_paje_gantt;

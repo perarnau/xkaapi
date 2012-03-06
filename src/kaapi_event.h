@@ -85,8 +85,8 @@ extern "C" {
 #define KAAPI_EVT_REQUESTS_END    18 /* when k-processor end to process requests */
 
 #define KAAPI_EVT_STEAL_OP        19 /* when k-processor emit a steal request data=victimid, serial*/
-#define KAAPI_EVT_SEND_REPLY      20 /* when k-processor send a reply request data=victimid, serial */
-#define KAAPI_EVT_RECV_REPLY      21 /* when k-processor recv reply, serial */
+#define KAAPI_EVT_SEND_REPLY      20 /* when k-processor send a reply request data=victimid, thiefid, serial */
+#define KAAPI_EVT_RECV_REPLY      21 /* when k-processor recv reply, victim id, serial, status (1:ok 0:nok) */
 
 
 #define KAAPI_EVT_FOREACH_BEG     25 /* */

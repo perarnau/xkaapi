@@ -124,12 +124,13 @@ extern void kaapi_event_closebuffer( kaapi_processor_t* kproc );
 */
 static inline void KAAPI_EVENT_PUSH0_(
     kaapi_processor_t*      kproc, 
+    uint64_t                tclock,
     kaapi_thread_context_t* thread, 
     uint8_t                 eventno
 )
 {
 #if defined(KAAPI_USE_PERFCOUNTER)
-  uint64_t tclock = kaapi_get_elapsedns() - kaapi_default_param.startuptime;
+  tclock -= kaapi_default_param.startuptime;
   kaapi_event_t* evt = &kproc->eventbuffer->buffer[kproc->eventbuffer->pos++];
   evt->evtno   = eventno;
   evt->type    = 0;
@@ -149,13 +150,14 @@ static inline void KAAPI_EVENT_PUSH0_(
 */
 static inline void KAAPI_EVENT_PUSH1_(
     kaapi_processor_t*      kproc, 
+    uint64_t                tclock,
     kaapi_thread_context_t* thread, 
     uint8_t                 eventno, 
     void*                   p0 
 )
 {
 #if defined(KAAPI_USE_PERFCOUNTER)
-  uint64_t tclock = kaapi_get_elapsedns() - kaapi_default_param.startuptime;
+  tclock -= kaapi_default_param.startuptime;
   kaapi_event_t* evt = &kproc->eventbuffer->buffer[kproc->eventbuffer->pos++];
   evt->evtno   = eventno;
   evt->type    = 0;
@@ -176,6 +178,7 @@ static inline void KAAPI_EVENT_PUSH1_(
 */
 static inline void KAAPI_EVENT_PUSH2_(
     kaapi_processor_t*      kproc, 
+    uint64_t                tclock,
     kaapi_thread_context_t* thread, 
     uint8_t                 eventno, 
     void*                   p0, 
@@ -183,7 +186,7 @@ static inline void KAAPI_EVENT_PUSH2_(
 )
 {
 #if defined(KAAPI_USE_PERFCOUNTER)
-  uint64_t tclock = kaapi_get_elapsedns() - kaapi_default_param.startuptime;
+  tclock -= kaapi_default_param.startuptime;
   kaapi_event_t* evt = &kproc->eventbuffer->buffer[kproc->eventbuffer->pos++];
   evt->evtno   = eventno;
   evt->type    = 0;
@@ -198,23 +201,81 @@ static inline void KAAPI_EVENT_PUSH2_(
 #endif
 }
 
+/** Push a new event into the eventbuffer of the kprocessor.
+    Assume that the event buffer was allocated into the kprocessor.
+    Current implementation only work if library is compiled 
+    with KAAPI_USE_PERFCOUNTER flag.
+*/
+static inline void KAAPI_EVENT_PUSH3_(
+    kaapi_processor_t*      kproc, 
+    uint64_t                tclock,
+    kaapi_thread_context_t* thread, 
+    uint8_t                 eventno, 
+    void*                   p0, 
+    void*                   p1,
+    void*                   p2
+)
+{
+#if defined(KAAPI_USE_PERFCOUNTER)
+  tclock -= kaapi_default_param.startuptime;
+  kaapi_event_t* evt = &kproc->eventbuffer->buffer[kproc->eventbuffer->pos++];
+  evt->evtno   = eventno;
+  evt->type    = 0;
+  evt->kid     = kproc->kid;
+  evt->gid     = 0;
+  evt->date    = tclock;
+  evt->d0.p    = p0;
+  evt->d1.p    = p1;
+  evt->d2.p    = p2;
+
+  if (kproc->eventbuffer->pos == KAAPI_EVENT_BUFFER_SIZE)
+    kaapi_event_flushbuffer(kproc);
+#endif
+}
+
+/* the datation used for event */
+static inline uint64_t kaapi_event_date(void)
+{ return kaapi_get_elapsedns(); }
+
 #if defined(KAAPI_USE_PERFCOUNTER)
 #  define KAAPI_IFUSE_TRACE(kproc,inst) \
     if (kproc->eventbuffer) { inst; }
 #  define KAAPI_EVENT_PUSH0(kproc, kthread, eventno ) \
     if ((kproc->eventbuffer) && (kaapi_event_mask & KAAPI_EVT_MASK(eventno)))\
-      KAAPI_EVENT_PUSH0_(kproc, kthread, eventno )
+      KAAPI_EVENT_PUSH0_(kproc, kaapi_event_date(), kthread, eventno )
 #  define KAAPI_EVENT_PUSH1(kproc, kthread, eventno, p1 ) \
     if ((kproc->eventbuffer) && (kaapi_event_mask & KAAPI_EVT_MASK(eventno)))\
-      KAAPI_EVENT_PUSH1_(kproc, kthread, eventno, (void*)(p1))
+      KAAPI_EVENT_PUSH1_(kproc, kaapi_event_date(), kthread, eventno, (void*)(p1))
 #  define KAAPI_EVENT_PUSH2(kproc, kthread, eventno, p1, p2 ) \
     if ((kproc->eventbuffer) && (kaapi_event_mask & KAAPI_EVT_MASK(eventno)))\
-      KAAPI_EVENT_PUSH2_(kproc, kthread, eventno, (void*)(p1), (void*)(p2))
+      KAAPI_EVENT_PUSH2_(kproc, kaapi_event_date(), kthread, eventno, (void*)(p1), (void*)(p2))
+#  define KAAPI_EVENT_PUSH3(kproc, kthread, eventno, p1, p2, p3 ) \
+    if ((kproc->eventbuffer) && (kaapi_event_mask & KAAPI_EVT_MASK(eventno)))\
+      KAAPI_EVENT_PUSH3_(kproc, kaapi_event_date(), kthread, eventno, (void*)(p1), (void*)(p2), (void*)(p3))
+
+/* push new event with given date (value return by kaapi_event_date()) */
+#  define KAAPI_EVENT_PUSH0_AT(kproc, tclock, kthread, eventno ) \
+    if ((kproc->eventbuffer) && (kaapi_event_mask & KAAPI_EVT_MASK(eventno)))\
+      KAAPI_EVENT_PUSH0_(kproc, tclock, kthread, eventno )
+#  define KAAPI_EVENT_PUSH1_AT(kproc, tclock, kthread, eventno, p1 ) \
+    if ((kproc->eventbuffer) && (kaapi_event_mask & KAAPI_EVT_MASK(eventno)))\
+      KAAPI_EVENT_PUSH1_(kproc, tclock, kthread, eventno, (void*)(p1))
+#  define KAAPI_EVENT_PUSH2_AT(kproc, tclock, kthread, eventno, p1, p2 ) \
+    if ((kproc->eventbuffer) && (kaapi_event_mask & KAAPI_EVT_MASK(eventno)))\
+      KAAPI_EVENT_PUSH2_(kproc, tclock, kthread, eventno, (void*)(p1), (void*)(p2))
+#  define KAAPI_EVENT_PUSH3_AT(kproc, tclock, kthread, eventno, p1, p2, p3 ) \
+    if ((kproc->eventbuffer) && (kaapi_event_mask & KAAPI_EVT_MASK(eventno)))\
+      KAAPI_EVENT_PUSH3_(kproc, tclock, kthread, eventno, (void*)(p1), (void*)(p2), (void*)(p3))
 #else
 #  define KAAPI_IFUSE_TRACE(kproc,inst)
 #  define KAAPI_EVENT_PUSH0(kproc, kthread, eventno ) 
 #  define KAAPI_EVENT_PUSH1(kproc, kthread, eventno, p1 )
 #  define KAAPI_EVENT_PUSH2(kproc, kthread, eventno, p1, p2 )
+#  define KAAPI_EVENT_PUSH3(kproc, kthread, eventno, p1, p2, p3 )
+#  define KAAPI_EVENT_PUSH0_AT(kproc, tclock, kthread, eventno ) 
+#  define KAAPI_EVENT_PUSH1_AT(kproc, tclock, kthread, eventno, p1 )
+#  define KAAPI_EVENT_PUSH2_AT(kproc, tclock, kthread, eventno, p1, p2 )
+#  define KAAPI_EVENT_PUSH3_AT(kproc, tclock, kthread, eventno, p1, p2, p3 )
 #endif
 
 

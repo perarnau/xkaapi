@@ -863,10 +863,9 @@ static inline int kaapi_request_replytask
   {
     kaapi_processor_t* kproc = kaapi_get_current_processor();
     KAAPI_IFUSE_TRACE(kproc,
-      request->who = kproc->kid;
       kaapi_writemem_barrier();
-      KAAPI_EVENT_PUSH2(kproc, 0, KAAPI_EVT_SEND_REPLY, 
-                        request->ident, request->serial );
+      KAAPI_EVENT_PUSH3(kproc, 0, KAAPI_EVT_SEND_REPLY, 
+                        request->victim, request->ident, request->serial );
     );
   }
 #endif
