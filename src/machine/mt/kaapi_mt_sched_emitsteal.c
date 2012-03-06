@@ -99,19 +99,13 @@ redo_select:
     return KAAPI_REQUEST_S_NOK;
 #endif
 
-#if 0 // to avoid lock
-  /* quick test to detect if thread has work */
-  if ((victim.kproc->thread ==0)||
-      ( 
-        (kproc->thread->stack.sfp == &kproc->thread->stack.stackframe[1])
-      &&  kaapi_frame_isempty( kproc->thread->stack.sfp ) 
-      ))
+  /* quick test to detect if thread has no work */
+  if (kaapi_processor_has_nowork(victim.kproc))
   {
     (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_FAILED );
     goto redo_select;
   }
   kaapi_assert_debug( (victim.kproc->kid >=0) && (victim.kproc->kid <kaapi_count_kprocessors));
-#endif
 
 
   /* (1) 

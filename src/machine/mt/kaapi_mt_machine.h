@@ -396,16 +396,12 @@ typedef struct kaapi_processor_t {
   kaapi_thread_context_t*  thread;                        /* current thread under execution */
   kaapi_processor_id_t     kid;                           /* Kprocessor id */
 
-  /* cache align */
+  /* cache align: only the lock */
   kaapi_lock_t             lock                           /* all requests attached to each kprocessor ordered by increasing level */
     __attribute__((aligned(KAAPI_CACHE_LINE)));
 
-#if defined(KAAPI_DEBUG)
-  volatile uintptr_t       req_version;
-  volatile uintptr_t       reply_version;
-  volatile uintptr_t       compute_version;
-#endif
-  
+  int volatile             isidle                         /* true if kproc is idle */
+        __attribute__((aligned(KAAPI_CACHE_LINE)));       
   kaapi_wsqueuectxt_t      lsuspend;                      /* list of suspended context */
 
   /* free list */
@@ -419,6 +415,12 @@ typedef struct kaapi_processor_t {
   kaapi_emitsteal_fnc_t	   emitsteal;                     /* virtualization of the WS algorithm */
   void*                    emitsteal_ctxt;                /* specific to the WS algorithm */
 
+#if defined(KAAPI_DEBUG)
+  volatile uintptr_t       req_version;
+  volatile uintptr_t       reply_version;
+  volatile uintptr_t       compute_version;
+#endif
+  
   pthread_mutex_t          suspend_lock;                  /* lock used to suspend / resume the threads */
     
   /* hierachical information of other kprocessor */
@@ -734,7 +736,7 @@ static inline kaapi_request_t* kaapi_request_post(
 
 /** push: LIFO order with respect to pop. Only owner may push
 */
-static inline int kaapi_wsqueuectxt_empty( kaapi_processor_t* kproc )
+static inline int kaapi_wsqueuectxt_empty( const kaapi_processor_t* kproc )
 { return (kproc->lsuspend.head ==0); }
 
 /**
@@ -774,6 +776,13 @@ static inline void kaapi_wsqueuectxt_finish_steal_cell( kaapi_wsqueuectxt_cell_t
 static inline unsigned int kaapi_processor_get_type(const kaapi_processor_t* kproc)
 {
   return kproc->proc_type;
+}
+
+/** Return true if the kprocess has no work == is begin stealing and suspend list is empty
+*/
+static inline int kaapi_processor_has_nowork( const kaapi_processor_t* kproc )
+{
+  return (kproc->isidle !=0) && kaapi_wsqueuectxt_empty(kproc);
 }
 
 /**
