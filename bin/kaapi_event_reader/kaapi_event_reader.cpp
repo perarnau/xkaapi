@@ -669,7 +669,9 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
     case KAAPI_EVT_STEAL_OP:
       d0  = 1e-9*(double)event->date;
       kid = event->d0.i; /* victim id */
+#if 0
       pajeNewEvent(d0, name, "STEAL", "so");
+#endif
       if (kid != event->kid)
       {
         sprintf(key,"s-%" PRIuPTR,event->d1.i*100000+event->kid);
