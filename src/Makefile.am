@@ -46,6 +46,7 @@ libkaapi_la_SOURCES=\
   kaapi_cpuset.h\
   kaapi_hws.h\
   kaapi_ws_queue.h\
+  kaapi_util.h\
   misc/kaapi_abort.c \
   misc/kaapi_allocator_allocate.c \
   misc/kaapi_cpuset2str.c \
