@@ -55,7 +55,6 @@ extern "C" {
 #define KAAPI_COMPILE_SOURCE 1
 
 #include "config.h"
-#include "kaapi.h"
 #include "kaapi_error.h"
 #include "kaapi_defs.h"
 
@@ -100,9 +99,7 @@ extern void kaapi_perf_thread_stop ( kaapi_processor_t* kproc );
 /* */
 extern void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser );
 /* */
-extern int kaapi_perf_thread_state(kaapi_processor_t* kproc);
-/* */
-extern uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
+extern int kaapi_mt_perf_thread_state(kaapi_processor_t* kproc);
 
 #if defined(__cplusplus)
 }

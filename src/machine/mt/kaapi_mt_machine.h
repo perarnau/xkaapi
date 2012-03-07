@@ -824,4 +824,23 @@ static inline void kaapi_processor_set_self_workload
   KAAPI_ATOMIC_WRITE(&kaapi_get_current_processor()->workload, workload);
 }
 
+/* */
+extern void kaapi_mt_perf_init(void);
+/* */
+extern void kaapi_mt_perf_fini(void);
+/* */
+extern void kaapi_mt_perf_thread_init ( kaapi_processor_t* kproc, int isuser );
+/* */
+extern void kaapi_mt_perf_thread_fini ( kaapi_processor_t* kproc );
+/* */
+extern void kaapi_mt_perf_thread_start ( kaapi_processor_t* kproc );
+/* */
+extern void kaapi_mt_perf_thread_stop ( kaapi_processor_t* kproc );
+/* */
+extern void kaapi_mt_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser );
+/* */
+extern uint64_t kaapi_mt_perf_thread_delayinstate(kaapi_processor_t* kproc);
+/* */
+extern size_t kaapi_mt_perf_counter_num(void);
+
 #endif /* _KAAPI_MT_MACHINE_H */

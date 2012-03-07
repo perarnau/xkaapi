@@ -50,7 +50,6 @@ libkaapi_la_SOURCES=\
   misc/kaapi_allocator_allocate.c \
   misc/kaapi_cpuset2str.c \
   misc/kaapi_default_netapi.c \
-  misc/kaapi_event_flush.c \
   misc/kaapi_get_self_kid.c \
   misc/kaapi_hashmap.c \
   misc/kaapi_hashmap_big.c \
@@ -62,6 +61,7 @@ libkaapi_la_SOURCES=\
   misc/kaapi_hashmap_insert.c \
   misc/kaapi_hashvalue.c \
   misc/kaapi_init.c \
+  misc/kaapi_perf_trace.c \
   misc/kaapi_malloc_align.c \
   misc/kaapi_time_elapse.c \
   misc/kaapi_time_elapsedns.c \

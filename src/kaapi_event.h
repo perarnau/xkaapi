@@ -120,9 +120,10 @@ typedef struct kaapi_event_t {
 */
 #define KAAPI_EVENT_BUFFER_SIZE 8190
 typedef struct kaapi_event_buffer_t {
-  uint32_t      pos;
-  int           fd;
-  kaapi_event_t buffer[KAAPI_EVENT_BUFFER_SIZE];
+  struct kaapi_event_buffer_t* volatile next;
+  uint32_t                              pos;
+  int                                   kid;
+  kaapi_event_t                         buffer[KAAPI_EVENT_BUFFER_SIZE];
 } kaapi_event_buffer_t;
 
 

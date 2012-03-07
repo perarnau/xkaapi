@@ -54,6 +54,9 @@
 #  include <signal.h>
 #endif
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+#include <signal.h>
+#endif
 
 /*
 */
@@ -143,9 +146,7 @@ int kaapi_mt_init(void)
 
   /* It should be the only location where request are initialized */
   for (int i=0; i<KAAPI_MAX_PROCESSOR+1; ++i)
-  {  
     kaapi_request_init(&kaapi_global_requests_list[i], i);
-  }
   
   /* build the memory hierarchy
      update kaapi_default_param data structure fields:

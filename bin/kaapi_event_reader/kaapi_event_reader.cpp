@@ -86,9 +86,9 @@ static const char* kaapi_event_name[] = {
 /*19 */  "StealOp",
 /*20 */  "SendReply",
 /*21 */  "RecvReply",
-/*22 */
-/*23 */
-/*24 */
+/*22 */  "*",
+/*23 */  "*",
+/*24 */  "*",
 /*25 */  "ForEachBeg",
 /*26 */  "ForEachEnd",
 /*27 */  "ForEachSteal"
@@ -281,7 +281,6 @@ static void fnc_print_map_task_kid( int count, const char** filenames )
       switch (e[i].evtno) {
         case KAAPI_EVT_TASK_BEG:
           std::cout << e[i].kid << " " << (void*)e[i].d0.p << std::endl;
-//          printf( "%" PRIu16" %p\n", e[i].kid, e[i].d0.p );
           break;
         default:
           break;

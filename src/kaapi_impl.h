@@ -791,47 +791,7 @@ static inline void kaapi_request_syncdata( kaapi_request_t* kr )
 
 
 /* ======================== Perf counter interface: machine dependent ========================*/
-/* for perf_regs access: SHOULD BE 0 and 1 
-   All counters have both USER and SYS definition (sys == program that execute the scheduler).
-   * KAAPI_PERF_ID_T1 is considered as the T1 (computation time) in the user space
-   and as TSCHED, the scheduling time if SYS space. In workstealing litterature it is also named Tidle.
-   [ In Kaapi, TIDLE is the time where the thread (kprocessor) do not perform task... ]
-*/
-#define KAAPI_PERF_USER_STATE       0
-#define KAAPI_PERF_SCHEDULE_STATE   1
-
-/* return a reference to the idp-th performance counter of the k-processor in the current set of counters */
-#define KAAPI_PERF_REG(kproc, idp) ((kproc)->curr_perf_regs[(idp)])
-
-/* return a reference to the idp-th USER performance counter of the k-processor */
-#define KAAPI_PERF_REG_USR(kproc, idp) ((kproc)->perf_regs[KAAPI_PERF_USER_STATE][(idp)])
-
-/* return a reference to the idp-th USER performance counter of the k-processor */
-#define KAAPI_PERF_REG_SYS(kproc, idp) ((kproc)->perf_regs[KAAPI_PERF_SCHEDULE_STATE][(idp)])
-
-/* return the sum of the idp-th USER and SYS performance counters */
-#define KAAPI_PERF_REG_READALL(kproc, idp) (KAAPI_PERF_REG_SYS(kproc, idp)+KAAPI_PERF_REG_USR(kproc, idp))
-
-/* internal */
-extern void kaapi_perf_global_init(void);
-
-/* */
-extern void kaapi_perf_global_fini(void);
-
-/* */
-extern void kaapi_perf_thread_init ( kaapi_processor_t* kproc, int isuser );
-/* */
-extern void kaapi_perf_thread_fini ( kaapi_processor_t* kproc );
-/* */
-extern void kaapi_perf_thread_start ( kaapi_processor_t* kproc );
-/* */
-extern void kaapi_perf_thread_stop ( kaapi_processor_t* kproc );
-/* */
-extern void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser );
-/* */
-extern int kaapi_perf_thread_state(kaapi_processor_t* kproc);
-/* */
-extern uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
+#include "kaapi_trace.h"
 
 /** Collect and display trace */
 extern void kaapi_collect_trace(void);
