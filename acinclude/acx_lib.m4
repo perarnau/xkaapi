@@ -767,7 +767,9 @@ dnl AC_ARG_VAR([$1][_LIBS_STATIC], [static linker flags for $1, overriding auto-
 ])])
   AS_CASE([x"$acx_lib_state_[]$1"],
     [xlinked], [AC_MSG_ERROR(m4_location[: cannot change $1 as this library has already been linked to another object])],
-    [x], [acx_lib_state_[]$1=defined],
+    [x], [
+      m4_foreach_w([_ACX_LIB_SUFFIX], _ACX_LIB_VAR_EXTLIBS, [AC_SUBST([$1]_[]_ACX_LIB_SUFFIX)])
+      acx_lib_state_[]$1=defined],
     [xdefined], [
       AS_CASE([x"$acx_lib_have_[]$1"],
       [xno],[],
