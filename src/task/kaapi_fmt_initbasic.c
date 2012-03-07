@@ -72,7 +72,7 @@
 
 /** Predefined format
 */
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_char_format, char, "%hhi")
+KAAPI_DECL_BASICTYPEFORMAT(kaapi_char_format, char, "%hhu")
 KAAPI_DECL_BASICTYPEFORMAT(kaapi_short_format, short, "%hi")
 KAAPI_DECL_BASICTYPEFORMAT(kaapi_int_format, int, "%i")
 KAAPI_DECL_BASICTYPEFORMAT(kaapi_long_format, long, "%li")

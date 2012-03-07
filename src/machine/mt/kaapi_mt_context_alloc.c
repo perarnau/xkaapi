@@ -84,7 +84,10 @@
 
 /** 
 */
-kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc, size_t stacksize )
+kaapi_thread_context_t* kaapi_context_alloc( 
+    kaapi_processor_t* kproc, 
+    size_t stacksize 
+)
 {
   kaapi_thread_context_t* ctxt;
   size_t size_data;
@@ -106,6 +109,7 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc, size_t st
   /* round to the nearest closest value */
   if (stacksize == (size_t)-1)
     stacksize = kaapi_default_param.stacksize;
+
   size_data = ((stacksize + KAAPI_MAX_DATA_ALIGNMENT -1) 
         / KAAPI_MAX_DATA_ALIGNMENT) *KAAPI_MAX_DATA_ALIGNMENT;
   
@@ -146,8 +150,24 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc, size_t st
   ctxt->size = (uint32_t)k_allocatestack;
   ctxt->stack_size = (uint32_t) stacksize;
 
+#if 1 //----------  new
 
-  /* should be aligned on a multiple of 64bit due to atomic read / write of pc in each kaapi_frame_t */
+  uintptr_t bottom_task = (uintptr_t)ctxt->data;
+  k_stacksize = k_allocatestack - (bottom_task - (uintptr_t)ctxt);
+
+  kaapi_stack_init(
+    &ctxt->stack,
+    ctxt->stackframe,
+    (kaapi_task_t*)((bottom_task + k_stacksize - sizeof(kaapi_task_t) - 0x3FUL) & ~0x3FUL),
+    (void*)bottom_task
+  );
+  kaapi_assert_m( (((uintptr_t)ctxt->stack.task) & 0x3FUL)== 0, "Stack of task not aligned to 64 bytes boundary");
+
+#else //---------- new
+
+  /* should be aligned on a multiple of 64bit due to atomic read / write of pc 
+     in each kaapi_frame_t 
+  */
   ctxt->stack.stackframe = ctxt->stackframe;
 //  kaapi_malloc_align(64, sizeof(kaapi_frame_t)*KAAPI_MAX_RECCALL, &ctxt->alloc_ptr);
   kaapi_assert_m( __kaapi_isaligned( &ctxt->stack.stackframe, 8), "StackFrame pointer not aligned to 64 bits boundary");
@@ -159,11 +179,14 @@ kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc, size_t st
   ctxt->stack.task = (kaapi_task_t*)((bottom_task + k_stacksize - sizeof(kaapi_task_t) - 0x3FUL) & ~0x3FUL);
   kaapi_assert_m( (((uintptr_t)ctxt->stack.task) & 0x3FUL)== 0, "Stack of task not aligned to 64 bytes boundary");
 
+#endif //---------- new
+
 #if defined(KAAPI_DEBUG)
   for (int i=0; i<KAAPI_MAX_RECCALL; ++i)
     kaapi_frame_clear( &ctxt->stack.stackframe[i] );
 #endif
 
+  /* optimization: clear and stack_init above is not optimal... */
   kaapi_thread_clear(ctxt);
   return ctxt;
 }

@@ -144,6 +144,8 @@ libkaapi_la_SOURCES=\
   workstealing/kaapi_sched_select_rand_f0.c \
   workstealing/kaapi_sched_select_workload_rand.c \
   workstealing/kaapi_sched_select_hierarchy.c\
+  workstealing/kaapi_sched_select_hwsn.c\
+  workstealing/kaapi_sched_select_aff.c \
   workstealing/kaapi_sched_stealprocessor.c \
   workstealing/kaapi_sched_stealstack.c \
   workstealing/kaapi_sched_stealframe.c \
@@ -214,8 +216,8 @@ libkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_bitmap.h \
   machine/mt/kaapi_mt_perf.c \
   machine/mt/kaapi_mt_register_procs.c \
-  machine/mt/kaapi_mt_suspendresume.c \
   machine/mt/kaapi_mt_condvar.c \
+  machine/mt/kaapi_mt_suspendresume.c \
   machine/mt/kaapi_mt_condvar.h
 endif
 
@@ -240,6 +242,7 @@ include_HEADERS=\
   kaapi.h \
   kaapi_defs.h \
   kaapi_atomic.h\
+  kaapi_cpuset.h\
   kaapi_error.h
 
 if KAAPI_TARGET_CUDA

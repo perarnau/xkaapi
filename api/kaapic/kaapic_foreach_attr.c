@@ -40,6 +40,7 @@
  ** terms.
  ** 
  */
+#include "kaapi_impl.h"
 #include "kaapic_impl.h"
 
 int kaapic_foreach_attr_init(kaapic_foreach_attr_t* attr)
@@ -47,6 +48,7 @@ int kaapic_foreach_attr_init(kaapic_foreach_attr_t* attr)
   attr->s_grain = 1;
   attr->p_grain = 1;
   attr->policy  = 0;
+  kaapi_cpuset_full(&attr->cpuset);
   return 0;
 }
 

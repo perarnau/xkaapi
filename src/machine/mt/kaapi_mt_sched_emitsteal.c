@@ -70,6 +70,7 @@ kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
   kaapi_atomic_t               status __attribute__((aligned(8)));
   kaapi_victim_t               victim;
   kaapi_request_t*             self_request;
+  kaapi_request_t*             request;
   int                          err;
   kaapi_listrequest_iterator_t lri;
   
@@ -82,12 +83,17 @@ kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
 redo_select:
   /* select the victim processor */
   err = (*kproc->fnc_select)( kproc, &victim, KAAPI_SELECT_VICTIM );
-  if (unlikely(err !=0)) {
+  if (unlikely(err !=0)) 
+  {
     if (kaapi_isterm) return 0;
     goto redo_select;
   }
+
+#if 0 // TG: test, steal also allow to steal stack from myself. Else only wakeup
   /* never pass by this function for a processor to steal itself */
-  if (kproc == victim.kproc) return KAAPI_REQUEST_S_NOK;
+  if (kproc == victim.kproc) 
+    return KAAPI_REQUEST_S_NOK;
+#endif
 
 #if 0 // to avoid lock
   /* quick test to detect if thread has work */
@@ -114,6 +120,19 @@ redo_select:
 
   self_request = &kaapi_global_requests_list[kproc->kid];
   kaapi_assert_debug( self_request->ident == kproc->kid );
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  KAAPI_IFUSE_TRACE(kproc,
+    self_request->who    = (uintptr_t)-1;
+    self_request->serial = ++kproc->serial;
+    KAAPI_EVENT_PUSH2(kproc, 0, KAAPI_EVT_STEAL_OP, 
+        (uintptr_t)victim.kproc->kid, 
+        self_request->serial
+    );
+  );
+  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
+#endif
+
   KAAPI_DEBUG_INST(kproc->victim_kproc = victim.kproc;)
   kaapi_request_post( 
     &victim_stealctxt->lr,
@@ -122,9 +141,6 @@ redo_select:
     &kproc->thread->stack.stackframe[0] 
   );
   
-#if defined(KAAPI_USE_PERFCOUNTER)
-  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
-#endif
 
   /* (2)
      lock and re-test if they are yet posted requests on victim or not 
@@ -144,27 +160,45 @@ redo_select:
   /* here becomes an aggregator... the trylock has synchronized memory */
   kaapi_listrequest_iterator_init(&victim_stealctxt->lr, &lri);
 
+#if defined(KAAPI_DEBUG)
+  int path0 = 0;
+  int path1 = 0;
+  kaapi_listrequest_iterator_t save_lri;
+#endif
+
   /* (3)
      process all requests on the victim kprocessor and reply failed to remaining requests
-     Warning: In this version the aggregator has a lock on the victim processor.
+     Warning: In this version the aggregator has a lock on the victim processor 
+     steal context (i.e. the list of requests).
   */
   if (!kaapi_listrequest_iterator_empty(&lri) ) 
   {
-    kaapi_request_t* request;
-
+#if defined(KAAPI_USE_PERFCOUNTER)
+    kaapi_assert_debug( sizeof(kaapi_atomic64_t) <= sizeof(kaapi_perf_counter_t) );
+    KAAPI_ATOMIC_ADD64( 
+      (kaapi_atomic64_t*)&KAAPI_PERF_REG(victim.kproc, KAAPI_PERF_ID_STEALIN),
+      kaapi_listrequest_iterator_count(&lri)
+    );
+    KAAPI_EVENT_PUSH1(kproc, 0, KAAPI_EVT_REQUESTS_BEG, (uintptr_t)victim.kproc->kid );
+#endif
     kaapi_sched_stealprocessor( victim.kproc, &victim_stealctxt->lr, &lri );
+    KAAPI_DEBUG_INST(path0= 1); 
+    KAAPI_DEBUG_INST(save_lri = lri);   
 
     /* reply failed for all others requests */
     request = kaapi_listrequest_iterator_get( &victim_stealctxt->lr, &lri );
     kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
-    
     while (request !=0)
     {
+      KAAPI_DEBUG_INST(path1 |= 1 << (request->ident) );    
       kaapi_request_replytask(request, KAAPI_REQUEST_S_NOK);
       KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( &lri ) );
       request = kaapi_listrequest_iterator_next( &victim_stealctxt->lr, &lri );
       kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
     }
+#if defined(KAAPI_USE_PERFCOUNTER)
+    KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_REQUESTS_END );
+#endif
   }
 
   KAAPI_DEBUG_INST(kproc->victim_kproc = 0;)
@@ -201,8 +235,8 @@ redo_select:
       /* note: could be optimized a bit, but finalization code */
 
       /* FIXME
-	 should wait for the request but does not work. maybe
-	 the request bitmap is being destroyed.
+	   should wait for the request but does not work. maybe
+	   the request bitmap is being destroyed.
        */
       return KAAPI_REQUEST_S_NOK;
       /* FIXME */
@@ -221,6 +255,11 @@ return_value:
 
   /* test if my request is ok */
   kaapi_request_syncdata( self_request );
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  KAAPI_EVENT_PUSH2(kproc, 0, KAAPI_EVT_RECV_REPLY, 
+                    self_request->who, self_request->serial );
+#endif
 
   switch (kaapi_request_status_get(&status))
   {

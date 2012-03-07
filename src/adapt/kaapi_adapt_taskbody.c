@@ -48,31 +48,18 @@
 /* - adaptive task body: this task drives the execution of the adaptive task,
    especially for the terminaison part.
 */
-void kaapi_taskadapt_body(void* sp, kaapi_thread_t* thread, kaapi_task_t* pc)
+void kaapi_taskadapt_body(void* sp, kaapi_thread_t* thread, kaapi_task_t* task)
 {
   kaapi_taskadaptive_arg_t* arg = (kaapi_taskadaptive_arg_t*)sp;
+
+#if defined(KAAPI_DEBUG)
+  kaapi_stealcontext_t* sc = (kaapi_stealcontext_t*)arg->shared_sc.data;
+  kaapi_assert( KAAPI_ATOMIC_READ(&sc->thieves.count) >= 0 ); /* may be steal... */
+#endif
   
   /* here invariant thread->stack.sfp->pc == pc ??? */
-  ((kaapi_task_body_internal_t)arg->user_body)( arg->user_sp, thread, pc );
-  
+  ((kaapi_task_body_internal_t)arg->user_body)( arg->user_sp, thread, task );  
+
   /* once finished: mark unsplittable the task */
-  kaapi_task_unset_splittable(pc);
-  
-  /* if preemption, mark task as finished */
-  if (kaapi_task_is_withpreemption(pc))
-  {
-    kaapi_stealcontext_t* sc = (kaapi_stealcontext_t*)arg->shared_sc.data;
-    kaapi_thiefadaptcontext_t* ktr = sc->ktr;
-    if (ktr !=0)
-    {
-      kaapi_atomic_lock( &ktr->lock );
-      ktr->thief_of_the_thief_head = sc->thieves.list.head;
-      ktr->thief_of_the_thief_tail = sc->thieves.list.tail;
-      ktr->arg_from_thief = arg->user_sp;
-      kaapi_atomic_unlock( &ktr->lock );
-    }
-    else {
-      kaapi_assert_debug( sc == sc->msc );
-    }
-  }
+  kaapi_task_unset_splittable(task);
 }

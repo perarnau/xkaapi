@@ -45,6 +45,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "kaapi.h"
+#include "kaapi_cpuset.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -67,6 +69,11 @@ enum kaapic_mode
   KAAPIC_MODE_W,
   KAAPIC_MODE_RW,
   KAAPIC_MODE_V
+};
+
+enum kaapic_init_flag {
+  KAAPIC_START_ALL = 0,
+  KAAPIC_START_ONLY_MAIN = 1
 };
 
 /** kaapic_init INIT initializes the runtime. 
@@ -103,9 +110,10 @@ extern int32_t kaapic_get_thread_num(void);
 /*
 */
 typedef struct kaapic_foreach_attr_t {
-  uint32_t s_grain;
-  uint32_t p_grain;  
-  int      policy;       /* choose the policy for splitting */
+  uint32_t             s_grain;
+  uint32_t             p_grain;  
+  int                  policy;       /* choose the policy for splitting */
+  kaapi_cpuset_t       cpuset;       /* cpuset used for initial distribution i = kid */
 } kaapic_foreach_attr_t;
   
 /*

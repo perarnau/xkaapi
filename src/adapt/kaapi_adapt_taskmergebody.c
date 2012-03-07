@@ -42,6 +42,7 @@
  */
 #include "kaapi_impl.h"
 
+#if 0// OLD: code was inlined
 /**
 */
 void kaapi_taskfinalize_body( void* sp, kaapi_thread_t* thread )
@@ -50,9 +51,6 @@ void kaapi_taskfinalize_body( void* sp, kaapi_thread_t* thread )
   kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)merge_arg->shared_sc.data;
   kaapi_assert_debug(!(sc->flag & KAAPI_SC_PREEMPTION));
   
-  /* avoid read reordering */
-  kaapi_writemem_barrier();
-
   /* ensure all working thieves are done. the steal
      sync has been done in kaapi_task_end_adaptive
    */
@@ -60,20 +58,22 @@ void kaapi_taskfinalize_body( void* sp, kaapi_thread_t* thread )
     kaapi_slowdown_cpu();
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->thieves.count) == 0);
 }
+#endif
 
 
 /* Merge body task: arg is the steal context
 */
 void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
 {
-  kaapi_taskmerge_arg_t* const arg = (kaapi_taskmerge_arg_t*)sp;
-  kaapi_stealcontext_t* const sc = (kaapi_stealcontext_t*)arg->shared_sc.data;
+  kaapi_taskmerge_arg_t* const arg    = (kaapi_taskmerge_arg_t*)sp;
+  kaapi_stealcontext_t* const sc      = (kaapi_stealcontext_t*)arg->shared_sc.data;
   kaapi_processor_t* const self_kproc = kaapi_get_current_processor();
 
-  /* Synchronize with the theft on the current thread.
-     After the following instruction, we have:
-     - no more theft is under stealing and master counter or list of thief is
-     correctly setted.
+  /* Not a master thread... 
+    - merge task > adapt body task
+    - adapt body task has setted unsplittable on it self
+    - no theft is under stealing after synchronize point 
+    - master counter or list of thief is correctly setted.
   */
 #if 0
   kaapi_synchronize_steal(self_kproc);
@@ -81,11 +81,11 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
   kaapi_synchronize_steal_thread(self_kproc->thread);
 #endif
 
-  /* If master thread */
+  /* If I'm the master task */
   if (sc->msc == sc )
   {
     /* if this is a preemptive algorithm, it is assumed the
-       user has preempted all the children (not doing so is
+       user has preempted all the thieves (not doing so is
        an error). we restore the frame and return without
        waiting for anyting.
      */
@@ -97,27 +97,22 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
       return;
     }
 
-    /* not a preemptive algorithm. push a finalization task
-       to wait for thieves and block until finalization done.
-    */
-    kaapi_task_init(
-      kaapi_thread_toptask(thread), 
-      kaapi_taskfinalize_body, 
-      sp
-    );
-    kaapi_thread_pushtask(thread);
+    /* Ensure all thieves are done.
+       Optimization: this mergetask must becomes steal when
+     */
+    while (KAAPI_ATOMIC_READ(&sc->thieves.count))
+      kaapi_slowdown_cpu();
+#if defined(KAAPI_DEBUG)
+    sc->state = 0;
+#endif
+
     return;
   }
-  
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->thieves.count) == 0);
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->msc->thieves.count) >= 0);
-
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->thieves.count) == 0);
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->msc->thieves.count) >= 0);
-
+    
   /* Else finalization of a thief: signal the master */
   if ( sc->flag == KAAPI_SC_PREEMPTION)
   {
+    kaapi_assert_debug( 0 );
     kaapi_assert_debug( sc->ktr != 0);
     /* report local list of thief to the remote ktr and finish */
     kaapi_atomic_lock(&sc->ktr->lock);
@@ -130,14 +125,30 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
   {
     kaapi_assert_debug( sc->ktr == 0);
 
-    /* Then flush memory & signal master context
-    */
-    kaapi_writemem_barrier();
+#if defined(KAAPI_DEBUG)
+    kaapi_assert(sc->version == sc->msc->version );
+    kaapi_assert(sc->msc->state == 1);
+    sc->state = 0;
+    kaapi_mem_barrier();
+#endif
 
     /* here a remote read of sc->msc->thieves may be avoided if
        sc stores a  pointer to the master count.
     */
-    kaapi_assert_debug( KAAPI_ATOMIC_READ(&sc->msc->thieves.count) > 0);
+#if defined(KAAPI_DEBUG)
+    int v0 = KAAPI_ATOMIC_READ(&sc->msc->thieves.count);
+    kaapi_assert_debug( v0 >0 );
+#endif
+
+    /* Then flush memory & signal master context
+    */
+    kaapi_writemem_barrier();
     KAAPI_ATOMIC_DECR(&sc->msc->thieves.count);
+
+#if defined(KAAPI_DEBUG)
+    int v1 = KAAPI_ATOMIC_READ(&sc->msc->thieves.count);
+    kaapi_assert_debug( v1 >=0);
+    //printf("%i end, cnt=%i -> cnt=%i\n", self_kproc->kid, v0, v1);
+#endif
   }
 }

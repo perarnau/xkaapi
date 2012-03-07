@@ -72,11 +72,15 @@ void kaapi_mt_suspendresume_init(void)
 void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
 {
   int round, first=1;
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_perf_thread_stop(kproc);
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_SUSPEND_BEG );
+#endif
   for(;;) {
     kproc_mutex_lock(&wakeupmutex_threads);
     if (! kaapi_suspendflag) {
       kproc_mutex_unlock(&wakeupmutex_threads);
-      return;
+      goto return_from;
     }
     int newround=kaapi_suspend_round;
     if (first || round!=newround) {
@@ -87,16 +91,24 @@ void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
     round=newround;
     kproc_condunlock_wait(&wakeupcond_threads, &wakeupmutex_threads);
     if (!kaapi_suspendflag) {
-      break ;
+      goto return_from;
     }
   }
+
+return_from:
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_perf_thread_start(kproc);
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_SUSPEND_END );
+#endif
+
+  /* reset steal history ? */
   memset(&kproc->fnc_selecarg, 0, sizeof(kproc->fnc_selecarg) );
 }
 
 
 /* should always be called by the main thread only
 */
-void kaapi_mt_suspend_threads_initiate(void)
+void kaapi_mt_suspend_threads_post(void)
 {
   kaapi_writemem_barrier();
   kaapi_suspend_round++;

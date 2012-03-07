@@ -90,7 +90,7 @@ int kaapi_sched_stealstack_helper( kaapi_stealcontext_t* stc )
     kaapi_bitmap_value_t savebitmap = (kaapi_bitmap_value_t)(lri.bitmap | (1UL << lri.idcurr));
     for (int i=0; i<count_req; ++i)
     {
-      int firstbit = kaapi_bitmap_first1_and_zero( &savebitmap );
+      int firstbit = kaapi_bitmap_value_first1_and_zero( &savebitmap );
       kaapi_assert( firstbit != 0);
       kaapi_assert( victim_hlr->requests[firstbit-1].reply != 0 );
     }

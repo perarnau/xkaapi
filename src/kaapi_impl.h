@@ -116,6 +116,7 @@ extern volatile int kaapi_suspendflag;
 extern kaapi_atomic_t kaapi_suspendedthreads;
 
 
+
 /* ================== Library initialization/terminaison ======================= */
 /** Initialize the machine level runtime.
     Return 0 in case of success. Else an error code.
@@ -127,13 +128,27 @@ extern int kaapi_mt_init(void);
 */
 extern int kaapi_mt_finalize(void);
 
-/** Suspend all threads except the main threads.
+/** Post request to suspend all threads except the main thread.
     Should be called by the main thread !
 */
-extern void kaapi_mt_suspend_threads_initiate(void);
+extern void kaapi_mt_suspend_threads_post(void);
 
 /** Wait for all other threads to be suspended.
-    Should be called by the main thread after kaapi_mt_suspend_threads_initiate
+    Should be called by the main thread after kaapi_mt_suspend_threads_post
+*/
+extern void kaapi_mt_suspend_threads_wait(void);
+
+/** Suspend all threads except the main thread.
+    Should be called by the main thread !
+*/
+static inline void kaapi_mt_suspend_threads(void)
+{
+  kaapi_mt_suspend_threads_post();
+  kaapi_mt_suspend_threads_wait();
+}
+
+/** Wait for all other threads to be suspended.
+    Should be called by the main thread after kaapi_mt_suspend_threads_post
 */
 extern void kaapi_mt_suspend_threads_wait(void);
 
@@ -344,33 +359,6 @@ extern kaapi_rtparam_t kaapi_default_param;
     sizeof(kaapi_tasksteal_arg_t).
 */
 
-/** \ingroup TASK
-    Reply to a steal request.
-    Return !=0 if the request cannot be replied.
-*/
-static inline int kaapi_request_replytask
-( 
-  kaapi_request_t*        request, 
-  kaapi_request_status_t  value
-)
-{
-  kaapi_atomic_t* const status = request->status;
-  request->status = 0;
-  if (value == KAAPI_REQUEST_S_OK)
-  {
-    /* even if tasks will be preempted, reply ok. On remote side, the processor will abort
-       preempted tasks
-    */
-    KAAPI_ATOMIC_WRITE_BARRIER(status, KAAPI_REQUEST_S_OK);
-  }
-  else
-  {
-    /* failed to steal: avoid unnecessary memory barrier */
-    KAAPI_ATOMIC_WRITE(status, KAAPI_REQUEST_S_NOK);
-  }
-  return 0;
-}
-
 
 /* ============================= Simple C API for network ============================ */
 #include "kaapi_network.h"
@@ -499,6 +487,27 @@ extern kaapi_ws_queue_t* kaapi_hws_queue_atlevel (
 );
 
 
+static inline
+kaapi_thread_t* kaapi_thread_push_frame_( kaapi_thread_context_t* thread )
+{
+  kaapi_frame_t* fp = (kaapi_frame_t*)thread->stack.sfp;
+  /* save the top frame */
+  fp[1].sp_data   = fp->sp_data;
+  fp[1].pc        = fp->sp;
+  fp[1].sp        = fp->sp;
+  /* push a new frame */
+  return (kaapi_thread_t*)++thread->stack.sfp;
+}
+
+
+static inline
+kaapi_thread_t*  kaapi_thread_pop_frame_( kaapi_thread_context_t* thread )
+{
+  kaapi_thread_t* retval = (kaapi_thread_t*)--thread->stack.sfp;
+  kaapi_synchronize_steal_thread( thread );
+  return retval;  
+}
+
 /**
 */
 extern int kaapi_thread_clear( kaapi_thread_context_t* thread );
@@ -515,22 +524,52 @@ extern kaapi_processor_t* kaapi_get_current_processor(void);
 /** \ingroup WS
     Select a victim for next steal request using uniform random selection over all cores.
 */
-extern int kaapi_sched_select_victim_rand( kaapi_processor_t* kproc, kaapi_victim_t* victim, kaapi_selecvictim_flag_t flag );
+extern int kaapi_sched_select_victim_rand( 
+    kaapi_processor_t* kproc, 
+    kaapi_victim_t* victim, 
+    kaapi_selecvictim_flag_t flag 
+);
 
 /** \ingroup WS
     Select a victim for next steal request using workload then uniform random selection over all cores.
 */
-extern int kaapi_sched_select_victim_workload_rand( kaapi_processor_t* kproc, kaapi_victim_t* victim, kaapi_selecvictim_flag_t flag );
+extern int kaapi_sched_select_victim_workload_rand( 
+    kaapi_processor_t* kproc, 
+    kaapi_victim_t* victim, 
+    kaapi_selecvictim_flag_t flag 
+);
 
 /** \ingroup WS
     First steal is 0 then select a victim for next steal request using uniform random selection over all cores.
 */
-extern int kaapi_sched_select_victim_rand_first0( kaapi_processor_t* kproc, kaapi_victim_t* victim, kaapi_selecvictim_flag_t flag );
+extern int kaapi_sched_select_victim_rand_first0( 
+    kaapi_processor_t* kproc, 
+    kaapi_victim_t* victim, 
+    kaapi_selecvictim_flag_t flag 
+);
 
 /** \ingroup WS
     Select victim using the memory hierarchy
 */
-extern int kaapi_sched_select_victim_hierarchy( kaapi_processor_t* kproc, kaapi_victim_t* victim, kaapi_selecvictim_flag_t flag );
+extern int kaapi_sched_select_victim_hierarchy( 
+    kaapi_processor_t* kproc, 
+    kaapi_victim_t* victim, 
+    kaapi_selecvictim_flag_t flag 
+);
+
+/* experimental: */
+extern int kaapi_sched_select_victim_hwsn( 
+    kaapi_processor_t* kproc, 
+    kaapi_victim_t* victim, 
+    kaapi_selecvictim_flag_t flag 
+);
+
+/* experimental: */
+extern int kaapi_sched_select_victim_aff( 
+    kaapi_processor_t* kproc, 
+    kaapi_victim_t* victim, 
+    kaapi_selecvictim_flag_t flag 
+);
 
 /** \ingroup WS
     Enter in the infinite loop of trying to steal work.
@@ -747,7 +786,7 @@ static inline void kaapi_request_syncdata( kaapi_request_t* kr )
    All counters have both USER and SYS definition (sys == program that execute the scheduler).
    * KAAPI_PERF_ID_T1 is considered as the T1 (computation time) in the user space
    and as TSCHED, the scheduling time if SYS space. In workstealing litterature it is also named Tidle.
-   [ In Kaapi, TIDLE is the time where the thread (kprocessor) is not scheduled on hardware... ]
+   [ In Kaapi, TIDLE is the time where the thread (kprocessor) do not perform task... ]
 */
 #define KAAPI_PERF_USER_STATE       0
 #define KAAPI_PERF_SCHEDULE_STATE   1
@@ -785,6 +824,10 @@ extern int kaapi_perf_thread_state(kaapi_processor_t* kproc);
 /* */
 extern uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
 
+/** Collect and display trace */
+extern void kaapi_collect_trace(void);
+
+
 /* */
 extern void kaapi_set_workload( kaapi_processor_t*, unsigned long workload );
 
@@ -795,6 +838,45 @@ extern void kaapi_set_self_workload( unsigned long workload );
 
 #include "kaapi_partition.h"
 #include "kaapi_event_recorder.h"
+
+/** \ingroup TASK
+    Reply to a steal request.
+    Return !=0 if the request cannot be replied.
+*/
+static inline int kaapi_request_replytask
+( 
+  kaapi_request_t*        request, 
+  kaapi_request_status_t  value
+)
+{
+  kaapi_atomic_t* const status = request->status;
+#if defined(KAAPI_USE_PERFCOUNTER)
+  {
+    kaapi_processor_t* kproc = kaapi_get_current_processor();
+    KAAPI_IFUSE_TRACE(kproc,
+      request->who = kproc->kid;
+      kaapi_writemem_barrier();
+      KAAPI_EVENT_PUSH2(kproc, 0, KAAPI_EVT_SEND_REPLY, 
+                        request->ident, request->serial );
+    );
+  }
+#endif
+  request->status = 0;
+  if (value == KAAPI_REQUEST_S_OK)
+  {
+    /* even if tasks will be preempted, reply ok. On remote side, the processor will abort
+       preempted tasks
+    */
+    KAAPI_ATOMIC_WRITE_BARRIER(status, KAAPI_REQUEST_S_OK);
+  }
+  else
+  {
+    /* failed to steal: avoid unnecessary memory barrier */
+    KAAPI_ATOMIC_WRITE(status, KAAPI_REQUEST_S_NOK);
+  }
+  return 0;
+}
+
 
 
 /*** TO BE MOVED INTO kaapi_task.h once tasklist.h could be included... */

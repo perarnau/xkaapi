@@ -227,14 +227,27 @@ static inline int kaapi_listrequest_iterator_empty(kaapi_listrequest_iterator_t*
 
 /* clear the bit the at given position
  */
-static inline void kaapi_listrequest_iterator_unset_at
-(kaapi_listrequest_iterator_t* lrrange, int pos)
-{ kaapi_bitmap_value_unset(&lrrange->bitmap, pos); }
+static inline void kaapi_listrequest_iterator_unset_at(
+  kaapi_listrequest_iterator_t* lrrange, 
+  int pos
+)
+{ 
+  kaapi_bitmap_value_unset(&lrrange->bitmap, pos); 
+  if (lrrange->idcurr == pos)
+  {
+    lrrange->idcurr = -1;
+    /* same as _iterator_next */
+    lrrange->idcurr = kaapi_bitmap_value_first1_and_zero( &lrrange->bitmap )-1;
+  }    
+}
 
 /* return the number of entries in the range
 */
-static inline int kaapi_listrequest_iterator_count(kaapi_listrequest_iterator_t* lrrange)
-{ return kaapi_bitmap_count(lrrange->bitmap) + (lrrange->idcurr == -1 ? 0 : 1); }
+static inline int kaapi_listrequest_iterator_count(
+    kaapi_listrequest_iterator_t* lrrange
+)
+{ return kaapi_bitmap_value_count(&lrrange->bitmap) 
+      + (lrrange->idcurr == -1 ? 0 : 1); }
 
 /* get the first request of the range. range iterator should have been initialized by kaapi_listrequest_iterator_init 
 */
@@ -251,7 +264,7 @@ static inline kaapi_request_t* kaapi_listrequest_iterator_getkid_andnext(
 { 
   kaapi_assert_debug( (kid >=0) && (kid < (int)kaapi_default_param.cpucount) );
   if (kid == lrrange->idcurr)
-    lrrange->idcurr = kaapi_bitmap_first1_and_zero( &lrrange->bitmap )-1;
+    lrrange->idcurr = kaapi_bitmap_value_first1_and_zero( &lrrange->bitmap )-1;
   else 
     kaapi_bitmap_value_unset( &lrrange->bitmap, kid );
   return &kaapi_global_requests_list[kid]; 
@@ -263,7 +276,7 @@ static inline kaapi_request_t* kaapi_listrequest_iterator_next(
   kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange 
 )
 {
-  lrrange->idcurr = kaapi_bitmap_first1_and_zero( &lrrange->bitmap )-1;
+  lrrange->idcurr = kaapi_bitmap_value_first1_and_zero( &lrrange->bitmap )-1;
   kaapi_request_t* retval = (lrrange->idcurr == -1 ? 0 : &kaapi_global_requests_list[lrrange->idcurr]);
   return retval;
 } 
@@ -277,7 +290,7 @@ static inline void kaapi_listrequest_iterator_init(
   kaapi_bitmap_swap0( &lrequests->bitmap, &lrrange->bitmap );
 #if defined(KAAPI_DEBUG)
   kaapi_bitmap_value_copy( &lrrange->bitmap_t0, &lrrange->bitmap );
-  lrrange->count_in  = kaapi_bitmap_count(lrrange->bitmap);
+  lrrange->count_in  = kaapi_bitmap_value_count(&lrrange->bitmap);
   lrrange->count_out = 0;
 #endif
   kaapi_listrequest_iterator_next( lrequests, lrrange );
@@ -328,7 +341,7 @@ static inline void kaapi_listrequest_iterator_update
 
 #if defined(KAAPI_DEBUG)
   kaapi_bitmap_value_or( &lrrange->bitmap_t0, &orig_bitmap );
-  lrrange->count_in  += kaapi_bitmap_count(orig_bitmap);
+  lrrange->count_in  += kaapi_bitmap_value_count(&orig_bitmap);
 #endif
 
   /* check if empty before nexting */
@@ -396,7 +409,7 @@ typedef struct kaapi_processor_t {
   kaapi_wsqueuectxt_t      lsuspend;                      /* list of suspended context */
 
   /* free list */
-  kaapi_lfree_t		       lfree;                         /* queue of free context */
+  kaapi_lfree_t		         lfree;                         /* queue of free context */
   int                      sizelfree;                     /* size of the queue */
   
   unsigned int             seed;                          /* for the kproc own random generator */
@@ -417,8 +430,8 @@ typedef struct kaapi_processor_t {
   kaapi_perf_counter_t	   perf_regs[2][KAAPI_PERF_ID_MAX];
   kaapi_perf_counter_t*	   curr_perf_regs;                /* either perf_regs[0], either perf_regs[1] */
 
-  int			           papi_event_set;
-  unsigned int		       papi_event_count;
+  int			                 papi_event_set;
+  unsigned int		         papi_event_count;
   kaapi_perf_counter_t     start_t[2];                    /* [KAAPI_PERF_SCHEDULE_STATE]= T1 else = Tidle */
    
   double                   t_preempt;                     /* total idle time in second pass in the preemption */           
@@ -429,19 +442,27 @@ typedef struct kaapi_processor_t {
   /* event buffer */
   struct kaapi_event_buffer_t* eventbuffer;
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+  uintptr_t                serial;      /* serial number of generated steal */
+  kaapi_perf_counter_t     lastcounter; /* used by libgomp */
+#endif
+
   /* workload */
-  kaapi_atomic64_t	       workload;
+  kaapi_atomic64_t	        workload;
 
   /* processor type */
-  unsigned int			   proc_type;
+  unsigned int			        proc_type;
 
   /* seed for kproc random generator */
-  unsigned int             seed_data;
+  unsigned int              seed_data;
   
   /* memory map */
   kaapi_mem_map_t          mem_map;
 
   struct kaapi_processor_t* victim_kproc;
+
+  void*                    libgomp_tls;
+
   /* cuda */
 #if defined(KAAPI_USE_CUDA)
   kaapi_cuda_proc_t cuda_proc;
@@ -519,7 +540,9 @@ extern void kaapi_synchronize_steal_thread( kaapi_thread_context_t* );
     \retval pointer to the stack 
     \retval 0 if allocation failed
 */
-extern kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc, size_t stacksize );
+extern kaapi_thread_context_t* kaapi_context_alloc( 
+      kaapi_processor_t* kproc, 
+      size_t stacksize );
 
 
 /** \ingroup TASK
@@ -527,15 +550,17 @@ extern kaapi_thread_context_t* kaapi_context_alloc( kaapi_processor_t* kproc, si
     If successful, the kaapi_context_free() function will return zero.  
     Otherwise, an error number will be returned to indicate the error.
     This function is machine dependent.
+    \param kproc IN/OUT the kprocessor that make allocation
     \param ctxt INOUT a pointer to the kaapi_thread_context_t to allocate.
     \retval EINVAL invalid argument: bad stack pointer.
 */
-extern int kaapi_context_free( kaapi_thread_context_t* ctxt );
+extern int kaapi_context_free( 
+      kaapi_processor_t* kproc, 
+      kaapi_thread_context_t* ctxt );
 
 
 /* lfree list routines
  */
-
 static inline void kaapi_lfree_clear(struct kaapi_processor_t* kproc)
 {
   kproc->sizelfree = 0;
@@ -548,11 +573,18 @@ static inline int kaapi_lfree_isempty(struct kaapi_processor_t* kproc)
   return kproc->sizelfree == 0;
 }
 
-static inline void kaapi_lfree_push(
-  struct kaapi_processor_t* kproc, kaapi_thread_context_t* ctxt
+/* return 1 iff the ctxt is pushed into free list else return 0
+*/
+static inline int kaapi_lfree_push(
+  struct kaapi_processor_t* kproc, 
+  kaapi_thread_context_t* ctxt
 )
 {
   kaapi_lfree_t* const list = &kproc->lfree;
+
+#  define KAAPI_MAXFREECTXT 4
+  if (kproc->sizelfree >= KAAPI_MAXFREECTXT)
+    return 0;
 
   /* push the node */
   ctxt->_next = list->_front;
@@ -563,28 +595,9 @@ static inline void kaapi_lfree_push(
     list->_front->_prev = ctxt;
   list->_front = ctxt;
 
+  ++kproc->sizelfree;
 
-  /* wait end of thieves on the processor */
-  kaapi_synchronize_steal(kproc);
-
-  /* pop back if new size exceeds max */
-#  define KAAPI_MAXFREECTXT 4
-  if (kproc->sizelfree >= KAAPI_MAXFREECTXT)
-  {
-
-    /* list size at least 2, no special case handling */
-    ctxt = list->_back;
-    list->_back = list->_back->_prev;
-    list->_back->_next = NULL;
-
-    /* this is the only vital ressource to destroy properly */
-    kaapi_atomic_destroylock(&ctxt->stack.lock);
-
-    /* free the popped context: lock the kproc until to wait end of thief operation */
-    kaapi_context_free(ctxt);
-  }
-  else
-    ++kproc->sizelfree;
+  return 1;
 }
 
 /* Re-design interface between context_free / context_alloc and lfree_push and lfree_pop

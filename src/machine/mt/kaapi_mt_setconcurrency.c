@@ -200,8 +200,7 @@ int kaapi_setconcurrency(void)
   kaapi_barrier_td_setactive(&barrier_init2, 0);
   
   /* this is the main thread that call this function */
-  kaapi_mt_suspend_threads_initiate();
-  kaapi_mt_suspend_threads_wait();
+  kaapi_mt_suspend_threads();
   
   kaapi_barrier_td_destroy( &barrier_init );
 
@@ -242,6 +241,7 @@ void* kaapi_sched_run_processor( void* arg )
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
   kaapi_perf_thread_init(kproc, KAAPI_PERF_SCHEDULE_STATE);
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_KPROC_START );
 #endif
   kaapi_assert( kproc->thread != 0 );
 
@@ -271,7 +271,8 @@ void* kaapi_sched_run_processor( void* arg )
 #endif
 
   /* suspend the threads */
-  kaapi_mt_suspend_self( kproc );
+  if (kaapi_suspendflag)
+    kaapi_mt_suspend_self( kproc );
   
   /* main work stealing loop */
   kaapi_assert( kproc->thread != 0 );
@@ -282,6 +283,7 @@ void* kaapi_sched_run_processor( void* arg )
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
   kaapi_perf_thread_stop(kproc);
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_KPROC_STOP );
 #endif
 
   /* kprocessor correctly initialize */

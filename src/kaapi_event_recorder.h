@@ -65,14 +65,14 @@ extern void kaapi_event_closebuffer( kaapi_processor_t* kproc );
     Current implementation only work if library is compiled 
     with KAAPI_USE_PERFCOUNTER flag.
 */
-static inline void kaapi_event_push0_(
+static inline void KAAPI_EVENT_PUSH0_(
     kaapi_processor_t*      kproc, 
     kaapi_thread_context_t* thread, 
     uint8_t                 eventno
 )
 {
 #if defined(KAAPI_USE_PERFCOUNTER)
-  uint64_t tclock = kaapi_get_elapsedns();
+  uint64_t tclock = kaapi_get_elapsedns() - kaapi_default_param.startuptime;
   kaapi_event_t* evt = &kproc->eventbuffer->buffer[kproc->eventbuffer->pos++];
   evt->evtno   = eventno;
   evt->type    = 0;
@@ -90,7 +90,7 @@ static inline void kaapi_event_push0_(
     Current implementation only work if library is compiled 
     with KAAPI_USE_PERFCOUNTER flag.
 */
-static inline void kaapi_event_push1_(
+static inline void KAAPI_EVENT_PUSH1_(
     kaapi_processor_t*      kproc, 
     kaapi_thread_context_t* thread, 
     uint8_t                 eventno, 
@@ -98,7 +98,7 @@ static inline void kaapi_event_push1_(
 )
 {
 #if defined(KAAPI_USE_PERFCOUNTER)
-  uint64_t tclock = kaapi_get_elapsedns();
+  uint64_t tclock = kaapi_get_elapsedns() - kaapi_default_param.startuptime;
   kaapi_event_t* evt = &kproc->eventbuffer->buffer[kproc->eventbuffer->pos++];
   evt->evtno   = eventno;
   evt->type    = 0;
@@ -117,7 +117,7 @@ static inline void kaapi_event_push1_(
     Current implementation only work if library is compiled 
     with KAAPI_USE_PERFCOUNTER flag.
 */
-static inline void kaapi_event_push2_(
+static inline void KAAPI_EVENT_PUSH2_(
     kaapi_processor_t*      kproc, 
     kaapi_thread_context_t* thread, 
     uint8_t                 eventno, 
@@ -126,7 +126,7 @@ static inline void kaapi_event_push2_(
 )
 {
 #if defined(KAAPI_USE_PERFCOUNTER)
-  uint64_t tclock = kaapi_get_elapsedns();
+  uint64_t tclock = kaapi_get_elapsedns() - kaapi_default_param.startuptime;
   kaapi_event_t* evt = &kproc->eventbuffer->buffer[kproc->eventbuffer->pos++];
   evt->evtno   = eventno;
   evt->type    = 0;
@@ -142,16 +142,19 @@ static inline void kaapi_event_push2_(
 }
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-#  define kaapi_event_push0(kproc, kthread, eventno ) \
-    if (kproc->eventbuffer) kaapi_event_push0_(kproc, kthread, eventno )
-#  define kaapi_event_push1(kproc, kthread, eventno, p1 ) \
-    if (kproc->eventbuffer) kaapi_event_push1_(kproc, kthread, eventno, (void*)(p1))
-#  define kaapi_event_push2(kproc, kthread, eventno, p1, p2 ) \
-    if (kproc->eventbuffer) kaapi_event_push2_(kproc, kthread, eventno, (void*)(p1), (void*)(p2))
+#  define KAAPI_IFUSE_TRACE(kproc,inst) \
+    if (kproc->eventbuffer) { inst; }
+#  define KAAPI_EVENT_PUSH0(kproc, kthread, eventno ) \
+    if (kproc->eventbuffer) KAAPI_EVENT_PUSH0_(kproc, kthread, eventno )
+#  define KAAPI_EVENT_PUSH1(kproc, kthread, eventno, p1 ) \
+    if (kproc->eventbuffer) KAAPI_EVENT_PUSH1_(kproc, kthread, eventno, (void*)(p1))
+#  define KAAPI_EVENT_PUSH2(kproc, kthread, eventno, p1, p2 ) \
+    if (kproc->eventbuffer) KAAPI_EVENT_PUSH2_(kproc, kthread, eventno, (void*)(p1), (void*)(p2))
 #else
-#  define kaapi_event_push0(kproc, kthread, eventno ) 
-#  define kaapi_event_push1(kproc, kthread, eventno, p1 )
-#  define kaapi_event_push2(kproc, kthread, eventno, p1, p2 )
+#  define KAAPI_IFUSE_TRACE(kproc,inst)
+#  define KAAPI_EVENT_PUSH0(kproc, kthread, eventno ) 
+#  define KAAPI_EVENT_PUSH1(kproc, kthread, eventno, p1 )
+#  define KAAPI_EVENT_PUSH2(kproc, kthread, eventno, p1, p2 )
 #endif
 
 

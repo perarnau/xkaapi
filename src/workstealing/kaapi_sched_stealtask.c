@@ -65,9 +65,15 @@ int kaapi_sched_steal_task
   cw_param = 0;
   wc = 0;
 
-  /* if map == history of visited access, then compute readiness */
+  /* if map == history of visited access, then compute readiness 
+     - even if the task is not stealable, then it is necessary to
+     propagate data flow constraints.
+  */
   if (map !=0)
   {
+#if 0
+    wc = 0; /* simulate indepent task */
+#else
     wc = kaapi_task_computeready( 
       task,
       kaapi_task_getargs(task), 
@@ -76,6 +82,7 @@ int kaapi_sched_steal_task
       &cw_param,
       map
     );
+#endif
   }
 
   if (wc !=0)
@@ -91,7 +98,6 @@ int kaapi_sched_steal_task
   kaapi_request_t* request =
 	kaapi_listrequest_iterator_get( lrequests, lrrange );
   kaapi_assert_debug( request != 0 );
-
 
   /* - create the task steal that will execute the stolen task
      The task stealtask stores:

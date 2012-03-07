@@ -51,21 +51,29 @@
 #include <inttypes.h>
 #include <math.h>
 #include <float.h>
-#include "PajeGenerator.hpp"
+#include "poti.h"
 
 /** see kaapi_event.h for coding of event name */
 static const char* kaapi_event_name[] = {
-  "<nop>",
+  "K-ProcStart",
+  "K-ProcEnd",
   "TaskBegin",
   "TaskEnd",
   "BeginFrame",
   "EndFrame",
-  "StaticBeg",
-  "StaticEnd",
-  "UnrollBeg",
-  "UnrollEnd",
+  "StaticUnrollBeg",
+  "StaticUnrollEnd",
+  "StaticTaskBeg",
+  "StaticTaskEnd",
   "IdleBeg",
-  "IdleEnd"
+  "IdleEnd",
+  "SuspendBeg",
+  "SuspendEnd",
+  "RequestBeg",
+  "RequestEnd",
+  "StealOp",
+  "SendReply",
+  "RecvReply"
 };
 
 
@@ -114,17 +122,85 @@ static void fnc_print_evt( const char* filename, int fd )
       /* full print */
       /*         date         kid          name  */
 //      printf( "%" PRIu64": %" PRIu16 " -> %6s |", e[i].date, e[i].kid, kaapi_event_name[e[i].evtno] );
-      std::cout << e[i].date << ": " << e[i].kid << " -> " << kaapi_event_name[e[i].evtno];
+      std::cout << e[i].date << ": " << e[i].kid << " -> " << kaapi_event_name[e[i].evtno] << " ";
       switch (e[i].evtno) {
+        case KAAPI_EVT_KPROC_START:
+          std::cout << e[i].kid;
+        break;
+
+        case KAAPI_EVT_KPROC_STOP:
+          std::cout << e[i].kid;
+        break;
+
+        /* standard task exec */
         case KAAPI_EVT_TASK_BEG:
+        break;
+
         case KAAPI_EVT_TASK_END:
-//          printf(" %p", e[i].d0.p );
-          std::cout << (void*)e[i].d0.p;
-          break;
+        break;
+
+        /* */
+        case KAAPI_EVT_FRAME_TL_BEG:
+        break;
+
+        case KAAPI_EVT_FRAME_TL_END:
+        break;
+
+        /* unroll graph for static schedule */
+        case KAAPI_EVT_STATIC_BEG:
+        break;
+
+        case KAAPI_EVT_STATIC_END:
+        break;
+
+        /* exec task in static graph partitioning */
+        case KAAPI_EVT_STATIC_TASK_BEG:
+        break;
+
+        case KAAPI_EVT_STATIC_TASK_END:
+        break;
+
+        /* idle = steal state */
+        case KAAPI_EVT_SCHED_IDLE_BEG:
+        break;
+
+        case KAAPI_EVT_SCHED_IDLE_END:
+        break;
+
+        /* suspend state */
+        case KAAPI_EVT_SCHED_SUSPEND_BEG:
+        break;
+
+        case KAAPI_EVT_SCHED_SUSPEND_END:
+        break;
+
+        /* processing request */
+        case KAAPI_EVT_REQUESTS_BEG:
+          std::cout << " victimid:" << e[i].d0.i;
+        break;
+
+        case KAAPI_EVT_REQUESTS_END:
+        break;
+
+        /* emit steal */
+        case KAAPI_EVT_STEAL_OP:
+          std::cout << " victimid:" << e[i].d0.i << ", serial:" << e[i].d1.i;
+        break;
+
+        /* emit reply */
+        case KAAPI_EVT_SEND_REPLY:
+          std::cout << " thiefid:" << e[i].d0.i << ", serial:" << e[i].d1.i;
+        break;
+
+        /* recv reply */
+        case KAAPI_EVT_RECV_REPLY:
+          std::cout << " combinorid:" << e[i].d0.i << ", serial:" << e[i].d1.i;
+        break;
+
         default:
+          printf("***Unkown event number: %i\n", e[i].evtno);
           break;
       }
-//      printf("\n");
       std::cout << std::endl;
     }
   }
@@ -173,12 +249,17 @@ static void fnc_statistic_task_kid( const char* filename, int fd )
   double   t_var2  = 0.0;
   uint64_t count   = 0.0;
   uint64_t t_idle  = 0;
+  uint64_t t_suspend  = 0;
+  uint64_t t_request  = 0;
+  uint64_t cnt_steal = 0;
 
   kaapi_event_buffer_t evb;
   kaapi_event_t* e = evb.buffer;
     
   uint64_t d0 =0, d1 =0;
   uint64_t d0_sched =0, d1_sched =0;
+  uint64_t d0_suspend =0, d1_suspend =0;
+  uint64_t d0_req =0, d1_req =0;
   void* task =0;
 
   while (1)
@@ -200,7 +281,7 @@ static void fnc_statistic_task_kid( const char* filename, int fd )
           task = e[i].d0.p;
           break;
         case KAAPI_EVT_TASK_END:
-          if (e[i].d0.p != task)
+          if (0) //e[i].d0.p != task
           {
             printf("*** invalid events format, ignore time for task: %p\n", task );
           }
@@ -232,6 +313,29 @@ static void fnc_statistic_task_kid( const char* filename, int fd )
           t_idle   += (d1_sched - d0_sched);
         break;
 
+        case KAAPI_EVT_SCHED_SUSPEND_BEG:
+          d0_suspend = e[i].date;
+        break;
+
+        case KAAPI_EVT_SCHED_SUSPEND_END:
+          d1_suspend = e[i].date;
+          t_idle    -= (d1_suspend - d0_suspend);
+          t_suspend += (d1_suspend - d0_suspend);
+        break;
+
+        case KAAPI_EVT_REQUESTS_BEG:
+          d0_req   = e[i].date;
+        break;
+
+        case KAAPI_EVT_REQUESTS_END:
+          d1_req   = e[i].date;
+          t_request += (d1_req - d0_req);
+        break;
+
+        case KAAPI_EVT_STEAL_OP:
+          ++cnt_steal;
+        break;
+
         default:
           break;
       }
@@ -250,8 +354,10 @@ static void fnc_statistic_task_kid( const char* filename, int fd )
   printf("*** Statistics:\n");
   printf("Ttotal    (s)     : %e\n", t_total);
   printf("Tidle     (s)     : %e\n", 1.0e-9 * (double)t_idle);
-  printf("Count     (#tasks): %zu\n", count);
-//  printf("Count     (#tasks): %llu\n", count);
+  printf("Tsuspend  (s)     : %e\n", 1.0e-9 * (double)t_suspend);
+  printf("Trequest  (s)     : %e\n", 1.0e-9 * (double)t_request);
+  printf("Count     (#task) : %zu\n", count);
+  printf("Count     (#steal): %zu\n", cnt_steal);
   printf("Tmin      (s)     : %e\n", t_min);
   printf("Tmax      (s)     : %e\n", t_max);
   printf("Taverage  (s)     : %e\n", average);
@@ -375,17 +481,20 @@ static void fnc_gnuplot_gantt( const char* filename, int fd )
 }
 
 
-static PajeGenerator* pg =0;
+static int pg =0;
 static double tmin = DBL_MAX;
+static double tmax = DBL_MIN;
 static void fnc_paje_gantt( const char* filename, int fd )
 {
+  char name[128];
+  char tmp[128];
+  char key[128];
   static int core  = 0; 
+  int kid;
   kaapi_event_buffer_t evb;
   kaapi_event_t* e = evb.buffer;
     
-
   double d0 =0.0, d1 = 0.0;
-  void* task = 0;
 
   while (1)
   {
@@ -400,64 +509,132 @@ static void fnc_paje_gantt( const char* filename, int fd )
 
     for (ssize_t i=0; i< sevents; ++i)
     {
-      if (tmin == DBL_MAX) tmin = (double)e[i].date;;
+      if ((double)e[i].date < tmin) tmin = (double)e[i].date;
+      if (tmax < (double)e[i].date) tmax = (double)e[i].date;
+
       switch (e[i].evtno) {
+        case KAAPI_EVT_KPROC_START:
+          d0   = 1e-9*(double)e[i].date;
+          kid = e[i].kid;
+          sprintf(name,"thread-%i",kid);
+          pajeCreateContainer (d0, name, "THREAD", "root", name);
+          break;
+
+        case KAAPI_EVT_KPROC_STOP:
+          d0   = 1e-9*(double)e[i].date;
+          kid = e[i].kid;
+          pajeDestroyContainer (d0, "THREAD", name);
+          break;
+
+        /* standard task exec */
         case KAAPI_EVT_TASK_BEG:
-          d0   = (double)e[i].date;
-          task = e[i].d0.p;
-          pg->addState( e[i].kid, KAAPI_EVT_TASK_BEG-1, 1e-9*(d0-tmin) );
+          d0   = 1e-9*(double)e[i].date;
+          pajePushState (d0, name, "STATE", "a");
           break;
 
         case KAAPI_EVT_TASK_END:
-          if (e[i].d0.p != task)
-          {
-            printf("*** invalid events format, ignore time for task: %p\n", task );
-          }
-          else {
-            d1 = (double)e[i].date;
-            pg->addState( e[i].kid, KAAPI_EVT_TASK_END-1, 1e-9*(d1-tmin) );
-          }
-          task = 0;
+          d1   = 1e-9*(double)e[i].date;
+          pajePopState (d1, name, "STATE");
         break;
 
+        /* */
         case KAAPI_EVT_FRAME_TL_BEG:
-          d0   = (double)e[i].date;
-          pg->addState( e[i].kid, KAAPI_EVT_FRAME_TL_BEG-1, 1e-9*(d0-tmin) );
+          d0   = 1e-9*(double)e[i].date;
         break;
 
         case KAAPI_EVT_FRAME_TL_END:
-          d1   = (double)e[i].date;
-          pg->addState( e[i].kid, KAAPI_EVT_FRAME_TL_END-1, 1e-9*(d1-tmin) );
+          d1   = 1e-9*(double)e[i].date;
         break;
 
+        /* unroll graph for static schedule */
         case KAAPI_EVT_STATIC_BEG:
-          d0   = (double)e[i].date;
-          pg->addState( e[i].kid, KAAPI_EVT_STATIC_BEG-1, 1e-9*(d0-tmin) );
+          d0   = 1e-9*(double)e[i].date;
+          pajePushState (d0, name, "STATE", "st");          
         break;
 
         case KAAPI_EVT_STATIC_END:
           d1   = (double)e[i].date;
-          pg->addState( e[i].kid, KAAPI_EVT_STATIC_END-1, 1e-9*(d1-tmin) );
+          pajePopState (d1, name, "STATE");
         break;
 
+        /* exec task in static graph partitioning */
         case KAAPI_EVT_STATIC_TASK_BEG:
-          d0   = (double)e[i].date;
-          pg->addState( e[i].kid, KAAPI_EVT_STATIC_TASK_BEG-1, 1e-9*(d0-tmin) );
+          d0   = 1e-9*(double)e[i].date;
+          pajePushState (d0, name, "STATE", "a");
         break;
 
         case KAAPI_EVT_STATIC_TASK_END:
-          d1   = (double)e[i].date;
-          pg->addState( e[i].kid, KAAPI_EVT_STATIC_TASK_END-1, 1e-9*(d1-tmin) );
+          d1   = 1e-9*(double)e[i].date;
+          pajePopState (d1, name, "STATE");
         break;
 
+        /* idle = steal state */
         case KAAPI_EVT_SCHED_IDLE_BEG:
-          d0   = (double)e[i].date;
-          pg->addState( e[i].kid, KAAPI_EVT_SCHED_IDLE_BEG-1, 1e-9*(d0-tmin) );
+          d0   = 1e-9*(double)e[i].date;
+          pajePushState (d0, name, "STATE", "i");          
         break;
 
         case KAAPI_EVT_SCHED_IDLE_END:
-          d1   = (double)e[i].date;
-          pg->addState( e[i].kid, KAAPI_EVT_SCHED_IDLE_END-1, 1e-9*(d1-tmin) );
+          d1   = 1e-9*(double)e[i].date;
+          pajePopState (d1, name, "STATE");          
+        break;
+
+        /* suspend state */
+        case KAAPI_EVT_SCHED_SUSPEND_BEG:
+          d0   = 1e-9*(double)e[i].date;
+          pajePushState (d0, name, "STATE", "s");          
+        break;
+
+        case KAAPI_EVT_SCHED_SUSPEND_END:
+          d1   = 1e-9*(double)e[i].date;
+          pajePopState (d1, name, "STATE");          
+        break;
+
+        /* processing request */
+        case KAAPI_EVT_REQUESTS_BEG:
+          d0   = 1e-9*(double)e[i].date;
+          pajePushState (d0, name, "STATE", "r");          
+        break;
+
+        case KAAPI_EVT_REQUESTS_END:
+          d1   = 1e-9*(double)e[i].date;
+          pajePopState (d1, name, "STATE");          
+        break;
+
+        /* emit steal */
+        case KAAPI_EVT_STEAL_OP:
+          d0   = 1e-9*(double)e[i].date;
+          kid = e[i].d0.i;
+//          pajeNewEvent(d0, name, "STEAL", "so");
+          if (kid != e[i].kid)
+          {
+            sprintf(key,"%i",e[i].d1.i*100000+e[i].kid);
+            pajeEndLink(d0, name, "LINK", name, "li", key);
+            sprintf(tmp,"thread-%i",kid);
+            pajeStartLink(d0, name, "LINK", tmp, "li", key);
+          }
+        break;
+
+        /* emit reply */
+        case KAAPI_EVT_SEND_REPLY:
+          d0   = 1e-9*(double)e[i].date;
+          kid = e[i].d0.i; /* kid that will recv the reply */
+          if (kid != e[i].kid)
+          {
+            sprintf(key,"%i",e[i].d1.i*100000+kid);
+            pajeEndLink(d0, "root", "LINK", name, "ri", key);
+          }
+        break;
+
+        /* recv reply */
+        case KAAPI_EVT_RECV_REPLY:
+          d0   = 1e-9*(double)e[i].date;
+          kid = e[i].d0.i; /* kid that send the reply */
+          if (kid != e[i].kid)
+          {
+            sprintf(key,"%i",e[i].d1.i*100000+kid);
+            pajeStartLink(d0, "root", "LINK", name, "ri", key);
+          }
         break;
 
         default:
@@ -469,6 +646,56 @@ static void fnc_paje_gantt( const char* filename, int fd )
   ++core;
 }
 
+
+int fnc_paje_gantt_header()
+{
+  pajeOpen("gantt.paje");
+  pajeHeader();
+
+  pajeDefineContainerType ("ROOT", "0", "ROOT");  
+  pajeDefineContainerType("THREAD", "ROOT", "THREAD");
+  pajeDefineStateType("STATE", "THREAD", "STATE");
+
+  pajeDefineEventType("STEAL", "THREAD", "STEAL", "blue");
+  pajeDefineLinkType("LINK", "ROOT", "THREAD", "THREAD", "LINK");
+
+  /* actif state */
+  pajeDefineEntityValue("a", "STATE", "running", "0;0 0.5 0.25");
+
+  /* idle (stealing) state */
+  pajeDefineEntityValue("i", "STATE", "stealing", "1 0.5 0.0");
+
+  /* suspended state */
+  pajeDefineEntityValue("s", "STATE", "suspended", "0.8 0.8 0.8");
+
+  /* execution of steal request */
+  pajeDefineEntityValue("r", "STATE", "request", "0.0 0.5 1.0");
+
+  /* execution of static task to unroll graph */
+  pajeDefineEntityValue("st", "STATE", "unroll", "0.5 1.0 0.0");
+
+  /* steal operation */
+  pajeDefineEntityValue("so", "STEAL", "steal", "1.0 0.1 0.1");
+
+  /* link  */
+  pajeDefineEntityValue("li", "LINK", "link", "1.0 0.1 0.1");
+
+  /* link  */
+  pajeDefineEntityValue("ri", "LINK", "reply", "0.2 0.2 0.2");
+
+  /* create the root container */
+  pajeCreateContainer (0.00, "root", "ROOT", "0", "root");
+
+  return 0;
+}
+
+int fnc_paje_gantt_close()
+{
+  pajeDestroyContainer (1e-9*tmax, "ROOT", "root");
+  pajeClose();
+  fprintf(stdout, "*** Paje interval [%f,%f]\n", tmin,tmax);
+  return 0;
+}
 
 /* Parse options:
    * nooption : nocode: print usage
@@ -483,6 +710,8 @@ static kaapi_fnc_event parse_option( int* argc, char*** argv)
   kaapi_fnc_event function = 0;
   char** destargv = *argv;
   int newargc =0;
+  int err;
+  
   for (int i=0; i<*argc; ++i)
   {
     if (strcmp((*argv)[i], "-a") ==0)
@@ -522,19 +751,11 @@ static kaapi_fnc_event parse_option( int* argc, char*** argv)
     {
       if (pg ==0)
       {
-        pg = new PajeGenerator;
-        int err = pg->initTrace (
-          "gantt.paje",
-          2,
-          KAAPI_MAX_PROCESSOR, /* as defined in config.h*/
-          KAAPI_EVT_NUMBER, /* number of events */
-          0,
-          0,
-          0
-        );
+        pg = 1;
+        err = fnc_paje_gantt_header();
         if (err !=0) 
         {
-          fprintf(stderr, "*** cannot open file: 'gantt.gnuplot'\n");
+          fprintf(stderr, "*** cannot open file: 'gantt.paje'\n");
           exit(1);
         }
       }
@@ -559,6 +780,7 @@ static kaapi_fnc_event parse_option( int* argc, char*** argv)
 int main(int argc, char** argv)
 {
   kaapi_fnc_event function = parse_option( &argc, &argv );
+  int err;
   
   for (int i=1; i<argc; ++i)
   {
@@ -579,7 +801,8 @@ int main(int argc, char** argv)
   if (output_gnuplot !=0) 
   {
     double delta = (t_max_gp-t_min_gp);
-    fprintf(output_gnuplot,"set xrange [%f:%f ]\n", t_min_gp -delta*0.01, t_max_gp +delta*0.1);
+    fprintf(output_gnuplot,"set xrange [%f:%f ]\n", 
+       t_min_gp -delta*0.01, t_max_gp +delta*0.1);
     fprintf(output_gnuplot,"set yrange [%i:%i ]\n", 0, gp_core-1 );
     fprintf(output_gnuplot,"set key outside bottom\n");
     fprintf(output_gnuplot,"set ytics 1\n" );
@@ -597,11 +820,14 @@ int main(int argc, char** argv)
     fclose(output_gnuplot);
     output_gnuplot = 0;
   }
-  if (pg !=0) 
+  if (pg !=0)
   {
-    pg->endTrace();
-    delete pg;
-    pg = 0;
+    err = fnc_paje_gantt_close();
+    if (err !=0) 
+    {
+      fprintf(stderr, "*** cannot close file: 'gantt.paje'\n");
+      exit(1);
+    }
   }
 
   return 0;

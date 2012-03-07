@@ -391,6 +391,12 @@ typedef struct kaapi_lock_t {
 #endif
 } kaapi_lock_t;
 
+#if defined(KAAPI_DEBUG)  
+#  define KAAPI_LOCK_INITIALIZER { 1, 0, -1U, -1U, 123123123U }
+#else
+#  define KAAPI_LOCK_INITIALIZER { 0, 0 }
+#endif
+
 static inline int kaapi_atomic_initlock( kaapi_lock_t* lock )
 {
   kaapi_assert_debug( lock->_magic != 123123123U);
@@ -496,9 +502,15 @@ typedef struct kaapi_lock_t {
 #endif
 } kaapi_lock_t;
 
+#if defined(KAAPI_DEBUG)  
+#  define KAAPI_LOCK_INITIALIZER { 1, 0, -1U, -1U, 123123123U }
+#else
+#  define KAAPI_LOCK_INITIALIZER { 1, 0 }
+#endif
 
 static inline int kaapi_atomic_initlock( kaapi_lock_t* lock )
 {
+  kaapi_assert_debug( lock->_magic != 123123123U);
   KAAPI_DEBUG_INST(lock->_magic = 123123123U;)
   KAAPI_DEBUG_INST(lock->_owner = -1U;)
   KAAPI_DEBUG_INST(lock->_unlocker = -1U;)

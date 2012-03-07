@@ -62,22 +62,24 @@ int kaapi_sched_select_victim_rand(
 {
   switch (flag)
   {
-  case KAAPI_SELECT_VICTIM:
+    case KAAPI_SELECT_VICTIM:
     {
       int nbproc, victimid;
 
       /* select a victim */
       if (kproc->fnc_selecarg[0] == 0) 
-	kproc->fnc_selecarg[0] = (uintptr_t)(long)rand();
+      kproc->fnc_selecarg[0] = (uintptr_t)(long)rand();
 
     redo_select:
       nbproc = kaapi_count_kprocessors;
-      if (nbproc <=1) return EINVAL;
+      if (nbproc <=1) 
+        return EINVAL;
       victimid = rand_r( (unsigned int*)&kproc->fnc_selecarg ) % nbproc;
 
       /* Get the k-processor */    
       victim->kproc = kaapi_all_kprocessors[ victimid ];
-      if (victim->kproc ==0) goto redo_select;
+      if (victim->kproc ==0) 
+        goto redo_select;
 
 #if CONFIG_USE_DELAY
       /* wait, deduced from previous failed steal operations */
@@ -90,7 +92,7 @@ int kaapi_sched_select_victim_rand(
     }
 
 #if CONFIG_USE_DELAY
-  case KAAPI_STEAL_SUCCESS:
+    case KAAPI_STEAL_SUCCESS:
     {
       /* reset failed steal count and delay us */
       kproc->fnc_selecarg[1] = 0;
@@ -100,42 +102,41 @@ int kaapi_sched_select_victim_rand(
 #endif /* CONFIG_USE_DELAY */
 
 #if CONFIG_USE_DELAY
-  case KAAPI_STEAL_FAILED:
+    case KAAPI_STEAL_FAILED:
     {
       const uintptr_t nsteals = (uintptr_t)kproc->fnc_selecarg[1];
 
       /* wait for failures to reach threshold */
       if (nsteals <= (kaapi_count_kprocessors * 8))
       {
-	kproc->fnc_selecarg[1] = (uintptr_t)(nsteals + 1);
+        kproc->fnc_selecarg[1] = (uintptr_t)(nsteals + 1);
       }
       /* update delay */
       else
       {
-	/* delayus set to 0 until failures reach kaapi_processor_count * 8
-	   delayus initially set to delay_init
-	   delayus incremented by delay_step per failure
-	   delayus not incremented if greater than delay_thre
-	   delayus reset on steal success
-	 */
+      /* delayus set to 0 until failures reach kaapi_processor_count * 8
+         delayus initially set to delay_init
+         delayus incremented by delay_step per failure
+         delayus not incremented if greater than delay_thre
+         delayus reset on steal success
+       */
+        static const uintptr_t delay_init = 1000;
+        static const uintptr_t delay_step = 1000;
+        static const uintptr_t delay_thre = 10000;
 
-	static const uintptr_t delay_init = 1000;
-	static const uintptr_t delay_step = 1000;
-	static const uintptr_t delay_thre = 10000;
-
-	uintptr_t delayus = (uintptr_t)kproc->fnc_selecarg[2];
+        uintptr_t delayus = (uintptr_t)kproc->fnc_selecarg[2];
         if (delayus == 0) delayus = delay_init;
-	else if (delayus < delay_thre) delayus += delay_step;
-	*((uintptr_t*)&kproc->fnc_selecarg[2]) = delayus;
+        else if (delayus < delay_thre) delayus += delay_step;
+        *((uintptr_t*)&kproc->fnc_selecarg[2]) = delayus;
       }
 
       break ;
     }
 #endif /* CONFIG_USE_DELAY */
 
-  default:
+    default:
     {
-      break ;
+      break;
     }
   }
 

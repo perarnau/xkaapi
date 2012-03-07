@@ -88,6 +88,11 @@ int kaapi_thread_pushtask_adaptive(
     KAAPI_ATOMIC_WRITE(&sc->thieves.count, 0);
   }
 
+#if defined(KAAPI_DEBUG)
+  sc->version = -1; /* version used only during steal operation */
+  sc->state   = 1;  /* it is initialized now */
+#endif
+
   /* initialize the taskadapt_body args */
   kaapi_access_init(&arg->shared_sc, sc);
   arg->user_body     = task_adapt->body;
@@ -102,6 +107,7 @@ int kaapi_thread_pushtask_adaptive(
   if (splitter !=0) 
     kaapi_task_set_splittable(task_adapt);
   
+  /* push the merge task */
   kaapi_access_init( &merge_arg->shared_sc, sc );
 
   task_merge = kaapi_thread_nexttask(thread, task_adapt);

@@ -112,8 +112,14 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   kaapi_assert( 0 == kaapi_default_param.emitsteal_initctxt(kproc) );
   
   kaapi_assert(0 == pthread_mutex_init(&kproc->suspend_lock, 0) );
+
   /* */
   kproc->eventbuffer     = 0;
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kproc->serial          = 0;
+  kproc->lastcounter     = 0;
+#endif
   
   /* workload */
   kaapi_processor_set_workload(kproc, 0);
@@ -135,6 +141,8 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
 
   /* set new context to the kprocessor */
   kaapi_setcontext(kproc, ctxt);
+  
+  kproc->libgomp_tls = 0;
 
 #if defined(KAAPI_USE_CUDA)
   /* initialize cuda processor */
