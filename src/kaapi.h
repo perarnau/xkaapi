@@ -57,6 +57,8 @@
 #  include <winnt.h>
 #endif
 
+#define __KAAPI__ 1
+#define __KAAPI_MINOR__ 1
 
 #if !defined(__SIZEOF_POINTER__)
 #  if defined(__LP64__) || defined(__x86_64__)
