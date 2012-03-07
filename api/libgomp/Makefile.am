@@ -5,6 +5,8 @@
 
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir) -I$(top_srcdir)/api/kaapic
 
+EXTRA_DIST=libgomp.map kaapi-gomp-wrapper.in
+
 if KAAPI_LIBGOMP
 
 SUBDIRS=tests testsuite
@@ -37,7 +39,6 @@ libkomp_la_LIBADD=../../src/libkaapi.la ../kaapic/libkaapic.la $(LIBGOMP_BUILD_L
 
 bin_SCRIPTS = kaapi-gomp-wrapper
 CLEANFILES = $(bin_SCRIPTS)
-EXTRA_DIST = kaapi-gomp-wrapper.in
 
 do_subst = sed -e 's,[@]libdir[@],$(libdir),g' \
                -e 's,[@]pkglibdir[@],$(pkglibdir),g' \
