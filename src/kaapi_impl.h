@@ -88,6 +88,7 @@ extern "C" {
 #include "kaapi_memory.h"
 #include "kaapi_task.h"
 #include "kaapi_format.h"
+#include "kaapi_event.h"
 
 #include <string.h>
 
@@ -319,23 +320,24 @@ typedef struct kaapi_hierarchy_t {
 /** Definition of parameters for the runtime system
 */
 typedef struct kaapi_rtparam_t {
-  size_t                   stacksize;                       /* default stack size */
-  size_t                   stacksize_master;                /* stack size for the master thread */
-  unsigned int             syscpucount;                     /* number of physical cpus of the system */
-  unsigned int             cpucount;                        /* number of physical cpu used for execution */
-  kaapi_selectvictim_fnc_t wsselect;                        /* default method to select a victim */
+  size_t                   stacksize;           /* default stack size */
+  size_t                   stacksize_master;    /* stack size for the master thread */
+  unsigned int             syscpucount;         /* number of physical cpus of the system */
+  unsigned int             cpucount;            /* number of physical cpu used for execution */
+  kaapi_selectvictim_fnc_t wsselect;            /* default method to select a victim */
   kaapi_emitsteal_fnc_t	   emitsteal;
-  kaapi_emitsteal_init_t   emitsteal_initctxt;              /* call to initialize the emitsteal ctxt */
-  unsigned int		       use_affinity;                    /* use cpu affinity */
-  int                      display_perfcounter;             /* set to 1 iff KAAPI_DISPLAY_PERF */
-  uint64_t                 startuptime;                     /* time at the end of kaapi_init */
-  int                      alarmperiod;                     /* period for alarm */
+  kaapi_emitsteal_init_t   emitsteal_initctxt;  /* call to initialize the emitsteal ctxt */
+  unsigned int		         use_affinity;        /* use cpu affinity */
+  int                      display_perfcounter; /* set to 1 iff KAAPI_DISPLAY_PERF */
+  uint64_t                 startuptime;         /* time at the end of kaapi_init */
+  int                      alarmperiod;         /* period for alarm */
+  uint64_t                 eventmask;           /* event mask */
 
-  struct kaapi_procinfo_list_t* kproc_list;                 /* list of kprocessors to initialized */
-  kaapi_cpuset_t           usedcpu;                         /* cpuset of used physical ressources */
-  kaapi_hierarchy_t        memory;                          /* memory hierarchy */
-  unsigned int*	           kid2cpu;                        /* mapping: kid->phys cpu  */
-  unsigned int*  	       cpu2kid;                        /* mapping: phys cpu -> kid */
+  struct kaapi_procinfo_list_t* kproc_list;     /* list of kprocessors to initialized */
+  kaapi_cpuset_t           usedcpu;             /* cpuset of used physical ressources */
+  kaapi_hierarchy_t        memory;              /* memory hierarchy */
+  unsigned int*	           kid2cpu;             /* mapping: kid->phys cpu  */
+  unsigned int*  	         cpu2kid;             /* mapping: phys cpu -> kid */
 } kaapi_rtparam_t;
 
 extern kaapi_rtparam_t kaapi_default_param;
@@ -552,6 +554,13 @@ extern int kaapi_sched_select_victim_rand_first0(
     Select victim using the memory hierarchy
 */
 extern int kaapi_sched_select_victim_hierarchy( 
+    kaapi_processor_t* kproc, 
+    kaapi_victim_t* victim, 
+    kaapi_selecvictim_flag_t flag 
+);
+
+/* experimental: */
+extern int kaapi_sched_select_victim_pws( 
     kaapi_processor_t* kproc, 
     kaapi_victim_t* victim, 
     kaapi_selecvictim_flag_t flag 
@@ -782,47 +791,7 @@ static inline void kaapi_request_syncdata( kaapi_request_t* kr )
 
 
 /* ======================== Perf counter interface: machine dependent ========================*/
-/* for perf_regs access: SHOULD BE 0 and 1 
-   All counters have both USER and SYS definition (sys == program that execute the scheduler).
-   * KAAPI_PERF_ID_T1 is considered as the T1 (computation time) in the user space
-   and as TSCHED, the scheduling time if SYS space. In workstealing litterature it is also named Tidle.
-   [ In Kaapi, TIDLE is the time where the thread (kprocessor) do not perform task... ]
-*/
-#define KAAPI_PERF_USER_STATE       0
-#define KAAPI_PERF_SCHEDULE_STATE   1
-
-/* return a reference to the idp-th performance counter of the k-processor in the current set of counters */
-#define KAAPI_PERF_REG(kproc, idp) ((kproc)->curr_perf_regs[(idp)])
-
-/* return a reference to the idp-th USER performance counter of the k-processor */
-#define KAAPI_PERF_REG_USR(kproc, idp) ((kproc)->perf_regs[KAAPI_PERF_USER_STATE][(idp)])
-
-/* return a reference to the idp-th USER performance counter of the k-processor */
-#define KAAPI_PERF_REG_SYS(kproc, idp) ((kproc)->perf_regs[KAAPI_PERF_SCHEDULE_STATE][(idp)])
-
-/* return the sum of the idp-th USER and SYS performance counters */
-#define KAAPI_PERF_REG_READALL(kproc, idp) (KAAPI_PERF_REG_SYS(kproc, idp)+KAAPI_PERF_REG_USR(kproc, idp))
-
-/* internal */
-extern void kaapi_perf_global_init(void);
-
-/* */
-extern void kaapi_perf_global_fini(void);
-
-/* */
-extern void kaapi_perf_thread_init ( kaapi_processor_t* kproc, int isuser );
-/* */
-extern void kaapi_perf_thread_fini ( kaapi_processor_t* kproc );
-/* */
-extern void kaapi_perf_thread_start ( kaapi_processor_t* kproc );
-/* */
-extern void kaapi_perf_thread_stop ( kaapi_processor_t* kproc );
-/* */
-extern void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser );
-/* */
-extern int kaapi_perf_thread_state(kaapi_processor_t* kproc);
-/* */
-extern uint64_t kaapi_perf_thread_delayinstate(kaapi_processor_t* kproc);
+#include "kaapi_trace.h"
 
 /** Collect and display trace */
 extern void kaapi_collect_trace(void);
@@ -854,10 +823,9 @@ static inline int kaapi_request_replytask
   {
     kaapi_processor_t* kproc = kaapi_get_current_processor();
     KAAPI_IFUSE_TRACE(kproc,
-      request->who = kproc->kid;
       kaapi_writemem_barrier();
-      KAAPI_EVENT_PUSH2(kproc, 0, KAAPI_EVT_SEND_REPLY, 
-                        request->ident, request->serial );
+      KAAPI_EVENT_PUSH3(kproc, 0, KAAPI_EVT_SEND_REPLY, 
+                        request->victim, request->ident, request->serial );
     );
   }
 #endif

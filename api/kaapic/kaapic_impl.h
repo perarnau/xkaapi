@@ -178,12 +178,12 @@ typedef struct local_work
 #else
   kaapi_lock_t            lock;
 #endif
+  int volatile            init;      /* !=0 iff init */
 
   void*                   context __attribute__((aligned(KAAPI_CACHE_LINE)));
   struct global_work*     global;    /* go up to all local information */
   kaapi_workqueue_index_t workdone;  /* to compute completion */
   int                     tid;       /* identifier : ==kid */
-  int volatile            init;      /* !=0 iff init */
 } kaapic_local_work_t __attribute__ ((aligned (KAAPI_CACHE_LINE)));
 
 

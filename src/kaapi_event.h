@@ -68,8 +68,8 @@ extern "C" {
 #define KAAPI_EVT_STATIC_BEG      6     /* begin of static schedule computation */
 #define KAAPI_EVT_STATIC_END      7     /* end of static schedule computation */
 
-#define KAAPI_EVT_STATIC_TASK_BEG 8     /* begin of sub task exec for static schedule */
-#define KAAPI_EVT_STATIC_TASK_END 9     /* end of sub task exec for static schedule */
+#define KAAPI_EVT_STATIC_TASK_BEG 8     /* begin of task after static schedule, param:  */
+#define KAAPI_EVT_STATIC_TASK_END 9     /* end of task after static schedule */
 
 #define KAAPI_EVT_SCHED_IDLE_BEG  10     /* begin when k-processor starts to steal */
 #define KAAPI_EVT_SCHED_IDLE_END  11    /* end when k-processor starts to steal */
@@ -77,12 +77,21 @@ extern "C" {
 #define KAAPI_EVT_SCHED_SUSPEND_BEG 12 /* when k-processor is suspending */
 #define KAAPI_EVT_SCHED_SUSPEND_END 13 /* when k-processor wakeup */
 
-#define KAAPI_EVT_REQUESTS_BEG    14 /* when k-processor begin to process requests, data=victim.id */
-#define KAAPI_EVT_REQUESTS_END    15 /* when k-processor end to process requests */
+#define KAAPI_EVT_SCHED_SUSPEND_POST 14 /* master thread post suspend */
+#define KAAPI_EVT_SCHED_SUSPWAIT_BEG 15 /* master thread wait */
+#define KAAPI_EVT_SCHED_SUSPWAIT_END 16 /* master thread end wait */
 
-#define KAAPI_EVT_STEAL_OP        16 /* when k-processor emit a steal request data=victimid, serial*/
-#define KAAPI_EVT_SEND_REPLY      17 /* when k-processor send a reply request data=victimid, serial */
-#define KAAPI_EVT_RECV_REPLY      18 /* when k-processor recv reply, serial */
+#define KAAPI_EVT_REQUESTS_BEG    17 /* when k-processor begin to process requests, data=victim.id */
+#define KAAPI_EVT_REQUESTS_END    18 /* when k-processor end to process requests */
+
+#define KAAPI_EVT_STEAL_OP        19 /* when k-processor emit a steal request data=victimid, serial*/
+#define KAAPI_EVT_SEND_REPLY      20 /* when k-processor send a reply request data=victimid, thiefid, serial */
+#define KAAPI_EVT_RECV_REPLY      21 /* when k-processor recv reply, victim id, serial, status (1:ok 0:nok) */
+
+
+#define KAAPI_EVT_FOREACH_BEG     25 /* */
+#define KAAPI_EVT_FOREACH_END     26 /* */
+#define KAAPI_EVT_FOREACH_STEAL   27 /* */
 
 
 /* ........................................ Implementation notes ........................................*/
@@ -109,11 +118,12 @@ typedef struct kaapi_event_t {
 
 /** Event Buffer 
 */
-#define KAAPI_EVENT_BUFFER_SIZE 1024
+#define KAAPI_EVENT_BUFFER_SIZE 8190
 typedef struct kaapi_event_buffer_t {
-  uint32_t      pos;
-  int           fd;
-  kaapi_event_t buffer[KAAPI_EVENT_BUFFER_SIZE];
+  struct kaapi_event_buffer_t* volatile next;
+  uint32_t                              pos;
+  int                                   kid;
+  kaapi_event_t                         buffer[KAAPI_EVENT_BUFFER_SIZE];
 } kaapi_event_buffer_t;
 
 

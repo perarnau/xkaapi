@@ -4,8 +4,8 @@
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
- **
  ** thierry.gautier@inrialpes.fr
+ ** fabien.lementec@imag.fr
  ** 
  ** This software is a computer program whose purpose is to execute
  ** multithreaded computation with data flow synchronization between
@@ -41,27 +41,12 @@
  ** 
  */
 #include "kaapi_impl.h"
+#include "kaapic_impl.h"
+#include <stdarg.h>
+#include <string.h>
 
 
-/* Signal body task
-   - used if the stolen task a non adaptive task and preemption flag was unset
-   on the victim adaptive task
-   - arg is the master steal context to signal (remotely)
-*/
-void kaapi_tasksignaladapt_body(void* sp, kaapi_thread_t* thread)
+void* kaapic_alloca( size_t sz )
 {
-  kaapi_stealcontext_t* const msc  = (kaapi_stealcontext_t*)sp;
-//printf("TO TEST\n");
-  kaapi_assert_debug( msc->flag != KAAPI_SC_PREEMPTION );
-
-  /* Then flush memory & signal master context
-  */
-  kaapi_writemem_barrier();
-
-  /* here a remote read of sc->msc->thieves may be avoided if
-     sc stores a  pointer to the master count.
-  */
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&msc->thieves.count) > 0);
-  KAAPI_ATOMIC_DECR(&msc->thieves.count);
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&msc->thieves.count) >= 0);
+  return kaapi_alloca( kaapi_self_thread(), sz );
 }

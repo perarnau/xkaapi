@@ -259,7 +259,7 @@ GOMP_parallel_start (
 
 #endif
 
-  kaapic_begin_parallel();
+  kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
 
   /* initialize master context */
   ctxt->numthreads = num_threads;

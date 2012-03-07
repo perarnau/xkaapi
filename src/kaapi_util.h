@@ -1,5 +1,5 @@
 /*
-** kaapi_time.c
+** kaapi_error.h
 ** xkaapi
 ** 
 **
@@ -43,34 +43,26 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
+#ifndef _KAAPI_UTIL_H_
+#define _KAAPI_UTIL_H_ 1
 
-#if defined(HAVE_CLOCK_GETTIME)
-# include <time.h>
-#else
-# include <sys/time.h>
+#include <stdint.h>
+
+#if defined(__cplusplus)
+extern "C" {
 #endif
 
-/**
+/* parse list of integer separated by sep 
+   return the union of (1<<i) if i is the integer in the list
 */
-uint64_t kaapi_get_elapsedns(void)
-{
-#if defined(HAVE_CLOCK_GETTIME)
-  uint64_t retval;
-  struct timespec tp;
-  int err = clock_gettime(CLOCK_REALTIME, &tp);
-  if (err != 0) return (uint64_t)0UL;
-  retval = tp.tv_sec;
-  retval *= 1000000000ULL + tp.tv_nsec;
-  return retval;
-#else
-  struct timeval tv;
-  uint64_t retval = 0;
-  int err = gettimeofday( &tv, 0);
-  if (err  !=0) return 0;
-  retval = (uint64_t)tv.tv_sec;
-  retval *= 1000000UL;
-  retval += (uint64_t)tv.tv_usec;
-  return retval*1000UL;
-#endif
+int kaapi_util_parse_list( 
+  uint64_t* mask, const char* str, char sep,
+  int count_constants,
+  ...
+);
+
+#if defined(__cplusplus)
 }
+#endif
+
+#endif

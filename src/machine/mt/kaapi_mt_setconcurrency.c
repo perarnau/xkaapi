@@ -173,10 +173,14 @@ int kaapi_setconcurrency(void)
 #if defined(KAAPI_USE_PERFCOUNTER)
       /*  */
       kaapi_perf_thread_init(kproc, KAAPI_PERF_USER_STATE);
+      KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_KPROC_START);
 #endif
 
       /* register the processor */
       kaapi_barrier_td_setactive(&kaapi_term_barrier, 1);
+     
+      /* master kproc is not idle at the begining */
+      kproc->isidle = 0;
     }
   }
 
@@ -256,14 +260,6 @@ void* kaapi_sched_run_processor( void* arg )
   
   /* wait end of the initialization */
   kaapi_barrier_td_waitterminated( &barrier_init2 );
-
-#if 0 /* dont understand. processor related routines must be called once in kaapi_processor_init. */
-  /* recompute topology information here, if CPUSET is not set
-     then the threads have self determined their processor,
-     thus the mappings cpu2kid and kid2cpu are valid.
-  */
-  kaapi_processor_computetopo( kproc );
-#endif
   
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
@@ -286,13 +282,13 @@ void* kaapi_sched_run_processor( void* arg )
   KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_KPROC_STOP );
 #endif
 
-  /* kprocessor correctly initialize */
-  kaapi_barrier_td_setactive(&kaapi_term_barrier, 0);
-
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
   kaapi_perf_thread_fini(kproc); 
 #endif
   
+  /* kprocessor correctly initialize */
+  kaapi_barrier_td_setactive(&kaapi_term_barrier, 0);
+
   return 0;
 }

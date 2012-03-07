@@ -58,7 +58,7 @@
 #endif
 
 #define __KAAPI__ 1
-#define __KAAPI_MINOR__ 1
+#define __KAAPI_MINOR__ 2
 
 #if !defined(__SIZEOF_POINTER__)
 #  if defined(__LP64__) || defined(__x86_64__)
@@ -620,7 +620,7 @@ typedef struct kaapi_request_t {
   uintptr_t                     ident;          /* system wide id of the queue */
   kaapi_frame_t                 frame;          /* where to store theft tasks/data */
 #if defined(KAAPI_USE_PERFCOUNTER)
-  uintptr_t                     who;            /* who has replied */
+  uintptr_t                     victim;         /* victim */
   uintptr_t                     serial;         /* serial number */
 #endif
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_request_t;

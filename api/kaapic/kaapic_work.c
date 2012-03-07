@@ -243,9 +243,11 @@ redo_select:
   */
   if (KAAPI_ATOMIC_READ(&gwork->workremain) ==0) 
     return 0;
+  kaapi_slowdown_cpu();
 
   /* select the victim processor */
   err = (*kproc->fnc_select)( kproc, &victim, KAAPI_SELECT_VICTIM );
+  //err = kaapi_sched_select_victim_hwsn( kproc, &victim, KAAPI_SELECT_VICTIM );
   if (unlikely(err !=0)) 
     goto redo_select;
 
@@ -265,7 +267,8 @@ redo_select:
 
   range_size = kaapi_workqueue_size(&lwork->cr);
   if (range_size <= wi->par_grain)
-    return 0;
+    goto redo_select;
+
   unit_size = range_size / 2;
 
   if (kaapic_local_work_steal(
@@ -282,7 +285,7 @@ redo_select:
     return 1;
   }
 
-  return 0;
+  goto redo_select;
 }
 
 
@@ -610,12 +613,12 @@ static int _kaapic_split_task
   if (kaapi_listrequest_iterator_empty(lri))
     return 0;
 
+
 skip_global:  
   /* because object lwork may exist without thread, test if initialized */
   if (lwork->init == 0)
     return 0;
     
-
   /* */
   kaapi_workqueue_index_t range_size, unit_size;
 
@@ -716,6 +719,8 @@ static void _kaapic_thief_entrypoint(
 
   kaapi_processor_t* kproc = kaapi_get_current_processor();
 
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_FOREACH_BEG );
+
   /* process the work */
   kaapic_local_work_t* const lwork = (kaapic_local_work_t*)arg;
   kaapic_global_work_t* const gwork = lwork->global;
@@ -735,7 +740,6 @@ static void _kaapic_thief_entrypoint(
   /* while there is sequential work to do in local work */
   while (kaapi_workqueue_pop(&lwork->cr, &i, &j, wi->seq_grain) ==0)
   {
-    kaapi_assert_debug(i < j);
     KAAPI_SET_SELF_WORKLOAD(kaapi_workqueue_size(&lwork->cr));
     lwork->workdone += j-i;
 redo_local_work:
@@ -743,6 +747,7 @@ redo_local_work:
     /* apply w->f on [i, j[ */
     gwork->body_f((int)i, (int)j, (int)lwork->tid, gwork->body_args);
   }
+  lwork->init = 0;
 
   /* */
   KAAPI_SET_SELF_WORKLOAD(0);
@@ -760,7 +765,6 @@ redo_local_work:
   lwork->workdone = 0;
 
   /* finish: nothing to steal */
-  lwork->init = 0;
   kaapi_writemem_barrier();
 
   KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
@@ -770,6 +774,8 @@ redo_local_work:
     goto redo_local_work;
   
 return_label:
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_FOREACH_END );
+
   lwork->workdone = 0;
   lwork->init = 0;
 
@@ -847,7 +853,7 @@ kaapic_local_work_t* kaapic_foreach_workinit
 #endif
 
   /* begin a parallel region */
-  if (kaapic_do_parallel) kaapic_begin_parallel();
+  if (kaapic_do_parallel) kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
 
   return lwork;
 }  
@@ -1041,8 +1047,11 @@ int kaapic_foreach_common
   kaapic_local_work_t*  lwork;
 
   /* is_format true if called from kaapif_foreach_with_format */
-  kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
+  kaapi_processor_t* const kproc = kaapi_get_current_processor();
+  kaapi_thread_context_t* const self_thread = kproc->thread;
   const int tid = self_thread->stack.proc->kid;
+
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_FOREACH_BEG );
 
   lwork = kaapic_foreach_workinit(
       self_thread,
@@ -1056,7 +1065,6 @@ int kaapic_foreach_common
   
   /* process locally */
 #if defined(KAAPI_DEBUG)
-  kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_assert_debug( kproc->kid == tid );
 #endif
 
@@ -1064,8 +1072,7 @@ int kaapic_foreach_common
   int seq_grain = gwork->wi.seq_grain;
   
   /* while there is sequential work to do in local work */
-  while (kaapi_workqueue_pop(&lwork->cr, 
-                &first, &last, seq_grain) ==0)
+  while (kaapi_workqueue_pop(&lwork->cr, &first, &last, seq_grain) ==0)
   {
     KAAPI_SET_SELF_WORKLOAD(kaapi_workqueue_size(&lwork->cr));
     lwork->workdone += last-first;
@@ -1100,6 +1107,8 @@ redo_local_work:
     goto redo_local_work;
  
 return_label:
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_FOREACH_END );
+
   lwork->workdone = 0;
   lwork->init = 0;
   kaapi_writemem_barrier();
@@ -1111,3 +1120,4 @@ return_label:
 #endif
   return 0;
 }
+

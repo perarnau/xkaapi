@@ -47,6 +47,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+
+uint64_t kaapi_event_mask;
+
 /**
 */
 void kaapi_event_flushbuffer( kaapi_processor_t* kproc )

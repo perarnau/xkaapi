@@ -83,10 +83,13 @@ typedef struct kaapi_atomic32_t {
 } kaapi_atomic32_t;
 typedef kaapi_atomic32_t kaapi_atomic_t;
 
-
 typedef struct kaapi_atomic64_t {
   volatile int64_t _counter;
 } kaapi_atomic64_t;
+
+typedef struct kaapi_atomicptr_t {
+  volatile intptr_t _counter;
+} kaapi_atomicptr_t;
 
 /* ========================= Low level memory barrier, inline for perf... so ============================= */
 /** Implementation note

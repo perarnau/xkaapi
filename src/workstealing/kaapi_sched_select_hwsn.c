@@ -44,10 +44,9 @@
 #include "kaapi_impl.h"
 
 typedef struct kaapi_hier_arg {
-  short         nfailed;
-  short         depth;     /* current depth where to select */
-  short         depth_min;
-  unsigned int  index;     /* 0: self set, 1: notself set */
+  short         init;     /* 0 iff not init  */
+  short         priority;  /* 1: local, 2: last victim ok, rand */
+  int           nfailed;
   unsigned int  seed;
 } kaapi_hier_arg;
 
@@ -61,6 +60,7 @@ int kaapi_sched_select_victim_hwsn(
 )
 {
   int victimid;
+  int nbproc;
   kaapi_hier_arg* arg;
   kaapi_onelevel_t* level;
 
@@ -68,38 +68,20 @@ int kaapi_sched_select_victim_hwsn(
 
   arg = (kaapi_hier_arg*)&kproc->fnc_selecarg;
 
-  if ((kproc->hlevel.depth ==0) || (arg->depth_min ==-1))
+  if ((kproc->hlevel.depth ==0) || (arg->init ==-1))
   { /* no hierarchy: like random flat selection */
     return kaapi_sched_select_victim_rand(kproc, victim, flag );
   }
 
+
   if (flag == KAAPI_STEAL_FAILED)
   {
-    int nset;
-    level = &kproc->hlevel.levels[arg->depth];
-    nset = (arg->index ==0 ? level->nsize : level->nnotself);
-
-    ++arg->nfailed;
-
-    /* failed: try on not self set before go up */
-    if  (arg->nfailed >= 4)
+    if (arg->priority == 1)
     {
-      arg->nfailed = 0;
-      if (arg->index ==0)
+      if (++arg->nfailed == 4)
       {
-        if (level->nnotself == 0)
-          ++arg->depth;
-        else
-          arg->index   = 1;
-      }
-      else {
-        ++arg->depth;
-        arg->index   = 0;
-      }
-      if (arg->depth >= 3) //kproc->hlevel.depth) 
-      {
-        arg->depth = kproc->hlevel.depth;
-        arg->index   = 0;
+        arg->priority = 10;
+        arg->nfailed  = 0;
       }
     }
     return 0;
@@ -107,25 +89,43 @@ int kaapi_sched_select_victim_hwsn(
 
   if (flag == KAAPI_STEAL_SUCCESS)
   {
+    if (arg->priority !=1) arg->priority =1; 
+
     /* success: try next to time initial depth */
-    arg->depth   = 0;
-    arg->nfailed = 0;
-    arg->index   = 0;
+    arg->nfailed  = 0;
     return 0;
   }
 
   kaapi_assert_debug (flag == KAAPI_SELECT_VICTIM);
+  if (arg->init ==0)
+  {
+    arg->init     = 1;
+    arg->priority = 10;
+    arg->nfailed  = 0;
+    arg->seed     = rand();
+  }
+
+  nbproc = kaapi_count_kprocessors;
+  if (nbproc <=1) 
+    return EINVAL;
 
 redo_select:
   /* first: select in self set */
-  level = &kproc->hlevel.levels[arg->depth];
-  if (arg->index ==0)
-    victimid = level->kids[ rand_r(&arg->seed) % level->nkids];
-  else
+  if (arg->priority ==1)
+  {
+    level = &kproc->hlevel.levels[0];
     victimid = level->notself[ rand_r(&arg->seed) % level->nnotself];
+  }
+#if 0
+  else if (arg->priority == 2)
+    victimid = arg->lastsok;
+#endif
+  else
+    victimid = rand_r( (unsigned int*)&arg->seed ) % nbproc;
 
   victim->kproc = kaapi_all_kprocessors[ victimid ];
   if (victim->kproc ==0) 
     goto redo_select;
+
   return 0;
 }

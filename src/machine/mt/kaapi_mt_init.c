@@ -54,6 +54,9 @@
 #  include <signal.h>
 #endif
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+#include <signal.h>
+#endif
 
 /*
 */
@@ -143,9 +146,7 @@ int kaapi_mt_init(void)
 
   /* It should be the only location where request are initialized */
   for (int i=0; i<KAAPI_MAX_PROCESSOR+1; ++i)
-  {  
     kaapi_request_init(&kaapi_global_requests_list[i], i);
-  }
   
   /* build the memory hierarchy
      update kaapi_default_param data structure fields:
@@ -236,10 +237,6 @@ int kaapi_mt_init(void)
   /* create the kprocessor AFTER topology !!! */
   kaapi_assert_m( 0 == kaapi_setconcurrency(), "kaapi_setconcurrency" );
   kproc = kaapi_get_current_processor();
-
-#if defined(KAAPI_USE_PERFCOUNTER)
-  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_KPROC_START);
-#endif
 
   /* initialize before destroying procinfo */
 #if KAAPI_USE_HWLOC
@@ -367,7 +364,6 @@ int kaapi_mt_finalize(void)
   KAAPI_EVENT_PUSH0(kaapi_all_kprocessors[0], 0, KAAPI_EVT_KPROC_STOP);
   kaapi_perf_thread_fini(kaapi_all_kprocessors[0]);
   kaapi_perf_global_fini();
-  
   kaapi_collect_trace();
 #endif
 

@@ -114,17 +114,33 @@ void kaapic_sync(void)
   kaapi_sched_sync();
 }
 
-void kaapic_begin_parallel(void)
+
+int kaapic_begin_parallel(int flags)
 {
-  kaapi_begin_parallel(KAAPI_SCHEDFLAG_DEFAULT);
+  int schedflag = KAAPI_SCHEDFLAG_DEFAULT; /* for runtime */
+  if (flags & KAAPIC_FLAG_STATIC_SCHED)
+    schedflag |= KAAPI_SCHEDFLAG_STATIC;
+  if (flags & KAAPIC_FLAG_END_NOSYNC)
+    schedflag |= KAAPI_SCHEDFLAG_NOWAIT;
+
+  kaapi_push_frame(&kaapi_self_thread_context()->stack );
+  kaapi_begin_parallel(schedflag);
+
+  return 0;
 }
 
-void kaapic_end_parallel(int32_t flags)
+int kaapic_end_parallel(int flags)
 {
-  if (flags)
-    kaapi_end_parallel(KAAPI_SCHEDFLAG_NOWAIT);
-  else
-    kaapi_end_parallel(KAAPI_SCHEDFLAG_DEFAULT);
+  int schedflag = KAAPI_SCHEDFLAG_DEFAULT; /* for runtime */
+  if (flags & KAAPIC_FLAG_STATIC_SCHED)
+    schedflag |= KAAPI_SCHEDFLAG_STATIC;
+  if (flags & KAAPIC_FLAG_END_NOSYNC)
+    schedflag |= KAAPI_SCHEDFLAG_NOWAIT;
+
+  kaapi_end_parallel(schedflag);
+  kaapi_pop_frame(&kaapi_self_thread_context()->stack );
+  
+  return 0;
 }
 
 

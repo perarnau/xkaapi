@@ -396,18 +396,14 @@ typedef struct kaapi_processor_t {
   kaapi_thread_context_t*  thread;                        /* current thread under execution */
   kaapi_processor_id_t     kid;                           /* Kprocessor id */
 
-  /* cache align */
+  /* cache align: only the lock */
   kaapi_lock_t             lock                           /* all requests attached to each kprocessor ordered by increasing level */
     __attribute__((aligned(KAAPI_CACHE_LINE)));
 
-#if defined(KAAPI_DEBUG)
-  volatile uintptr_t       req_version;
-  volatile uintptr_t       reply_version;
-  volatile uintptr_t       compute_version;
-#endif
-  
-  kaapi_wsqueuectxt_t      lsuspend;                      /* list of suspended context */
+  int volatile             isidle;                        /* true if kproc is idle (active thread is empty) */
 
+  kaapi_wsqueuectxt_t      lsuspend                       /* list of suspended context */
+      __attribute__((aligned(KAAPI_CACHE_LINE)));
   /* free list */
   kaapi_lfree_t		         lfree;                         /* queue of free context */
   int                      sizelfree;                     /* size of the queue */
@@ -419,6 +415,12 @@ typedef struct kaapi_processor_t {
   kaapi_emitsteal_fnc_t	   emitsteal;                     /* virtualization of the WS algorithm */
   void*                    emitsteal_ctxt;                /* specific to the WS algorithm */
 
+#if defined(KAAPI_DEBUG)
+  volatile uintptr_t       req_version;
+  volatile uintptr_t       reply_version;
+  volatile uintptr_t       compute_version;
+#endif
+  
   pthread_mutex_t          suspend_lock;                  /* lock used to suspend / resume the threads */
     
   /* hierachical information of other kprocessor */
@@ -734,7 +736,7 @@ static inline kaapi_request_t* kaapi_request_post(
 
 /** push: LIFO order with respect to pop. Only owner may push
 */
-static inline int kaapi_wsqueuectxt_empty( kaapi_processor_t* kproc )
+static inline int kaapi_wsqueuectxt_empty( const kaapi_processor_t* kproc )
 { return (kproc->lsuspend.head ==0); }
 
 /**
@@ -776,6 +778,13 @@ static inline unsigned int kaapi_processor_get_type(const kaapi_processor_t* kpr
   return kproc->proc_type;
 }
 
+/** Return true if the kprocess has no work == is begin stealing and suspend list is empty
+*/
+static inline int kaapi_processor_has_nowork( const kaapi_processor_t* kproc )
+{
+  return (kproc->isidle !=0) && kaapi_wsqueuectxt_empty(kproc);
+}
+
 /**
 */
 static inline void kaapi_processor_set_workload
@@ -814,5 +823,24 @@ static inline void kaapi_processor_set_self_workload
 {
   KAAPI_ATOMIC_WRITE(&kaapi_get_current_processor()->workload, workload);
 }
+
+/* */
+extern void kaapi_mt_perf_init(void);
+/* */
+extern void kaapi_mt_perf_fini(void);
+/* */
+extern void kaapi_mt_perf_thread_init ( kaapi_processor_t* kproc, int isuser );
+/* */
+extern void kaapi_mt_perf_thread_fini ( kaapi_processor_t* kproc );
+/* */
+extern void kaapi_mt_perf_thread_start ( kaapi_processor_t* kproc );
+/* */
+extern void kaapi_mt_perf_thread_stop ( kaapi_processor_t* kproc );
+/* */
+extern void kaapi_mt_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser );
+/* */
+extern uint64_t kaapi_mt_perf_thread_delayinstate(kaapi_processor_t* kproc);
+/* */
+extern size_t kaapi_mt_perf_counter_num(void);
 
 #endif /* _KAAPI_MT_MACHINE_H */

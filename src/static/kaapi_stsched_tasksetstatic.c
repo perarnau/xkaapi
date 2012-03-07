@@ -144,12 +144,9 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
         + arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU];
   }
 
-  KAAPI_EVENT_PUSH0(thread->stack.proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
 
   /* the embedded task cannot be steal because it was not visible to thieves */
   arg->sub_body( arg->sub_sp, uthread, pc );
-
-  KAAPI_EVENT_PUSH0(thread->stack.proc, thread, KAAPI_EVT_STATIC_TASK_END );
 
   /* allocate the tasklist for this task
   */
@@ -159,7 +156,6 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   /* currently: that all, do not compute other things */
   kaapi_thread_computereadylist(thread, tasklist);
   KAAPI_ATOMIC_WRITE(&tasklist->count_thief, 0);
-  KAAPI_EVENT_PUSH0(thread->stack.proc, thread, KAAPI_EVT_STATIC_END );
 
   /* populate tasklist with initial ready tasks */
   kaapi_thread_tasklistready_push_init( tasklist, &tasklist->readylist );
@@ -168,6 +164,8 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   /* keep the first task to execute outside the workqueue */
 //FALSE  tasklist->context.chkpt = 2;
   tasklist->context.chkpt = 0;
+
+  KAAPI_EVENT_PUSH0(thread->stack.proc, thread, KAAPI_EVT_STATIC_END );
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* here sfp is initialized, dump graph if required */

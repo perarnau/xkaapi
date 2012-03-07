@@ -120,6 +120,8 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       continue;
 
 redo_execute:    
+    kproc->isidle = 0;
+    
 #if defined(KAAPI_USE_PERFCOUNTER)
     kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
     KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
@@ -182,6 +184,8 @@ redo_execute:
 #endif
     }
 #endif
+
+    kproc->isidle = 1;
   } while (1);
   
 }

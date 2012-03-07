@@ -12,9 +12,14 @@ check_PROGRAMS=$(BIN_PRGS)
 
 all-bfs: $(BIN_PRGS)
 
-kaapi_event_reader_SOURCES=kaapi_event_reader.cpp poti/src/poti.c
+kaapi_event_reader_SOURCES=kaapi_event_reader.cpp \
+	poti/src/poti.c \
+	poti/src/poti_private.h \
+	poti/include/poti_config.h\
+	poti/include/poti.h
 
 kaapi_event_reader_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS) -I$(srcdir)/poti/include -I$(srcdir)/poti/src
 kaapi_event_reader_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIPROGS_BUILD_CXXFLAGS)
 kaapi_event_reader_LDFLAGS =$(AM_LDFLAGS)
 kaapi_event_reader_LDADD   =$(LIBS)
+
