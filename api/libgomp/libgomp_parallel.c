@@ -274,9 +274,9 @@ GOMP_parallel_end (void)
   kaapi_libkomp_teaminfo_t* teaminfo = ctxt->teaminfo;
 
   /* implicit sync + implicit pop fame */
-  kaapic_end_parallel (KAAPI_SCHEDFLAG_DEFAULT);
   ctxt->teaminfo->gwork = 0;
   ctxt->teaminfo = 0;
+  kaapic_end_parallel (KAAPI_SCHEDFLAG_DEFAULT);
   ctxt->icv = ctxt->save_icv;
 
   /* free shared resource */
