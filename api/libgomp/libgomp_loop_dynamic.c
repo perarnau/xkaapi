@@ -222,9 +222,9 @@ void GOMP_parallel_loop_dynamic_start (
 {
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_context_t* const self_thread = kproc->thread;
-
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
   kaapi_thread_t* thread;
+  int i;
 
   ctxt->save_icv = ctxt->icv;
 
@@ -278,7 +278,7 @@ void GOMP_parallel_loop_dynamic_start (
   /* The master thread (id 0) calls fn (data) directly. That's why we
      start this loop from id = 1.*/
   task = kaapi_thread_toptask(thread);
-  for (int i = 1; i < num_threads; i++)
+  for (i = 1; i < num_threads; i++)
   {
     kaapi_task_init( 
         task, 
