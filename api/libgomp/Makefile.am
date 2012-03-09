@@ -54,8 +54,7 @@ install-exec-hook: kaapi-gomp-wrapper
 		< kaapi-gomp-wrapper
 	chmod +x $(DESTDIR)$(bindir)/kaapi-gomp-wrapper
 
-include_HEADERS=\
-    libgomp.h
+include_HEADERS=
 
 libgomp_la_SOURCES=\
     libgomp_parallel.c \
@@ -71,9 +70,16 @@ libgomp_la_SOURCES=\
     libgomp_task.c \
     libgomp_init.c \
     libomprt.c\
+    libgomp_g.h \
+    libgomp.h \
     $(include_HEADERS)
 
 libkomp_la_SOURCES=\
 	$(libgomp_la_SOURCES)
+
+check_PROGRAMS=check-headers
+
+check_headers_SOURCES=\
+  check-headers.c
 
 endif
