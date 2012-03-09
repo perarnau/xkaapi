@@ -128,7 +128,6 @@ static inline void kaapi_request_init( struct kaapi_request_t* pkr, uintptr_t id
 }
 
 
-static int init_iscalled = 0;
 /**
 */
 int kaapi_mt_init(void)
@@ -138,9 +137,6 @@ int kaapi_mt_init(void)
   kaapi_task_t*           task;
   const char* volatile    version __attribute__((unused));
 
-  if (init_iscalled !=0) return EALREADY;
-  init_iscalled = 1;
-  
   kaapi_isterm = 0;
   version = get_kaapi_version();
 
@@ -327,10 +323,6 @@ int kaapi_mt_finalize(void)
   unsigned int i;
   kaapi_processor_t* kproc;
 
-  static kaapi_atomic_t iscalled = {1};
-  if (KAAPI_ATOMIC_DECR(&iscalled) !=0) 
-    return EALREADY;
-
   kaapi_assert(kaapi_count_kprocessors >0);
 
   kproc = kaapi_get_current_processor();
@@ -496,14 +488,5 @@ void kaapi_collect_trace(void)
     printf("Average steal requests aggregation  : %e\n", ((double)cnt_stealreq)/(double)cnt_stealop);
   }
 #endif
-}
-
-
-__attribute__ ((destructor)) static void __kaapi_mt_finalize(void)
-{
-  if (!init_iscalled)
-    return;
-
-  kaapi_mt_finalize();
 }
 
