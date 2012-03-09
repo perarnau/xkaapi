@@ -112,6 +112,7 @@ typedef struct PerTeamLocalStorage {
   kaapi_libkomp_teaminfo_t*    teaminfo;      /* team information */
   
   gomp_icv_t                   icv;
+  gomp_icv_t                   save_icv;      /* saved version. No yet ready for nested */ 
   int                          inside_single;
 } kaapi_libkompctxt_t ;
 

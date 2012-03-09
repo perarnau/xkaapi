@@ -222,14 +222,18 @@ void GOMP_parallel_loop_dynamic_start (
 {
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_context_t* const self_thread = kproc->thread;
+
+  kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
   kaapi_thread_t* thread;
+
+  ctxt->save_icv = ctxt->icv;
 
   kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
 
   kaapi_libkomp_teaminfo_t* teaminfo = 
       komp_init_parallel_start( kproc, num_threads );
 
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
+  
   kaapi_libkompworkshared_t* workshare = &ctxt->workshare;
 
   long ka_start = start;

@@ -203,8 +203,7 @@ GOMP_parallel_start (
   kaapi_libkompctxt_t* ctxt   = komp_get_ctxtkproc(kproc);
 
 
-  gomp_icv_t* save_icv = (gomp_icv_t*)kaapi_thread_pushdata(thread, sizeof(gomp_icv_t) );
-  *save_icv = ctxt->icv;
+  ctxt->save_icv = ctxt->icv;
   kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
 
   kaapi_libkomp_teaminfo_t* teaminfo = 
@@ -272,13 +271,12 @@ GOMP_parallel_end (void)
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
   kaapi_libkomp_teaminfo_t* teaminfo = ctxt->teaminfo;
-  kaapi_thread_t*      thread = kaapi_threadcontext2thread(kproc->thread);
 
   ctxt->teaminfo = 0;
 
   /* implicit sync + implicit pop fame */
   kaapic_end_parallel (KAAPI_SCHEDFLAG_DEFAULT);
-  ctxt->icv = *(gomp_icv_t*)(thread->sp_data - sizeof(gomp_icv_t) );
+  ctxt->icv = ctxt->save_icv;
 
   /* free shared resource */
   kaapi_atomic_destroylock(&teaminfo->lock);
