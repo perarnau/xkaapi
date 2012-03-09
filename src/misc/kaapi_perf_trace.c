@@ -204,13 +204,19 @@ void kaapi_event_closebuffer( kaapi_processor_t* kproc )
 void kaapi_perf_global_init(void)
 {
   int i;
-  pthread_mutex_init(&mutex_listevt, 0);
-  pthread_mutex_init(&mutex_listevtfree_head, 0);
-  pthread_cond_init(&signal_thread, 0);
-  pthread_create(&collector_threadid, 0, _kaapi_event_flushimator, 0);
-  
   for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
     listfd_set[i] = -1;
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  if (getenv("KAAPI_RECORD_TRACE") !=0)
+  {
+    pthread_mutex_init(&mutex_listevt, 0);
+    pthread_mutex_init(&mutex_listevtfree_head, 0);
+    pthread_cond_init(&signal_thread, 0);
+    pthread_create(&collector_threadid, 0, _kaapi_event_flushimator, 0);
+  }
+#endif
+  
 
   kaapi_mt_perf_init();
 }
@@ -229,34 +235,43 @@ void kaapi_perf_global_fini(void)
   kaapi_mt_perf_fini();
 
   kaapi_assert( kaapi_isterminated() );
-  pthread_mutex_lock(&mutex_listevt);
-  pthread_cond_signal(&signal_thread);
-  pthread_mutex_unlock(&mutex_listevt);
-  pthread_join(collector_threadid, &result);
-  
-  /* flush remains buffer */
-  pthread_mutex_lock(&mutex_listevt);
-  while (listevt_head !=0)
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  if (getenv("KAAPI_RECORD_TRACE") !=0)
   {
-    evb = listevt_head;
-    listevt_head = evb->next;
-    if (listevt_head ==0)
-      listevt_tail = 0;
-    evb->next = 0;
-    _kaapi_write_evb(evb);
-    free(evb);
-  }
-  pthread_mutex_unlock(&mutex_listevt);
+    pthread_mutex_lock(&mutex_listevt);
+    pthread_cond_signal(&signal_thread);
+    pthread_mutex_unlock(&mutex_listevt);
+    pthread_join(collector_threadid, &result);
   
+    /* flush remains buffer */
+    pthread_mutex_lock(&mutex_listevt);
+    while (listevt_head !=0)
+    {
+      evb = listevt_head;
+      listevt_head = evb->next;
+      if (listevt_head ==0)
+        listevt_tail = 0;
+      evb->next = 0;
+      _kaapi_write_evb(evb);
+      free(evb);
+    }
+    pthread_mutex_unlock(&mutex_listevt);
+  }
+    
   /* close all file descriptors */
   for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
     if (listfd_set[i] != -1)
       close(listfd_set[i]);
 
-  /* destroy mutexes/conditions */
-  pthread_cond_destroy(&signal_thread);
-  pthread_mutex_destroy(&mutex_listevt);
-  pthread_mutex_destroy(&mutex_listevtfree_head);
+  if (getenv("KAAPI_RECORD_TRACE") !=0)
+  {
+    /* destroy mutexes/conditions */
+    pthread_cond_destroy(&signal_thread);
+    pthread_mutex_destroy(&mutex_listevt);
+    pthread_mutex_destroy(&mutex_listevtfree_head);
+  }
+#endif
 }
 
 
