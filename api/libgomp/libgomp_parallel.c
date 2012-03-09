@@ -273,8 +273,6 @@ GOMP_parallel_end (void)
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
   kaapi_libkomp_teaminfo_t* teaminfo = ctxt->teaminfo;
 
-  ctxt->teaminfo = 0;
-
   /* implicit sync + implicit pop fame */
   kaapic_end_parallel (KAAPI_SCHEDFLAG_DEFAULT);
   ctxt->icv = ctxt->save_icv;
@@ -282,5 +280,6 @@ GOMP_parallel_end (void)
   /* free shared resource */
   kaapi_atomic_destroylock(&teaminfo->lock);
 
+printf("Out GOMP_parallel_end\n"); fflush(stdout);
   ctxt->teaminfo = 0;
 }

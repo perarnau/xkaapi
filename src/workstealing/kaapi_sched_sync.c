@@ -84,12 +84,14 @@ int kaapi_sched_sync_(kaapi_thread_context_t* thread)
   kaapi_frame_t*          save_esfp;
 #if defined(KAAPI_DEBUG)
   kaapi_frame_t*          save_fp;
-  kaapi_frame_t           save_frame;
+  kaapi_frame_t           save_frame __attribute__((unused));
 #endif
 
   /* If pure DFG frame and empty return */
   if ((thread->stack.sfp->tasklist == 0) && kaapi_frame_isempty( thread->stack.sfp ) ) 
     return 0;
+
+printf("In sync\n"); fflush(stdout);
 
   /* here affinity should be deleted (not scalable concept) 
      - use localkid to enforce execution into one specific
@@ -142,7 +144,7 @@ redo:
   kaapi_cpuset_copy(&thread->affinity, &save_affinity);
   
   if (err) /* but do not restore anyting */
-    return err;
+    goto returnvalue;
 
 #if defined(KAAPI_DEBUG)
   kaapi_assert_debug(save_fp == thread->stack.sfp);
@@ -150,6 +152,9 @@ redo:
   /* flush the stack of task */
   thread->stack.sfp->pc = thread->stack.sfp->sp = savepc;
   thread->stack.esfp = save_esfp;
+
+returnvalue:
+printf("out sync, err:%i\n", err); fflush(stdout);
 
   return err;
 }
