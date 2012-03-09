@@ -51,20 +51,20 @@ omp_set_num_threads (int n)
   if (n >0)
   {
     kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
-    ctxt->nextnumthreads = n;
+    ctxt->icv.nextnumthreads = n;
   }
 }
 
 int
 omp_get_num_threads (void)
 {
-  return komp_get_ctxt()->numthreads;
+  return komp_get_ctxt()->icv.numthreads;
 }
 
 int
 omp_get_thread_num (void)
 {
-  return komp_get_ctxt()->threadid;
+  return komp_get_ctxt()->icv.threadid;
 }
 
 /*
@@ -72,7 +72,8 @@ omp_get_thread_num (void)
 int 
 omp_get_max_threads (void)
 {
-  return kaapi_getconcurrency();
+  kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
+  return ctxt->icv.nextnumthreads;
 }
 
 int omp_get_num_procs (void)

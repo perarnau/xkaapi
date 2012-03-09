@@ -7,7 +7,7 @@ main (int argc, char **argv)
 
 #pragma omp parallel shared (cpt)
   {
-    printf ("par-shared: cpt = %i\n", cpt);
+    printf ("%i::par-shared: cpt = %i\n", omp_get_thread_num(), cpt);
   }
 
   return 0;

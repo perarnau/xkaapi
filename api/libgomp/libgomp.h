@@ -74,6 +74,14 @@ typedef struct gomp_barrier {
 struct PerTeamLocalStorage;
 struct WorkShareRep;
 
+/* ICV
+*/
+typedef struct gomp_icv_t {
+  int threadid;       /* thread id */
+  int numthreads;     /* in the team */
+  int nextnumthreads; /* */
+} gomp_icv_t;
+
 /* Team information : common to all threads that shared a same parallel region 
    - localinfo is set to 0 at creation time
    - localinfo[tid] = &workshare of the thread tid is set in the trampoline task
@@ -93,6 +101,7 @@ typedef struct GlobalTeamInformation {
 */
 typedef struct WorkShareRep {
   kaapic_local_work_t*         lwork;      /* last foreach loop context */
+  long                         start;      /* start index of the Kaapi/GOMP slice*/
   long                         incr;       /* scaling factor between Kaapi/GOMP slice*/
   int                          workload;   /* workload */
 } kaapi_libkompworkshared_t;
@@ -103,9 +112,8 @@ typedef struct PerTeamLocalStorage {
   kaapi_libkompworkshared_t    workshare;     /* team workshare */
   kaapi_libkomp_teaminfo_t*    teaminfo;      /* team information */
   
-  int                          threadid;      /* current thread identifier */
-  int                          numthreads;    /* number of threads in the parallel region */
-  int                          nextnumthreads;/* number of threads for the next // region */
+  gomp_icv_t                   icv;
+  gomp_icv_t                   save_icv;      /* saved version. No yet ready for nested */ 
   int                          inside_single;
 } kaapi_libkompctxt_t ;
 
@@ -117,10 +125,10 @@ static inline kaapi_libkompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc 
     kaapi_libkompctxt_t* ctxt = (kaapi_libkompctxt_t*)malloc(sizeof(kaapi_libkompctxt_t));
     ctxt->workshare.lwork = 0;
     ctxt->teaminfo        = 0;
-    ctxt->threadid        = 0;
-    ctxt->numthreads      = 1;
-    ctxt->nextnumthreads  = kaapi_getconcurrency();
-    kproc->libgomp_tls    = ctxt;
+    ctxt->icv.threadid        = 0;
+    ctxt->icv.numthreads      = 1;
+    ctxt->icv.nextnumthreads  = kaapi_getconcurrency();
+    kproc->libgomp_tls        = ctxt;
     return ctxt;
   }
   return (kaapi_libkompctxt_t*)kproc->libgomp_tls;

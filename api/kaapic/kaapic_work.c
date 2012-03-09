@@ -156,6 +156,11 @@ static int kaapic_global_getwork
   }
 
   int pos = gw->wa.tid2pos[tid];
+  if (pos == (uint8_t)-1) 
+  {
+    *i = *j = 0;
+    return 0;
+  }
   kaapi_assert_debug( (pos > 0) && (pos<kaapi_getconcurrency()) );
   
   *i = gw->wa.startindex[pos];
@@ -182,6 +187,11 @@ int kaapic_global_work_pop
   }
 
   int pos = gw->wa.tid2pos[tid];
+  if (pos == (uint8_t)-1) 
+  {
+    *i = *j = 0;
+    return 0;
+  }
   kaapi_assert_debug( pos >= 0 );
   kaapi_assert_debug( pos<kaapi_getconcurrency() );
   
@@ -211,7 +221,7 @@ static int kaapic_global_work_steal
      - any try to pop a slice closed to the tid of the thread
      - only 0 can pop a non poped slice
   */
-#if 1
+#if 0
   /* caller has already pop and finish its slice, if it is 0 then may pop
      the next non null entry
   */

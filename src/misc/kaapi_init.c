@@ -312,4 +312,3 @@ void kaapi_end_parallel(int flag)
   }
 }
 
-

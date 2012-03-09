@@ -50,6 +50,7 @@ bool GOMP_loop_ull_static_start (bool, unsigned long long,
 					unsigned long long *,
 					unsigned long long *)
 {
+  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
 }
                   
 bool GOMP_loop_ull_dynamic_start (bool, unsigned long long,
@@ -59,6 +60,7 @@ bool GOMP_loop_ull_dynamic_start (bool, unsigned long long,
 					 unsigned long long *,
 					 unsigned long long *)
 {
+  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
 }
 
 bool GOMP_loop_ull_guided_start (bool, unsigned long long,
@@ -68,6 +70,7 @@ bool GOMP_loop_ull_guided_start (bool, unsigned long long,
 					unsigned long long *,
 					unsigned long long *)
 {
+  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
 }
 
 bool GOMP_loop_ull_runtime_start (bool, unsigned long long,
@@ -76,6 +79,7 @@ bool GOMP_loop_ull_runtime_start (bool, unsigned long long,
 					 unsigned long long *,
 					 unsigned long long *)
 {
+  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
 }
 
 bool GOMP_loop_ull_ordered_static_start (bool, unsigned long long,
@@ -85,6 +89,7 @@ bool GOMP_loop_ull_ordered_static_start (bool, unsigned long long,
 						unsigned long long *,
 						unsigned long long *)
 {
+  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
 }
 
 bool GOMP_loop_ull_ordered_dynamic_start (bool, unsigned long long,
@@ -94,6 +99,7 @@ bool GOMP_loop_ull_ordered_dynamic_start (bool, unsigned long long,
 						 unsigned long long *,
 						 unsigned long long *)
 {
+  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
 }
 
 bool GOMP_loop_ull_ordered_guided_start (bool, unsigned long long,
@@ -103,6 +109,7 @@ bool GOMP_loop_ull_ordered_guided_start (bool, unsigned long long,
 						unsigned long long *,
 						unsigned long long *)
 {
+  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
 }
 
 bool GOMP_loop_ull_ordered_runtime_start (bool, unsigned long long,
@@ -111,44 +118,53 @@ bool GOMP_loop_ull_ordered_runtime_start (bool, unsigned long long,
 						 unsigned long long *,
 						 unsigned long long *)
 {
+  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
 }                         
 
 bool GOMP_loop_ull_static_next (unsigned long long *,
 				       unsigned long long *)
 {
+  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
 }
 
 bool GOMP_loop_ull_dynamic_next (unsigned long long *,
 					unsigned long long *)
 {
+  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
 }
 
 bool GOMP_loop_ull_guided_next (unsigned long long *,
 				       unsigned long long *)
 {
+  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
 }
 
 bool GOMP_loop_ull_runtime_next (unsigned long long *,
 					unsigned long long *)
 {
+  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
 }
 
 bool GOMP_loop_ull_ordered_static_next (unsigned long long *,
 					       unsigned long long *)
 {
+  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
 }
 
 bool GOMP_loop_ull_ordered_dynamic_next (unsigned long long *,
 						unsigned long long *)
 {
+  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
 }
 
 bool GOMP_loop_ull_ordered_guided_next (unsigned long long *,
 					       unsigned long long *)
 {
+  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
 }
 
 bool GOMP_loop_ull_ordered_runtime_next (unsigned long long *,
 						unsigned long long *)
 {
+  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
 }
