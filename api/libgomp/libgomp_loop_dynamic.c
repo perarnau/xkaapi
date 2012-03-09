@@ -44,9 +44,6 @@
 #include "libgomp.h"
 
 
-#define KAAPI_GOMP_USE_TASK 1
-
-
 /* General comment on: http://gcc.gnu.org/onlinedocs/libgomp/Implementing-FOR-construct.html
 
 4.11 Implementing FOR construct
@@ -125,8 +122,8 @@ bool GOMP_loop_dynamic_start (
       chunk_size=(ka_end-ka_start)/1024*kaapi_getconcurrency();
       if (chunk_size ==0) chunk_size = 1;
     }
-    //kaapic_foreach_attr_set_grains( &attr, chunk_size, 1 );
-    kaapic_foreach_attr_set_grains( &attr, 8, 1); 
+    kaapic_foreach_attr_set_grains( &attr, chunk_size, 1 );
+    //kaapic_foreach_attr_set_grains( &attr, 8, 1); 
         
     /* initialize the master if not already done */
     workshare->lwork = kaapic_foreach_workinit(self_thread, 
@@ -192,8 +189,7 @@ bool GOMP_loop_dynamic_next (long *istart, long *iend)
 }
 
 
-
-#if (KAAPI_GOMP_USE_TASK == 1)
+/* fwd decl */
 typedef struct komp_parallelfor_task_arg {
   int                       numthreads;
   int                       threadid;
@@ -209,7 +205,6 @@ static void komp_trampoline_task_parallelfor
   void*           voidp, 
   kaapi_thread_t* thread
 );
-#endif
 
 
 /* 
@@ -250,8 +245,7 @@ void GOMP_parallel_loop_dynamic_start (
     chunk_size=(ka_end-ka_start)/1024*kaapi_getconcurrency();
     if (chunk_size ==0) chunk_size = 1;
   }
-  //kaapic_foreach_attr_set_grains( &attr, chunk_size, 1 );
-  kaapic_foreach_attr_set_grains( &attr, 8, 1); 
+  kaapic_foreach_attr_set_grains( &attr, chunk_size, 1 );
   
   workshare->lwork = kaapic_foreach_workinit(
       self_thread,
@@ -268,7 +262,6 @@ void GOMP_parallel_loop_dynamic_start (
   /* create each task, as in GOMP_parallel_start 
      + arguments to initialize local context
   */
-#if (KAAPI_GOMP_USE_TASK == 1)
   kaapi_task_t* task;
   komp_parallelfor_task_arg_t* arg;
   komp_parallelfor_task_arg_t* allarg;
@@ -299,9 +292,6 @@ void GOMP_parallel_loop_dynamic_start (
     task = kaapi_thread_nexttask(thread, task);
   }
   kaapi_thread_push_packedtasks(thread, num_threads-1);
-#else
-#error "Not yet implemented"
-#endif
 }
 
 
