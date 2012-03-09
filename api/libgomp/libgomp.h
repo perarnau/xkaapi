@@ -49,6 +49,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include <omp.h>
+
 #ifdef HAVE_VISIBILITY_HIDDEN
 # pragma GCC visibility push(hidden)
 #endif
@@ -302,7 +304,7 @@ extern bool GOMP_single_start (void);
 extern void *GOMP_single_copy_start (void);
 extern void GOMP_single_copy_end (void *);
 
-
+#if 0 // in OMP.H
 /* function from the runtime support of OMP */
 typedef enum omp_sched_t {
     omp_sched_static = 1,
@@ -346,5 +348,6 @@ extern void omp_destroy_nest_lock(omp_nest_lock_t *lock);
 extern void omp_set_nest_lock(omp_nest_lock_t *lock);
 extern void omp_unset_nest_lock(omp_nest_lock_t *lock);
 extern int omp_test_nest_lock(omp_nest_lock_t *lock);
+#endif
 
 #endif // #ifndef _KAAPI_LIBGOMP_

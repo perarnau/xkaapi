@@ -121,12 +121,6 @@ omp_get_nested(void)
 
 /*
 */
-typedef enum omp_sched_t {
-    omp_sched_static = 1,
-    omp_sched_dynamic = 2,
-    omp_sched_guided = 3,
-    omp_sched_auto = 4
-} omp_sched_t;
 void 
 omp_set_schedule(omp_sched_t kind __attribute__((unused)), int modifier __attribute__((unused)))
 {
@@ -224,34 +218,31 @@ double omp_get_wtick(void)
 
 /* Simple lock: map omp_lock_t to the smallest atomic in kaapi...
 */
-typedef kaapi_atomic8_t omp_lock_t;
-typedef kaapi_atomic32_t omp_nest_lock_t;
-
 void omp_init_lock(omp_lock_t *lock)
 {
-  KAAPI_ATOMIC_WRITE(lock, 0);
+  KAAPI_ATOMIC_WRITE( (kaapi_atomic8_t*)lock, 0);
 }
 
 void omp_destroy_lock(omp_lock_t *lock)
 {
-  KAAPI_ATOMIC_WRITE(lock, 0);
+  KAAPI_ATOMIC_WRITE( (kaapi_atomic8_t*)lock, 0);
 }
 
 void omp_set_lock(omp_lock_t *lock)
 {
-  while ( (KAAPI_ATOMIC_READ(lock) !=0) || 
-           !KAAPI_ATOMIC_CAS(lock,0,1) )
+  while ( (KAAPI_ATOMIC_READ( (kaapi_atomic8_t*)lock) !=0) || 
+           !KAAPI_ATOMIC_CAS( (kaapi_atomic8_t*)lock,0,1) )
     kaapi_slowdown_cpu();
 }
 
 void omp_unset_lock(omp_lock_t *lock)
 {
-  KAAPI_ATOMIC_WRITE(lock, 0);
+  KAAPI_ATOMIC_WRITE( (kaapi_atomic8_t*)lock, 0);
 }
 
 int omp_test_lock(omp_lock_t *lock)
 {
-  return KAAPI_ATOMIC_CAS(lock,0,1);
+  return KAAPI_ATOMIC_CAS( (kaapi_atomic8_t*)lock,0,1);
 }
 
 /* nested lock */
