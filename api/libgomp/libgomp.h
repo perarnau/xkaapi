@@ -160,4 +160,50 @@ void gomp_barrier_wait (struct gomp_barrier *barrier);
 
 #include "libgomp_g.h"
 
+#ifdef HAVE_VERSION_SYMBOL
+extern void gomp_init_lock_30 (omp_lock_t *) __GOMP_NOTHROW;
+extern void gomp_destroy_lock_30 (omp_lock_t *) __GOMP_NOTHROW;
+extern void gomp_set_lock_30 (omp_lock_t *) __GOMP_NOTHROW;
+extern void gomp_unset_lock_30 (omp_lock_t *) __GOMP_NOTHROW;
+extern int gomp_test_lock_30 (omp_lock_t *) __GOMP_NOTHROW;
+extern void gomp_init_nest_lock_30 (omp_nest_lock_t *) __GOMP_NOTHROW;
+extern void gomp_destroy_nest_lock_30 (omp_nest_lock_t *) __GOMP_NOTHROW;
+extern void gomp_set_nest_lock_30 (omp_nest_lock_t *) __GOMP_NOTHROW;
+extern void gomp_unset_nest_lock_30 (omp_nest_lock_t *) __GOMP_NOTHROW;
+extern int gomp_test_nest_lock_30 (omp_nest_lock_t *) __GOMP_NOTHROW;
+
+#if 0 /* not yet implemented */
+extern void gomp_init_lock_25 (omp_lock_25_t *) __GOMP_NOTHROW;
+extern void gomp_destroy_lock_25 (omp_lock_25_t *) __GOMP_NOTHROW;
+extern void gomp_set_lock_25 (omp_lock_25_t *) __GOMP_NOTHROW;
+extern void gomp_unset_lock_25 (omp_lock_25_t *) __GOMP_NOTHROW;
+extern int gomp_test_lock_25 (omp_lock_25_t *) __GOMP_NOTHROW;
+extern void gomp_init_nest_lock_25 (omp_nest_lock_25_t *) __GOMP_NOTHROW;
+extern void gomp_destroy_nest_lock_25 (omp_nest_lock_25_t *) __GOMP_NOTHROW;
+extern void gomp_set_nest_lock_25 (omp_nest_lock_25_t *) __GOMP_NOTHROW;
+extern void gomp_unset_nest_lock_25 (omp_nest_lock_25_t *) __GOMP_NOTHROW;
+extern int gomp_test_nest_lock_25 (omp_nest_lock_25_t *) __GOMP_NOTHROW;
+#endif
+
+# define strong_alias(fn, al) \
+  extern __typeof (fn) al __attribute__ ((alias (#fn)));
+# define komp_lock_symver30(fn) \
+  __asm (".symver g" #fn "_30, " #fn "@@OMP_3.0");
+# define komp_lock_symver(fn) \
+  komp_lock_symver30(fn) \
+  __asm (".symver g" #fn "_25, " #fn "@OMP_1.0");
+
+#else
+# define gomp_init_lock_30 omp_init_lock
+# define gomp_destroy_lock_30 omp_destroy_lock
+# define gomp_set_lock_30 omp_set_lock
+# define gomp_unset_lock_30 omp_unset_lock
+# define gomp_test_lock_30 omp_test_lock
+# define gomp_init_nest_lock_30 omp_init_nest_lock
+# define gomp_destroy_nest_lock_30 omp_destroy_nest_lock
+# define gomp_set_nest_lock_30 omp_set_nest_lock
+# define gomp_unset_nest_lock_30 omp_unset_nest_lock
+# define gomp_test_nest_lock_30 omp_test_nest_lock
+#endif
+
 #endif // #ifndef _KAAPI_LIBGOMP_
