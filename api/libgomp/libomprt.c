@@ -52,12 +52,16 @@ omp_set_num_threads (int n)
   {
     kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
     ctxt->nextnumthreads = n;
+printf("%s: set %i\n", __PRETTY_FUNCTION__, ctxt->nextnumthreads );
+fflush(stdout);
   }
 }
 
 int
 omp_get_num_threads (void)
 {
+printf("%s: get %i\n", __PRETTY_FUNCTION__, komp_get_ctxt()->numthreads );
+fflush(stdout);
   return komp_get_ctxt()->numthreads;
 }
 
@@ -72,7 +76,10 @@ omp_get_thread_num (void)
 int 
 omp_get_max_threads (void)
 {
-  return kaapi_getconcurrency();
+  kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
+printf("%s: get %i\n", __PRETTY_FUNCTION__, ctxt->nextnumthreads );
+fflush(stdout);
+  return ctxt->nextnumthreads;
 }
 
 int omp_get_num_procs (void)

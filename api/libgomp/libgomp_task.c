@@ -66,14 +66,21 @@ static void GOMP_trampoline_task(
   GOMP_spawn_task_arg_t* taskarg = (GOMP_spawn_task_arg_t*)voidp;
   kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
 
-  int num_threads  = taskarg->numthreads;
-  int thread_id    = taskarg->threadid;
+  int save_num_threads    = ctxt->numthreads;
+  int save_nextnumthreads = ctxt->nextnumthreads;
+  int save_thread_id      = ctxt->threadid;
+
+printf("GOMP_task: Save nextnumthreads=%i\n", save_nextnumthreads); fflush(stdout);
   
-  ctxt->numthreads = num_threads;
-  ctxt->threadid   = thread_id;
+  ctxt->numthreads = taskarg->numthreads;
+  ctxt->threadid   = taskarg->threadid;
+
   taskarg->fn(taskarg->data);
-  ctxt->numthreads = num_threads;
-  ctxt->threadid   = thread_id;
+
+  ctxt->numthreads     = save_num_threads;
+  ctxt->nextnumthreads = save_nextnumthreads;
+  ctxt->threadid       = save_thread_id;
+printf("GOMP_task: restore nextnumthreads=%i\n", save_nextnumthreads); fflush(stdout);
 }
 
 KAAPI_REGISTER_TASKFORMAT(GOMP_task_format,
@@ -113,26 +120,14 @@ void GOMP_task(
                unsigned flags __attribute__((unused))
                )
 {
-#if 0// EXPERIMENTAL defined(KAAPI_USE_PERFCOUNTER)
-  if (if_clause) 
-  {
-    /* try to force sequential degeneration is no steal request */
-    kaapi_processor_t* kproc = kaapi_get_current_processor();
-    int seqdeg = 0;
-    kaapi_perf_counter_t rcntsi = KAAPI_PERF_REG_READALL(kproc, KAAPI_PERF_ID_STEALIN);
-    if (rcntsi == kproc->lastcounter)
-    {
-      seqdeg = 1;
-      kaapi_push_frame(&kproc->thread->stack);
-    }
-    else
-      kproc->lastcounter = rcntsi;
-  }
-  if (!if_clause || seqdeg) 
-#else
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
   if (!if_clause) 
-#endif
   {
+    int save_num_threads    = ctxt->numthreads;
+    int save_nextnumthreads = ctxt->nextnumthreads;
+    int save_thread_id      = ctxt->threadid;
+
     if (cpyfn)
     {
       char buf[arg_size + arg_align - 1];
@@ -143,15 +138,13 @@ void GOMP_task(
     }
     else
       fn (data);
-#if 0// EXPERIMENTAL//defined(KAAPI_USE_PERFCOUNTER)
-    kaapi_pop_frame(&kproc->thread->stack);
-#endif
+
+    ctxt->numthreads     = save_num_threads;
+    ctxt->nextnumthreads = save_nextnumthreads;
+    ctxt->threadid       = save_thread_id;
     return;
   }
-#if 1// EXPERIMENTAL//!defined(KAAPI_USE_PERFCOUNTER)
-  kaapi_processor_t* kproc = kaapi_get_current_processor();
-#endif
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
+
   kaapi_thread_t* thread =  kaapi_threadcontext2thread(kproc->thread);
   kaapi_task_t* task = kaapi_thread_toptask(thread);
   kaapi_task_init( 
