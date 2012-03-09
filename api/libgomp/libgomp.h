@@ -101,6 +101,7 @@ typedef struct GlobalTeamInformation {
 */
 typedef struct WorkShareRep {
   kaapic_local_work_t*         lwork;      /* last foreach loop context */
+  long                         start;      /* start index of the Kaapi/GOMP slice*/
   long                         incr;       /* scaling factor between Kaapi/GOMP slice*/
   int                          workload;   /* workload */
 } kaapi_libkompworkshared_t;

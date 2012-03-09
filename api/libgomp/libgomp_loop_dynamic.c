@@ -107,9 +107,10 @@ bool GOMP_loop_dynamic_start (
   kaapi_libkompworkshared_t* workshare = &ctxt->workshare;
   kaapi_libkomp_teaminfo_t* teaminfo = ctxt->teaminfo;
 
-  long ka_start = start;
+  long ka_start = 0;
   long ka_end   = (end-start+incr-1)/incr;
-  workshare->incr = incr;
+  workshare->start = start;
+  workshare->incr  = incr;
 
   if (ctxt->icv.threadid ==0)
   {
@@ -160,8 +161,8 @@ bool GOMP_loop_dynamic_start (
         iend)
       )
   {
-    *istart *= incr;
-    *iend *= incr;
+    *istart = ctxt->workshare.start + *istart * ctxt->workshare.incr;
+    *end    = ctxt->workshare.start + *iend * ctxt->workshare.incr;
     return 1;
   }
   return 0;
@@ -181,8 +182,8 @@ bool GOMP_loop_dynamic_next (long *istart, long *iend)
         iend)
   )
   {
-    *istart *= ctxt->workshare.incr;
-    *iend *= ctxt->workshare.incr;
+    *istart = ctxt->workshare.start + *istart * ctxt->workshare.incr;
+    *end    = ctxt->workshare.start + *iend * ctxt->workshare.incr;
     return 1;
   }
   return 0;
