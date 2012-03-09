@@ -98,11 +98,12 @@ typedef struct WorkShareRep {
 
 /** Pre-historic TLS  support for OMP */
 typedef struct PerTeamLocalStorage {
-  kaapi_libkompworkshared_t    workshare;  /* team workshare */
-  kaapi_libkomp_teaminfo_t*    teaminfo;   /* team information */
+  kaapi_libkompworkshared_t    workshare;     /* team workshare */
+  kaapi_libkomp_teaminfo_t*    teaminfo;      /* team information */
   
-  int                          threadid;
-  int                          numthreads;
+  int                          threadid;      /* current thread identifier */
+  int                          numthreads;    /* number of threads in the parallel region */
+  int                          nextnumthreads;/* number of threads for the next // region */
   int                          inside_single;
 } kaapi_libkompctxt_t ;
 
@@ -113,10 +114,11 @@ static inline kaapi_libkompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc 
   {
     kaapi_libkompctxt_t* ctxt = (kaapi_libkompctxt_t*)malloc(sizeof(kaapi_libkompctxt_t));
     ctxt->workshare.lwork = 0;
-    ctxt->teaminfo   = 0;
-    ctxt->threadid   = 0;
-    ctxt->numthreads = 1;
-    kproc->libgomp_tls = ctxt;
+    ctxt->teaminfo        = 0;
+    ctxt->threadid        = 0;
+    ctxt->numthreads      = 1;
+    ctxt->nextnumthreads  = kaapi_getconcurrency();
+    kproc->libgomp_tls    = ctxt;
     return ctxt;
   }
   return (kaapi_libkompctxt_t*)kproc->libgomp_tls;
@@ -141,18 +143,18 @@ enum omp_task_kind
   GOMP_TASK_TIED
 };
 
-extern int gomp_nthreads_var;
-
-/* going back to the previous visibility, ie "default" */
-#ifdef HAVE_ATTRIBUTE_VISIBILITY
-# pragma GCC visibility pop
-#endif
 
 /* init.c */
 
 void gomp_barrier_init (struct gomp_barrier *barrier, unsigned int num);
 void gomp_barrier_destroy (struct gomp_barrier *barrier);
 void gomp_barrier_wait (struct gomp_barrier *barrier);
+
+
+/* going back to the previous visibility, ie "default" */
+#ifdef HAVE_ATTRIBUTE_VISIBILITY
+# pragma GCC visibility pop
+#endif
 
 extern void GOMP_barrier (void);
 

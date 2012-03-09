@@ -42,15 +42,12 @@
 ** terms.
 ** 
 */
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <ctype.h>
 #include <errno.h>
 #include "kaapic.h"
-
-int gomp_nthreads_var = 0;
 
 /* Parse an unsigned long environment varible.  Return true if one was
    present and it was successfully parsed.  */
@@ -102,8 +99,6 @@ initialize_lib (void)
   /* here to do: convert GOM_AFFINITY to KAAPI_CPUSET */
 
   kaapic_init (KAAPIC_START_ONLY_MAIN);
-
-  gomp_nthreads_var = (env_nthreads > 0) ? env_nthreads : kaapic_get_concurrency ();  
 
   //kaapic_begin_parallel ();
 }
