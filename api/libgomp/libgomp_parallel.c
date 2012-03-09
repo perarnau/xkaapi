@@ -78,7 +78,9 @@ static void GOMP_trampoline_task_parallel
   ctxt->inside_single      = 0;
   ctxt->teaminfo           = taskarg->teaminfo;
 
+printf("%i: In GOMP_trampoline_task_parallel\n", kaapi_get_current_processor()->kid); fflush(stdout);
   taskarg->fn(taskarg->data);
+printf("%i: Out GOMP_trampoline_task_parallel\n", kaapi_get_current_processor()->kid); fflush(stdout);
 
   /* Restore the initial context values. */
   ctxt->numthreads         = save_numthreads;
@@ -258,7 +260,6 @@ GOMP_parallel_start (
   );
 
 #endif
-
   kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
 
   /* initialize master context */
@@ -270,15 +271,16 @@ void
 GOMP_parallel_end (void)
 {
   kaapi_processor_t* kproc = kaapi_get_current_processor();
+  kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
+  kaapi_libkomp_teaminfo_t* teaminfo = ctxt->teaminfo;
+
+  gomp_barrier_wait(&teaminfo->barrier);
+  ctxt->teaminfo = 0;
 
   /* implicit sync */
   kaapic_end_parallel (KAAPI_SCHEDFLAG_DEFAULT);
 
+  /* restore frame:push was in komp_init_parallel_start */
   kaapi_thread_pop_frame_(kproc->thread);
-
-  /* restore frame */
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
-  kaapi_atomic_destroylock(&ctxt->teaminfo->lock);
-
-  ctxt->teaminfo = 0;
+  kaapi_atomic_destroylock(&teaminfo->lock);
 }

@@ -66,12 +66,12 @@ int main(int argc, char** argv)
   kaapic_init(1);
   
   if (argc >1)
-    grain = atoi(argv[1]);
-  else
-    grain = size / kaapi_getconcurrency();
+    size = atoi(argv[1]);
 
   if (argc >2)
-    size = atoi(argv[2]);
+    grain = atoi(argv[2]);
+  else
+    grain = size / kaapi_getconcurrency();
 
   array = (Point*)malloc(sizeof(Point)*size);
   source = (Point*)malloc(sizeof(Point)*size);
@@ -93,7 +93,7 @@ int main(int argc, char** argv)
   
   start = kaapic_get_time();
   
-  for (i = 0; i < 50; ++i)
+  for (i = 0; i < 5; ++i)
   {
     t0 = kaapic_get_time();
     //kaapic_foreach(0, size, &attr, 2, Matbody_inplace, array, &mat);
@@ -104,7 +104,7 @@ int main(int argc, char** argv)
       
   stop = kaapic_get_time();
   
-  printf("Grain:%i\ttime: %lf\n", grain, (stop - start)/50);
+  printf("Grain:%i\ttime: %lf\n", grain, (stop - start)/5);
   
   kaapic_finalize();
 

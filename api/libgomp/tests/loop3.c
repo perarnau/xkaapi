@@ -18,7 +18,7 @@ double get_elapsedtime()
 
 void fu(int i)
 {
-  int l = (rand_r(&i) % 100);
+  int l = (rand_r(&i) % 10);
   for ( ; l>0; --l)
     sin((double)(unsigned long)&i);
 }
@@ -40,13 +40,16 @@ main (int argc, char **argv)
       double t0, t1;  
       t0 = get_elapsedtime();
 #pragma omp for schedule(runtime) private(i)
-      for (i=0; i<10000; ++i)
+      for (i=0; i<1000000; ++i)
         fu(i);
       t1 = get_elapsedtime();
       alldelay[omp_get_thread_num()] += t1-t0;
     }
-    fputc('.',stdout);
-    if (j % 50 ==0) fflush(stdout);
+    if (j % 10)
+    {
+      fputc('.',stdout);
+      fflush(stdout);
+     }
   }
   t1 = get_elapsedtime();
 

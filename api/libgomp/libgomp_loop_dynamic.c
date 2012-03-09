@@ -100,7 +100,7 @@ bool GOMP_loop_dynamic_start (
   long end, 
   long incr, 
   long chunk_size,
-	long *istart, 
+  long *istart, 
   long *iend
 )
 {  
@@ -114,6 +114,8 @@ bool GOMP_loop_dynamic_start (
   long ka_end   = (end-start+incr-1)/incr;
   workshare->incr = incr;
 
+printf("%i: GOMP_loop_dynamic_start: start loop\n", kproc->kid);
+fflush(stdout);
   if (ctxt->threadid ==0)
   {
     /* TODO: automatic adaptation on the chunksize here
@@ -231,7 +233,9 @@ void GOMP_parallel_loop_dynamic_start (
   kaapi_thread_context_t* const self_thread = kproc->thread;
   kaapi_thread_t* thread;
 
-  /* push a frame as parallel do it */
+printf("%i: GOMP_parallel_loop_dynamic_start: start loop\n", kproc->kid);
+fflush(stdout);
+
   kaapi_libkomp_teaminfo_t* teaminfo = 
       komp_init_parallel_start( kproc, num_threads );
 
@@ -312,7 +316,7 @@ static void komp_trampoline_task_parallelfor
   kaapi_thread_t* thread
 )
 {
-//printf("In %s\n", __PRETTY_FUNCTION__ );
+printf("In %s\n", __PRETTY_FUNCTION__ );
   komp_parallelfor_task_arg_t* taskarg = (komp_parallelfor_task_arg_t*)voidp;
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
@@ -357,6 +361,9 @@ static void komp_trampoline_task_parallelfor
   ctxt->numthreads         = save_numthreads;
   ctxt->threadid           = save_threadid;
   ctxt->teaminfo           = save_teaminfo;
+
+printf("Out %s\n", __PRETTY_FUNCTION__ );
+fflush(stdout);
 }
 
 KAAPI_REGISTER_TASKFORMAT( komp_parallelfor_task_format,

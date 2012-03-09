@@ -46,8 +46,8 @@ static void fu (
 #endif
     
     array[k] += *value;
-    array[k] += sqrt(sin(*value * *value) + cos(*value * *value));
-    array[k] += sin(*value * *value) + sqrt(cos(*value * *value));
+//    array[k] += sqrt(sin(*value * *value) + cos(*value * *value));
+//    array[k] += sin(*value * *value) + sqrt(cos(*value * *value));
   }
   
 #if CONFIG_TERM_BUG
@@ -79,7 +79,7 @@ int main(int ac, char** av)
   kaapic_init(1);
   
   kaapic_foreach_attr_init(&attr);
-  kaapic_foreach_attr_set_grains(&attr, 1024, 1024);
+  kaapic_foreach_attr_set_grains(&attr, 256, 1024);
   
 #if CONFIG_BENCH
   start = kaapic_get_time();
@@ -91,10 +91,9 @@ int main(int ac, char** av)
     for (i = 0; i < 1000; ++i)
 #endif
     {
-#if 0
-     if (i % 10 ==0) fputc('.',stdout);
-     if (i % 100 ==0) fflush(stdout);
-     if (i % 1000 ==0) printf("%i\n", i);
+#if 1
+     if (i % 10 ==0){fputc('.',stdout);fflush(stdout);}
+     if ((1+i) % 1000 ==0) printf("\n%i\n", i);
 #endif
 #if CONFIG_TERM_BUG
       global_check = (void*)(uintptr_t)i;
