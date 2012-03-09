@@ -49,7 +49,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-//#include <omp.h>
+#include <omp.h>
 
 #ifdef HAVE_VISIBILITY_HIDDEN
 # pragma GCC visibility push(hidden)
