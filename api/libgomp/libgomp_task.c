@@ -47,6 +47,7 @@
 
 typedef struct GOMP_spawn_task_arg {
   int                       numthreads;
+  int                       nextnumthreads;
   int                       threadid;
   void                     (*fn) (void *);
   void*                     data;
@@ -66,21 +67,15 @@ static void GOMP_trampoline_task(
   GOMP_spawn_task_arg_t* taskarg = (GOMP_spawn_task_arg_t*)voidp;
   kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
 
-  int save_num_threads    = ctxt->numthreads;
-  int save_nextnumthreads = ctxt->nextnumthreads;
-  int save_thread_id      = ctxt->threadid;
+  gomp_icv_t save_icv = ctxt->icv;
 
-printf("GOMP_task: Save nextnumthreads=%i\n", save_nextnumthreads); fflush(stdout);
-  
-  ctxt->numthreads = taskarg->numthreads;
-  ctxt->threadid   = taskarg->threadid;
+  ctxt->icv.numthreads     = taskarg->numthreads;
+  ctxt->icv.nextnumthreads = taskarg->nextnumthreads;
+  ctxt->icv.threadid       = taskarg->threadid;
 
   taskarg->fn(taskarg->data);
 
-  ctxt->numthreads     = save_num_threads;
-  ctxt->nextnumthreads = save_nextnumthreads;
-  ctxt->threadid       = save_thread_id;
-printf("GOMP_task: restore nextnumthreads=%i\n", save_nextnumthreads); fflush(stdout);
+  ctxt->icv = save_icv;
 }
 
 KAAPI_REGISTER_TASKFORMAT(GOMP_task_format,
@@ -124,10 +119,7 @@ void GOMP_task(
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
   if (!if_clause) 
   {
-    int save_num_threads    = ctxt->numthreads;
-    int save_nextnumthreads = ctxt->nextnumthreads;
-    int save_thread_id      = ctxt->threadid;
-
+    gomp_icv_t save_icv = ctxt->icv;
     if (cpyfn)
     {
       char buf[arg_size + arg_align - 1];
@@ -139,9 +131,7 @@ void GOMP_task(
     else
       fn (data);
 
-    ctxt->numthreads     = save_num_threads;
-    ctxt->nextnumthreads = save_nextnumthreads;
-    ctxt->threadid       = save_thread_id;
+    ctxt->icv      = save_icv;
     return;
   }
 
@@ -159,10 +149,11 @@ void GOMP_task(
     memcpy(userarg, data, arg_size);
 
   GOMP_spawn_task_arg_t* arg = kaapi_task_getargst( task, GOMP_spawn_task_arg_t );
-  arg->numthreads = ctxt->numthreads;
-  arg->threadid   = ctxt->threadid;
-  arg->fn         = fn;
-  arg->data       = userarg;
+  arg->numthreads     = ctxt->icv.numthreads;
+  arg->nextnumthreads = ctxt->icv.nextnumthreads;
+  arg->threadid       = ctxt->icv.threadid;
+  arg->fn             = fn;
+  arg->data           = userarg;
   kaapi_thread_pushtask(thread);
 }
 

@@ -53,6 +53,7 @@
 
 typedef struct GOMP_parallel_task_arg {
   int                       numthreads;
+  int                       nextnumthreads;
   int                       threadid;
   void                    (*fn) (void *);
   void*                     data;
@@ -69,46 +70,46 @@ static void GOMP_trampoline_task_parallel
   kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
   
   /* save context information */
-  int save_threadid = ctxt->threadid;
-  int save_numthreads = ctxt->numthreads;
-  int save_nextnumthreads = ctxt->nextnumthreads;
+  gomp_icv_t save_icv = ctxt->icv;
   kaapi_libkomp_teaminfo_t* save_teaminfo = ctxt->teaminfo;
 
-  ctxt->numthreads         = taskarg->numthreads;
-  ctxt->threadid           = taskarg->threadid;
+  ctxt->icv.numthreads     = taskarg->numthreads;
+  ctxt->icv.nextnumthreads = taskarg->nextnumthreads;
+  ctxt->icv.threadid       = taskarg->threadid;
   ctxt->inside_single      = 0;
   ctxt->teaminfo           = taskarg->teaminfo;
 
   taskarg->fn(taskarg->data);
 
   /* Restore the initial context values. */
-  ctxt->threadid           = save_threadid;
-  ctxt->numthreads         = save_numthreads;
-  ctxt->nextnumthreads     = save_nextnumthreads;
-  ctxt->teaminfo           = save_teaminfo;
+  ctxt->icv      = save_icv;
+  ctxt->teaminfo = save_teaminfo;
 }
 
 KAAPI_REGISTER_TASKFORMAT( GOMP_parallel_task_format,
     "GOMP/Parallel Task",
     GOMP_trampoline_task_parallel,
     sizeof(GOMP_parallel_task_arg_t),
-    5,
+    6,
     (kaapi_access_mode_t[]){ 
         KAAPI_ACCESS_MODE_V, 
         KAAPI_ACCESS_MODE_V, 
+        KAAPI_ACCESS_MODE_V,
         KAAPI_ACCESS_MODE_V,
         KAAPI_ACCESS_MODE_V,
         KAAPI_ACCESS_MODE_V 
     },
     (kaapi_offset_t[])     { 
         offsetof(GOMP_parallel_task_arg_t, numthreads), 
+        offsetof(GOMP_parallel_task_arg_t, nextnumthreads), 
         offsetof(GOMP_parallel_task_arg_t, threadid), 
         offsetof(GOMP_parallel_task_arg_t, fn), 
         offsetof(GOMP_parallel_task_arg_t, data),
         offsetof(GOMP_parallel_task_arg_t, teaminfo)
     },
-    (kaapi_offset_t[])     { 0, 0, 0, 0, 0 },
+    (kaapi_offset_t[])     { 0, 0, 0, 0, 0, 0 },
     (const struct kaapi_format_t*[]) { 
+        kaapi_int_format, 
         kaapi_int_format, 
         kaapi_int_format,
         kaapi_voidp_format,
@@ -158,7 +159,7 @@ komp_init_parallel_start (
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
 
   if (num_threads == 0)
-    num_threads = ctxt->nextnumthreads;
+    num_threads = ctxt->icv.nextnumthreads;
 
   thread = kaapi_threadcontext2thread(kproc->thread);
   
@@ -183,8 +184,8 @@ komp_init_parallel_start (
   ctxt->teaminfo            = teaminfo;
 
   /* initialize master context */
-  ctxt->numthreads = num_threads;
-  ctxt->threadid   = 0;
+  ctxt->icv.numthreads = num_threads;
+  ctxt->icv.threadid   = 0;
 
   return teaminfo;
 };
@@ -197,18 +198,19 @@ GOMP_parallel_start (
   unsigned num_threads
 )
 {
-  kaapi_processor_t* kproc = kaapi_get_current_processor();
-  kaapi_thread_t* thread;
-  kaapi_libkompctxt_t* ctxt;
+  kaapi_processor_t*   kproc  = kaapi_get_current_processor();
+  kaapi_thread_t*      thread = kaapi_threadcontext2thread(kproc->thread);
+  kaapi_libkompctxt_t* ctxt   = komp_get_ctxtkproc(kproc);
 
+
+  gomp_icv_t* save_icv = (gomp_icv_t*)kaapi_thread_pushdata(thread, sizeof(gomp_icv_t) );
+  *save_icv = ctxt->icv;
   kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
 
   kaapi_libkomp_teaminfo_t* teaminfo = 
     komp_init_parallel_start( kproc, num_threads );
   
-  ctxt = komp_get_ctxtkproc(kproc);
-  num_threads = ctxt->numthreads;
-  thread = kaapi_threadcontext2thread(kproc->thread);
+  num_threads = ctxt->icv.numthreads;
 
 #if (KAAPI_GOMP_USE_TASK == 1)
 
@@ -218,7 +220,7 @@ GOMP_parallel_start (
   
   
   allarg = kaapi_thread_pushdata(thread, num_threads * sizeof(GOMP_parallel_task_arg_t));
-
+  
   /* The master thread (id 0) calls fn (data) directly. That's why we
      start this loop from id = 1.*/
   task = kaapi_thread_toptask(thread);
@@ -270,11 +272,13 @@ GOMP_parallel_end (void)
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
   kaapi_libkomp_teaminfo_t* teaminfo = ctxt->teaminfo;
+  kaapi_thread_t*      thread = kaapi_threadcontext2thread(kproc->thread);
 
   ctxt->teaminfo = 0;
 
   /* implicit sync + implicit pop fame */
   kaapic_end_parallel (KAAPI_SCHEDFLAG_DEFAULT);
+  ctxt->icv = *(gomp_icv_t*)(thread->sp_data - sizeof(gomp_icv_t) );
 
   /* free shared resource */
   kaapi_atomic_destroylock(&teaminfo->lock);
