@@ -91,8 +91,6 @@ int kaapi_sched_sync_(kaapi_thread_context_t* thread)
   if ((thread->stack.sfp->tasklist == 0) && kaapi_frame_isempty( thread->stack.sfp ) ) 
     return 0;
 
-printf("In sync\n"); fflush(stdout);
-
   /* here affinity should be deleted (not scalable concept) 
      - use localkid to enforce execution into one specific
      kprocessor
@@ -154,8 +152,6 @@ redo:
   thread->stack.esfp = save_esfp;
 
 returnvalue:
-printf("out sync, err:%i\n", err); fflush(stdout);
-
   return err;
 }
 

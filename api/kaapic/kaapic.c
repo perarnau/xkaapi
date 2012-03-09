@@ -139,7 +139,6 @@ int kaapic_end_parallel(int flags)
 
   kaapi_end_parallel(schedflag);
   kaapi_pop_frame(&kaapi_self_thread_context()->stack );
-printf("Out kaapic_end_parallel\n"); fflush(stdout);
   
   return 0;
 }

@@ -222,19 +222,18 @@ void GOMP_parallel_loop_dynamic_start (
 {
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_context_t* const self_thread = kproc->thread;
-
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
+  kaapi_libkompworkshared_t* workshare;
+  kaapi_libkomp_teaminfo_t* teaminfo;
   kaapi_thread_t* thread;
+  int i;
 
   ctxt->save_icv = ctxt->icv;
 
   kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
 
-  kaapi_libkomp_teaminfo_t* teaminfo = 
-      komp_init_parallel_start( kproc, num_threads );
-
-  
-  kaapi_libkompworkshared_t* workshare = &ctxt->workshare;
+  teaminfo = komp_init_parallel_start( kproc, num_threads );
+  workshare = &ctxt->workshare;
 
   long ka_start = start;
   long ka_end   = (end-start+incr-1)/incr;
@@ -278,7 +277,7 @@ void GOMP_parallel_loop_dynamic_start (
   /* The master thread (id 0) calls fn (data) directly. That's why we
      start this loop from id = 1.*/
   task = kaapi_thread_toptask(thread);
-  for (int i = 1; i < num_threads; i++)
+  for (i = 1; i < num_threads; i++)
   {
     kaapi_task_init( 
         task, 
@@ -313,10 +312,11 @@ static void komp_trampoline_task_parallelfor
   kaapi_workqueue_index_t start, end;
   
   /* save context information */
-  gomp_icv_t save_icv = ctxt->icv;
 
   kaapi_libkomp_teaminfo_t* save_teaminfo = ctxt->teaminfo;
   
+  gomp_icv_t save_icv = ctxt->icv;
+
   ctxt->icv.numthreads     = taskarg->numthreads;
   ctxt->icv.nextnumthreads = taskarg->nextnumthreads;
   ctxt->icv.threadid       = taskarg->threadid;
@@ -351,7 +351,6 @@ static void komp_trampoline_task_parallelfor
   /* Restore the initial context values. */
   ctxt->icv      = save_icv;
   ctxt->teaminfo = save_teaminfo;
-
 }
 
 KAAPI_REGISTER_TASKFORMAT( komp_parallelfor_task_format,

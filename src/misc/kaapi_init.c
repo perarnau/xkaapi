@@ -294,7 +294,6 @@ void kaapi_begin_parallel( int schedflag )
 */
 void kaapi_end_parallel(int flag)
 {
-printf("In kaapic_end_parallel, flag:%i\n",flag); fflush(stdout);
   if (flag & KAAPI_SCHEDFLAG_STATIC) 
   { /* end of the static parallel region: compute readylist + 
        set thread stealable + resume thread if 1rst // region*/
@@ -305,17 +304,11 @@ printf("In kaapic_end_parallel, flag:%i\n",flag); fflush(stdout);
   }
   
   if ((flag & KAAPI_SCHEDFLAG_NOWAIT) ==0) 
-{
-printf("In kaapic_end_parallel::dosync\n"); fflush(stdout);
     kaapi_sched_sync();
-printf("Out kaapic_end_parallel::dosync\n"); fflush(stdout);
-}
 
   if (KAAPI_ATOMIC_DECR(&kaapi_parallel_stack) == 0)
   {
     kaapi_mt_suspend_threads_post();
   }
-printf("Out kaapic_end_parallel, flag:%i\n",flag); fflush(stdout);
 }
-
 

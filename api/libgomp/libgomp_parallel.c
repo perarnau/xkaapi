@@ -199,16 +199,16 @@ GOMP_parallel_start (
 )
 {
   kaapi_processor_t*   kproc  = kaapi_get_current_processor();
-  kaapi_thread_t*      thread = kaapi_threadcontext2thread(kproc->thread);
   kaapi_libkompctxt_t* ctxt   = komp_get_ctxtkproc(kproc);
-
+  kaapi_thread_t*      thread;
+  kaapi_libkomp_teaminfo_t* teaminfo;
 
   ctxt->save_icv = ctxt->icv;
+  
   kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
 
-  kaapi_libkomp_teaminfo_t* teaminfo = 
-    komp_init_parallel_start( kproc, num_threads );
-  
+  teaminfo = komp_init_parallel_start( kproc, num_threads );
+  thread = kaapi_threadcontext2thread(kproc->thread);
   num_threads = ctxt->icv.numthreads;
 
 #if (KAAPI_GOMP_USE_TASK == 1)
@@ -275,11 +275,11 @@ GOMP_parallel_end (void)
 
   /* implicit sync + implicit pop fame */
   kaapic_end_parallel (KAAPI_SCHEDFLAG_DEFAULT);
+  ctxt->teaminfo = 0;
   ctxt->icv = ctxt->save_icv;
 
   /* free shared resource */
   kaapi_atomic_destroylock(&teaminfo->lock);
 
-printf("Out GOMP_parallel_end\n"); fflush(stdout);
   ctxt->teaminfo = 0;
 }
