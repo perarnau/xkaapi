@@ -275,11 +275,10 @@ GOMP_parallel_end (void)
 
   /* implicit sync + implicit pop fame */
   kaapic_end_parallel (KAAPI_SCHEDFLAG_DEFAULT);
+  ctxt->teaminfo->gwork = 0;
   ctxt->teaminfo = 0;
   ctxt->icv = ctxt->save_icv;
 
   /* free shared resource */
   kaapi_atomic_destroylock(&teaminfo->lock);
-
-  ctxt->teaminfo = 0;
 }

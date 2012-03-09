@@ -258,9 +258,11 @@ void GOMP_parallel_loop_dynamic_start (
       0,     /* body */
       0      /* arg */
   );
+  kaapi_assert(workshare->lwork !=0);
   
   /* initialize the master work */
   teaminfo->gwork = workshare->lwork->global;
+  kaapi_assert(teaminfo->gwork !=0);
 
   /* create each task, as in GOMP_parallel_start 
      + arguments to initialize local context
