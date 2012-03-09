@@ -219,9 +219,6 @@ void GOMP_parallel_loop_dynamic_start (
           long chunk_size
 )
 {
-  if (num_threads == 0)
-    num_threads = gomp_nthreads_var;
-
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_context_t* const self_thread = kproc->thread;
   kaapi_thread_t* thread;
@@ -239,6 +236,7 @@ void GOMP_parallel_loop_dynamic_start (
   workshare->incr = incr;
 
   kaapi_assert_debug(ctxt->threadid ==0)
+  num_threads = ctxt->numthreads;
 
   kaapic_foreach_attr_t attr;
   kaapic_foreach_attr_init(&attr);
@@ -309,8 +307,10 @@ static void komp_trampoline_task_parallelfor
   kaapi_workqueue_index_t start, end;
   
   /* save context information */
+  int save_threadid = ctxt->threadid;
   int save_numthreads = ctxt->numthreads;
-  int save_threadid   = ctxt->threadid;
+  int save_nextnumthreads = ctxt->nextnumthreads;
+
   kaapi_libkomp_teaminfo_t* save_teaminfo = ctxt->teaminfo;
   
   ctxt->numthreads         = taskarg->numthreads;
@@ -344,8 +344,9 @@ static void komp_trampoline_task_parallelfor
   );
   
   /* Restore the initial context values. */
-  ctxt->numthreads         = save_numthreads;
   ctxt->threadid           = save_threadid;
+  ctxt->numthreads         = save_numthreads;
+  ctxt->nextnumthreads     = save_nextnumthreads;
   ctxt->teaminfo           = save_teaminfo;
 
 }

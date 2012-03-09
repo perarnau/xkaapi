@@ -50,9 +50,8 @@ omp_set_num_threads (int n)
 {
   if (n >0)
   {
-    char numthreads_str[8];
-    sprintf(numthreads_str, "%i", n );
-    setenv ("KAAPI_CPUCOUNT", numthreads_str, 1);
+    kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
+    ctxt->nextnumthreads = n;
   }
 }
 

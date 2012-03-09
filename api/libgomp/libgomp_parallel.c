@@ -69,8 +69,9 @@ static void GOMP_trampoline_task_parallel
   kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
   
   /* save context information */
-  int save_numthreads = ctxt->numthreads;
   int save_threadid = ctxt->threadid;
+  int save_numthreads = ctxt->numthreads;
+  int save_nextnumthreads = ctxt->nextnumthreads;
   kaapi_libkomp_teaminfo_t* save_teaminfo = ctxt->teaminfo;
 
   ctxt->numthreads         = taskarg->numthreads;
@@ -81,8 +82,9 @@ static void GOMP_trampoline_task_parallel
   taskarg->fn(taskarg->data);
 
   /* Restore the initial context values. */
-  ctxt->numthreads         = save_numthreads;
   ctxt->threadid           = save_threadid;
+  ctxt->numthreads         = save_numthreads;
+  ctxt->nextnumthreads     = save_nextnumthreads;
   ctxt->teaminfo           = save_teaminfo;
 }
 
@@ -152,11 +154,11 @@ komp_init_parallel_start (
 {
   kaapi_thread_t* thread;
 
-  if (num_threads == 0)
-    num_threads = gomp_nthreads_var;
-
   /* do not save the ctxt, assume just one top level ctxt */
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
+
+  if (num_threads == 0)
+    num_threads = ctxt->nextnumthreads;
 
   thread = kaapi_threadcontext2thread(kproc->thread);
   
@@ -197,15 +199,15 @@ GOMP_parallel_start (
 {
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_t* thread;
-
-  if (num_threads == 0)
-    num_threads = gomp_nthreads_var;
+  kaapi_libkompctxt_t* ctxt;
 
   kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
 
   kaapi_libkomp_teaminfo_t* teaminfo = 
     komp_init_parallel_start( kproc, num_threads );
   
+  ctxt = komp_get_ctxtkproc(kproc);
+  num_threads = ctxt->numthreads;
   thread = kaapi_threadcontext2thread(kproc->thread);
 
 #if (KAAPI_GOMP_USE_TASK == 1)
