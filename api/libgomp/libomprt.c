@@ -68,6 +68,149 @@ omp_get_thread_num (void)
   return komp_get_ctxt()->threadid;
 }
 
+/*
+*/
+int 
+omp_get_max_threads (void)
+{
+  return kaapi_getconcurrency();
+}
+
+int omp_get_num_procs (void)
+{
+  return kaapi_getconcurrency();
+}
+
+/*
+*/
+int 
+omp_in_parallel(void)
+{
+  kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
+  return ctxt->teaminfo !=0;
+}
+
+/*
+*/
+void 
+omp_set_dynamic(int dynamic_threads __attribute__((unused)) )
+{
+}
+
+/*
+*/
+int 
+omp_get_dynamic(void)
+{
+  return 1;
+}
+
+/*
+*/
+void 
+omp_set_nested(int nested __attribute__((unused)))
+{
+}
+
+/*
+*/
+int 
+omp_get_nested(void)
+{
+  return 0; /* not yet implemented */
+}
+
+/*
+*/
+typedef enum omp_sched_t {
+    omp_sched_static = 1,
+    omp_sched_dynamic = 2,
+    omp_sched_guided = 3,
+    omp_sched_auto = 4
+} omp_sched_t;
+void 
+omp_set_schedule(omp_sched_t kind __attribute__((unused)), int modifier __attribute__((unused)))
+{
+}
+
+/*
+*/
+void 
+omp_get_schedule(omp_sched_t * kind, int * modifier )
+{
+  *kind = omp_sched_dynamic;
+  *modifier = -1;
+}
+
+/*
+*/
+int 
+omp_get_thread_limit(void)
+{ 
+  return kaapi_getconcurrency();
+}
+
+/*
+*/
+void 
+omp_set_max_active_levels (int max_levels __attribute__((unused)))
+{
+}
+
+/*
+*/
+int 
+omp_get_max_active_levels(void)
+{
+  return 1;
+}
+
+/*
+*/
+int 
+omp_get_level(void)
+{
+  kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
+  if (ctxt->teaminfo ==0) 
+    return 0;
+  return 1;
+}
+
+/*
+*/
+int 
+omp_get_ancestor_thread_num(int level)
+{
+  return kaapi_getconcurrency();
+}
+
+/*
+*/
+int 
+omp_get_team_size(int level)
+{
+  kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
+  if (ctxt->teaminfo ==0) return 1;
+  return kaapi_getconcurrency();
+}
+
+/*
+*/
+int 
+omp_get_active_level(void)
+{
+  kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
+  if (ctxt->teaminfo ==0) return 0;
+  return 1;
+}
+
+/*
+*/
+int 
+omp_in_final(void)
+{
+  return 0;
+}
 
 double omp_get_wtime(void)
 {
@@ -80,3 +223,61 @@ double omp_get_wtick(void)
 }
 
 
+/* Simple lock: map omp_lock_t to the smallest atomic in kaapi...
+*/
+typedef kaapi_atomic8_t omp_lock_t;
+typedef kaapi_atomic32_t omp_nest_lock_t;
+
+void omp_init_lock(omp_lock_t *lock)
+{
+  KAAPI_ATOMIC_WRITE(lock, 0);
+}
+
+void omp_destroy_lock(omp_lock_t *lock)
+{
+  KAAPI_ATOMIC_WRITE(lock, 0);
+}
+
+void omp_set_lock(omp_lock_t *lock)
+{
+  while ( (KAAPI_ATOMIC_READ(lock) !=0) || 
+           !KAAPI_ATOMIC_CAS(lock,0,1) )
+    kaapi_slowdown_cpu();
+}
+
+void omp_unset_lock(omp_lock_t *lock)
+{
+  KAAPI_ATOMIC_WRITE(lock, 0);
+}
+
+int omp_test_lock(omp_lock_t *lock)
+{
+  return KAAPI_ATOMIC_CAS(lock,0,1);
+}
+
+/* nested lock */
+void omp_init_nest_lock(omp_nest_lock_t *lock)
+{
+  printf("%s\n", __PRETTY_FUNCTION__ );
+}
+
+void omp_destroy_nest_lock(omp_nest_lock_t *lock)
+{
+  printf("%s\n", __PRETTY_FUNCTION__ );
+}
+
+void omp_set_nest_lock(omp_nest_lock_t *lock)
+{
+  printf("%s\n", __PRETTY_FUNCTION__ );
+}
+
+void omp_unset_nest_lock(omp_nest_lock_t *lock)
+{
+  printf("%s\n", __PRETTY_FUNCTION__ );
+}
+
+int omp_test_nest_lock(omp_nest_lock_t *lock)
+{
+  printf("%s\n", __PRETTY_FUNCTION__ );
+  return 0;
+}
