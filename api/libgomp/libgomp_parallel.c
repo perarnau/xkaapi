@@ -78,9 +78,7 @@ static void GOMP_trampoline_task_parallel
   ctxt->inside_single      = 0;
   ctxt->teaminfo           = taskarg->teaminfo;
 
-printf("%i: In GOMP_trampoline_task_parallel\n", kaapi_get_current_processor()->kid); fflush(stdout);
   taskarg->fn(taskarg->data);
-printf("%i: Out GOMP_trampoline_task_parallel\n", kaapi_get_current_processor()->kid); fflush(stdout);
 
   /* Restore the initial context values. */
   ctxt->numthreads         = save_numthreads;
@@ -160,9 +158,6 @@ komp_init_parallel_start (
   /* do not save the ctxt, assume just one top level ctxt */
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
 
-  /* push a new frame before any push_data */
-  kaapi_thread_push_frame_( kproc->thread );
-
   thread = kaapi_threadcontext2thread(kproc->thread);
   
   /* init team information */
@@ -185,6 +180,10 @@ komp_init_parallel_start (
   ctxt->workshare.workload  = 0;
   ctxt->teaminfo            = teaminfo;
 
+  /* initialize master context */
+  ctxt->numthreads = num_threads;
+  ctxt->threadid   = 0;
+
   return teaminfo;
 };
 
@@ -202,19 +201,19 @@ GOMP_parallel_start (
   if (num_threads == 0)
     num_threads = gomp_nthreads_var;
 
+  kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
+
   kaapi_libkomp_teaminfo_t* teaminfo = 
     komp_init_parallel_start( kproc, num_threads );
   
   thread = kaapi_threadcontext2thread(kproc->thread);
-
-  /* get KOMP ctxt, assume just one top level ctxt */
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
 
 #if (KAAPI_GOMP_USE_TASK == 1)
 
   kaapi_task_t* task;
   GOMP_parallel_task_arg_t* arg;
   GOMP_parallel_task_arg_t* allarg;
+  
   
   allarg = kaapi_thread_pushdata(thread, num_threads * sizeof(GOMP_parallel_task_arg_t));
 
@@ -260,12 +259,8 @@ GOMP_parallel_start (
   );
 
 #endif
-  kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
-
-  /* initialize master context */
-  ctxt->numthreads = num_threads;
-  ctxt->threadid   = 0;
 }
+
 
 void 
 GOMP_parallel_end (void)
@@ -274,13 +269,13 @@ GOMP_parallel_end (void)
   kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
   kaapi_libkomp_teaminfo_t* teaminfo = ctxt->teaminfo;
 
-  gomp_barrier_wait(&teaminfo->barrier);
   ctxt->teaminfo = 0;
 
-  /* implicit sync */
+  /* implicit sync + implicit pop fame */
   kaapic_end_parallel (KAAPI_SCHEDFLAG_DEFAULT);
 
-  /* restore frame:push was in komp_init_parallel_start */
-  kaapi_thread_pop_frame_(kproc->thread);
+  /* free shared resource */
   kaapi_atomic_destroylock(&teaminfo->lock);
+
+  ctxt->teaminfo = 0;
 }
