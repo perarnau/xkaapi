@@ -156,6 +156,11 @@ static int kaapic_global_getwork
   }
 
   int pos = gw->wa.tid2pos[tid];
+  if (pos == (uint8_t)-1) 
+  {
+    *i = *j = 0;
+    return 0;
+  }
   kaapi_assert_debug( (pos > 0) && (pos<kaapi_getconcurrency()) );
   
   *i = gw->wa.startindex[pos];
@@ -182,6 +187,11 @@ int kaapic_global_work_pop
   }
 
   int pos = gw->wa.tid2pos[tid];
+  if (pos == (uint8_t)-1) 
+  {
+    *i = *j = 0;
+    return 0;
+  }
   kaapi_assert_debug( pos >= 0 );
   kaapi_assert_debug( pos<kaapi_getconcurrency() );
   
