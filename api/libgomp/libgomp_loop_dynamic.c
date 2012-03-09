@@ -152,7 +152,7 @@ bool GOMP_loop_dynamic_start (
     workshare->lwork = kaapic_foreach_local_workinit( 
                             &teaminfo->gwork->lwork[kproc->kid],
                             *istart, *iend );
-printf("Slave dynamic_start: [%i, %i)\n", *istart, *iend); fflush(stdout);
+//printf("Slave dynamic_start: [%li, %li)\n", *istart, *iend); fflush(stdout);
   }
 
   /* pop next range and start execution (on return...) */
