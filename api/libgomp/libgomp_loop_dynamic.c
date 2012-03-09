@@ -152,6 +152,7 @@ bool GOMP_loop_dynamic_start (
     workshare->lwork = kaapic_foreach_local_workinit( 
                             &teaminfo->gwork->lwork[kproc->kid],
                             *istart, *iend );
+printf("Slave dynamic_start: [%i, %i)\n", *istart, *iend); fflush(stdout);
   }
 
   /* pop next range and start execution (on return...) */
@@ -162,7 +163,7 @@ bool GOMP_loop_dynamic_start (
       )
   {
     *istart = ctxt->workshare.start + *istart * ctxt->workshare.incr;
-    *end    = ctxt->workshare.start + *iend * ctxt->workshare.incr;
+    *iend   = ctxt->workshare.start + *iend * ctxt->workshare.incr;
     return 1;
   }
   return 0;
@@ -183,7 +184,7 @@ bool GOMP_loop_dynamic_next (long *istart, long *iend)
   )
   {
     *istart = ctxt->workshare.start + *istart * ctxt->workshare.incr;
-    *end    = ctxt->workshare.start + *iend * ctxt->workshare.incr;
+    *iend   = ctxt->workshare.start + *iend * ctxt->workshare.incr;
     return 1;
   }
   return 0;
@@ -236,9 +237,10 @@ void GOMP_parallel_loop_dynamic_start (
   teaminfo = komp_init_parallel_start( kproc, num_threads );
   workshare = &ctxt->workshare;
 
-  long ka_start = start;
+  long ka_start = 0;
   long ka_end   = (end-start+incr-1)/incr;
-  workshare->incr = incr;
+  workshare->start = start;
+  workshare->incr  = incr;
 
   kaapi_assert_debug(ctxt->icv.threadid ==0)
   num_threads = ctxt->icv.numthreads;

@@ -173,10 +173,11 @@ komp_init_parallel_start (
   /* lock for ??? */
   kaapi_atomic_initlock(&teaminfo->lock);
 
+  teaminfo->numthreads   = num_threads;
+
   /* barrier for the team */
   gomp_barrier_init (&teaminfo->barrier, num_threads);
 
-  teaminfo->numthreads   = num_threads;
   KAAPI_ATOMIC_WRITE(&teaminfo->single_state, 0);
 
   /* init workshared construct, assume just one top level ctxt */
