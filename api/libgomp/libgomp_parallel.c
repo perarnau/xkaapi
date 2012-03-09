@@ -232,6 +232,7 @@ GOMP_parallel_start (
     );
     arg = kaapi_task_getargst( task, GOMP_parallel_task_arg_t );
     arg->numthreads = num_threads;
+    arg->nextnumthreads = ctxt->icv.nextnumthreads;
     arg->threadid   = i;
     arg->fn         = fn;
     arg->data       = data;

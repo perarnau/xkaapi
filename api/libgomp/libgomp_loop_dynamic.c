@@ -286,12 +286,13 @@ void GOMP_parallel_loop_dynamic_start (
         allarg+i
     );
     arg = kaapi_task_getargst( task, komp_parallelfor_task_arg_t );
-    arg->numthreads = num_threads;
-    arg->threadid   = i;
-    arg->fn         = fn;
-    arg->data       = data;
-    arg->teaminfo   = teaminfo; /* this is the master workshare of the team... */
-    arg->incr       = incr;
+    arg->numthreads     = num_threads;
+    arg->nextnumthreads = ctxt->icv.nextnumthreads;
+    arg->threadid       = i;
+    arg->fn             = fn;
+    arg->data           = data;
+    arg->teaminfo       = teaminfo; /* this is the master workshare of the team... */
+    arg->incr           = incr;
     
     task = kaapi_thread_nexttask(thread, task);
   }
