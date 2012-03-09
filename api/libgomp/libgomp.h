@@ -51,13 +51,13 @@
 
 #include <omp.h>
 
+#include "kaapi_impl.h"
+#include "kaapic_impl.h"
+
 #ifdef HAVE_VISIBILITY_HIDDEN
 # pragma GCC visibility push(hidden)
 #endif
 /* all things defined in this visibility section are private to our library */
-
-#include "kaapi_impl.h"
-#include "kaapic_impl.h"
 
 /* barrier.c */
 
@@ -154,7 +154,7 @@ void gomp_barrier_wait (struct gomp_barrier *barrier);
 
 
 /* going back to the previous visibility, ie "default" */
-#ifdef HAVE_ATTRIBUTE_VISIBILITY
+#ifdef HAVE_VISIBILITY_HIDDEN
 # pragma GCC visibility pop
 #endif
 
