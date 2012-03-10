@@ -52,32 +52,39 @@
 #include "libgomp.h"
 
 /* Simple lock: map omp_lock_t to the smallest atomic in kaapi...
+   Cannot reuse kaapi_lock_t because Kaapi data structure
 */
 void gomp_init_lock_30(omp_lock_t *lock)
 {
-  KAAPI_ATOMIC_WRITE(lock, 0);
+  KAAPI_ATOMIC_WRITE(lock, 1);
 }
 
 void gomp_destroy_lock_30(omp_lock_t *lock)
 {
-  KAAPI_ATOMIC_WRITE(lock, 0);
+  kaapi_assert_debug(KAAPI_ATOMIC_READ(lock)==1);
 }
 
 void gomp_set_lock_30(omp_lock_t *lock)
 {
-  while ( (KAAPI_ATOMIC_READ(lock) !=0) || 
-           !KAAPI_ATOMIC_CAS(lock,0,1) )
+acquire:
+  if (KAAPI_ATOMIC_DECR(lock) ==0) 
+    return;
+  while (KAAPI_ATOMIC_READ(lock) <=0)
     kaapi_slowdown_cpu();
+  goto acquire;
 }
 
 void gomp_unset_lock_30(omp_lock_t *lock)
 {
-  KAAPI_ATOMIC_WRITE(lock, 0);
+  kaapi_mem_barrier();
+  KAAPI_ATOMIC_WRITE(lock, 1);
 }
 
 int gomp_test_lock_30(omp_lock_t *lock)
 {
-  return KAAPI_ATOMIC_CAS(lock,0,1);
+  if ((KAAPI_ATOMIC_READ(lock) ==1) && (KAAPI_ATOMIC_DECR(lock) ==0))
+    return 1;
+  return 0;
 }
 
 strong_alias (gomp_init_lock_30, gomp_init_lock_25)
@@ -95,11 +102,14 @@ komp_lock_symver(omp_test_lock)
 /* nested lock */
 void gomp_init_nest_lock_30(omp_nest_lock_t *lock)
 {
-  memset (lock, '\0', sizeof (*lock));
+  gomp_init_lock_30( &lock->lock );
+  lock->count = 0;
+  lock->owner = 0;
 }
 
 void gomp_destroy_nest_lock_30(omp_nest_lock_t *lock)
 {
+  gomp_destroy_lock_30(&lock->lock);
 }
 
 void gomp_set_nest_lock_30(omp_nest_lock_t *lock)

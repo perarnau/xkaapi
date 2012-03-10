@@ -175,6 +175,7 @@ komp_init_parallel_start (
   kaapi_atomic_initlock(&teaminfo->lock);
 
   teaminfo->numthreads   = num_threads;
+  teaminfo->serial       = 0;
 
   /* barrier for the team */
   gomp_barrier_init (&teaminfo->barrier, num_threads);
@@ -188,6 +189,7 @@ komp_init_parallel_start (
   /* initialize master context */
   ctxt->icv.numthreads = num_threads;
   ctxt->icv.threadid   = 0;
+  ctxt->icv.serial     = teaminfo->serial;
 
   return teaminfo;
 }

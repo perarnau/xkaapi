@@ -49,7 +49,9 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#if defined(__linux__)
 #include <omp.h>
+#endif
 
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
@@ -80,6 +82,7 @@ typedef struct gomp_icv_t {
   int threadid;       /* thread id */
   int numthreads;     /* in the team */
   int nextnumthreads; /* */
+  int serial;         /* */
 } gomp_icv_t;
 
 /* Team information : common to all threads that shared a same parallel region 
@@ -93,8 +96,9 @@ typedef struct GlobalTeamInformation {
   int                          numthreads;
   kaapi_atomic_t               single_state;
   komp_barrier_t               barrier;
-  kaapic_global_work_t*        volatile gwork;      /* last foreach loop context */
-} kaapi_libkomp_teaminfo_t;
+  kaapic_global_work_t*        volatile gwork;  /* last foreach loop context */
+  int                          serial;          /* serial number of workshare construct */
+ } kaapi_libkomp_teaminfo_t;
 
 
 /* Workshare structure
@@ -111,7 +115,6 @@ typedef struct WorkShareRep {
 typedef struct PerTeamLocalStorage {
   kaapi_libkompworkshared_t    workshare;     /* team workshare */
   kaapi_libkomp_teaminfo_t*    teaminfo;      /* team information */
-  
   gomp_icv_t                   icv;
   gomp_icv_t                   save_icv;      /* saved version. No yet ready for nested */ 
   int                          inside_single;
@@ -139,23 +142,13 @@ static inline kaapi_libkompctxt_t* komp_get_ctxt()
   return komp_get_ctxtkproc(kaapi_get_current_processor());
 }
 
-extern
-kaapi_libkomp_teaminfo_t*  komp_init_parallel_start (
+extern kaapi_libkomp_teaminfo_t*  komp_init_parallel_start (
   kaapi_processor_t* kproc,
   unsigned num_threads
 );
 
-enum omp_task_kind
-{
-  GOMP_TASK_IMPLICIT,
-  GOMP_TASK_IFFALSE,
-  GOMP_TASK_WAITING,
-  GOMP_TASK_TIED
-};
-
 
 /* init.c */
-
 void gomp_barrier_init (struct gomp_barrier *barrier, unsigned int num);
 void gomp_barrier_destroy (struct gomp_barrier *barrier);
 void gomp_barrier_wait (struct gomp_barrier *barrier);
@@ -164,6 +157,19 @@ void gomp_barrier_wait (struct gomp_barrier *barrier);
 /* going back to the previous visibility, ie "default" */
 #ifdef HAVE_VISIBILITY_HIDDEN
 # pragma GCC visibility pop
+#endif
+
+#if !defined(__linux__)
+/* function from the runtime support of OMP: need for mac... */
+typedef enum omp_sched_t {
+    omp_sched_static = 1,
+    omp_sched_dynamic = 2,
+    omp_sched_guided = 3,
+    omp_sched_auto = 4
+} omp_sched_t;
+
+//typedef kaapi_atomic8_t omp_lock_t;
+//typedef kaapi_atomic32_t omp_nest_lock_t;
 #endif
 
 #include "libgomp_g.h"

@@ -41,7 +41,6 @@
 ** terms.
 ** 
 */
-
 #ifndef _KAAPI_LOCK_INTERNAL_H_
 #define _KAAPI_LOCK_INTERNAL_H_
 
@@ -51,7 +50,7 @@
 */
 typedef kaapi_atomic_t omp_lock_t;
 typedef struct {
-	kaapi_atomic_t lock;
+	omp_lock_t lock;
 	int count;
 	void* owner;
 } omp_nest_lock_t;

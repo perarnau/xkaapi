@@ -90,7 +90,7 @@ extern void GOMP_parallel_loop_dynamic_start (void (*)(void *), void *,
 extern void GOMP_parallel_loop_guided_start (void (*)(void *), void *,
 					     unsigned, long, long, long, long);
 extern void GOMP_parallel_loop_runtime_start (void (*)(void *), void *,
-					      unsigned, long, long, long);
+               unsigned, long, long, long);
 
 extern void GOMP_loop_end (void);
 extern void GOMP_loop_end_nowait (void);

@@ -48,7 +48,7 @@
     This functions are called by all threads.
     Only the master thread call kaapic_foreach_workend in order
     to destroy global team information...
-   TG.
+    TG.
 */
 void GOMP_loop_end (void)
 {
