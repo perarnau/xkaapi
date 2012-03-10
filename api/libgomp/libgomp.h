@@ -49,7 +49,9 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#if defined(__linux__)
 #include <omp.h>
+#endif
 
 #ifdef HAVE_VISIBILITY_HIDDEN
 # pragma GCC visibility push(hidden)
@@ -80,6 +82,7 @@ typedef struct gomp_icv_t {
   int threadid;       /* thread id */
   int numthreads;     /* in the team */
   int nextnumthreads; /* */
+  int serial;         /* */
 } gomp_icv_t;
 
 /* Team information : common to all threads that shared a same parallel region 
@@ -93,8 +96,9 @@ typedef struct GlobalTeamInformation {
   int                          numthreads;
   kaapi_atomic_t               single_state;
   komp_barrier_t               barrier;
-  kaapic_global_work_t*        volatile gwork;      /* last foreach loop context */
-} kaapi_libkomp_teaminfo_t;
+  kaapic_global_work_t*        volatile gwork;  /* last foreach loop context */
+  int                          serial;          /* serial number of workshare construct */
+ } kaapi_libkomp_teaminfo_t;
 
 
 /* Workshare structure
@@ -111,7 +115,6 @@ typedef struct WorkShareRep {
 typedef struct PerTeamLocalStorage {
   kaapi_libkompworkshared_t    workshare;     /* team workshare */
   kaapi_libkomp_teaminfo_t*    teaminfo;      /* team information */
-  
   gomp_icv_t                   icv;
   gomp_icv_t                   save_icv;      /* saved version. No yet ready for nested */ 
   int                          inside_single;
@@ -312,7 +315,7 @@ extern bool GOMP_single_start (void);
 extern void *GOMP_single_copy_start (void);
 extern void GOMP_single_copy_end (void *);
 
-#if 0// in OMP.H
+#if !defined(__linux__)
 /* function from the runtime support of OMP */
 typedef enum omp_sched_t {
     omp_sched_static = 1,

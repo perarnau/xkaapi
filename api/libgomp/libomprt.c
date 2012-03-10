@@ -73,7 +73,9 @@ int
 omp_get_max_threads (void)
 {
   kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
-  return ctxt->icv.nextnumthreads;
+  if (ctxt->icv.nextnumthreads < kaapi_getconcurrency())
+    return ctxt->icv.nextnumthreads;
+  return kaapi_getconcurrency();
 }
 
 int omp_get_num_procs (void)
