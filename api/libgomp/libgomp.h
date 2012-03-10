@@ -51,13 +51,13 @@
 
 #include <omp.h>
 
+#include "kaapi_impl.h"
+#include "kaapic_impl.h"
+
 #ifdef HAVE_VISIBILITY_HIDDEN
 # pragma GCC visibility push(hidden)
 #endif
 /* all things defined in this visibility section are private to our library */
-
-#include "kaapi_impl.h"
-#include "kaapic_impl.h"
 
 /* barrier.c */
 
@@ -162,200 +162,56 @@ void gomp_barrier_wait (struct gomp_barrier *barrier);
 
 
 /* going back to the previous visibility, ie "default" */
-#ifdef HAVE_ATTRIBUTE_VISIBILITY
+#ifdef HAVE_VISIBILITY_HIDDEN
 # pragma GCC visibility pop
 #endif
 
-extern void GOMP_barrier (void);
+#include "libgomp_g.h"
 
-/* critical.c */
+#ifdef HAVE_VERSION_SYMBOL
+extern void gomp_init_lock_30 (omp_lock_t *) __GOMP_NOTHROW;
+extern void gomp_destroy_lock_30 (omp_lock_t *) __GOMP_NOTHROW;
+extern void gomp_set_lock_30 (omp_lock_t *) __GOMP_NOTHROW;
+extern void gomp_unset_lock_30 (omp_lock_t *) __GOMP_NOTHROW;
+extern int gomp_test_lock_30 (omp_lock_t *) __GOMP_NOTHROW;
+extern void gomp_init_nest_lock_30 (omp_nest_lock_t *) __GOMP_NOTHROW;
+extern void gomp_destroy_nest_lock_30 (omp_nest_lock_t *) __GOMP_NOTHROW;
+extern void gomp_set_nest_lock_30 (omp_nest_lock_t *) __GOMP_NOTHROW;
+extern void gomp_unset_nest_lock_30 (omp_nest_lock_t *) __GOMP_NOTHROW;
+extern int gomp_test_nest_lock_30 (omp_nest_lock_t *) __GOMP_NOTHROW;
 
-extern void GOMP_critical_start (void);
-extern void GOMP_critical_end (void);
-extern void GOMP_critical_name_start (void **);
-extern void GOMP_critical_name_end (void **);
-extern void GOMP_atomic_start (void);
-extern void GOMP_atomic_end (void);
+#if 0 /* not yet implemented */
+extern void gomp_init_lock_25 (omp_lock_25_t *) __GOMP_NOTHROW;
+extern void gomp_destroy_lock_25 (omp_lock_25_t *) __GOMP_NOTHROW;
+extern void gomp_set_lock_25 (omp_lock_25_t *) __GOMP_NOTHROW;
+extern void gomp_unset_lock_25 (omp_lock_25_t *) __GOMP_NOTHROW;
+extern int gomp_test_lock_25 (omp_lock_25_t *) __GOMP_NOTHROW;
+extern void gomp_init_nest_lock_25 (omp_nest_lock_25_t *) __GOMP_NOTHROW;
+extern void gomp_destroy_nest_lock_25 (omp_nest_lock_25_t *) __GOMP_NOTHROW;
+extern void gomp_set_nest_lock_25 (omp_nest_lock_25_t *) __GOMP_NOTHROW;
+extern void gomp_unset_nest_lock_25 (omp_nest_lock_25_t *) __GOMP_NOTHROW;
+extern int gomp_test_nest_lock_25 (omp_nest_lock_25_t *) __GOMP_NOTHROW;
+#endif
 
-/* loop.c */
+# define strong_alias(fn, al) \
+  extern __typeof (fn) al __attribute__ ((alias (#fn)));
+# define komp_lock_symver30(fn) \
+  __asm (".symver g" #fn "_30, " #fn "@@OMP_3.0");
+# define komp_lock_symver(fn) \
+  komp_lock_symver30(fn) \
+  __asm (".symver g" #fn "_25, " #fn "@OMP_1.0");
 
-extern bool GOMP_loop_static_start (long, long, long, long, long *, long *);
-extern bool GOMP_loop_dynamic_start (long, long, long, long, long *, long *);
-extern bool GOMP_loop_guided_start (long, long, long, long, long *, long *);
-extern bool GOMP_loop_runtime_start (long, long, long, long *, long *);
-
-extern bool GOMP_loop_ordered_static_start (long, long, long, long,
-					    long *, long *);
-extern bool GOMP_loop_ordered_dynamic_start (long, long, long, long,
-					     long *, long *);
-extern bool GOMP_loop_ordered_guided_start (long, long, long, long,
-					    long *, long *);
-extern bool GOMP_loop_ordered_runtime_start (long, long, long, long *, long *);
-
-extern bool GOMP_loop_static_next (long *, long *);
-extern bool GOMP_loop_dynamic_next (long *, long *);
-extern bool GOMP_loop_guided_next (long *, long *);
-extern bool GOMP_loop_runtime_next (long *, long *);
-
-extern bool GOMP_loop_ordered_static_next (long *, long *);
-extern bool GOMP_loop_ordered_dynamic_next (long *, long *);
-extern bool GOMP_loop_ordered_guided_next (long *, long *);
-extern bool GOMP_loop_ordered_runtime_next (long *, long *);
-
-extern void GOMP_parallel_loop_static_start (void (*)(void *), void *,
-					     unsigned, long, long, long, long);
-extern void GOMP_parallel_loop_dynamic_start (void (*)(void *), void *,
-					     unsigned, long, long, long, long);
-extern void GOMP_parallel_loop_guided_start (void (*)(void *), void *,
-					     unsigned, long, long, long, long);
-extern void GOMP_parallel_loop_runtime_start (void (*)(void *), void *,
-					      unsigned, long, long, long);
-
-extern void GOMP_loop_end (void);
-extern void GOMP_loop_end_nowait (void);
-
-/* loop_ull.c */
-
-extern bool GOMP_loop_ull_static_start (bool, unsigned long long,
-					unsigned long long,
-					unsigned long long,
-					unsigned long long,
-					unsigned long long *,
-					unsigned long long *);
-extern bool GOMP_loop_ull_dynamic_start (bool, unsigned long long,
-					 unsigned long long,
-					 unsigned long long,
-					 unsigned long long,
-					 unsigned long long *,
-					 unsigned long long *);
-extern bool GOMP_loop_ull_guided_start (bool, unsigned long long,
-					unsigned long long,
-					unsigned long long,
-					unsigned long long,
-					unsigned long long *,
-					unsigned long long *);
-extern bool GOMP_loop_ull_runtime_start (bool, unsigned long long,
-					 unsigned long long,
-					 unsigned long long,
-					 unsigned long long *,
-					 unsigned long long *);
-
-extern bool GOMP_loop_ull_ordered_static_start (bool, unsigned long long,
-						unsigned long long,
-						unsigned long long,
-						unsigned long long,
-						unsigned long long *,
-						unsigned long long *);
-extern bool GOMP_loop_ull_ordered_dynamic_start (bool, unsigned long long,
-						 unsigned long long,
-						 unsigned long long,
-						 unsigned long long,
-						 unsigned long long *,
-						 unsigned long long *);
-extern bool GOMP_loop_ull_ordered_guided_start (bool, unsigned long long,
-						unsigned long long,
-						unsigned long long,
-						unsigned long long,
-						unsigned long long *,
-						unsigned long long *);
-extern bool GOMP_loop_ull_ordered_runtime_start (bool, unsigned long long,
-						 unsigned long long,
-						 unsigned long long,
-						 unsigned long long *,
-						 unsigned long long *);
-
-extern bool GOMP_loop_ull_static_next (unsigned long long *,
-				       unsigned long long *);
-extern bool GOMP_loop_ull_dynamic_next (unsigned long long *,
-					unsigned long long *);
-extern bool GOMP_loop_ull_guided_next (unsigned long long *,
-				       unsigned long long *);
-extern bool GOMP_loop_ull_runtime_next (unsigned long long *,
-					unsigned long long *);
-
-extern bool GOMP_loop_ull_ordered_static_next (unsigned long long *,
-					       unsigned long long *);
-extern bool GOMP_loop_ull_ordered_dynamic_next (unsigned long long *,
-						unsigned long long *);
-extern bool GOMP_loop_ull_ordered_guided_next (unsigned long long *,
-					       unsigned long long *);
-extern bool GOMP_loop_ull_ordered_runtime_next (unsigned long long *,
-						unsigned long long *);
-
-/* ordered.c */
-
-extern void GOMP_ordered_start (void);
-extern void GOMP_ordered_end (void);
-
-/* parallel.c */
-
-extern void GOMP_parallel_start (void (*) (void *), void *, unsigned);
-extern void GOMP_parallel_end (void);
-
-/* team.c */
-
-extern void GOMP_task (void (*) (void *), void *, void (*) (void *, void *),
-		       long, long, bool, unsigned);
-extern void GOMP_taskwait (void);
-
-/* sections.c */
-
-extern unsigned GOMP_sections_start (unsigned);
-extern unsigned GOMP_sections_next (void);
-extern void GOMP_parallel_sections_start (void (*) (void *), void *,
-					  unsigned, unsigned);
-extern void GOMP_sections_end (void);
-extern void GOMP_sections_end_nowait (void);
-
-/* single.c */
-extern bool GOMP_single_start (void);
-extern void *GOMP_single_copy_start (void);
-extern void GOMP_single_copy_end (void *);
-
-#if 0// in OMP.H
-/* function from the runtime support of OMP */
-typedef enum omp_sched_t {
-    omp_sched_static = 1,
-    omp_sched_dynamic = 2,
-    omp_sched_guided = 3,
-    omp_sched_auto = 4
-} omp_sched_t;
-
-typedef kaapi_atomic8_t omp_lock_t;
-typedef kaapi_atomic32_t omp_nest_lock_t;
-
-extern void omp_set_num_threads (int n);
-extern int omp_get_num_threads (void);
-extern int omp_get_thread_num (void);
-extern int omp_get_max_threads (void);
-extern int omp_get_num_procs (void);
-extern int omp_in_parallel(void);
-extern void omp_set_dynamic(int dynamic_threads );
-extern int omp_get_dynamic(void);
-extern void omp_set_nested(int nested);
-extern int omp_get_nested(void);
-extern void omp_set_schedule(omp_sched_t kind, int modifier );
-extern void omp_get_schedule(omp_sched_t * kind, int * modifier );
-extern int omp_get_thread_limit(void);
-extern void omp_set_max_active_levels (int max_levels );
-extern int omp_get_max_active_levels(void);
-extern int omp_get_level(void);
-extern int  omp_get_ancestor_thread_num(int level);
-extern int omp_get_team_size(int level);
-extern int omp_get_active_level(void);
-extern int omp_in_final(void);
-extern double omp_get_wtime(void);
-extern double omp_get_wtick(void);
-extern void omp_init_lock(omp_lock_t *lock);
-extern void omp_destroy_lock(omp_lock_t *lock);
-extern void omp_set_lock(omp_lock_t *lock);
-extern void omp_unset_lock(omp_lock_t *lock);
-extern int omp_test_lock(omp_lock_t *lock);
-extern void omp_init_nest_lock(omp_nest_lock_t *lock);
-extern void omp_destroy_nest_lock(omp_nest_lock_t *lock);
-extern void omp_set_nest_lock(omp_nest_lock_t *lock);
-extern void omp_unset_nest_lock(omp_nest_lock_t *lock);
-extern int omp_test_nest_lock(omp_nest_lock_t *lock);
+#else
+# define gomp_init_lock_30 omp_init_lock
+# define gomp_destroy_lock_30 omp_destroy_lock
+# define gomp_set_lock_30 omp_set_lock
+# define gomp_unset_lock_30 omp_unset_lock
+# define gomp_test_lock_30 omp_test_lock
+# define gomp_init_nest_lock_30 omp_init_nest_lock
+# define gomp_destroy_nest_lock_30 omp_destroy_nest_lock
+# define gomp_set_nest_lock_30 omp_set_nest_lock
+# define gomp_unset_nest_lock_30 omp_unset_nest_lock
+# define gomp_test_nest_lock_30 omp_test_nest_lock
 #endif
 
 #endif // #ifndef _KAAPI_LIBGOMP_

@@ -34,7 +34,7 @@ libgomp_la_DEPENDENCIES = $(libgomp_version_dep)
 libkomp_la_CPPFLAGS=$(AM_CPPFLAGS) $(LIBGOMP_BUILD_CPPFLAGS) -DLIBKOMP
 libkomp_la_CFLAGS=$(AM_CFLAGS) $(LIBGOMP_BUILD_CFLAGS)
 libkomp_la_CXXFLAGS=$(AM_CXXFLAGS) $(LIBGOMP_BUILD_CXXFLAGS)
-libkomp_la_LDFLAGS = -version-info 1:0:0 $(LIBGOMP_BUILD_LDFLAGS)
+libkomp_la_LDFLAGS = -version-info 1:0:0 $(libgomp_version_script) $(LIBGOMP_BUILD_LDFLAGS)
 libkomp_la_LIBADD=../../src/libkaapi.la ../kaapic/libkaapic.la $(LIBGOMP_BUILD_LIBS)
 
 bin_SCRIPTS = kaapi-gomp-wrapper
@@ -54,8 +54,7 @@ install-exec-hook: kaapi-gomp-wrapper
 		< kaapi-gomp-wrapper
 	chmod +x $(DESTDIR)$(bindir)/kaapi-gomp-wrapper
 
-include_HEADERS=\
-    libgomp.h
+include_HEADERS=
 
 libgomp_la_SOURCES=\
     libgomp_parallel.c \
@@ -63,6 +62,7 @@ libgomp_la_SOURCES=\
     libgomp_critical.c \
     libgomp_ordered.c \
     libgomp_single.c \
+    libgomp_lock.c \
     libgomp_loop.c \
     libgomp_loop_dynamic.c \
     libgomp_loop_static.c \
@@ -71,9 +71,17 @@ libgomp_la_SOURCES=\
     libgomp_task.c \
     libgomp_init.c \
     libomprt.c\
+    libgomp_g.h \
+    libgomp.h \
+    lock-internal.h \
     $(include_HEADERS)
 
 libkomp_la_SOURCES=\
 	$(libgomp_la_SOURCES)
+
+check_PROGRAMS=check-headers
+
+check_headers_SOURCES=\
+  check-headers.c
 
 endif
