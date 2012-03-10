@@ -176,17 +176,12 @@ int kaapic_global_work_pop
   kaapi_workqueue_index_t* j
 )
 {
+  int retval;
+  int pos;
+
   kaapi_assert_debug(tid<KAAPI_MAX_PROCESSOR);
 
-  /* Here, because work may have been finished  
-  */
-  if (KAAPI_ATOMIC_READ(&gw->workremain) ==0)
-  {
-    *i = *j = 0;
-    return 0;
-  }
-
-  int pos = gw->wa.tid2pos[tid];
+  pos = gw->wa.tid2pos[tid];
   if (pos == (uint8_t)-1) 
   {
     *i = *j = 0;
@@ -197,7 +192,17 @@ int kaapic_global_work_pop
   
   *i = gw->wa.startindex[pos];
   *j = gw->wa.startindex[pos+1];
-  return 0 == kaapi_bitmap_unset(&gw->wa.map, pos);
+  retval = (0 == kaapi_bitmap_unset(&gw->wa.map, pos));
+
+  /* Here, because work may have been finished  
+  */
+  if (KAAPI_ATOMIC_READ(&gw->workremain) ==0)
+  {
+    *i = *j = 0;
+    return 0;
+  }
+
+  return retval;
 }
 
 

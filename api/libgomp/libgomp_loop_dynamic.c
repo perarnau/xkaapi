@@ -152,7 +152,7 @@ bool GOMP_loop_dynamic_start (
     workshare->lwork = kaapic_foreach_local_workinit( 
                             &teaminfo->gwork->lwork[kproc->kid],
                             *istart, *iend );
-printf("Slave dynamic_start: [%i, %i)\n", *istart, *iend); fflush(stdout);
+//printf("Slave dynamic_start: [%i, %i)\n", *istart, *iend); fflush(stdout);
   }
 
   /* pop next range and start execution (on return...) */
@@ -215,7 +215,7 @@ static void komp_trampoline_task_parallelfor
 void GOMP_parallel_loop_dynamic_start (
           void (*fn) (void *), 
           void *data,
-				  unsigned num_threads, 
+          unsigned num_threads, 
           long start, 
           long end, 
           long incr, 
@@ -234,6 +234,7 @@ void GOMP_parallel_loop_dynamic_start (
 
   kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
 
+  /* initialize the work and set the number of threads for the group */
   teaminfo = komp_init_parallel_start( kproc, num_threads );
   workshare = &ctxt->workshare;
 

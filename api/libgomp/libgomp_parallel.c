@@ -144,7 +144,6 @@ static void GOMP_trampoline_task_parallel
     fn(data);
   }
 }
-
 #endif
 
 kaapi_libkomp_teaminfo_t* 
@@ -160,6 +159,8 @@ komp_init_parallel_start (
 
   if (num_threads == 0)
     num_threads = ctxt->icv.nextnumthreads;
+  if (num_threads > kaapi_getconcurrency())
+    num_threads = kaapi_getconcurrency();
 
   thread = kaapi_threadcontext2thread(kproc->thread);
   
@@ -189,7 +190,7 @@ komp_init_parallel_start (
   ctxt->icv.threadid   = 0;
 
   return teaminfo;
-};
+}
 
 
 void 
