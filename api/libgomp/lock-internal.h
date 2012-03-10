@@ -2,11 +2,11 @@
 ** xkaapi
 ** 
 **
-** Copyright 2009 INRIA.
+** Copyright 2012 INRIA.
 **
 ** Contributors :
 **
-** thierry.gautier@inrialpes.fr
+** vincent.danjean@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -41,42 +41,27 @@
 ** terms.
 ** 
 */
-#include "libgomp.h"
-#include <stdio.h>
+#ifndef _KAAPI_LOCK_INTERNAL_H_
+#define _KAAPI_LOCK_INTERNAL_H_
 
-/* Implementation note.
-    This functions are called by all threads.
-    Only the master thread call kaapic_foreach_workend in order
-    to destroy global team information...
-    TG.
+#include "kaapi_impl.h"
+
+/* Simple lock: map omp_lock_t to the atomic type in kaapi...
 */
-void GOMP_loop_end (void)
-{
-  kaapi_processor_t* kproc = kaapi_get_current_processor();
-  kaapi_thread_context_t* const self_thread = kproc->thread;
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
-  
-  if (ctxt->icv.threadid == 0)
-    kaapic_foreach_workend( self_thread, ctxt->workshare.lwork);
-  else
-    kaapic_foreach_local_workend( self_thread, ctxt->workshare.lwork );
+typedef kaapi_atomic_t omp_lock_t;
+typedef struct {
+	omp_lock_t lock;
+	int count;
+	void* owner;
+} omp_nest_lock_t;
 
-//  ctxt->teaminfo->gwork = 0;
+/* Warning: as "omp.h" system header does not defined the following types
+ * we can not automatically check they are compatible
+ */
+typedef kaapi_atomic_t omp_lock_25_t;
+typedef struct {
+	int owner;
+	int count;
+} omp_nest_lock_25_t;
 
-  /* implicit barrier at the end ? It will deadlock if parallel region task is steal ...*/
-  gomp_barrier_wait(&ctxt->teaminfo->barrier);
-}
-
-void GOMP_loop_end_nowait (void)
-{
-  kaapi_processor_t* kproc = kaapi_get_current_processor();
-  kaapi_thread_context_t* const self_thread = kproc->thread;
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
-
-  if (ctxt->icv.threadid == 0)
-    kaapic_foreach_workend( self_thread, ctxt->workshare.lwork);
-  else
-    kaapic_foreach_local_workend( self_thread, ctxt->workshare.lwork );
-
-//  ctxt->teaminfo->gwork = 0;
-}
+#endif

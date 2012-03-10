@@ -7,6 +7,7 @@
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** francois.broquedis@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -41,42 +42,9 @@
 ** terms.
 ** 
 */
-#include "libgomp.h"
-#include <stdio.h>
 
-/* Implementation note.
-    This functions are called by all threads.
-    Only the master thread call kaapic_foreach_workend in order
-    to destroy global team information...
-    TG.
-*/
-void GOMP_loop_end (void)
-{
-  kaapi_processor_t* kproc = kaapi_get_current_processor();
-  kaapi_thread_context_t* const self_thread = kproc->thread;
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
-  
-  if (ctxt->icv.threadid == 0)
-    kaapic_foreach_workend( self_thread, ctxt->workshare.lwork);
-  else
-    kaapic_foreach_local_workend( self_thread, ctxt->workshare.lwork );
+#include "libgomp_g.h"
 
-//  ctxt->teaminfo->gwork = 0;
-
-  /* implicit barrier at the end ? It will deadlock if parallel region task is steal ...*/
-  gomp_barrier_wait(&ctxt->teaminfo->barrier);
-}
-
-void GOMP_loop_end_nowait (void)
-{
-  kaapi_processor_t* kproc = kaapi_get_current_processor();
-  kaapi_thread_context_t* const self_thread = kproc->thread;
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
-
-  if (ctxt->icv.threadid == 0)
-    kaapic_foreach_workend( self_thread, ctxt->workshare.lwork);
-  else
-    kaapic_foreach_local_workend( self_thread, ctxt->workshare.lwork );
-
-//  ctxt->teaminfo->gwork = 0;
+int main() {
+	return 0;
 }
