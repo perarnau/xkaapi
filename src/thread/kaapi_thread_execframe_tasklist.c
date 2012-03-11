@@ -107,7 +107,7 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   
   /* force previous write before next write */
   //kaapi_writemem_barrier();
-KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist = *tasklist; )
+KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist __attribute__((unused)) = *tasklist; )
 
 #if 0
 redo_while:

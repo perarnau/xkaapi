@@ -432,8 +432,8 @@ typedef struct kaapi_processor_t {
   kaapi_perf_counter_t	   perf_regs[2][KAAPI_PERF_ID_MAX];
   kaapi_perf_counter_t*	   curr_perf_regs;                /* either perf_regs[0], either perf_regs[1] */
 
-  int			                 papi_event_set;
-  unsigned int		         papi_event_count;
+  int	                   papi_event_set;
+  unsigned int	           papi_event_count;
   kaapi_perf_counter_t     start_t[2];                    /* [KAAPI_PERF_SCHEDULE_STATE]= T1 else = Tidle */
    
   double                   t_preempt;                     /* total idle time in second pass in the preemption */           
@@ -450,10 +450,10 @@ typedef struct kaapi_processor_t {
 #endif
 
   /* workload */
-  kaapi_atomic64_t	        workload;
+  kaapi_atomic64_t          workload;
 
   /* processor type */
-  unsigned int			        proc_type;
+  unsigned int	            proc_type;
 
   /* seed for kproc random generator */
   unsigned int              seed_data;
@@ -463,7 +463,7 @@ typedef struct kaapi_processor_t {
 
   struct kaapi_processor_t* victim_kproc;
 
-  void*                    libgomp_tls;
+  void*                    libkomp_tls;
 
   /* cuda */
 #if defined(KAAPI_USE_CUDA)

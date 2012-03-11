@@ -515,7 +515,7 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
   char tmp[128];
   char key[128];
   int kid;
-  int serial;
+  int serial __attribute__((unused)); 
   double d0 =0.0, d1 = 0.0;
 
   switch (event->evtno) 
