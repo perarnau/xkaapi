@@ -320,11 +320,9 @@ void GOMP_parallel_loop_dynamic_start (
      and a call to komp_get_ctxtkproc must be done to retreive the new ctxt.
   */
   teaminfo = komp_init_parallel_start( kproc, num_threads );
-  thread = kaapi_threadcontext2thread(kproc->thread);
   
   ctxt = komp_get_ctxtkproc(kproc);
   num_threads = teaminfo->numthreads;
-
 
   /* initialize master workshare construct */
   workshare = komp_loop_dynamic_start_init( kproc, start, incr );
@@ -338,19 +336,17 @@ void GOMP_parallel_loop_dynamic_start (
   );
   
   /* allocate in the caller stack the tasks for the parallel region */
-  allarg = kaapi_thread_pushdata(thread, num_threads * sizeof(komp_parallelfor_task_arg_t));
+  thread = kaapi_threadcontext2thread(kproc->thread);
+  allarg = kaapi_thread_pushdata(thread, 
+     num_threads * sizeof(komp_parallelfor_task_arg_t)
+  );
   
   /* The master thread (id 0) calls fn (data) directly. That's why we
      start this loop from id = 1.*/
   task = kaapi_thread_toptask(thread);
   for (int i = 1; i < num_threads; i++)
   {
-    kaapi_task_init( 
-        task, 
-        komp_trampoline_task_parallelfor, 
-        allarg+i
-    );
-    arg = kaapi_task_getargst( task, komp_parallelfor_task_arg_t );
+    arg = allarg+i;
     arg->threadid   = i;
     arg->fn         = fn;
     arg->data       = data;
@@ -360,6 +356,11 @@ void GOMP_parallel_loop_dynamic_start (
     arg->start      = start;
     arg->incr       = incr;
 
+    kaapi_task_init( 
+        task, 
+        komp_trampoline_task_parallelfor, 
+        arg
+    );
     task = kaapi_thread_nexttask(thread, task);
   }
   kaapi_thread_push_packedtasks(thread, num_threads-1);
