@@ -110,7 +110,7 @@ static inline komp_workshare_t*  komp_loop_dynamic_start_init(
   if (workshare ==0)
   {
     workshare = kaapi_thread_pushdata(thread, sizeof(komp_workshare_t) );
-    ctxt->workshare   = workshare;
+    ctxt->workshare = workshare;
   }
   workshare->start  = start;
   workshare->incr   = incr;
