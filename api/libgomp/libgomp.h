@@ -84,6 +84,8 @@ typedef kaapic_global_work_t komp_globalworkshare_t;
 typedef struct komp_icv_t {
   int                threadid;       /* thread id */
   int                nextnumthreads; /* number of thread for the next // region */
+  int                nestedlevel;    /* nested level of // region */
+  int                nestedparallel; /* !=0 iff nest allowed */
 } komp_icv_t;
 
 /* Team information : common to all threads that shared a same parallel region.
@@ -142,6 +144,8 @@ static inline kompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc )
     ctxt->teaminfo            = 0;
     ctxt->icv.threadid        = 0;
     ctxt->icv.nextnumthreads  = kaapi_getconcurrency();
+    ctxt->icv.nestedlevel     = 0;
+    ctxt->icv.nestedparallel  = 1;
     kproc->libkomp_tls        = ctxt;
     return ctxt;
   }
