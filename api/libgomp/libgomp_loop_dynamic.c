@@ -104,10 +104,10 @@ static inline komp_workshare_t*  komp_loop_dynamic_start_init(
   kaapi_thread_t* thread = kaapi_threadcontext2thread(kproc->thread);
   kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
   komp_teaminfo_t* teaminfo = ctxt->teaminfo;
-  komp_workshare_t* workshare;
+  komp_workshare_t* workshare = ctxt->workshare;
 
   /* initialize the work share data: reuse previous allocated workshare if !=0 */
-  if (ctxt->workshare !=0)
+  if (workshare ==0)
   {
     workshare = kaapi_thread_pushdata(thread, sizeof(komp_workshare_t) );
     ctxt->workshare   = workshare;
