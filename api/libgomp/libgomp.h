@@ -213,10 +213,10 @@ extern int  komp_test_nest_lock_25 (omp_nest_lock_25_t *) __GOMP_NOTHROW;
 # define strong_alias(fn, al) \
   extern __typeof (fn) al __attribute__ ((alias (#fn)));
 # define komp_lock_symver30(fn) \
-  __asm (".symver g" #fn "_30, " #fn "@@OMP_3.0");
+  __asm (".symver k" #fn "_30, " #fn "@@OMP_3.0");
 # define komp_lock_symver(fn) \
   komp_lock_symver30(fn) \
-  __asm (".symver g" #fn "_25, " #fn "@OMP_1.0");
+  __asm (".symver k" #fn "_25, " #fn "@OMP_1.0");
 
 #else
 # define komp_init_lock_30 omp_init_lock
