@@ -399,20 +399,19 @@ static void komp_trampoline_task_parallelfor
   /* swap context: until end_parallel, new_ctxt becomes the current context */
   kproc->libkomp_tls = new_ctxt;
 
+printf("\n parallel_for task: teaminfo:%p\n", new_ctxt->teaminfo );
+
   /* initialize the workshare construct */
   komp_workshare_t* workshare = 
     komp_loop_dynamic_start_init( kproc, taskarg->start, taskarg->incr );
 
   kaapi_assert_debug(new_ctxt->icv.threadid !=0);
-  kaapi_assert_debug(taskarg->teaminfo->gwork !=0);
+  kaapi_assert_debug(new_ctxt->teaminfo->gwork !=0);
 
   komp_loop_dynamic_start_slave(
     kproc,
     workshare
   );
-
-  /* swap context: until end_parallel, new_ctxt becomes the current context */
-  kproc->libkomp_tls = new_ctxt;
 
   /* GCC compiled code */
   taskarg->fn(taskarg->data);
