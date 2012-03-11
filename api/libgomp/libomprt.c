@@ -114,6 +114,8 @@ omp_get_dynamic(void)
 void 
 omp_set_nested(int nested __attribute__((unused)))
 {
+  kompctxt_t* ctxt = komp_get_ctxt();
+  ctxt->icv.nestedparallel = (nested !=0);
 }
 
 /*
@@ -121,7 +123,8 @@ omp_set_nested(int nested __attribute__((unused)))
 int 
 omp_get_nested(void)
 {
-  return 0; /* not yet implemented */
+  kompctxt_t* ctxt = komp_get_ctxt();
+  return (ctxt->icv.nestedparallel !=0);
 }
 
 /*
