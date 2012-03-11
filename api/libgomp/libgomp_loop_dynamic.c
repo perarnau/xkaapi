@@ -403,7 +403,7 @@ static void komp_trampoline_task_parallelfor
   komp_workshare_t* workshare = 
     komp_loop_dynamic_start_init( kproc, taskarg->start, taskarg->incr );
 
-  kaapi_assert_debug(ctxt->icv.threadid !=0);
+  kaapi_assert_debug(new_ctxt->icv.threadid !=0);
   kaapi_assert_debug(taskarg->teaminfo->gwork !=0);
 
   komp_loop_dynamic_start_slave(
