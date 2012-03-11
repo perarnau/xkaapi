@@ -103,9 +103,9 @@ bool GOMP_loop_dynamic_start (
 {  
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_context_t* const self_thread = kproc->thread;
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
-  kaapi_libkompworkshared_t* workshare = &ctxt->workshare;
-  kaapi_libkomp_teaminfo_t* teaminfo = ctxt->teaminfo;
+  kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
+  komp_workshare_t* workshare = &ctxt->workshare;
+  komp_teaminfo_t* teaminfo = ctxt->teaminfo;
 
   long ka_start = 0;
   long ka_end   = (end-start+incr-1)/incr;
@@ -175,7 +175,7 @@ bool GOMP_loop_dynamic_start (
 bool GOMP_loop_dynamic_next (long *istart, long *iend)
 {
   kaapi_processor_t*   kproc = kaapi_get_current_processor();
-  kaapi_libkompctxt_t* ctxt  = komp_get_ctxtkproc( kproc );
+  kompctxt_t* ctxt  = komp_get_ctxtkproc( kproc );
 
   if (kaapic_foreach_worknext(
         ctxt->workshare.lwork, 
@@ -198,7 +198,7 @@ typedef struct komp_parallelfor_task_arg {
   int                       threadid;
   void                    (*fn) (void *);
   void*                     data;
-  kaapi_libkomp_teaminfo_t* teaminfo;
+  komp_teaminfo_t* teaminfo;
   
   long                      incr;
 } komp_parallelfor_task_arg_t;
@@ -224,9 +224,9 @@ void GOMP_parallel_loop_dynamic_start (
 {
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_context_t* const self_thread = kproc->thread;
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
-  kaapi_libkompworkshared_t* workshare;
-  kaapi_libkomp_teaminfo_t* teaminfo;
+  kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
+  komp_workshare_t* workshare;
+  komp_teaminfo_t* teaminfo;
   kaapi_thread_t* thread;
   int i;
 
@@ -313,12 +313,12 @@ static void komp_trampoline_task_parallelfor
 {
   komp_parallelfor_task_arg_t* taskarg = (komp_parallelfor_task_arg_t*)voidp;
   kaapi_processor_t* kproc = kaapi_get_current_processor();
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
+  kompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
   kaapi_workqueue_index_t start, end;
   
   /* save context information */
 
-  kaapi_libkomp_teaminfo_t* save_teaminfo = ctxt->teaminfo;
+  komp_teaminfo_t* save_teaminfo = ctxt->teaminfo;
   
   gomp_icv_t save_icv = ctxt->icv;
 
@@ -330,7 +330,7 @@ static void komp_trampoline_task_parallelfor
 
   kaapi_assert_debug(ctxt->icv.threadid !=0);
 
-  kaapi_libkompworkshared_t* workshare = &ctxt->workshare;
+  komp_workshare_t* workshare = &ctxt->workshare;
   workshare->incr = taskarg->incr;
 
   if (!kaapic_global_work_pop(ctxt->teaminfo->gwork, kproc->kid, &start, &end))

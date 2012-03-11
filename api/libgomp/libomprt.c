@@ -50,7 +50,7 @@ omp_set_num_threads (int n)
 {
   if (n >0)
   {
-    kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
+    kompctxt_t* ctxt = komp_get_ctxt();
     ctxt->icv.nextnumthreads = n;
   }
 }
@@ -72,7 +72,7 @@ omp_get_thread_num (void)
 int 
 omp_get_max_threads (void)
 {
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
+  kompctxt_t* ctxt = komp_get_ctxt();
   if (ctxt->icv.nextnumthreads < kaapi_getconcurrency())
     return ctxt->icv.nextnumthreads;
   return kaapi_getconcurrency();
@@ -88,7 +88,7 @@ int omp_get_num_procs (void)
 int 
 omp_in_parallel(void)
 {
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
+  kompctxt_t* ctxt = komp_get_ctxt();
   return ctxt->teaminfo !=0;
 }
 
@@ -166,7 +166,7 @@ omp_get_max_active_levels(void)
 int 
 omp_get_level(void)
 {
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
+  kompctxt_t* ctxt = komp_get_ctxt();
   if (ctxt->teaminfo ==0) 
     return 0;
   return 1;
@@ -185,7 +185,7 @@ omp_get_ancestor_thread_num(int level)
 int 
 omp_get_team_size(int level)
 {
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
+  kompctxt_t* ctxt = komp_get_ctxt();
   if (ctxt->teaminfo ==0) return 1;
   return kaapi_getconcurrency();
 }
@@ -195,7 +195,7 @@ omp_get_team_size(int level)
 int 
 omp_get_active_level(void)
 {
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
+  kompctxt_t* ctxt = komp_get_ctxt();
   if (ctxt->teaminfo ==0) return 0;
   return 1;
 }

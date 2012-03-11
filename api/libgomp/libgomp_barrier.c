@@ -71,7 +71,7 @@ gomp_barrier_wait (struct gomp_barrier *barrier)
   /* _barrier_ call generated from a _single_ construct: Only the
      thread performing the single body (creating OpenMP tasks) is
      waiting for completion of created tasks. */
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
+  kompctxt_t* ctxt = komp_get_ctxt();
   if (ctxt->inside_single)
     {
       if (ctxt->icv.threadid == 0)
@@ -103,7 +103,7 @@ gomp_barrier_wait (struct gomp_barrier *barrier)
 
 void GOMP_barrier (void)
 {
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
+  kompctxt_t* ctxt = komp_get_ctxt();
   if (ctxt->teaminfo ==0) /* not in parallel region */
     return;
   gomp_barrier_wait (&ctxt->teaminfo->barrier);

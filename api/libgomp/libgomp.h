@@ -75,57 +75,68 @@ typedef struct gomp_barrier {
 
 struct PerTeamLocalStorage;
 struct WorkShareRep;
+typedef kaapic_global_work_t* komp_globalworkshare_t;
 
-/* ICV
+/* each task owns its icv instance.
+   The following fields are inherited at task creation time:
+   - [read and report OpenMP 3.1 spec definition]
 */
 typedef struct gomp_icv_t {
   int threadid;       /* thread id */
   int numthreads;     /* in the team */
   int nextnumthreads; /* */
-  int serial;         /* */
 } gomp_icv_t;
 
-/* Team information : common to all threads that shared a same parallel region 
-   - localinfo is set to 0 at creation time
-   - localinfo[tid] = &workshare of the thread tid is set in the trampoline task
-   used to initialize task contexte.
-   - the workshare is initialized in the workshare construct (parallel loop)
+/* Team information : common to all threads that shared a same parallel region.
+   - lock is in case of concurrency on global team access update
+   - barrier is the barrier that is used by all tasks in the parallel region
+   - sing_state is the state to implement #pragma omp single construct
+   - numthreads is the number of threads in the parallel region. Fix at the 
+   start of the parallel region.
+   - the global workshare is initialized in the workshare construct (parallel loop)
+   
+   The team information data created by a the master thread that encounters 
+   a #pragma omp parallel construct. Parallel region has a lexical scope 
+   that allows to store the team info data into the Kaapi's stack 
+   of the runing Kaapi thread.
 */
 typedef struct GlobalTeamInformation {
-  kaapi_lock_t                 lock;       /* 1 iff work is init */
-  int                          numthreads;
-  kaapi_atomic_t               single_state;
-  komp_barrier_t               barrier;
-  kaapic_global_work_t*        volatile gwork;  /* last foreach loop context */
-  int                          serial;          /* serial number of workshare construct */
- } kaapi_libkomp_teaminfo_t;
+  kaapi_lock_t                   lock;       /* 1 iff work is init */
+  komp_barrier_t                 barrier;
+  kaapi_atomic_t                 single_state;
+  int                            numthreads;
+  komp_globalworkshare_t volatile gwork;  /* last foreach loop context */
+  unsigned long                  serial; /* serial number of workshare construct */
+ } komp_teaminfo_t;
 
 
-/* Workshare structure
+/* Workshare structure: define work for all threads in a team
+   - each thread owns its proper state defined by a komp_workshare_t data
+   
 */
 typedef struct WorkShareRep {
   kaapic_local_work_t*         lwork;      /* last foreach loop context */
   long                         start;      /* start index of the Kaapi/GOMP slice*/
   long                         incr;       /* scaling factor between Kaapi/GOMP slice*/
-  int                          workload;   /* workload */
-} kaapi_libkompworkshared_t;
+  unsigned long                serial; /* serial number of workshare construct */
+} komp_workshare_t;
 
 
 /** Pre-historic TLS  support for OMP */
 typedef struct PerTeamLocalStorage {
-  kaapi_libkompworkshared_t    workshare;     /* team workshare */
-  kaapi_libkomp_teaminfo_t*    teaminfo;      /* team information */
+  komp_workshare_t     workshare;     /* team workshare */
+  komp_teaminfo_t*    teaminfo;      /* team information */
   gomp_icv_t                   icv;
   gomp_icv_t                   save_icv;      /* saved version. No yet ready for nested */ 
   int                          inside_single;
-} kaapi_libkompctxt_t ;
+} kompctxt_t ;
 
 
-static inline kaapi_libkompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc )
+static inline kompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc )
 { 
   if (kproc->libgomp_tls == 0)
   {
-    kaapi_libkompctxt_t* ctxt = (kaapi_libkompctxt_t*)malloc(sizeof(kaapi_libkompctxt_t));
+    kompctxt_t* ctxt = (kompctxt_t*)malloc(sizeof(kompctxt_t));
     ctxt->workshare.lwork = 0;
     ctxt->teaminfo        = 0;
     ctxt->icv.threadid        = 0;
@@ -134,15 +145,15 @@ static inline kaapi_libkompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc 
     kproc->libgomp_tls        = ctxt;
     return ctxt;
   }
-  return (kaapi_libkompctxt_t*)kproc->libgomp_tls;
+  return (kompctxt_t*)kproc->libgomp_tls;
 }
 
-static inline kaapi_libkompctxt_t* komp_get_ctxt()
+static inline kompctxt_t* komp_get_ctxt()
 {
   return komp_get_ctxtkproc(kaapi_get_current_processor());
 }
 
-extern kaapi_libkomp_teaminfo_t*  komp_init_parallel_start (
+extern komp_teaminfo_t*  komp_init_parallel_start (
   kaapi_processor_t* kproc,
   unsigned num_threads
 );

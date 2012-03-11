@@ -65,7 +65,7 @@ static void GOMP_trampoline_task(
 #endif
 
   GOMP_spawn_task_arg_t* taskarg = (GOMP_spawn_task_arg_t*)voidp;
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxt();
+  kompctxt_t* ctxt = komp_get_ctxt();
 
   gomp_icv_t save_icv = ctxt->icv;
 
@@ -119,7 +119,7 @@ void GOMP_task(
                )
 {
   kaapi_processor_t* kproc = kaapi_get_current_processor();
-  kaapi_libkompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
+  kompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
   if (!if_clause) 
   {
     gomp_icv_t save_icv = ctxt->icv;
