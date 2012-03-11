@@ -51,6 +51,7 @@ typedef struct komp_parallel_task_arg {
   void*                     data;
   komp_teaminfo_t*          teaminfo;
   int                       nextnumthreads;
+  int                       nestedparallel;
 } komp_parallel_task_arg_t;
 
 /*
@@ -80,6 +81,7 @@ static void komp_trampoline_task_parallel
   /* initialize master context: nextnum thread is inherited */
   new_ctxt->icv.threadid       = taskarg->threadid;
   new_ctxt->icv.nextnumthreads = taskarg->nextnumthreads; /* WARNING: spec ?*/
+  new_ctxt->icv.nestedparallel = taskarg->nestedparallel;
   
   new_ctxt->inside_single      = 0;
   new_ctxt->save_ctxt          = ctxt;
@@ -99,9 +101,10 @@ KAAPI_REGISTER_TASKFORMAT( komp_parallel_task_format,
     "KOMP/Parallel Task",
     komp_trampoline_task_parallel,
     sizeof(komp_parallel_task_arg_t),
-    5,
+    6,
     (kaapi_access_mode_t[]){ 
         KAAPI_ACCESS_MODE_V, 
+        KAAPI_ACCESS_MODE_V,
         KAAPI_ACCESS_MODE_V,
         KAAPI_ACCESS_MODE_V,
         KAAPI_ACCESS_MODE_V,
@@ -112,15 +115,17 @@ KAAPI_REGISTER_TASKFORMAT( komp_parallel_task_format,
         offsetof(komp_parallel_task_arg_t, fn), 
         offsetof(komp_parallel_task_arg_t, data),
         offsetof(komp_parallel_task_arg_t, teaminfo),
-        offsetof(komp_parallel_task_arg_t, nextnumthreads)
+        offsetof(komp_parallel_task_arg_t, nextnumthreads),
+        offsetof(komp_parallel_task_arg_t, nestedparallel)
     },
-    (kaapi_offset_t[])     { 0, 0, 0, 0, 0 },
+    (kaapi_offset_t[])     { 0, 0, 0, 0, 0, 0 },
     (const struct kaapi_format_t*[]) { 
         kaapi_int_format, 
         kaapi_voidp_format,
         kaapi_voidp_format, 
         kaapi_voidp_format,
         kaapi_int_format, 
+        kaapi_int_format
       },
     0
 )
@@ -139,10 +144,15 @@ komp_init_parallel_start (
   /* do not save the ctxt, assume just one top level ctxt */
   kompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
 
-  if (num_threads == 0)
-    num_threads = ctxt->icv.nextnumthreads;
-  if (num_threads > kaapi_getconcurrency())
-    num_threads = kaapi_getconcurrency();
+  /* pseudo OpenMP spec algorithm to compute the number of threads */
+  if ( !ctxt->icv.nestedparallel && (ctxt->icv.nestedlevel >0))
+    num_threads = 1;
+  else {
+    if (num_threads == 0)
+      num_threads = ctxt->icv.nextnumthreads;
+    if (num_threads > kaapi_getconcurrency())
+      num_threads = kaapi_getconcurrency();
+  }
 
   thread = kaapi_threadcontext2thread(kproc->thread);
   
@@ -179,6 +189,8 @@ komp_init_parallel_start (
   /* initialize master context: nextnum thread is inherited */
   new_ctxt->icv.threadid       = 0;
   new_ctxt->icv.nextnumthreads = ctxt->icv.nextnumthreads; /* WARNING: spec ? */
+  new_ctxt->icv.nestedlevel    = 1+ctxt->icv.nestedlevel; 
+  new_ctxt->icv.nestedparallel = ctxt->icv.nestedparallel; /* WARNING: spec ? */
   
   new_ctxt->inside_single      = 0;
   new_ctxt->save_ctxt          = ctxt;
@@ -234,12 +246,13 @@ GOMP_parallel_start (
         allarg+i
     );
     arg = kaapi_task_getargst( task, komp_parallel_task_arg_t );
-    arg->threadid   = i;
-    arg->fn         = fn;
-    arg->data       = data;
-    arg->teaminfo   = teaminfo;
+    arg->threadid       = i;
+    arg->fn             = fn;
+    arg->data           = data;
+    arg->teaminfo       = teaminfo;
     /* WARNING: see spec: nextnum threads is inherited ? */
     arg->nextnumthreads = ctxt->icv.nextnumthreads;
+    arg->nestedparallel = ctxt->icv.nestedparallel;
 
     task = kaapi_thread_nexttask(thread, task);
   }
