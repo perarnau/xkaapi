@@ -51,6 +51,7 @@ typedef struct komp_parallel_task_arg {
   void*                     data;
   komp_teaminfo_t*          teaminfo;
   int                       nextnumthreads;
+  int                       nestedlevel;
   int                       nestedparallel;
 } komp_parallel_task_arg_t;
 
@@ -81,6 +82,7 @@ static void komp_trampoline_task_parallel
   /* initialize master context: nextnum thread is inherited */
   new_ctxt->icv.threadid       = taskarg->threadid;
   new_ctxt->icv.nextnumthreads = taskarg->nextnumthreads; /* WARNING: spec ?*/
+  new_ctxt->icv.nestedlevel    = 1+taskarg->nestedlevel;
   new_ctxt->icv.nestedparallel = taskarg->nestedparallel;
   
   new_ctxt->inside_single      = 0;
@@ -101,9 +103,10 @@ KAAPI_REGISTER_TASKFORMAT( komp_parallel_task_format,
     "KOMP/Parallel Task",
     komp_trampoline_task_parallel,
     sizeof(komp_parallel_task_arg_t),
-    6,
+    7,
     (kaapi_access_mode_t[]){ 
         KAAPI_ACCESS_MODE_V, 
+        KAAPI_ACCESS_MODE_V,
         KAAPI_ACCESS_MODE_V,
         KAAPI_ACCESS_MODE_V,
         KAAPI_ACCESS_MODE_V,
@@ -116,14 +119,16 @@ KAAPI_REGISTER_TASKFORMAT( komp_parallel_task_format,
         offsetof(komp_parallel_task_arg_t, data),
         offsetof(komp_parallel_task_arg_t, teaminfo),
         offsetof(komp_parallel_task_arg_t, nextnumthreads),
+        offsetof(komp_parallel_task_arg_t, nestedlevel),
         offsetof(komp_parallel_task_arg_t, nestedparallel)
     },
-    (kaapi_offset_t[])     { 0, 0, 0, 0, 0, 0 },
+    (kaapi_offset_t[])     { 0, 0, 0, 0, 0, 0, 0 },
     (const struct kaapi_format_t*[]) { 
         kaapi_int_format, 
         kaapi_voidp_format,
         kaapi_voidp_format, 
         kaapi_voidp_format,
+        kaapi_int_format, 
         kaapi_int_format, 
         kaapi_int_format
       },
@@ -252,6 +257,7 @@ GOMP_parallel_start (
     arg->teaminfo       = teaminfo;
     /* WARNING: see spec: nextnum threads is inherited ? */
     arg->nextnumthreads = ctxt->icv.nextnumthreads;
+    arg->nestedlevel    = ctxt->icv.nestedlevel;
     arg->nestedparallel = ctxt->icv.nestedparallel;
 
     task = kaapi_thread_nexttask(thread, task);
