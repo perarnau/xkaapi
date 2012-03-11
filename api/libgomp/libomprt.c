@@ -58,7 +58,7 @@ omp_set_num_threads (int n)
 int
 omp_get_num_threads (void)
 {
-  return komp_get_ctxt()->icv.numthreads;
+  return komp_get_ctxt()->teaminfo->numthreads;
 }
 
 int

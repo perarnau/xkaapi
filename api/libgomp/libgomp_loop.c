@@ -58,13 +58,13 @@ void GOMP_loop_end (void)
   
   ctxt->teaminfo->gwork = 0;
   if (ctxt->icv.threadid == 0)
-    kaapic_foreach_workend( self_thread, ctxt->workshare.lwork);
+    kaapic_foreach_workend( self_thread, ctxt->workshare->lwork);
   else
-    kaapic_foreach_local_workend( self_thread, ctxt->workshare.lwork );
+    kaapic_foreach_local_workend( self_thread, ctxt->workshare->lwork );
 
 
   /* implicit barrier at the end ? It will deadlock if parallel region task is steal ...*/
-  gomp_barrier_wait(&ctxt->teaminfo->barrier);
+  komp_barrier_wait(&ctxt->teaminfo->barrier);
 }
 
 void GOMP_loop_end_nowait (void)
@@ -75,7 +75,7 @@ void GOMP_loop_end_nowait (void)
 
   ctxt->teaminfo->gwork = 0;
   if (ctxt->icv.threadid == 0)
-    kaapic_foreach_workend( self_thread, ctxt->workshare.lwork);
+    kaapic_foreach_workend( self_thread, ctxt->workshare->lwork);
   else
-    kaapic_foreach_local_workend( self_thread, ctxt->workshare.lwork );
+    kaapic_foreach_local_workend( self_thread, ctxt->workshare->lwork );
 }

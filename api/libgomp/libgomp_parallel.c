@@ -44,55 +44,63 @@
 */
 #include "libgomp.h"
 
-// ==1 to use task based begin_parallel
-// else ==0 to use foreach based begin_parallel
-#define KAAPI_GOMP_USE_TASK 1
 
-
-#if (KAAPI_GOMP_USE_TASK == 1)
-
-typedef struct GOMP_parallel_task_arg {
-  int                       numthreads;
-  int                       nextnumthreads;
+typedef struct komp_parallel_task_arg {
   int                       threadid;
   void                    (*fn) (void *);
   void*                     data;
-  komp_teaminfo_t* teaminfo;
-} GOMP_parallel_task_arg_t;
+  komp_teaminfo_t*          teaminfo;
+  int                       nextnumthreads;
+} komp_parallel_task_arg_t;
 
-static void GOMP_trampoline_task_parallel
+/*
+*/
+static void komp_trampoline_task_parallel
 (
   void*           voidp, 
   kaapi_thread_t* thread
 )
 {
-  GOMP_parallel_task_arg_t* taskarg = (GOMP_parallel_task_arg_t*)voidp;
-  kompctxt_t* ctxt = komp_get_ctxt();
+  kaapi_processor_t* kproc  = kaapi_get_current_processor();
+  komp_parallel_task_arg_t* taskarg = (komp_parallel_task_arg_t*)voidp;
+  kompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
+  kompctxt_t* new_ctxt;
   
-  /* save context information */
-  gomp_icv_t save_icv = ctxt->icv;
-  komp_teaminfo_t* save_teaminfo = ctxt->teaminfo;
+  /* save context information: allocate new context in the caller stack */
+  new_ctxt = 
+    (kompctxt_t*)kaapi_thread_pushdata(
+        thread, 
+        sizeof(kompctxt_t)
+  );
 
-  ctxt->icv.numthreads     = taskarg->numthreads;
-  ctxt->icv.nextnumthreads = taskarg->nextnumthreads;
-  ctxt->icv.threadid       = taskarg->threadid;
-  ctxt->inside_single      = 0;
-  ctxt->teaminfo           = taskarg->teaminfo;
+  /* init workshared construct */
+  new_ctxt->workshare          = 0;
+  new_ctxt->teaminfo           = taskarg->teaminfo;
+  
+  /* initialize master context: nextnum thread is inherited */
+  new_ctxt->icv.threadid       = taskarg->threadid;
+  new_ctxt->icv.nextnumthreads = taskarg->nextnumthreads; /* WARNING: spec ?*/
+  
+  new_ctxt->inside_single      = 0;
+  new_ctxt->save_ctxt          = ctxt;
+  
+  /* swap context: until end_parallel, new_ctxt becomes the current context */
+  kproc->libkomp_tls = new_ctxt;
 
+  /* GCC compiled code */
   taskarg->fn(taskarg->data);
 
-  /* Restore the initial context values. */
-  ctxt->icv      = save_icv;
-  ctxt->teaminfo = save_teaminfo;
+  /* restore the initial context */
+  kproc->libkomp_tls = ctxt;
 }
 
-KAAPI_REGISTER_TASKFORMAT( GOMP_parallel_task_format,
-    "GOMP/Parallel Task",
-    GOMP_trampoline_task_parallel,
-    sizeof(GOMP_parallel_task_arg_t),
-    6,
+
+KAAPI_REGISTER_TASKFORMAT( komp_parallel_task_format,
+    "KOMP/Parallel Task",
+    komp_trampoline_task_parallel,
+    sizeof(komp_parallel_task_arg_t),
+    5,
     (kaapi_access_mode_t[]){ 
-        KAAPI_ACCESS_MODE_V, 
         KAAPI_ACCESS_MODE_V, 
         KAAPI_ACCESS_MODE_V,
         KAAPI_ACCESS_MODE_V,
@@ -100,59 +108,33 @@ KAAPI_REGISTER_TASKFORMAT( GOMP_parallel_task_format,
         KAAPI_ACCESS_MODE_V 
     },
     (kaapi_offset_t[])     { 
-        offsetof(GOMP_parallel_task_arg_t, numthreads), 
-        offsetof(GOMP_parallel_task_arg_t, nextnumthreads), 
-        offsetof(GOMP_parallel_task_arg_t, threadid), 
-        offsetof(GOMP_parallel_task_arg_t, fn), 
-        offsetof(GOMP_parallel_task_arg_t, data),
-        offsetof(GOMP_parallel_task_arg_t, teaminfo)
+        offsetof(komp_parallel_task_arg_t, threadid), 
+        offsetof(komp_parallel_task_arg_t, fn), 
+        offsetof(komp_parallel_task_arg_t, data),
+        offsetof(komp_parallel_task_arg_t, teaminfo),
+        offsetof(komp_parallel_task_arg_t, nextnumthreads)
     },
-    (kaapi_offset_t[])     { 0, 0, 0, 0, 0, 0 },
+    (kaapi_offset_t[])     { 0, 0, 0, 0, 0 },
     (const struct kaapi_format_t*[]) { 
         kaapi_int_format, 
-        kaapi_int_format, 
-        kaapi_int_format,
         kaapi_voidp_format,
         kaapi_voidp_format, 
-        kaapi_voidp_format
+        kaapi_voidp_format,
+        kaapi_int_format, 
       },
     0
 )
 
-#else
 
-static void GOMP_trampoline_task_parallel
-(
-  int32_t                   i, 
-  int32_t                   j, 
-  int32_t                   tid,
-  int                       numthreads,
-  komp_teaminfo_t* teaminfo,
-  void                    (*fn) (void *),
-  void*                     data
-)
-{
-  kompctxt_t* ctxt= komp_get_ctxt();
-  
-  ctxt->numthreads         = numthreads;
-  KAAPI_ATOMIC_WRITE(&ctxt->workshare.init, 0);
-  ctxt->teaminfo           = teaminfo;
-  
-  for (int32_t k = i; k<j; ++k)
-  {
-    ctxt->threadid = k;
-    fn(data);
-  }
-}
-#endif
-
-komp_teaminfo_t* 
+komp_teaminfo_t*  
 komp_init_parallel_start (
   kaapi_processor_t* kproc,
   unsigned num_threads
 )
 {
+  kompctxt_t* new_ctxt;
   kaapi_thread_t* thread;
+  komp_teaminfo_t* teaminfo;
 
   /* do not save the ctxt, assume just one top level ctxt */
   kompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
@@ -164,8 +146,15 @@ komp_init_parallel_start (
 
   thread = kaapi_threadcontext2thread(kproc->thread);
   
+  /* allocate new context in the caller stack */
+  new_ctxt = 
+    (kompctxt_t*)kaapi_thread_pushdata(
+        thread, 
+        sizeof(kompctxt_t)
+  );
+  
   /* init team information */
-  komp_teaminfo_t* teaminfo = 
+  teaminfo = 
     (komp_teaminfo_t*)kaapi_thread_pushdata_align(
         thread, 
         sizeof(komp_teaminfo_t), 
@@ -174,22 +163,28 @@ komp_init_parallel_start (
   /* lock for ??? */
   kaapi_atomic_initlock(&teaminfo->lock);
 
-  teaminfo->numthreads   = num_threads;
-  teaminfo->serial       = 0;
-
   /* barrier for the team */
-  gomp_barrier_init (&teaminfo->barrier, num_threads);
+  komp_barrier_init (&teaminfo->barrier, num_threads);
 
   KAAPI_ATOMIC_WRITE(&teaminfo->single_state, 0);
 
-  /* init workshared construct, assume just one top level ctxt */
-  ctxt->workshare.workload  = 0;
-  ctxt->teaminfo            = teaminfo;
+  teaminfo->numthreads         = num_threads;
+  teaminfo->gwork              = 0;
+  teaminfo->serial             = 0;
 
-  /* initialize master context */
-  ctxt->icv.numthreads = num_threads;
-  ctxt->icv.threadid   = 0;
-  ctxt->icv.serial     = teaminfo->serial;
+  /* init workshared construct */
+  new_ctxt->workshare          = 0;
+  new_ctxt->teaminfo           = teaminfo;
+  
+  /* initialize master context: nextnum thread is inherited */
+  new_ctxt->icv.threadid       = 0;
+  new_ctxt->icv.nextnumthreads = kaapi_getconcurrency(); /* WARNING: spec ?*/
+  
+  new_ctxt->inside_single      = 0;
+  new_ctxt->save_ctxt          = ctxt;
+  
+  /* swap context: until end_parallel, new_ctxt becomes the current context */
+  kproc->libkomp_tls = new_ctxt;
 
   return teaminfo;
 }
@@ -202,27 +197,31 @@ GOMP_parallel_start (
   unsigned num_threads
 )
 {
-  kaapi_processor_t*   kproc  = kaapi_get_current_processor();
-  kompctxt_t* ctxt   = komp_get_ctxtkproc(kproc);
-  kaapi_thread_t*      thread;
+  kaapi_processor_t* kproc  = kaapi_get_current_processor();
+  kompctxt_t* ctxt;
+  kaapi_thread_t* thread;
   komp_teaminfo_t* teaminfo;
-
-  ctxt->save_icv = ctxt->icv;
-  
+  kaapi_task_t* task;
+  komp_parallel_task_arg_t* arg;
+  komp_parallel_task_arg_t* allarg;
+    
+  /* begin parallel region: also push a new frame that will be pop
+     during call to kaapic_end_parallel
+  */
   kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
 
+  /* init the new context with team information and workshare construct 
+     the method push a new context in the caller Kaapi' stack 
+     and a call to komp_get_ctxtkproc must be done to retreive the new ctxt.
+  */
   teaminfo = komp_init_parallel_start( kproc, num_threads );
   thread = kaapi_threadcontext2thread(kproc->thread);
-  num_threads = ctxt->icv.numthreads;
-
-#if (KAAPI_GOMP_USE_TASK == 1)
-
-  kaapi_task_t* task;
-  GOMP_parallel_task_arg_t* arg;
-  GOMP_parallel_task_arg_t* allarg;
   
+  ctxt = komp_get_ctxtkproc(kproc);
+  num_threads = teaminfo->numthreads;
   
-  allarg = kaapi_thread_pushdata(thread, num_threads * sizeof(GOMP_parallel_task_arg_t));
+  /* allocate in the caller stack the tasks for the parallel region */
+  allarg = kaapi_thread_pushdata(thread, num_threads * sizeof(komp_parallel_task_arg_t));
   
   /* The master thread (id 0) calls fn (data) directly. That's why we
      start this loop from id = 1.*/
@@ -231,42 +230,20 @@ GOMP_parallel_start (
   {
     kaapi_task_init( 
         task, 
-        GOMP_trampoline_task_parallel, 
+        komp_trampoline_task_parallel, 
         allarg+i
     );
-    arg = kaapi_task_getargst( task, GOMP_parallel_task_arg_t );
-    arg->numthreads = num_threads;
-    arg->nextnumthreads = ctxt->icv.nextnumthreads;
+    arg = kaapi_task_getargst( task, komp_parallel_task_arg_t );
     arg->threadid   = i;
     arg->fn         = fn;
     arg->data       = data;
-    arg->teaminfo   = teaminfo; /* this is the master workshare of the team... */
+    arg->teaminfo   = teaminfo;
+    /* WARNING: see spec: nextnum threads is inherited ? */
+    arg->nextnumthreads = ctxt->icv.nextnumthreads;
 
     task = kaapi_thread_nexttask(thread, task);
   }
   kaapi_thread_push_packedtasks(thread, num_threads-1);
-
-#else
-
-  /* ici : il faut un kaapic_foreach asynchrone 
-     - creation de la tache adaptative
-     - mais on continue localement.
-     Le thread courant ne doit pas prendre d'element dans la sequence
-     pour les executer.
-  */
-  kaapic_foreach_attr_t attr;
-  kaapic_foreach_attr_init(&attr);
-  kaapic_foreach_attr_set_grains( &attr, 1, 1 );
-  
-  kaapic_foreach(1, num_threads, &attr, 
-    4, GOMP_trampoline_task_parallel,
-    num_threads,
-    teaminfo,
-    fn,
-    data
-  );
-
-#endif
 }
 
 
@@ -276,13 +253,18 @@ GOMP_parallel_end (void)
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
   komp_teaminfo_t* teaminfo = ctxt->teaminfo;
+  kompctxt_t* old_ctxt;
 
   /* implicit sync + implicit pop fame */
   ctxt->teaminfo->gwork = 0;
   ctxt->teaminfo = 0;
+  old_ctxt = ctxt->save_ctxt;
   kaapic_end_parallel (KAAPI_SCHEDFLAG_DEFAULT);
-  ctxt->icv = ctxt->save_icv;
+  
+  /* restore old context */
+  kproc->libkomp_tls = old_ctxt;
 
   /* free shared resource */
   kaapi_atomic_destroylock(&teaminfo->lock);
+  komp_barrier_destroy(&teaminfo->barrier);
 }

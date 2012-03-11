@@ -46,7 +46,7 @@
 
 
 void
-gomp_barrier_init (struct gomp_barrier *barrier, unsigned int num)
+komp_barrier_init (struct komp_barrier *barrier, unsigned int num)
 {
   barrier->nthreads = num;
   KAAPI_ATOMIC_WRITE (&barrier->cycle, 0);
@@ -54,7 +54,7 @@ gomp_barrier_init (struct gomp_barrier *barrier, unsigned int num)
 }
 
 void
-gomp_barrier_destroy (struct gomp_barrier *barrier)
+komp_barrier_destroy (struct komp_barrier *barrier)
 {
   barrier->nthreads = -1;
   KAAPI_ATOMIC_WRITE (&barrier->cycle, -1);
@@ -62,7 +62,7 @@ gomp_barrier_destroy (struct gomp_barrier *barrier)
 }
 
 void
-gomp_barrier_wait (struct gomp_barrier *barrier)
+komp_barrier_wait (struct komp_barrier *barrier)
 {
   int current_cycle = KAAPI_ATOMIC_READ (&barrier->cycle);
   int next_cycle = (current_cycle + 1) % BAR_CYCLES;
@@ -106,7 +106,7 @@ void GOMP_barrier (void)
   kompctxt_t* ctxt = komp_get_ctxt();
   if (ctxt->teaminfo ==0) /* not in parallel region */
     return;
-  gomp_barrier_wait (&ctxt->teaminfo->barrier);
+  komp_barrier_wait (&ctxt->teaminfo->barrier);
   
   /* barrier should reset single ? */  
 }

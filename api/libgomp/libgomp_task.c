@@ -45,43 +45,55 @@
 
 //#define USE_WORKLOAD 1
 
-typedef struct GOMP_spawn_task_arg {
-  int                       numthreads;
-  int                       nextnumthreads;
+typedef struct GOMP_trampoline_task_arg {
   int                       threadid;
   void                     (*fn) (void *);
   void*                     data;
-} GOMP_spawn_task_arg_t;
+  komp_teaminfo_t*          teaminfo;
+  int                       nextnumthreads;
+} GOMP_trampoline_task_arg;
 
 static void GOMP_trampoline_task(
   void* voidp, kaapi_thread_t* thread
 )
 {
-#if defined(USE_WORKLOAD)
+  GOMP_trampoline_task_arg* taskarg = (GOMP_trampoline_task_arg*)voidp;
   kaapi_processor_t* kproc = kaapi_get_current_processor();
-  kaapi_set_workload( kproc, 
-    kproc->thread->stack.sfp - kproc->thread->stack.stackframe
+  kompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
+  kompctxt_t* new_ctxt;
+
+  /* save context information: allocate new context in the caller stack */
+  /* ideally this context should be created only on steal operation */
+  new_ctxt = 
+    (kompctxt_t*)kaapi_thread_pushdata(
+        thread, 
+        sizeof(kompctxt_t)
   );
-#endif
+  
+  /* init workshared construct */
+  new_ctxt->workshare          = 0;
+  new_ctxt->teaminfo           = taskarg->teaminfo;
+  
+  /* initialize master context: nextnum thread is inherited */
+  new_ctxt->icv.threadid       = taskarg->threadid;
+  new_ctxt->icv.nextnumthreads = taskarg->nextnumthreads; /* WARNING: spec ?*/
+  
+  new_ctxt->inside_single      = 0;
+  new_ctxt->save_ctxt          = ctxt;
 
-  GOMP_spawn_task_arg_t* taskarg = (GOMP_spawn_task_arg_t*)voidp;
-  kompctxt_t* ctxt = komp_get_ctxt();
-
-  gomp_icv_t save_icv = ctxt->icv;
-
-  ctxt->icv.numthreads     = taskarg->numthreads;
-  ctxt->icv.nextnumthreads = taskarg->nextnumthreads;
-  ctxt->icv.threadid       = taskarg->threadid;
+  /* swap context: until end_parallel, new_ctxt becomes the current context */
+  kproc->libkomp_tls = new_ctxt;
 
   taskarg->fn(taskarg->data);
 
-  ctxt->icv = save_icv;
+  /* restore the initial context */
+  kproc->libkomp_tls = ctxt;
 }
 
 KAAPI_REGISTER_TASKFORMAT(GOMP_task_format,
     "GOMP/Task",
     GOMP_trampoline_task,
-    sizeof(GOMP_spawn_task_arg_t),
+    sizeof(GOMP_trampoline_task_arg),
     5,
     (kaapi_access_mode_t[]){ 
         KAAPI_ACCESS_MODE_V, 
@@ -91,19 +103,19 @@ KAAPI_REGISTER_TASKFORMAT(GOMP_task_format,
         KAAPI_ACCESS_MODE_V 
     },
     (kaapi_offset_t[])     { 
-        offsetof(GOMP_spawn_task_arg_t, numthreads), 
-        offsetof(GOMP_spawn_task_arg_t, nextnumthreads), 
-        offsetof(GOMP_spawn_task_arg_t, threadid), 
-        offsetof(GOMP_spawn_task_arg_t, fn), 
-        offsetof(GOMP_spawn_task_arg_t, data)
+        offsetof(GOMP_trampoline_task_arg, threadid), 
+        offsetof(GOMP_trampoline_task_arg, fn), 
+        offsetof(GOMP_trampoline_task_arg, data),
+        offsetof(GOMP_trampoline_task_arg, teaminfo), 
+        offsetof(GOMP_trampoline_task_arg, nextnumthreads), 
     },
     (kaapi_offset_t[])     { 0, 0, 0, 0,0 },
     (const struct kaapi_format_t*[]) {
-        kaapi_int_format, 
-        kaapi_int_format, 
         kaapi_int_format,
         kaapi_voidp_format, 
-        kaapi_voidp_format
+        kaapi_voidp_format,
+        kaapi_voidp_format,
+        kaapi_int_format, 
       },
     0
 )
@@ -122,8 +134,10 @@ void GOMP_task(
   kompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
   if (!if_clause) 
   {
-    gomp_icv_t save_icv = ctxt->icv;
-    if (cpyfn)
+    komp_icv_t save_icv = ctxt->icv;
+    if (!cpyfn)
+      fn (data);
+    else
     {
       char buf[arg_size + arg_align - 1];
       char *arg = (char *) (((uintptr_t) buf + arg_align - 1)
@@ -131,9 +145,6 @@ void GOMP_task(
       cpyfn (arg, data);
       fn (arg);
     }
-    else
-      fn (data);
-
     ctxt->icv      = save_icv;
     return;
   }
@@ -143,7 +154,7 @@ void GOMP_task(
   kaapi_task_init( 
       task, 
       GOMP_trampoline_task, 
-      kaapi_thread_pushdata(thread, sizeof(GOMP_spawn_task_arg_t)) 
+      kaapi_thread_pushdata(thread, sizeof(GOMP_trampoline_task_arg)) 
   );
   void* userarg = kaapi_thread_pushdata_align( thread, arg_size, arg_align);
   if (cpyfn)
@@ -151,12 +162,12 @@ void GOMP_task(
   else
     memcpy(userarg, data, arg_size);
 
-  GOMP_spawn_task_arg_t* arg = kaapi_task_getargst( task, GOMP_spawn_task_arg_t );
-  arg->numthreads     = ctxt->icv.numthreads;
-  arg->nextnumthreads = ctxt->icv.nextnumthreads;
+  GOMP_trampoline_task_arg* arg = kaapi_task_getargst( task, GOMP_trampoline_task_arg );
   arg->threadid       = ctxt->icv.threadid;
   arg->fn             = fn;
   arg->data           = userarg;
+  arg->teaminfo       = ctxt->teaminfo;
+  arg->nextnumthreads = ctxt->icv.nextnumthreads;
   kaapi_thread_pushtask(thread);
 }
 
