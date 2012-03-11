@@ -178,7 +178,7 @@ komp_init_parallel_start (
   
   /* initialize master context: nextnum thread is inherited */
   new_ctxt->icv.threadid       = 0;
-  new_ctxt->icv.nextnumthreads = kaapi_getconcurrency(); /* WARNING: spec ?*/
+  new_ctxt->icv.nextnumthreads = ctxt->icv.nextnumthreads; /* WARNING: spec ? */
   
   new_ctxt->inside_single      = 0;
   new_ctxt->save_ctxt          = ctxt;

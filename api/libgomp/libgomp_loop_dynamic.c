@@ -400,8 +400,6 @@ static void komp_trampoline_task_parallelfor
   /* swap context: until end_parallel, new_ctxt becomes the current context */
   kproc->libkomp_tls = new_ctxt;
 
-printf("\n parallel_for task: teaminfo:%p\n", new_ctxt->teaminfo );
-
   /* initialize the workshare construct */
   komp_workshare_t* workshare = 
     komp_loop_dynamic_start_init( kproc, taskarg->start, taskarg->incr );
