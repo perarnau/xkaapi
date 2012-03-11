@@ -131,10 +131,27 @@ void GOMP_task(
                )
 {
   kaapi_processor_t* kproc = kaapi_get_current_processor();
+  kaapi_thread_t* thread =  kaapi_threadcontext2thread(kproc->thread);
   kompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
   if (!if_clause) 
   {
-    komp_icv_t save_icv = ctxt->icv;
+    kompctxt_t* new_ctxt;
+
+    /* save context information: allocate new context in the caller stack */
+    /* ideally this context should be created only on steal operation */
+    new_ctxt = 
+      (kompctxt_t*)kaapi_thread_pushdata(
+          thread, 
+          sizeof(kompctxt_t)
+    );
+    
+    /* init workshared construct */
+    *new_ctxt = *ctxt;
+    new_ctxt->save_ctxt          = ctxt;
+
+    /* swap context: until end_parallel, new_ctxt becomes the current context */
+    kproc->libkomp_tls = new_ctxt;
+
     if (!cpyfn)
       fn (data);
     else
@@ -145,11 +162,12 @@ void GOMP_task(
       cpyfn (arg, data);
       fn (arg);
     }
-    ctxt->icv      = save_icv;
+
+    /* restore the initial context */
+    kproc->libkomp_tls = ctxt;
     return;
   }
 
-  kaapi_thread_t* thread =  kaapi_threadcontext2thread(kproc->thread);
   kaapi_task_t* task = kaapi_thread_toptask(thread);
   kaapi_task_init( 
       task, 
