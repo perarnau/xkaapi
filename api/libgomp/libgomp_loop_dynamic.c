@@ -114,8 +114,7 @@ static inline komp_workshare_t*  komp_loop_dynamic_start_init(
   }
   workshare->start  = start;
   workshare->incr   = incr;
-  workshare->serial = teaminfo->serial;
-
+  workshare->serial = ++teaminfo->serial;
   return workshare;
 }
 

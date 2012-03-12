@@ -64,7 +64,6 @@ void GOMP_loop_end (void)
     kaapic_foreach_workend( self_thread, ctxt->workshare->lwork);
   else
     kaapic_foreach_local_workend( self_thread, ctxt->workshare->lwork );
-
 }
 
 void GOMP_loop_end_nowait (void)
