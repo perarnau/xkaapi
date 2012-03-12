@@ -208,7 +208,7 @@ komp_init_parallel_start (
 
 
 void 
-GOMP_parallel_start (
+komp_parallel_start (
   void (*fn) (void *), 
   void *data, 
   unsigned num_threads
@@ -263,6 +263,17 @@ GOMP_parallel_start (
     task = kaapi_thread_nexttask(thread, task);
   }
   kaapi_thread_push_packedtasks(thread, num_threads-1);
+}
+
+
+void 
+GOMP_parallel_start (
+  void (*fn) (void *), 
+  void *data, 
+  unsigned num_threads
+)
+{
+  komp_parallel_start( fn, data, num_threads, -1 );
 }
 
 

@@ -105,13 +105,14 @@ typedef struct komp_teaminfo_t {
   kaapi_lock_t                     lock;
   komp_barrier_t                   barrier;
   kaapi_atomic_t                   single_state;
+  unsigned int volatile            section_state;
   int                              numthreads;
   komp_globalworkshare_t* volatile gwork;      /* last foreach loop context */
   unsigned long                    serial;      /* serial number of workshare */
  } komp_teaminfo_t;
 
 
-/* Workshare structure: it defines work for all threads in a team
+/* Workshare structure: it defines loop work for all threads in a team
    - each thread owns its proper state defined by a komp_workshare_t data
    - the Kaapi iterates over [0,N) with increment=1, start and incr is used
    to convert [0,N) to [start,end) + incr ginve in for loop workshare construct.
@@ -157,8 +158,16 @@ static inline kompctxt_t* komp_get_ctxt()
   return komp_get_ctxtkproc(kaapi_get_current_processor());
 }
 
+/* */
 extern komp_teaminfo_t*  komp_init_parallel_start (
   kaapi_processor_t* kproc,
+  unsigned num_threads
+);
+
+/* */
+extern void komp_parallel_start (
+  void (*fn) (void *), 
+  void *data, 
   unsigned num_threads
 );
 
