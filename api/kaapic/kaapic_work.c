@@ -178,14 +178,16 @@ int kaapic_global_work_pop
 {
   int retval;
   int pos;
+  int idx;
 
   kaapi_assert_debug(tid<KAAPI_MAX_PROCESSOR);
 
   pos = gw->wa.tid2pos[tid];
   if (pos == (uint8_t)-1) 
   {
+repop_any:
     /* no reserved slice: steal one */
-    int idx = kaapi_bitmap_value_first1_and_zero(&gw->wa.map);
+    idx = kaapi_bitmap_first1_and_zero(&gw->wa.map);
     if (idx ==0)
     {
       *i = *j = 0;
@@ -199,10 +201,16 @@ int kaapic_global_work_pop
   kaapi_assert_debug( pos >= 0 );
   kaapi_assert_debug( pos<kaapi_getconcurrency() );
   
+  retval = (0 == kaapi_bitmap_unset(&gw->wa.map, pos));
+  if (retval ==0)
+  {
+    pos = -1;
+    goto repop_any;
+  }
+
   *i = gw->wa.startindex[pos];
   *j = gw->wa.startindex[pos+1];
   
-  retval = (0 == kaapi_bitmap_unset(&gw->wa.map, pos));
 
   /* Here, because work may have been finished  
   */
