@@ -6,7 +6,6 @@
 #include <string.h>
 #include <assert.h>
 #include "libgomp_g.h"
-#include <stdio.h>
 
 
 #define N 100
@@ -42,7 +41,6 @@ static void f_1 (void *dummy)
 
   for (s = GOMP_sections_start (N); s ; s = GOMP_sections_next ())
   {
-printf("s=%i iam:%i\n", s, iam ); fflush(stdout);
     set_data (s, iam);
   }
   GOMP_sections_end ();

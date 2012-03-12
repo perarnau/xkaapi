@@ -181,14 +181,8 @@ static inline void komp_loop_dynamic_start_slave(
         
   /* get own slice */
   if (!kaapic_global_work_pop( teaminfo->gwork, kproc->kid, &start, &end))
-  {
     start = end = 0;
-printf("Tid:%i is slave cannot pop initial slice\n",kproc->kid); fflush(stdout); 
-  }
-else
-{
-printf("Tid:%i is slave and pop initial slice\n",kproc->kid); fflush(stdout); 
-}
+
   workshare->lwork = kaapic_foreach_local_workinit( 
                           &teaminfo->gwork->lwork[kproc->kid],
                           start, end );
