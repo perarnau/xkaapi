@@ -358,7 +358,7 @@ static void _kaapic_foreach_initwa(
   int concurrency = kaapi_getconcurrency();
   long off;
   long scale;
-  int sizemap;
+  int sizemap, finalsize;
 
   kaapi_assert_debug(KAAPI_MAX_PROCESSOR < (uint8_t)~0 );
 
@@ -371,7 +371,7 @@ static void _kaapic_foreach_initwa(
   kaapi_bitmap_init( &wa->map, &mask );
 
   /* concurrency now = size of the set */
-  sizemap = kaapi_bitmap_value_count(&mask);
+  finalsize = sizemap = kaapi_bitmap_value_count(&mask);
 
   /* split the range in equal slices */
   range_size = last - first;
@@ -379,16 +379,16 @@ static void _kaapic_foreach_initwa(
   /* handle concurrency too high case */
   if (range_size < sizemap) 
   {
-    sizemap = range_size;
+    finalsize = range_size;
   }
 
   /* round range to be multiple of concurrency 
      tid with indexes 0 will get the biggest part
      Here it is an uniform block distribution. An other distribution should be used.
   */
-  off = range_size % sizemap;
+  off = range_size % finalsize;
   range_size -= off;
-  scale = range_size / sizemap;
+  scale = range_size / finalsize;
   
   /* init logical mapping from tid to [0, ..., n] such that localtid is attached to 0 if
      is in the set.
@@ -404,7 +404,7 @@ static void _kaapic_foreach_initwa(
     if (i == self_tid) 
       continue;
       
-    if (kaapi_bitmap_value_get(&mask, i)  && (localcount < sizemap))
+    if (kaapi_bitmap_value_get(&mask, i)  && (localcount < finalsize))
       wa->tid2pos[i] = localcount++;
     else 
       wa->tid2pos[i] = (uint8_t)-1; /* not in the set */
@@ -415,10 +415,12 @@ static void _kaapic_foreach_initwa(
   */
   wa->startindex[0] = first;
   wa->startindex[1] = first+off+scale;
-  for (i=1; i<sizemap; ++i)
+  for (i=1; i<finalsize; ++i)
     wa->startindex[i+1] = wa->startindex[i]+scale;
+  for (i=finalsize; i<sizemap; ++i)
+    wa->startindex[i+1] = wa->startindex[finalsize];
 
-  kaapi_assert_debug(wa->startindex[sizemap] == last);
+  kaapi_assert_debug(wa->startindex[finalsize] == last);
 }
 
 
