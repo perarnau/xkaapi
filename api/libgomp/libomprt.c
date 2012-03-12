@@ -48,17 +48,15 @@
 void
 omp_set_num_threads (int n)
 {
-  if (n >0)
-  {
-    kompctxt_t* ctxt = komp_get_ctxt();
-    ctxt->icv.next_numthreads = n;
-  }
+  kompctxt_t* ctxt = komp_get_ctxt();
+  ctxt->icv.next_numthreads = n > 0 ? n : 1;
 }
 
 int
 omp_get_num_threads (void)
 {
-  return komp_get_ctxt()->teaminfo->numthreads;
+  kompctxt_t* ctxt = komp_get_ctxt();
+  return ctxt->teaminfo ? komp_get_ctxt()->teaminfo->numthreads : 1;
 }
 
 int
