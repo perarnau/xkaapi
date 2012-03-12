@@ -168,22 +168,21 @@ static inline void komp_loop_dynamic_start_master(
 */
 static inline void komp_loop_dynamic_start_slave(
   kaapi_processor_t* kproc,
-  komp_workshare_t*  workshare
+  komp_workshare_t*  workshare,
+  kaapic_global_work_t* gwork
 )
 {
-  kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
-  komp_teaminfo_t* teaminfo = ctxt->teaminfo;
   long start, end;
 
   /* wait global work becomes ready */
-  kaapi_assert_debug(teaminfo->gwork !=0);
+  kaapi_assert_debug(gwork !=0);
         
   /* get own slice */
-  if (!kaapic_global_work_pop( teaminfo->gwork, kproc->kid, &start, &end))
+  if (!kaapic_global_work_pop( gwork, kproc->kid, &start, &end))
     start = end = 0;
 
   workshare->lwork = kaapic_foreach_local_workinit( 
-                          &teaminfo->gwork->lwork[kproc->kid],
+                          &gwork->lwork[kproc->kid],
                           start, end );
 
 }
@@ -205,11 +204,13 @@ bool GOMP_loop_dynamic_start (
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
   komp_teaminfo_t* teaminfo = ctxt->teaminfo;
+  kaapic_global_work_t* gwork;
 
   komp_workshare_t* workshare = 
     komp_loop_dynamic_start_init( kproc, start, incr );
 
   if (ctxt->icv.thread_id ==0)
+  {
     komp_loop_dynamic_start_master(
       kproc,
       workshare,
@@ -218,16 +219,19 @@ bool GOMP_loop_dynamic_start (
       incr,
       chunk_size
     );
+    gwork = teaminfo->gwork;
+  }
   else 
   {
     /* wait global work becomes ready */
-    while (teaminfo->gwork ==0)
+    while ( (gwork = teaminfo->gwork) ==0)
       kaapi_slowdown_cpu();
     kaapi_readmem_barrier();
 
     komp_loop_dynamic_start_slave(
       kproc,
-      workshare
+      workshare,
+      gwork
     );
   }
 
