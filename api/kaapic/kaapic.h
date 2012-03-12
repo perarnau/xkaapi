@@ -114,8 +114,9 @@ extern int32_t kaapic_get_thread_num(void);
 typedef struct kaapic_foreach_attr_t {
   uint32_t             s_grain;
   uint32_t             p_grain;  
-  int                  policy;       /* choose the policy for splitting */
-  kaapi_cpuset_t       cpuset;       /* cpuset used for initial distribution i = kid */
+  unsigned int         nthreads;/* number of threads for initial splitting */
+  int                  policy;  /* choose the policy for splitting */
+  kaapi_cpuset_t       cpuset;  /* cpuset used for initial distribution i = kid */
 } kaapic_foreach_attr_t;
   
 /*
@@ -128,6 +129,11 @@ extern int kaapic_foreach_attr_set_grains(
   kaapic_foreach_attr_t* attr, 
   uint32_t s_grain,
   uint32_t p_grain
+);
+
+extern int kaapic_foreach_attr_set_threads(
+  kaapic_foreach_attr_t* attr, 
+  unsigned int nthreads
 );
 
 /*

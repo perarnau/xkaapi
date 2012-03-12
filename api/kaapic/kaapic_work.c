@@ -417,6 +417,8 @@ kaapic_global_work_t* kaapic_foreach_global_workinit
 {
   kaapic_global_work_t* gwork;
   kaapic_local_work_t* lwork;
+  int concurrency;
+  unsigned int nthreads;
   int i;
 
   /* if empty gwork 
@@ -439,7 +441,11 @@ kaapic_global_work_t* kaapic_foreach_global_workinit
   
   /* work array, reserve range in [first,last) for each thief */
   if (attr == 0) attr = &kaapic_default_attr;
-  int concurrency = kaapi_getconcurrency();
+
+  concurrency = kaapi_getconcurrency();
+  nthreads = attr->nthreads;
+  if (nthreads == (unsigned int)-1)
+    nthreads = concurrency;
 
   /* initialize work distribution 
      - this function should a policy of the foreach attribut
@@ -448,7 +454,7 @@ kaapic_global_work_t* kaapic_foreach_global_workinit
       &gwork->wa, 
       localtid, 
       (kaapi_bitmap_value_t*)&attr->cpuset, 
-      concurrency,
+      nthreads,
       first, last
   );
 
