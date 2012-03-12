@@ -246,13 +246,18 @@ static inline int kaapi_bitmap_value_first1_and_zero_32( kaapi_bitmap_value32_t*
 }
 
 /* Return the 1+index of the least significant bit set to 1.
-   If the value is 0 return 0.
+   If the value is 0 return 0. Return 0 if atomicity is failed.
    Else return the number of trailing zero (from to least significant
    bit to the most significant bit). And set to 0 the bit.
 */
 static inline int kaapi_bitmap_first1_and_zero_32( kaapi_bitmap32_t* b )
 {
-  return kaapi_bitmap_value_first1_and_zero_32( (kaapi_bitmap_value32_t*)b );
+  /* Note: for WIN32, to have a look at _BitScanForward */
+  int fb = __builtin_ffs( KAAPI_ATOMIC_READ(&b->proc32) );
+  if (fb ==0) return 0;
+  if (kaapi_bitmap_unset_32(b, fb-1) ==0)
+    return fb;
+  return 0;
 }
 
 /* set all the [0, i[ bits 
@@ -434,7 +439,12 @@ static inline int kaapi_bitmap_value_first1_and_zero_64( kaapi_bitmap_value64_t*
 */
 static inline int kaapi_bitmap_first1_and_zero_64( kaapi_bitmap64_t* b )
 {
-  return kaapi_bitmap_value_first1_and_zero_64( (kaapi_bitmap_value64_t*)b );
+  /* Note: for WIN32, to have a look at _BitScanForward */
+  int fb = __builtin_ffsl( KAAPI_ATOMIC_READ(&b->proc64) );
+  if (fb ==0) return 0;
+  if (kaapi_bitmap_unset_64(b, fb-1) ==0)
+    return fb;
+  return 0;
 }
 
 static inline int kaapi_bitmap_value_first1_64( const kaapi_bitmap_value64_t* b )
@@ -652,7 +662,21 @@ static inline int kaapi_bitmap_value_first1_and_zero_128( kaapi_bitmap_value128_
 */
 static inline int kaapi_bitmap_first1_and_zero_128( kaapi_bitmap128_t* b )
 {
-  return kaapi_bitmap_value_first1_and_zero_128( (kaapi_bitmap_value128_t*)b );
+  /* Note: for WIN32, to have a look at _BitScanForward */
+  int fb = __builtin_ffsl( KAAPI_ATOMIC_READ(&(b->proc128)[0]) );
+  if (fb !=0) 
+  {
+    if (kaapi_bitmap_unset_64((kaapi_bitmap64_t*)&b->proc128[0], fb-1) ==0)
+      return fb;
+    return 0;
+  }
+  fb = __builtin_ffsl( KAAPI_ATOMIC_READ(&(b->proc128)[1]) );
+  if (fb !=0) 
+  {
+    if (kaapi_bitmap_unset_64((kaapi_bitmap64_t*)&b->proc128[1], fb-1) ==0)
+      return 64+fb;
+  }
+  return 0;
 }
 
 static inline int kaapi_bitmap_value_first1_128( const kaapi_bitmap_value128_t* b )
