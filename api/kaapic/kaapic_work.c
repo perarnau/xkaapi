@@ -185,7 +185,8 @@ int kaapic_global_work_pop
   if (pos == (uint8_t)-1) 
   {
     /* no reserved slice: steal one */
-    int idx = kaapi_bitmap_value_first1_and_zero(&gw->wa.map);
+    int idx = kaapi_bitmap_first1_and_zero(&gw->wa.map);
+printf("Tid:%i steal slice idx:%i\n", tid, idx-1 ); fflush(stdout);
     if (idx ==0)
     {
       *i = *j = 0;

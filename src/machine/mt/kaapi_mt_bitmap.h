@@ -245,6 +245,16 @@ static inline int kaapi_bitmap_value_first1_and_zero_32( kaapi_bitmap_value32_t*
   return fb;
 }
 
+/* Return the 1+index of the least significant bit set to 1.
+   If the value is 0 return 0.
+   Else return the number of trailing zero (from to least significant
+   bit to the most significant bit). And set to 0 the bit.
+*/
+static inline int kaapi_bitmap_first1_and_zero_32( kaapi_bitmap32_t* b )
+{
+  return kaapi_bitmap_value_first1_and_zero_32( (kaapi_bitmap_value32_t*)b );
+}
+
 /* set all the [0, i[ bits 
 */
 static inline void kaapi_bitmap_value_set_low_bits_32( kaapi_bitmap_value32_t* b, unsigned int i)
@@ -415,6 +425,16 @@ static inline int kaapi_bitmap_value_first1_and_zero_64( kaapi_bitmap_value64_t*
   if (fb ==0) return 0;
   b->proc64 &= ~( ((uint64_t)1) << (fb-1) );
   return fb;
+}
+
+/* Return the 1+index of the least significant bit set to 1.
+   If the value is 0 return 0.
+   Else return the number of trailing zero (from to least significant
+   bit to the most significant bit). And set to 0 the bit.
+*/
+static inline int kaapi_bitmap_first1_and_zero_64( kaapi_bitmap64_t* b )
+{
+  return kaapi_bitmap_value_first1_and_zero_64( (kaapi_bitmap_value64_t*)b );
 }
 
 static inline int kaapi_bitmap_value_first1_64( const kaapi_bitmap_value64_t* b )
@@ -625,6 +645,16 @@ static inline int kaapi_bitmap_value_first1_and_zero_128( kaapi_bitmap_value128_
   return 64+fb;
 }
 
+/* Return the 1+index of the least significant bit set to 1.
+   If the value is 0 return 0.
+   Else return the number of trailing zero (from to least significant
+   bit to the most significant bit). And set to 0 the bit.
+*/
+static inline int kaapi_bitmap_first1_and_zero_128( kaapi_bitmap128_t* b )
+{
+  return kaapi_bitmap_value_first1_and_zero_128( (kaapi_bitmap_value128_t*)b );
+}
+
 static inline int kaapi_bitmap_value_first1_128( const kaapi_bitmap_value128_t* b )
 {
   /* Note: for WIN32, to have a look at _BitScanForward */
@@ -744,6 +774,7 @@ typedef kaapi_bitmap_value128_t kaapi_bitmap_value_t;
 #    define kaapi_bitmap_unset(b, i) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_unset)((b), (i))
 #    define kaapi_bitmap_count(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_count)(b)
 #    define kaapi_bitmap_value_first1_and_zero(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_first1_and_zero)(b)
+#    define kaapi_bitmap_first1_and_zero(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_first1_and_zero)(b)
 #    define kaapi_bitmap_value_first1(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_first1)(b)
 #    define kaapi_bitmap_first1(b) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_first1)(b)
 #    define kaapi_bitmap_value_set_low_bits(b,i) KAAPI_MAX_PROCESSOR_SUFFIX(kaapi_bitmap_value_set_low_bits)(b,i)

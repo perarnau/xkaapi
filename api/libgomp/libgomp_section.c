@@ -47,15 +47,17 @@ unsigned GOMP_sections_start (unsigned maxsec)
 {
   long first, last;
   GOMP_loop_dynamic_start( 0, maxsec, 1, 1, &first, &last );
-  if (first <last) return first;
+  if (first <last) return 1+first;
   return 0;
 }
 
 unsigned GOMP_sections_next (void)
 {
   long first, last;
-  GOMP_loop_dynamic_next( &first, &last );
-  if (first <last) return first;
+  if (GOMP_loop_dynamic_next( &first, &last ))
+  {
+    return 1+first;
+  }
   return 0;
 }
 
