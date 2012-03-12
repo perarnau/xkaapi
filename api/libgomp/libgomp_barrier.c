@@ -74,7 +74,7 @@ komp_barrier_wait (struct komp_barrier *barrier)
   kompctxt_t* ctxt = komp_get_ctxt();
   if (ctxt->inside_single)
     {
-      if (ctxt->icv.threadid == 0)
+      if (ctxt->icv.thread_id == 0)
 	{
 	  ctxt->inside_single = 0;
 	  kaapic_sync ();

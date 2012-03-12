@@ -210,7 +210,7 @@ bool GOMP_loop_dynamic_start (
   komp_workshare_t* workshare = 
     komp_loop_dynamic_start_init( kproc, start, incr );
 
-  if (ctxt->icv.threadid ==0)
+  if (ctxt->icv.thread_id ==0)
     komp_loop_dynamic_start_master(
       kproc,
       workshare,
@@ -352,7 +352,7 @@ void GOMP_parallel_loop_dynamic_start (
     arg->data       = data;
     arg->teaminfo   = teaminfo;
     /* WARNING: see spec: nextnum threads is inherited ? */
-    arg->nextnumthreads = ctxt->icv.nextnumthreads;
+    arg->nextnumthreads = ctxt->icv.next_numthreads;
     arg->start      = start;
     arg->incr       = incr;
 
@@ -391,8 +391,8 @@ static void komp_trampoline_task_parallelfor
   new_ctxt->teaminfo           = taskarg->teaminfo;
   
   /* initialize master context: nextnum thread is inherited */
-  new_ctxt->icv.threadid       = taskarg->threadid;
-  new_ctxt->icv.nextnumthreads = taskarg->nextnumthreads; /* WARNING: spec ?*/
+  new_ctxt->icv.thread_id       = taskarg->threadid;
+  new_ctxt->icv.next_numthreads = taskarg->nextnumthreads; /* WARNING: spec ?*/
   
   new_ctxt->inside_single      = 0;
   new_ctxt->save_ctxt          = ctxt;
@@ -404,7 +404,7 @@ static void komp_trampoline_task_parallelfor
   komp_workshare_t* workshare = 
     komp_loop_dynamic_start_init( kproc, taskarg->start, taskarg->incr );
 
-  kaapi_assert_debug(new_ctxt->icv.threadid !=0);
+  kaapi_assert_debug(new_ctxt->icv.thread_id !=0);
   kaapi_assert_debug(new_ctxt->teaminfo->gwork !=0);
 
   komp_loop_dynamic_start_slave(

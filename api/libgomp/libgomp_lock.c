@@ -114,7 +114,7 @@ void komp_destroy_nest_lock_30(omp_nest_lock_t *lock)
 
 void komp_set_nest_lock_30(omp_nest_lock_t *lock)
 {
-  void *me = (void*)(intptr_t)komp_get_ctxt()->icv.threadid;
+  void *me = (void*)(intptr_t)komp_get_ctxt()->icv.thread_id;
   if (lock->owner != me)  {
     komp_set_lock_30(&lock->lock);
     lock->owner = me;
@@ -132,7 +132,7 @@ void komp_unset_nest_lock_30(omp_nest_lock_t *lock)
 
 int komp_test_nest_lock_30(omp_nest_lock_t *lock)
 {
-  void *me = (void*)(intptr_t)komp_get_ctxt()->icv.threadid;
+  void *me = (void*)(intptr_t)komp_get_ctxt()->icv.thread_id;
   if (lock->owner == me) {
     lock->count++;
     return lock->count;
