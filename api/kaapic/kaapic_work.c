@@ -330,13 +330,14 @@ static void _kaapic_foreach_initwa(
   kaapic_work_distribution_t* wa,
   int                         self_tid,
   const kaapi_bitmap_value_t* cpuset,
-  int                         concurrency,
+  int                         nthreads,
   kaapi_workqueue_index_t     first, 
   kaapi_workqueue_index_t     last
 )
 {
   kaapi_bitmap_value_t mask;
   kaapi_workqueue_index_t range_size;
+  int concurrency = kaapi_getconcurrency();
   long off;
   long scale;
   int sizemap;
@@ -345,7 +346,7 @@ static void _kaapic_foreach_initwa(
 
   /* compute the map of kid where to pre-reserve local work. Exclude the calling kproc */
   kaapi_bitmap_value_clear(&mask);
-  kaapi_bitmap_value_set_low_bits(&mask, concurrency);
+  kaapi_bitmap_value_set_low_bits(&mask, nthreads);
 
   /* mask with specified cpuset */
   kaapi_bitmap_value_and(&mask, cpuset);
