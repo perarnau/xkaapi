@@ -4,6 +4,7 @@
 
 #include <omp.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 int thr = 32;
 #pragma omp threadprivate (thr)
@@ -19,15 +20,29 @@ main (void)
 #pragma omp parallel copyin (thr) reduction (||:l)
   {
     l = thr != 32;
+printf("%li:: << tid:%i #num:%i -> thr = %i, l=%i\n", 
+  pthread_self(), omp_get_thread_num(), omp_get_num_threads(), thr, l );
     thr = omp_get_thread_num () + 11;
+printf("%li:: >> tid:%i #num:%i -> thr = %i, l=%i\n", 
+  pthread_self(), omp_get_thread_num(), omp_get_num_threads(), thr, l );
   }
 
+printf("%li:: == tid:%i #num:%i -> thr = %i, l=%i\n", 
+  pthread_self(), omp_get_thread_num(), omp_get_num_threads(), thr, l );
   if (l || thr != 11)
     abort ();
 
 #pragma omp parallel reduction (||:l)
-  l = thr != omp_get_thread_num () + 11;
+{
+printf("%li:: << tid:%i #num:%i -> thr = %i, l=%i\n", 
+  pthread_self(), omp_get_thread_num(), omp_get_num_threads(), thr, l );
+  l = (thr != omp_get_thread_num () + 11);
+printf("%li:: >> tid:%i #num:%i -> thr = %i, l=%i\n", 
+  pthread_self(), omp_get_thread_num(), omp_get_num_threads(), thr, l );
+}
 
+printf("%li:: == tid:%i #num:%i -> thr = %i, l=%i\n", 
+  pthread_self(), omp_get_thread_num(), omp_get_num_threads(), thr, l );
   if (l)
     abort ();
   return 0;

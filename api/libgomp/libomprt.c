@@ -58,7 +58,9 @@ omp_set_num_threads (int n)
 int
 omp_get_num_threads (void)
 {
-  return komp_get_ctxt()->teaminfo->numthreads;
+  kompctxt_t* ctxt = komp_get_ctxt();
+  if (ctxt->teaminfo ==0) return 1;
+  return ctxt->teaminfo->numthreads;
 }
 
 int
