@@ -378,7 +378,11 @@ static void _kaapic_foreach_initwa(
 
   /* handle concurrency too high case */
   if (range_size < sizemap) 
+  {
     sizemap = range_size;
+    kaapi_bitmap_value_set_low_bits(&mask, range_size);
+    kaapi_bitmap_init( &wa->map, &mask );
+  }
 
   /* round range to be multiple of concurrency 
      tid with indexes 0 will get the biggest part
