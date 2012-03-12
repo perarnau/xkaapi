@@ -73,6 +73,11 @@ typedef struct komp_barrier {
 } komp_barrier_t; 
 
 
+/* init.c */
+void komp_barrier_init (struct komp_barrier *barrier, unsigned int num);
+void komp_barrier_destroy (struct komp_barrier *barrier);
+void komp_barrier_wait (struct komp_barrier *barrier);
+
 struct kompctxt_t;
 struct komp_workshare_t;
 typedef kaapic_global_work_t komp_globalworkshare_t;
@@ -140,23 +145,34 @@ typedef struct kompctxt_t {
 } kompctxt_t ;
 
 
+/** Initial context with teaminformation */
+typedef struct kompctxt_first_t {
+  kompctxt_t      ctxt;
+  komp_teaminfo_t teaminfo; /* sequential thread */
+} kompctxt_first_t;
+
+
 static inline kompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc )
 { 
   if (kproc->libkomp_tls == 0)
   {
-    kompctxt_t* ctxt = (kompctxt_t*)malloc(sizeof(kompctxt_t));
-    ctxt->workshare               = 0;
-    ctxt->teaminfo                = 0;
-    ctxt->icv.thread_id           = 0;
-    ctxt->icv.next_numthreads     = kaapi_getconcurrency();
-    ctxt->icv.nested_level        = 0;
-    ctxt->icv.nested_parallel     = 1;
-    ctxt->icv.dynamic_numthreads  = 0; /* Not sure of this initial
-					  value, next_numthreads may
-					  be more appropriate
-					  here... */
-    kproc->libkomp_tls            = ctxt;
-    return ctxt;
+    kompctxt_first_t* first = (kompctxt_first_t*)malloc(sizeof(kompctxt_first_t));
+    first->ctxt.workshare               = 0;
+    first->ctxt.teaminfo                = 0;
+    first->ctxt.icv.thread_id           = 0;
+    first->ctxt.icv.next_numthreads     = kaapi_getconcurrency();
+    first->ctxt.icv.nested_level        = 0;
+    first->ctxt.icv.nested_parallel     = 1;
+    first->ctxt.icv.dynamic_numthreads  = 0; /* Not sure of this initial value, next_numthreads may
+                                     					  be more appropriate here... */
+    kaapi_atomic_initlock(&first->teaminfo.lock);
+    komp_barrier_init (&first->teaminfo.barrier, 1);
+    first->teaminfo.single_data = 0;
+    first->teaminfo.numthreads  = 1;
+    first->teaminfo.gwork       = 0;
+    first->teaminfo.serial      = 0;
+    kproc->libkomp_tls            = &first->ctxt;
+    return &first->ctxt;
   }
   return (kompctxt_t*)kproc->libkomp_tls;
 }
@@ -178,12 +194,6 @@ extern void komp_parallel_start (
   void *data, 
   unsigned num_threads
 );
-
-
-/* init.c */
-void komp_barrier_init (struct komp_barrier *barrier, unsigned int num);
-void komp_barrier_destroy (struct komp_barrier *barrier);
-void komp_barrier_wait (struct komp_barrier *barrier);
 
 
 /* going back to the previous visibility, ie "default" */
