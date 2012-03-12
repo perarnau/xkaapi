@@ -273,7 +273,7 @@ GOMP_parallel_start (
   unsigned num_threads
 )
 {
-  komp_parallel_start( fn, data, num_threads, -1 );
+  komp_parallel_start( fn, data, num_threads );
 }
 
 
