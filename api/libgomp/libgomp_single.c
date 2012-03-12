@@ -50,23 +50,22 @@ bool GOMP_single_start (void)
 {
   kompctxt_t* ctxt = komp_get_ctxt();
   ctxt->inside_single = 1;
-#if 1 // ONLY 0 PASS SINGLE
   return (ctxt->icv.thread_id == 0);
-#else
-  if (KAAPI_ATOMIC_READ(&ctxt->teaminfo->single_state) == 1) 
-    return 0;
-  return KAAPI_ATOMIC_CAS (&ctxt->teaminfo->single_state, 0, 1) !=0;
-#endif
 }
 
 void * GOMP_single_copy_start (void)
 {  
-  printf("%s:: \n", __FUNCTION__);
-
-  return NULL;
+  kompctxt_t* ctxt = komp_get_ctxt();
+  if (ctxt->icv.thread_id == 0)
+    return 0;
+  while (ctxt->teaminfo->single_data ==0);
+    kaapi_slowdown_cpu();
+  return ctxt->teaminfo->single_data;
 }
 
 void GOMP_single_copy_end (void *data)
 {
-  printf("%s:: \n", __FUNCTION__);
+  kompctxt_t* ctxt = komp_get_ctxt();
+  kaapi_writemem_barrier();
+  ctxt->teaminfo->single_data = data;
 }

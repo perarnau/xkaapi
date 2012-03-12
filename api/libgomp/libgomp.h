@@ -108,7 +108,7 @@ typedef struct komp_icv_t {
 typedef struct komp_teaminfo_t {
   kaapi_lock_t                     lock;
   komp_barrier_t                   barrier;
-  kaapi_atomic_t                   single_state;
+  void*  volatile                  single_data;  /* 0 or the & of copy_end */
   unsigned int volatile            section_state;
   int                              numthreads;
   komp_globalworkshare_t* volatile gwork;      /* last foreach loop context */

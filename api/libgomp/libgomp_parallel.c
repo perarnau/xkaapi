@@ -181,8 +181,7 @@ komp_init_parallel_start (
   /* barrier for the team */
   komp_barrier_init (&teaminfo->barrier, num_threads);
 
-  KAAPI_ATOMIC_WRITE(&teaminfo->single_state, 0);
-
+  teaminfo->single_data        = 0;
   teaminfo->numthreads         = num_threads;
   teaminfo->gwork              = 0;
   teaminfo->serial             = 0;
@@ -197,8 +196,8 @@ komp_init_parallel_start (
   new_ctxt->icv.nested_level    = 1+ctxt->icv.nested_level; 
   new_ctxt->icv.nested_parallel = ctxt->icv.nested_parallel; /* WARNING: spec ? */
   
-  new_ctxt->inside_single      = 0;
-  new_ctxt->save_ctxt          = ctxt;
+  new_ctxt->inside_single       = 0;
+  new_ctxt->save_ctxt           = ctxt;
   
   /* swap context: until end_parallel, new_ctxt becomes the current context */
   kproc->libkomp_tls = new_ctxt;
