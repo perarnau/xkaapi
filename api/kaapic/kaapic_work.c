@@ -359,6 +359,7 @@ static void _kaapic_foreach_initwa(
   long off;
   long scale;
   int sizemap, finalsize;
+  int i;
 
   kaapi_assert_debug(KAAPI_MAX_PROCESSOR < (uint8_t)~0 );
 
@@ -398,7 +399,7 @@ static void _kaapic_foreach_initwa(
   kaapi_assert_debug( (self_tid>=0) && (self_tid < concurrency));
   if (kaapi_bitmap_value_get(&mask, self_tid))
     wa->tid2pos[self_tid] = localcount++;
-  int i;
+
   for (i=0; i<concurrency; ++i)
   {
     if (i == self_tid) 
