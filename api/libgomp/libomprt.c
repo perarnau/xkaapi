@@ -163,7 +163,7 @@ omp_set_max_active_levels (int max_levels __attribute__((unused)))
 int 
 omp_get_max_active_levels(void)
 {
-  return 1;
+  return 256;
 }
 
 /*
@@ -172,9 +172,7 @@ int
 omp_get_level(void)
 {
   kompctxt_t* ctxt = komp_get_ctxt();
-  if (ctxt->teaminfo ==0) 
-    return 0;
-  return 1;
+  return ctxt->icv.nestedlevel;
 }
 
 /*
@@ -192,7 +190,7 @@ omp_get_team_size(int level)
 {
   kompctxt_t* ctxt = komp_get_ctxt();
   if (ctxt->teaminfo ==0) return 1;
-  return kaapi_getconcurrency();
+  return ctxt->teaminfo->numthreads;
 }
 
 /*
