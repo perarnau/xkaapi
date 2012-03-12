@@ -51,7 +51,7 @@ bool GOMP_single_start (void)
   kompctxt_t* ctxt = komp_get_ctxt();
   ctxt->inside_single = 1;
 #if 1 // ONLY 0 PASS SINGLE
-  return (ctxt->icv.threadid == 0);
+  return (ctxt->icv.thread_id == 0);
 #else
   if (KAAPI_ATOMIC_READ(&ctxt->teaminfo->single_state) == 1) 
     return 0;

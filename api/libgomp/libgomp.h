@@ -82,10 +82,14 @@ typedef kaapic_global_work_t komp_globalworkshare_t;
    - [read and report OpenMP 3.1 spec definition]
 */
 typedef struct komp_icv_t {
-  int                threadid;       /* thread id */
-  int                nextnumthreads; /* number of thread for the next // region */
-  int                nestedlevel;    /* nested level of // region */
-  int                nestedparallel; /* !=0 iff nest allowed */
+  int                thread_id;       /* thread id */
+  int                next_numthreads; /* number of thread for the next // region */
+  int                nested_level;    /* nested level of // region */
+  int                nested_parallel; /* !=0 iff nest allowed */
+  int                dynamic_numthreads;    /* number of threads the
+					       runtime can dynamically
+					       adjust the next
+					       parallel region to. */
 } komp_icv_t;
 
 /* Team information : common to all threads that shared a same parallel region.
@@ -141,13 +145,17 @@ static inline kompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc )
   if (kproc->libkomp_tls == 0)
   {
     kompctxt_t* ctxt = (kompctxt_t*)malloc(sizeof(kompctxt_t));
-    ctxt->workshare           = 0;
-    ctxt->teaminfo            = 0;
-    ctxt->icv.threadid        = 0;
-    ctxt->icv.nextnumthreads  = kaapi_getconcurrency();
-    ctxt->icv.nestedlevel     = 0;
-    ctxt->icv.nestedparallel  = 1;
-    kproc->libkomp_tls        = ctxt;
+    ctxt->workshare               = 0;
+    ctxt->teaminfo                = 0;
+    ctxt->icv.thread_id           = 0;
+    ctxt->icv.next_numthreads     = kaapi_getconcurrency();
+    ctxt->icv.nested_level        = 0;
+    ctxt->icv.nested_parallel     = 1;
+    ctxt->icv.dynamic_numthreads  = 0; /* Not sure of this initial
+					  value, next_numthreads may
+					  be more appropriate
+					  here... */
+    kproc->libkomp_tls            = ctxt;
     return ctxt;
   }
   return (kompctxt_t*)kproc->libkomp_tls;

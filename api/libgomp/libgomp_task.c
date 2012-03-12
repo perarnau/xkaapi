@@ -75,8 +75,8 @@ static void GOMP_trampoline_task(
   new_ctxt->teaminfo           = taskarg->teaminfo;
   
   /* initialize master context: nextnum thread is inherited */
-  new_ctxt->icv.threadid       = taskarg->threadid;
-  new_ctxt->icv.nextnumthreads = taskarg->nextnumthreads; /* WARNING: spec ?*/
+  new_ctxt->icv.thread_id       = taskarg->threadid;
+  new_ctxt->icv.next_numthreads = taskarg->nextnumthreads; /* WARNING: spec ?*/
   
   new_ctxt->inside_single      = 0;
   new_ctxt->save_ctxt          = ctxt;
@@ -181,11 +181,11 @@ void GOMP_task(
     memcpy(userarg, data, arg_size);
 
   GOMP_trampoline_task_arg* arg = kaapi_task_getargst( task, GOMP_trampoline_task_arg );
-  arg->threadid       = ctxt->icv.threadid;
+  arg->threadid       = ctxt->icv.thread_id;
   arg->fn             = fn;
   arg->data           = userarg;
   arg->teaminfo       = ctxt->teaminfo;
-  arg->nextnumthreads = ctxt->icv.nextnumthreads;
+  arg->nextnumthreads = ctxt->icv.next_numthreads;
   kaapi_thread_pushtask(thread);
 }
 

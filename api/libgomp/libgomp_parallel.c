@@ -80,10 +80,10 @@ static void komp_trampoline_task_parallel
   new_ctxt->teaminfo           = taskarg->teaminfo;
   
   /* initialize master context: nextnum thread is inherited */
-  new_ctxt->icv.threadid       = taskarg->threadid;
-  new_ctxt->icv.nextnumthreads = taskarg->nextnumthreads; /* WARNING: spec ?*/
-  new_ctxt->icv.nestedlevel    = 1+taskarg->nestedlevel;
-  new_ctxt->icv.nestedparallel = taskarg->nestedparallel;
+  new_ctxt->icv.thread_id       = taskarg->threadid;
+  new_ctxt->icv.next_numthreads = taskarg->nextnumthreads; /* WARNING: spec ?*/
+  new_ctxt->icv.nested_level    = 1+taskarg->nestedlevel;
+  new_ctxt->icv.nested_parallel = taskarg->nestedparallel;
   
   new_ctxt->inside_single      = 0;
   new_ctxt->save_ctxt          = ctxt;
@@ -150,11 +150,11 @@ komp_init_parallel_start (
   kompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
 
   /* pseudo OpenMP spec algorithm to compute the number of threads */
-  if ( !ctxt->icv.nestedparallel && (ctxt->icv.nestedlevel >0))
+  if ( !ctxt->icv.nested_parallel && (ctxt->icv.nested_level >0))
     num_threads = 1;
   else {
     if (num_threads == 0)
-      num_threads = ctxt->icv.nextnumthreads;
+      num_threads = ctxt->icv.next_numthreads;
     if (num_threads > kaapi_getconcurrency())
       num_threads = kaapi_getconcurrency();
   }
@@ -192,10 +192,10 @@ komp_init_parallel_start (
   new_ctxt->teaminfo           = teaminfo;
   
   /* initialize master context: nextnum thread is inherited */
-  new_ctxt->icv.threadid       = 0;
-  new_ctxt->icv.nextnumthreads = ctxt->icv.nextnumthreads; /* WARNING: spec ? */
-  new_ctxt->icv.nestedlevel    = 1+ctxt->icv.nestedlevel; 
-  new_ctxt->icv.nestedparallel = ctxt->icv.nestedparallel; /* WARNING: spec ? */
+  new_ctxt->icv.thread_id       = 0;
+  new_ctxt->icv.next_numthreads = ctxt->icv.next_numthreads; /* WARNING: spec ? */
+  new_ctxt->icv.nested_level    = 1+ctxt->icv.nested_level; 
+  new_ctxt->icv.nested_parallel = ctxt->icv.nested_parallel; /* WARNING: spec ? */
   
   new_ctxt->inside_single      = 0;
   new_ctxt->save_ctxt          = ctxt;
@@ -256,9 +256,9 @@ komp_parallel_start (
     arg->data           = data;
     arg->teaminfo       = teaminfo;
     /* WARNING: see spec: nextnum threads is inherited ? */
-    arg->nextnumthreads = ctxt->icv.nextnumthreads;
-    arg->nestedlevel    = ctxt->icv.nestedlevel;
-    arg->nestedparallel = ctxt->icv.nestedparallel;
+    arg->nextnumthreads = ctxt->icv.next_numthreads;
+    arg->nestedlevel    = ctxt->icv.nested_level;
+    arg->nestedparallel = ctxt->icv.nested_parallel;
 
     task = kaapi_thread_nexttask(thread, task);
   }

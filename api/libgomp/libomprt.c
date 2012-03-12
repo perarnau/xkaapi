@@ -48,25 +48,21 @@
 void
 omp_set_num_threads (int n)
 {
-  if (n >0)
-  {
-    kompctxt_t* ctxt = komp_get_ctxt();
-    ctxt->icv.nextnumthreads = n;
-  }
+  kompctxt_t* ctxt = komp_get_ctxt();
+  ctxt->icv.next_numthreads = n > 0 ? n : 1;
 }
 
 int
 omp_get_num_threads (void)
 {
   kompctxt_t* ctxt = komp_get_ctxt();
-  if (ctxt->teaminfo ==0) return 1;
-  return ctxt->teaminfo->numthreads;
+  return ctxt->teaminfo ? komp_get_ctxt()->teaminfo->numthreads : 1;
 }
 
 int
 omp_get_thread_num (void)
 {
-  return komp_get_ctxt()->icv.threadid;
+  return komp_get_ctxt()->icv.thread_id;
 }
 
 /*
@@ -75,8 +71,8 @@ int
 omp_get_max_threads (void)
 {
   kompctxt_t* ctxt = komp_get_ctxt();
-  if (ctxt->icv.nextnumthreads < kaapi_getconcurrency())
-    return ctxt->icv.nextnumthreads;
+  if (ctxt->icv.next_numthreads < kaapi_getconcurrency())
+    return ctxt->icv.next_numthreads;
   return kaapi_getconcurrency();
 }
 
@@ -99,6 +95,8 @@ omp_in_parallel(void)
 void 
 omp_set_dynamic(int dynamic_threads __attribute__((unused)) )
 {
+  kompctxt_t* ctxt = komp_get_ctxt();
+  ctxt->icv.dynamic_numthreads = dynamic_threads;
 }
 
 /*
@@ -106,7 +104,8 @@ omp_set_dynamic(int dynamic_threads __attribute__((unused)) )
 int 
 omp_get_dynamic(void)
 {
-  return 1;
+  kompctxt_t* ctxt = komp_get_ctxt();
+  return ctxt->icv.dynamic_numthreads;
 }
 
 /*
@@ -115,7 +114,7 @@ void
 omp_set_nested(int nested __attribute__((unused)))
 {
   kompctxt_t* ctxt = komp_get_ctxt();
-  ctxt->icv.nestedparallel = (nested !=0);
+  ctxt->icv.nested_parallel = (nested !=0);
 }
 
 /*
@@ -124,7 +123,7 @@ int
 omp_get_nested(void)
 {
   kompctxt_t* ctxt = komp_get_ctxt();
-  return (ctxt->icv.nestedparallel !=0);
+  return (ctxt->icv.nested_parallel !=0);
 }
 
 /*
@@ -172,7 +171,7 @@ int
 omp_get_level(void)
 {
   kompctxt_t* ctxt = komp_get_ctxt();
-  return ctxt->icv.nestedlevel;
+  return ctxt->icv.nested_level;
 }
 
 /*
@@ -218,6 +217,6 @@ double omp_get_wtime(void)
 
 double omp_get_wtick(void)
 {
-  return 1e6; /* elapsed time is assumed to be in micro second ?? */
+  return 1e-6; /* elapsed time is assumed to be in micro second ?? */
 }
 
