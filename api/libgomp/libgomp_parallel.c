@@ -209,8 +209,8 @@ komp_init_parallel_start (
 
 void 
 komp_parallel_start (
-  void (*fn) (void *), 
-  void *data, 
+  void   (*fn) (void *), 
+  void*    data, 
   unsigned num_threads
 )
 {

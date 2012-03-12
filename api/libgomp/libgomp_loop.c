@@ -56,6 +56,9 @@ void GOMP_loop_end (void)
   kaapi_thread_context_t* const self_thread = kproc->thread;
   kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
   
+  /* implicit barrier at the end ? It will deadlock if parallel region task is steal ...*/
+  komp_barrier_wait(&ctxt->teaminfo->barrier);
+
   ctxt->teaminfo->gwork = 0;
   if (ctxt->icv.thread_id == 0)
     kaapic_foreach_workend( self_thread, ctxt->workshare->lwork);
@@ -63,8 +66,6 @@ void GOMP_loop_end (void)
     kaapic_foreach_local_workend( self_thread, ctxt->workshare->lwork );
 
 
-  /* implicit barrier at the end ? It will deadlock if parallel region task is steal ...*/
-  komp_barrier_wait(&ctxt->teaminfo->barrier);
 }
 
 void GOMP_loop_end_nowait (void)
