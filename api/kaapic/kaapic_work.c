@@ -186,38 +186,33 @@ int kaapic_global_work_pop
   if (pos == (uint8_t)-1) 
   {
 repop_any:
-    /* no reserved slice: steal one */
-{
-kaapi_bitmap_t       map = gw->wa.map;
-    idx = kaapi_bitmap_first1_and_zero(&gw->wa.map);
-    if (idx ==0)
-    {
-      *i = *j = 0;
-      return 0;
-    }
-    pos = idx-1;
-printf("%i::kaapic_global_work_pop[steal any]: old=%lu new mask=%lu, pos=%i\n", kaapi_get_self_kid(), *(int*)&map, *(int*)&gw->wa.map, pos ); fflush(stdout);
-}
-    *i = gw->wa.startindex[pos];
-    *j = gw->wa.startindex[pos+1];
-    return 1;    
+    do {
+      /* no reserved slice: steal one */
+      idx = kaapi_bitmap_first1_and_zero(&gw->wa.map);
+      if (idx !=0)
+      {
+        pos = idx-1;
+        *i = gw->wa.startindex[pos];
+        *j = gw->wa.startindex[pos+1];
+        return 1;    
+      }
+    } while (!kaapi_bitmap_empty(&gw->wa.map));
+    *i = *j = 0;
+    return 0;
   }
   kaapi_assert_debug( pos >= 0 );
   kaapi_assert_debug( pos<kaapi_getconcurrency() );
   
-kaapi_bitmap_t       map = gw->wa.map;
   retval = (0 == kaapi_bitmap_unset(&gw->wa.map, pos));
   if (retval ==0)
   {
     pos = -1;
     goto repop_any;
   }
-printf("%i::kaapic_global_work_pop[steal self]: old=%lu new mask=%lu, pos=%i\n", kaapi_get_self_kid(), *(int*)&map, *(int*)&gw->wa.map, pos ); fflush(stdout);
 
   *i = gw->wa.startindex[pos];
   *j = gw->wa.startindex[pos+1];
   
-
   /* Here, because work may have been finished  
   */
   if (KAAPI_ATOMIC_READ(&gw->workremain) ==0)
@@ -389,7 +384,6 @@ static void _kaapic_foreach_initwa(
     kaapi_bitmap_value_set_low_bits(&mask, finalsize);
     kaapi_bitmap_init( &wa->map, &mask );
   }
-printf("%i::_kaapic_foreach_initwa: mask=%lu\n", kaapi_get_self_kid(), *(int*)&mask ); fflush(stdout);
 
   /* round range to be multiple of concurrency 
      tid with indexes 0 will get the biggest part
@@ -429,11 +423,6 @@ printf("%i::_kaapic_foreach_initwa: mask=%lu\n", kaapi_get_self_kid(), *(int*)&m
   for (i=finalsize; i<concurrency; ++i)
     wa->startindex[i+1] = wa->startindex[finalsize];
 
-  for (i=0; i<sizemap; ++i)
-  {
-    printf("tid2pos[%i]=%i\n", i, wa->tid2pos[i] ); 
-  }
-  fflush(stdout);
   kaapi_assert_debug(wa->startindex[finalsize] == last);
 }
 
