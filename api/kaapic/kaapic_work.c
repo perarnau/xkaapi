@@ -184,19 +184,29 @@ int kaapic_global_work_pop
   pos = gw->wa.tid2pos[tid];
   if (pos == (uint8_t)-1) 
   {
-    *i = *j = 0;
-    return 0;
+    /* no reserved slice: steal one */
+    int idx = kaapi_bitmap_value_first1_and_zero(&gw->wa.map);
+    if (idx ==0)
+    {
+      *i = *j = 0;
+      return 0;
+    }
+    pos = idx-1;
+    *i = gw->wa.startindex[pos];
+    *j = gw->wa.startindex[pos+1];
+    return 1;    
   }
   kaapi_assert_debug( pos >= 0 );
   kaapi_assert_debug( pos<kaapi_getconcurrency() );
   
   *i = gw->wa.startindex[pos];
   *j = gw->wa.startindex[pos+1];
+  
   retval = (0 == kaapi_bitmap_unset(&gw->wa.map, pos));
 
   /* Here, because work may have been finished  
   */
-  if (KAAPI_ATOMIC_READ(&gw->workremain) ==0)
+  if (!retval || (KAAPI_ATOMIC_READ(&gw->workremain) ==0))
   {
     *i = *j = 0;
     return 0;
