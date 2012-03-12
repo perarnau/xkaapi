@@ -47,7 +47,11 @@ unsigned GOMP_sections_start (unsigned maxsec)
 {
   long first, last;
   if (GOMP_loop_dynamic_start( 0, maxsec, 1, 1, &first, &last ))
+{
+printf("%i:: GOMP_sections_start:%i\n", kaapi_get_self_kid(), 1+first); fflush(stdout);
     return 1+first;
+}
+printf("GOMP_sections_start:0\n"); fflush(stdout);
   return 0;
 }
 
@@ -55,7 +59,11 @@ unsigned GOMP_sections_next (void)
 {
   long first, last;
   if (GOMP_loop_dynamic_next( &first, &last ))
+{
+printf("%i:: GOMP_sections_next:%i\n", kaapi_get_self_kid(), 1+first); fflush(stdout);
     return 1+first;
+}
+printf("GOMP_sections_next:0\n"); fflush(stdout);
   return 0;
 }
 
