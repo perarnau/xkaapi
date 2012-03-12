@@ -217,6 +217,6 @@ double omp_get_wtime(void)
 
 double omp_get_wtick(void)
 {
-  return 1e6; /* elapsed time is assumed to be in micro second ?? */
+  return 1e-6; /* elapsed time is assumed to be in micro second ?? */
 }
 
