@@ -180,11 +180,12 @@ static inline void komp_loop_dynamic_start_slave(
   /* get own slice */
   if (!kaapic_global_work_pop( gwork, kproc->kid, &start, &end))
     start = end = 0;
+  else
+    printf("%i::Slave -> [%li,%li)\n", kaapi_get_self_kid(), start, end); fflush(stdout);
 
   workshare->lwork = kaapic_foreach_local_workinit( 
                           &gwork->lwork[kproc->kid],
                           start, end );
-
 }
 
 
