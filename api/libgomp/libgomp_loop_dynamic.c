@@ -412,7 +412,8 @@ static void komp_trampoline_task_parallelfor
 
   komp_loop_dynamic_start_slave(
     kproc,
-    workshare
+    workshare,
+    new_ctxt->teaminfo->gwork
   );
 
   /* GCC compiled code */
