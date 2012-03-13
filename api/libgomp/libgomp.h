@@ -158,7 +158,7 @@ static inline kompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc )
   {
     kompctxt_first_t* first = (kompctxt_first_t*)malloc(sizeof(kompctxt_first_t));
     first->ctxt.workshare               = 0;
-    first->ctxt.teaminfo                = 0;
+    first->ctxt.teaminfo                = &first->teaminfo;
     first->ctxt.icv.thread_id           = 0;
     first->ctxt.icv.next_numthreads     = kaapi_getconcurrency();
     first->ctxt.icv.nested_level        = 0;
