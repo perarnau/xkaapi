@@ -68,6 +68,8 @@ void GOMP_loop_end (void)
 
 void GOMP_loop_end_nowait (void)
 {
+  GOMP_loop_end();
+#if 0
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_context_t* const self_thread = kproc->thread;
   kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
@@ -77,4 +79,5 @@ void GOMP_loop_end_nowait (void)
     kaapic_foreach_workend( self_thread, ctxt->workshare->lwork);
   else
     kaapic_foreach_local_workend( self_thread, ctxt->workshare->lwork );
+#endif
 }
