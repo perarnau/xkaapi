@@ -87,6 +87,7 @@ int komp_test_lock_30(omp_lock_t *lock)
   return 0;
 }
 
+#if defined(HAVE_VERSION_SYMBOL)
 strong_alias (komp_init_lock_30, komp_init_lock_25)
 strong_alias (komp_destroy_lock_30, komp_destroy_lock_25)
 strong_alias (komp_set_lock_30, komp_set_lock_25)
@@ -98,6 +99,7 @@ komp_lock_symver(omp_destroy_lock)
 komp_lock_symver(omp_set_lock)
 komp_lock_symver(omp_unset_lock)
 komp_lock_symver(omp_test_lock)
+#endif
 
 /* nested lock */
 void komp_init_nest_lock_30(omp_nest_lock_t *lock)
@@ -148,8 +150,10 @@ int komp_test_nest_lock_30(omp_nest_lock_t *lock)
   return 0;
 }
 
+#if defined(HAVE_VERSION_SYMBOL)
 komp_lock_symver30(omp_init_nest_lock)
 komp_lock_symver30(omp_destroy_nest_lock)
 komp_lock_symver30(omp_set_nest_lock)
 komp_lock_symver30(omp_unset_nest_lock)
 komp_lock_symver30(omp_test_nest_lock)
+#endif
