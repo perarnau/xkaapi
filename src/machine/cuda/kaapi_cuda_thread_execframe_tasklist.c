@@ -157,13 +157,14 @@ execute_first:
 		(cuda_task_body_t) td->fmt->entrypoint_wh[proc_type];
 
 	    kaapi_cuda_ctx_push( );
+	    kaapi_cuda_data_allocate( td->fmt, pc->sp );
 	    kaapi_cuda_data_send( td->fmt, pc->sp );
-	    kaapi_cuda_cublas_set_stream( );
+	//    kaapi_cuda_cublas_set_stream( );
 #if KAAPI_CUDA_TIME
     uint64_t t0 = kaapi_get_elapsedns();
 #endif
+	    //kaapi_cuda_event_record();
 	    body( pc->sp, kaapi_cuda_kernel_stream() );
-	    kaapi_cuda_event_record();
 #if KAAPI_CUDA_TIME
     uint64_t t1 = kaapi_get_elapsedns();
     fprintf( stdout, "%lu:%x:TaskBodyGPU:%s:%d\n", kaapi_get_current_kid(),
@@ -172,7 +173,6 @@ execute_first:
 #if 0
 	    kaapi_cuda_data_check();
 #endif
-	    kaapi_cuda_stream_HtoD_next();
 	    kaapi_cuda_ctx_pop( );
         }
         kaapi_event_push1(stack->proc, thread, KAAPI_EVT_TASK_END, pc );  

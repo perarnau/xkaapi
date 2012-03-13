@@ -42,10 +42,12 @@
  ** 
  */
 #include "kaapi_impl.h"
+#if 0
 #include "kaapi_memory.h"
 #include "memory/kaapi_mem.h"
 #include "memory/kaapi_mem_data.h"
 #include "memory/kaapi_mem_host_map.h"
+#endif
 
 static inline uint64_t _kaapi_max(uint64_t d1, uint64_t d2)
 { return (d1 < d2 ? d2 : d1); }
@@ -86,11 +88,6 @@ int kaapi_thread_computedep_task(
 #if 0
     uint64_t t0 = kaapi_get_elapsedns();
 #endif
-    const kaapi_mem_host_map_t* host_map = 
-	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
-    const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
-    kaapi_mem_data_t *kmd;
-
   /* assume task list  */
   kaapi_assert( tasklist != 0 );
   
@@ -168,6 +165,7 @@ int kaapi_thread_computedep_task(
     */
     handle = kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
 
+#if 0
     kaapi_mem_host_map_find_or_insert( host_map,
 	    (kaapi_mem_addr_t)access.data,
 	    &kmd );
@@ -175,6 +173,7 @@ int kaapi_thread_computedep_task(
     kaapi_mem_data_t *host_kmd = kaapi_memory_register_find(
 	    (kaapi_mem_addr_t)access.data );
     kaapi_mem_data_set_parent( kmd, host_kmd );
+#endif
 
     /* replace the pointer to the data in the task argument by the pointer to the global data */
     access.data = handle;

@@ -66,19 +66,8 @@ typedef struct kaapi_mem_data_t {
     unsigned int addr_bits;
 } kaapi_mem_data_t;
 
-struct kaapi_mem_reg_data_item_t;
-
-typedef struct kaapi_mem_reg_data
-{
-	struct kaapi_mem_reg_data_item_t* beg;
-	struct kaapi_mem_reg_data_item_t* end;
-
-	kaapi_big_hashmap_t hblocks;
-} kaapi_mem_reg_data_t;
-
 typedef struct kaapi_mem_host_map_t {
     kaapi_mem_asid_t asid;
-    kaapi_mem_reg_data_t data;
     kaapi_big_hashmap_t hmap; /* TODO remove */
 } kaapi_mem_host_map_t;
 
@@ -87,12 +76,5 @@ void kaapi_mem_init( void );
 void kaapi_mem_destroy( void );
 
 int kaapi_mem_sync_ptr( kaapi_data_t* kdata );
-
-kaapi_mem_data_t*
-kaapi_memory_register_find( kaapi_mem_addr_t addr );
-
-kaapi_mem_addr_t 
-kaapi_memory_register_convert( kaapi_mem_asid_t dev_asid,
-       kaapi_mem_asid_t host_asid, kaapi_mem_data_t* kmd );
 
 #endif /* ! KAAPI_MEM_H_INCLUDED */

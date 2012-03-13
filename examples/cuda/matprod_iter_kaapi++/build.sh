@@ -1,10 +1,10 @@
 #!/usr/bin/env sh
 
-SCRATCH=$HOME
-#SCRATCH=/scratch/jvlima
+CUDA_HOME=/usr
+SCRATCH=/scratch/jvlima
 XKAAPIDIR=$SCRATCH/install/xkaapi/default
 CUDADIR=$CUDA_HOME
-ATLAS=$SCRATCH/install/atlas3.9.47
+ATLAS=$SCRATCH/install/atlas3.9.69
 
 CUDA_CFLAGS="-DCONFIG_USE_CUDA=1 -I$CUDADIR/include"
 CUDA_LDFLAGS="-L$CUDADIR/lib64 -lcuda"
@@ -13,10 +13,14 @@ CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"
 CUBLAS_LDFLAGS="-lcublas"
 
 CBLAS_LDFLAGS="-L$ATLAS/lib -llapack -lcblas -latlas
-	-lf77blas -L$SCRATCH/install/lapacke-3.3.0/lib -llapacke
--llapack -lf77blas -lgfortran"
+	-lf77blas
+	-L$SCRATCH/install/lapacke/lib -llapacke
+	$SCRATCH/install/lapack-3.4.0/libtmglib.a
+	$SCRATCH/install/lapack-3.4.0/liblapack.a
+	-llapack -lf77blas -lgfortran"
+#	$SCRATCH/install/lapack-3.4.0/liblapack.a
 CBLAS_CPPFLAGS="-I$ATLAS/include
--I$SCRATCH/install/lapacke-3.3.0/include
+-I$SCRATCH/install/lapacke/include
 -DCONFIG_USE_FLOAT=1
 "
 

@@ -51,7 +51,7 @@ kaapi_cuda_data_view_convert( kaapi_memory_view_t* dest_view, const
   }
     dest_view->wordsize = src_view->wordsize;
     dest_view->type = src_view->type;
-    dest_view->lda = src_view->lda;
+//    dest_view->lda = src_view->lda;
 }
 
 /* here it checks if the CPU pointer is present in the GPU.
@@ -148,43 +148,6 @@ int kaapi_cuda_data_allocate(
 	return 0;
 }
 
-static inline void 
-kaapi_cuda_data_convert_ptr( kaapi_data_t* dev_data,
-	kaapi_mem_asid_t cuda_asid, 
-	kaapi_mem_asid_t host_asid,
-	kaapi_mem_data_t* kmd 
-	)
-{
-    kaapi_mem_addr_t d_addr = kaapi_memory_register_convert (
-	cuda_asid, host_asid, kmd );
-    dev_data->ptr = kaapi_make_pointer( 0, (void*)d_addr );
-}
-
-static inline kaapi_data_t* 
-kaapi_cuda_data_register_ptr( kaapi_data_t* host_data, 
-	kaapi_mem_data_t* kmd,
-	kaapi_mem_host_map_t* cuda_map,
-	kaapi_mem_asid_t cuda_asid,
-	kaapi_mem_asid_t host_asid
-	)
-{
-    kaapi_data_t* dev_data;
-
-    if( !kaapi_mem_data_has_addr( kmd, cuda_asid ) ) {
-	dev_data = (kaapi_data_t*)calloc( 1, sizeof(kaapi_data_t) );
-	kaapi_cuda_data_view_convert( &dev_data->view, &host_data->view );
-	kaapi_cuda_data_convert_ptr( dev_data, cuda_asid, host_asid, kmd );
-	kaapi_mem_data_set_addr( kmd, cuda_asid, (kaapi_mem_addr_t)dev_data );
-	kaapi_mem_host_map_find_or_insert_(  cuda_map,
-	    (kaapi_mem_addr_t)kaapi_pointer2void(dev_data->ptr),
-	    &kmd );
-    } else {
-	dev_data = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
-		 cuda_asid );
-//	kaapi_cuda_mem_inc_use( &dest->ptr );
-    }
-    return dev_data;
-}
 
 /* 
  * Context: it executes right before a CUDA task (kernel).
@@ -224,21 +187,19 @@ int kaapi_cuda_data_send(
 
 	    kaapi_access_t access = kaapi_format_get_access_param( fmt,
 			    i, sp );
-	    kaapi_data_t* host_data = kaapi_data( kaapi_data_t, &access );
-	    kaapi_mem_host_map_find_or_insert( host_map,
-		    (kaapi_mem_addr_t)kaapi_pointer2void(host_data->ptr),
-		    &kmd );
-	    kaapi_data_t* dev_data = kaapi_cuda_data_register_ptr( host_data,
-		   kmd, cuda_map, cuda_asid, host_asid );
+	    kaapi_data_t* dev_data = kaapi_data( kaapi_data_t, &access );
 	    kaapi_cuda_data_sync_device( dev_data );
 
 	    if( KAAPI_ACCESS_IS_WRITE(m) ) {
-		kaapi_mem_data_set_all_dirty_except( kmd, 
-		    kaapi_mem_host_map_get_asid(cuda_map) );
+		kaapi_mem_host_map_find_or_insert( cuda_map,
+			(kaapi_mem_addr_t)kaapi_pointer2void(dev_data->ptr),
+			&kmd );
+		kaapi_assert_debug( kmd !=0 );
+		kaapi_mem_data_set_all_dirty_except( kmd, cuda_asid );
 	    }
 
-	    access.data = dev_data;
-	    kaapi_format_set_access_param(fmt, i, sp, &access);
+	    //access.data = dev_data;
+	    //kaapi_format_set_access_param(fmt, i, sp, &access);
     }
 
 #if KAAPI_CUDA_TIME
@@ -283,6 +244,11 @@ kaapi_cuda_data_sync_device_transfer(
 	kaapi_cuda_mem_copy_htod( dest->ptr, &dest->view,
 		src->ptr, &src->view );
     } else {
+	    kaapi_cuda_mem_copy_dtod_buffer(
+		dest->ptr, &dest->view,	dest_dev,
+		src->ptr, &src->view, src_dev
+		);
+#if 0
 	int canAccessPeer;
 	cudaDeviceCanAccessPeer( &canAccessPeer,
 		dest_dev, src_dev );
@@ -297,6 +263,7 @@ kaapi_cuda_data_sync_device_transfer(
 		src->ptr, &src->view, src_dev
 		);
 	}
+#endif
     }
 
     return 0;

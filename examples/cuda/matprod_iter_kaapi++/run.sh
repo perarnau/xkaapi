@@ -1,10 +1,9 @@
 #!/bin/bash
 
-#SCRATCH=/scratch/jvlima
-SCRATCH=$HOME
+CUDA_HOME=/usr
+SCRATCH=/scratch/jvlima
 export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$SCRATCH/install/xkaapi/default/lib:$LD_LIBRARY_PATH
-#export LD_LIBRARY_PATH=$SCRATCH/adonis/xkaapi/default/lib:$LD_LIBRARY_PATH
 
 niter=1
 #niter=30
@@ -13,12 +12,9 @@ version="$(date +%s)"
 #export KAAPI_DUMP_GRAPH='1'
 
 function run_test {
-    export KAAPI_CPUSET="0:2"
-#    export KAAPI_GPUSET=""
-#    export KAAPI_GPUSET="1~6"
-#    export KAAPI_GPUSET="0~6,3~7"
-    export KAAPI_GPUSET="0~3"
-    msizes="2048"
+    export KAAPI_CPUSET="0:1"
+    export KAAPI_GPUSET="0~4,1~5"
+    msizes="4096"
 #    msizes="2048"
 #    msizes="16384"
 #    msizes="2048"
@@ -41,52 +37,58 @@ function run_test {
 }
 
 run_test
-
 exit 0
 
 function run_sgemm {
-    ncpu=6
-    ngpu="$1"
-    gpuset="$2"
+    ncpu="$1"
+    cpuset="$2"
+    ngpu="$3"
+    gpuset="$4"
 
     out="$SCRATCH/res/xkaapi-sgemm-${ncpu}cpu${ngpu}gpu-${version}.txt"
     export KAAPI_GPUSET="$gpuset"
-    export KAAPI_CPUSET='0:5'
-    msizes="1024 2048"
+    export KAAPI_CPUSET="$cpuset"
+    msizes="1024 2048 4096"
     bsizes="512"
     for m in $msizes ; do
 	    for b in $bsizes; do
 	    for i in `seq 1 $niter`
 	    do
-	    echo "$KAAPI_CPUSET $KAAPI_GPUSET KAAPI_STACKSIZE=536870912 \
-		    ./matprod_iter_kaapi++ $m $b $verif >> $out"
+	    echo "$KAAPI_CPUSET $KAAPI_GPUSET ./matprod_iter_kaapi++ $m $b $verif"
 	    #	KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
 	    #	KAAPI_STACKSIZE=536870912 gdb ./matprod_iter_kaapi++ 
 	    done
 	done
     done
-    return
     bsizes="1024"
-    msizes="$(seq 3072 1024 40960)"
+    msizes="$(seq 8192 2048 40960)"
     for m in $msizes ; do
 	    for b in $bsizes; do
 	    for i in `seq 1 $niter`
 	    do
-	    KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
+	    echo "$KAAPI_CPUSET $KAAPI_GPUSET ./matprod_iter_kaapi++ $m $b $verif"
+#	    KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
     #	KAAPI_STACKSIZE=536870912 gdb ./matprod_iter_kaapi++ 
 	    done
 	done
     done
 }
 
-GPUSET='3~7 4~8 5~9 6~10 7~11'
-init_gpuset="0~6"
-let 'ngpu=1'
-run_sgemm "$ngpu" "$init_gpuset"
-for gset in $GPUSET
-do
-    init_gpuset="$init_gpuset,$gset"
-    let 'ngpu++'
-    run_sgemm "$ngpu" "$init_gpuset"
-done
+ncpu=1
+cpuset="0"
 
+ngpu=1
+gpuset="0~4"
+run_sgemm "$ncpu" "$cpuset" "$ngpu" "$gpuset"
+
+ngpu=2
+gpuset="0~4,1~5"
+run_sgemm "$ncpu" "$cpuset" "$ngpu" "$gpuset"
+
+ngpu=4
+gpuset="0~4,1~5,2~6,3~7"
+run_sgemm "$ncpu" "$cpuset" "$ngpu" "$gpuset"
+
+ngpu=8
+gpuset="0~4,1~5,2~6,3~7,4~8,5~9,6~10,7~11"
+run_sgemm "$ncpu" "$cpuset" "$ngpu" "$gpuset"

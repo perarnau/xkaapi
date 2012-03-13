@@ -13,8 +13,6 @@ kaapi_mem_host_map_init( kaapi_mem_host_map_t* map, kaapi_mem_asid_t asid )
     fflush(stdout);
 #endif
   map->asid = asid;
-  map->data.beg = map->data.end = NULL;
-  kaapi_big_hashmap_init( &map->data.hblocks, 0 );  
 
   kaapi_big_hashmap_init( &map->hmap, 0 );  
   return 0;

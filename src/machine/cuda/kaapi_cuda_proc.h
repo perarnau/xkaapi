@@ -62,7 +62,14 @@
 
 //#define KAAPI_CUDA_USE_POOL	1
 
-#define KAAPI_CUDA_MAX_STREAMS		8
+#define KAAPI_CUDA_MAX_STREAMS	4
+
+enum {
+    KAAPI_CUDA_STREAM_HTOD,
+    KAAPI_CUDA_STREAM_KERNEL,
+    KAAPI_CUDA_STREAM_DTOH,
+    KAAPI_CUDA_STREAM_DTOD
+};
 
 typedef struct kaapi_cuda_ctx
 {
@@ -90,11 +97,6 @@ typedef struct kaapi_cuda_proc
     /* WARNING: some old devices get errors on multiple stream */
     cudaStream_t stream[KAAPI_CUDA_MAX_STREAMS];
     cudaEvent_t event;
-    cudaStream_t streamDtoD;
-    cudaStream_t stream_DtoH[KAAPI_CUDA_MAX_STREAMS];
-    int stream_htod_idx; /* stream ID to tranfer/execute */
-    int stream_dtoh_idx; /* stream ID to tranfer/execute */
-    int stream_max; /* maximum number of streams */
 
     kaapi_cuda_ctx_t ctx;
 
@@ -124,10 +126,6 @@ cudaStream_t kaapi_cuda_HtoD_stream(void);
 cudaStream_t kaapi_cuda_DtoH_stream(void);
 
 cudaStream_t kaapi_cuda_DtoD_stream(void);
-
-void kaapi_cuda_stream_HtoD_next(void);
-
-void kaapi_cuda_stream_DtoH_next(void);
 
 void kaapi_cuda_event_record( void );
 

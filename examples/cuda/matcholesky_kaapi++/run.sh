@@ -1,10 +1,8 @@
 #!/bin/bash
 
-#SCRATCH=/scratch/jvlima
-SCRATCH=$HOME
+SCRATCH=/scratch/jvlima
 export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$SCRATCH/install/xkaapi/default/lib:$LD_LIBRARY_PATH
-#export LD_LIBRARY_PATH=$SCRATCH/adonis/xkaapi/default/lib:$LD_LIBRARY_PATH
 
 version="$(date +%s)"
 out="$SCRATCH/res/xkaapi-spotrf-4cpu1gpu-${version}.txt"
