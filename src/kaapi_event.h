@@ -56,42 +56,42 @@ extern "C" {
     Not that any extension or modification of the events must
     be reflected in the utility bin/kaapi_event_reader.
 */
-#define KAAPI_EVT_KPROC_START     0     /* kproc begins */
-#define KAAPI_EVT_KPROC_STOP      1     /* kproc ends */
+#define KAAPI_EVT_KPROC_START        0     /* kproc begins */
+#define KAAPI_EVT_KPROC_STOP         1     /* kproc ends */
 
-#define KAAPI_EVT_TASK_BEG        2     /* begin execution of tasks */
-#define KAAPI_EVT_TASK_END        3     /* end execution of tasks */
+#define KAAPI_EVT_TASK_BEG           2     /* begin execution of tasks */
+#define KAAPI_EVT_TASK_END           3     /* end execution of tasks */
 
-#define KAAPI_EVT_FRAME_TL_BEG    4     /* begin execution using frame tasklist */
-#define KAAPI_EVT_FRAME_TL_END    5     /* end execution using frame tasklist */
+#define KAAPI_EVT_FRAME_TL_BEG       4     /* begin execution using frame tasklist */
+#define KAAPI_EVT_FRAME_TL_END       5     /* end execution using frame tasklist */
 
-#define KAAPI_EVT_STATIC_BEG      6     /* begin of static schedule computation */
-#define KAAPI_EVT_STATIC_END      7     /* end of static schedule computation */
+#define KAAPI_EVT_STATIC_BEG         6     /* begin of static schedule computation */
+#define KAAPI_EVT_STATIC_END         7     /* end of static schedule computation */
 
-#define KAAPI_EVT_STATIC_TASK_BEG 8     /* begin of task after static schedule, param:  */
-#define KAAPI_EVT_STATIC_TASK_END 9     /* end of task after static schedule */
+#define KAAPI_EVT_STATIC_TASK_BEG    8     /* begin of task after static schedule, param:  */
+#define KAAPI_EVT_STATIC_TASK_END    9     /* end of task after static schedule */
 
-#define KAAPI_EVT_SCHED_IDLE_BEG  10     /* begin when k-processor starts to steal */
-#define KAAPI_EVT_SCHED_IDLE_END  11    /* end when k-processor starts to steal */
+#define KAAPI_EVT_SCHED_IDLE_BEG     10     /* begin when k-processor starts to steal */
+#define KAAPI_EVT_SCHED_IDLE_END     11    /* end when k-processor starts to steal */
 
-#define KAAPI_EVT_SCHED_SUSPEND_BEG 12 /* when k-processor is suspending */
-#define KAAPI_EVT_SCHED_SUSPEND_END 13 /* when k-processor wakeup */
+#define KAAPI_EVT_SCHED_SUSPEND_BEG  12 /* when k-processor is suspending */
+#define KAAPI_EVT_SCHED_SUSPEND_END  13 /* when k-processor wakeup */
 
 #define KAAPI_EVT_SCHED_SUSPEND_POST 14 /* master thread post suspend */
 #define KAAPI_EVT_SCHED_SUSPWAIT_BEG 15 /* master thread wait */
 #define KAAPI_EVT_SCHED_SUSPWAIT_END 16 /* master thread end wait */
 
-#define KAAPI_EVT_REQUESTS_BEG    17 /* when k-processor begin to process requests, data=victim.id */
-#define KAAPI_EVT_REQUESTS_END    18 /* when k-processor end to process requests */
+#define KAAPI_EVT_REQUESTS_BEG       17 /* when k-processor begin to process requests, data=victim.id */
+#define KAAPI_EVT_REQUESTS_END       18 /* when k-processor end to process requests */
 
-#define KAAPI_EVT_STEAL_OP        19 /* when k-processor emit a steal request data=victimid, serial*/
-#define KAAPI_EVT_SEND_REPLY      20 /* when k-processor send a reply request data=victimid, thiefid, serial */
-#define KAAPI_EVT_RECV_REPLY      21 /* when k-processor recv reply, victim id, serial, status (1:ok 0:nok) */
+#define KAAPI_EVT_STEAL_OP           19 /* when k-processor emit a steal request data=victimid, serial*/
+#define KAAPI_EVT_SEND_REPLY         20 /* when k-processor send a reply request data=victimid, thiefid, serial */
+#define KAAPI_EVT_RECV_REPLY         21 /* when k-processor recv reply, victim id, serial, status (1:ok 0:nok) */
 
 
-#define KAAPI_EVT_FOREACH_BEG     25 /* */
-#define KAAPI_EVT_FOREACH_END     26 /* */
-#define KAAPI_EVT_FOREACH_STEAL   27 /* */
+#define KAAPI_EVT_FOREACH_BEG        25 /* */
+#define KAAPI_EVT_FOREACH_END        26 /* */
+#define KAAPI_EVT_FOREACH_STEAL      27 /* */
 
 
 /* ........................................ Implementation notes ........................................*/
