@@ -163,7 +163,7 @@ execute_first:
 #if KAAPI_CUDA_TIME
     uint64_t t0 = kaapi_get_elapsedns();
 #endif
-	    //kaapi_cuda_event_record();
+	    kaapi_cuda_event_record();
 	    body( pc->sp, kaapi_cuda_kernel_stream() );
 #if KAAPI_CUDA_TIME
     uint64_t t1 = kaapi_get_elapsedns();

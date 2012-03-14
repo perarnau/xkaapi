@@ -153,7 +153,7 @@ cudaStream_t kaapi_cuda_kernel_stream(void)
 {
     kaapi_processor_t* const self_proc =
 	kaapi_get_current_processor();
-    return self_proc->cuda_proc.stream[KAAPI_CUDA_STREAM_HTOD];
+    return self_proc->cuda_proc.stream[KAAPI_CUDA_STREAM_KERNEL];
 }
 
 cudaStream_t kaapi_cuda_HtoD_stream(void)
