@@ -205,3 +205,15 @@ void kaapi_cuda_event_record( void )
 	    0 );
 }
 
+void kaapi_cuda_event_record_( cudaStream_t stream )
+{
+    kaapi_processor_t* const self_proc =
+	kaapi_get_current_processor();
+    const cudaError_t res = cudaEventRecord( self_proc->cuda_proc.event, 
+	   stream );
+    if( res != cudaSuccess ) {
+	    fprintf( stdout, "%s: cudaEventRecord ERROR %d\n", __FUNCTION__, res);
+	    fflush(stdout);
+    }
+}
+

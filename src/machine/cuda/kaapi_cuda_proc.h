@@ -129,6 +129,8 @@ cudaStream_t kaapi_cuda_DtoD_stream(void);
 
 void kaapi_cuda_event_record( void );
 
+void kaapi_cuda_event_record_( cudaStream_t stream );
+
 static inline int
 kaapi_cuda_sync( void )
 {

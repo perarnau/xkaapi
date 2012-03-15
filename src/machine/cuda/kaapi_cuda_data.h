@@ -12,6 +12,11 @@ int kaapi_cuda_data_send(
 	void*			sp
 );
 
+int kaapi_cuda_data_recv( 
+	kaapi_format_t*		   fmt,
+	void*			sp
+);
+
 #if	KAAPI_CUDA_MEM_ALLOC_MANAGER
 int 
 kaapi_cuda_data_check( void );

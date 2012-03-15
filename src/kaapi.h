@@ -1539,10 +1539,16 @@ static inline void* __kaapi_pointer2void(kaapi_pointer_t p)
     The data also stores a pointer to the meta data information for fast lookup.
     Warning: The ptr should be the first field of the data structure.
 */
+#if defined(KAAPI_USE_CUDA)
+#include <cuda_runtime_api.h>
+#endif
 typedef struct kaapi_data_t {
   kaapi_pointer_t               ptr;                /* address of data */
   kaapi_memory_view_t           view;               /* view of data */
   struct kaapi_metadata_info_t* mdi;                /* if not null, pointer to the meta data */
+#if defined(KAAPI_USE_CUDA)
+  cudaEvent_t event;
+#endif
 } kaapi_data_t;
 
 

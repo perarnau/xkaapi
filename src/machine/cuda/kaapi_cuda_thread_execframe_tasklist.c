@@ -165,6 +165,8 @@ execute_first:
 #endif
 	    kaapi_cuda_event_record();
 	    body( pc->sp, kaapi_cuda_kernel_stream() );
+	    kaapi_cuda_event_record_( kaapi_cuda_kernel_stream() );
+	    kaapi_cuda_data_recv( td->fmt, pc->sp );
 #if KAAPI_CUDA_TIME
     uint64_t t1 = kaapi_get_elapsedns();
     fprintf( stdout, "%lu:%x:TaskBodyGPU:%s:%d\n", kaapi_get_current_kid(),
