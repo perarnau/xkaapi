@@ -1,5 +1,4 @@
 
-#if 0
 #include <stdio.h>
 
 #include "kaapi_impl.h"
@@ -10,11 +9,11 @@
 #include "kaapi_cuda_proc.h"
 #include "kaapi_cuda_mem.h"
 #include "kaapi_cuda_ctx.h"
-#include "kaapi_cuda_data.h"
+#include "kaapi_cuda_data_async.h"
 
 #ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
 static inline void
-xxx_kaapi_cuda_data_inc_use(
+xxx_kaapi_cuda_data_async_inc_use(
 		const kaapi_mem_host_map_t* map,
 		kaapi_mem_data_t* kmd,
 		kaapi_data_t* src
@@ -33,7 +32,7 @@ xxx_kaapi_cuda_data_inc_use(
 #endif /* KAAPI_CUDA_MEM_ALLOC_MANAGER */
 
 static inline void
-kaapi_cuda_data_view_convert( kaapi_memory_view_t* dest_view, const
+kaapi_cuda_data_async_view_convert( kaapi_memory_view_t* dest_view, const
 	kaapi_memory_view_t* src_view )
 {
   switch (src_view->type) 
@@ -60,7 +59,7 @@ kaapi_cuda_data_view_convert( kaapi_memory_view_t* dest_view, const
  * Context: it executes right before a CUDA task (kernel).
  */
 static inline kaapi_data_t*
-xxx_kaapi_cuda_data_allocate(
+xxx_kaapi_cuda_data_async_allocate(
 		const kaapi_mem_host_map_t* cuda_map,
 		kaapi_mem_data_t* kmd,
 		kaapi_data_t* src
@@ -72,7 +71,7 @@ xxx_kaapi_cuda_data_allocate(
 		kaapi_data_t* dest = (kaapi_data_t*)calloc( 1, sizeof(kaapi_data_t) );
 		kaapi_cuda_mem_alloc( &dest->ptr, 0UL, 
 		    kaapi_memory_view_size(&src->view), 0 );
-	    	kaapi_cuda_data_view_convert( &dest->view, &src->view );
+	    	kaapi_cuda_data_async_view_convert( &dest->view, &src->view );
 		kaapi_mem_data_set_addr( kmd, asid, (kaapi_mem_addr_t)dest );
 		kaapi_mem_data_set_dirty( kmd, asid );
 		kaapi_mem_host_map_find_or_insert_(  cuda_map,
@@ -89,7 +88,7 @@ xxx_kaapi_cuda_data_allocate(
 	return NULL;
 }
 
-int kaapi_cuda_data_allocate( 
+int kaapi_cuda_data_async_allocate( 
 	kaapi_format_t*		   fmt,
 	void*              sp
 )
@@ -131,7 +130,7 @@ int kaapi_cuda_data_allocate(
 		    kaapi_mem_data_set_addr( kmd, host_asid,
 			    (kaapi_mem_addr_t)src );
 
-		kaapi_data_t* dest= xxx_kaapi_cuda_data_allocate( cuda_map, kmd, src );
+		kaapi_data_t* dest= xxx_kaapi_cuda_data_async_allocate( cuda_map, kmd, src );
 
 		/* sets new pointer to the task */
 		access.data =  dest;
@@ -155,7 +154,7 @@ int kaapi_cuda_data_allocate(
  * The function goes through every parameter and checks if it is allocated and
  * valid on GPU memory.
  */
-int kaapi_cuda_data_send( 
+int kaapi_cuda_data_async_send( 
 	kaapi_format_t*		   fmt,
 	void*              sp
 )
@@ -189,7 +188,7 @@ int kaapi_cuda_data_send(
 	    kaapi_access_t access = kaapi_format_get_access_param( fmt,
 			    i, sp );
 	    kaapi_data_t* dev_data = kaapi_data( kaapi_data_t, &access );
-	    kaapi_cuda_data_sync_device( dev_data );
+	    kaapi_cuda_data_async_sync_device( dev_data );
 
 	    if( KAAPI_ACCESS_IS_WRITE(m) ) {
 		kaapi_mem_host_map_find_or_insert( cuda_map,
@@ -214,7 +213,7 @@ int kaapi_cuda_data_send(
     return 0;
 }
 
-int kaapi_cuda_data_recv( 
+int kaapi_cuda_data_async_recv( 
 	kaapi_format_t*		   fmt,
 	void*              sp
 )
@@ -284,14 +283,14 @@ int kaapi_cuda_data_recv(
 
 #if	KAAPI_CUDA_MEM_ALLOC_MANAGER
 int 
-kaapi_cuda_data_check( void )
+kaapi_cuda_data_async_check( void )
 {
     return kaapi_cuda_mem_mgmt_check( kaapi_get_current_processor() );
 }
 #endif
 
 static inline int
-kaapi_cuda_data_sync_device_transfer(
+kaapi_cuda_data_async_sync_device_transfer(
 	kaapi_data_t* dest, const kaapi_mem_asid_t dest_asid,
 	kaapi_data_t* src,  const kaapi_mem_asid_t src_asid
        	)
@@ -339,7 +338,7 @@ kaapi_cuda_data_sync_device_transfer(
 }
 
 int
-kaapi_cuda_data_sync_device( kaapi_data_t* kdata )
+kaapi_cuda_data_async_sync_device( kaapi_data_t* kdata )
 {
 #if KAAPI_CUDA_TIME
     uint64_t t0 = kaapi_get_elapsedns();
@@ -355,7 +354,7 @@ kaapi_cuda_data_sync_device( kaapi_data_t* kdata )
     if ( kaapi_mem_data_is_dirty( kmd, cuda_asid ) ) {
 	valid_asid = kaapi_mem_data_get_nondirty_asid( kmd );
 	kaapi_data_t* valid_data = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd, valid_asid );
-	kaapi_cuda_data_sync_device_transfer( kdata, cuda_asid,
+	kaapi_cuda_data_async_sync_device_transfer( kdata, cuda_asid,
 		valid_data, valid_asid );
 	kaapi_mem_data_clear_dirty( kmd, cuda_asid );
     }
@@ -372,7 +371,7 @@ kaapi_cuda_data_sync_device( kaapi_data_t* kdata )
 }
 
 static inline int
-kaapi_cuda_data_sync_host_transfer(
+kaapi_cuda_data_async_sync_host_transfer(
 	kaapi_data_t* dest, const kaapi_mem_asid_t dest_asid,
 	kaapi_data_t* src,  const kaapi_mem_asid_t src_asid
 	)
@@ -383,7 +382,7 @@ kaapi_cuda_data_sync_host_transfer(
     uint64_t t0 = kaapi_get_elapsedns();
 #endif
     kaapi_cuda_ctx_set( src_asid-1 );
-    cudaEventSynchronize( src->event );
+    res= cudaEventSynchronize( src->event );
 #if 0
     cudaStream_t stream;
     res = cudaStreamCreate( &stream );
@@ -416,7 +415,7 @@ kaapi_cuda_data_sync_host_transfer(
 }
 
 int
-kaapi_cuda_data_sync_host( kaapi_data_t* kdata )
+kaapi_cuda_data_async_sync_host( kaapi_data_t* kdata )
 {
     //const kaapi_mem_host_map_t* host_map = kaapi_get_current_mem_host_map();
 #if KAAPI_CUDA_TIME
@@ -434,7 +433,7 @@ kaapi_cuda_data_sync_host( kaapi_data_t* kdata )
     if ( kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
 	valid_asid = kaapi_mem_data_get_nondirty_asid( kmd );
 	kaapi_data_t* valid_data = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd, valid_asid );
-	kaapi_cuda_data_sync_host_transfer( kdata, host_asid, valid_data,
+	kaapi_cuda_data_async_sync_host_transfer( kdata, host_asid, valid_data,
 		valid_asid );
 	kaapi_mem_data_clear_dirty( kmd, host_asid );
     }
@@ -450,4 +449,3 @@ kaapi_cuda_data_sync_host( kaapi_data_t* kdata )
     return 0;
 }
 
-#endif

@@ -243,7 +243,10 @@ libkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda_cublas.h \
   machine/cuda/kaapi_cuda_cublas.c \
   machine/cuda/kaapi_cuda_data.h \
-  machine/cuda/kaapi_cuda_data.c \
+  machine/cuda/kaapi_cuda_data_basic.h \
+  machine/cuda/kaapi_cuda_data_basic.c \
+  machine/cuda/kaapi_cuda_data_async.h \
+  machine/cuda/kaapi_cuda_data_async.c \
   machine/cuda/kaapi_cuda_mem.h \
   machine/cuda/kaapi_cuda_mem.c \
   machine/cuda/kaapi_cuda_pool.h \

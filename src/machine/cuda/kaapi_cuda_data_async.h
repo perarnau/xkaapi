@@ -1,5 +1,5 @@
 /*
-** kaapi_cuda_proc.h
+** kaapi_cuda_data_async.h
 ** xkaapi
 ** 
 ** Created on Jan 2012
@@ -44,112 +44,43 @@
 ** 
 */
 
-#ifndef KAAPI_CUDA_DATA_H_INCLUDED
-#define KAAPI_CUDA_DATA_H_INCLUDED
+#ifndef KAAPI_CUDA_DATA_ASYNC_H_INCLUDED
+#define KAAPI_CUDA_DATA_ASYNC_H_INCLUDED
 
-#include "kaapi_impl.h"
-#include "kaapi_cuda_proc.h"
-
-/* TODO: configure better the async/basic mode
- * or choose at runtime 
- */
-
-#if KAAPI_CUDA_ASYNC
-
-#include "kaapi_cuda_data_async.h"
-
-static inline int
-kaapi_cuda_data_allocate( 
+int kaapi_cuda_data_async_allocate( 
 	kaapi_format_t*		   fmt,
 	void*			sp
-)
-{
-    return kaapi_cuda_data_async_allocate( fmt, sp );
-}
+);
 
-static inline int
-kaapi_cuda_data_send( 
+int kaapi_cuda_data_async_send( 
 	kaapi_format_t*		   fmt,
 	void*			sp
-)
-{
-    return kaapi_cuda_data_async_send( fmt, sp );
-}
+);
 
-static inline int
-kaapi_cuda_data_recv( 
+int kaapi_cuda_data_async_recv( 
 	kaapi_format_t*		   fmt,
 	void*			sp
-)
-{
-    return kaapi_cuda_data_async_recv( fmt, sp );
-}
+);
+
+#if	KAAPI_CUDA_MEM_ALLOC_MANAGER
+int 
+kaapi_cuda_data_async_check( void );
+#endif
 
 /* ** Memory system **
     This method is called by a CUDA thread to synchronize the kdata parameter.
 It checks if the data is valid on the current kproc, otherwise searches for a
 valid copy on the asids of the system.
 */
-static inline int
-kaapi_cuda_data_sync_device( kaapi_data_t* kdata )
-{
-    return kaapi_cuda_data_async_sync_device( kdata );
-}
+int
+kaapi_cuda_data_async_sync_device( kaapi_data_t* kdata );
 
 /* ** Memory system **
    This method is called from a host thread to synchronize the kdata parameter.
 It checks if the data is valid on the current kproc, otherwise search for a
 valid copy on the GPUs.
 */
-static inline int
-kaapi_cuda_data_sync_host( kaapi_data_t* kdata )
-{
-    return kaapi_cuda_data_async_sync_host( kdata );
-}
+int
+kaapi_cuda_data_async_sync_host( kaapi_data_t* kdata );
 
-#else /* BASIC mode */
-
-#include "kaapi_cuda_data_basic.h"
-
-static inline int
-kaapi_cuda_data_allocate( 
-	kaapi_format_t*		   fmt,
-	void*			sp
-)
-{
-    return kaapi_cuda_data_basic_allocate( fmt, sp );
-}
-
-static inline int
-kaapi_cuda_data_send( 
-	kaapi_format_t*		   fmt,
-	void*			sp
-)
-{
-    return kaapi_cuda_data_basic_send( fmt, sp );
-}
-
-static inline int
-kaapi_cuda_data_recv( 
-	kaapi_format_t*		   fmt,
-	void*			sp
-)
-{
-    return kaapi_cuda_data_basic_recv( fmt, sp );
-}
-
-static inline int
-kaapi_cuda_data_sync_device( kaapi_data_t* kdata )
-{
-    return 0;
-}
-
-static inline int
-kaapi_cuda_data_sync_host( kaapi_data_t* kdata )
-{
-    return 0;
-}
-
-#endif /* KAAPI_CUDA_ASYNC */
-
-#endif /* KAAPI_CUDA_DATA_H_INCLUDED */
+#endif /* KAAPI_CUDA_DATA_ASYNC_H_INCLUDED */
