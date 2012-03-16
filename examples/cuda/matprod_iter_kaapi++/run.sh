@@ -14,6 +14,7 @@ version="$(date +%s)"
 function run_test {
     export KAAPI_CPUSET="0:1"
     export KAAPI_GPUSET="0~4,1~5"
+
     msizes="4096"
 #    msizes="2048"
 #    msizes="16384"
