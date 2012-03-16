@@ -71,8 +71,6 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   kaapi_thread_context_t* ctxt;
 
   kproc->thread       = 0;  
-  kproc->thread       = 0;  
-  kproc->thread       = 0;  
   kproc->kid          = kpi->kid;
   kproc->proc_type    = kpi->proc_type;
   kproc->kpi          = kpi;
@@ -90,12 +88,7 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   
   kaapi_sched_initlock( &kproc->lock );
   
-#if defined(KAAPI_DEBUG)
-  kproc->req_version = 0;
-  kproc->reply_version = 0;
-  kproc->compute_version =0;
-#endif
-
+  kproc->isidle         = 1;
   kaapi_wsqueuectxt_init( &kproc->lsuspend );
 
   kaapi_lfree_clear( kproc );
@@ -113,9 +106,21 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   kproc->emitsteal       = kaapi_default_param.emitsteal;
   kaapi_assert( 0 == kaapi_default_param.emitsteal_initctxt(kproc) );
   
+#if defined(KAAPI_DEBUG)
+  kproc->req_version = 0;
+  kproc->reply_version = 0;
+  kproc->compute_version =0;
+#endif
+
   kaapi_assert(0 == pthread_mutex_init(&kproc->suspend_lock, 0) );
+
   /* */
   kproc->eventbuffer     = 0;
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kproc->serial          = 0;
+  kproc->lastcounter     = 0;
+#endif
   
   /* workload */
   kaapi_processor_set_workload(kproc, 0);
@@ -137,6 +142,8 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
 
   /* set new context to the kprocessor */
   kaapi_setcontext(kproc, ctxt);
+  
+  kproc->libkomp_tls = 0;
 
 #if defined(KAAPI_USE_CUDA)
   /* initialize cuda processor */

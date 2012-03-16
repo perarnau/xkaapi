@@ -40,13 +40,16 @@
  ** terms.
  ** 
  */
+#include "kaapi_impl.h"
 #include "kaapic_impl.h"
 
 int kaapic_foreach_attr_init(kaapic_foreach_attr_t* attr)
 {
-  attr->s_grain = 1;
-  attr->p_grain = 1;
-  attr->policy  = 0;
+  attr->s_grain  = 1;
+  attr->p_grain  = 1;
+  attr->nthreads = -1;
+  attr->policy   = 0;
+  kaapi_cpuset_full(&attr->cpuset);
   return 0;
 }
 
@@ -61,3 +64,11 @@ int kaapic_foreach_attr_set_grains(
   return 0;
 }
 
+int kaapic_foreach_attr_set_threads(
+  kaapic_foreach_attr_t* attr, 
+  unsigned int nthreads
+)
+{
+  attr->nthreads = nthreads;
+  return 0;
+}

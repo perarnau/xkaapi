@@ -70,38 +70,43 @@ kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
   kaapi_atomic_t               status __attribute__((aligned(8)));
   kaapi_victim_t               victim;
   kaapi_request_t*             self_request;
+  kaapi_request_t*             request;
   int                          err;
   kaapi_listrequest_iterator_t lri;
-  
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  uintptr_t serial;
+#endif
+
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc->thread !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
   
-  if (kaapi_count_kprocessors <2) return KAAPI_REQUEST_S_NOK;
+  if (kaapi_count_kprocessors <2) 
+    return KAAPI_REQUEST_S_NOK;
     
 redo_select:
   /* select the victim processor */
   err = (*kproc->fnc_select)( kproc, &victim, KAAPI_SELECT_VICTIM );
-  if (unlikely(err !=0)) {
+  if (unlikely(err !=0)) 
+  {
     if (kaapi_isterm) return 0;
     goto redo_select;
   }
-  /* never pass by this function for a processor to steal itself */
-  if (kproc == victim.kproc) return KAAPI_REQUEST_S_NOK;
 
-#if 0 // to avoid lock
-  /* quick test to detect if thread has work */
-  if ((victim.kproc->thread ==0)||
-      ( 
-        (kproc->thread->stack.sfp == &kproc->thread->stack.stackframe[1])
-      &&  kaapi_frame_isempty( kproc->thread->stack.sfp ) 
-      ))
+#if 0 // TG: test, steal also allow to steal stack from myself. Else only wakeup
+  /* never pass by this function for a processor to steal itself */
+  if (kproc == victim.kproc) 
+    return KAAPI_REQUEST_S_NOK;
+#endif
+
+  /* quick test to detect if thread has no work */
+  if (kaapi_processor_has_nowork(victim.kproc))
   {
     (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_FAILED );
     goto redo_select;
   }
   kaapi_assert_debug( (victim.kproc->kid >=0) && (victim.kproc->kid <kaapi_count_kprocessors));
-#endif
 
 
   /* (1) 
@@ -114,6 +119,19 @@ redo_select:
 
   self_request = &kaapi_global_requests_list[kproc->kid];
   kaapi_assert_debug( self_request->ident == kproc->kid );
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  KAAPI_IFUSE_TRACE(kproc,
+    self_request->victim = (uintptr_t)victim.kproc->kid;
+    self_request->serial = serial = ++kproc->serial;
+    KAAPI_EVENT_PUSH2(kproc, 0, KAAPI_EVT_STEAL_OP, 
+        (uintptr_t)victim.kproc->kid, 
+        self_request->serial
+    );
+  );
+  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
+#endif
+
   KAAPI_DEBUG_INST(kproc->victim_kproc = victim.kproc;)
   kaapi_request_post( 
     &victim_stealctxt->lr,
@@ -122,9 +140,6 @@ redo_select:
     &kproc->thread->stack.stackframe[0] 
   );
   
-#if defined(KAAPI_USE_PERFCOUNTER)
-  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQ);
-#endif
 
   /* (2)
      lock and re-test if they are yet posted requests on victim or not 
@@ -140,28 +155,36 @@ redo_select:
 #endif
     kaapi_slowdown_cpu();
   }
+#if defined(KAAPI_USE_PERFCOUNTER)
+  KAAPI_EVENT_PUSH2(kproc, 0, KAAPI_EVT_REQUESTS_BEG, 
+                    (uintptr_t)victim.kproc->kid, serial );
+#endif
 
   /* here becomes an aggregator... the trylock has synchronized memory */
   kaapi_listrequest_iterator_init(&victim_stealctxt->lr, &lri);
 
   /* (3)
      process all requests on the victim kprocessor and reply failed to remaining requests
-     Warning: In this version the aggregator has a lock on the victim processor.
+     Warning: In this version the aggregator has a lock on the victim processor 
+     steal context (i.e. the list of requests).
   */
   if (!kaapi_listrequest_iterator_empty(&lri) ) 
   {
-    kaapi_request_t* request;
-
+#if defined(KAAPI_USE_PERFCOUNTER)
+    kaapi_assert_debug( sizeof(kaapi_atomic64_t) <= sizeof(kaapi_perf_counter_t) );
+    KAAPI_ATOMIC_ADD64( 
+      (kaapi_atomic64_t*)&KAAPI_PERF_REG(victim.kproc, KAAPI_PERF_ID_STEALIN),
+      kaapi_listrequest_iterator_count(&lri)
+    );
+#endif
     kaapi_sched_stealprocessor( victim.kproc, &victim_stealctxt->lr, &lri );
 
     /* reply failed for all others requests */
     request = kaapi_listrequest_iterator_get( &victim_stealctxt->lr, &lri );
     kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
-    
     while (request !=0)
     {
       kaapi_request_replytask(request, KAAPI_REQUEST_S_NOK);
-      KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( &lri ) );
       request = kaapi_listrequest_iterator_next( &victim_stealctxt->lr, &lri );
       kaapi_assert_debug( !kaapi_listrequest_iterator_empty(&lri) || (request ==0) );
     }
@@ -169,6 +192,11 @@ redo_select:
 
   KAAPI_DEBUG_INST(kproc->victim_kproc = 0;)
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+  KAAPI_EVENT_PUSH2(kproc, 0, KAAPI_EVT_REQUESTS_END, 
+            (uintptr_t)victim.kproc->kid, serial
+  );
+#endif
   /* unlock the victim kproc after processing the steal operation */
   kaapi_sched_unlock( &victim.kproc->lock );
 
@@ -201,8 +229,8 @@ redo_select:
       /* note: could be optimized a bit, but finalization code */
 
       /* FIXME
-	 should wait for the request but does not work. maybe
-	 the request bitmap is being destroyed.
+	   should wait for the request but does not work. maybe
+	   the request bitmap is being destroyed.
        */
       return KAAPI_REQUEST_S_NOK;
       /* FIXME */
@@ -248,14 +276,26 @@ return_value:
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALREQOK);
 #endif
       (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_SUCCESS );
+#if defined(KAAPI_USE_PERFCOUNTER)
+      KAAPI_EVENT_PUSH3(kproc, 0, KAAPI_EVT_RECV_REPLY, 
+                        self_request->victim, self_request->serial, 1 );
+#endif
       return KAAPI_REQUEST_S_OK;
 
     case KAAPI_REQUEST_S_NOK:
       (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_FAILED );
+#if defined(KAAPI_USE_PERFCOUNTER)
+      KAAPI_EVENT_PUSH3(kproc, 0, KAAPI_EVT_RECV_REPLY, 
+                        self_request->victim, self_request->serial, 0 );
+#endif
       return KAAPI_REQUEST_S_NOK;
 
     case KAAPI_REQUEST_S_ERROR:
       (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_ERROR );
+#if defined(KAAPI_USE_PERFCOUNTER)
+      KAAPI_EVENT_PUSH3(kproc, 0, KAAPI_EVT_RECV_REPLY, 
+                        self_request->victim, self_request->serial, 0 );
+#endif
       return KAAPI_REQUEST_S_ERROR;
 
     default:

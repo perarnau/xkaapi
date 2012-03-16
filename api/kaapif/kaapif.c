@@ -41,9 +41,9 @@
  ** terms.
  ** 
  */
-#include "kaapi.h"
-#include "kaapif.h"
 #include "kaapic_impl.h"
+#include <string.h>
+#include "kaapif.h"
 
 
 extern void _kaapif_register_task_format(void);
@@ -131,7 +131,7 @@ void kaapif_set_grains_(int32_t* par_grain, int32_t* seq_grain)
   xxx_seq_grain = *seq_grain;
 }
 
-void kaapif_set_default_grains_()
+void kaapif_set_default_grains_(void)
 {
   xxx_par_grain = kaapic_default_attr.s_grain;
   xxx_seq_grain = kaapic_default_attr.p_grain;
@@ -165,4 +165,58 @@ int kaapif_end_parallel_(int32_t* flags)
 {
   kaapi_end_parallel(*flags);
   return KAAPIF_SUCCESS;
+}
+
+
+/* tasklist parallel regions, temporary */
+
+extern void kaapic_save_frame(void);
+extern void kaapic_restore_frame(void);
+
+int kaapif_begin_parallel_tasklist_(void)
+{
+  kaapic_save_frame();
+  kaapi_begin_parallel(KAAPI_SCHEDFLAG_STATIC);
+  return 0;
+}
+
+int kaapif_end_parallel_tasklist_(void)
+{
+  kaapi_end_parallel(KAAPI_SCHEDFLAG_STATIC);
+  kaapic_restore_frame();
+  return 0;
+}
+
+
+/* kaapi version string */
+extern const char* get_kaapi_git_hash(void);
+
+void kaapif_get_version_(uint8_t* s)
+{
+  /* assume s large enough */
+  memcpy((void*)s, get_kaapi_git_hash(), 40);
+}
+
+
+/* addr to dim conversion
+   make and get addresses from i, j, ld
+   dataflow programming requires data to be identified
+   by a unique address. from this address, the runtime
+   can compute data dependencies. in this algorithm,
+   we choose i * n4 + j as a factice address.
+ */
+
+int64_t kaapif_make_id2_(int64_t* i, int64_t* j, int64_t* ld)
+{
+  return *i * *ld + *j;
+}
+
+int64_t kaapif_get_id2_row_(int64_t* id, int64_t* ld)
+{
+  return ((int64_t)(uintptr_t)id) / *ld;
+}
+
+int64_t kaapif_get_id2_col_(int64_t* id, int64_t* ld)
+{
+  return ((int64_t)(uintptr_t)id) % *ld;
 }

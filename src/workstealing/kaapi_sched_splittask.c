@@ -54,18 +54,18 @@ int kaapi_sched_splittask
 {
   kaapi_adaptivetask_splitter_t splitter; 
 
-  kaapi_assert_debug( kaapi_task_is_splittable( task ) );
-  
   /* only steal into an correctly initialized steal context */
   uintptr_t orig_state = kaapi_task_getstate(task);
 
   /* Only split if task is INIT or EXEC.
-     The victim may synchronize with the end of thief on the lock of the current thread
+     The victim may synchronize with the end of thief 
+     on the lock of the current thread. 
   */  
-  if ( (orig_state == KAAPI_TASK_STATE_INIT) || (orig_state == KAAPI_TASK_STATE_EXEC) )
+  if ( (orig_state == KAAPI_TASK_STATE_INIT) 
+    || (orig_state == KAAPI_TASK_STATE_EXEC) )
   {
     splitter = kaapi_format_get_splitter( task_fmt, task->sp );
-    if (splitter !=0)
+    if ((splitter !=0) && kaapi_task_is_splittable( task ))
     {
       int err = splitter( task, task->sp, lrequests, lrrange );
       if (err == ECHILD)

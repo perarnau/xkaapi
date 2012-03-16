@@ -40,10 +40,12 @@
  ** terms.
  ** 
  */
+#include "kaapi_impl.h"
 #include "kaapic_impl.h"
 
 
 kaapic_foreach_attr_t kaapic_default_attr;
+unsigned int kaapic_do_parallel;
 
 static kaapi_atomic_t kaapic_initcalled = { 0 };
 
@@ -54,12 +56,20 @@ int kaapic_init(int32_t flags)
     return 0;
 
   if (flags ==0)
+  {
+    kaapic_do_parallel = 0;
     err = kaapi_init(1, 0, 0);
-  else 
+  }
+  else /* only the main thread is started */
+  {
+    kaapic_do_parallel = 1;
     err = kaapi_init(0, 0, 0);
+  }
 
   if (err !=0) return err;
-  
+
+  kaapic_foreach_attr_init( &kaapic_default_attr );
+    
   if (getenv("KAAPI_SEQ_GRAIN") !=0)
     kaapic_default_attr.s_grain = atoi(getenv("KAAPI_SEQ_GRAIN"));
   else
@@ -76,7 +86,10 @@ int kaapic_init(int32_t flags)
 int kaapic_finalize(void)
 {
   if (KAAPI_ATOMIC_DECR(&kaapic_initcalled) == 0)
+  {
+    kaapic_foreach_attr_destroy(&kaapic_default_attr);
     return kaapi_finalize();
+  }
 
   return 0;
 }
@@ -101,15 +114,59 @@ void kaapic_sync(void)
   kaapi_sched_sync();
 }
 
-void kaapic_begin_parallel(void)
+
+int kaapic_begin_parallel(int flags)
 {
-  kaapi_begin_parallel(KAAPI_SCHEDFLAG_DEFAULT);
+  int schedflag = KAAPI_SCHEDFLAG_DEFAULT; /* for runtime */
+  if (flags & KAAPIC_FLAG_STATIC_SCHED)
+    schedflag |= KAAPI_SCHEDFLAG_STATIC;
+  if (flags & KAAPIC_FLAG_END_NOSYNC)
+    schedflag |= KAAPI_SCHEDFLAG_NOWAIT;
+
+  kaapi_push_frame(&kaapi_self_thread_context()->stack );
+  kaapi_begin_parallel(schedflag);
+
+  return 0;
 }
 
-void kaapic_end_parallel(int32_t flags)
+int kaapic_end_parallel(int flags)
 {
-  if (flags)
-    kaapi_end_parallel(KAAPI_SCHEDFLAG_NOWAIT);
-  else
-    kaapi_end_parallel(KAAPI_SCHEDFLAG_DEFAULT);
+  int schedflag = KAAPI_SCHEDFLAG_DEFAULT; /* for runtime */
+  if (flags & KAAPIC_FLAG_STATIC_SCHED)
+    schedflag |= KAAPI_SCHEDFLAG_STATIC;
+  if (flags & KAAPIC_FLAG_END_NOSYNC)
+    schedflag |= KAAPI_SCHEDFLAG_NOWAIT;
+
+  kaapi_end_parallel(schedflag);
+  kaapi_pop_frame(&kaapi_self_thread_context()->stack );
+  
+  return 0;
+}
+
+
+/* temporary */
+
+#include "kaapi_impl.h"
+
+static kaapi_frame_t saved_fp;
+
+void kaapic_save_frame(void)
+{
+  kaapi_thread_context_t* const thread = kaapi_self_thread_context();
+
+  saved_fp = *(kaapi_frame_t*)thread->stack.sfp;
+  thread->stack.sfp[1] = saved_fp;
+  kaapi_writemem_barrier();
+  ++thread->stack.sfp;
+}
+
+void kaapic_restore_frame(void)
+{
+  kaapi_thread_context_t* const thread = kaapi_self_thread_context();
+
+  kaapi_sched_lock(&thread->stack.lock);
+  thread->stack.sfp->tasklist = 0;
+  --thread->stack.sfp;
+  *thread->stack.sfp = saved_fp;
+  kaapi_sched_unlock(&thread->stack.lock);
 }

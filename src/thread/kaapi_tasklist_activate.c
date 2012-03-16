@@ -87,9 +87,9 @@ int kaapi_tasklist_pushready_td(
     int                     priority
 )
 {
-  int nodeid;
   kaapi_ws_queue_t* queue = 0;
 #if 0 /* desactivate this portion of code if you do not want push on remote queue */
+  int nodeid;
   kaapi_bitmap_value32_t ocr = td->ocr;
   uintptr_t addr = 0;
   kaapi_task_t* task;
@@ -102,6 +102,7 @@ int kaapi_tasklist_pushready_td(
 
 
 #if 0 /* desactivate this portion of code if you do not want push on remote queue */
+  int nodeid;
 
   /* if non local -> push on remote queue ? 
      - first find a memory address where to get numa information
@@ -121,7 +122,7 @@ int kaapi_tasklist_pushready_td(
   }
   else 
   {
-    int ith = kaapi_bitmap_first1_and_zero_32( &ocr )-1;
+    int ith = kaapi_bitmap_value_first1_and_zero_32( &ocr )-1;
   /* get binding. TEST: only logical binding */
     kaapi_access_t a __attribute__((unused))= kaapi_format_get_access_param(td->fmt, ith, task->sp);
     kaapi_data_t* gd = (kaapi_data_t*)a.data;

@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.60])
 
-AC_INIT([X-KAAPI],[1.0-rc6],[kaapi-dev-info@lists.gforge.inria.fr],[xkaapi])
+AC_INIT([X-KAAPI],[1.0.2],[kaapi-dev-info@lists.gforge.inria.fr],[xkaapi])
 dnl AC_CONFIG_AUX_DIR: not before, not after
 dnl http://www.mail-archive.com/autoconf@gnu.org/msg07824.html
 AC_CONFIG_AUX_DIR([build-aux])
@@ -58,8 +58,8 @@ AC_PROG_CC
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
 AC_PROG_INSTALL
-AC_PROG_LIBTOOL
-#ACX_PROG_CCACHE_CC
+LT_INIT
+ACX_PROG_CCACHE_CC
 AC_PROG_CXX
 ACX_PROG_CCACHE_CXX
 AC_PROG_F77
@@ -141,11 +141,20 @@ if test $have_cxx = yes ; then
 fi
 AM_CONDITIONAL([KAAPI_CXX_HAS_LAMBDA],[test x"$ac_cv_cxx_lambda" = x"yes"])
 
+# TODO: better check for this feature
+AM_CONDITIONAL([HAVE_VERSION_SCRIPT],[test x"$with_gnu_ld" = xyes])
+if test x"$with_gnu_ld" = xyes; then
+	AC_DEFINE([HAVE_VERSION_SYMBOL], [1], [Define to 1 if symbols can be versionned.])
+fi
+
 # add warning flags to the C and C++ compilers
 AX_CFLAGS_WARN_ALL([AM_CFLAGS])
 if test $have_cxx = yes ; then
   AX_CXXFLAGS_WARN_ALL([AM_CXXFLAGS])
 fi
+
+# check for __attribute__((visibility("..."))) support
+ACX_VISIBILITY
 
 # check for automatic macros that are used by KAAPI
 AX_MACRO_DEFINED([__SIZEOF_POINTER__],[],[],[
@@ -175,6 +184,8 @@ ACX_LIB_ADD_PUBLIC_FLAGS([KAAPICLIB], [-I\${includedir}])
 
 ACX_LIB_NEW_LIB([KAAPIFLIB], [-L\${libdir} -lkaapif], [kaapif])
 ACX_LIB_ADD_PUBLIC_FLAGS([KAAPIFLIB], [-I\${includedir}])
+
+ACX_LIB_NEW_LIB([LIBGOMP], [-L\${libdir} -lgomp], [])
 
 ACX_LIB_NEW_PRG([KAAPIPROGS])
 ACX_LIB_NEW_PRG([KAAPIXXPROGS])
@@ -209,27 +220,19 @@ KAAPI_FEATURE([api-kaapic], [compile C API],
   [C API compiled], [yes],
   [],
   [],
-  [KAAPI_API_KAAPIC],
-  [
-    if test "$have_cc" = no; then
-      AC_MSG_WARN([a C and Fortrand compiler is required for Kaapi C API])
-      FEATURE_DISABLE
-    else
-      FEATURE_ENABLE
-    fi
-  ])
+  [KAAPI_API_KAAPIC])
 
 dnl -----------------------------------------------------------------------
 dnl The "--enable-api-kaapif"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([api-kaapif], [compile fortran API],
-  [Fortran API compiled], [yes],
+  [Fortran API compiled], [check],
   [],
   [],
   [KAAPI_API_KAAPIF],
   [
-    if test "$have_cc" = no -o x"$F77" = x; then
-      AC_MSG_WARN([a C compiler is required for Fortran API])
+    if test x"$F77" = x; then
+      AC_MSG_WARN([a Fortran compiler is required for Fortran API])
       FEATURE_DISABLE
     else
 dnl      ACX_LIB_CHECK_PLAIN([FORTRAN],[],[
@@ -269,7 +272,7 @@ dnl -----------------------------------------------------------------------
 dnl The "--enable-api-kaapixx"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([api-kaapixx], [compile Kaapi++ API],
-  [Kaapi++ API compiled], [yes],
+  [Kaapi++ API compiled], [check],
   [],
   [],
   [KAAPI_API_KAAPIXX],
@@ -290,10 +293,7 @@ KAAPI_FEATURE([api-quark], [compile Quark API used by PLASMA library],
   [Quark API compiled], [yes],
   [],
   [],
-  [KAAPI_API_QUARK],
-  [
-    FEATURE_ENABLE
-  ])
+  [KAAPI_API_QUARK])
 
 
 dnl -----------------------------------------------------------------------
@@ -330,6 +330,24 @@ KAAPI_FEATURE([api-kastl], [compile KaSTL API],
       FEATURE_ENABLE
     fi
   ])
+
+dnl -----------------------------------------------------------------------
+dnl The "--enable-libgomp"
+dnl -----------------------------------------------------------------------
+KAAPI_FEATURE([libgomp], [compile OpenMP libgomp library],
+  [OpenMP libgomp compiled], [check],
+  [],
+  [],
+  [KAAPI_LIBGOMP],
+  [
+    if test "$enable_api_kaapic" != yes ; then
+      AC_MSG_NOTICE([KaapiC API is required for OpenMP libgomp])
+      FEATURE_DISABLE
+    else
+      FEATURE_ENABLE
+    fi
+  ])
+
 
 dnl ----------------------------------------------------------------
 dnl Compilation options
@@ -377,8 +395,8 @@ AS_CASE([$enable_mode],
     AM_CPPFLAGS="$AM_CPPFLAGS"
     CFLAGS=""
     CXXFLAGS=""
-    AM_CFLAGS="$AM_CFLAGS -O4 -DNDEBUG"
-    AM_CXXFLAGS="$AM_CXXFLAGS -O4 -DNDEBUG"
+    AM_CFLAGS="$AM_CFLAGS -O3 -DNDEBUG"
+    AM_CXXFLAGS="$AM_CXXFLAGS -O3 -DNDEBUG"
   ], [dnl
     AC_MSG_ERROR([Unknown compilation mode '$enable_mode'. Aborting.])
   ])
@@ -471,6 +489,17 @@ else
 fi
 AC_DEFINE_UNQUOTED([KAAPI_MAX_PROCESSOR],[$enable_max_processors],[Maximum number of processors (0 for generic implementation)])
 
+dnl 
+KAAPI_FEATURE([futex], [use low-level futex synchronisation primitives],
+  [using futex], [check],
+  [HAVE_FUTEX=1],
+  [HAVE_FUTEX=0],
+  [],
+  [
+    AC_CHECK_HEADER([linux/futex.h], [ FEATURE_ENABLE ], [ FEATURE_DISABLE ])
+  ])
+AC_DEFINE_UNQUOTED([HAVE_FUTEX],[$HAVE_FUTEX],[use futex synchronisation primitives])
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
 AC_C_INLINE
@@ -533,6 +562,13 @@ dnl -----------------------------------------------------------------------
 dnl --with && --enable OPTIONS
 dnl -----------------------------------------------------------------------
 dnl -----------------------------------------------------------------------
+
+dnl -----------------------------------------------------------------------
+dnl The "--with-poti"
+dnl -----------------------------------------------------------------------
+KAAPI_PKGLIB_CHECK([POTI], [poti], [POTI], [no], [KAAPI_USE_EXTERNAL_POTI],
+  [use POTI library to produce Paje traces],
+  [poti], [], [poti.h], [pajeOpen])
 
 dnl -----------------------------------------------------------------------
 dnl The "--with-papi"
@@ -839,6 +875,8 @@ ACX_LIB_LINK([KAAPIFLIB], [PUBLIC], [KAAPICLIB])
 ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [CUDA])
 dnl ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [HWLOC])
 
+ACX_LIB_LINK([LIBGOMP], [PUBLIC], [KAAPILIB KAAPICLIB])
+
 ACX_LIB_LINK([KAAPIPROGS], [KAAPILIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIPROGS],
 	[-I\$(top_srcdir)/src],[],[],
@@ -850,8 +888,8 @@ ACX_LIB_ADD_BUILD_FLAGS([KAAPICPROGS],
 	[-I\$(top_srcdir)/api/kaapic -I\$(top_srcdir)/src],[],[],
 	[\$(top_builddir)/api/kaapic/libkaapic.la \$(top_builddir)/src/libkaapi.la])
 
-ACX_LIB_LINK([KAAPIFLIB], [KAAPIFLIB])
-ACX_LIB_ADD_BUILD_FLAGS([KAAPICPROGS],
+ACX_LIB_LINK([KAAPIFPROGS], [KAAPIFLIB])
+ACX_LIB_ADD_BUILD_FLAGS([KAAPIFPROGS],
 	[-I\$(top_srcdir)/api/kaapif -I\$(top_srcdir)/src],[],[],
 	[\$(top_builddir)/api/kaapif/libkaapif.la \$(top_builddir)/api/kaapic/libkaapic.la \$(top_builddir)/src/libkaapi.la])
 
@@ -889,12 +927,15 @@ dnl Then   alphabetic order of other files
 AC_CONFIG_FILES([
 	Makefile
 	api/Makefile
+	api/atha/Makefile
 	api/kaapixx/Makefile
 	api/kaapic/Makefile
 	api/kaapif/Makefile
-	api/quark/Makefile
 	api/kastl/Makefile
-	api/atha/Makefile
+	api/libgomp/Makefile
+	api/libgomp/tests/Makefile
+	api/libgomp/testsuite/Makefile
+	api/quark/Makefile
 	examples/Makefile
 	network/Makefile
 	network/gasnet/Makefile

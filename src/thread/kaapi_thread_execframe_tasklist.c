@@ -78,7 +78,7 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   kaapi_assert_debug( tasklist != 0 );
 
   /* here... begin execute frame tasklist*/
-  kaapi_event_push0(stack->proc, thread, KAAPI_EVT_FRAME_TL_BEG );
+  KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_FRAME_TL_BEG );
 
   /* get the processor type to select correct entry point */
   proc_type = stack->proc->proc_type;
@@ -109,7 +109,7 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   
   /* force previous write before next write */
   //kaapi_writemem_barrier();
-KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist = *tasklist; )
+KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist __attribute__((unused)) = *tasklist; )
 
 #if 0
 redo_while:
@@ -151,24 +151,16 @@ execute_first:
         kaapi_assert_debug((char*)fp->sp > (char*)fp->sp_data);
         kaapi_assert_debug( stack->sfp - stack->stackframe <KAAPI_MAX_RECCALL);
         
-        /* start execution of the user body of the task */
-        KAAPI_DEBUG_INST(kaapi_assert( td->u.acl.exec_date == 0 ));
-        kaapi_event_push1(stack->proc, thread, KAAPI_EVT_TASK_BEG, pc );
 #if defined(KAAPI_USE_CUDA)
 	if ( td->fmt != 0 )
 		kaapi_mem_host_map_sync( td->fmt, pc->sp );
 #endif
-#if KAAPI_CUDA_TIME
-    uint64_t t0 = kaapi_get_elapsedns();
-#endif
+
+        /* start execution of the user body of the task */
+        KAAPI_DEBUG_INST(kaapi_assert( td->u.acl.exec_date == 0 ));
+        KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
         body( pc->sp, (kaapi_thread_t*)stack->sfp );
-#if KAAPI_CUDA_TIME
-    uint64_t t1 = kaapi_get_elapsedns();
-    if ( td->fmt != 0 )
-    fprintf( stdout, "%lu:%x:TaskBodyCPU:%s:%d\n", kaapi_get_current_kid(),
-	    kaapi_get_current_processor()->proc_type, td->fmt->name, t1-t0);
-#endif
-        kaapi_event_push1(stack->proc, thread, KAAPI_EVT_TASK_END, pc );  
+        KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_END );
         KAAPI_DEBUG_INST( td->u.acl.exec_date = kaapi_get_elapsedns() );
         ++cnt_exec;
 
@@ -227,7 +219,7 @@ printf("EWOULDBLOCK case 1\n");
   } /* while */
 
   /* here... end execute frame tasklist*/
-  kaapi_event_push0(stack->proc, thread, KAAPI_EVT_FRAME_TL_END );
+  KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_FRAME_TL_END );
   
   KAAPI_ATOMIC_ADD(&tasklist->cnt_exec, cnt_exec);
 

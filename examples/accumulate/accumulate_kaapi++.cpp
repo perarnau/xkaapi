@@ -565,8 +565,11 @@ static double accumulate(const double* array, size_t size)
     goto redo_work;
   }
 
+  kaapi_task_end_adaptive(thread, sc);
+
   /* wait for thieves */
-  kaapi_task_end_adaptive(sc);
+  kaapi_sched_sync( );
+  
 
   return work.res;
 }

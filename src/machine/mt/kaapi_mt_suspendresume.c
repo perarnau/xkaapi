@@ -42,10 +42,13 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include "machine/mt/kaapi_mt_condvar.h"
 
 /*
 */
 volatile int kaapi_suspendflag;
+
+static volatile int kaapi_suspend_round=0;
 
 /*
 */
@@ -54,13 +57,13 @@ kaapi_atomic_t kaapi_suspendedthreads;
 
 /*
 */
-static pthread_cond_t   wakeupcond_threads;
-static pthread_mutex_t  wakeupmutex_threads;
+static kproc_condunlock_t   wakeupcond_threads;
+static kproc_mutex_t  wakeupmutex_threads;
 
 void kaapi_mt_suspendresume_init(void)
 {
-  kaapi_assert( 0 == pthread_cond_init(&wakeupcond_threads, 0) );
-  kaapi_assert( 0 == pthread_mutex_init(&wakeupmutex_threads, 0) );
+  kaapi_assert( 0 == kproc_condunlock_init(&wakeupcond_threads, 0) );
+  kaapi_assert( 0 == kproc_mutex_init(&wakeupmutex_threads, 0) );
   kaapi_suspendflag = 0;
   KAAPI_ATOMIC_WRITE(&kaapi_suspendedthreads, 0);
 }
@@ -68,40 +71,90 @@ void kaapi_mt_suspendresume_init(void)
 
 void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
 {
-  pthread_mutex_lock(&wakeupmutex_threads);
-  if (kaapi_suspendflag)
-  {
-    KAAPI_ATOMIC_INCR( &kaapi_suspendedthreads );
-    pthread_cond_wait(&wakeupcond_threads, &wakeupmutex_threads);
-    memset(&kproc->fnc_selecarg, 0, sizeof(kproc->fnc_selecarg) );
+  int round, first=1;
+  if (kproc->kid ==0) return;
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_perf_thread_stop(kproc);
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_SUSPEND_BEG );
+#endif
+  for(;;) {
+    kproc_mutex_lock(&wakeupmutex_threads);
+    if (! kaapi_suspendflag) {
+      kproc_mutex_unlock(&wakeupmutex_threads);
+      goto return_from;
+    }
+    int newround=kaapi_suspend_round;
+    if (first || round!=newround) {
+      /* cond_wait can return without signal/broadcast
+	 if this is the case, do not increment again the counter */
+      KAAPI_ATOMIC_INCR( &kaapi_suspendedthreads );
+    }
+    round=newround;
+    kproc_condunlock_wait(&wakeupcond_threads, &wakeupmutex_threads);
+    if (!kaapi_suspendflag) {
+      goto return_from;
+    }
   }
-  pthread_mutex_unlock(&wakeupmutex_threads);
+
+return_from:
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_perf_thread_start(kproc);
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_SUSPEND_END );
+#endif
+
+  /* reset steal history ? */
+  memset(&kproc->fnc_selecarg, 0, sizeof(kproc->fnc_selecarg) );
 }
 
 
 /* should always be called by the main thread only
 */
-void kaapi_mt_suspend_threads(void)
+void kaapi_mt_suspend_threads_post(void)
 {
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == 0 );
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_SUSPEND_POST );
+#endif
+  kaapi_writemem_barrier();
+  kaapi_suspend_round++;
   kaapi_writemem_barrier();
   kaapi_suspendflag = 1;
+  kaapi_writemem_barrier();
+}
+
+void kaapi_mt_suspend_threads_wait(void)
+{
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_SUSPWAIT_BEG );
+#endif
+
+  kaapi_assert_debug( kaapi_suspendflag >= 1 );
+  kaapi_suspendflag = 2;
+  kaapi_writemem_barrier();
+
   while (KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) != (kaapi_count_kprocessors-1))
   {
     kaapi_slowdown_cpu();
   }
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );  
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_SUSPWAIT_END );
+#endif
 }
 
 /*
 */
 void kaapi_mt_resume_threads(void)
 {
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );
-  pthread_mutex_lock(&wakeupmutex_threads);
+  kaapi_assert_debug( kaapi_suspendflag >= 1 );
+  kaapi_assert_debug( kaapi_suspendflag == 1 
+		      || KAAPI_ATOMIC_READ(&kaapi_suspendedthreads) == (kaapi_count_kprocessors-1) );
+  kproc_mutex_lock(&wakeupmutex_threads);
   kaapi_suspendflag = 0;
   KAAPI_ATOMIC_WRITE(&kaapi_suspendedthreads, 0);
-  pthread_cond_broadcast(&wakeupcond_threads);
-  pthread_mutex_unlock(&wakeupmutex_threads);  
+  kproc_condunlock_broadcast(&wakeupcond_threads);
+  kproc_mutex_unlock(&wakeupmutex_threads);  
 }
 

@@ -42,14 +42,30 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include <stdlib.h>
+
+/* This is an very experimental code. Do not is your are not developping
+   the code.
+   Principle in this version:
+   - the cores are splited into two sets
+      - the set of local cores LCS
+      - the set of remote cores RCS
+   - random selection with biased random generator in order
+   to have about p chances to select cores in LCS and (1-p) in RCS.
+   Algorithm:
+      - r = rand() % (#RCS + #LCS*(1+P))
+      - if (r < #RCS) -> select victim kaapi_all_kprocessors[r]
+      - select in #LCS -> select victim ->self[ (r-#RCS) / #LCS]
+      
+*/
 
 typedef struct kaapi_hier_arg {
-  unsigned int  seed;
+  int            level;
+  unsigned int   seed;
 } kaapi_hier_arg;
 
 
 /** PWS:
-    - 
 */
 int kaapi_sched_select_victim_pws( 
       kaapi_processor_t* kproc, 
@@ -57,7 +73,7 @@ int kaapi_sched_select_victim_pws(
       kaapi_selecvictim_flag_t flag 
 )
 {
-  int victimid;
+  int victimid, count, r;
   kaapi_hier_arg* arg;
   kaapi_onelevel_t* level;
 
@@ -73,69 +89,37 @@ int kaapi_sched_select_victim_pws(
 
   if (flag == KAAPI_STEAL_FAILED)
   {
-    /* success: try next to time on lower depth */
-    level = &kproc->hlevel.levels[arg->depth];
-    if (++arg->index >= 2)//level->nkids/4)
-    {
-      ++arg->depth;
-      arg->index = 0;
-      if (arg->depth == kproc->hlevel.depth) 
-        arg->depth = arg->depth_min;
-    }
+    if (arg->level <2)
+      ++arg->level;
     return 0;
   }
 
   if (flag == KAAPI_STEAL_SUCCESS)
   {
-    /* success: try next to time on lower depth */
-    arg->depth = arg->depth_min; 
-    arg->index = 0;
+    arg->level = 0;
     return 0;
   }
-
-
-do_select:
-  if (arg->depth_min ==-1) 
-  { /* no hierarchy */
-    return kaapi_sched_select_victim_rand(kproc, victim, flag );
+  
+  if (arg->seed ==0)
+  {
+    arg->level = 2; /* for idfreeze test */
+    arg->seed = rand();
   }
 
   kaapi_assert_debug (flag == KAAPI_SELECT_VICTIM);
 
-  if (arg->depth_min ==0) 
-  {
-    arg->seed = rand();
-    level = &kproc->hlevel.levels[arg->depth_min];
-    /* set to the min level where at least 2 threads */
-    while (level->nkids ==1)
-    {
-      ++arg->depth_min;
-      if (arg->depth_min > kproc->hlevel.depth)
-      {
-        arg->depth_min = -1;
-        goto do_select;
-      }
-      level = &kproc->hlevel.levels[arg->depth_min];
-    }
-    arg->depth = arg->depth_min;
-
-#if 0
-{
-    int i;
-    kaapi_sched_lock( &thelock );
-    printf("\n--------> kid:%i, cpu:%i mindepth:%i ", kproc->kid, kproc->cpuid, arg->depth_min);
-    for (i=0; i<level->nkids; ++i)
-      printf(", kid: %i ", level->kids[i] ); 
-    printf("\n");
-    fflush(stdout);
-    kaapi_sched_unlock( &thelock );
-}    
-#endif
-  }
-
 redo_select:
-  level = &kproc->hlevel.levels[arg->depth];
-  victimid = level->kids[ rand_r(&arg->seed) % level->nkids];  
+  level = &kproc->hlevel.levels[arg->level];
+  count = level->nkids + level->nnotself;
+  r = rand_r(&arg->seed) % count;
+  if (r < 0.8*count) {
+    /* kids set */
+    victimid  = level->kids[ r % level->nkids ];
+  }
+  else {
+    /* notself set */
+    victimid  = level->notself[ r % level->nnotself ];
+  }
   victim->kproc = kaapi_all_kprocessors[ victimid ];
   if (victim->kproc ==0) 
     goto redo_select;

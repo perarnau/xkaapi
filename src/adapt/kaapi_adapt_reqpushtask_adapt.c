@@ -64,28 +64,41 @@ int kaapi_request_pushtask_adaptive(
                   ||  (victim_task->body == (kaapi_task_body_t)kaapi_taskbegendadapt_body) );
   
   toptask = kaapi_thread_toptask(&request->frame);
+
   /* this a reply to an adaptive task: set the task as unstealable */
   kaapi_task_set_unstealable(toptask);
   kaapi_thread_pushtask_adaptive(&request->frame, user_splitter);
 
-  /* here toptask was replaced in pushtask_adaptive by a kaapi_taskadapt_body, 
-     but flags remain equals.
-     Link together the adaptive victim_task's steal context to the newly created task stealcontext
+  /* here toptask was replaced by kaapi_thread_pushtask_adaptive 
+     to a kaapi_taskadapt_body. Flags remain unchanged.
+     Link together the adaptive victim_task's steal context to the newly 
+     created task stealcontext.
+     Master of the victim context is incremented.
   */
   victim_adapt_arg = kaapi_task_getargst(victim_task, kaapi_taskadaptive_arg_t);
   adapt_arg = kaapi_task_getargst(toptask, kaapi_taskadaptive_arg_t);
   sc = (kaapi_stealcontext_t*)adapt_arg->shared_sc.data;
-  sc->msc  = ((kaapi_stealcontext_t*)victim_adapt_arg->shared_sc.data)->msc;
+  sc->msc = ((kaapi_stealcontext_t*)victim_adapt_arg->shared_sc.data)->msc;
 
-  if (kaapi_task_is_withpreemption(victim_task) && !kaapi_task_is_withpreemption(toptask))
+#if defined(KAAPI_DEBUG)
+  sc->version = sc->msc->version; 
+  kaapi_assert(sc->msc->state == 1);
+  sc->state = 1;
+#endif
+
+  if (  kaapi_task_is_withpreemption(victim_task) 
+    && !kaapi_task_is_withpreemption(toptask) )
   {
     toptask->u.s.flag = KAAPI_TASK_S_PREEMPTION;
     sc->flag = KAAPI_SC_PREEMPTION;
   }
 
-  /* cas if toptask is with preemption flag (may be inherited, see above) */
+  /* case: if toptask is with preemption flag (may be inherited, see above) */
   if (kaapi_task_is_withpreemption(toptask))
   {
+    /* to be implemented fully as in previous version of XKaapi */
+    kaapi_assert_debug(0);
+
     /* this allocation may be amortized if we reserve some memory in the steal context
        for thief + bloc allocation
     */
@@ -129,6 +142,11 @@ int kaapi_request_pushtask_adaptive(
   else
   {
     sc->ktr = 0;
+
+    /* here optimization: do not use counter if preemption... 
+       This increment ensures that correct terminaison of the thieves:
+       - exams' question !
+    */
     KAAPI_ATOMIC_INCR(&sc->msc->thieves.count);
   }
   

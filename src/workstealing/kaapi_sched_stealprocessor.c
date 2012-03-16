@@ -46,8 +46,6 @@
 #include "kaapi_impl.h"
 
 
-extern unsigned long kaapi_numa_get_kid_binding(unsigned int);
-
 /** Most important assumption here:
     kaapi_sched_lock was locked.
 */
@@ -63,7 +61,7 @@ int kaapi_sched_stealprocessor(
   /* test should be done before calling the function */
   kaapi_assert_debug( !kaapi_listrequest_iterator_empty(lrrange) );
   
-  /* 0/ steal in ready list : to add in the futur */
+  /* 1/ steal in ready list : to add in the futur */
 
   /* 2/ steal in suspended threads */
   cell = kproc->lsuspend.tail;
@@ -71,15 +69,7 @@ int kaapi_sched_stealprocessor(
   {
     thread = cell->thread;
     if (thread != 0)
-    {
       kaapi_sched_stealstack( thread, lrequests, lrrange );
-
-#if 0 /* not working */
-      /* some get stolen */
-      if (request != kaapi_listrequest_iterator_get( lrequests, lrrange ))
-	goto steal_bound_task;
-#endif
-    }
   }
 
   /* 3/ steal current thread; make local copy because it can disappear */
@@ -88,12 +78,6 @@ int kaapi_sched_stealprocessor(
   {
     /* signal that count thefts are waiting */
     kaapi_sched_stealstack( thread, lrequests, lrrange );
-
-#if 0 /* not working */
-    /* some get stolen */
-    if (request != kaapi_listrequest_iterator_get( lrequests, lrrange ))
-      goto steal_bound_task;
-#endif
   }
 
   return 0;

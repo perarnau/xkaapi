@@ -110,7 +110,7 @@ static void kaapi_quark_helper_delete_scratch( kaapi_quark_task_t* arg )
   kaapi_bitmap_value32_t bits = { arg->scratchbit };
   while (!kaapi_bitmap_value_empty_32( &bits ))
   {
-    int ith = kaapi_bitmap_first1_and_zero_32( &bits );
+    int ith = kaapi_bitmap_value_first1_and_zero_32( &bits );
     kaapi_assert_debug(ith != 0);
     quark_one_param_t* param = &arg->param[ith-1];
     if (param->addr.data !=0) free(param->addr.data);
@@ -525,7 +525,11 @@ printf("IN/OUT %s\n", __PRETTY_FUNCTION__);
 /* Cancel a specific task */
 int QUARK_Cancel_Task(Quark *quark, unsigned long long taskid)
 {
+#if (SIZEOF_VOIDP==4)
+  kaapi_task_t* task = (kaapi_task_t*)(uintptr_t)taskid;
+#else
   kaapi_task_t* task = (kaapi_task_t*)taskid;
+#endif
   uintptr_t state = kaapi_task_getstate(task);
   if (state == KAAPI_TASK_STATE_INIT)
     kaapi_task_casstate(task, KAAPI_TASK_STATE_INIT, KAAPI_TASK_STATE_TERM);
