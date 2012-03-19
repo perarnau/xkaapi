@@ -91,7 +91,13 @@ static const char* kaapi_event_name[] = {
 /*24 */  "*",
 /*25 */  "ForEachBeg",
 /*26 */  "ForEachEnd",
-/*27 */  "ForEachSteal"
+/*27 */  "ForEachSteal",
+/*28 */  "CudaCPUHtoDBeg",
+/*29 */  "CudaCPUHtoDEnd",
+/*30 */  "CudaCPUDtoHBeg",
+/*31 */  "CudaCPUDtoHEnd",
+/*32 */  "K-ProcCudaStart",
+/*33 */  "K-ProcCudaEnd"
 };
 
 
@@ -147,7 +153,7 @@ static void fnc_print_evt( int count, const char** filenames )
       {
         /* full print */
         /*         date         kid          name  */
-  //      printf( "%" PRIu64": %" PRIu16 " -> %6s |", e[i].date, e[i].kid, kaapi_event_name[e[i].evtno] );
+        //printf( "%" PRIu66": %" PRIu16 " -> %6s |", e[i].date, e[i].kid, kaapi_event_name[e[i].evtno] );
         std::cout << e[i].date << ": " << e[i].kid << " -> " << kaapi_event_name[e[i].evtno] << " ";
         switch (e[i].evtno) {
           case KAAPI_EVT_KPROC_START:
@@ -155,6 +161,14 @@ static void fnc_print_evt( int count, const char** filenames )
           break;
 
           case KAAPI_EVT_KPROC_STOP:
+            std::cout << e[i].kid;
+          break;
+
+          case KAAPI_EVT_CUDA_KPROC_START:
+            std::cout << e[i].kid;
+          break;
+
+          case KAAPI_EVT_CUDA_KPROC_STOP:
             std::cout << e[i].kid;
           break;
 
@@ -246,6 +260,18 @@ static void fnc_print_evt( int count, const char** filenames )
           break;
 
           case KAAPI_EVT_FOREACH_STEAL:
+          break;
+
+          case KAAPI_EVT_CUDA_CPU_HTOD_BEG:
+          break;
+
+          case KAAPI_EVT_CUDA_CPU_HTOD_END:
+          break;
+
+          case KAAPI_EVT_CUDA_CPU_DTOH_BEG:
+          break;
+
+          case KAAPI_EVT_CUDA_CPU_DTOH_END:
           break;
         }
         std::cout << std::endl;
@@ -527,6 +553,15 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
       pajeCreateContainer (d0, tmp, "THREAD", "root", tmp);
       sprintf(name,"steal-%i",kid);
       pajeCreateContainer (d0, name, "STEAL", tmp, name);
+      if( event->ktype == KAAPI_PROC_TYPE_CUDA ){
+	  char tmp2[128];
+	  sprintf(tmp2,"GPU-%i",kid);
+	  pajeCreateContainer (d0, tmp2, "GPU", tmp, tmp2);
+	  sprintf(name,"HtoD-%i",kid);
+	  pajeCreateContainer (d0, name, "GPU", tmp2, name);
+	  sprintf(name,"DtoH-%i",kid);
+	  pajeCreateContainer (d0, name, "GPU", tmp2, name);
+      } 
       sprintf(name,"work-%i",kid);
       pajeCreateContainer (d0, name, "WORKER", tmp, name);
       break;
@@ -534,6 +569,14 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
     case KAAPI_EVT_KPROC_STOP:
       d0   = 1e-9*(double)event->date;
       kid = event->kid;
+      if( event->ktype == KAAPI_PROC_TYPE_CUDA ){
+	  sprintf(name,"HtoD-%i",kid);
+	  pajeDestroyContainer (d0, "GPU", name);
+	  sprintf(name,"DtoH-%i",kid);
+	  pajeDestroyContainer (d0, "GPU", name);
+	  sprintf(name,"GPU-%i",kid);
+	  pajeDestroyContainer (d0, "GPU", name);
+      }
       sprintf(name,"steal-%i",kid);
       pajeDestroyContainer (d0, "THREAD", name);
       sprintf(name,"work-%i",kid);
@@ -735,6 +778,34 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
       }
     break;
 
+    case KAAPI_EVT_CUDA_CPU_HTOD_BEG:
+      d0   = 1e-9*(double)event->date;
+      kid = event->kid;
+      sprintf(tmp,"HtoD-%i",kid);
+      pajePushState (d0, tmp, "STATE", "htod");          
+    break;
+
+    case KAAPI_EVT_CUDA_CPU_HTOD_END:
+      d1   = 1e-9*(double)event->date;
+      kid = event->kid;
+      sprintf(tmp,"HtoD-%i",kid);
+      pajePopState (d1, tmp, "STATE");
+    break;
+
+    case KAAPI_EVT_CUDA_CPU_DTOH_BEG:
+      d0   = 1e-9*(double)event->date;
+      kid = event->kid;
+      sprintf(tmp,"DtoH-%i",kid);
+      pajePushState (d0, tmp, "STATE", "dtoh");          
+    break;
+
+    case KAAPI_EVT_CUDA_CPU_DTOH_END:
+      d1   = 1e-9*(double)event->date;
+      kid = event->kid;
+      sprintf(tmp,"DtoH-%i",kid);
+      pajePopState (d1, tmp, "STATE");
+    break;
+
     default:
       printf("***Unkown event number: %i\n", event->evtno);
       break;
@@ -858,6 +929,7 @@ static int fnc_paje_gantt_header()
   pajeDefineContainerType("THREAD", "ROOT", "THREAD");
   pajeDefineContainerType("WORKER", "THREAD", "WORKER");
   pajeDefineContainerType("STEAL", "THREAD", "STEAL");
+  pajeDefineContainerType("GPU", "THREAD", "GPU");
 
   pajeDefineStateType("STATE",   "THREAD", "STATE");
 
@@ -908,6 +980,12 @@ static int fnc_paje_gantt_header()
 
   /* link: successfull steal  */
   pajeDefineEntityValue("riok", "LINK", "steal", "0.0 1.0 0.2");
+
+  /* CUDA host-to-device copy operation */
+  pajeDefineEntityValue("htod", "STATE", "copy", "1.0 1.0 0.0");
+
+  /* CUDA device-to-host copy operation */
+  pajeDefineEntityValue("dtoh", "STATE", "copy", "1.0 0.0 0.0");
 
   /* create the root container */
   pajeCreateContainer (0.00, "root", "ROOT", "0", "root");

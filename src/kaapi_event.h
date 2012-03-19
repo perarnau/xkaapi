@@ -93,6 +93,14 @@ extern "C" {
 #define KAAPI_EVT_FOREACH_END        26 /* */
 #define KAAPI_EVT_FOREACH_STEAL      27 /* */
 
+#define KAAPI_EVT_CUDA_CPU_HTOD_BEG      28 /* cudaMemcpy time from CPU */
+#define KAAPI_EVT_CUDA_CPU_HTOD_END      29
+
+#define KAAPI_EVT_CUDA_CPU_DTOH_BEG      30 /* cudaMemcpy time from CPU */
+#define KAAPI_EVT_CUDA_CPU_DTOH_END      31
+
+#define KAAPI_EVT_CUDA_KPROC_START        32     /* CUDA kproc begins */
+#define KAAPI_EVT_CUDA_KPROC_STOP         33     /* CUDA kproc ends */
 
 /* ........................................ Implementation notes ........................................*/
 
@@ -109,6 +117,7 @@ typedef struct kaapi_event_t {
   uint8_t     evtno;      /* event number */
   uint8_t     type;       /* event number */
   uint16_t    kid;        /* processor identifier */
+  uint8_t     ktype;      /* processor type */
   uint32_t    gid;        /* global identifier */
   uint64_t    date;       /* nano second */
   kaapi_event_data_t d0;

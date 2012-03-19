@@ -353,7 +353,12 @@ int kaapi_mt_finalize(void)
   kaapi_barrier_td_waitterminated(&kaapi_term_barrier);
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-  KAAPI_EVENT_PUSH0(kaapi_all_kprocessors[0], 0, KAAPI_EVT_KPROC_STOP);
+#if 0
+  if (kaapi_all_kprocessors[0]->proc_type == KAAPI_PROC_TYPE_CUDA)
+    KAAPI_EVENT_PUSH0(kaapi_all_kprocessors[0], 0, KAAPI_EVT_CUDA_KPROC_STOP);
+  else
+#endif /* KAAPI_USE_CUDA */
+    KAAPI_EVENT_PUSH0(kaapi_all_kprocessors[0], 0, KAAPI_EVT_KPROC_STOP);
   kaapi_perf_thread_fini(kaapi_all_kprocessors[0]);
   kaapi_perf_global_fini();
   kaapi_collect_trace();

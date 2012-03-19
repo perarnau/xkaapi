@@ -13,8 +13,14 @@ version="$(date +%s)"
 
 function run_test {
     export KAAPI_CPUSET="0:1"
-    export KAAPI_GPUSET="0~4,1~5"
+    export KAAPI_GPUSET="0~4"
 
+    export COMPUTE_PROFILE=1
+    export COMPUTE_PROFILE_CSV=1
+    export COMPUTE_PROFILE_CONFIG="$HOME/compute_profile_config.txt"
+
+    export KAAPI_RECORD_TRACE=1
+#    export KAAPI_RECORD_MASK="COMPUTE,IDLE"
     msizes="4096"
 #    msizes="2048"
 #    msizes="16384"

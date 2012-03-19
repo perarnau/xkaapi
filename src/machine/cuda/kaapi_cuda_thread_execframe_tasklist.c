@@ -143,8 +143,6 @@ execute_first:
         
         /* start execution of the user body of the task */
         KAAPI_DEBUG_INST(kaapi_assert( td->u.acl.exec_date == 0 ));
-        KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
-
 //printf("%i:: Exec td:%p, date:%lu\n", kaapi_get_self_kid(), td, td->u.acl.date );
         /* get the correct body for the proc type */
         if ( (td->fmt == 0) ||
@@ -158,15 +156,24 @@ execute_first:
 
 	    kaapi_cuda_ctx_push( );
 	    kaapi_cuda_data_allocate( td->fmt, pc->sp );
+	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_HTOD_BEG);
 	    kaapi_cuda_data_send( td->fmt, pc->sp );
+	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_HTOD_END);
 	//    kaapi_cuda_cublas_set_stream( );
 #if KAAPI_CUDA_TIME
     uint64_t t0 = kaapi_get_elapsedns();
 #endif
 	    kaapi_cuda_event_record();
+	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
 	    body( pc->sp, kaapi_cuda_kernel_stream() );
+#ifndef	    KAAPI_CUDA_ASYNC
+	    kaapi_cuda_sync();
+#endif
+	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_END );
 	    kaapi_cuda_event_record_( kaapi_cuda_kernel_stream() );
+	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_DTOH_BEG);
 	    kaapi_cuda_data_recv( td->fmt, pc->sp );
+	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_DTOH_END);
 #if KAAPI_CUDA_TIME
     uint64_t t1 = kaapi_get_elapsedns();
     fprintf( stdout, "%lu:%x:TaskBodyGPU:%s:%d\n", kaapi_get_current_kid(),
@@ -177,7 +184,6 @@ execute_first:
 #endif
 	    kaapi_cuda_ctx_pop( );
         }
-        KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_END );
         KAAPI_DEBUG_INST( td->u.acl.exec_date = kaapi_get_elapsedns() );
         ++cnt_exec;
 

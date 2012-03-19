@@ -76,6 +76,8 @@ extern uint64_t kaapi_event_mask;
 #define KAAPI_EVT_MASK_STARTUP \
     (  KAAPI_EVT_MASK(KAAPI_EVT_KPROC_START) \
      | KAAPI_EVT_MASK(KAAPI_EVT_KPROC_STOP) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_KPROC_START) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_KPROC_STOP) \
     )
 
 #define KAAPI_EVT_MASK_COMPUTE \
@@ -88,6 +90,10 @@ extern uint64_t kaapi_event_mask;
      | KAAPI_EVT_MASK(KAAPI_EVT_FOREACH_BEG) \
      | KAAPI_EVT_MASK(KAAPI_EVT_FOREACH_END) \
      | KAAPI_EVT_MASK(KAAPI_EVT_FOREACH_STEAL) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_CPU_HTOD_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_CPU_HTOD_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_CPU_DTOH_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_CPU_DTOH_END) \
     )
 
 #define KAAPI_EVT_MASK_IDLE \
@@ -135,6 +141,7 @@ static inline void KAAPI_EVENT_PUSH0_(
   evt->evtno   = eventno;
   evt->type    = 0;
   evt->kid     = kproc->kid;
+  evt->ktype   = kproc->proc_type;
   evt->gid     = 0;
   evt->date    = tclock;
 
