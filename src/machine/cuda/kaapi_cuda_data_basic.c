@@ -62,8 +62,9 @@ xxx_kaapi_cuda_data_basic_allocate(
 {
     const kaapi_mem_asid_t asid = kaapi_mem_host_map_get_asid(cuda_map);
     kaapi_data_t* dest = (kaapi_data_t*)calloc( 1, sizeof(kaapi_data_t) );
-    kaapi_cuda_mem_alloc( &dest->ptr, 0UL, 
-	kaapi_memory_view_size(&src->view), 0 );
+    kaapi_mem_addr_t addr;
+    kaapi_cuda_mem_alloc_( &addr, kaapi_memory_view_size(&src->view) );
+    dest->ptr = kaapi_make_pointer( 0, (void*)addr );
     kaapi_cuda_data_basic_view_convert( &dest->view, &src->view );
     kaapi_mem_data_set_addr( kmd, asid, (kaapi_mem_addr_t)dest );
     kaapi_mem_host_map_find_or_insert_(  cuda_map,
