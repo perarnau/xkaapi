@@ -99,8 +99,11 @@ extern "C" {
 #define KAAPI_EVT_CUDA_CPU_DTOH_BEG      30 /* cudaMemcpy time from CPU */
 #define KAAPI_EVT_CUDA_CPU_DTOH_END      31
 
-#define KAAPI_EVT_CUDA_KPROC_START        32     /* CUDA kproc begins */
-#define KAAPI_EVT_CUDA_KPROC_STOP         33     /* CUDA kproc ends */
+#define KAAPI_EVT_CUDA_SYNC_BEG        32     /* CUDA cudaDeviceSync */
+#define KAAPI_EVT_CUDA_SYNC_END        33     /*  */
+
+#define KAAPI_EVT_CUDA_MEM_ALLOC_BEG	    34     /* CUDA cudaDeviceSync */
+#define KAAPI_EVT_CUDA_MEM_ALLOC_END	    35     /*  */
 
 /* ........................................ Implementation notes ........................................*/
 

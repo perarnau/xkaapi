@@ -155,7 +155,10 @@ execute_first:
 		(cuda_task_body_t) td->fmt->entrypoint_wh[proc_type];
 
 	    kaapi_cuda_ctx_push( );
+	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_MEM_ALLOC_BEG );
 	    kaapi_cuda_data_allocate( td->fmt, pc->sp );
+	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_MEM_ALLOC_END );
+
 	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_HTOD_BEG);
 	    kaapi_cuda_data_send( td->fmt, pc->sp );
 	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_HTOD_END);
@@ -166,10 +169,12 @@ execute_first:
 	    kaapi_cuda_event_record();
 	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
 	    body( pc->sp, kaapi_cuda_kernel_stream() );
-#ifndef	    KAAPI_CUDA_ASYNC
-	    kaapi_cuda_sync();
-#endif
 	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_END );
+#ifndef	    KAAPI_CUDA_ASYNC /* Synchronous execution */
+	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_SYNC_BEG );
+	    kaapi_cuda_sync();
+	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_SYNC_END );
+#endif
 	    kaapi_cuda_event_record_( kaapi_cuda_kernel_stream() );
 	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_DTOH_BEG);
 	    kaapi_cuda_data_recv( td->fmt, pc->sp );

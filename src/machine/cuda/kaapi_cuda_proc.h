@@ -54,7 +54,7 @@
 #include <cuda_runtime_api.h>
 #include "cublas_v2.h"
 
-//#define KAAPI_CUDA_ASYNC	1
+#define KAAPI_CUDA_ASYNC	1
 #define KAAPI_CUDA_MEM_ALLOC_MANAGER	1
 #define KAAPI_CUDA_MEM_FREE_FACTOR	1
 //#define	KAAPI_CUDA_MODE_BASIC	1
