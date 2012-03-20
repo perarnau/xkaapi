@@ -58,7 +58,7 @@
 #include <queue>
 #include <set>
 #include "kaapi_impl.h"
-
+#include "kaapi_trace_reader.h"
 #include "poti.h"
 
 
@@ -116,144 +116,123 @@ static void print_usage()
 }
 
 
+/* Print human readable version of each event */
+void callback_print_event(
+  char* container_name,
+  const kaapi_event_t* event
+)
+{
+  std::cout << event->date << ": " << event->kid << " -> " << kaapi_event_name[event->evtno] << " ";
+  switch (event->evtno) {
+    case KAAPI_EVT_KPROC_START:
+      std::cout << event->kid << " type:" << event->d0.i;
+    break;
+
+    case KAAPI_EVT_KPROC_STOP:
+      std::cout << event->kid;
+    break;
+
+    /* standard task exec */
+    case KAAPI_EVT_TASK_BEG:
+    break;
+
+    case KAAPI_EVT_TASK_END:
+    break;
+
+    /* */
+    case KAAPI_EVT_FRAME_TL_BEG:
+    break;
+
+    case KAAPI_EVT_FRAME_TL_END:
+    break;
+
+    /* unroll graph for static schedule */
+    case KAAPI_EVT_STATIC_BEG:
+    break;
+
+    case KAAPI_EVT_STATIC_END:
+    break;
+
+    /* exec task in static graph partitioning */
+    case KAAPI_EVT_STATIC_TASK_BEG:
+    break;
+
+    case KAAPI_EVT_STATIC_TASK_END:
+    break;
+
+    /* idle = steal state */
+    case KAAPI_EVT_SCHED_IDLE_BEG:
+    break;
+
+    case KAAPI_EVT_SCHED_IDLE_END:
+    break;
+
+    /* suspend state: worker thread */
+    case KAAPI_EVT_SCHED_SUSPEND_BEG:
+    break;
+
+    case KAAPI_EVT_SCHED_SUSPEND_END:
+    break;
+
+    /* suspend state: master thread */
+    case KAAPI_EVT_SCHED_SUSPEND_POST:
+    break;
+
+    case KAAPI_EVT_SCHED_SUSPWAIT_BEG:
+    break;
+
+    case KAAPI_EVT_SCHED_SUSPWAIT_END:
+    break;
+
+    /* processing request */
+    case KAAPI_EVT_REQUESTS_BEG:
+      std::cout << " victimid:" << event->d0.i << ", serial:" << event->d1.i;
+    break;
+
+    case KAAPI_EVT_REQUESTS_END:
+      std::cout << " victimid:" << event->d0.i << ", serial:" << event->d1.i;
+    break;
+
+    /* emit steal */
+    case KAAPI_EVT_STEAL_OP:
+      std::cout << " victimid:" << event->d0.i << ", serial:" << event->d1.i;
+    break;
+
+    /* emit reply */
+    case KAAPI_EVT_SEND_REPLY:
+      std::cout << " victimid:" << event->d0.i << ", thiefid:" << event->d1.i << ", serial:" << event->d2.i;
+    break;
+
+    /* recv reply */
+    case KAAPI_EVT_RECV_REPLY:
+      std::cout << " victimid:" << event->d0.i << ", serial:" << event->d1.i << ", status: " << event->d2.i;
+    break;
+
+    default:
+      printf("***Unkown event number: %i\n", event->evtno);
+      break;
+
+    /* suspend state: master thread */
+    case KAAPI_EVT_FOREACH_BEG:
+    break;
+
+    case KAAPI_EVT_FOREACH_END:
+    break;
+
+    case KAAPI_EVT_FOREACH_STEAL:
+    break;
+  }
+  std::cout << std::endl;
+}
+
 /*
 */
 static void fnc_print_evt( int count, const char** filenames )
 {
-  kaapi_event_buffer_t evb;
-  kaapi_event_t* e = evb.buffer;
-
-  for (int i=0; i<count; ++i)
-  {
-    const char* filename = filenames[i];
-    int fd = open(filename, O_RDONLY);
-    if (fd == -1) 
-    {
-      fprintf(stderr, "*** cannot open file '%s'\n", filename);
-      continue;
-    }
-    while (1)
-    {
-      ssize_t sz_read = read(fd, evb.buffer, KAAPI_EVENT_BUFFER_SIZE*sizeof(kaapi_event_t) );
-      if (sz_read ==0) break;
-      if (sz_read ==-1)
-      {
-        fprintf(stderr, "*** error while reading file '%s' : %s", filename, strerror(errno));
-        break;
-      }
-      ssize_t sevents = sz_read/sizeof(kaapi_event_t);
-
-      for (ssize_t i=0; i< sevents; ++i)
-      {
-        /* full print */
-        /*         date         kid          name  */
-  //      printf( "%" PRIu64": %" PRIu16 " -> %6s |", e[i].date, e[i].kid, kaapi_event_name[e[i].evtno] );
-        std::cout << e[i].date << ": " << e[i].kid << " -> " << kaapi_event_name[e[i].evtno] << " ";
-        switch (e[i].evtno) {
-          case KAAPI_EVT_KPROC_START:
-            std::cout << e[i].kid;
-          break;
-
-          case KAAPI_EVT_KPROC_STOP:
-            std::cout << e[i].kid;
-          break;
-
-          /* standard task exec */
-          case KAAPI_EVT_TASK_BEG:
-          break;
-
-          case KAAPI_EVT_TASK_END:
-          break;
-
-          /* */
-          case KAAPI_EVT_FRAME_TL_BEG:
-          break;
-
-          case KAAPI_EVT_FRAME_TL_END:
-          break;
-
-          /* unroll graph for static schedule */
-          case KAAPI_EVT_STATIC_BEG:
-          break;
-
-          case KAAPI_EVT_STATIC_END:
-          break;
-
-          /* exec task in static graph partitioning */
-          case KAAPI_EVT_STATIC_TASK_BEG:
-          break;
-
-          case KAAPI_EVT_STATIC_TASK_END:
-          break;
-
-          /* idle = steal state */
-          case KAAPI_EVT_SCHED_IDLE_BEG:
-          break;
-
-          case KAAPI_EVT_SCHED_IDLE_END:
-          break;
-
-          /* suspend state: worker thread */
-          case KAAPI_EVT_SCHED_SUSPEND_BEG:
-          break;
-
-          case KAAPI_EVT_SCHED_SUSPEND_END:
-          break;
-
-          /* suspend state: master thread */
-          case KAAPI_EVT_SCHED_SUSPEND_POST:
-          break;
-
-          case KAAPI_EVT_SCHED_SUSPWAIT_BEG:
-          break;
-
-          case KAAPI_EVT_SCHED_SUSPWAIT_END:
-          break;
-
-          /* processing request */
-          case KAAPI_EVT_REQUESTS_BEG:
-            std::cout << " victimid:" << e[i].d0.i << ", serial:" << e[i].d1.i;
-          break;
-
-          case KAAPI_EVT_REQUESTS_END:
-            std::cout << " victimid:" << e[i].d0.i << ", serial:" << e[i].d1.i;
-          break;
-
-          /* emit steal */
-          case KAAPI_EVT_STEAL_OP:
-            std::cout << " victimid:" << e[i].d0.i << ", serial:" << e[i].d1.i;
-          break;
-
-          /* emit reply */
-          case KAAPI_EVT_SEND_REPLY:
-            std::cout << " victimid:" << e[i].d0.i << ", thiefid:" << e[i].d1.i << ", serial:" << e[i].d2.i;
-          break;
-
-          /* recv reply */
-          case KAAPI_EVT_RECV_REPLY:
-            std::cout << " victimid:" << e[i].d0.i << ", serial:" << e[i].d1.i << ", status: " << e[i].d2.i;
-          break;
-
-          default:
-            printf("***Unkown event number: %i\n", e[i].evtno);
-            break;
-
-          /* suspend state: master thread */
-          case KAAPI_EVT_FOREACH_BEG:
-          break;
-
-          case KAAPI_EVT_FOREACH_END:
-          break;
-
-          case KAAPI_EVT_FOREACH_STEAL:
-          break;
-        }
-        std::cout << std::endl;
-      }
-    }
-    
-   close(fd);
-  }
+  FileSet* fs;
+  fs = OpenFiles( count, filenames );
+  ReadFiles(fs, callback_print_event );
+  CloseFiles(fs);
 }
 
 /*

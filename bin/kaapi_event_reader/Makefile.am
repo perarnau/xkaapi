@@ -12,7 +12,7 @@ check_PROGRAMS=$(BIN_PRGS)
 
 all-bfs: $(BIN_PRGS)
 
-kaapi_event_reader_SOURCES=kaapi_event_reader.cpp
+kaapi_event_reader_SOURCES=kaapi_event_reader.cpp kaapi_trace_reader.cpp
 
 kaapi_event_reader_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
 kaapi_event_reader_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIPROGS_BUILD_CXXFLAGS)

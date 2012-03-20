@@ -80,9 +80,11 @@ static pthread_mutex_t mutex_listevtfree_head;
 */
 static int listfd_set[KAAPI_MAX_PROCESSOR];
 
+#if defined(KAAPI_USE_PERFCOUNTER)
 /** The thread to join in termination
 */
 static pthread_t collector_threadid;
+#endif
 
 /* write one bloc. Should not be concurrent */
 static void _kaapi_write_evb( kaapi_event_buffer_t* evb )
@@ -227,10 +229,12 @@ void kaapi_perf_global_init(void)
 */
 void kaapi_perf_global_fini(void)
 {
+#if defined(KAAPI_USE_PERFCOUNTER)
   void* result;
   int i;
   kaapi_event_buffer_t* evb;
-  
+#endif
+
   /* close and flush */
   kaapi_mt_perf_fini();
 

@@ -87,7 +87,6 @@ static int kaapi_setup_param()
 {
   const char* wsselect;
   const char* emitsteal;
-  int err;
     
   /* compute the number of cpu of the system */
 #if defined(__linux__)
@@ -192,7 +191,7 @@ static int kaapi_setup_param()
          grammar must be more complex using predefined set
       */
       uint64_t mask = 0;
-      err = kaapi_util_parse_list( &mask, getenv("KAAPI_RECORD_MASK"), ',',
+      int err = kaapi_util_parse_list( &mask, getenv("KAAPI_RECORD_MASK"), ',',
          3,
            "COMPUTE", (uint64_t)KAAPI_EVT_MASK_COMPUTE,
            "IDLE",    (uint64_t)KAAPI_EVT_MASK_IDLE,

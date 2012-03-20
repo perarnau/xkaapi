@@ -45,7 +45,6 @@
 #ifndef _KAAPI_EVENT_H_
 #define _KAAPI_EVENT_H_
 
-#include "config.h"
 #include <stdint.h>
 
 #if defined(__cplusplus)
@@ -56,7 +55,7 @@ extern "C" {
     Not that any extension or modification of the events must
     be reflected in the utility bin/kaapi_event_reader.
 */
-#define KAAPI_EVT_KPROC_START        0     /* kproc begins */
+#define KAAPI_EVT_KPROC_START        0     /* kproc begins, i0: processor type (0:CPU, 1:GPU) */
 #define KAAPI_EVT_KPROC_STOP         1     /* kproc ends */
 
 #define KAAPI_EVT_TASK_BEG           2     /* begin execution of tasks */
