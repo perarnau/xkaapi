@@ -71,7 +71,7 @@ kaapi_rtparam_t kaapi_default_param = {
    .kproc_list  = 0,
    .kid2cpu     = 0,
    .cpu2kid     = 0,
-   .eventmask   = ~(uint64_t)0
+   .eventmask   = ~KAAPI_EVT_MASK_STEALOP
 };
 
 
