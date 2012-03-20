@@ -41,6 +41,9 @@
 ** terms.
 ** 
 */
+#define __STDC_LIMIT_MACROS 1
+#include <stdint.h>
+
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/types.h>
@@ -52,7 +55,8 @@
 #include <string>
 
 #include "kaapi_impl.h"
-#include <float.h>
+//#include <float.h>
+
 
 #include "kaapi_trace_reader.h"
 
