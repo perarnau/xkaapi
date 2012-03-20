@@ -310,7 +310,7 @@ uint64_t kaapi_mt_perf_thread_delayinstate(kaapi_processor_t* kproc)
 }
 
 
-const char* kaapi_mt_perf_id_to_name(kaapi_perf_id_t id)
+static const char* kaapi_mt_perf_id_to_name(kaapi_perf_id_t id)
 {
   static const char* names[] =
   {

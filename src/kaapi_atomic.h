@@ -216,46 +216,38 @@ static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
 
 
 #if defined(__APPLE__)
-#  ifdef __ppc__
-#    include <libkern/OSAtomic.h>
-#  endif
+#  include <libkern/OSAtomic.h>
 static inline void kaapi_writemem_barrier()  
 {
-#  ifdef __ppc__
-  OSMemoryBarrier();
-#  elif defined(__x86_64) || defined(__i386__)
+#  if defined(__x86_64) || defined(__i386__)
   /* not need sfence on X86 archi: write are ordered */
   __asm__ __volatile__ ("":::"memory");
   __asm__ __volatile__ ("sfence":::"memory");
 #  else
-#    error "bad configuration"
+  OSMemoryBarrier();
 #  endif
 }
 
 static inline void kaapi_readmem_barrier()  
 {
-#  ifdef __ppc__
-  OSMemoryBarrier();
-#  elif defined(__x86_64) || defined(__i386__)
+#  if defined(__x86_64) || defined(__i386__)
   __asm__ __volatile__ ("":::"memory");
 //  __asm__ __volatile__ ("lfence":::"memory");
 #  else
-#    error "bad configuration"
+  OSMemoryBarrier();
 #  endif
 }
 
 /* should be both read & write barrier */
 static inline void kaapi_mem_barrier()  
 {
-#  ifdef __ppc__
-  OSMemoryBarrier();
-#  elif defined(__x86_64) || defined(__i386__)
+#  if defined(__x86_64) || defined(__i386__)
   /** Mac OS 10.6.8 with gcc 4.2.1 has a buggy __sync_synchronize(); 
       gcc-4.4.4 pass the test with sync_synchronize
   */
   __asm__ __volatile__ ("mfence":::"memory");
 #  else
-#    error "bad configuration"
+  OSMemoryBarrier();
 #  endif
 }
 

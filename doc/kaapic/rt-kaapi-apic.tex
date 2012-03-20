@@ -614,7 +614,7 @@ int kaapic_spawn(int32_t nargs, ...)
     \begin{code}
 #include "kaapic.h"
 
-int kaapic_begin_parallel(void)
+int kaapic_begin_parallel(int flag)
 int kaapic_end_parallel(int flag)
     \end{code}
   \end{synopsis}
@@ -628,7 +628,12 @@ int kaapic_end_parallel(int flag)
     parameter.
   \end{desc}
   \begin{params}
-    \param{flag} if zero, an implicit synchronization is inserted
+    \param{flag} must be the same between begin and end calls. It must be ored value of:
+      \begin{itemize}
+      \item \verb+KAAPIC_FLAG_DEFAULT+: an implicit synchronization is inserted at the end
+      \item \verb+KAAPIC_FLAG_END_NOSYNC+: do not insert implicit synchronization
+      \item \verb+KAAPIC_FLAG_STATIC_SCHED+: precompute a static schedule of tasks generated between begin and end calls.
+      \end{itemize}
     before leaving the region.
   \end{params}
   \begin{ret}
@@ -642,9 +647,9 @@ int kaapic_end_parallel(int flag)
   {
     int err = kaapic_init(1);
 
-    kaapic_begin_parallel();
+    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
     ...
-    kaapic_end_parallel();
+    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
     ...
 
   }

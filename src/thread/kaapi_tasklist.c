@@ -127,12 +127,12 @@ int kaapi_readytasklist_reserve(
 #endif
       rtl->prl[i].base         += cnt_tasks[i];
       rtl->prl[i].dynallocated = 1;
-      rtl->prl[i].size         = cnt_tasks[i];
+      rtl->prl[i].size         = (int)cnt_tasks[i];
     }
     else if (cnt_tasks[i] >0)
     {
       rtl->prl[i].base         = base+cnt_tasks[i]; /* because index are negative */
-      rtl->prl[i].size         = cnt_tasks[i];
+      rtl->prl[i].size         = (int)cnt_tasks[i];
       base += cnt_tasks[i];
       capacity -= cnt_tasks[i];
     }
@@ -175,7 +175,7 @@ int _kaapi_readylist_extend_wq( kaapi_onereadytasklist_t* onertl )
 
 #if defined(KAAPI_DEBUG)
 {
-  int i;
+  long i;
   for (i= onertl->next+1; i<0; ++i)
     kaapi_assert( newbase[i] == oldbase[i] );
 }

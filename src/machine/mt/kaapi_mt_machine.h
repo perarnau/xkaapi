@@ -243,11 +243,11 @@ static inline void kaapi_listrequest_iterator_unset_at(
 
 /* return the number of entries in the range
 */
-static inline int kaapi_listrequest_iterator_count(
+static inline unsigned long kaapi_listrequest_iterator_count(
     kaapi_listrequest_iterator_t* lrrange
 )
 { return kaapi_bitmap_value_count(&lrrange->bitmap) 
-      + (lrrange->idcurr == -1 ? 0 : 1); }
+      + (unsigned long)(lrrange->idcurr == -1 ? 0 : 1); }
 
 /* get the first request of the range. range iterator should have been initialized by kaapi_listrequest_iterator_init 
 */
@@ -729,7 +729,7 @@ static inline kaapi_request_t* kaapi_request_post(
   KAAPI_ATOMIC_WRITE(status, KAAPI_REQUEST_S_POSTED);
   request->status       = status;
   kaapi_writemem_barrier();
-  kaapi_bitmap_set( &l_requests->bitmap, request->ident );
+  kaapi_bitmap_set( &l_requests->bitmap, (int)request->ident );
   return request;
 }
 
@@ -797,7 +797,7 @@ static inline void kaapi_processor_set_workload
 */
 static inline int kaapi_processor_get_workload(const kaapi_processor_t* kproc) 
 {
-  return KAAPI_ATOMIC_READ(&kproc->workload);
+  return (int)KAAPI_ATOMIC_READ(&kproc->workload);
 }
 
 /**

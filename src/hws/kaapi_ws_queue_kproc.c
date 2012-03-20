@@ -67,7 +67,7 @@ static kaapi_ws_error_t steal
 )
 {
   kaapi_processor_t* const kproc = *(kaapi_processor_t**)p;
-  const int saved_count = kaapi_listrequest_iterator_count(lri);
+  const int saved_count = (int)kaapi_listrequest_iterator_count(lri);
 
   /* TODO: synchronize with flat workstealing, i.e. share the same lock */
   kaapi_sched_lock( &kproc->lock );

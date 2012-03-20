@@ -165,6 +165,15 @@ extern void kaapi_mt_resume_threads(void);
 */
 extern void kaapi_mt_suspendresume_init(void);
 
+/**
+*/
+extern void kaapi_mt_begin_parallel(void);
+
+/**
+*/
+extern void kaapi_mt_end_parallel(void);
+
+
 
 /** Initialize hw topo.
     Based on hwloc library.

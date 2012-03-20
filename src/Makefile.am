@@ -173,8 +173,7 @@ libkaapi_la_SOURCES=\
   static/kaapi_stsched_taskrecv.c\
   static/kaapi_stsched_taskbcast.c
 
-#   misc/kaapi_splitter.c\
-   hws/kaapi_hws_splitter.c \
+#   hws/kaapi_hws_splitter.c \
   hws/kaapi_hws_adaptive.c 
 
 if KAAPI_TARGET_STATICSCHED

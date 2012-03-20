@@ -194,7 +194,7 @@ typedef struct kaapi_onereadytasklist_t {
 typedef struct kaapi_readytasklist_t {
   kaapi_onereadytasklist_t prl[KAAPI_TASKLIST_NUM_PRIORITY]; 
 #if defined(KAAPI_DEBUG)
-  int32_t                  max_task;
+  kaapi_workqueue_index_t  max_task;
 #endif
   kaapi_bitmap_value32_t   task_pushed;  /* bit ith== i-th priority workqueue has new pushed tasks */
   kaapi_taskdescr_t*       staticcontainer[KAAPI_TASKLIST_NUM_PRIORITY*KAAPI_TASKLIST_INITIAL_CAPACITY];

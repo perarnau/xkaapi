@@ -55,7 +55,7 @@ int kaapi_workqueue_init(
 {
   kaapi_mem_barrier();
   kaapi_processor_t* const kproc = kaapi_get_current_processor();
-#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)||defined(__ppc__)
+#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)||defined(__ppc__) ||defined(__arm__)
   kaapi_assert_debug( (((unsigned long)&kwq->beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
   kaapi_assert_debug( (((unsigned long)&kwq->end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
 #else
@@ -79,7 +79,7 @@ int kaapi_workqueue_init_with_lock(
 )
 {
   kaapi_mem_barrier();
-#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)||defined(__ppc__)
+#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)||defined(__ppc__)||defined(__arm__)
   kaapi_assert_debug( (((unsigned long)&kwq->beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
   kaapi_assert_debug( (((unsigned long)&kwq->end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
 #else
