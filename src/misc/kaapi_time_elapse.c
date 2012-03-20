@@ -63,6 +63,6 @@ double kaapi_get_elapsedtime(void)
   struct timeval tv;
   int err = gettimeofday( &tv, 0);
   if (err  !=0) return 0;
-  return (double)tv.tv_sec + 1e-9*(double)tv.tv_usec;
+  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
 #endif
 }
