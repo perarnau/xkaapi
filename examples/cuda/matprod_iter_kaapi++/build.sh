@@ -21,7 +21,7 @@ CBLAS_LDFLAGS="-L$ATLAS/lib -llapack -lcblas -latlas
 #	$SCRATCH/install/lapack-3.4.0/liblapack.a
 CBLAS_CPPFLAGS="-I$ATLAS/include
 -I$SCRATCH/install/lapacke/include
--DCONFIG_USE_FLOAT=1
+-DCONFIG_USE_DOUBLE=1
 "
 
 #MAGMA_CFLAGS="-I${SCRATCH}/install/magma_1.0.0/include -DCONFIG_USE_MAGMA=1"

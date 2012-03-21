@@ -291,6 +291,7 @@ kaapi_cuda_data_async_check( void )
 
 static inline int
 kaapi_cuda_data_async_sync_device_transfer(
+	kaapi_mem_data_t *kmd,
 	kaapi_data_t* dest, const kaapi_mem_asid_t dest_asid,
 	kaapi_data_t* src,  const kaapi_mem_asid_t src_asid
        	)
@@ -312,20 +313,33 @@ kaapi_cuda_data_async_sync_device_transfer(
 	kaapi_cuda_mem_copy_htod( dest->ptr, &dest->view,
 		src->ptr, &src->view );
     } else {
+	    const kaapi_mem_host_map_t* host_map = 
+		kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
+	    const kaapi_mem_asid_t host_asid =
+		kaapi_mem_host_map_get_asid(host_map);
+	    kaapi_data_t* host_data =
+		(kaapi_data_t*) kaapi_mem_data_get_addr( kmd, host_asid );
 	    kaapi_cuda_mem_copy_dtod_buffer(
 		dest->ptr, &dest->view,	dest_dev,
-		src->ptr, &src->view, src_dev
+		host_data->ptr, &host_data->view, src_dev,
+		src->event
 		);
 #if 0
 	int canAccessPeer;
 	cudaDeviceCanAccessPeer( &canAccessPeer,
 		dest_dev, src_dev );
 	if( canAccessPeer ) {
+	    fprintf(stdout, "OK %d -> %d\n", src_dev,
+		    dest_dev );
+	    fflush(stdout);
 	    kaapi_cuda_mem_copy_dtod_peer( 
 		dest->ptr, &dest->view,	dest_dev,
 		src->ptr, &src->view, src_dev
 		);
 	} else {
+	    fprintf(stdout, "NO %d -> %d\n", src_dev,
+		    dest_dev );
+	    fflush(stdout);
 	    kaapi_cuda_mem_copy_dtod_buffer(
 		dest->ptr, &dest->view,	dest_dev,
 		src->ptr, &src->view, src_dev
@@ -354,7 +368,9 @@ kaapi_cuda_data_async_sync_device( kaapi_data_t* kdata )
     if ( kaapi_mem_data_is_dirty( kmd, cuda_asid ) ) {
 	valid_asid = kaapi_mem_data_get_nondirty_asid( kmd );
 	kaapi_data_t* valid_data = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd, valid_asid );
-	kaapi_cuda_data_async_sync_device_transfer( kdata, cuda_asid,
+	kaapi_cuda_data_async_sync_device_transfer(
+		kmd,
+		kdata, cuda_asid,
 		valid_data, valid_asid );
 	kaapi_mem_data_clear_dirty( kmd, cuda_asid );
     }
