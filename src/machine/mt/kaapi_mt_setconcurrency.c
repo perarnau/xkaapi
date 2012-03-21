@@ -173,11 +173,6 @@ int kaapi_setconcurrency(void)
 #if defined(KAAPI_USE_PERFCOUNTER)
       /*  */
       kaapi_perf_thread_init(kproc, KAAPI_PERF_USER_STATE);
-#if 0
-      if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
-	KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_CUDA_KPROC_START);
-      else
-#endif /* KAAPI_USE_CUDA */
       KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_KPROC_START);
 #endif
 
@@ -250,12 +245,7 @@ void* kaapi_sched_run_processor( void* arg )
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
   kaapi_perf_thread_init(kproc, KAAPI_PERF_SCHEDULE_STATE);
-#if 0
-  if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
-    KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_CUDA_KPROC_START);
-  else
-#endif /* KAAPI_USE_CUDA */
-    KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_KPROC_START );
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_KPROC_START );
 #endif
   kaapi_assert( kproc->thread != 0 );
 
@@ -289,12 +279,7 @@ void* kaapi_sched_run_processor( void* arg )
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
   kaapi_perf_thread_stop(kproc);
-#if 0
-  if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
-    KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_CUDA_KPROC_STOP);
-  else
-#endif /* KAAPI_USE_CUDA */
-    KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_KPROC_STOP );
+  KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_KPROC_STOP );
 #endif
 
 #if defined(KAAPI_USE_PERFCOUNTER)

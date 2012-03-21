@@ -196,7 +196,8 @@ kaapi_cuda_mem_copy_dtod_peer(
 	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
 	const int dest_dev,
 	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
-	const int src_dev
+	const int src_dev,
+	cudaEvent_t event
        	);
 
 #endif /* ! KAAPI_CUDA_MEM_H_INCLUDED */

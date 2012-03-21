@@ -334,15 +334,23 @@ kaapi_cuda_data_async_sync_device_transfer(
 	    fflush(stdout);
 	    kaapi_cuda_mem_copy_dtod_peer( 
 		dest->ptr, &dest->view,	dest_dev,
-		src->ptr, &src->view, src_dev
+		src->ptr, &src->view, src_dev,
+		src->evt_kernel
 		);
 	} else {
 	    fprintf(stdout, "NO %d -> %d\n", src_dev,
 		    dest_dev );
 	    fflush(stdout);
+	    const kaapi_mem_host_map_t* host_map = 
+		kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
+	    const kaapi_mem_asid_t host_asid =
+		kaapi_mem_host_map_get_asid(host_map);
+	    kaapi_data_t* host_data =
+		(kaapi_data_t*) kaapi_mem_data_get_addr( kmd, host_asid );
 	    kaapi_cuda_mem_copy_dtod_buffer(
 		dest->ptr, &dest->view,	dest_dev,
-		src->ptr, &src->view, src_dev
+		host_data->ptr, &host_data->view, src_dev,
+		src->event
 		);
 	}
 #endif

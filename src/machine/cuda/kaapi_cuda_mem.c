@@ -699,10 +699,6 @@ kaapi_cuda_mem_copy_dtod_buffer(
 	cudaEvent_t event
        	)
 {
-//    cudaError_t res;
-//    cudaStream_t stream;
-//    void *host_buffer;
-
 #if KAAPI_CUDA_TIME
     uint64_t t0 = kaapi_get_elapsedns();
 #endif 
@@ -710,53 +706,6 @@ kaapi_cuda_mem_copy_dtod_buffer(
      * device */
     cudaStreamWaitEvent( kaapi_cuda_HtoD_stream(), event, 0 );
     kaapi_cuda_mem_copy_htod( dest, view_dest, src, view_src );
-#if 0
-    res = cudaHostAlloc( &host_buffer, kaapi_memory_view_size(view_src),
-	   cudaHostAllocPortable );
-    if( res != cudaSuccess ) {
-	fprintf( stdout, "%s: ERROR cudaHostAlloc %d\n",
-	       __FUNCTION__, res );
-	fflush(stdout);
-	abort();
-    }
-    kaapi_pointer_t hostptr = kaapi_make_pointer( 0, host_buffer );
-
-    /* GPU to CPU (temporary) */
-    kaapi_cuda_ctx_set( src_dev );
-    kaapi_cuda_sync();
-    res = cudaStreamCreate( &stream );
-    if (res != cudaSuccess) {
-	fprintf(stdout, "%s: cudaStreamCreate ERROR %d\n", __FUNCTION__, res );
-	fflush(stdout);
-	abort();
-    }
-    kaapi_cuda_mem_copy_dtoh_( hostptr, view_src, src, view_src, stream );
-    res = cudaStreamSynchronize( stream );
-    if (res != cudaSuccess) {
-	fprintf(stdout, "%s: cudaStreamSynchronize ERROR %d\n", __FUNCTION__, res );
-	fflush(stdout);
-	abort();
-    }
-    cudaStreamDestroy( stream );
-
-    /* CPU to GPU (definitive) */
-    kaapi_cuda_ctx_set( dest_dev );
-    res = cudaStreamCreate( &stream );
-    if (res != cudaSuccess) {
-	fprintf(stdout, "%s: cudaStreamCreate ERROR %d\n", __FUNCTION__, res );
-	fflush(stdout);
-	abort();
-    }
-    kaapi_cuda_mem_copy_htod_( dest, view_dest, hostptr, view_src, stream );
-    res = cudaStreamSynchronize( stream );
-    if (res != cudaSuccess) {
-	fprintf(stdout, "%s: cudaStreamSynchronize ERROR %d\n", __FUNCTION__, res );
-	fflush(stdout);
-	abort();
-    }
-    cudaStreamDestroy( stream );
-    cudaFreeHost( host_buffer );
-#endif
 #if KAAPI_CUDA_TIME
     uint64_t t1 = kaapi_get_elapsedns();
     fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
@@ -774,7 +723,8 @@ kaapi_cuda_mem_copy_dtod_peer(
 	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
 	const int dest_dev,
 	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
-	const int src_dev
+	const int src_dev,
+	cudaEvent_t event
        	)
 {
     cudaError_t res;
@@ -789,6 +739,7 @@ kaapi_cuda_mem_copy_dtod_peer(
 	abort();
     }
 
+    cudaStreamWaitEvent( kaapi_cuda_HtoD_stream(), event, 0 );
     res = cudaMemcpyPeerAsync(
 	    kaapi_pointer2void(dest), dest_dev,
 	    kaapi_pointer2void(src), src_dev,

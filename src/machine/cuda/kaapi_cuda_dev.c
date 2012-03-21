@@ -25,6 +25,7 @@ kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
 	abort();
     }
 
+    /* Just warm the GPU */
     cudaFree(0);
     res = cudaGetDeviceProperties( &proc->deviceProp, index );
     if (res != cudaSuccess) {
@@ -45,6 +46,7 @@ kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
 void
 kaapi_cuda_dev_close( kaapi_cuda_proc_t* proc )
 {
+    cudaSetDevice( proc->index );
     cudaDeviceReset();
 }
 
