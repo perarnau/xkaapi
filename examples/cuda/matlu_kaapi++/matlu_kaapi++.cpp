@@ -334,9 +334,8 @@ struct doit {
     }
 
     ka::array<2,double_type> A(dA, n, n, n);
-    ka::Spawn<TaskDLARNV>()( A );
-    ka::Sync();
-    kaapi_memory_register( dA, n*n*sizeof(double_type) );
+    TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(A) );
+    ka::Memory::Register( A );
 
     if (verif) {
 	/* copy the matrix to compute the norm */
@@ -437,7 +436,7 @@ struct doit {
 	free(dAcopy);
 	}
 
-    kaapi_memory_unregister( dA );
+    ka::Memory::Unregister( A );
     free(dA);
   }
 };

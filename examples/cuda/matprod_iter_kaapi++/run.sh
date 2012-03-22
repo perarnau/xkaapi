@@ -44,38 +44,26 @@ function run_test {
     done
 }
 
-run_test
-exit 0
+#run_test
+#exit 0
 
-function run_sgemm {
+function run_dgemm {
     ncpu="$1"
     cpuset="$2"
     ngpu="$3"
     gpuset="$4"
 
-    out="$SCRATCH/res/xkaapi-sgemm-${ncpu}cpu${ngpu}gpu-${version}.txt"
+    out="$HOME/res/xkaapi-dgemm-${ncpu}cpu${ngpu}gpu-${version}.txt"
     export KAAPI_GPUSET="$gpuset"
     export KAAPI_CPUSET="$cpuset"
-    msizes="1024 2048 4096"
     bsizes="512"
+    msizes="$(seq 1024 1024 20480)"
     for m in $msizes ; do
 	    for b in $bsizes; do
 	    for i in `seq 1 $niter`
 	    do
-	    echo "$KAAPI_CPUSET $KAAPI_GPUSET ./matprod_iter_kaapi++ $m $b $verif"
-	    #	KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
-	    #	KAAPI_STACKSIZE=536870912 gdb ./matprod_iter_kaapi++ 
-	    done
-	done
-    done
-    bsizes="1024"
-    msizes="$(seq 8192 2048 40960)"
-    for m in $msizes ; do
-	    for b in $bsizes; do
-	    for i in `seq 1 $niter`
-	    do
-	    echo "$KAAPI_CPUSET $KAAPI_GPUSET ./matprod_iter_kaapi++ $m $b $verif"
-#	    KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
+		echo "$KAAPI_CPUSET($ncpu) $KAAPI_GPUSET($ngpu) ./matprod_iter_kaapi++ $m $b $verif"
+	    # KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif >> $out
     #	KAAPI_STACKSIZE=536870912 gdb ./matprod_iter_kaapi++ 
 	    done
 	done
@@ -83,20 +71,20 @@ function run_sgemm {
 }
 
 ncpu=1
-cpuset="0"
+cpuset="4"
 
 ngpu=1
-gpuset="0~4"
-run_sgemm "$ncpu" "$cpuset" "$ngpu" "$gpuset"
+gpuset="0~0"
+run_dgemm "$ncpu" "$cpuset" "$ngpu" "$gpuset"
 
 ngpu=2
-gpuset="0~4,1~5"
-run_sgemm "$ncpu" "$cpuset" "$ngpu" "$gpuset"
+gpuset="0~0,1~1"
+run_dgemm "$ncpu" "$cpuset" "$ngpu" "$gpuset"
 
 ngpu=4
-gpuset="0~4,1~5,2~6,3~7"
-run_sgemm "$ncpu" "$cpuset" "$ngpu" "$gpuset"
+gpuset="0~0,1~1,2~2,3~3"
+run_dgemm "$ncpu" "$cpuset" "$ngpu" "$gpuset"
 
 ngpu=8
-gpuset="0~4,1~5,2~6,3~7,4~8,5~9,6~10,7~11"
-run_sgemm "$ncpu" "$cpuset" "$ngpu" "$gpuset"
+gpuset="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
+run_dgemm "$ncpu" "$cpuset" "$ngpu" "$gpuset"

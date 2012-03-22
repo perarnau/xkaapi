@@ -56,74 +56,20 @@
 
 #include "lapacke.h"
 
-#if 1
 /* Generate a random matrix symetric definite positive matrix of size m x m 
    - it will be also interesting to generate symetric diagonally dominant 
    matrices which are known to be definite postive.
+   Based from MAGMA
 */
 static void
 generate_matrix( double_type* A, size_t N )
 {
-#if 0
-    size_t i, j;
-
-    double_type* dtmp = (double_type*) malloc( N*N*sizeof(double_type) );
-    ka::array<2,double_type> tmp( dtmp, N, N, N );
-    TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(tmp)  );
-    for( i = 0; i < N; i++ ) {
-	dtmp[ i*N+i ] = dtmp[i*N+i] + 1.*N;
-	for( j = 0; j < N; j++ ) {
-	    dtmp[i*N+j] = dtmp[j*N+i];
-	}
-    }
-    ka::array<2,double_type> a( A, N, N, N );
-    TaskBodyCPU<TaskDLACPY>()(
-	    CblasColMajor, CblasLower,
-	    ka::range2d_rw<double_type>( tmp ),
-	    ka::range2d_rw<double_type>( a )
-	);
-    free( dtmp );
-#endif
-#if 1
-  // 
-  for (size_t i = 0; i< N; ++i)
-  {
-    for (size_t j = 0; j< N; ++j)
-      A[i*N+j] = 1.0 / (1.0+i+j);
-    A[i*N+i] = N*1.0; 
+  for (size_t i = 0; i< N; i++) {
+    A[i*N+i] = A[i*N+i] + 1.*N; 
+    for (size_t j = 0; j < i; j++)
+      A[i*N+j] = A[j*N+i];
   }
-#endif
 }
-
-#else
-/* Generate a random matrix symetric definite positive matrix of size m x m 
-*/
-static void generate_matrix(double_type* A, size_t N)
-{
-  double_type* L = new double_type[N*N];
-  // Lower random part
-  for (size_t i = 0; i< N; ++i)
-  {  
-    size_t j;
-    for (j = 0; j< i+1; ++j)
-      L[i*N+j] = drand48();
-    for (; j< N; ++j)
-      L[i*N+j] = 0.0;
-    L[i*N+i] = N; /* add dominant diagonal, else very ill conditionning */
-  }
-
-  TaskBodyCPU<TaskDGEMM>()(
-      CblasRowMajor, CblasNoTrans,CblasTrans,
-      1.0,
-      ka::range2d_r<double_type>(ka::range2d<double_type>(L, N, N, N)),
-      ka::range2d_r<double_type>(ka::range2d<double_type>(L, N, N, N)),
-      0.0,
-      ka::range2d_rw<double_type>(ka::range2d<double_type>(A, N, N, N))
-  );
-  
-  delete []L;
-}
-#endif
 
 
 /* Task Print Matrix LLt
@@ -168,7 +114,7 @@ struct TaskNormMatrix: public ka::Task<5>::Signature
 	CBLAS_UPLO,
 	ka::W<double_type>, /* norm */
 	ka::RW<ka::range2d<double_type> >, /* A */
-	ka::RW<ka::range2d<double_type> >  /* LU */
+	ka::RW<ka::range2d<double_type> >  /* A result */
 >{};
 template<>
 struct TaskBodyCPU<TaskNormMatrix> {
@@ -177,133 +123,23 @@ struct TaskBodyCPU<TaskNormMatrix> {
 		CBLAS_UPLO uplo,
 		ka::pointer_w<double_type> norm, 
 		ka::range2d_rw<double_type> A,
-		ka::range2d_rw<double_type> LU
+		ka::range2d_rw<double_type> R
 	)
-	{
-		double_type Anorm, Rnorm;
-		double_type alpha;
-		unsigned int i,j;
-		double_type eps;
-		unsigned int N = A.dim(0);
-
-		eps = LAPACKE_lamch('e');
-
-		double_type *Residual = (double_type *)malloc(N*N*sizeof(double_type));
-		double_type *L1       = (double_type *)malloc(N*N*sizeof(double_type));
-		double_type *L2       = (double_type *)malloc(N*N*sizeof(double_type));
-		double_type *work              = (double_type *)malloc(N*sizeof(double_type));
-
-		memset((void*)L1, 0, N*N*sizeof(double_type));
-		memset((void*)L2, 0, N*N*sizeof(double_type));
-
-		alpha= 1.0;
-
-		LAPACKE_lacpy( order,' ', N, N, A.ptr(), A.lda(), Residual, N);
-
-		/* Dealing with L'L or U'U  */
-		if (uplo == CblasUpper){
-		LAPACKE_lacpy( order, uplo, N, N, LU.ptr(), LU.lda(), L1, N);
-		LAPACKE_lacpy( order, uplo, N, N, LU.ptr(), LU.lda(), L2, N);
-		cblas_trmm( order, CblasLeft, uplo, CblasTrans, CblasNonUnit, N, N, (alpha), L1, N, L2, N);
-		}
-		else{
-		LAPACKE_lacpy( order, uplo, N, N, LU.ptr(), LU.lda(), L1, N);
-		LAPACKE_lacpy( order, uplo, N, N, LU.ptr(), LU.lda(), L2, N);
-		cblas_trmm( order, CblasRight, uplo, CblasTrans, CblasNonUnit, N, N, (alpha), L1, N, L2, N);
-		}
-
-		/* Compute the Residual || A -L'L|| */
-		for (i = 0; i < N; i++)
-		for (j = 0; j < N; j++)
-		   Residual[j*N+i] = L2[j*N+i] - Residual[j*N+i];
-
-		char infnorm[]= "Infinity";
-		Rnorm = LAPACKE_lange( order, infnorm[0], N, N, Residual, N, work);
-		Anorm = LAPACKE_lange( order, infnorm[0], N, N, A.ptr(),
-			       A.lda(), work);
-
-		//printf("============\n");
-		//printf("Checking the Cholesky Factorization \n");
-#if 1
-		fprintf( stdout, "# ||L'L-A||_oo/(||A||_oo.N.eps) = %e\n",
-			    Rnorm/(Anorm*N*eps));
-		fflush(stdout);
-
-		if ( isnan(Rnorm/(Anorm*N*eps)) || (Rnorm/(Anorm*N*eps) > 10.0) ){
-		printf("# ERRO Factorization is suspicious ! \n");
-		}
-		else{
-		printf("-- Factorization is CORRECT ! \n");
-		}
-#endif
-
-		free(Residual); free(L1); free(L2); free(work);
-
-		*norm= Rnorm/(Anorm*N*eps);
-	}
+{
+	double_type matnorm;
+	unsigned int N = A.dim(0);
+	double_type alpha = -1.0;
+	int ione = 1;
+	//double_type *work = (double_type *)malloc(N*sizeof(double_type));
+	double_type work[1];
+	char infnorm[]= "f";
+	matnorm = LAPACKE_lange( order, infnorm[0], N, N, A.ptr(),
+		       A.lda(), work);
+	cblas_axpy( N*N, alpha, A.ptr(), ione, R.ptr(), ione );
+	*norm = LAPACKE_lange( order, infnorm[0], N, N, R.ptr(),
+		       R.lda(), work ) / matnorm;
+}
 };
-
-/* Compute the norm || A - L*Lt ||infinity
- * The norm value serves to detec an error in the computation
- */
-#if 0
-struct TaskNormMatrix: public ka::Task<3>::Signature<
-  ka::W<double_type>, /* norm */
-  ka::RW<ka::range2d<double_type> >, /* A */
-  ka::RW<ka::range2d<double_type> >  /* LU */
->{};
-template<>
-struct TaskBodyCPU<TaskNormMatrix> {
-  void operator() ( ka::pointer_w<double_type> norm, ka::range2d_rw<double_type> A, ka::range2d_rw<double_type> LU )
-  {
-    const double_type* dA = A.ptr();
-    const double_type* dLU = LU.ptr();
-    int lda_LU = LU.lda();
-    int M = A.dim(0);
-    int N = A.dim(1);
-    *norm = 0.0;
-
-    double_type max = 0.0;
-    double_type* L = new double_type[M*N];
-    double_type* U = new double_type[M*N];
-
-    for (int i=0; i<M; ++i)
-    {
-      int j;
-      /* copy L */
-      const double_type* ALik = dLU+i*lda_LU;
-      double_type* Lik = L+i*N;
-      for (j=0; j < i; ++j, ++Lik, ++ALik)
-        *Lik = *ALik;
-      *Lik = *ALik; /* diag entry */
-      ++Lik;
-      ++ALik;
-      ++j;
-      for ( ; j<N; ++j, ++Lik)
-        *Lik = 0.0;      
-    }
-
-    TaskBodyCPU<TaskDGEMM>()(
-        CblasRowMajor,CblasNoTrans,CblasTrans,
-        1.0,
-        ka::range2d_r<double_type>(ka::range2d<double_type>(L, M, N, N)),
-        ka::range2d_r<double_type>(ka::range2d<double_type>(L, M, N, N)),
-        -1.0,
-        A
-    );
-    max = 0;
-    for (int i=0; i<M*N; ++i)
-    {
-        double_type error_ij = fabs(dA[i]);
-        if (error_ij > max) 
-          max = error_ij;
-    }
-    delete [] U;
-    delete [] L;
-    *norm = max;
-  }
-};
-#endif
 
 /* Block Cholesky factorization A <- L * L^t
    Lower triangular matrix, with the diagonal, stores the Cholesky factor.
@@ -346,7 +182,7 @@ struct TaskBodyCPU<TaskCholesky> {
 
 // task input matrices considered row major
 // ordered. cublas expects col major order
-#define CONFIG_INVERSE_ORDERING 1
+//#define CONFIG_INVERSE_ORDERING 1
 
 #if CONFIG_INVERSE_ORDERING
 static void transpose_inplace(double_type* a, int n)
@@ -399,7 +235,7 @@ struct doit {
     }
 
     ka::array<2,double_type> A(dA, n, n, n);
-    kaapi_memory_register( dA, n*n*sizeof(double_type) );
+    ka::Memory::Register( A );
 
 #if 0
     std::cout << "Start Cholesky with " 
@@ -412,7 +248,6 @@ struct doit {
     double sumt = 0.0;
     double sumgf = 0.0;
     double sumgf2 = 0.0;
-    double sd;
     double gflops;
     double gflops_max = 0.0;
 
@@ -424,7 +259,9 @@ struct doit {
         
     for (int i=0; i<niter; ++i)
     {
-      generate_matrix(dA, n);
+     /* based on MAGMA */
+      TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(A) );
+      generate_matrix(dA, n); 
 
       if (verif)
         memcpy(dAcopy, dA, n*n*sizeof(double_type) );
@@ -439,7 +276,7 @@ struct doit {
       t1 = kaapi_get_elapsedtime();
 
 #if CONFIG_INVERSE_ORDERING
- //     transpose_inplace(dA, n);
+      transpose_inplace(dA, n);
 #endif
 
       gflops = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / (t1-t0);
@@ -464,9 +301,20 @@ struct doit {
         }
 #endif
         // /* compute the norm || A - L*U ||inf */
-        {
-          double_type norm;
+        double_type norm;
+    	ka::array<2,double_type> A2(dAcopy, n, n, n);
 
+	t0 = kaapi_get_elapsedtime();
+	clapack_potrf( CblasColMajor, CblasLower, n, A2.ptr(), A2.lda() );
+	t1 = kaapi_get_elapsedtime();
+
+      TaskBodyCPU<TaskNormMatrix>()( CblasColMajor, CblasLower,
+	      &norm,
+	      ka::range2d_rw<double_type>(A2),
+	      ka::range2d_rw<double_type>(A) );
+      fprintf( stdout, "# ||R_xkaapi - R_lapack||Inf / ||R_lapack||inf : %e in %.10f seconds\n", norm, (t1-t0) );
+
+#if 0
 	double_type* dAcopy2 = (double_type*) calloc(n* n, sizeof(double_type));
 	double_type* dA2 = (double_type*) calloc(n* n, sizeof(double_type));
 	memcpy(dAcopy2, dAcopy, n*n*sizeof(double_type) );
@@ -474,7 +322,9 @@ struct doit {
     	ka::array<2,double_type> A2(dA2, n, n, n);
 
           t0 = kaapi_get_elapsedtime();
-          ka::Spawn<TaskNormMatrix>()( CblasColMajor, CblasLower, &norm, ka::array<2,double_type>(dAcopy, n, n, n), A );
+          TaskBodyCPU<TaskNormMatrix>()( CblasColMajor, CblasLower, &norm,
+		  ka::range2d_rw<double_type>(ka::array<2,double_type>(dAcopy, n, n, n)),
+		  ka::range2d_rw<double_type>(A) );
           ka::Sync();
           t1 = kaapi_get_elapsedtime();
           
@@ -484,7 +334,9 @@ struct doit {
 
 	t0 = kaapi_get_elapsedtime();
 	clapack_potrf( CblasRowMajor, CblasLower, n, A2.ptr(), A2.lda() );
-         ka::Spawn<TaskNormMatrix>()( CblasColMajor, CblasLower, &norm, ka::array<2,double_type>(dAcopy2, n, n, n), A2 );
+         TaskBodyCPU<TaskNormMatrix>()( CblasColMajor, CblasLower, &norm,
+		 ka::range2d_rw<double_type>(ka::array<2,double_type>(dAcopy2, n, n, n)),
+		 ka::range2d_rw<double_type>(A2) );
 	ka::Sync();
 	t1 = kaapi_get_elapsedtime();
 	std::cout << "# sequential Error ||A-LU||inf " << norm 
@@ -493,25 +345,19 @@ struct doit {
 
 	free( dAcopy2 );
 	free( dA2 );
-        }
-
+#endif
 	free( dAcopy );
       }
     }
 
     gflops = sumgf/niter;
-    if (niter ==1) 
-      sd = 0.0;
-    else
-      sd = sqrt((sumgf2 - (sumgf*sumgf)/niter)/niter);
-    
     printf("POTRF %6d %5d %5d %9.10f %9.6f\n",
 	    (int)n,
 	    (int)global_blocsize,
 	    (int)kaapi_getconcurrency(),
 	    sumt/niter, gflops );
 
-    kaapi_memory_unregister( dA );
+    ka::Memory::Unregister( A );
     free(dA);
   }
 

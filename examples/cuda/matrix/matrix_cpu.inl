@@ -58,13 +58,14 @@ extern "C" {
 // specialize for double_type
 #if CONFIG_USE_FLOAT
 
-# define cblas_trsm cblas_strsm
+# define cblas_trsm	cblas_strsm
 #define cblas_trmm	cblas_strmm
-# define cblas_gemm cblas_sgemm
-# define cblas_syrk cblas_ssyrk
-# define cblas_getrf cblas_sgetrf
-# define clapack_getrf clapack_sgetrf
-# define clapack_potrf clapack_spotrf
+# define cblas_gemm	cblas_sgemm
+# define cblas_syrk	cblas_ssyrk
+# define cblas_getrf	cblas_sgetrf
+#define cblas_axpy	cblas_saxpy
+# define clapack_getrf	clapack_sgetrf
+# define clapack_potrf	clapack_spotrf
 #define LAPACKE_lacpy	LAPACKE_slacpy
 #define LAPACKE_larnv	LAPACKE_slarnv
 #define LAPACKE_lamch	LAPACKE_slamch
@@ -73,12 +74,13 @@ extern "C" {
 
 #else
 
-# define cblas_trsm cblas_dtrsm
+#define cblas_trsm	cblas_dtrsm
 #define cblas_trmm	cblas_dtrmm
-# define cblas_gemm cblas_dgemm
-# define cblas_syrk cblas_dsyrk
-# define clapack_getrf clapack_dgetrf
-# define clapack_potrf clapack_dpotrf
+#define cblas_gemm	cblas_dgemm
+#define cblas_syrk	cblas_dsyrk
+#define cblas_axpy	cblas_daxpy
+#define clapack_getrf	clapack_dgetrf
+#define clapack_potrf	clapack_dpotrf
 #define LAPACKE_lacpy	LAPACKE_dlacpy
 #define LAPACKE_larnv	LAPACKE_dlarnv
 #define LAPACKE_lamch	LAPACKE_dlamch
