@@ -188,7 +188,9 @@ kaapi_cuda_proc_sync_all( void )
     for (i = 0; i < kaapi_count_kprocessors; ++i, ++pos)
 	if ((*pos)->proc_type == KAAPI_PROC_TYPE_CUDA) {
 	    kaapi_cuda_ctx_set( (*pos)->cuda_proc.index );
+	    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
 	    kaapi_cuda_sync();
+	    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
 	}
     return 0;
 }

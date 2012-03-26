@@ -817,17 +817,17 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
       pajePopState (d1, tmp, "STATE");
     break;
 
-#if 0
-    case KAAPI_EVT_CUDA_SYNC_BEG:
+    case KAAPI_EVT_CUDA_CPU_SYNC_BEG:
       d0   = 1e-9*(double)event->date;
       pajePushState (d0, name, "STATE", "sync");          
     break;
 
-    case KAAPI_EVT_CUDA_SYNC_END:
+    case KAAPI_EVT_CUDA_CPU_SYNC_END:
       d1   = 1e-9*(double)event->date;
       pajePopState (d1, name, "STATE");
     break;
 
+#if 0
     case KAAPI_EVT_CUDA_MEM_ALLOC_BEG:
       d0   = 1e-9*(double)event->date;
       pajePushState (d0, name, "STATE", "alloc");          
@@ -1015,17 +1015,18 @@ static int fnc_paje_gantt_header()
   pajeDefineEntityValue("riok", "LINK", "steal", "0.0 1.0 0.2");
 
   /* CUDA host-to-device copy operation */
-  pajeDefineEntityValue("htod", "STATE", "htod", "1.0 1.0 0.0");
+  pajeDefineEntityValue("htod", "STATE", "htod", "0.6 0.0 1.0");
 
   /* CUDA kernel execution time */
-  pajeDefineEntityValue("kernel", "STATE", "kernel", "1.0 0.0 0.0");
+  pajeDefineEntityValue("kernel", "STATE", "kernel", "0.6 0.0 1.0");
 
   /* CUDA device-to-host copy operation */
-  pajeDefineEntityValue("dtoh", "STATE", "DtoH", "1.0 1.0 0.0");
+  pajeDefineEntityValue("dtoh", "STATE", "dtoh", "0.6 0.0 1.0");
+
+//  /* CUDA synchronizations by CPU */
+  pajeDefineEntityValue("sync", "STATE", "sync", "0.0 0.6 0.6");
 
 #if 0
-//  /* CUDA synchronizations */
-  pajeDefineEntityValue("sync", "STATE", "synchronize", "1.0 1.0 1.0");
 
   /* CUDA device memory allocations */
   pajeDefineEntityValue("al", "STATE", "Alloc", "0.0 0.0 0.0");

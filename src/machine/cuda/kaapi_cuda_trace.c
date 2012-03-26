@@ -59,6 +59,7 @@
 #define ALIGN_BUFFER(buffer, align) \
   (((uintptr_t) (buffer) & ((align)-1)) ? ((buffer) + (align) - ((uintptr_t) (buffer) & ((align)-1))) : (buffer)) 
 
+#if 0
 static const char *
 getMemcpyKindString(CUpti_ActivityMemcpyKind kind)
 {
@@ -87,6 +88,7 @@ getMemcpyKindString(CUpti_ActivityMemcpyKind kind)
 
   return "<unknown>";
 }
+#endif
 
 static inline void
 kaapi_cuda_trace_record_memcpy( kaapi_processor_t *kproc,
@@ -128,12 +130,14 @@ kaapi_cuda_trace_record( CUpti_Activity *record )
 	CUpti_ActivityMemcpy *memcpy = (CUpti_ActivityMemcpy *)record;
 	kproc = kaapi_cuda_get_proc_by_dev( memcpy->deviceId );
 	kaapi_cuda_trace_record_memcpy( kproc, memcpy );
+#if 0
 	printf("MEMCPY %s [ %llu - %llu ] device %u, context %u, stream %u, correlation %u/r%u\n",
 	getMemcpyKindString((CUpti_ActivityMemcpyKind)memcpy->copyKind),
 	(unsigned long long)(memcpy->start - kaapi_default_param.cudastartuptime),
 	(unsigned long long)(memcpy->end - kaapi_default_param.cudastartuptime),
 	memcpy->deviceId, memcpy->contextId, memcpy->streamId, 
 	memcpy->correlationId, memcpy->runtimeCorrelationId);
+#endif
 	break;
     }
     case CUPTI_ACTIVITY_KIND_KERNEL:
@@ -141,6 +145,7 @@ kaapi_cuda_trace_record( CUpti_Activity *record )
 	CUpti_ActivityKernel *kernel = (CUpti_ActivityKernel *)record;
 	kproc = kaapi_cuda_get_proc_by_dev( kernel->deviceId );
 	kaapi_cuda_trace_record_kernel( kproc, kernel );
+#if 0
 	printf("KERNEL \"%s\" [ %llu - %llu ] device %u, context %u, stream %u, correlation %u/r%u\n",
 	    kernel->name,
 	    (unsigned long long)(kernel->start - kaapi_default_param.cudastartuptime),
@@ -151,6 +156,7 @@ kaapi_cuda_trace_record( CUpti_Activity *record )
 	kernel->gridX, kernel->gridY, kernel->gridZ,
 	kernel->blockX, kernel->blockY, kernel->blockZ,
 	kernel->staticSharedMemory, kernel->dynamicSharedMemory);
+#endif
 	break;
     }
     default:

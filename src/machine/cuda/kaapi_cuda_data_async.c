@@ -93,9 +93,6 @@ int kaapi_cuda_data_async_allocate(
 	void*              sp
 )
 {
-#if KAAPI_CUDA_TIME
-    uint64_t t0 = kaapi_get_elapsedns();
-#endif
     const size_t count_params = kaapi_format_get_count_params(fmt, sp );
     size_t i;
     const kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
@@ -137,14 +134,6 @@ int kaapi_cuda_data_async_allocate(
 		kaapi_format_set_access_param( fmt, i, sp, &access );
 	}
 
-#if KAAPI_CUDA_TIME
-    uint64_t t1 = kaapi_get_elapsedns();
-    fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
-	    kaapi_get_current_processor()->proc_type,
-	    __FUNCTION__,
-	    fmt->name,
-	    t1-t0);
-#endif
 	return 0;
 }
 
@@ -159,9 +148,6 @@ int kaapi_cuda_data_async_send(
 	void*              sp
 )
 {
-#if KAAPI_CUDA_TIME
-    uint64_t t0 = kaapi_get_elapsedns();
-#endif
     const size_t count_params = kaapi_format_get_count_params(fmt, sp );
     size_t i;
     kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
@@ -202,14 +188,6 @@ int kaapi_cuda_data_async_send(
 	    //kaapi_format_set_access_param(fmt, i, sp, &access);
     }
 
-#if KAAPI_CUDA_TIME
-    uint64_t t1 = kaapi_get_elapsedns();
-    fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
-	    kaapi_get_current_processor()->proc_type,
-	    __FUNCTION__,
-	    fmt->name,
-	    t1-t0);
-#endif
     return 0;
 }
 
@@ -218,9 +196,6 @@ int kaapi_cuda_data_async_recv(
 	void*              sp
 )
 {
-#if KAAPI_CUDA_TIME
-    uint64_t t0 = kaapi_get_elapsedns();
-#endif
     const size_t count_params = kaapi_format_get_count_params(fmt, sp );
     size_t i;
     kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
@@ -270,14 +245,6 @@ int kaapi_cuda_data_async_recv(
 	    }
     }
 
-#if KAAPI_CUDA_TIME
-    uint64_t t1 = kaapi_get_elapsedns();
-    fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
-	    kaapi_get_current_processor()->proc_type,
-	    __FUNCTION__,
-	    fmt->name,
-	    t1-t0);
-#endif
     return 0;
 }
 
@@ -300,16 +267,6 @@ kaapi_cuda_data_async_sync_device_transfer(
     const int src_dev = src_asid - 1;
 
     if( src_asid == 0 ) {
-#if 0
-	fprintf(stdout, "%s: dest=%p %lux%lu lda=%lu src=%p %lux%lu lda=%lu\n",
-		__FUNCTION__,
-		kaapi_pointer2void(dest->ptr),
-		dest->view.size[0], dest->view.size[1], dest->view.lda,
-		kaapi_pointer2void(src->ptr),
-		src->view.size[0], src->view.size[1], src->view.lda
-		);
-	fflush(stdout);
-#endif
 	kaapi_cuda_mem_copy_htod( dest->ptr, &dest->view,
 		src->ptr, &src->view );
     } else {
@@ -362,9 +319,6 @@ kaapi_cuda_data_async_sync_device_transfer(
 int
 kaapi_cuda_data_async_sync_device( kaapi_data_t* kdata )
 {
-#if KAAPI_CUDA_TIME
-    uint64_t t0 = kaapi_get_elapsedns();
-#endif
     const kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
     const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
     kaapi_mem_data_t *kmd;
@@ -382,14 +336,6 @@ kaapi_cuda_data_async_sync_device( kaapi_data_t* kdata )
 		valid_data, valid_asid );
 	kaapi_mem_data_clear_dirty( kmd, cuda_asid );
     }
-#if KAAPI_CUDA_TIME
-    uint64_t t1 = kaapi_get_elapsedns();
-    fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
-	    kaapi_get_current_processor()->proc_type,
-	    __FUNCTION__,
-	    "",
-	    t1-t0);
-#endif
 
     return 0;
 }
@@ -402,38 +348,10 @@ kaapi_cuda_data_async_sync_host_transfer(
 {
     cudaError_t res;
 
-#if KAAPI_CUDA_TIME
-    uint64_t t0 = kaapi_get_elapsedns();
-#endif
     kaapi_cuda_ctx_set( src_asid-1 );
+    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
     res= cudaEventSynchronize( src->event );
-#if 0
-    cudaStream_t stream;
-    res = cudaStreamCreate( &stream );
-    if (res != cudaSuccess) {
-	fprintf(stdout, "%s: cudaStreamCreate ERROR %d\n", __FUNCTION__, res );
-	fflush(stdout);
-	abort();
-    }
-    /* Synchronize everything since we dont know about its execution */
-    kaapi_cuda_sync();
-    kaapi_cuda_mem_copy_dtoh_( dest->ptr, &dest->view, src->ptr, &src->view, stream );
-    res = cudaStreamSynchronize( stream );
-    if (res != cudaSuccess) {
-	fprintf(stdout, "%s: cudaStreamSynchronize ERROR %d\n", __FUNCTION__, res );
-	fflush(stdout);
-	abort();
-    }
-    cudaStreamDestroy( stream );
-#endif
-#if KAAPI_CUDA_TIME
-    uint64_t t1 = kaapi_get_elapsedns();
-    fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
-	    kaapi_get_current_processor()->proc_type,
-	    __FUNCTION__,
-	    "",
-	    t1-t0);
-#endif
+    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END );
 
     return res;
 }
@@ -441,10 +359,6 @@ kaapi_cuda_data_async_sync_host_transfer(
 int
 kaapi_cuda_data_async_sync_host( kaapi_data_t* kdata )
 {
-    //const kaapi_mem_host_map_t* host_map = kaapi_get_current_mem_host_map();
-#if KAAPI_CUDA_TIME
-    uint64_t t0 = kaapi_get_elapsedns();
-#endif
     const kaapi_mem_host_map_t* host_map = 
 	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
     const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
@@ -461,14 +375,6 @@ kaapi_cuda_data_async_sync_host( kaapi_data_t* kdata )
 		valid_asid );
 	kaapi_mem_data_clear_dirty( kmd, host_asid );
     }
-#if KAAPI_CUDA_TIME
-    uint64_t t1 = kaapi_get_elapsedns();
-    fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
-	    kaapi_get_current_processor()->proc_type,
-	    __FUNCTION__,
-	    "",
-	    t1-t0);
-#endif
 
     return 0;
 }

@@ -53,7 +53,7 @@ extern "C" {
 
 /** Size of the event mask 
 */
-typedef uint32_t kaapi_event_mask_type_t;
+typedef uint64_t kaapi_event_mask_type_t;
 
 /** Mask of events
     The mask is set at runtime to select events that will be registered
@@ -94,6 +94,8 @@ extern uint64_t kaapi_event_mask;
      | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_GPU_DTOH_END) \
      | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_GPU_KERNEL_BEG) \
      | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_GPU_KERNEL_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_CPU_SYNC_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_CPU_SYNC_END) \
     )
 
 #define KAAPI_EVT_MASK_IDLE \

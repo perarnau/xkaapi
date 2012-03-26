@@ -8,7 +8,7 @@ CUDADIR=$SCRATCH/install/cuda
 CUBLAS_LDFLAGS="-lcublas"
 
 CUDA_CFLAGS="-DCONFIG_USE_CUDA=1 -I$CUDADIR/include"
-CUDA_LDFLAGS="-L$CUDADIR/lib64 -lcuda"
+CUDA_LDFLAGS="-L$CUDADIR/lib64 -lcuda -lcudart"
 
 CBLAS_LDFLAGS="-L$SCRATCH/install/atlas3.9.69/lib -llapack -lcblas -latlas
 -lf77blas 

@@ -11,26 +11,6 @@
 #include "kaapi_cuda_ctx.h"
 #include "kaapi_cuda_data_basic.h"
 
-#if	0
-static inline void
-xxx_kaapi_cuda_data_basic_inc_use(
-		const kaapi_mem_host_map_t* map,
-		kaapi_mem_data_t* kmd,
-		kaapi_data_t* src
-		)
-{
-	const kaapi_mem_asid_t asid = kaapi_mem_host_map_get_asid(map);
-
-	if( kaapi_mem_data_has_addr( kmd, asid ) ) {
-	    kaapi_data_t* dest= (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
-		     asid );
-	    kaapi_cuda_mem_inc_use( &dest->ptr );
-	}
-
-}
-
-#endif /* KAAPI_CUDA_MEM_ALLOC_MANAGER */
-
 static inline void
 kaapi_cuda_data_basic_view_convert( kaapi_memory_view_t* dest_view, const
 	kaapi_memory_view_t* src_view )
@@ -78,9 +58,6 @@ int kaapi_cuda_data_basic_allocate(
 	void*              sp
 )
 {
-#if KAAPI_CUDA_TIME
-    uint64_t t0 = kaapi_get_elapsedns();
-#endif
     const size_t count_params = kaapi_format_get_count_params(fmt, sp );
     size_t i;
     const kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
@@ -122,14 +99,6 @@ int kaapi_cuda_data_basic_allocate(
 		kaapi_format_set_access_param( fmt, i, sp, &access );
 	}
 
-#if KAAPI_CUDA_TIME
-    uint64_t t1 = kaapi_get_elapsedns();
-    fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
-	    kaapi_get_current_processor()->proc_type,
-	    __FUNCTION__,
-	    fmt->name,
-	    t1-t0);
-#endif
 	return 0;
 }
 
@@ -139,9 +108,6 @@ int kaapi_cuda_data_basic_send(
 	void*              sp
 )
 {
-#if KAAPI_CUDA_TIME
-    uint64_t t0 = kaapi_get_elapsedns();
-#endif
     const size_t count_params = kaapi_format_get_count_params(fmt, sp );
     size_t i;
     kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
@@ -180,14 +146,6 @@ int kaapi_cuda_data_basic_send(
 	    }
     }
 
-#if KAAPI_CUDA_TIME
-    uint64_t t1 = kaapi_get_elapsedns();
-    fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
-	    kaapi_get_current_processor()->proc_type,
-	    __FUNCTION__,
-	    fmt->name,
-	    t1-t0);
-#endif
     return 0;
 }
 
@@ -196,9 +154,6 @@ int kaapi_cuda_data_basic_recv(
 	void*              sp
 )
 {
-#if KAAPI_CUDA_TIME
-    uint64_t t0 = kaapi_get_elapsedns();
-#endif
     const size_t count_params = kaapi_format_get_count_params(fmt, sp );
     size_t i;
     kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
@@ -243,13 +198,5 @@ int kaapi_cuda_data_basic_recv(
 	    free( dev_data );
     }
 
-#if KAAPI_CUDA_TIME
-    uint64_t t1 = kaapi_get_elapsedns();
-    fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
-	    kaapi_get_current_processor()->proc_type,
-	    __FUNCTION__,
-	    fmt->name,
-	    t1-t0);
-#endif
     return 0;
 }
