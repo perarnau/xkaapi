@@ -65,6 +65,9 @@ static kaapi_atomic_t kaapi_count_init = {0};
 */
 kaapi_rtparam_t kaapi_default_param = {
    .startuptime = 0,
+#if defined(KAAPI_USE_CUPTI)
+   .cudastartuptime = 0,
+#endif
    .stacksize   = 64*4096, /**/
    .stacksize_master = 64*4096, /**/
    .cpucount    = 0,

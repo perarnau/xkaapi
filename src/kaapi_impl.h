@@ -331,6 +331,9 @@ typedef struct kaapi_rtparam_t {
   kaapi_emitsteal_init_t   emitsteal_initctxt;  /* call to initialize the emitsteal ctxt */
   unsigned int		         use_affinity;        /* use cpu affinity */
   int                      display_perfcounter; /* set to 1 iff KAAPI_DISPLAY_PERF */
+#if defined(KAAPI_USE_CUPTI)
+   uint64_t		    cudastartuptime;
+#endif
   uint64_t                 startuptime;         /* time at the end of kaapi_init */
   int                      alarmperiod;         /* period for alarm */
   uint64_t                 eventmask;           /* event mask */

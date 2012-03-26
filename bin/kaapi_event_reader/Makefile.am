@@ -17,7 +17,7 @@ kaapi_event_reader_SOURCES=kaapi_event_reader.cpp
 kaapi_event_reader_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS) $(CUDA_CPPFLAGS)
 kaapi_event_reader_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIPROGS_BUILD_CXXFLAGS) $(CUDA_CXXFLAGS)
 kaapi_event_reader_LDFLAGS =$(AM_LDFLAGS) $(KAAPIPROGS_BUILD_LDFLAGS) $(CUDA_LDFLAGS)
-kaapi_event_reader_LDADD   =$(LIBS) $(KAAPIPROGS_BUILD_LIBS) $(CUDA_LIBS)
+kaapi_event_reader_LDADD   =$(LIBS) $(KAAPIPROGS_BUILD_LIBS) $(CUDA_LIBS) -lcuda -lcublas
 
 if KAAPI_USE_EXTERNAL_POTI
 kaapi_event_reader_CPPFLAGS+= $(POTI_CPPFLAGS)

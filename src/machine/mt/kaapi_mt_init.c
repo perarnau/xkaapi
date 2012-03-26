@@ -56,6 +56,8 @@
 
 #if defined(KAAPI_USE_PERFCOUNTER)
 #include <signal.h>
+
+#include "machine/cuda/kaapi_cuda_trace.h"
 #endif
 
 /*
@@ -227,6 +229,7 @@ int kaapi_mt_init(void)
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* call prior setconcurrency */
   kaapi_perf_global_init();
+  kaapi_cuda_trace_init();
   /* kaapi_perf_thread_init(); */
 #endif
     
@@ -354,11 +357,10 @@ int kaapi_mt_finalize(void)
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_EVENT_PUSH0(kaapi_all_kprocessors[0], 0, KAAPI_EVT_KPROC_STOP);
-  kaapi_perf_thread_fini(kaapi_all_kprocessors[0]);
-  kaapi_perf_global_fini();
+  kaapi_cuda_trace_finalize();
+//  kaapi_perf_thread_fini(kaapi_all_kprocessors[0]);
   kaapi_collect_trace();
 #endif
-
 
   for (i=0; i<kaapi_count_kprocessors; ++i)
   {
@@ -367,12 +369,19 @@ int kaapi_mt_finalize(void)
     if (kaapi_all_kprocessors[i]->proc_type == KAAPI_PROC_TYPE_CUDA)
       kaapi_cuda_proc_cleanup(&kaapi_all_kprocessors[i]->cuda_proc);
 #endif /* KAAPI_USE_CUDA */
+#if 0
+    kaapi_perf_thread_fini(kaapi_all_kprocessors[i]); 
+#endif
     kaapi_wsqueuectxt_destroy(&kaapi_all_kprocessors[i]->lsuspend);
     kaapi_processor_free(kaapi_all_kprocessors[i]);
     kaapi_all_kprocessors[i]= 0;
   }
   free( kaapi_all_kprocessors );
   kaapi_all_kprocessors =0;
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  kaapi_perf_global_fini();
+#endif 
 
 #if KAAPI_USE_HWLOC
   kaapi_hws_fini_global();

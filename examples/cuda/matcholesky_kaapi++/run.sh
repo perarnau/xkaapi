@@ -1,6 +1,7 @@
 #!/bin/bash
 
 SCRATCH=/scratch/jvlima
+CUDADIR=$SCRATCH/install/cuda
 export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$SCRATCH/install/xkaapi/default/lib:$LD_LIBRARY_PATH
 
@@ -9,9 +10,9 @@ out="$SCRATCH/res/xkaapi-spotrf-4cpu1gpu-${version}.txt"
 niter=1
 
 function run_test {
-    export KAAPI_CPUSET="4,5"
+    export KAAPI_CPUSET="4"
 #    export KAAPI_CPUSET="4,5,10,11"
-    export KAAPI_GPUSET="0~0,1~1"
+    export KAAPI_GPUSET="0~0"
 #    export KAAPI_GPUSET="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
 
 #    export COMPUTE_PROFILE=1
@@ -24,9 +25,9 @@ function run_test {
     msizes="4096"
 #    bsizes="1024"
 #    bsizes="2048"
-    bsizes="512"
+    bsizes="1024"
     niter=1
-    verif=1
+#    verif=1
     for m in $msizes ; do
 	    for b in $bsizes; do
 	    for i in `seq 1 $niter`
@@ -41,9 +42,9 @@ function run_test {
     done
 }
 
-#run_test
+run_test
 
-#exit 0
+exit 0
 
 function run_potrf {
     ncpu="$1"

@@ -54,6 +54,7 @@
 #include "kaapi_cuda_ctx.h"
 #include "kaapi_cuda_cublas.h"
 #include "kaapi_cuda_mem.h"
+#include "kaapi_cuda_trace.h"
 
 #ifdef KAAPI_CUDA_USE_POOL
 #include "kaapi_cuda_pool.h"
@@ -95,6 +96,7 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
   */
   kaapi_cuda_cublas_init( proc );
   kaapi_cuda_cublas_set_stream( );
+  kaapi_cuda_trace_thread_init();
   kaapi_cuda_sync();
 
 #if KAAPI_VERBOSE
@@ -112,7 +114,7 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
 }
 
 
-int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t* proc)
+int kaapi_cuda_proc_cleanup( kaapi_cuda_proc_t* proc )
 {
   if (proc->is_initialized == 0)
     return -1;
@@ -215,5 +217,20 @@ void kaapi_cuda_event_record_( cudaStream_t stream )
 	    fprintf( stdout, "%s: cudaEventRecord ERROR %d\n", __FUNCTION__, res);
 	    fflush(stdout);
     }
+}
+
+kaapi_processor_t*
+kaapi_cuda_get_proc_by_dev( unsigned int id )
+{
+    kaapi_processor_t** pos = kaapi_all_kprocessors;
+    size_t i;
+
+    for (i = 0; i < kaapi_count_kprocessors; ++i, ++pos)
+	if ((*pos)->proc_type == KAAPI_PROC_TYPE_CUDA) {
+	    if( (*pos)->cuda_proc.index == id )
+		return *pos;
+	}
+
+    return NULL;
 }
 

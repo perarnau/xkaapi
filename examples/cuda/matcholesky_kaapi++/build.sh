@@ -2,7 +2,7 @@
 
 SCRATCH=/scratch/jvlima
 XKAAPIDIR=$SCRATCH/install/xkaapi/default
-CUDADIR=/usr
+CUDADIR=$SCRATCH/install/cuda
 
 #CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"
 CUBLAS_LDFLAGS="-lcublas"

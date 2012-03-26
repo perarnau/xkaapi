@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
-CUDA_HOME=/usr
 SCRATCH=/scratch/jvlima
+CUDA_HOME=$SCRATCH/install/cuda
 XKAAPIDIR=$SCRATCH/install/xkaapi/default
 CUDADIR=$CUDA_HOME
 ATLAS=$SCRATCH/install/atlas3.9.69

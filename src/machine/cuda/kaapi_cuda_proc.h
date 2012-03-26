@@ -118,7 +118,8 @@ int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t*);
 
 size_t kaapi_cuda_get_proc_count(void);
 
-unsigned int kaapi_cuda_get_first_kid(void);
+struct kaapi_processor_t;
+struct kaapi_processor_t* kaapi_cuda_get_proc_by_dev( unsigned int id );
 
 cudaStream_t kaapi_cuda_kernel_stream(void);
 

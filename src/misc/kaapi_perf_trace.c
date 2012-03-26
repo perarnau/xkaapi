@@ -302,8 +302,6 @@ void kaapi_perf_thread_init(kaapi_processor_t* kproc, int isuser)
 */
 void kaapi_perf_thread_fini(kaapi_processor_t* kproc)
 {
-  kaapi_mt_perf_thread_fini( kproc );
-  
   if (kproc->eventbuffer !=0)
     kaapi_event_closebuffer(kproc);
 }

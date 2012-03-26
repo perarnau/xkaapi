@@ -57,6 +57,8 @@
 #include "kaapi_cuda_data.h"
 #include "kaapi_cuda_cublas.h"
 
+#include "kaapi_cuda_event.h"
+
 /* cuda task body */
 typedef void (*cuda_task_body_t)(void*, cudaStream_t);
 
@@ -155,30 +157,34 @@ execute_first:
 		(cuda_task_body_t) td->fmt->entrypoint_wh[proc_type];
 
 	    kaapi_cuda_ctx_push( );
-	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_MEM_ALLOC_BEG );
 	    kaapi_cuda_data_allocate( td->fmt, pc->sp );
-	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_MEM_ALLOC_END );
 
-	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_HTOD_BEG);
+//	    KAAPI_CUDA_EVENT_PUSH0( stack->proc, thread, KAAPI_EVT_CUDA_CPU_HTOD_BEG );
 	    kaapi_cuda_data_send( td->fmt, pc->sp );
-	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_HTOD_END);
+//	    KAAPI_CUDA_EVENT_PUSH1( stack->proc, thread, KAAPI_EVT_CUDA_CPU_HTOD_END, kaapi_cuda_HtoD_stream() );
 	//    kaapi_cuda_cublas_set_stream( );
 #if KAAPI_CUDA_TIME
     uint64_t t0 = kaapi_get_elapsedns();
 #endif
 	    kaapi_cuda_event_record();
-	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
+//	    KAAPI_CUDA_EVENT_PUSH1( stack->proc, thread,
+//		    KAAPI_EVT_STATIC_TASK_BEG,
+//		    &kaapi_cuda_kernel_stream() );
 	    body( pc->sp, kaapi_cuda_kernel_stream() );
-	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_END );
+//	    KAAPI_CUDA_EVENT_PUSH1( stack->proc, thread,
+//		    KAAPI_EVT_STATIC_TASK_END,
+//		    &kaapi_cuda_kernel_stream() );
 #ifndef	    KAAPI_CUDA_ASYNC /* Synchronous execution */
-	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_SYNC_BEG );
 	    kaapi_cuda_sync();
-	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_SYNC_END );
 #endif
 	    kaapi_cuda_event_record_( kaapi_cuda_kernel_stream() );
-	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_DTOH_BEG);
+//	    KAAPI_CUDA_EVENT_PUSH1( stack->proc, thread,
+//		    KAAPI_EVT_CUDA_CPU_DTOH_BEG,
+//		    &kaapi_cuda_DtoH_stream() );
 	    kaapi_cuda_data_recv( td->fmt, pc->sp );
-	    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_DTOH_END);
+//	    KAAPI_CUDA_EVENT_PUSH1( stack->proc, thread,
+//		    KAAPI_EVT_CUDA_CPU_DTOH_END,
+//		    &kaapi_cuda_DtoH_stream() );
 #if KAAPI_CUDA_TIME
     uint64_t t1 = kaapi_get_elapsedns();
     fprintf( stdout, "%lu:%x:TaskBodyGPU:%s:%d\n", kaapi_get_current_kid(),

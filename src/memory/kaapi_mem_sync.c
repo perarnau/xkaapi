@@ -14,13 +14,13 @@ int
 kaapi_mem_sync_ptr( kaapi_data_t* kdata )
 {
 #if defined(KAAPI_USE_CUDA)
-    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_SYNC_BEG );
+//    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_SYNC_BEG );
     if( kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA ){
 	return kaapi_cuda_data_sync_device( kdata );
     } else {
 	return kaapi_cuda_data_sync_host( kdata );
     }
-    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_SYNC_END );
+//    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_SYNC_END );
 #else
     return 0;
 #endif

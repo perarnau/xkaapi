@@ -44,6 +44,10 @@
 #include "kaapi_impl.h"
 #include "../common/kaapi_procinfo.h"
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+#include "machine/cuda/kaapi_cuda_trace.h"
+#endif
+
 static void* kaapi_sched_run_processor( void* arg );
 
 /**
@@ -284,7 +288,8 @@ void* kaapi_sched_run_processor( void* arg )
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
-  kaapi_perf_thread_fini(kproc); 
+  kaapi_cuda_trace_thread_finalize();
+  kaapi_mt_perf_thread_fini( kproc );
 #endif
   
   /* kprocessor correctly initialize */

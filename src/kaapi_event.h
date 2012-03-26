@@ -93,17 +93,14 @@ extern "C" {
 #define KAAPI_EVT_FOREACH_END        26 /* */
 #define KAAPI_EVT_FOREACH_STEAL      27 /* */
 
-#define KAAPI_EVT_CUDA_CPU_HTOD_BEG      28 /* cudaMemcpy time from CPU */
-#define KAAPI_EVT_CUDA_CPU_HTOD_END      29
+#define KAAPI_EVT_CUDA_GPU_HTOD_BEG      28 /* cudaMemcpy time from GPU */
+#define KAAPI_EVT_CUDA_GPU_HTOD_END      29
 
-#define KAAPI_EVT_CUDA_CPU_DTOH_BEG      30 /* cudaMemcpy time from CPU */
-#define KAAPI_EVT_CUDA_CPU_DTOH_END      31
+#define KAAPI_EVT_CUDA_GPU_DTOH_BEG      30 /* cudaMemcpy time from CPU */
+#define KAAPI_EVT_CUDA_GPU_DTOH_END      31
 
-#define KAAPI_EVT_CUDA_SYNC_BEG        32     /* CUDA cudaDeviceSync */
-#define KAAPI_EVT_CUDA_SYNC_END        33     /*  */
-
-#define KAAPI_EVT_CUDA_MEM_ALLOC_BEG	    34     /* CUDA cudaDeviceSync */
-#define KAAPI_EVT_CUDA_MEM_ALLOC_END	    35     /*  */
+#define KAAPI_EVT_CUDA_GPU_KERNEL_BEG        32     /* CUDA cudaDeviceSync */
+#define KAAPI_EVT_CUDA_GPU_KERNEL_END        33     /*  */
 
 /* ........................................ Implementation notes ........................................*/
 
