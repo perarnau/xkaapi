@@ -412,7 +412,8 @@ void kaapi_collect_trace(void)
 
   for (i=0; i<kaapi_count_kprocessors; ++i)
   {
-    kaapi_event_closebuffer( kaapi_all_kprocessors[i] );
+    kaapi_event_closebuffer( kaapi_all_kprocessors[i]->eventbuffer );
+    kaapi_all_kprocessors[i]->eventbuffer = 0;
     
     cnt_tasks +=      KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS);
     cnt_stealreqok += KAAPI_PERF_REG_READALL(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK);

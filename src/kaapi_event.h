@@ -93,6 +93,53 @@ extern "C" {
 #define KAAPI_EVT_FOREACH_STEAL      27 /* */
 
 
+
+/** Size of the event mask 
+*/
+typedef uint32_t kaapi_event_mask_type_t;
+
+/** Heler for creating mask from an event
+*/
+#define KAAPI_EVT_MASK(eventno) \
+  ((kaapi_event_mask_type_t)1 << eventno)
+
+/* The following set is always in the mask
+*/
+#define KAAPI_EVT_MASK_STARTUP \
+    (  KAAPI_EVT_MASK(KAAPI_EVT_KPROC_START) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_KPROC_STOP) \
+    )
+
+#define KAAPI_EVT_MASK_COMPUTE \
+    (  KAAPI_EVT_MASK(KAAPI_EVT_TASK_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_TASK_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_STATIC_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_STATIC_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_STATIC_TASK_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_STATIC_TASK_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_FOREACH_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_FOREACH_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_FOREACH_STEAL) \
+    )
+
+#define KAAPI_EVT_MASK_IDLE \
+    (  KAAPI_EVT_MASK(KAAPI_EVT_SCHED_IDLE_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_SCHED_IDLE_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_SCHED_SUSPEND_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_SCHED_SUSPEND_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_SCHED_SUSPWAIT_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_SCHED_SUSPWAIT_END) \
+    )
+
+#define KAAPI_EVT_MASK_STEALOP \
+    (  KAAPI_EVT_MASK(KAAPI_EVT_REQUESTS_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_REQUESTS_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_STEAL_OP) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_SEND_REPLY) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_RECV_REPLY) \
+    )
+
+
 /* ........................................ Implementation notes ........................................*/
 
 /* entry of event. 3 entry per event.
