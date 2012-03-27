@@ -89,7 +89,7 @@ extern int kaapic_foreach_common
 (
   kaapi_workqueue_index_t first,
   kaapi_workqueue_index_t last,
-  kaapic_foreach_attr_t*  attr,
+  const kaapic_foreach_attr_t*  attr,
   kaapic_foreach_body_t   body_f,
   kaapic_body_arg_t*      body_args
 );
@@ -137,7 +137,8 @@ typedef struct kaapic_task_info
 /*
 */
 extern int kaapic_spawn_ti(
-  kaapi_thread_t* thread, 
+  kaapi_thread_t* thread,
+  const kaapic_spawn_attr_t* attr,
   kaapi_task_body_t body, 
   kaapic_task_info_t* ti
 );

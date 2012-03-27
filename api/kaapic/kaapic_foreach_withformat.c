@@ -50,7 +50,7 @@
 void kaapic_foreach_with_format( 
   int32_t first, 
   int32_t last, 
-  kaapic_foreach_attr_t* attr,
+  const kaapic_foreach_attr_t* attr,
   int32_t nargs, 
   ...
 )

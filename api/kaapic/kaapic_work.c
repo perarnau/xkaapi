@@ -1085,7 +1085,7 @@ int kaapic_foreach_common
 (
   kaapi_workqueue_index_t first,
   kaapi_workqueue_index_t last,
-  kaapic_foreach_attr_t*  attr,
+  const kaapic_foreach_attr_t*  attr,
   kaapic_foreach_body_t   body_f,
   kaapic_body_arg_t*      body_args
 )

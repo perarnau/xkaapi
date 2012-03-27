@@ -177,7 +177,7 @@ int kaapif_spawn_
   va_end(va_args);
 
   /* spawn the task */
-  if (0== kaapic_spawn_ti( thread, kaapic_dfg_body, ti ))
+  if (0== kaapic_spawn_ti( thread, 0, kaapic_dfg_body, ti ))
     return KAAPIF_SUCCESS;
   return KAAPIF_ERR_FAILURE;
 }
