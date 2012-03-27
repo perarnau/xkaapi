@@ -58,7 +58,7 @@
 #endif
 
 #define __KAAPI__ 1
-#define __KAAPI_MINOR__ 2
+#define __KAAPI_MINOR__ 3
 
 #if !defined(__SIZEOF_POINTER__)
 #  if defined(__LP64__) || defined(__x86_64__)
@@ -886,6 +886,8 @@ static inline int kaapi_thread_pushtask_withocr(kaapi_thread_t* thread, const vo
 /** \ingroup TASK
     The function kaapi_thread_distribute_task() pushes the top task into the mailbox of processor kid.
     The task must be ready and does not have false dependencies (RAW or WAW) nor CW accesses.
+    If the kid correspond to the current kprocessor then the call to kaapi_thread_distribute_task()
+    is equivalent to the call of kaapi_thread_push().
     If successful, the kaapi_thread_distribute_task() function will return zero.
     Otherwise, an error number will be returned to indicate the error.
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
