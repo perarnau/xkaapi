@@ -46,21 +46,27 @@
 
 #include "kaapi_impl.h"
 
-/* push the task thread->pc at a given hierarchy level
+
+/* push the task thread->pc on a given processor
  */
 int kaapi_thread_distribute_task (
-  kaapi_thread_t* thread,
-  kaapi_hws_levelid_t levelid
+  kaapi_thread_t*      thread,
+  kaapi_processor_id_t kid
 )
 {
-  /* the task is in the own queue of the thread but not yet visible to other threads */
-  kaapi_task_t* local_task = thread->sp;
+  kaapi_processor_t* kproc = 0;
   
-  /* create a new steal_body task */
-  kaapi_task_t*          remote_task    = 
-      (kaapi_task_t*)kaapi_thread_pushdata_align(
+  /* the task is in the own queue of the thread but not yet visible to other threads */
+  kaapi_task_t* local_task = kaapi_thread_toptask(thread);
+  
+  /* create a new steal_body task.
+     task is allocated into local queue: once the local steal task is remotely finished,
+     the local stack may be pop.
+  */
+  kaapi_task_withlink_t* remote_task    = 
+      (kaapi_task_withlink_t*)kaapi_thread_pushdata_align(
                           thread, 
-                          sizeof(kaapi_task_t), 
+                          sizeof(kaapi_task_withlink_t), 
                           sizeof(uintptr_t)
       );
   
@@ -76,57 +82,32 @@ int kaapi_thread_distribute_task (
   argsteal->war_param             = 0;    /* assume no war */
   argsteal->cw_param              = 0;    /* assume no cw mode */
   kaapi_task_init(  
-      remote_task, 
+      &remote_task->task, 
       kaapi_tasksteal_body, 
       argsteal
   );
-  local_task->reserved             = remote_task;
+  local_task->reserved             = &remote_task->task;
   argsteal->origin_body = kaapi_task_marksteal( local_task ) ? local_task->body : 0;
   kaapi_assert_debug( argsteal->origin_body != 0);
   
-  /* ok here initial local_task is marked as steal and distributed 
-     task correspond to a stealbody 
-     - push remote_task to a hierarchical queue
+  /* ok here initial local_task is marked as steal and remote 
+     task corresponds to a steal task 
      - push local_task into the own thread queue
+     - push remote_task to the kproc' mailbox queue
   */
-  kaapi_thread_pushtask_atlevel(remote_task, levelid);
-  return kaapi_thread_pushtask(thread);
-}
-
-
-int kaapi_thread_distribute_task_with_nodeid (
-  kaapi_thread_t* thread,
-  kaapi_hws_levelid_t levelid,
-  unsigned int nodeid
-)
-{
-  /* the task is in the own queue of the thread but not yet visible to other threads */
-  kaapi_task_t* local_task = thread->sp;
+  kaapi_thread_pushtask(thread);
   
-  /* create a new steal_body task */
-  kaapi_task_t*          remote_task    = 
-      (kaapi_task_t*)kaapi_thread_pushdata_align(thread, sizeof(kaapi_task_t), sizeof(uintptr_t));
-  
-  kaapi_tasksteal_arg_t* argsteal = 
-      (kaapi_tasksteal_arg_t*)kaapi_thread_pushdata_align(thread, sizeof(kaapi_tasksteal_arg_t), sizeof(void*));
-  argsteal->origin_task           = local_task;
-  argsteal->origin_body           = local_task->body;
-  argsteal->origin_fmt            = 0;    /* should be computed by a thief */
-  argsteal->war_param             = 0;    /* assume no war */
-  argsteal->cw_param              = 0;    /* assume no cw mode */
-  kaapi_task_init(  
-      remote_task, 
-      kaapi_tasksteal_body, 
-      argsteal
-  );
-  local_task->reserved             = remote_task;
-  argsteal->origin_body = kaapi_task_marksteal( local_task ) ? local_task->body : 0;
-  kaapi_assert_debug( argsteal->origin_body != 0);
-  
-  /* ok here initial local_task is marked as steal and distributed task correspond to a stealbody 
-     - push remote_task to a hierarchical queue
-     - push local_task into the own thread queue
-  */
-  kaapi_thread_pushtask_atlevel_with_nodeid(remote_task, levelid, nodeid);
-  return kaapi_thread_pushtask(thread);
+  /* mail box: FIFO push in tail */
+  remote_task->next = 0;
+  kaapi_atomic_lock(&kproc->lock);
+  {
+    if (kproc->mailbox.tail ==0)
+      kproc->mailbox.tail = kproc->mailbox.head = remote_task;
+    else
+      kproc->mailbox.tail->next = remote_task;
+    kproc->mailbox.tail = remote_task;
+  }
+  kaapi_atomic_unlock(&kproc->lock);
+    
+  return 0;
 }

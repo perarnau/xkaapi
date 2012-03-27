@@ -86,6 +86,9 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   
   kaapi_sched_initlock( &kproc->lock );
   
+  kproc->mailbox.head   = 0;
+  kproc->mailbox.tail   = 0;
+  
   kproc->isidle         = 1;
   kaapi_wsqueuectxt_init( &kproc->lsuspend );
 
@@ -133,7 +136,6 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
     kaapi_mem_map_initialize(&kproc->mem_map, 1 + kpi->proc_index);
   
   kaapi_processor_computetopo( kproc );  
-  kaapi_hws_init_perproc(kproc);
 
   ctxt = (kaapi_thread_context_t*)kaapi_context_alloc( kproc, stacksize );
   kaapi_assert(ctxt !=0);

@@ -44,7 +44,6 @@ libkaapi_la_SOURCES=\
   kaapi_event_recorder.h\
   kaapi_memory.h \
   kaapi_cpuset.h\
-  kaapi_hws.h\
   kaapi_ws_queue.h\
   kaapi_util.h\
   misc/kaapi_abort.c \
@@ -161,21 +160,10 @@ libkaapi_la_SOURCES=\
   workstealing/kaapi_sched_suspend.c \
   workstealing/kaapi_sched_sync.c \
   workstealing/kaapi_sched_wsqueue.c \
-  hws/kaapi_hws_initialize.c \
-  hws/kaapi_hws_emitsteal.c \
-  hws/kaapi_hws_pushtask.c \
-  hws/kaapi_hws_misc.c \
-  hws/kaapi_hws_sched_sync.c \
-  hws/kaapi_hws_counters.c \
-  hws/kaapi_ws_queue_lifo.c \
-  hws/kaapi_ws_queue_kproc.c \
   static/kaapi_stsched_tasksetstatic.c \
   static/kaapi_threadgroup_nothgrp.c\
   static/kaapi_stsched_taskrecv.c\
   static/kaapi_stsched_taskbcast.c
-
-#   hws/kaapi_hws_splitter.c \
-  hws/kaapi_hws_adaptive.c 
 
 if KAAPI_TARGET_STATICSCHED
 #Partitionning

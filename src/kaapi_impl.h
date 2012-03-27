@@ -446,8 +446,6 @@ extern uint64_t kaapi_perf_thread_delayinstate(struct kaapi_processor_t* kproc);
 #include "kaapi_machine.h"
 /* ========== MACHINE DEPEND DATA STRUCTURE =========== */
 
-#include "kaapi_hws.h"
-
 
 #include "kaapi_tasklist.h"
 
@@ -489,13 +487,6 @@ static inline void kaapi_sched_waitlock( kaapi_lock_t* lock)
 {
   kaapi_atomic_waitlock(lock);
 }
-
-
-/* Return the hws queueblock at level levelid
-*/
-extern kaapi_ws_queue_t* kaapi_hws_queue_atlevel (
-  kaapi_hws_levelid_t levelid
-);
 
 
 static inline

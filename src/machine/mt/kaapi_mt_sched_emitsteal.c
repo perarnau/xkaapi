@@ -82,6 +82,28 @@ kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
   kaapi_assert_debug( kproc->thread !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
   
+  
+  if (kproc->mailbox.head != 0 )
+  {
+    kaapi_task_withlink_t* taskwl;
+
+    /* pop the first item at kproc->mailbox.head
+       lock free MPSC FIFO queue must be used here.
+    */
+    kaapi_atomic_lock(&kproc->lock);
+    taskwl = kproc->mailbox.head;
+    if (kproc->mailbox.tail == taskwl)
+      kproc->mailbox.tail = 0;
+    kproc->mailbox.head = taskwl->next;
+    kaapi_atomic_unlock(&kproc->lock);
+    
+    /* push the task into local queue */
+    *kaapi_thread_toptask(&kproc->thread->stack.stackframe[0]) = taskwl->task;
+    kaapi_thread_pushtask(&kproc->thread->stack.stackframe[0]);
+
+    return KAAPI_REQUEST_S_OK;
+  }
+  
   if (kaapi_count_kprocessors <2) 
     return KAAPI_REQUEST_S_NOK;
     

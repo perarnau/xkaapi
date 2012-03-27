@@ -101,7 +101,7 @@ struct kaapi_event_buffer_t;
 extern kaapi_atomic_t kaapi_term_barrier;
 
 /* ========================================================================= */
-/** Termination detecting barrier
+/** Termination flag
 */
 extern volatile int kaapi_isterm;
 
@@ -164,6 +164,21 @@ typedef struct kaapi_lfree
   kaapi_thread_context_t* _front;
   kaapi_thread_context_t* _back;
 } kaapi_lfree_t;
+
+
+/**
+*/
+typedef struct kaapi_task_withlink_t {
+  struct kaapi_task_withlink_t* volatile next;
+  kaapi_task_t                           task;
+} kaapi_task_withlink_t;
+
+/** Mail box queue: remote thead may push stealtask into this queue.
+*/
+typedef  struct {
+  kaapi_task_withlink_t*         volatile head;
+  kaapi_task_withlink_t*         volatile tail;
+}   __attribute__((aligned(KAAPI_CACHE_LINE))) kaapi_mailbox_queue_t;
 
 
 /** \ingroup WS
@@ -400,10 +415,13 @@ typedef struct kaapi_processor_t {
   kaapi_lock_t             lock                           /* all requests attached to each kprocessor ordered by increasing level */
     __attribute__((aligned(KAAPI_CACHE_LINE)));
 
+  kaapi_mailbox_queue_t    mailbox;
+
   int volatile             isidle;                        /* true if kproc is idle (active thread is empty) */
 
   kaapi_wsqueuectxt_t      lsuspend                       /* list of suspended context */
       __attribute__((aligned(KAAPI_CACHE_LINE)));
+
   /* free list */
   kaapi_lfree_t		         lfree;                         /* queue of free context */
   int                      sizelfree;                     /* size of the queue */
@@ -432,7 +450,7 @@ typedef struct kaapi_processor_t {
   kaapi_perf_counter_t	   perf_regs[2][KAAPI_PERF_ID_MAX];
   kaapi_perf_counter_t*	   curr_perf_regs;                /* either perf_regs[0], either perf_regs[1] */
 
-  int	                   papi_event_set;
+  int	                     papi_event_set;
   unsigned int	           papi_event_count;
   kaapi_perf_counter_t     start_t[2];                    /* [KAAPI_PERF_SCHEDULE_STATE]= T1 else = Tidle */
    

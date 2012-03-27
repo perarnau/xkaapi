@@ -883,14 +883,9 @@ static inline int kaapi_thread_pushtask_withocr(kaapi_thread_t* thread, const vo
   return 0;
 }
 
-/*
-*/
-extern int kaapi_thread_pushtask_atlevel(kaapi_task_t*, kaapi_hws_levelid_t);
-extern int kaapi_thread_pushtask_atlevel_with_nodeid(kaapi_task_t*, kaapi_hws_levelid_t, unsigned int);
-
 /** \ingroup TASK
-    The function kaapi_thread_distribute_task() pushes the top task into the stack
-    and into a hierarchical queue specify by levelid.
+    The function kaapi_thread_distribute_task() pushes the top task into the mailbox of processor kid.
+    The task must be ready and does not have false dependencies (RAW or WAW) nor CW accesses.
     If successful, the kaapi_thread_distribute_task() function will return zero.
     Otherwise, an error number will be returned to indicate the error.
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
@@ -898,11 +893,8 @@ extern int kaapi_thread_pushtask_atlevel_with_nodeid(kaapi_task_t*, kaapi_hws_le
 */
 extern int kaapi_thread_distribute_task (
   kaapi_thread_t* thread,
-  kaapi_hws_levelid_t levelid
+  kaapi_processor_id_t kid
 );
-
-extern int kaapi_thread_distribute_task_with_nodeid
-(kaapi_thread_t*, kaapi_hws_levelid_t, unsigned int);
 
 /** \ingroup TASK
     Task initialization routines
@@ -2294,88 +2286,6 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     isinit = 1;\
     kaapi_format_structregister( &formatobject, name, size, cstor, dstor, cstorcopy, copy, assign );\
   }
-
-
-/* ========================================================================== */
-/** \ingroup HWS
-    initialize hierarchical workstealing. must be called only once globally.
-    \retval -1 on error, 0 on success
- */
-extern int kaapi_hws_init_global(void);
-extern int kaapi_hws_fini_global(void);
-
-/* ========================================================================== */
-/** \ingroup HWS
-    initialize hierarchical workstealing. must be called only once per kproc.
-    \retval -1 on error, 0 on success
- */
-extern int kaapi_hws_init_perproc(struct kaapi_processor_t*);
-extern int kaapi_hws_fini_perproc(struct kaapi_processor_t*);
-
-
-/* ========================================================================== */
-/** \ingroup HWS
-    push a task at a given hierarchy level
-    \retval -1 on error, 0 on success
- */
-/* DEPRECATED: move to kaapi_thread_pushtask_atlevel */
-static inline int kaapi_hws_pushtask(kaapi_task_t* task, kaapi_hws_levelid_t lid)
-{ return kaapi_thread_pushtask_atlevel(task, lid); }
-
-static inline int kaapi_hws_pushtask_flat(kaapi_task_t* task)
-{
-  return kaapi_thread_pushtask_atlevel(task, KAAPI_HWS_LEVELID_FLAT);
-}
-
-static inline int kaapi_hws_pushtask_machine(kaapi_task_t* task)
-{
-  return kaapi_thread_pushtask_atlevel(task, KAAPI_HWS_LEVELID_MACHINE);
-}
-
-static inline int kaapi_hws_pushtask_numa(kaapi_task_t* task)
-{
-  return kaapi_thread_pushtask_atlevel(task, KAAPI_HWS_LEVELID_NUMA);
-}
-/* ========================================================================== */
-/** \ingroup HWS
-    retrieve the memory node id for the given request
-    \retval the node id
- */
-extern unsigned int kaapi_hws_get_request_nodeid(const struct kaapi_request_t*);
-
-/* ========================================================================== */
-/** \ingroup HWS
-    get the node count at the given hierarchy level
-    \retval the node count
- */
-extern unsigned int kaapi_hws_get_node_count(kaapi_hws_levelid_t);
-
-/* ========================================================================== */
-/** \ingroup HWS
-    get the leaf count at the given hierarchy level
-    \retval the leaf count
- */
-extern unsigned int kaapi_hws_get_leaf_count(kaapi_hws_levelid_t);
-
-#if 0
-/* ========================================================================== */
-/** \ingroup HWS
-    get splitter info related to HWS
-    \retval -1 if this is not a HWS splitter. 0 otherwise.
- */
-extern int kaapi_hws_get_splitter_info
-(kaapi_stealcontext_t*, kaapi_hws_levelid_t*);
-extern void kaapi_hws_clear_splitter_info
-(kaapi_stealcontext_t*);
-
-extern void kaapi_hws_end_adaptive(kaapi_stealcontext_t* sc);
-#endif // #if 0
-
-/* ========================================================================== */
-/** \ingroup HWS
-    print counters
- */
-void kaapi_hws_print_counters(void);
 
 
 #ifdef __cplusplus

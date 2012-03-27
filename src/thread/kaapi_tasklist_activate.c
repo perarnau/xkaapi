@@ -42,7 +42,6 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include "kaapi_hws.h"
 
 /** Activate and push ready tasks of an activation link.
     Return 1 if at least one ready task has been pushed into ready queue.
@@ -57,8 +56,8 @@ int kaapi_tasklist_pushready_td(
     int                     priority
 )
 {
-  kaapi_ws_queue_t* queue = 0;
 #if 0 /* desactivate this portion of code if you do not want push on remote queue */
+  kaapi_ws_queue_t* queue = 0;
   int nodeid;
   kaapi_bitmap_value32_t ocr = td->ocr;
   uintptr_t addr = 0;
@@ -107,7 +106,7 @@ int kaapi_tasklist_pushready_td(
   }
 #endif
   
-  if (queue == 0)
+  if (1) //(queue == 0)
   {
     /* I was not able to identify a queue for the task: push locally */
     kaapi_readylist_pushone_td( 
