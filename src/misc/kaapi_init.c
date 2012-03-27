@@ -160,6 +160,7 @@ static int kaapi_setup_param()
   emitsteal = getenv("KAAPI_EMITSTEAL");
   if (emitsteal != NULL)
   {
+#if 0
 #if KAAPI_USE_HWLOC
     if (strcmp(emitsteal, "hws") == 0)
     {
@@ -168,6 +169,7 @@ static int kaapi_setup_param()
     }
     else
 #endif /* KAAPI_USE_HWLOC */
+#endif
     if (strcmp(emitsteal, "flat") == 0)
     {
       kaapi_default_param.emitsteal          = kaapi_sched_flat_emitsteal;

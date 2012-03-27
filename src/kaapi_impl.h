@@ -656,33 +656,6 @@ extern kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kp
 */
 extern int kaapi_sched_flat_emitsteal_init(kaapi_processor_t*);
 
-/** \ingroup HWS
-    Hierarchical workstealing routine
-    \retval KAAPI_REQUEST_S_NOK in case of failure of stealing something
-    \retval KAAPI_REQUEST_S_OK in case of success of the steal operation
-*/
-extern kaapi_request_status_t kaapi_hws_emitsteal ( kaapi_processor_t* kproc );
-
-/** \ingroup WS
-    The method initialize the information required for the hierarchical emitsteal function.
-    \retval 0 in case success
-    \retval an error code
-*/
-extern int kaapi_hws_emitsteal_init(kaapi_processor_t*);
-
-/** \ingroup HWS
-    Split the task among the given level leaves
-    \retval the splitter returned value
-*/
-extern int kaapi_hws_splitter
-(kaapi_stealcontext_t*, kaapi_task_splitter_t, void*, kaapi_hws_levelid_t);
-
-/** \ingroup HWS
-    equivalent of kaapi_taskadapt_body, tailored for HWS
-*/
-extern void kaapi_hws_adapt_body(void* arg, kaapi_thread_t* thread);
-
-
 /** \ingroup WS
     Advance polling of request for the current running thread.
     If this method is called from an other running thread than proc,
