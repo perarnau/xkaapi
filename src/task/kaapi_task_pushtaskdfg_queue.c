@@ -54,7 +54,14 @@ int kaapi_thread_distribute_task (
   kaapi_processor_id_t kid
 )
 {
-  kaapi_processor_t* kproc = 0;
+  kaapi_processor_t* kproc;
+  if (kid >= kaapi_getconcurrency())
+    kid %= kaapi_getconcurrency();
+  kproc = kaapi_get_current_processor();
+  if (kproc->kid == kid)
+    return kaapi_thread_pushtask( kaapi_threadcontext2thread(kproc->thread) );
+
+  kproc = kaapi_all_kprocessors[kid];
   
   /* the task is in the own queue of the thread but not yet visible to other threads */
   kaapi_task_t* local_task = kaapi_thread_toptask(thread);
