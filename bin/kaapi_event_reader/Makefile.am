@@ -14,10 +14,35 @@ all-bfs: $(BIN_PRGS)
 
 kaapi_event_reader_SOURCES=kaapi_event_reader.cpp
 
-kaapi_event_reader_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS) $(CUDA_CPPFLAGS)
-kaapi_event_reader_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIPROGS_BUILD_CXXFLAGS) $(CUDA_CXXFLAGS)
-kaapi_event_reader_LDFLAGS =$(AM_LDFLAGS) $(KAAPIPROGS_BUILD_LDFLAGS) $(CUDA_LDFLAGS)
-kaapi_event_reader_LDADD   =$(LIBS) $(KAAPIPROGS_BUILD_LIBS) $(CUDA_LIBS) -lcuda -lcublas
+kaapi_event_reader_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
+if KAAPI_TARGET_CUDA
+kaapi_event_reader_CPPFLAGS+=$(CUDA_CPPFLAGS)
+endif 
+if KAAPI_TARGET_CUPTI
+kaapi_event_reader_CPPFLAGS+=$(CUPTI_CPPFLAGS)
+endif
+
+kaapi_event_reader_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIPROGS_BUILD_CXXFLAGS)
+if KAAPI_TARGET_CUDA
+kaapi_event_reader_CXXFLAGS+=$(CUDA_CXXFLAGS)
+endif 
+if KAAPI_TARGET_CUPTI
+kaapi_event_reader_CXXFLAGS+=$(CUPTI_CXXFLAGS)
+endif
+kaapi_event_reader_LDFLAGS =$(AM_LDFLAGS) $(KAAPIPROGS_BUILD_LDFLAGS)
+if KAAPI_TARGET_CUDA
+kaapi_event_reader_LDFLAGS+=$(CUDA_LDFLAGS)
+endif 
+if KAAPI_TARGET_CUPTI
+kaapi_event_reader_LDFLAGS+=$(CUPTI_LDFLAGS)
+endif
+kaapi_event_reader_LDADD   =$(LIBS) $(KAAPIPROGS_BUILD_LIBS)
+if KAAPI_TARGET_CUDA
+kaapi_event_reader_LDADD+=$(CUDA_LDADD)
+endif 
+if KAAPI_TARGET_CUPTI
+kaapi_event_reader_LDADD+=$(CUPTI_LDADD)
+endif
 
 if KAAPI_USE_EXTERNAL_POTI
 kaapi_event_reader_CPPFLAGS+= $(POTI_CPPFLAGS)

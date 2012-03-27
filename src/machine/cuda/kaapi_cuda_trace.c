@@ -44,7 +44,7 @@
 ** 
 */
 
-#if defined(KAAPI_USE_PERFCOUNTER)
+#if defined(KAAPI_USE_PERFCOUNTER) && defined(KAAPI_USE_CUPTI)
 
 #include <stdio.h>
 #include <cuda_runtime_api.h>

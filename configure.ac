@@ -608,7 +608,7 @@ dnl    CUDA is there
   ],
   [
   ],
-  [])
+  [-lcublas])
 AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$HACK_USE_CUDA" = x"yes"])
 ACX_LIB_LINK([KAAPILIB],[CUDA])
 

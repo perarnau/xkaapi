@@ -47,7 +47,7 @@
 #ifndef KAAPI_CUDA_TRACE_H_INCLUDED
 #define KAAPI_CUDA_TRACE_H_INCLUDED
 
-#if defined(KAAPI_USE_PERFCOUNTER)
+#if defined(KAAPI_USE_PERFCOUNTER) && defined(KAAPI_USE_CUPTI)
 
 #include <cuda_runtime_api.h>
 #include <cupti.h>
