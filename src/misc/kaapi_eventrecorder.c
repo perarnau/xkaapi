@@ -164,7 +164,7 @@ static void* _kaapi_event_flushimator(void* arg)
     pthread_mutex_lock(&mutex_listevt);
     while (listevt_head ==0)
     {
-      if (kaapi_isterminated()) 
+      if (kaapi_isterminated())
         goto exit_fromterm;
       pthread_cond_wait(&signal_thread, &mutex_listevt);
     }
@@ -217,8 +217,8 @@ kaapi_event_buffer_t* kaapi_event_flushbuffer( kaapi_event_buffer_t* evb )
     listevt_tail->next = evb;
   else listevt_head = evb;
   listevt_tail = evb;
-  pthread_mutex_unlock(&mutex_listevt);
   pthread_cond_signal(&signal_thread);
+  pthread_mutex_unlock(&mutex_listevt);
 
   /* alloc new buffer */
   if (listevtfree_head ==0)
@@ -251,8 +251,8 @@ void kaapi_event_closebuffer( kaapi_event_buffer_t* evb )
     listevt_tail->next = evb;
   else listevt_head = evb;
   listevt_tail = evb;
-  pthread_mutex_unlock(&mutex_listevt);
   pthread_cond_signal(&signal_thread);
+  pthread_mutex_unlock(&mutex_listevt);
 }
 
 
