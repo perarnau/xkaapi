@@ -59,15 +59,23 @@ struct FileSet;
 */
 extern struct FileSet* OpenFiles( int count, const char** filenames );
 
+/* Return the header information of the ith file of the set fdset.
+   Return 0 in case of success.
+*/
+extern int GetHeader(struct FileSet* fdset, int ith, kaapi_eventfile_header* header );
+
 /* Return the [min,max] date value. Return 0 in case of success.
+   Return 0 in case of success.
 */
 extern int GetInterval(struct FileSet* fdset, uint64_t* tmin, uint64_t* tmax );
 
 /* Return the number of kprocessor. -1 in case of error
+   Return 0 in case of success.
 */
 extern int GetProcessorCount(struct FileSet* fdset );
 
 /* Read and call callback on each event, ordered by date (in nanosecond)
+   Return 0 in case of success.
 */
 extern int ReadFiles(struct FileSet* fdset, void (*callback)( char* name, const kaapi_event_t* event) );
 

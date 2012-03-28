@@ -62,11 +62,14 @@
 
 /* Reader for one file */
 struct file_event {
-  int                  fd;
-  char                 name[128]; /* container name */
-  size_t               rpos;      /* next position to read */
-  kaapi_event_t*       addr;      /* memory mapped file */
-  size_t               size;
+  int                     fd;
+  char                    name[128]; /* container name */
+  kaapi_eventfile_header* header;    /* pointer to the header of the file */
+  kaapi_event_t*          base;      /* base for event */
+  size_t                  rpos;      /* next position to read event */
+  size_t                  end;       /* past the last position to read event */
+  void*                   addr;      /* memory mapped file */
+  size_t                  size;      /* file size */
 };
 
 /* Compare (less) for priority queue
@@ -137,9 +140,10 @@ FileSet* OpenFiles( int count, const char** filenames )
     if (fd_stat.st_size ==0) 
       continue;
 
+    fdset->fds[c].base = 0;
     fdset->fds[c].rpos = 0;
     fdset->fds[c].size = fd_stat.st_size;
-    fdset->fds[c].addr = (kaapi_event_t*)mmap(
+    fdset->fds[c].addr = (void*)mmap(
           0, 
           fdset->fds[c].size, 
           PROT_READ|PROT_WRITE, 
@@ -147,7 +151,7 @@ FileSet* OpenFiles( int count, const char** filenames )
           fdset->fds[c].fd,
           0
     );
-    if (fdset->fds[c].addr == (kaapi_event_t*)-1)
+    if (fdset->fds[c].addr == (void*)-1)
     {
       fprintf(stderr, "*** cannot map file '%s', error=%i, msg=%s\n", 
           filenames[i],
@@ -156,17 +160,20 @@ FileSet* OpenFiles( int count, const char** filenames )
       );
       return 0;
     }
-    fdset->fds[c].size /= sizeof(kaapi_event_t);
-    fdset->filenames[c] = filenames[i];
+    fdset->fds[c].header = (kaapi_eventfile_header*)fdset->fds[c].addr;
+    fdset->fds[c].base   = (kaapi_event_t*)(fdset->fds[c].header+1);
+    fdset->fds[c].rpos   = 0;
+    fdset->fds[c].end    = (fdset->fds[c].size-sizeof(kaapi_eventfile_header)) / sizeof(kaapi_event_t);
+    fdset->filenames[c]  = filenames[i];
     
     /* update min/max */
-    if (fdset->fds[c].addr[0].date < fdset->tmin)
-      fdset->tmin = fdset->fds[c].addr[0].date;
-    if (fdset->tmax < fdset->fds[c].addr[fdset->fds[c].size-1].date)
-      fdset->tmax = fdset->fds[c].addr[fdset->fds[c].size-1].date;
+    if (fdset->fds[c].base[0].date < fdset->tmin)
+      fdset->tmin = fdset->fds[c].base[0].date;
+    if (fdset->tmax < fdset->fds[c].base[fdset->fds[c].end-1].date)
+      fdset->tmax = fdset->fds[c].base[fdset->fds[c].end-1].date;
 
     /* insert date of first event in queue */
-    fdset->eventqueue.push( next_event_t(fdset->fds[c].addr->date, c) );
+    fdset->eventqueue.push( next_event_t(fdset->fds[c].base->date, c) );
 
     /* */
     ++c;
@@ -194,10 +201,10 @@ int ReadFiles(FileSet* fdset, void (*callback)( char* name, const kaapi_event_t*
     
 
     /* The container name is passed in/out: first event can initialize them */
-    callback( fe->name, &fe->addr[fe->rpos++] );
+    callback( fe->name, &fe->base[fe->rpos++] );
     
-    if (fe->rpos < fe->size)
-      fdset->eventqueue.push( next_event_t(fe->addr[fe->rpos].date, ne.fds) );
+    if (fe->rpos < fe->end)
+      fdset->eventqueue.push( next_event_t(fe->base[fe->rpos].date, ne.fds) );
   }
   return 0;
 }
@@ -210,7 +217,7 @@ const kaapi_event_t* TopEvent(FileSet* fdset)
 
   next_event_t ne = fdset->eventqueue.top();
   file_event* fe = &fdset->fds[ne.fds];
-  const kaapi_event_t* retval = &fe->addr[fe->rpos];
+  const kaapi_event_t* retval = &fe->base[fe->rpos];
 
   return retval;
 }
@@ -232,8 +239,8 @@ void NextEvent(FileSet* fdset)
   file_event* fe = &fdset->fds[ne.fds];
   fe->rpos++;
     
-  if (fe->rpos < fe->size)
-    fdset->eventqueue.push( next_event_t(fe->addr[fe->rpos].date, ne.fds) );
+  if (fe->rpos < fe->end)
+    fdset->eventqueue.push( next_event_t(fe->base[fe->rpos].date, ne.fds) );
 }
 
 /* Return the [min,max] date value
@@ -243,6 +250,20 @@ int GetProcessorCount(struct FileSet* fdset )
   if (fdset == 0) 
     return -1;
   return (int)fdset->fds.size();
+}
+
+
+/* Return the header information of the ith file of the set fdset.
+   Return 0 in case of success.
+*/
+int GetHeader(struct FileSet* fdset, int ith, kaapi_eventfile_header* header )
+{
+  if (fdset == 0) 
+    return EINVAL;
+  if ((ith <0) || (ith >= (int)fdset->fds.size()))
+    return EINVAL;
+  memcpy(header, fdset->fds[ith].header, sizeof(kaapi_eventfile_header));
+  return 0;
 }
 
 /* Return the [min,max] date value
@@ -269,7 +290,7 @@ int CloseFiles(FileSet* fdset )
   for (int i=0; i<count; ++i)
   {
     close(fdset->fds[i].fd);
-    munmap(fdset->fds[i].addr, fdset->fds[i].size*sizeof(kaapi_event_t) );
+    munmap(fdset->fds[i].addr, fdset->fds[i].size );
   }
   delete fdset;
   return 0;

@@ -51,6 +51,8 @@
 extern "C" {
 #endif
 
+#define __KAAPI_TRACE_VERSION__         1
+
 /** Definition of internal KAAPI events.
     Not that any extension or modification of the events must
     be reflected in the utility bin/kaapi_event_reader.
@@ -149,6 +151,7 @@ typedef union {
     uintptr_t i; 
 } kaapi_event_data_t;
 
+
 /* Event 
 */
 typedef struct kaapi_event_t {
@@ -171,6 +174,17 @@ typedef struct kaapi_event_buffer_t {
   int                                   kid;
   kaapi_event_t                         buffer[KAAPI_EVENT_BUFFER_SIZE];
 } kaapi_event_buffer_t;
+
+/** Header of the trace file. First block of each trace file.
+*/
+typedef struct kaapi_eventfile_header {
+  int       version;
+  int       minor_version;
+  int       trace_version;
+  int       cpucount;
+  uint64_t  event_mask;
+  char      package[128];
+} kaapi_eventfile_header;
 
 
 #if defined(__cplusplus)

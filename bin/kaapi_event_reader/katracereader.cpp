@@ -63,6 +63,7 @@
 
 
 /** see kaapi_event.h for coding of event name */
+#if (__KAAPI_TRACE_VERSION__ == 1)
 static const char* kaapi_event_name[] = {
 /* 0 */  "K-ProcStart",
 /* 1 */  "K-ProcEnd",
@@ -93,6 +94,9 @@ static const char* kaapi_event_name[] = {
 /*26 */  "ForEachEnd",
 /*27 */  "ForEachSteal"
 };
+#else
+#error "Undefined trace version"
+#endif
 
 
 /* Type of function to process data
@@ -113,6 +117,31 @@ static void print_usage()
   fprintf(stderr, "  -p: output Paje format for Gantt diagram, one row per core\n");
   fprintf(stderr, "      Output filename is gantt.paje\n");
   exit(1);
+}
+
+/*
+*/
+std::string Binary(uint64_t value)
+{
+	char digits[] = "0123456789";
+	std::string output;
+  do {
+    output = digits[value % 2] + output;
+    value /= 2;
+  } while(value !=0);
+	return output;
+}
+
+/*
+*/
+static void print_traceheader(const kaapi_eventfile_header* header)
+{
+  std::cout << "Kaapi version number :" << header->version << std::endl;
+  std::cout << "Kaapi minor version  :" << header->minor_version << std::endl;
+  std::cout << "Trace format version :" << header->trace_version << std::endl;
+  std::cout << "Kaapi cpucount used  :" << header->cpucount << std::endl;
+  std::cout << "Event mask           :" << Binary(header->event_mask) << std::endl;
+  std::cout << "Kaapi package        :" << header->package << std::endl;
 }
 
 
@@ -231,6 +260,11 @@ static void fnc_print_evt( int count, const char** filenames )
 {
   FileSet* fs;
   fs = OpenFiles( count, filenames );
+  kaapi_eventfile_header header;
+  if (GetHeader(fs, 0, &header) ==0)
+  {
+    print_traceheader(&header);
+  }
   ReadFiles(fs, callback_print_event );
   CloseFiles(fs);
 }

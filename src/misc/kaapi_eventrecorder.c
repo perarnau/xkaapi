@@ -50,6 +50,9 @@
 #include "kaapi_impl.h"
 #include "kaapi_event_recorder.h"
 
+/*
+*/
+extern const char* get_kaapi_git_hash(void);
 
 /* global mask of events to register */
 uint64_t kaapi_event_mask;
@@ -80,9 +83,11 @@ static pthread_mutex_t mutex_listevtfree_head;
 */
 static int listfd_set[KAAPI_MAX_PROCESSOR];
 
+
 /** The thread to join in termination
 */
 static pthread_t collector_threadid;
+
 
 /* write one bloc. Should not be concurrent */
 static void _kaapi_write_evb( kaapi_event_buffer_t* evb )
@@ -100,11 +105,25 @@ static void _kaapi_write_evb( kaapi_event_buffer_t* evb )
     listfd_set[kid] = open(filename, O_WRONLY|O_CREAT|O_TRUNC);
     kaapi_assert( listfd_set[kid] != -1 );
     fchmod( listfd_set[kid], S_IRUSR|S_IWUSR);
+    
+    /* write the header */
+    kaapi_eventfile_header header;
+    header.version         = __KAAPI__;
+    header.minor_version   = __KAAPI_MINOR__;
+    header.trace_version   = __KAAPI_TRACE_VERSION__;
+    header.cpucount        = kaapi_default_param.cpucount;
+    header.event_mask      = kaapi_event_mask;
+    const char* gitversion = get_kaapi_git_hash();
+    memset(header.package, 0, sizeof(header.package));
+    strncpy(header.package, gitversion, sizeof(header.package)-1);
+    ssize_t sz_write = write(listfd_set[kid], &header, sizeof(header));
+    kaapi_assert(sz_write == sizeof(header));
   }
   ssize_t sz_write = write(listfd_set[kid], evb->buffer, sizeof(kaapi_event_t)*evb->pos);
   kaapi_assert( sz_write == (ssize_t)(sizeof(kaapi_event_t)*evb->pos) );
   evb->pos = 0;
 }
+
 
 /* Write all buffers in the list */
 void kaapi_event_fencebuffers(void)
@@ -172,7 +191,6 @@ exit_fromterm:
 }
 
 
-
 /**
 */
 kaapi_event_buffer_t* kaapi_event_openbuffer(int kid)
@@ -183,6 +201,7 @@ kaapi_event_buffer_t* kaapi_event_openbuffer(int kid)
   evb->next = 0;
   return evb;
 }
+
 
 /**
 */
@@ -237,7 +256,6 @@ void kaapi_event_closebuffer( kaapi_event_buffer_t* evb )
 }
 
 
-
 /**
 */
 void kaapi_eventrecorder_init(void)
@@ -257,8 +275,6 @@ void kaapi_eventrecorder_init(void)
   pthread_cond_init(&signal_thread, 0);
   pthread_create(&collector_threadid, 0, _kaapi_event_flushimator, 0);
 }
-
-
 
 
 /** Finish trace. Assume that threads have reach the barrier and have flush theirs buffers

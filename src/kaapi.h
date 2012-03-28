@@ -58,7 +58,7 @@
 #endif
 
 #define __KAAPI__ 1
-#define __KAAPI_MINOR__ 3
+#define __KAAPI_MINOR__ 2
 
 #if !defined(__SIZEOF_POINTER__)
 #  if defined(__LP64__) || defined(__x86_64__)
