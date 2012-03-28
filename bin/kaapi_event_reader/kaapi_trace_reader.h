@@ -74,7 +74,9 @@ extern int GetInterval(struct FileSet* fdset, uint64_t* tmin, uint64_t* tmax );
 */
 extern int GetProcessorCount(struct FileSet* fdset );
 
-/* Read and call callback on each event, ordered by date (in nanosecond)
+/* Read and call callback on each event, ordered by date (in nanosecond).
+   It is safe for the callback to iterate through event[0]...event[k] until event[k] is the KAAPI_EVT_KPROC_STOP
+   event.
    Return 0 in case of success.
 */
 extern int ReadFiles(struct FileSet* fdset, void (*callback)( char* name, const kaapi_event_t* event) );

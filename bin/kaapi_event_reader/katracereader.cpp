@@ -104,7 +104,6 @@ static const char* kaapi_event_name[] = {
 typedef void (*kaapi_fnc_event)( int, const char** );
 
 
-
 /*
 */
 static void print_usage()
@@ -119,6 +118,7 @@ static void print_usage()
   exit(1);
 }
 
+
 /*
 */
 std::string Binary(uint64_t value)
@@ -132,6 +132,7 @@ std::string Binary(uint64_t value)
 	return output;
 }
 
+
 /*
 */
 static void print_traceheader(const kaapi_eventfile_header* header)
@@ -143,7 +144,6 @@ static void print_traceheader(const kaapi_eventfile_header* header)
   std::cout << "Event mask           :" << Binary(header->event_mask) << std::endl;
   std::cout << "Kaapi package        :" << header->package << std::endl;
 }
-
 
 /* Print human readable version of each event */
 void callback_print_event(
@@ -254,6 +254,7 @@ void callback_print_event(
   std::cout << std::endl;
 }
 
+
 /*
 */
 static void fnc_print_evt( int count, const char** filenames )
@@ -268,6 +269,7 @@ static void fnc_print_evt( int count, const char** filenames )
   ReadFiles(fs, callback_print_event );
   CloseFiles(fs);
 }
+
 
 /*
 */
@@ -435,34 +437,6 @@ static void fnc_statistic_task_kid( int count, const char** filenames )
 #endif
 }
 
-/* */
-struct file_event {
-  int                  fd;
-  char                 name[128]; /* container name */
-  size_t               rpos; /* next position to read */
-  kaapi_event_t*       addr; /* memory mapped file */
-  size_t               size;
-};
-
-/* double
-*/
-double tmax = 0;
-
-/* Compare (less) for priority queue
-*/
-struct next_event_t {
-  next_event_t( uint64_t d=0, int f=0 )
-   : date(d), fds(f) 
-  {}
-
-  uint64_t date;
-  int      fds;  /* index in file_event set */
-  
-};
-struct compare_event {
-  bool operator()( const next_event_t& e1, const next_event_t& e2)
-  { return e1.date > e2.date; }
-};
 
 /* set of successfull steal request, one entry per processor kid
 */
@@ -475,38 +449,34 @@ static std::vector<std::set<uint64_t> > gantt_steal_op_issuccess;
    And the combinator processor that has processed the request generate:
    - KAAPI_EVT_SEND_REPLY
 */
-static void paje_mark_steal_status( file_event* fe )
+static void paje_mark_steal_status( const kaapi_event_t* event )
 {
-  size_t rpos = fe->rpos;
-  kaapi_event_t* curr;
   uint64_t serial;
 
-  curr = &fe->addr[rpos];
-  if ( curr->evtno != KAAPI_EVT_STEAL_OP)
+  if ( event->evtno != KAAPI_EVT_STEAL_OP)
   {
     fprintf(stderr,"[internal error]: Bad call to paje_mark_steal_status\n");
     exit(1);
   }
-  serial = curr->d1.i;
+  serial = event->d1.i;
 
-  while (rpos < fe->size)
+  while (event->evtno != KAAPI_EVT_KPROC_STOP)
   {
-    if (curr->evtno == KAAPI_EVT_RECV_REPLY)
+    if (event->evtno == KAAPI_EVT_RECV_REPLY)
     {
-      if (curr->d1.i != serial)
+      if (event->d1.i != serial)
       {
         fprintf(stderr,"Trace is corrupted, RECV_REPLY event does not match STEAL_OP event\n");
         exit(1);
       }
-      int status = (curr->d2.i !=0);
-      if (gantt_steal_op_issuccess.size() <= curr->kid)
-        gantt_steal_op_issuccess.resize(1+curr->kid);
+      int status = (event->d2.i !=0);
+      if (gantt_steal_op_issuccess.size() <= event->kid)
+        gantt_steal_op_issuccess.resize(1+event->kid);
       if (status)
-        gantt_steal_op_issuccess[curr->kid].insert( serial );
+        gantt_steal_op_issuccess[event->kid].insert( serial );
       return;
     }
-    ++rpos;
-    curr = &fe->addr[rpos];
+    ++event;
   }
   fprintf(stderr,
     "Trace is corrupted, STEAL_OP is does not matched a RECV_REPLY event\n"
@@ -521,9 +491,12 @@ static void paje_mark_steal_status( file_event* fe )
  * then initialize it.
  */
 static int fnc_paje_gantt_header();
-static int fnc_paje_gantt_close();
+static int fnc_paje_gantt_close(uint64_t tmax);
 
-static void fnc_paje_event(char* name, const kaapi_event_t* event)
+static void callback_display_paje_event(
+  char* name,
+  const kaapi_event_t* event
+)
 {
   char tmp[128];
   char key[128];
@@ -679,6 +652,9 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
 
     /* emit steal */
     case KAAPI_EVT_STEAL_OP:
+      /* find in next event (safe in callback) if steal success */
+      paje_mark_steal_status( event );
+
       d0  = 1e-9*(double)event->date;
       kid = event->d0.i; /* victim id */
 #if 0
@@ -759,71 +735,20 @@ static void fnc_paje_event(char* name, const kaapi_event_t* event)
 static void fnc_paje_gantt( int count, const char** filenames )
 {
   int err;
-  struct stat fd_stat;
-  file_event* fdset;
-    
-  fdset = (file_event*)alloca( sizeof(file_event)*count );
+  FileSet* fs;
+  kaapi_eventfile_header header;
+  uint64_t tmin, tmax;
 
-  std::priority_queue<next_event_t,
-                      std::vector<next_event_t>,
-                      compare_event
-  > eventqueue;
-  
   gantt_steal_op_issuccess.resize( 256 );
 
-  /* open all files */
-  int c = 0;
-  for (int i=0; i<count; ++i)
-  {
-    fdset[c].fd = open(filenames[i], O_RDONLY);
-    if (fdset[c].fd == -1) 
-    {
-      fprintf(stderr, "*** cannot open file '%s'\n", filenames[i]);
-      exit(1);
-    }
-    fprintf(stdout, "*** file '%s'\n", filenames[i]);
-  
-    /* memory map the file */
-    err = fstat(fdset[c].fd, &fd_stat);
-    if (err !=0)
-    {
-      fprintf(stderr, "*** cannot read information about file '%s'\n", 
-          filenames[i]);
-      exit(1);
-    }
-
-    if (fd_stat.st_size ==0) 
-      continue;
-
-    fdset[c].rpos = 0;
-    fdset[c].size = fd_stat.st_size;
-    fdset[c].addr = (kaapi_event_t*)mmap(
-          0, 
-          fdset[c].size, 
-          PROT_READ|PROT_WRITE, 
-          MAP_PRIVATE,
-          fdset[c].fd,
-          0
-    );
-    if (fdset[c].addr == (kaapi_event_t*)-1)
-    {
-      fprintf(stderr, "*** cannot map file '%s', error=%i, msg=%s\n", 
-          filenames[i],
-          errno,
-          strerror(errno)
-      );
-      exit(1);
-    }
-    fdset[c].size /= sizeof(kaapi_event_t);
-
-    /* insert date of first event in queue */
-    eventqueue.push( next_event_t(fdset[c].addr->date, c) );
-//    std::cout << "Push date:" << fdset[c].addr->date << " file:" << c << std::endl;
-
-    /* */
-    ++c;
-  }
-  
+  fs = OpenFiles( count, filenames );
+  if (fs ==0) 
+    return;
+  if (GetHeader(fs, 0, &header) !=0)
+    return;
+  if (GetInterval(fs, &tmin, &tmax) !=0)
+    return;
+    
   /* output paje header */
   err = fnc_paje_gantt_header();
   if (err !=0) 
@@ -832,27 +757,14 @@ static void fnc_paje_gantt( int count, const char** filenames )
     exit(1);
   }
 
-  /* sort loop ! */
-  while (!eventqueue.empty())
-  {
-    next_event_t ne = eventqueue.top();
-    eventqueue.pop();
-    file_event* fe = &fdset[ne.fds];
-    
-    if (tmax < fe->addr[fe->rpos].date)
-      tmax = fe->addr[fe->rpos].date;
-
-    /* if KAAPI_EVT_STEAL_OP: lookup in next events, is steal was success */
-    if (fe->addr[fe->rpos].evtno == KAAPI_EVT_STEAL_OP)
-      paje_mark_steal_status( fe );
-
-    fnc_paje_event( fe->name, &fe->addr[fe->rpos++] );
-    if (fe->rpos < fe->size)
-      eventqueue.push( next_event_t(fe->addr[fe->rpos].date, ne.fds) );
-  }
-
+  /* generate all states/container etc... */
+  ReadFiles(fs, callback_display_paje_event );
+  
+  /* close & umap */
+  CloseFiles(fs);
+  
   /* close output file */
-  err = fnc_paje_gantt_close();
+  err = fnc_paje_gantt_close(tmax);
   if (err !=0) 
   {
     fprintf(stderr, "*** cannot close file: 'gantt.paje'\n");
@@ -929,13 +841,14 @@ static int fnc_paje_gantt_header()
 }
 
 
-static int fnc_paje_gantt_close()
+static int fnc_paje_gantt_close(uint64_t gantt_tmax)
 {
-  pajeDestroyContainer (1e-9*tmax, "ROOT", "root");
+  pajeDestroyContainer (1e-9*gantt_tmax, "ROOT", "root");
   pajeClose();
   fprintf(stdout, "*** Paje file 'gant.paje' closed\n");
   return 0;
 }
+
 
 /* Parse options:
    * nooption : nocode: print usage
