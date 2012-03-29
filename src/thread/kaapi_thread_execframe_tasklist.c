@@ -46,6 +46,20 @@
 #include "memory/kaapi_mem.h"
 #include "memory/kaapi_mem_host_map.h"
 
+int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
+{
+  kaapi_stack_t* const stack = &thread->stack;
+  kaapi_tasklist_t*          tasklist;
+  tasklist = stack->sfp->tasklist;
+  if (tasklist->master ==0)
+  {
+    while( KAAPI_ATOMIC_READ(&tasklist->cnt_exec) != tasklist->total_tasks )
+      kaapi_slowdown_cpu();
+  }
+    return 0;
+}
+
+#if 0
 /** Use the readylist and list of task to execute tasks.
     If the list doesnot have ready tasks but all the tasks
     are note executed, then return EWOULDBLOCK.
@@ -291,3 +305,4 @@ printf("EWOULDBLOCK case 1\n");
 #endif // #if !defined(TASKLIST_ONEGLOBAL_MASTER)  
 
 }
+#endif
