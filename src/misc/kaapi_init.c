@@ -71,7 +71,7 @@ kaapi_rtparam_t kaapi_default_param = {
    .kproc_list  = 0,
    .kid2cpu     = 0,
    .cpu2kid     = 0,
-   .eventmask   = ~KAAPI_EVT_MASK_STEALOP
+   .eventmask   = ~0ULL
 };
 
 
@@ -206,13 +206,11 @@ static int kaapi_setup_param()
         );
         return EINVAL;
       }
-            
+      printf("MASK:%s -> %ull\n", getenv("KAAPI_RECORD_MASK"), mask); 
+      fflush(stdout);
       /* always add startup set */
       kaapi_default_param.eventmask = mask | KAAPI_EVT_MASK_STARTUP;
     }
-    
-    /* push back eventmask: downcast to event mask with may be fewer bits */
-    kaapi_event_mask = (kaapi_event_mask_type_t)kaapi_default_param.eventmask;
   }
 #endif  
   

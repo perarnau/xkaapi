@@ -123,8 +123,9 @@ static void _kaapi_write_evb( kaapi_event_buffer_t* evb )
   ssize_t sz_write = write(listfd_set[kid], evb->buffer, sizeof(kaapi_event_t)*evb->pos);
   if (sz_write == -1)
   {
-    printf("Errno:%s", strerror(errno) );
-    _abort();
+    printf("Errno:%s\n", strerror(errno) );
+    fflush(stderr);
+    abort();
   }
   kaapi_assert( sz_write == (ssize_t)(sizeof(kaapi_event_t)*evb->pos) );
   evb->pos = 0;
@@ -296,7 +297,7 @@ void kaapi_eventrecorder_init(void)
   kaapi_event_startuptime = kaapi_event_date();
   
   /* mask all events types */
-  kaapi_event_mask= ~0UL;
+  kaapi_event_mask= kaapi_default_param.eventmask;
   
   for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
     listfd_set[i] = -1;
