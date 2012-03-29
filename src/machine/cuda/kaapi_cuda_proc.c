@@ -96,7 +96,9 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
   */
   kaapi_cuda_cublas_init( proc );
   kaapi_cuda_cublas_set_stream( );
-  kaapi_cuda_trace_thread_init();
+  if (getenv("KAAPI_RECORD_TRACE") !=0) {
+      kaapi_cuda_trace_thread_init();
+  }
   kaapi_cuda_sync();
 
 #if KAAPI_VERBOSE

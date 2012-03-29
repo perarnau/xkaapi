@@ -22,7 +22,7 @@ function run_test {
 #    export COMPUTE_PROFILE_CONFIG="$HOME/compute_profile_config.txt"
 
     export KAAPI_RECORD_TRACE=1
-#    export KAAPI_RECORD_MASK="COMPUTE,IDLE"
+    export KAAPI_RECORD_MASK="COMPUTE,IDLE"
     msizes="1024"
 #    msizes="4096"
 #    msizes="2048"

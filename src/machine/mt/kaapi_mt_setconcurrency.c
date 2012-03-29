@@ -288,7 +288,11 @@ void* kaapi_sched_run_processor( void* arg )
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
-  kaapi_cuda_trace_thread_finalize();
+#if defined(KAAPI_USE_CUDA)
+  if (getenv("KAAPI_RECORD_TRACE") !=0) {
+      kaapi_cuda_trace_thread_finalize();
+  }
+#endif /* KAAPI_USE_CUDA */
   kaapi_mt_perf_thread_fini( kproc );
 #endif
   

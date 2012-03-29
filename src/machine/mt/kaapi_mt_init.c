@@ -229,7 +229,9 @@ int kaapi_mt_init(void)
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* call prior setconcurrency */
   kaapi_perf_global_init();
-  kaapi_cuda_trace_init();
+  if (getenv("KAAPI_RECORD_TRACE") !=0) {
+    kaapi_cuda_trace_init();
+  }
   /* kaapi_perf_thread_init(); */
 #endif
     
@@ -357,7 +359,9 @@ int kaapi_mt_finalize(void)
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_EVENT_PUSH0(kaapi_all_kprocessors[0], 0, KAAPI_EVT_KPROC_STOP);
-  kaapi_cuda_trace_finalize();
+  if (getenv("KAAPI_RECORD_TRACE") !=0) {
+      kaapi_cuda_trace_finalize();
+  }
 //  kaapi_perf_thread_fini(kaapi_all_kprocessors[0]);
   kaapi_collect_trace();
 #endif
