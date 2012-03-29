@@ -87,6 +87,7 @@ static int listfd_set[KAAPI_MAX_PROCESSOR];
 /** The thread to join in termination
 */
 static pthread_t collector_threadid;
+static int volatile finalize_flushimator = 0;
 
 
 /* write one bloc. Should not be concurrent */
@@ -166,7 +167,7 @@ static void* _kaapi_event_flushimator(void* arg)
     pthread_mutex_lock(&mutex_listevt);
     while (listevt_head ==0)
     {
-      if (kaapi_isterminated())
+      if (finalize_flushimator)
         goto exit_fromterm;
       pthread_cond_wait(&signal_thread, &mutex_listevt);
     }
@@ -300,6 +301,7 @@ void kaapi_eventrecorder_init(void)
   pthread_cond_init(&signal_thread, 0);
   
   /* */
+  finalize_flushimator = 0;
   pthread_create(&collector_threadid, 0, _kaapi_event_flushimator, 0);
 }
 
@@ -313,8 +315,8 @@ void kaapi_eventrecorder_fini(void)
   kaapi_event_buffer_t* evb;
 
   pthread_mutex_lock(&mutex_listevt);
-  if (listevt_head ==0)
-    pthread_cond_signal(&signal_thread);
+  finalize_flushimator = 1;
+  pthread_cond_signal(&signal_thread);
   pthread_mutex_unlock(&mutex_listevt);
 
   /* wait terminaison of the collector thread */
