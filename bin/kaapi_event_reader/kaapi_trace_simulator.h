@@ -66,7 +66,8 @@ extern struct Simulator* OpenSimulator( struct FileSet* fds, double hres );
 extern int OneStepSimulator( struct Simulator* sim,
                              double* date,
                              int* count, 
-                             const double** efficiencies
+                             const double** efficiencies,
+                             const uint64_t** count_stealok
                            );
 
 /* Read and call callback on each event, ordered by date

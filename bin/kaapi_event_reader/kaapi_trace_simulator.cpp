@@ -50,7 +50,7 @@
 struct ProcessorState {
   int      active;            /* 1 iff active, 0 iff idle */
   uint64_t taskcount;
-  uint64_t stealcount;
+  uint64_t stealcount;        /* successfull steal operation */
   uint64_t tactive;           /* time where is active  */
   uint64_t tidle;             /* time where is idle */
   uint64_t lastdate;          /* last date where state changed */
@@ -72,6 +72,8 @@ struct Simulator {
   uint64_t                    tsim; /* in ns */
   std::vector<ProcessorState> procs;
   std::vector<double>         efficiencies;
+  std::vector<uint64_t>       count_steakok;
+  std::vector<uint64_t>       count_task;
 };
 
 /* Return the efficiency of the processor at the given date 
@@ -117,6 +119,15 @@ static double ProcessorEfficiencyAt( ProcessorState& proc, uint64_t tsim )
   return (double)(diff_tactive) / (double)(diff_tactive+diff_tidle);
 }
 
+static uint64_t ProcessorStealOkAt( ProcessorState& proc, uint64_t tsim )
+{
+  return proc.stealcount;
+}
+
+static uint64_t ProcessorTaskAt( ProcessorState& proc, uint64_t tsim )
+{
+  return proc.taskcount;
+}
 
 /*
 */
@@ -140,8 +151,10 @@ Simulator* OpenSimulator( FileSet* fds, double hres )
   if (count <=0) 
     goto return_on_error;
 
-  sim->procs.resize( count );
+  sim->procs.resize(count);
   sim->efficiencies.resize(count);
+  sim->count_steakok.resize(count);
+  sim->count_task.resize(count);
     
   for (i=0;i<count; ++i)
   {
@@ -168,10 +181,11 @@ return_on_error:
    On return the next simulation date is date+hres
 */
 extern "C"
-int OneStepSimulator( Simulator* sim,
-                      double* date,
-                      int* count, 
-                      const double** efficiencies
+int OneStepSimulator( Simulator*       sim,
+                      double*          date,
+                      int*             count, 
+                      const double**   efficiencies,
+                      const uint64_t** count_stealok
 )
 {
   int retval = 0;
@@ -181,9 +195,10 @@ int OneStepSimulator( Simulator* sim,
   
   if (EmptyEvent(sim->fds))
   {
-    *date         = 0;
-    *count        = 0;
-    *efficiencies = 0;
+    *date          = 0;
+    *count         = 0;
+    *efficiencies  = 0;
+    *count_stealok = 0;
     return 0;
   }
   
@@ -196,10 +211,7 @@ int OneStepSimulator( Simulator* sim,
       break;
     }
     
-    processor_simulate_event(
-      sim->procs[event->kid],
-      event
-    );
+    processor_simulate_event( sim->procs[event->kid], event );
     
     NextEvent(sim->fds);
   }
@@ -208,12 +220,16 @@ int OneStepSimulator( Simulator* sim,
   sim->tsim = nextTsim;
   *date  = 1e-9*(double)nextTsim;
   *count = (int)sim->procs.size();
+  
   /* compute efficiencies at date nextTsim */
   for (int i=0; i<sim->procs.size(); ++i)
   {
-    sim->efficiencies[i] = ProcessorEfficiencyAt( sim->procs[i], nextTsim );
+    sim->efficiencies[i]  = ProcessorEfficiencyAt( sim->procs[i], nextTsim );
+    sim->count_steakok[i] = ProcessorStealOkAt( sim->procs[i], nextTsim );
+    sim->count_task[i]    = ProcessorTaskAt( sim->procs[i], nextTsim );
   }
-  *efficiencies = &sim->efficiencies[0];
+  *efficiencies  = &sim->efficiencies[0];
+  *count_stealok = &sim->count_steakok[0];
    
   return retval;
 }
@@ -277,6 +293,7 @@ static void processor_simulate_event(
 
     /* exec task in static graph partitioning */
     case KAAPI_EVT_STATIC_TASK_BEG:
+      ++p.taskcount;
     break;
 
     case KAAPI_EVT_STATIC_TASK_END:
@@ -363,7 +380,6 @@ static void processor_simulate_event(
 
     /* emit steal */
     case KAAPI_EVT_STEAL_OP:
-      ++p.stealcount;
     break;
 
     /* emit reply */
@@ -372,6 +388,8 @@ static void processor_simulate_event(
 
     /* recv reply */
     case KAAPI_EVT_RECV_REPLY:
+      if (event->d2.i !=0)
+        ++p.stealcount;
     break;
 
     default:
