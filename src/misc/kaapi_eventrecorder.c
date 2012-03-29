@@ -121,6 +121,11 @@ static void _kaapi_write_evb( kaapi_event_buffer_t* evb )
     kaapi_assert(sz_write == sizeof(header));
   }
   ssize_t sz_write = write(listfd_set[kid], evb->buffer, sizeof(kaapi_event_t)*evb->pos);
+  if (sz_write == -1)
+  {
+    printf("Errno:%s", strerror(errno) );
+    _abort();
+  }
   kaapi_assert( sz_write == (ssize_t)(sizeof(kaapi_event_t)*evb->pos) );
   evb->pos = 0;
 }
