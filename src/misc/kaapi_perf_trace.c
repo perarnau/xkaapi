@@ -118,7 +118,10 @@ void kaapi_perf_thread_fini(kaapi_processor_t* kproc)
   kaapi_mt_perf_thread_fini( kproc );
   
   if (kproc->eventbuffer !=0)
+  {
     kaapi_event_closebuffer(kproc->eventbuffer);
+    kproc->eventbuffer = 0;
+  }
 }
 
 
@@ -181,7 +184,10 @@ void _kaapi_signal_dump_counters(int xxdummy)
   uint32_t i;
   
   for (i=0; i<kaapi_count_kprocessors; ++i)
+  {
     kaapi_event_closebuffer( kaapi_all_kprocessors[i]->eventbuffer );
+    kaapi_all_kprocessors[i]->eventbuffer = 0;
+  }
 
   kaapi_event_fencebuffers();
   _exit(0);
