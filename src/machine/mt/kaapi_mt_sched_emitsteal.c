@@ -1,6 +1,5 @@
 /*
 ** xkaapi
-** 
 **
 ** Copyright 2009 INRIA.
 **
@@ -116,7 +115,7 @@ redo_select:
     goto redo_select;
   }
 
-#if 0 // TG: test, steal also allow to steal stack from myself. Else only wakeup
+#if 1 // TG: test, steal also allow to steal stack from myself. Else only wakeup
   /* never pass by this function for a processor to steal itself */
   if (kproc == victim.kproc) 
     return KAAPI_REQUEST_S_NOK;
@@ -145,7 +144,8 @@ redo_select:
 #if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_IFUSE_TRACE(kproc,
     self_request->victim = (uintptr_t)victim.kproc->kid;
-    self_request->serial = serial = ++kproc->serial;
+    serial = ++kproc->serial;
+    self_request->serial = serial;
     KAAPI_EVENT_PUSH2(kproc, 0, KAAPI_EVT_STEAL_OP, 
         (uintptr_t)victim.kproc->kid, 
         self_request->serial
