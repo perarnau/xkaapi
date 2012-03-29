@@ -138,9 +138,11 @@ void kaapi_event_fencebuffers(void)
     listevt_head = evb->next;
     if (listevt_head ==0)
       listevt_tail = 0;
+    evb->next = 0;
+    
+    /* release lock when writing */
     pthread_mutex_unlock(&mutex_listevt);
   
-    evb->next = 0;
     _kaapi_write_evb(evb);
   
     /* free buffer */
@@ -173,9 +175,11 @@ static void* _kaapi_event_flushimator(void* arg)
     listevt_head = evb->next;
     if (listevt_head ==0)
       listevt_tail = 0;
-    pthread_mutex_unlock(&mutex_listevt);
-    
     evb->next = 0;
+
+    /* release lock when writing */
+    pthread_mutex_unlock(&mutex_listevt);
+
     _kaapi_write_evb(evb);
     
     /* free buffer */
@@ -211,23 +215,36 @@ kaapi_event_buffer_t* kaapi_event_flushbuffer( kaapi_event_buffer_t* evb )
 
   /* push buffer in listevt buffer list */
   int kid = evb->kid;
+  int tosignal;
+  
   pthread_mutex_lock(&mutex_listevt);
   evb->next = 0;
-  if (listevt_head !=0)
+  if (listevt_tail !=0)
+  {
     listevt_tail->next = evb;
-  else listevt_head = evb;
+    tosignal = 0;
+  }
+  else { /* signal if list was empty */
+    listevt_head = evb;
+    tosignal = 1;
+  }
   listevt_tail = evb;
-  pthread_cond_signal(&signal_thread);
+  if (tosignal) 
+    pthread_cond_signal(&signal_thread);
   pthread_mutex_unlock(&mutex_listevt);
 
-  /* alloc new buffer */
+  /* alloc new buffer if empty free list */
   if (listevtfree_head ==0)
     evb = (kaapi_event_buffer_t*)malloc(sizeof(kaapi_event_buffer_t));
   else 
   {
     pthread_mutex_lock(&mutex_listevtfree_head);
-    evb = listevtfree_head;
-    listevtfree_head = evb->next;
+    if (listevtfree_head ==0)
+      evb = (kaapi_event_buffer_t*)malloc(sizeof(kaapi_event_buffer_t));
+    else {
+      evb = listevtfree_head;
+      listevtfree_head = evb->next;
+    }
     pthread_mutex_unlock(&mutex_listevtfree_head);    
   }
 
@@ -244,14 +261,22 @@ kaapi_event_buffer_t* kaapi_event_flushbuffer( kaapi_event_buffer_t* evb )
 void kaapi_event_closebuffer( kaapi_event_buffer_t* evb )
 {
   if (evb ==0) return;
+  int tosignal;
 
   pthread_mutex_lock(&mutex_listevt);
   evb->next = 0;
-  if (listevt_head !=0)
+  if (listevt_tail !=0)
+  {
     listevt_tail->next = evb;
-  else listevt_head = evb;
+    tosignal = 0;
+  }
+  else {
+    listevt_head = evb;
+    tosignal = 1;
+  }
   listevt_tail = evb;
-  pthread_cond_signal(&signal_thread);
+  if (tosignal)
+    pthread_cond_signal(&signal_thread);
   pthread_mutex_unlock(&mutex_listevt);
 }
 
@@ -273,6 +298,8 @@ void kaapi_eventrecorder_init(void)
   pthread_mutex_init(&mutex_listevt, 0);
   pthread_mutex_init(&mutex_listevtfree_head, 0);
   pthread_cond_init(&signal_thread, 0);
+  
+  /* */
   pthread_create(&collector_threadid, 0, _kaapi_event_flushimator, 0);
 }
 
@@ -286,8 +313,11 @@ void kaapi_eventrecorder_fini(void)
   kaapi_event_buffer_t* evb;
 
   pthread_mutex_lock(&mutex_listevt);
-  pthread_cond_signal(&signal_thread);
+  if (listevt_head ==0)
+    pthread_cond_signal(&signal_thread);
   pthread_mutex_unlock(&mutex_listevt);
+
+  /* wait terminaison of the collector thread */
   pthread_join(collector_threadid, &result);
   
   /* flush remains buffer */
