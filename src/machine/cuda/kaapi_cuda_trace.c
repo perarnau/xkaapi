@@ -44,7 +44,6 @@
 ** 
 */
 
-#if defined(KAAPI_USE_PERFCOUNTER) && defined(KAAPI_USE_CUPTI)
 
 #include <stdio.h>
 #include <cuda_runtime_api.h>
@@ -53,6 +52,8 @@
 #include "kaapi_impl.h"
 #include "kaapi_event.h"
 #include "kaapi_cuda_event.h"
+
+#if defined(KAAPI_USE_PERFCOUNTER) && defined(KAAPI_USE_CUPTI)
 
 #define ALIGN_SIZE (8)
 #define BUFFER_SIZE	(32 * 1024)
