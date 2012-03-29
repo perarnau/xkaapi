@@ -80,6 +80,8 @@ void kaapi_perf_global_fini(void)
 
   kaapi_assert( kaapi_isterminated() );
 
+  kaapi_collect_trace();
+
 #if defined(KAAPI_USE_PERFCOUNTER)
   if (getenv("KAAPI_RECORD_TRACE") !=0)
   {

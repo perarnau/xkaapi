@@ -62,6 +62,7 @@ libkaapi_la_SOURCES=\
   misc/kaapi_hashvalue.c \
   misc/kaapi_init.c \
   misc/kaapi_perf_trace.c \
+  misc/kaapi_collect_trace.c \
   misc/kaapi_eventrecorder.c \
   misc/kaapi_malloc_align.c \
   misc/kaapi_time_elapse.c \
