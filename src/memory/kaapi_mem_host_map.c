@@ -4,6 +4,10 @@
 #include "kaapi_mem_data.h"
 #include "kaapi_mem_host_map.h"
 
+#if defined(KAAPI_USE_CUDA)
+#include <cuda_runtime_api.h>
+#endif
+
 static inline kaapi_mem_data_t* 
 _kaapi_mem_data_alloc( void )
 {
@@ -69,6 +73,10 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, void* sp )
 {
     size_t count_params = kaapi_format_get_count_params( fmt, sp );
     size_t i;
+#if defined(KAAPI_USE_CUDA)
+    cudaStream_t stream;
+    cudaStreamCreate( &stream );
+#endif
 
     for( i= 0; i < count_params; i++ ) {
 	kaapi_access_mode_t m = fmt->get_mode_param( fmt, i, sp );
@@ -78,7 +86,9 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, void* sp )
 
 	kaapi_access_t access = fmt->get_access_param( fmt, i, sp );
 	kaapi_data_t* kdata = kaapi_data( kaapi_data_t, &access );
-	kaapi_mem_sync_ptr( kdata );
+#if defined(KAAPI_USE_CUDA)
+	kaapi_mem_sync_data( kdata, stream );
+#endif
 
 	if( KAAPI_ACCESS_IS_WRITE(m) ) {
 	    const kaapi_mem_host_map_t* host_map = 
@@ -92,6 +102,11 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, void* sp )
 		    host_asid );
 	}
     }
+#if defined(KAAPI_USE_CUDA)
+    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
+    cudaStreamSynchronize( stream );
+    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END );
+#endif
 
     return 0;
 }

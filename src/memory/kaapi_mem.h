@@ -75,6 +75,8 @@ void kaapi_mem_init( void );
 
 void kaapi_mem_destroy( void );
 
-int kaapi_mem_sync_ptr( kaapi_data_t* kdata );
+#if defined(KAAPI_USE_CUDA)
+int kaapi_mem_sync_data( kaapi_data_t*, cudaStream_t );
+#endif
 
 #endif /* ! KAAPI_MEM_H_INCLUDED */

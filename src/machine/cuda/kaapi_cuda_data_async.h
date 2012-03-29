@@ -81,6 +81,6 @@ It checks if the data is valid on the current kproc, otherwise search for a
 valid copy on the GPUs.
 */
 int
-kaapi_cuda_data_async_sync_host( kaapi_data_t* kdata );
+kaapi_cuda_data_async_sync_host( kaapi_data_t* kdata, cudaStream_t stream );
 
 #endif /* KAAPI_CUDA_DATA_ASYNC_H_INCLUDED */

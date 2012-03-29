@@ -10,25 +10,19 @@
 #include "machine/cuda/kaapi_cuda_data.h"
 #endif
 
-int
-kaapi_mem_sync_ptr( kaapi_data_t* kdata )
-{
 #if defined(KAAPI_USE_CUDA)
-//    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_SYNC_BEG );
+
+int kaapi_mem_sync_data( kaapi_data_t* kdata, cudaStream_t stream )
+{
     if( kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA ){
 	return kaapi_cuda_data_sync_device( kdata );
     } else {
-	return kaapi_cuda_data_sync_host( kdata );
+	return kaapi_cuda_data_sync_host( kdata, stream );
     }
-//    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_SYNC_END );
-#else
-    return 0;
-#endif
 }
 
-/**
-*/
-int kaapi_memory_synchronize( void )
+static int
+kaapi_memory_host_synchronize( void )
 {
     kaapi_mem_host_map_t* host_map = 
 	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
@@ -37,18 +31,36 @@ int kaapi_memory_synchronize( void )
     kaapi_big_hashmap_t* hmap = &host_map->hmap;
     kaapi_hashentries_t* entry;
     uint32_t i;
+    cudaStream_t stream;
 
+    cudaStreamCreate( &stream );
     for (i = 0; i < map_size; ++i) {
 	for (entry = hmap->entries[i]; entry != NULL; entry = entry->next) {
 	    const kaapi_mem_data_t *kmd = entry->u.kmd;
 	    if ( kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
 		kaapi_data_t *kdata = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
 			host_asid );
-		kaapi_mem_sync_ptr( kdata );
+		kaapi_mem_sync_data( kdata, stream );
 	    }
 	}
     }
+    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
+    cudaStreamSynchronize( stream );
+    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END );
 
     return 0;
 }
+#endif
 
+int kaapi_memory_synchronize( void )
+{
+#if defined(KAAPI_USE_CUDA)
+    kaapi_memory_host_synchronize();
+#endif
+    return 0;
+}
+
+int kaapi_memory_synchronize_pointer( void *ptr )
+{
+    return 0;
+}

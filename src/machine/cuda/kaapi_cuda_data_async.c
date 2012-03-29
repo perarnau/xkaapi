@@ -343,21 +343,23 @@ kaapi_cuda_data_async_sync_device( kaapi_data_t* kdata )
 static inline int
 kaapi_cuda_data_async_sync_host_transfer(
 	kaapi_data_t* dest, const kaapi_mem_asid_t dest_asid,
-	kaapi_data_t* src,  const kaapi_mem_asid_t src_asid
+	kaapi_data_t* src,  const kaapi_mem_asid_t src_asid,
+	cudaStream_t stream
 	)
 {
     cudaError_t res;
 
-    kaapi_cuda_ctx_set( src_asid-1 );
-    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
-    res= cudaEventSynchronize( src->event );
-    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END );
+//    kaapi_cuda_ctx_set( src_asid-1 );
+//    res= cudaEventSynchronize( src->event );
+//    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
+//    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END );
+    cudaStreamWaitEvent( stream, src->event, 0 );
 
     return res;
 }
 
 int
-kaapi_cuda_data_async_sync_host( kaapi_data_t* kdata )
+kaapi_cuda_data_async_sync_host( kaapi_data_t* kdata, cudaStream_t stream )
 {
     const kaapi_mem_host_map_t* host_map = 
 	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
@@ -372,7 +374,7 @@ kaapi_cuda_data_async_sync_host( kaapi_data_t* kdata )
 	valid_asid = kaapi_mem_data_get_nondirty_asid( kmd );
 	kaapi_data_t* valid_data = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd, valid_asid );
 	kaapi_cuda_data_async_sync_host_transfer( kdata, host_asid, valid_data,
-		valid_asid );
+		valid_asid, stream );
 	kaapi_mem_data_clear_dirty( kmd, host_asid );
     }
 

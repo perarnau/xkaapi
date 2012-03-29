@@ -102,9 +102,9 @@ It checks if the data is valid on the current kproc, otherwise search for a
 valid copy on the GPUs.
 */
 static inline int
-kaapi_cuda_data_sync_host( kaapi_data_t* kdata )
+kaapi_cuda_data_sync_host( kaapi_data_t* kdata, cudaStream_t stream )
 {
-    return kaapi_cuda_data_async_sync_host( kdata );
+    return kaapi_cuda_data_async_sync_host( kdata, stream );
 }
 
 #else /* BASIC mode */
@@ -139,13 +139,13 @@ kaapi_cuda_data_recv(
 }
 
 static inline int
-kaapi_cuda_data_sync_device( kaapi_data_t* kdata )
+kaapi_cuda_data_sync_device( kaapi_data_t* kdata, cudaStream_t stream )
 {
     return 0;
 }
 
 static inline int
-kaapi_cuda_data_sync_host( kaapi_data_t* kdata )
+kaapi_cuda_data_sync_host( kaapi_data_t* kdata, cudaStream_t stream )
 {
     return 0;
 }
