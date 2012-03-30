@@ -64,6 +64,11 @@ void kaapi_collect_trace(void)
   double t_preempt;
   double t_1;
   double t_tasklist;
+  
+#if defined(KAAPI_USE_PAPI)
+  uint64_t papicnt[2][KAAPI_PERF_ID_PAPI_MAX];
+  memset( papicnt, 0, sizeof(papicnt) );
+#endif
 
   cnt_tasks       = 0;
   cnt_stealreqok  = 0;
@@ -91,7 +96,15 @@ void kaapi_collect_trace(void)
     t_sched +=        1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_T1);
     t_preempt +=      1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TPREEMPT);
     t_1 +=            1e-9*(double)KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_T1); 
-    t_tasklist +=     1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKLISTCALC); 
+    t_tasklist +=     1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKLISTCALC);
+    
+#if defined(KAAPI_USE_PAPI)
+    for (int cnt=KAAPI_PERF_ID_PAPI_BASE; cnt<KAAPI_PERF_ID_PAPI_BASE+KAAPI_PERF_ID_PAPI_MAX; ++cnt)
+    {
+      papicnt[KAAPI_PERF_USR_COUNTER][cnt] += KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], cnt);
+      papicnt[KAAPI_PERF_SYS_COUNTER][cnt] += KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], cnt);
+    }
+#endif    
 
     /* */
     if (kaapi_default_param.display_perfcounter) //( && (kaapi_count_kprocessors <4))
@@ -131,6 +144,21 @@ void kaapi_collect_trace(void)
 
       printf("Total compute time of dependencies  : %e\n",
          1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKLISTCALC));
+
+#if defined(KAAPI_USE_PAPI)
+      printf("Papi counter0  : %"PRIi64", %" PRIi64 "\n",
+         KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_0),
+         KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_0)
+      );
+      printf("Papi counter1  : %"PRIi64", %" PRIi64 "\n",
+         KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_1),
+         KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_1)
+      );
+      printf("Papi counter2  : %"PRIi64", %" PRIi64 "\n",
+         KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_2),
+         KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_2)
+      );
+#endif
 
       printf("Total idle time                     : %e\n",
          1e-9*(KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i],KAAPI_PERF_ID_T1)
