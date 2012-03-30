@@ -33,7 +33,7 @@ include net.am
 include nqueens.am
 include poisson3D.am
 #include prefix.am
-# include papi.am
+include papi.am
 
 USER_MAKEFILES=\
 	array/Makefile \
@@ -48,7 +48,8 @@ USER_MAKEFILES=\
 	mergesort/Makefile \
 	net/Makefile \
 	nqueens/Makefile \
-	poisson3D/Makefile
+	poisson3D/Makefile \
+	papi/Makefile
 
 #TO CORRECT	\
 	accumulate/Makefile\

@@ -53,7 +53,7 @@
 
 /**
  */
-static void apply_cos( int i, int j, int tid, double* v )
+static void apply_cos( int i, int j, int tid, double* array )
 {
   for (int k=i; k<j; ++k)
     array[k] += cos(array[k]);
@@ -96,7 +96,7 @@ int main(int ac, char** av)
       array[i] = 0.f;
 
     t0 = kaapi_get_elapsedns();
-    kaapic_for_each( 0, ITEM_COUNT, 0, 1, apply_cos, array );
+    kaapic_foreach( 0, ITEM_COUNT, 0, 1, apply_cos, array );
     t1 = kaapi_get_elapsedns();
     sum += (t1-t0)/1000; /* ms */
 

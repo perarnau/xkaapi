@@ -142,7 +142,7 @@ void kaapi_mt_perf_init(void)
 void kaapi_mt_perf_fini(void)
 {
 #if defined(KAAPI_USE_PAPI)
-  PAPI_shutdown();
+  //PAPI_shutdown();
 #endif
 }
 

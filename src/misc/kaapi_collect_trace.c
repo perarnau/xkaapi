@@ -181,7 +181,8 @@ void kaapi_collect_trace(void)
     printf("Total idle time                     : %e\n", t_sched+t_preempt);
     printf("   sched idle time                  : %e\n", t_sched);
     printf("   preemption idle time             : %e\n", t_preempt);
-    printf("Average steal requests aggregation  : %e\n", ((double)cnt_stealreq)/(double)cnt_stealop);
+    if (cnt_stealop >0)
+      printf("Average steal requests aggregation  : %e\n", ((double)cnt_stealreq)/(double)cnt_stealop);
   }
 #endif
 
