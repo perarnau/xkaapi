@@ -316,8 +316,12 @@ uint64_t kaapi_mt_perf_thread_delayinstate(kaapi_processor_t* kproc)
 
 static const char* kaapi_mt_perf_id_to_name(kaapi_perf_id_t id)
 {
+#if defined(KAAPI_USE_PAPI)
   kaapi_assert_debug( (0 <= id) && (id <3) );
   return papi_names[(size_t)id];
+#else
+  return 0;
+#endif
 }
 
 
