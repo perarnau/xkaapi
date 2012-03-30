@@ -207,8 +207,10 @@ static int kaapi_setup_param()
         return EINVAL;
       }
       /* always add startup set */
-      kaapi_default_param.eventmask = mask | KAAPI_EVT_MASK_STARTUP;
+      kaapi_default_param.eventmask = mask;
     }
+    /* always add startup set */
+    kaapi_default_param.eventmask |= KAAPI_EVT_MASK_STARTUP;
   }
 #endif  
   

@@ -55,7 +55,7 @@
 extern const char* get_kaapi_git_hash(void);
 
 /* global mask of events to register */
-uint64_t kaapi_event_mask;
+uint64_t kaapi_event_mask = 0;
 
 /*
 */
