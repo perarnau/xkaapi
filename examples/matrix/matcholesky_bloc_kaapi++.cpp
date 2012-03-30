@@ -55,9 +55,7 @@ extern "C" {
 #include <clapack.h> // assume MKL/ATLAS clapack version
 }
 
-
 #include "kaapi++" // this is the new C++ interface for Kaapi
-
 
 /* Compute inplace LLt factorization of A, ie L such that A = L * Lt
    with L lower triangular.
@@ -363,7 +361,6 @@ struct doit {
       }
 }
 #endif
-
       t0 = kaapi_get_elapsedtime();
       ka::Spawn<TaskCholesky>( ka::SetStaticSched() )(block_count, NB, (uintptr_t)&dAbloc);
       ka::Sync();

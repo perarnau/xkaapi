@@ -102,8 +102,8 @@ void kaapi_collect_trace(void)
 #if defined(KAAPI_USE_PAPI)
     for (int cnt=KAAPI_PERF_ID_PAPI_BASE; cnt<kaapi_mt_perf_counter_num(); ++cnt)
     {
-      papicnt[KAAPI_PERF_USR_COUNTER][cnt] += KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], cnt);
-      papicnt[KAAPI_PERF_SYS_COUNTER][cnt] += KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], cnt);
+      papicnt[0][cnt-KAAPI_PERF_ID_PAPI_BASE] += KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], cnt);
+      papicnt[1][cnt-KAAPI_PERF_ID_PAPI_BASE] += KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], cnt);
     }
 #endif    
 
@@ -149,11 +149,12 @@ void kaapi_collect_trace(void)
 #if defined(KAAPI_USE_PAPI)
       for (int cnt=KAAPI_PERF_ID_PAPI_BASE; cnt<kaapi_mt_perf_counter_num(); ++cnt)
       {
-        printf("Papi counter '%10s'          : %"PRIi64", %" PRIi64 "\n",
-          kaapi_mt_perf_id_to_name( cnt ),
+        printf("Papi counter %-14s         : %"PRIi64", %" PRIi64 "\n",
+          kaapi_perf_id_to_name( cnt ),
           KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], cnt),
           KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], cnt)
         );
+      }
 #endif
 
       printf("Total idle time                     : %e\n",
@@ -179,8 +180,18 @@ void kaapi_collect_trace(void)
     printf("   preemption idle time             : %e\n", t_preempt);
     if (cnt_stealop >0)
       printf("Average steal requests aggregation  : %e\n", ((double)cnt_stealreq)/(double)cnt_stealop);
-  }
+#if defined(KAAPI_USE_PAPI)
+    for (int cnt=KAAPI_PERF_ID_PAPI_BASE; cnt<kaapi_mt_perf_counter_num(); ++cnt)
+    {
+      printf("Papi counter %-14s         : %"PRIi64", %" PRIi64 "\n",
+        kaapi_perf_id_to_name( cnt ),
+        papicnt[0][cnt-KAAPI_PERF_ID_PAPI_BASE],
+        papicnt[1][cnt-KAAPI_PERF_ID_PAPI_BASE]
+      );
+    }
 #endif
 
+  }
+#endif
 }
 

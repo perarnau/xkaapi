@@ -860,5 +860,7 @@ extern void kaapi_mt_perf_thread_stopswapstart( kaapi_processor_t* kproc, int is
 extern uint64_t kaapi_mt_perf_thread_delayinstate(kaapi_processor_t* kproc);
 /* */
 extern size_t kaapi_mt_perf_counter_num(void);
+/* */
+extern const char* kaapi_mt_perf_id_to_name(kaapi_perf_id_t id);
 
 #endif /* _KAAPI_MT_MACHINE_H */

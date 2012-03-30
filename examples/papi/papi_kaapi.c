@@ -62,19 +62,24 @@ static void apply_cos( int i, int j, int tid, double* array )
 
 /**
  */
-int main(int ac, char** av)
+int main(int argc, char** argv)
 {
   double t0,t1;
   double sum = 0.f;
   size_t i;
   size_t iter;
+  size_t size;
 
   /* at most 3 papi counters */
   kaapi_perf_idset_t perfids;
   kaapi_perf_counter_t counters[3] = {0, 0, 0};
   
-#define ITEM_COUNT 100000
-  static double array[ITEM_COUNT];
+  if (argc>1)
+    size = atoi(argv[1]);
+  else
+    size = 100000;
+
+  double* array = (double*)malloc(sizeof(double)*size);
   
   /* initialize the runtime */
   kaapic_init(KAAPIC_START_ONLY_MAIN);
@@ -92,15 +97,15 @@ int main(int ac, char** av)
   for (iter = 0; iter < 100; ++iter)
   {
     /* initialize, apply, check */
-    for (i = 0; i < ITEM_COUNT; ++i)
+    for (i = 0; i < size; ++i)
       array[i] = 0.f;
 
     t0 = kaapi_get_elapsedns();
-    kaapic_foreach( 0, ITEM_COUNT, 0, 1, apply_cos, array );
+    kaapic_foreach( 0, size, 0, 1, apply_cos, array );
     t1 = kaapi_get_elapsedns();
     sum += (t1-t0)/1000; /* ms */
 
-    for (i = 0; i < ITEM_COUNT; ++i)
+    for (i = 0; i < size; ++i)
       if (array[i] != 1.f)
       {
         printf("invalid @%lu == %lf\n", i, array[i]);
@@ -120,5 +125,7 @@ int main(int ac, char** av)
   /* finalize the runtime */
   kaapic_finalize();
   
+  free(array);
+
   return 0;
 }
