@@ -112,8 +112,8 @@ void kaapi_collect_trace(void)
 
       printf("----- Performance counters, core    : %i\n", i);
       printf("Total number of tasks executed      : %"PRIi64 ", %" PRIi64 "\n",
-        KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS),
-        KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS)
+        KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS),
+        KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKS)
       );
       printf("Total number of steal OK requests   : %"PRIi64 ", %" PRIi64 "\n",
         KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_STEALREQOK),
