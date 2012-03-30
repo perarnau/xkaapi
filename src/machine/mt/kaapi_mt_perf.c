@@ -43,14 +43,14 @@
 */
 #include <stdlib.h>
 
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
 #include <papi.h>
 #endif
 #include "kaapi_impl.h"
 #include "kaapi_event_recorder.h"
 
 /* internal */
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
 static int papi_event_codes[KAAPI_PERF_ID_PAPI_MAX];
 static unsigned int papi_event_count = 0;
 #endif
@@ -68,7 +68,7 @@ int kaapi_mt_perf_thread_state(kaapi_processor_t* kproc)
 }
 
 
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
 
 static inline int get_event_code(char* name, int* code)
 {
@@ -124,7 +124,7 @@ static int get_papi_events(void)
 */
 void kaapi_mt_perf_init(void)
 {
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
   /* must be called once */
   int error;
 
@@ -144,7 +144,7 @@ void kaapi_mt_perf_init(void)
 */
 void kaapi_mt_perf_fini(void)
 {
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
   PAPI_shutdown();
 #endif
 }
@@ -156,7 +156,7 @@ void kaapi_mt_perf_thread_init( kaapi_processor_t* kproc, int isuser )
 {
   kaapi_assert( (isuser ==0)||(isuser==1) );
   
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
   kproc->papi_event_count = 0;
 
   if (papi_event_count)
@@ -207,7 +207,7 @@ void kaapi_mt_perf_thread_init( kaapi_processor_t* kproc, int isuser )
 
 /*
 */
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
 void kaapi_mt_perf_thread_fini(kaapi_processor_t* kproc)
 {
   if (kproc->papi_event_count)
@@ -229,7 +229,7 @@ void kaapi_mt_perf_thread_fini(kaapi_processor_t* kproc __attribute__((unused)) 
 
 /*
 */
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
 void kaapi_mt_perf_thread_start(kaapi_processor_t* kproc)
 {
   if (kproc->papi_event_count)
@@ -250,7 +250,7 @@ void kaapi_mt_perf_thread_start(kaapi_processor_t* kproc __attribute__((unused))
 
 /*
 */
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
 void kaapi_mt_perf_thread_stop(kaapi_processor_t* kproc)
 {
   if (kproc->papi_event_count)
@@ -275,7 +275,7 @@ void kaapi_mt_perf_thread_stop(kaapi_processor_t* kproc __attribute__((unused)) 
 
 /*
 */
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
 void kaapi_mt_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser )
 {
   if (papi_event_count)
@@ -326,7 +326,7 @@ static const char* kaapi_mt_perf_id_to_name(kaapi_perf_id_t id)
 size_t kaapi_mt_perf_counter_num(void)
 {
   return KAAPI_PERF_ID_PAPI_BASE
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
     + papi_event_count
 #endif
     ;
