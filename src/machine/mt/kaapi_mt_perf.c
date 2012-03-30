@@ -83,8 +83,7 @@ static int get_papi_events(void)
 
   unsigned int i = 0;
   unsigned int j;
-  const char* p;
-  const char* s;
+  const char* s = 0;
   char name[PAPI_MIN_STR_LEN];
 
   s = getenv("KAAPI_PERF_PAPIES");
@@ -95,8 +94,6 @@ static int get_papi_events(void)
   {
     if (i >= KAAPI_PERF_ID_PAPI_MAX)
       return -1;
-
-    p = s;
 
     for (j = 0; j < (sizeof(name) - 1) && *s && (*s != ','); ++s, ++j)
       name[j] = *s;
