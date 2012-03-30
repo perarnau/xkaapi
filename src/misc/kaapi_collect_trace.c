@@ -50,6 +50,7 @@
 #include <signal.h>
 #endif
 
+
 void kaapi_collect_trace(void)
 {
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -99,7 +100,7 @@ void kaapi_collect_trace(void)
     t_tasklist +=     1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKLISTCALC);
     
 #if defined(KAAPI_USE_PAPI)
-    for (int cnt=KAAPI_PERF_ID_PAPI_BASE; cnt<KAAPI_PERF_ID_PAPI_BASE+KAAPI_PERF_ID_PAPI_MAX; ++cnt)
+    for (int cnt=KAAPI_PERF_ID_PAPI_BASE; cnt<kaapi_mt_perf_counter_num(); ++cnt)
     {
       papicnt[KAAPI_PERF_USR_COUNTER][cnt] += KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], cnt);
       papicnt[KAAPI_PERF_SYS_COUNTER][cnt] += KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], cnt);
@@ -146,18 +147,13 @@ void kaapi_collect_trace(void)
          1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKLISTCALC));
 
 #if defined(KAAPI_USE_PAPI)
-      printf("Papi counter0                       : %"PRIi64", %" PRIi64 "\n",
-        KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_0),
-        KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_0)
-      );
-      printf("Papi counter1                       : %"PRIi64", %" PRIi64 "\n",
-        KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_1),
-        KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_1)
-      );
-      printf("Papi counter2                       : %"PRIi64", %" PRIi64 "\n",
-        KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_2),
-        KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_2)
-      );
+      for (int cnt=KAAPI_PERF_ID_PAPI_BASE; cnt<kaapi_mt_perf_counter_num(); ++cnt)
+      {
+        printf("Papi counter '%10s'          : %"PRIi64", %" PRIi64 "\n",
+          kaapi_mt_perf_id_to_name( cnt ),
+          KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], cnt),
+          KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], cnt)
+        );
 #endif
 
       printf("Total idle time                     : %e\n",

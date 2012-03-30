@@ -326,22 +326,34 @@ void _kaapi_perf_accum_register(const kaapi_perf_idset_t* idset, int isuser, kaa
 }
 
 
+/*
+*/
 const char* kaapi_perf_id_to_name(kaapi_perf_id_t id)
 {
+  /* see kaapi.h
+     Basic perf counter name.
+  */
   static const char* names[] =
   {
     "TASKS",
     "STEALREQOK",
     "STEALREQ",
     "STEALOP",
+    "STEALIN",
     "SUSPEND",
-    "PAPI_0",
-    "PAPI_1",
-    "PAPI_2"
+    "T1",
+    "TPREEMPT",
+    "ALLOCTHREAD",
+    "FREETHREAD",
+    "QUEUETHREAD",
+    "TASKLISTCALC"
   };
   
-  if (id <5) return names[(size_t)id];
-  return kaapi_perf_id_to_name( id - 5 );
+  if (id <= KAAPI_PERF_ID_TASKLISTCALC) 
+    return names[(size_t)id];
+  if ((id <KAAPI_PERF_ID_ENDSOFTWARE) || (id >= KAAPI_PERF_ID_MAX))
+    return "<undefined>";
+  return kaapi_mt_perf_id_to_name( id - 5 );
 }
 
 

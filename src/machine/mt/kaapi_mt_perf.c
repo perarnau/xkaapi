@@ -53,6 +53,12 @@
 #if defined(KAAPI_USE_PAPI)
 static int papi_event_codes[KAAPI_PERF_ID_PAPI_MAX];
 static unsigned int papi_event_count = 0;
+static const char* papi_names[4] = {
+  "PAPI_0",
+  "PAPI_1",
+  "PAPI_2",
+  "PAPI_3"
+};
 #endif
 
 /**/
@@ -95,6 +101,7 @@ static int get_papi_events(void)
     if (i >= KAAPI_PERF_ID_PAPI_MAX)
       return -1;
 
+    papi_names[i] = s;
     for (j = 0; j < (sizeof(name) - 1) && *s && (*s != ','); ++s, ++j)
       name[j] = *s;
     name[j] = 0;
@@ -309,14 +316,8 @@ uint64_t kaapi_mt_perf_thread_delayinstate(kaapi_processor_t* kproc)
 
 static const char* kaapi_mt_perf_id_to_name(kaapi_perf_id_t id)
 {
-  static const char* names[] =
-  {
-    "PAPI_0",
-    "PAPI_1",
-    "PAPI_2"
-  };
   kaapi_assert_debug( (0 <= id) && (id <3) );
-  return names[(size_t)id];
+  return papi_names[(size_t)id];
 }
 
 
