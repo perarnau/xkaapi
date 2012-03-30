@@ -280,9 +280,6 @@ void* kaapi_sched_run_processor( void* arg )
   /*  */
   kaapi_perf_thread_stop(kproc);
   KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_KPROC_STOP );
-#endif
-
-#if defined(KAAPI_USE_PERFCOUNTER)
   /*  */
   kaapi_perf_thread_fini(kproc); 
 #endif
