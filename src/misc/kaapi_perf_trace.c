@@ -353,7 +353,7 @@ const char* kaapi_perf_id_to_name(kaapi_perf_id_t id)
     return names[(size_t)id];
   if ((id <KAAPI_PERF_ID_ENDSOFTWARE) || (id >= KAAPI_PERF_ID_MAX))
     return "<undefined>";
-  return kaapi_mt_perf_id_to_name( id - 5 );
+  return kaapi_mt_perf_id_to_name( id - KAAPI_PERF_ID_ENDSOFTWARE );
 }
 
 
