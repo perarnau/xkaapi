@@ -146,17 +146,17 @@ void kaapi_collect_trace(void)
          1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKLISTCALC));
 
 #if defined(KAAPI_USE_PAPI)
-      printf("Papi counter0  : %"PRIi64", %" PRIi64 "\n",
-         KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_0),
-         KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_0)
+      printf("Papi counter0                       : %"PRIi64", %" PRIi64 "\n",
+        KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_0),
+        KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_0)
       );
-      printf("Papi counter1  : %"PRIi64", %" PRIi64 "\n",
-         KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_1),
-         KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_1)
+      printf("Papi counter1                       : %"PRIi64", %" PRIi64 "\n",
+        KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_1),
+        KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_1)
       );
-      printf("Papi counter2  : %"PRIi64", %" PRIi64 "\n",
-         KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_2),
-         KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_2)
+      printf("Papi counter2                       : %"PRIi64", %" PRIi64 "\n",
+        KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_2),
+        KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_PAPI_2)
       );
 #endif
 
@@ -184,5 +184,6 @@ void kaapi_collect_trace(void)
     printf("Average steal requests aggregation  : %e\n", ((double)cnt_stealreq)/(double)cnt_stealop);
   }
 #endif
+
 }
 
