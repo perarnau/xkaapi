@@ -12,7 +12,7 @@ niter=1
 function run_test {
     export KAAPI_CPUSET="4"
 #    export KAAPI_CPUSET="4,5,10,11"
-    export KAAPI_GPUSET="0~0"
+    export KAAPI_GPUSET="0~0,1~1,2~2,3~3"
 #    export KAAPI_GPUSET="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
 
 #    export COMPUTE_PROFILE=1
@@ -22,7 +22,7 @@ function run_test {
 #    export KAAPI_RECORD_TRACE=1
 #    export KAAPI_RECORD_MASK="COMPUTE,IDLE"
 #    msizes="10240"
-    msizes="4096"
+    msizes="8192"
 #    bsizes="1024"
 #    bsizes="2048"
     bsizes="1024"

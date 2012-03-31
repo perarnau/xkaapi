@@ -113,9 +113,6 @@ int kaapi_cuda_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   //kaapi_writemem_barrier();
 KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist = *tasklist; )
 
-#if 0
-redo_while:
-#endif
   while (!kaapi_tasklist_isempty( tasklist ))
   {
     err = kaapi_readylist_pop( &tasklist->rtl, &td );
@@ -224,9 +221,22 @@ printf("EWOULDBLOCK case 1\n");
     {
     }
 
+#if 0
+    if( KAAPI_CUDA_SLIDING_WINDOW < cnt_exec ) {
+	kaapi_thread_tasklist_commit_ready( tasklist );
+        KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_SYNC_BEG );
+	const cudaError_t res = cudaStreamSynchronize( kaapi_cuda_kernel_stream() );
+	if( res != cudaSuccess ) {
+		fprintf( stdout,
+		    "%s: cudaStreamSync ERROR %d\n", __FUNCTION__, res);
+		fflush(stdout);
+	}
+        KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_SYNC_END );
+    } else
+#endif
     /* ok, now push pushed task into the wq and restore the next td to execute */
-    if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0)
-      goto execute_first;
+	if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0)
+	  goto execute_first;
     //kaapi_thread_tasklist_commit_ready( tasklist );
             
     KAAPI_DEBUG_INST(save_tasklist = *tasklist;)
@@ -239,14 +249,6 @@ printf("EWOULDBLOCK case 1\n");
   KAAPI_ATOMIC_ADD(&tasklist->cnt_exec, cnt_exec);
 
 //KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist = *tasklist; )
-#if 0
-#if !defined(TASKLIST_ONEGLOBAL_MASTER)
-  if (!kaapi_tasklist_isempty(tasklist))
-  {
-    goto redo_while;
-  }
-#endif
-#endif
 
   kaapi_assert(kaapi_tasklist_isempty(tasklist));
 

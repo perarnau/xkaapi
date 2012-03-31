@@ -428,10 +428,10 @@ template<> struct TaskBodyGPU<TaskDGEMM>
 #elif CONFIG_USE_MAGMA
 	if( order == CblasColMajor ) 
 		magmablas_gemm(
-			MagmaNoTrans,
-			//convertToOp(transA),
-			MagmaNoTrans,
-			//convertToOp(transB),
+			//MagmaNoTrans,
+			convertToOp(transA),
+			//MagmaNoTrans,
+			convertToOp(transB),
 			m, n, k,
 			alpha,
 			a, lda,
@@ -441,11 +441,11 @@ template<> struct TaskBodyGPU<TaskDGEMM>
 		);
 	else if( order == CblasRowMajor )
 		magmablas_gemm(
-			MagmaNoTrans,
-			//convertToOp(transA),
-			MagmaNoTrans,
-			//convertToOp(transB),
-			m, n, k,
+			//MagmaNoTrans,
+			convertToOp(transB),
+			//MagmaNoTrans,
+			convertToOp(transA),
+			n, m, k,
 			alpha,
 			b, ldb,
 			a, lda,
@@ -485,15 +485,13 @@ template<> struct TaskBodyGPU<TaskDSYRK>
   {
     const int n     = A.dim(0); 
     const int k     = A.dim(1); // eq. to Akj.rows();
-    const int lda   = A.dim(1);
-    //const int lda   = A.lda();
+    const int lda   = A.lda();
     const double_type* const a = A.ptr();
 
-    //const int ldc   = C.lda();
-    const int ldc   = C.dim(1);
+    const int ldc   = C.lda();
     double_type* const c = C.ptr();
 
-#if KAAPI_VERBOSE
+#if 0
     fprintf(stdout, "TaskGPU DSYRK n=%d k=%d lda=%d A=%p ldc=%d C=%p\n",
 		n, k, lda, (void*)a, ldc, c ); fflush(stdout);
 #endif
@@ -692,8 +690,7 @@ template<> struct TaskBodyGPU<TaskDPOTRF>
   )
   {
     const int n     = A.dim(0); 
-    //const int lda   = A.lda();
-    const int lda   = A.dim(1);
+    const int lda   = A.lda();
     double_type* const a = A.ptr();
 
 #if KAAPI_VERBOSE
@@ -709,12 +706,14 @@ template<> struct TaskBodyGPU<TaskDPOTRF>
 	}
 #else
     double_type* work = (double_type*) calloc( n*lda, sizeof(double_type));
-    cudaMemcpy2D( work, lda*sizeof(double_type), a,
-	    lda*sizeof(double_type), n, lda, 
+    cudaMemcpy2D( work, lda*sizeof(double_type),
+	    a, lda*sizeof(double_type),
+	    lda*sizeof(double_type), n, 
 	    cudaMemcpyDeviceToHost );
     clapack_potrf( order,  uplo, n, work, lda );
-    cudaMemcpy2D( a, lda*sizeof(double_type), work,
-	    lda*sizeof(double_type), n, lda,
+    cudaMemcpy2D( a, lda*sizeof(double_type),
+	    work, lda*sizeof(double_type),
+	    lda*sizeof(double_type), n,
 	    cudaMemcpyHostToDevice );
     free( work );
 #endif

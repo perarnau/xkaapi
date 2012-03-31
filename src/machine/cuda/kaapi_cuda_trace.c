@@ -56,7 +56,7 @@
 #if defined(KAAPI_USE_PERFCOUNTER) && defined(KAAPI_USE_CUPTI)
 
 #define ALIGN_SIZE (8)
-#define BUFFER_SIZE	(32 * 1024)
+#define BUFFER_SIZE	(1024 * 1024)
 #define ALIGN_BUFFER(buffer, align) \
   (((uintptr_t) (buffer) & ((align)-1)) ? ((buffer) + (align) - ((uintptr_t) (buffer) & ((align)-1))) : (buffer)) 
 

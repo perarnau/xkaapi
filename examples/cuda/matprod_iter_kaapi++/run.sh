@@ -73,32 +73,23 @@ function run_dgemm {
 }
 
 function run_test_block {
-    export KAAPI_CPUSET="4"
-#    export KAAPI_CPUSET="4,5,10,11"
-    export KAAPI_GPUSET="0~0"
-#   export KAAPI_GPUSET="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
+    ncpu="$1"
+    cpuset="$2"
+    ngpu="$3"
+    gpuset="$4"
 
-    out="$HOME/res/xkaapi-dgemm-block-0cpu1gpu-${version}.txt"
-#    export COMPUTE_PROFILE=1
-#    export COMPUTE_PROFILE_CSV=1
-#    export COMPUTE_PROFILE_CONFIG="$HOME/compute_profile_config.txt"
-
-#    export KAAPI_RECORD_TRACE=1
-#    export KAAPI_RECORD_MASK="COMPUTE,IDLE"
-#    msizes="1024"
+    out="$HOME/res/xkaapi-dgemm-block-${ncpu}cpu${ngpu}gpu-${version}.txt"
+    export KAAPI_GPUSET="$gpuset"
+    export KAAPI_CPUSET="$cpuset"
     msizes="8192"
-#    msizes="2048"
-#    msizes="16384"
-#    msizes="2048"
-    bsizes="$(seq 256 256 4096)"
-    niter=20
+    bsizes="128 256 512 1024 2048 4096"
+    niter=30
 #    verif=1
     for m in $msizes ; do
 	    for b in $bsizes; do
 	    for i in `seq 1 $niter`
 	    do
-	    echo "$KAAPI_CPUSET $KAAPI_GPUSET \
-		    ./matprod_iter_kaapi++ $m $b $verif"
+	    echo "$KAAPI_CPUSET($ncpu) $KAAPI_GPUSET($ngpu) ./matprod_iter_kaapi++ $m $b $verif"
 	    KAAPI_STACKSIZE=536870912 \
 		    ./matprod_iter_kaapi++ $m $b $verif >> $out
 #	    	KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
@@ -108,24 +99,25 @@ function run_test_block {
     done
 }
 
-run_test_block
-exit 0
+#run_test_block
+#exit 0
 
-ncpu=1
+ncpu=0
 cpuset="4"
 
 ngpu=1
 gpuset="0~0"
-run_dgemm "$ncpu" "$cpuset" "$ngpu" "$gpuset"
+run_test_block "$ncpu" "$cpuset" "$ngpu" "$gpuset"
 
 ngpu=2
 gpuset="0~0,1~1"
-run_dgemm "$ncpu" "$cpuset" "$ngpu" "$gpuset"
+run_test_block "$ncpu" "$cpuset" "$ngpu" "$gpuset"
 
 ngpu=4
 gpuset="0~0,1~1,2~2,3~3"
-run_dgemm "$ncpu" "$cpuset" "$ngpu" "$gpuset"
+run_test_block "$ncpu" "$cpuset" "$ngpu" "$gpuset"
 
 ngpu=8
 gpuset="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
-run_dgemm "$ncpu" "$cpuset" "$ngpu" "$gpuset"
+run_test_block "$ncpu" "$cpuset" "$ngpu" "$gpuset"
+
