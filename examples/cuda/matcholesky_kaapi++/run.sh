@@ -12,7 +12,7 @@ niter=1
 function run_test {
     export KAAPI_CPUSET="4"
 #    export KAAPI_CPUSET="4,5,10,11"
-    export KAAPI_GPUSET="0~0,1~1,2~2,3~3"
+    export KAAPI_GPUSET="0~0"
 #    export KAAPI_GPUSET="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
 
 #    export COMPUTE_PROFILE=1
@@ -42,9 +42,9 @@ function run_test {
     done
 }
 
-run_test
+#run_test
 
-exit 0
+#exit 0
 
 function run_potrf {
     ncpu="$1"
@@ -55,8 +55,9 @@ function run_potrf {
     out="$HOME/res/xkaapi-dpotrf-${ncpu}cpu${ngpu}gpu-${version}.txt"
     export KAAPI_GPUSET="$gpuset"
     export KAAPI_CPUSET="$cpuset"
-    bsizes="256 512 1024"
-    msizes="$(seq 1024 1024 10240)"
+    msizes="$(seq 1024 1024 30720)"
+    bsizes="512 1024"
+    niter=30
     for m in $msizes
     do
 	    for b in $bsizes
@@ -73,19 +74,20 @@ function run_potrf {
     done
 }
 
-ncpu=1
+ncpu=0
 cpuset="4"
 
 ngpu=1
 gpuset="0~0"
 run_potrf "$ncpu" "$cpuset" "$ngpu" "$gpuset"
+exit 0
 
 ngpu=2
-gpuset="0~0,1~1"
+gpuset="0~0,2~2"
 run_potrf "$ncpu" "$cpuset" "$ngpu" "$gpuset"
 
 ngpu=4
-gpuset="0~0,1~1,2~2,3~3"
+gpuset="0~0,2~2,4~6,6~8"
 run_potrf "$ncpu" "$cpuset" "$ngpu" "$gpuset"
 
 ngpu=8

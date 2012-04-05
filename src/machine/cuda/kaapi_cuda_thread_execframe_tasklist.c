@@ -73,6 +73,7 @@ int kaapi_cuda_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   int                        err =0;
   uint32_t                   cnt_exec; /* executed tasks during one call of execframe_tasklist */
   uint32_t                   cnt_pushed;
+  cudaEvent_t		    event;
 
   kaapi_assert_debug( stack->sfp >= stack->stackframe );
   kaapi_assert_debug( stack->sfp < stack->stackframe+KAAPI_MAX_RECCALL );
@@ -113,6 +114,7 @@ int kaapi_cuda_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   //kaapi_writemem_barrier();
 KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist = *tasklist; )
 
+    cudaEventCreateWithFlags(&event, cudaEventDisableTiming);
   while (!kaapi_tasklist_isempty( tasklist ))
   {
     err = kaapi_readylist_pop( &tasklist->rtl, &td );
@@ -166,6 +168,7 @@ execute_first:
         KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_SYNC_END );
 #endif
 	    kaapi_cuda_event_record_( kaapi_cuda_kernel_stream() );
+	    cudaEventRecord( event, kaapi_cuda_kernel_stream() );
 	    kaapi_cuda_data_recv( td->fmt, pc->sp );
 #if 0
 	    kaapi_cuda_data_check();
@@ -225,10 +228,12 @@ printf("EWOULDBLOCK case 1\n");
     if( KAAPI_CUDA_SLIDING_WINDOW < cnt_exec ) {
 	kaapi_thread_tasklist_commit_ready( tasklist );
         KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_SYNC_BEG );
-	const cudaError_t res = cudaStreamSynchronize( kaapi_cuda_kernel_stream() );
+	cudaError_t res;
+	while( (res = cudaEventQuery( event )) == cudaErrorNotReady )
+	    kaapi_slowdown_cpu();
 	if( res != cudaSuccess ) {
 		fprintf( stdout,
-		    "%s: cudaStreamSync ERROR %d\n", __FUNCTION__, res);
+		    "%s: cudaEventQuery ERROR %d\n", __FUNCTION__, res);
 		fflush(stdout);
 	}
         KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_SYNC_END );

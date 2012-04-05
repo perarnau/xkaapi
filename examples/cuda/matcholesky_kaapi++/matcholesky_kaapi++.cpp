@@ -254,8 +254,12 @@ struct doit {
     /* formula used by plasma in time_dpotrf.c */
     double fp_per_mul = 1;
     double fp_per_add = 1;
-    double fmuls = (n * (1.0 / 6.0 * n + 0.5 ) * n);
-    double fadds = (n * (1.0 / 6.0 * n ) * n);
+#define FMULS_POTRF(n) ((n) * (((1. / 6.) * (n) + 0.5) * (n) + (1. / 3.)))
+#define FADDS_POTRF(n) ((n) * (((1. / 6.) * (n)      ) * (n) - (1. / 6.)))
+//    double fmuls = (n * (1.0 / 6.0 * n + 0.5 ) * n);
+    double fmuls = FMULS_POTRF(n);
+//    double fadds = (n * (1.0 / 6.0 * n ) * n);
+    double fadds = FADDS_POTRF(n);
         
     for (int i=0; i<niter; ++i)
     {
