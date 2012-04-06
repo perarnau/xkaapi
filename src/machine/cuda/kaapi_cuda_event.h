@@ -65,7 +65,11 @@ static inline void KAAPI_CUDA_EVENT_PUSH0_(
     uint8_t                 eventno
 )
 {
+#if defined(KAAPI_USE_CUPTI)
   tclock -= kaapi_default_param.cudastartuptime;
+#else
+  tclock -= kaapi_default_param.startuptime;
+#endif
   kaapi_event_t* evt = &kproc->eventbuffer->buffer[kproc->eventbuffer->pos++];
   evt->evtno   = eventno;
   evt->type    = 0;
