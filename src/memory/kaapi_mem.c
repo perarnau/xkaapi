@@ -191,7 +191,7 @@ void kaapi_mem_free_host(void* hostptr)
 {
   kaapi_cuda_proc_t* const cu_proc = get_cu_context();
   if (cu_proc == NULL) return ;
-  cuMemFreeHost(hostptr);
+//  cuMemFreeHost(hostptr);
   put_cu_context(cu_proc);
 }
 

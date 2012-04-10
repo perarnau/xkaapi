@@ -54,19 +54,21 @@ extern void put_cu_context(kaapi_cuda_proc_t*);
 
 static inline int allocate_cu_mem(CUdeviceptr* devptr, size_t size)
 {
+#if 0
   const CUresult res = cuMemAlloc(devptr, size);
   if (res != CUDA_SUCCESS)
   {
 //    kaapi_cuda_error("cuMemAlloc", res);
     return -1;
   }
+#endif
   
   return 0;
 }
 
 static inline void free_cu_mem(CUdeviceptr devptr)
 {
-  cuMemFree(devptr);
+//  cuMemFree(devptr);
 }
 #endif
 

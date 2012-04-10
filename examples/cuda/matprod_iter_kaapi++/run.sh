@@ -81,8 +81,8 @@ function run_test_block {
     out="$HOME/res/xkaapi-dgemm-${ncpu}cpu${ngpu}gpu-${version}.txt"
     export KAAPI_GPUSET="$gpuset"
     export KAAPI_CPUSET="$cpuset"
-    msizes="$(seq 17408 1024 30720)"
-    bsizes="512"
+    msizes="$(seq 2048 2048 30720)"
+    bsizes="2048"
     niter=30
 #    verif=1
     for m in $msizes ; do
