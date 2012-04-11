@@ -172,11 +172,11 @@ struct TaskDGEMM: public ka::Task<8>::Signature<
       CBLAS_TRANSPOSE,             /* NoTrans/Trans for A */
       CBLAS_TRANSPOSE,             /* NoTrans/Trans for B */
       double,                      /* alpha */
-      ka::R<double>, /* Aik   */
-      ka::R<double>, /* Akj   */
+      ka::R<double>,               /* Aik   */
+      ka::R<double>,               /* Akj   */
       double,                      /* beta */
-      ka::RW<double>, /* Aij   */
-      int /* NB */
+      ka::RW<double>,              /* Aij   */
+      int                          /* NB */
 >{};
 template<>
 struct TaskBodyCPU<TaskDGEMM> {

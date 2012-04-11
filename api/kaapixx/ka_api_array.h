@@ -451,7 +451,90 @@ protected:
 };
 
 
+/**
+*/
+template<class T> 
+class array_storage<2,T,ColMajor> {
+public:
+  typedef typename base_array::index_t index_t;
+  typedef T*                           pointer_t;
+  typedef T&                           reference_t;
+  typedef const T&                     const_reference_t;
 
+  array_storage<2,T,ColMajor>() 
+   : _data(0), _n(0), _m(0), _lda(0) {}
+  
+  array_storage<2,T,ColMajor>( T* d, index_t n, index_t m, index_t l )
+   : _data(d), _n(n), _m(m), _lda(l) {}
+
+  /** */
+  reference_t operator()(index_t i, index_t j)
+  { 
+    kaapi_assert_debug( (i>=0) && (i < _n) );
+    kaapi_assert_debug( (j>=0) && (j < _m) );
+    return _data[i+j*_lda]; 
+  }
+
+  /** */
+  const_reference_t operator()(index_t i, index_t j) const
+  { 
+    kaapi_assert_debug( (i>=0) && (i < _n) );
+    kaapi_assert_debug( (j>=0) && (j < _m) );
+    return _data[i+j*_lda]; 
+  }
+  
+  // Set the (i) element to value
+  void set (index_t i, index_t j, reference_t value) 
+  {
+    kaapi_assert_debug( (i>=0) && (i < _n) );
+    kaapi_assert_debug( (j>=0) && (j < _m) );
+	  _data[i+j*_lda] = value;
+  }
+
+  // Access to the (i) element (to rewrite)
+  const_reference_t get (index_t i, index_t j ) const 
+  {
+    kaapi_assert_debug( (i>=0) && (i < _n) );
+    kaapi_assert_debug( (j>=0) && (j < _m) );
+	  return _data[i+j*_lda];
+  }
+  
+  // Assignment
+  array_storage<2,T,ColMajor>& operator=( const array<2,T,ColMajor>& a )
+  {
+    kaapi_assert_debug( (_n == a._n) && (_m == a._m) );
+    for (index_t j=0; j<_m; ++j)
+    {
+      T* dest  = _data+j*_lda;
+      const T* src =  a._data+j*a._lda;
+      for (index_t i=0; i<_n; ++i)
+        dest[i] = src[i];
+    }
+    return *this;
+  }
+
+  // Assignment to a value
+  array_storage<2,T,ColMajor>& operator=( const T& value )
+  {
+    for (index_t j=0; j<_m; ++j)
+    {
+      T* dest  = _data+j*_lda;
+      for (index_t i=0; i<_n; ++i)
+        dest[i] = value;
+    }
+    return *this;
+  }
+
+protected:
+  T*      _data;
+  index_t _n;
+  index_t _m;
+  index_t _lda;
+};
+
+
+/**
+*/
 template<class T, Storage2DClass s2dc>
 class array_rep<2,T,s2dc> : public base_array, public array_storage<2,T,s2dc> {
 public:
@@ -485,8 +568,12 @@ public:
   pointer_t ptr() const
   { return array_storage<2,T,s2dc>::_data; }
 
-  /** */
+  /** must be deprecated -> lda == ld */
   index_t lda() const
+  { return array_storage<2,T,s2dc>::_lda; }
+
+  /** */
+  index_t ld() const
   { return array_storage<2,T,s2dc>::_lda; }
 
   /** */

@@ -110,8 +110,8 @@ template<>
 struct TaskBodyCPU<TaskPrintMatrixLLt> {
   void operator() ( std::string msg, ka::range2d_r<double> A  )
   {
-    size_t d0 = A.dim(0);
-    size_t d1 = A.dim(1);
+    size_t d0 = A->dim(0);
+    size_t d1 = A->dim(1);
     std::cout << "L :=matrix( [" << std::endl;
     for (size_t i=0; i < d0; ++i)
     {
@@ -150,11 +150,11 @@ template<>
 struct TaskBodyCPU<TaskNormMatrix> {
   void operator() ( ka::pointer_w<double> norm, ka::range2d_rw<double> A, ka::range2d_rw<double> LU )
   {
-    const double* dA = A.ptr();
-    const double* dLU = LU.ptr();
-    int lda_LU = LU.lda();
-    int M = A.dim(0);
-    int N = A.dim(1);
+    const double* dA = A->ptr();
+    const double* dLU = LU->ptr();
+    int lda_LU = LU->lda();
+    int M = A->dim(0);
+    int N = A->dim(1);
     *norm = 0.0;
 
     double max = 0.0;
@@ -212,7 +212,7 @@ struct TaskBodyCPU<TaskCholesky> {
   {
     //int ncpu = info->count_cpu();
     //int sncpu = (int)sqrt( (double)ncpu );
-    size_t N = A.dim(0);
+    size_t N = A->dim(0);
     size_t blocsize = global_blocsize;
 
     for (size_t k=0; k < N; k += blocsize)

@@ -70,13 +70,16 @@ static void generate_matrix(double* c, size_t m)
  * assume that the matrix stores an LU decomposition with L lower triangular matrix with unit diagonal
    and U upper triangular matrix, then print both L and U using the Maple matrix format.
  */
-struct TaskPrintMatrixLU : public ka::Task<2>::Signature<std::string,  ka::R<ka::range2d<double> > > {};
+struct TaskPrintMatrixLU : public ka::Task<2>::Signature<
+    std::string,  
+    ka::R<ka::range2d<double> > 
+> {};
 template<>
 struct TaskBodyCPU<TaskPrintMatrixLU> {
   void operator() ( std::string msg, ka::range2d_r<double> A  )
   {
-    size_t d0 = A.dim(0);
-    size_t d1 = A.dim(1);
+    size_t d0 = A->dim(0);
+    size_t d1 = A->dim(1);
     std::cout << "U :=matrix( [" << std::endl;
     for (size_t i=0; i < d0; ++i)
     {
@@ -140,25 +143,13 @@ struct TaskBodyCPU<TaskDGETRFNoPiv> {
   void operator()
   ( ka::range2d_rw<double> A )
   {
-    int N = A.dim(0);
-    int M = A.dim(1);
+    int N = A->dim(0);
+    int M = A->dim(1);
     int k_stop = std::min(N, M);
 
-#if 0
-    /* Simple code: correct ||L*U -A || very small */
-    for ( int k = 0; k < k_stop; ++k )
-    {
-      double pivot = 1.0 / A(k,k);
-      for (int i = k+1 ; i < N ; ++i )
-        A(i,k) *= pivot;
-      for (int i= k+1 ; i < N; ++i)
-        for (int j= k+1 ; j < M; ++j)
-          A(i,j) -=  A(i,k)*A(k,j);
-    }
-#else
     /* More optimized code: correct ||L*U -A || very small */
-    double* dk = A.ptr(); /* &A(k,0) */
-    int lda = A.lda();
+    double* dk = A->ptr(); /* &A(k,0) */
+    int lda = A->ld();
     
     for ( int k = 0; k < k_stop; ++k, dk += lda )
     {
@@ -179,7 +170,6 @@ struct TaskBodyCPU<TaskDGETRFNoPiv> {
           *dij -=  *dik * *dkj;
       } 
     }
-#endif
   }
 };
 
@@ -194,13 +184,17 @@ struct TaskNormMatrix: public ka::Task<3>::Signature<
 >{};
 template<>
 struct TaskBodyCPU<TaskNormMatrix> {
-  void operator() ( ka::pointer_w<double> norm, ka::range2d_rw<double> A, ka::range2d_rw<double> LU )
+  void operator() ( 
+    ka::pointer_w<double> norm, 
+    ka::range2d_rw<double> A, 
+    ka::range2d_rw<double> LU 
+  )
   {
-    const double* dA = A.ptr();
-    const double* dLU = LU.ptr();
-    int lda_LU = LU.lda();
-    int M = A.dim(0);
-    int N = A.dim(1);
+    const double* dA = A->ptr();
+    const double* dLU = LU->ptr();
+    int lda_LU = LU->ld();
+    int M = A->dim(0);
+    int N = A->dim(1);
     *norm = 0.0;
 
     double max = 0.0;
@@ -264,14 +258,8 @@ struct TaskBodyCPU<TaskLU> {
   {
     //int ncpu = info->count_cpu();
     //int sncpu = (int)sqrt( (double)ncpu );
-    size_t N = A.dim(0);
+    size_t N = A->dim(0);
     size_t blocsize = global_blocsize;
-
-#if 0
-    std::cout << kaapi_get_self_kid() << "::" << __PRETTY_FUNCTION__ 
-              << "-> blocsize " << blocsize
-              << std::endl;
-#endif
 
     for (size_t k=0; k<N; k += blocsize)
     {
