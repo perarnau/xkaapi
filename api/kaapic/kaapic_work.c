@@ -245,14 +245,19 @@ static int kaapic_global_work_steal
      - any try to pop a slice closed to the tid of the thread
      - only 0 can pop a non poped slice
   */
-#if 0
+#if 1
   /* caller has already pop and finish its slice, if it is 0 then may pop
      the next non null entry
   */
+#if 0
   int tid = kproc->kid;
   if (tid == 0)
   {
     kaapi_assert_debug(tid<KAAPI_MAX_PROCESSOR);
+#else
+  if (1)
+  {
+#endif
     int tidpos = kaapi_bitmap_first1( &gwork->wa.map );
     if ((tidpos !=0) && kaapic_global_work_pop(gwork, tidpos-1, i, j ))
     {
