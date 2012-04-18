@@ -46,6 +46,8 @@
 #include "memory/kaapi_mem.h"
 #include "memory/kaapi_mem_host_map.h"
 
+#if defined(KAAPI_NO_CPU)
+
 int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 {
   kaapi_stack_t* const stack = &thread->stack;
@@ -59,7 +61,8 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
     return 0;
 }
 
-#if 0
+#else /* KAAPI_NO_CPU */
+
 /** Use the readylist and list of task to execute tasks.
     If the list doesnot have ready tasks but all the tasks
     are note executed, then return EWOULDBLOCK.
@@ -165,7 +168,7 @@ execute_first:
         kaapi_assert_debug((char*)fp->sp > (char*)fp->sp_data);
         kaapi_assert_debug( stack->sfp - stack->stackframe <KAAPI_MAX_RECCALL);
         
-#if defined(KAAPI_USE_CUDA)
+#if defined(KAAPI_USE_CUDA) && !defined(KAAPI_CUDA_NO_D2H)
 	if ( td->fmt != 0 )
 		kaapi_mem_host_map_sync( td->fmt, pc->sp );
 #endif

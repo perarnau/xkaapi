@@ -155,18 +155,28 @@ execute_first:
 		(cuda_task_body_t) td->fmt->entrypoint_wh[proc_type];
 
 	    kaapi_cuda_ctx_push( );
+#if !defined(KAAPI_CUDA_NO_H2D)
 	    kaapi_cuda_data_allocate( td->fmt, pc->sp );
-
 	    kaapi_cuda_data_send( td->fmt, pc->sp );
 	    kaapi_cuda_event_record();
+#endif
+
 	    body( pc->sp, kaapi_cuda_kernel_stream() );
+
 #ifndef	    KAAPI_CUDA_ASYNC /* Synchronous execution */
         KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_SYNC_BEG );
 	    kaapi_cuda_sync();
         KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_SYNC_END );
 #endif
+
+#if !defined(KAAPI_CUDA_NO_D2H)
 	    kaapi_cuda_event_record_( kaapi_cuda_kernel_stream() );
 	    kaapi_cuda_data_recv( td->fmt, pc->sp );
+#endif
+
+#if defined(KAAPI_CUDA_NO_D2H)
+	    kaapi_cuda_event_record_( kaapi_cuda_kernel_stream() );
+#endif
 #if 0
 	    kaapi_cuda_data_check();
 #endif
@@ -250,7 +260,7 @@ printf("EWOULDBLOCK case 1\n");
       kaapi_slowdown_cpu();
       
     int isterm = KAAPI_ATOMIC_READ(&tasklist->cnt_exec) == tasklist->total_tasks;
-    if (isterm) return 0;
+    if (isterm) return 0; 
 
     tasklist->context.chkpt = 0;
 #if defined(KAAPI_DEBUG)

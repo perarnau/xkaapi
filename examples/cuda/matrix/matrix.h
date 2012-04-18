@@ -118,6 +118,30 @@ struct TaskDLARNV: public ka::Task<1>::Signature
 	ka::W<ka::range2d<double_type> > /* A */
 >{};
 
+#if 0
+/*
+ * LAPACK QR factorization of a real M-by-N matrix A.
+ */
+/* clapack_dgeqrf / magma_dgeqrf2_gpu */
+struct TaskDGEQRF: public ka::Task<3>::Signature
+<
+  CBLAS_ORDER,			/* row / col */
+  ka::RW<ka::range2d<double_type> >, /* A */
+  ka::W<ka::range2d<double_type> > /* TAU */
+>{};
+
+/* LAPACKE_dormqr /  */
+struct TaskDORMQR: public ka::Task<7>::Signature
+<
+  CBLAS_ORDER,			/* row / col */
+  CBLAS_UPLO,                  /* CBLAS Upper / Lower */
+  CBLAS_TRANSPOSE,             /* transpose flag */
+  ka::R<ka::range2d<double_type> >,	/* A */
+  ka::R<ka::range1d<double_type> >,	/* TAU */
+  ka::RW<ka::range2d<double_type> >,	/* C */
+>{};
+#endif
+
 // task definitions
 # include "matrix_cpu.inl"
 

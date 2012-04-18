@@ -21,6 +21,28 @@ int kaapi_mem_sync_data( kaapi_data_t* kdata, cudaStream_t stream )
     }
 }
 
+#if defined(KAAPI_CUDA_NO_D2H)
+static int
+kaapi_memory_host_synchronize( void )
+{
+    kaapi_processor_t** pos = kaapi_all_kprocessors;
+    size_t i;
+    cudaStream_t stream;
+
+    cudaStreamCreate( &stream );
+    for (i = 0; i < kaapi_count_kprocessors; ++i, ++pos)
+	if ((*pos)->proc_type == KAAPI_PROC_TYPE_CUDA) {
+	    cudaStreamWaitEvent( stream, (*pos)->cuda_proc.event, 0 );
+	}
+
+    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
+    cudaStreamSynchronize( stream );
+    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END );
+
+    return 0;
+}
+
+#else /* KAAPI_CUDA_NO_D2H */
 static int
 kaapi_memory_host_synchronize( void )
 {
@@ -50,7 +72,10 @@ kaapi_memory_host_synchronize( void )
 
     return 0;
 }
-#endif
+
+#endif /* KAAPI_CUDA_NO_D2H */
+
+#endif /* KAAPI_USE_CUDA */
 
 int kaapi_memory_synchronize( void )
 {
@@ -62,5 +87,6 @@ int kaapi_memory_synchronize( void )
 
 int kaapi_memory_synchronize_pointer( void *ptr )
 {
+    /* TODO */
     return 0;
 }

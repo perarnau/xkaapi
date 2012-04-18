@@ -3,7 +3,7 @@
 SCRATCH=/scratch/jvlima
 CUDA_HOME=$SCRATCH/install/cuda
 export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=$SCRATCH/install/xkaapi/default/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$SCRATCH/install/xkaapi/nocopy/lib:$LD_LIBRARY_PATH
 
 niter=1
 #niter=30
@@ -24,8 +24,8 @@ function run_test {
 #    export KAAPI_RECORD_TRACE=1
 #    export KAAPI_RECORD_MASK="COMPUTE,IDLE"
 #    msizes="1024"
-    msizes="2048"
-#    msizes="2048"
+#    msizes="8192"
+    msizes="4096"
 #    msizes="16384"
 #    msizes="2048"
     bsizes="1024"
@@ -36,11 +36,11 @@ function run_test {
 	    for i in `seq 1 $niter`
 	    do
 	    echo "$KAAPI_CPUSET $KAAPI_GPUSET \
-		    ./matprod_iter_kaapi++ $m $b $verif"
+		    ./matprod_nocopy_kaapi++ $m $b $verif"
 	    KAAPI_STACKSIZE=536870912 \
-		    ./matprod_iter_kaapi++ $m $b $verif
-#	    	KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
-#       KAAPI_STACKSIZE=536870912 gdb ./matprod_iter_kaapi++ 
+		    ./matprod_nocopy_kaapi++ $m $b $verif
+#	    	KAAPI_STACKSIZE=536870912 ./matprod_nocopy_kaapi++ $m $b $verif
+#       KAAPI_STACKSIZE=536870912 gdb ./matprod_nocopy_kaapi++ 
 	    done
 	done
     done
@@ -64,9 +64,9 @@ function run_dgemm {
 	    for b in $bsizes; do
 	    for i in `seq 1 $niter`
 	    do
-		echo "$KAAPI_CPUSET($ncpu) $KAAPI_GPUSET($ngpu) ./matprod_iter_kaapi++ $m $b $verif"
-	    # KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif >> $out
-    #	KAAPI_STACKSIZE=536870912 gdb ./matprod_iter_kaapi++ 
+		echo "$KAAPI_CPUSET($ncpu) $KAAPI_GPUSET($ngpu) ./matprod_nocopy_kaapi++ $m $b $verif"
+	    # KAAPI_STACKSIZE=536870912 ./matprod_nocopy_kaapi++ $m $b $verif >> $out
+    #	KAAPI_STACKSIZE=536870912 gdb ./matprod_nocopy_kaapi++ 
 	    done
 	done
     done
@@ -81,19 +81,19 @@ function run_test_block {
     out="$HOME/res/xkaapi-dgemm-${ncpu}cpu${ngpu}gpu-${version}.txt"
     export KAAPI_GPUSET="$gpuset"
     export KAAPI_CPUSET="$cpuset"
-    msizes="$(seq 2048 2048 30720)"
-    bsizes="2048"
+    msizes="$(seq 17408 1024 30720)"
+    bsizes="512"
     niter=30
 #    verif=1
     for m in $msizes ; do
 	    for b in $bsizes; do
 	    for i in `seq 1 $niter`
 	    do
-	    echo "$KAAPI_CPUSET($ncpu) $KAAPI_GPUSET($ngpu) ./matprod_iter_kaapi++ $m $b $verif"
+	    echo "$KAAPI_CPUSET($ncpu) $KAAPI_GPUSET($ngpu) ./matprod_nocopy_kaapi++ $m $b $verif"
 	    KAAPI_STACKSIZE=536870912 \
-		    ./matprod_iter_kaapi++ $m $b $verif >> $out
-#	    	KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
-#       KAAPI_STACKSIZE=536870912 gdb ./matprod_iter_kaapi++ 
+		    ./matprod_nocopy_kaapi++ $m $b $verif >> $out
+#	    	KAAPI_STACKSIZE=536870912 ./matprod_nocopy_kaapi++ $m $b $verif
+#       KAAPI_STACKSIZE=536870912 gdb ./matprod_nocopy_kaapi++ 
 	    done
 	done
     done
