@@ -78,7 +78,7 @@ int kaapi_workqueue_slowpop_ull(
   kaapi_sched_unlock( kwq->lock );
 
   *end = loc_beg;
-  *beg = *end - size; /* >=0 */
+  *beg = loc_beg - size; /* >=0 */
   kaapi_assert_debug( *beg < *end );
   return 0;
 
