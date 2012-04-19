@@ -607,7 +607,9 @@ static int _kaapic_split_task
   for (; !kaapi_listrequest_iterator_empty(&cpy_lri); ) 
   {
     kaapi_request_t* req = kaapi_listrequest_iterator_get(lr, &cpy_lri);
-    kaapi_bitmap_value_set( &mask, gwork->wa.tid2pos[ req->ident ] );
+    int pos = gwork->wa.tid2pos[ req->ident ];
+    if (pos != (uint8_t)-1)
+      kaapi_bitmap_value_set( &mask, pos );
     
     kaapi_listrequest_iterator_next(lr, &cpy_lri);
   }
