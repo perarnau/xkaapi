@@ -254,7 +254,10 @@ struct TaskLU: public ka::Task<1>::Signature<
 static size_t global_blocsize = 2;
 template<>
 struct TaskBodyCPU<TaskLU> {
-  void operator()( const ka::StaticSchedInfo* info, ka::range2d_rpwp<double> A )
+  void operator()( 
+    const ka::StaticSchedInfo* info, 
+    ka::range2d_rpwp<double> A 
+  )
   {
     //int ncpu = info->count_cpu();
     //int sncpu = (int)sqrt( (double)ncpu );

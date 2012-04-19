@@ -317,7 +317,6 @@ struct doit {
 #endif
       }
 
-
               
     // Cholesky factorization of A 
     double sumt = 0.0;

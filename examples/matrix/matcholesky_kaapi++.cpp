@@ -148,7 +148,10 @@ struct TaskNormMatrix: public ka::Task<3>::Signature<
 >{};
 template<>
 struct TaskBodyCPU<TaskNormMatrix> {
-  void operator() ( ka::pointer_w<double> norm, ka::range2d_rw<double> A, ka::range2d_rw<double> LU )
+  void operator() ( 
+    ka::pointer_w<double> norm, 
+    ka::range2d_rw<double> A, 
+    ka::range2d_rw<double> LU )
   {
     const double* dA = A->ptr();
     const double* dLU = LU->ptr();
@@ -208,7 +211,10 @@ struct TaskCholesky: public ka::Task<1>::Signature<
 static size_t global_blocsize = 2;
 template<>
 struct TaskBodyCPU<TaskCholesky> {
-  void operator()( const ka::StaticSchedInfo* info, ka::range2d_rpwp<double> A )
+  void operator()( 
+    const ka::StaticSchedInfo* info, 
+    ka::range2d_rpwp<double>   A 
+  )
   {
     //int ncpu = info->count_cpu();
     //int sncpu = (int)sqrt( (double)ncpu );
@@ -239,7 +245,6 @@ struct TaskBodyCPU<TaskCholesky> {
     }
   }
 };
-
 
 
 /* Main of the program
