@@ -230,7 +230,9 @@ void kaapi_tasklist_push_broadcasttask(
 {
   kaapi_activationlink_t* al = kaapi_tasklist_allocate_al(tl);
   al->td    = td_bcast;
+#if 0
   al->queue = 0;
+#endif
   al->next  = 0;
   if (td_writer->u.acl.bcast ==0) 
     td_writer->u.acl.bcast = (kaapi_activationlist_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_activationlist_t));
