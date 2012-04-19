@@ -1,4 +1,5 @@
 /*
+** kaapi_hashmap.c
 ** xkaapi
 ** 
 ** 
@@ -44,50 +45,44 @@
 */
 #include "kaapi_impl.h"
 
-/** 
-*/
-int kaapi_workqueue_init( 
-    kaapi_workqueue_t* kwq, 
-    kaapi_workqueue_index_t b, 
-    kaapi_workqueue_index_t e 
+/** */
+int kaapi_workqueue_slowpop_ull(
+  kaapi_workqueue_t*           kwq, 
+  kaapi_workqueue_index_ull_t* beg,
+  kaapi_workqueue_index_ull_t* end,
+  kaapi_workqueue_index_ull_t  max_size
 )
 {
-  kaapi_mem_barrier();
-  kaapi_processor_t* const kproc = kaapi_get_current_processor();
-#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)||defined(__ppc__) ||defined(__arm__)
-  kaapi_assert_debug( (((unsigned long)&kwq->rep.li.beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
-  kaapi_assert_debug( (((unsigned long)&kwq->rep.li.end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
-#else
-#  error "May be alignment constraints exit to garantee atomic read write"
-#endif
-  kaapi_assert_debug( b <= e );
-  kwq->rep.li.beg  = b;
-  kwq->rep.li.end  = e;
-  kwq->lock = &kproc->lock;
-  return 0;
-}
+  kaapi_workqueue_index_ull_t size;
+  kaapi_workqueue_index_ull_t loc_beg;
+  kaapi_workqueue_index_ull_t loc_end;
 
+  if ( kwq->lock ==0 ) 
+    return ESRCH;
 
-/** 
-*/
-int kaapi_workqueue_init_with_lock( 
-    kaapi_workqueue_t*      kwq, 
-    kaapi_workqueue_index_t b, 
-    kaapi_workqueue_index_t e, 
-    kaapi_lock_t*           thelock 
-)
-{
-  kaapi_mem_barrier();
-#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)||defined(__ppc__)||defined(__arm__)
-  kaapi_assert_debug( (((unsigned long)&kwq->rep.li.beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
-  kaapi_assert_debug( (((unsigned long)&kwq->rep.li.end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
-#else
-#  error "May be alignment constraints exit to garantee atomic read write"
-#endif
-  kaapi_assert_debug( b <= e );
-  kaapi_assert_debug( thelock != 0 );
-  kwq->rep.li.beg  = b;
-  kwq->rep.li.end  = e;
-  kwq->lock = thelock;
+  kaapi_sched_lock( kwq->lock );
+
+  kaapi_assert_debug( kaapi_atomic_assertlocked(kwq->lock) );
+
+  loc_beg = kwq->rep.ull.beg;
+  loc_end = kwq->rep.ull.end;
+  if (loc_end <= loc_beg) 
+    goto empty_case;
+  size = loc_end - loc_beg;
+
+  if (size > max_size)
+    size = max_size;
+  loc_beg += size;
+  kwq->rep.ull.beg = loc_beg;
+
+  kaapi_sched_unlock( kwq->lock );
+
+  *end = loc_beg;
+  *beg = *end - size; /* >=0 */
+  kaapi_assert_debug( *beg < *end );
   return 0;
+
+empty_case:
+  kaapi_sched_unlock( kwq->lock );
+  return EBUSY;
 }

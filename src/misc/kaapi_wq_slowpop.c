@@ -56,14 +56,15 @@ int kaapi_workqueue_slowpop(
   kaapi_workqueue_index_t size;
   kaapi_workqueue_index_t loc_beg;
 
-  if ( kwq->lock ==0 ) return ESRCH;
+  if ( kwq->lock ==0 ) 
+    return ESRCH;
 
   kaapi_sched_lock( kwq->lock );
 
   kaapi_assert_debug( kaapi_atomic_assertlocked(kwq->lock) );
 
-  loc_beg = kwq->beg;
-  size = kwq->end - loc_beg;
+  loc_beg = kwq->rep.li.beg;
+  size = kwq->rep.li.end - loc_beg;
   if (size ==0) 
     goto empty_case;
   kaapi_assert_debug( size >=0 );
@@ -71,7 +72,7 @@ int kaapi_workqueue_slowpop(
   if (size > max_size)
     size = max_size;
   loc_beg += size;
-  kwq->beg = loc_beg;
+  kwq->rep.li.beg = loc_beg;
 
   kaapi_sched_unlock( kwq->lock );
 
