@@ -51,7 +51,6 @@
        for (i = lb; i <= ub; i++)
          body;
 becomes
-
        void subfunction (void *data)
        {
          long _s0, _e0;

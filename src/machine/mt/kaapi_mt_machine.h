@@ -258,11 +258,11 @@ static inline void kaapi_listrequest_iterator_unset_at(
 
 /* return the number of entries in the range
 */
-static inline unsigned long kaapi_listrequest_iterator_count(
+static inline int kaapi_listrequest_iterator_count(
     kaapi_listrequest_iterator_t* lrrange
 )
 { return kaapi_bitmap_value_count(&lrrange->bitmap) 
-      + (unsigned long)(lrrange->idcurr == -1 ? 0 : 1); }
+      + (int)(lrrange->idcurr == -1 ? 0 : 1); }
 
 /* get the first request of the range. range iterator should have been initialized by kaapi_listrequest_iterator_init 
 */

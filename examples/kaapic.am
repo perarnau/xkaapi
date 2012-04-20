@@ -6,7 +6,7 @@
 ##
 
 if KAAPI_API_KAAPIC
-KAAPIC_PRGS=foreach_kaapic foreach_vtk
+KAAPIC_PRGS=foreach_kaapic foreach_vtk foreach_double_kaapic
 endif
 
 check_PROGRAMS+=$(KAAPIC_PRGS)
@@ -15,6 +15,7 @@ all-kaapic: $(KAAPIC_PRGS)
 #For each using C API kaapic_foreach
 foreach_kaapic_SOURCES=kaapic/foreach_kaapic.c
 foreach_vtk_SOURCES=kaapic/foreach_vtk.c
+foreach_double_kaapic_SOURCES=kaapic/foreach_double_kaapic.c
 
 foreach_kaapic_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
 foreach_kaapic_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
@@ -25,3 +26,8 @@ foreach_vtk_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
 foreach_vtk_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
 foreach_vtk_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
 foreach_vtk_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm
+
+foreach_double_kaapic_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
+foreach_double_kaapic_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
+foreach_double_kaapic_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
+foreach_double_kaapic_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm

@@ -49,6 +49,7 @@
 #include "kaapic.h"
 #include <string.h>
 #include <math.h>
+#include <inttypes.h>
 
 
 /**
@@ -119,7 +120,7 @@ int main(int argc, char** argv)
      counters[i] where i in KAAPI_PERF_PAPIES[i]
    */
   kaapi_perf_accum_counters(&perfids, counters);
-  printf("perf_counters: %lu, %lu, %lu\n",
+  printf("perf_counters: %"PRIi64", %"PRIi64", %"PRIi64"\n",
 	 counters[0], counters[1], counters[2]);
 
   /* finalize the runtime */

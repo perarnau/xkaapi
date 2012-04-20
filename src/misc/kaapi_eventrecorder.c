@@ -103,7 +103,7 @@ static void _kaapi_write_evb( kaapi_event_buffer_t* evb )
       sprintf(filename,"/tmp/events.%i.evt", kid );
 
     /* open it */
-    listfd_set[kid] = open(filename, O_WRONLY|O_CREAT|O_TRUNC);
+    listfd_set[kid] = open(filename, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR);
     kaapi_assert( listfd_set[kid] != -1 );
     fchmod( listfd_set[kid], S_IRUSR|S_IWUSR);
     

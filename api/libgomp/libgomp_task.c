@@ -174,7 +174,7 @@ void GOMP_task(
       GOMP_trampoline_task, 
       kaapi_thread_pushdata(thread, sizeof(GOMP_trampoline_task_arg)) 
   );
-  void* userarg = kaapi_thread_pushdata_align( thread, arg_size, arg_align);
+  void* userarg = kaapi_thread_pushdata_align( thread, (int)arg_size, arg_align);
   if (cpyfn)
     cpyfn(userarg, data);
   else

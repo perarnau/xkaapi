@@ -85,6 +85,14 @@ switch((__w)->nargs) { \\
 ENDDDD
 }
 
+makeswitchadaptativeull() {
+cat <<ENDDDD 
+#define KAAPIC_MAX_ARGS $MAX_NUMBER_PARAMS
+#define KAAPIC_ADAPTIVE_SWITCH_ULL(__w, __i, __j, __tid) \\
+switch((__w)->nargs) { \\
+ENDDDD
+}
+
 
 makeendswitch() {
 cat <<ENDDDD 
@@ -107,16 +115,19 @@ MAX_NUMBER_PARAMS=$1
 makeheader > kaapic_dfg_switch.h
 makeheader > kaapic_dfg_wh_switch.h
 makeheader > kaapic_adaptive_switch.h
+makeheader > kaapic_adaptive_switch_ull.h
 
 makeswitchdfg >> kaapic_dfg_switch.h
 makeswitchdfgwh >> kaapic_dfg_wh_switch.h
 makeswitchadaptative >> kaapic_adaptive_switch.h
+makeswitchadaptativeull >> kaapic_adaptive_switch_ull.h
 
 while [ $COUNTER -ge 0 ]
 do
       m4 -DKAAPI_NUMBER_PARAMS=$NUMBER -DKAAPI_MAX_NUMBER_PARAMS=$MAX_NUMBER_PARAMS m4_macros  kaapic_dfg_switch.m4 >> kaapic_dfg_switch.h
       m4 -DKAAPI_NUMBER_PARAMS=$NUMBER -DKAAPI_MAX_NUMBER_PARAMS=$MAX_NUMBER_PARAMS m4_macros  kaapic_dfg_wh_switch.m4 >> kaapic_dfg_wh_switch.h
       m4 -DKAAPI_NUMBER_PARAMS=$NUMBER -DKAAPI_MAX_NUMBER_PARAMS=$MAX_NUMBER_PARAMS m4_macros  kaapic_adaptive_switch.m4 >> kaapic_adaptive_switch.h
+      m4 -DKAAPI_NUMBER_PARAMS=$NUMBER -DKAAPI_MAX_NUMBER_PARAMS=$MAX_NUMBER_PARAMS m4_macros  kaapic_adaptive_switch_ull.m4 >> kaapic_adaptive_switch_ull.h
       echo "Generating file: $file step $NUMBER :-)"
       NUMBER=`expr $NUMBER + 1`
       COUNTER=`expr $COUNTER - 1`
@@ -125,4 +136,5 @@ done
 makeendswitch >> kaapic_dfg_switch.h
 makeendswitch >> kaapic_dfg_wh_switch.h
 makeendswitch >> kaapic_adaptive_switch.h
+makeendswitch >> kaapic_adaptive_switch_ull.h
 

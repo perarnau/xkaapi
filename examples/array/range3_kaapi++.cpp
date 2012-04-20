@@ -57,8 +57,8 @@ template<>
 struct TaskBodyCPU<TaskPrintMatrix> {
   void operator() ( std::string s, ka::range2d_r<double> array  )
   {
-    size_t d0 = array.dim(0);
-    size_t d1 = array.dim(1);
+    size_t d0 = array->dim(0);
+    size_t d1 = array->dim(1);
     std::cout << "In '" << s << "' TaskPrintMatrix/CPU, matrix = " << d0 << "x" << d1 << std::endl;
     for (size_t i=0; i < d0; ++i)
     {
