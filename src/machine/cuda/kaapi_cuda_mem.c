@@ -607,13 +607,12 @@ kaapi_cuda_mem_copy_dtod_buffer(
 	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
 	const int dest_dev,
 	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
-	const int src_dev,
-	cudaEvent_t event
+	const int src_dev
        	)
 {
     /* Just add a synchronization event waiting the HtoD copy from the source
      * device */
-    cudaStreamWaitEvent( kaapi_cuda_HtoD_stream(), event, 0 );
+//    cudaStreamWaitEvent( kaapi_cuda_HtoD_stream(), event, 0 );
     kaapi_cuda_mem_copy_htod( dest, view_dest, src, view_src );
 
     return 0;

@@ -59,8 +59,89 @@
 
 #include "kaapi_cuda_event.h"
 
+#include "kaapi_cuda_stream.h"
+
 /* cuda task body */
-typedef void (*cuda_task_body_t)(void*, cudaStream_t);
+typedef void (*kaapi_cuda_task_body_t)(
+	void*,
+	cudaStream_t
+    );
+
+static inline void
+kaapi_cuda_thread_tasklist_activate_deps(
+	kaapi_tasklist_t*    tasklist,
+	kaapi_taskdescr_t*   td
+	)
+{
+    /* push in the front the activated tasks */
+    if( !kaapi_activationlist_isempty(&td->u.acl.list) )
+	kaapi_thread_tasklistready_pushactivated( tasklist,
+		td->u.acl.list.front );
+
+    /* do bcast after child execution (they can produce output data) */
+    if( td->u.acl.bcast !=0 ) 
+	kaapi_thread_tasklistready_pushactivated( tasklist,
+		td->u.acl.bcast->front );
+}
+
+/* call back to push ready task into the tasklist after terminaison of a task */
+static int
+kaapi_cuda_callback3_output(
+	kaapi_cuda_stream_t* kstream,
+	kaapi_tasklist_t*    tasklist,
+	kaapi_taskdescr_t*   td
+    )
+{
+    kaapi_cuda_thread_tasklist_activate_deps( tasklist, td );  
+    return 0;
+}
+
+static int
+kaapi_cuda_callback2_kernel(
+	kaapi_cuda_stream_t* kstream,
+	kaapi_tasklist_t*    tasklist,
+	kaapi_taskdescr_t*   td
+    )
+{
+    kaapi_cuda_ctx_push( );
+#if !defined(KAAPI_CUDA_NO_D2H)
+    kaapi_cuda_data_async_recv( kstream, tasklist, td );
+#endif
+    kaapi_cuda_ctx_pop( );
+    kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_D2H, 
+	    kaapi_cuda_callback3_output, tasklist, td );
+    return 0;
+}
+
+static int
+kaapi_cuda_callback1_input(
+	kaapi_cuda_stream_t* kstream,
+	kaapi_tasklist_t*    tasklist,
+	kaapi_taskdescr_t*   td
+    )
+{
+    kaapi_task_t*              pc;         /* cache */
+    kaapi_cuda_task_body_t body =
+	(kaapi_cuda_task_body_t) td->fmt->entrypoint_wh[KAAPI_PROC_TYPE_CUDA];
+    kaapi_assert_debug(body != 0);
+#if defined(KAAPI_TASKLIST_POINTER_TASK)
+    pc = td->task;
+#else
+    pc = &td->task;
+#endif
+    kaapi_assert_debug(pc != 0);
+    kaapi_cuda_ctx_push( );
+    body( pc->sp, kaapi_cuda_kernel_stream() );
+#ifndef	    KAAPI_CUDA_ASYNC /* Synchronous execution */
+    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread_context(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
+	kaapi_cuda_sync();
+    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread_context(), KAAPI_EVT_CUDA_CPU_SYNC_END );
+#endif
+    kaapi_cuda_ctx_pop( );
+    kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_KER, 
+	    kaapi_cuda_callback2_kernel, tasklist, td );
+    return 0;
+}
 
 int kaapi_cuda_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 {
@@ -69,10 +150,11 @@ int kaapi_cuda_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   kaapi_tasklist_t*          tasklist;
   kaapi_taskdescr_t*         td;
   kaapi_frame_t*             fp;
-  unsigned int               proc_type;
+//  unsigned int               proc_type;
   int                        err =0;
   uint32_t                   cnt_exec; /* executed tasks during one call of execframe_tasklist */
-  uint32_t                   cnt_pushed;
+//  uint32_t                   cnt_pushed;
+  kaapi_cuda_stream_t*	    kstream;
 
   kaapi_assert_debug( stack->sfp >= stack->stackframe );
   kaapi_assert_debug( stack->sfp < stack->stackframe+KAAPI_MAX_RECCALL );
@@ -83,14 +165,16 @@ int kaapi_cuda_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_FRAME_TL_BEG );
 
   /* get the processor type to select correct entry point */
-  proc_type = stack->proc->proc_type;
+//  proc_type = stack->proc->proc_type;
   
   /* */
   cnt_exec = 0;
   
   /* */
-  cnt_pushed = 0;
+//  cnt_pushed = 0;
   
+  kstream = stack->proc->cuda_proc.kstream;
+
   /* jump to previous state if return from suspend 
      (if previous return from EWOULDBLOCK)
   */
@@ -113,12 +197,10 @@ int kaapi_cuda_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   //kaapi_writemem_barrier();
 KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist = *tasklist; )
 
-  while (!kaapi_tasklist_isempty( tasklist ))
-  {
+  while (!kaapi_tasklist_isempty( tasklist )) {
     err = kaapi_readylist_pop( &tasklist->rtl, &td );
 
-    if (err ==0)
-    {
+    if (err == 0) {
       kaapi_processor_decr_workload( stack->proc, 1 );
 execute_first:
 #if defined(KAAPI_TASKLIST_POINTER_TASK)
@@ -126,102 +208,65 @@ execute_first:
 #else
       pc = &td->task;
 #endif
-      if (pc !=0)
-      {
-//printf("Execute td:%p, name=%s\n", td, (td->fmt == 0 ? "<no name>" : td->fmt->name) );
-//        kaapi_assert_debug(body != 0);
 
-        /* push the frame for the running task: pc/sp = one before td (which is in the stack)à */
-        fp = (kaapi_frame_t*)stack->sfp;
-        stack->sfp[1] = *fp;
+    kaapi_assert_debug(pc != 0);
+    /* push the frame for the running task: pc/sp = one before td (which is in the stack)à */
+    fp = (kaapi_frame_t*)stack->sfp;
+    stack->sfp[1] = *fp;
 
-        /* kaapi_writemem_barrier(); */
-        stack->sfp = ++fp;
-        kaapi_assert_debug((char*)fp->sp > (char*)fp->sp_data);
-        kaapi_assert_debug( stack->sfp - stack->stackframe <KAAPI_MAX_RECCALL);
-        
-        /* start execution of the user body of the task */
-        KAAPI_DEBUG_INST(kaapi_assert( td->u.acl.exec_date == 0 ));
-        KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
-//printf("%i:: Exec td:%p, date:%lu\n", kaapi_get_self_kid(), td, td->u.acl.date );
-        /* get the correct body for the proc type */
-        if ( (td->fmt == 0) ||
-		(td->fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0) ) {
-	    /* currently some internal tasks do not have format */
-	    kaapi_task_body_t body = kaapi_task_getbody( pc );
-	    body( pc->sp, (kaapi_thread_t*)stack->sfp );
-        } else {
-	    cuda_task_body_t body =
-		(cuda_task_body_t) td->fmt->entrypoint_wh[proc_type];
-
-	    kaapi_cuda_ctx_push( );
+    /* kaapi_writemem_barrier(); */
+    stack->sfp = ++fp;
+    kaapi_assert_debug((char*)fp->sp > (char*)fp->sp_data);
+    kaapi_assert_debug( stack->sfp - stack->stackframe <KAAPI_MAX_RECCALL);
+    
+    /* start execution of the user body of the task */
+    KAAPI_DEBUG_INST(kaapi_assert( td->u.acl.exec_date == 0 ));
+    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
+    /* get the correct body for the proc type */
+    if ( (td->fmt == 0) ||
+	    (td->fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0) ) {
+	/* currently some internal tasks do not have format */
+	kaapi_task_body_t body = kaapi_task_getbody( pc );
+        kaapi_assert_debug(body != 0);
+	body( pc->sp, (kaapi_thread_t*)stack->sfp );
+    } else {
 #if !defined(KAAPI_CUDA_NO_H2D)
-	    kaapi_cuda_data_allocate( td->fmt, pc->sp );
-	    kaapi_cuda_data_send( td->fmt, pc->sp );
-	    kaapi_cuda_event_record();
+	kaapi_cuda_ctx_push( );
+	kaapi_cuda_data_allocate( kstream, tasklist, td );
+	kaapi_cuda_data_send( kstream, tasklist, td );
+	kaapi_cuda_ctx_pop( );
 #endif
-
-	    body( pc->sp, kaapi_cuda_kernel_stream() );
-
-#ifndef	    KAAPI_CUDA_ASYNC /* Synchronous execution */
-        KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_SYNC_BEG );
-	    kaapi_cuda_sync();
-        KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_CUDA_CPU_SYNC_END );
-#endif
-
-#if !defined(KAAPI_CUDA_NO_D2H)
-	    kaapi_cuda_event_record_( kaapi_cuda_kernel_stream() );
-	    kaapi_cuda_data_recv( td->fmt, pc->sp );
-#endif
-
-#if defined(KAAPI_CUDA_NO_D2H)
-	    kaapi_cuda_event_record_( kaapi_cuda_kernel_stream() );
-#endif
-#if 0
-	    kaapi_cuda_data_check();
-#endif
-	    kaapi_cuda_ctx_pop( );
-        }
-        KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_END );
-        KAAPI_DEBUG_INST( td->u.acl.exec_date = kaapi_get_elapsedns() );
-        ++cnt_exec;
-
-        /* new tasks created ? */
-        if (unlikely(fp->sp > stack->sfp->sp))
-        {
-redo_frameexecution:
-          err = kaapi_stack_execframe( &thread->stack );
-          if (err == EWOULDBLOCK)
-          {
-printf("EWOULDBLOCK case 1\n");
-            tasklist->context.chkpt     = 1;
-            tasklist->context.td        = td;
-            tasklist->context.fp        = fp;
-            KAAPI_ATOMIC_ADD(&tasklist->cnt_exec, cnt_exec);
-            return EWOULDBLOCK;
-          }
-          kaapi_assert_debug( err == 0 );
-        }
-        
-        /* pop the frame, even if not used */
-        stack->sfp = --fp;
-      }
-
-      /* push in the front the activated tasks */
-      if (!kaapi_activationlist_isempty(&td->u.acl.list))
-        cnt_pushed = kaapi_thread_tasklistready_pushactivated( tasklist, td->u.acl.list.front );
-      else 
-        cnt_pushed = 0;
-
-      /* do bcast after child execution (they can produce output data) */
-      if (td->u.acl.bcast !=0) 
-        cnt_pushed += kaapi_thread_tasklistready_pushactivated( tasklist, td->u.acl.bcast->front );
-      
-#if 0
-      if (cnt_pushed !=0)
-        kaapi_processor_incr_workload( stack->proc, cnt_pushed );
-#endif
+	kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_H2D, 
+		kaapi_cuda_callback1_input, tasklist, td );
     }
+    KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_END );
+    KAAPI_DEBUG_INST( td->u.acl.exec_date = kaapi_get_elapsedns() );
+    ++cnt_exec;
+
+    /* new tasks created ? */
+    if (unlikely(fp->sp > stack->sfp->sp)) {
+    redo_frameexecution:
+      err = kaapi_stack_execframe( &thread->stack );
+      if (err == EWOULDBLOCK)
+      {
+    printf("EWOULDBLOCK case 1\n");
+	tasklist->context.chkpt     = 1;
+	tasklist->context.td        = td;
+	tasklist->context.fp        = fp;
+	KAAPI_ATOMIC_ADD(&tasklist->cnt_exec, cnt_exec);
+	return EWOULDBLOCK;
+      }
+      kaapi_assert_debug( err == 0 );
+    }
+
+    /* pop the frame, even if not used */
+    stack->sfp = --fp;
+
+    /* activate non-CUDA tasks now */
+    if ( td->fmt == 0 )
+	kaapi_cuda_thread_tasklist_activate_deps( tasklist, td );  
+
+    } /* err == 0 */
     
     /* recv incomming synchronisation 
        - process it before the activation list of the executed
@@ -231,14 +276,21 @@ printf("EWOULDBLOCK case 1\n");
     {
     }
 
+    kaapi_cuda_test_stream( kstream );
+
     /* ok, now push pushed task into the wq and restore the next td to execute */
-	if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0)
+    if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0)
 	  goto execute_first;
     //kaapi_thread_tasklist_commit_ready( tasklist );
             
     KAAPI_DEBUG_INST(save_tasklist = *tasklist;)
 
   } /* while */
+
+    while( kaapi_cuda_waitfirst_stream( kstream ) != KAAPI_CUDA_STREAM_EMPTY ){
+    if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0)
+	  goto execute_first;
+    }
 
   /* here... end execute frame tasklist*/
   KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_FRAME_TL_END );

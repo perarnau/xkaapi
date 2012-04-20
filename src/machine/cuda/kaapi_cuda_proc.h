@@ -65,6 +65,10 @@
 
 #define KAAPI_CUDA_SLIDING_WINDOW	4
 
+#define KAAPI_CUDA_KSTREAM	1
+
+struct kaapi_cuda_stream_t;
+
 enum {
     KAAPI_CUDA_STREAM_HTOD,
     KAAPI_CUDA_STREAM_KERNEL,
@@ -95,9 +99,13 @@ typedef struct kaapi_cuda_proc
     unsigned int index;
     struct cudaDeviceProp  deviceProp;
 
+#if 0
     /* WARNING: some old devices get errors on multiple stream */
     cudaStream_t stream[KAAPI_CUDA_MAX_STREAMS];
     cudaEvent_t event;
+#endif
+
+    struct kaapi_cuda_stream_t* kstream;
 
     kaapi_cuda_ctx_t ctx;
 
@@ -128,10 +136,6 @@ cudaStream_t kaapi_cuda_HtoD_stream(void);
 cudaStream_t kaapi_cuda_DtoH_stream(void);
 
 cudaStream_t kaapi_cuda_DtoD_stream(void);
-
-void kaapi_cuda_event_record( void );
-
-void kaapi_cuda_event_record_( cudaStream_t stream );
 
 static inline int
 kaapi_cuda_sync( void )

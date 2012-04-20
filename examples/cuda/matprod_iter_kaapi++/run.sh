@@ -37,8 +37,7 @@ function run_test {
 	    do
 	    echo "$KAAPI_CPUSET $KAAPI_GPUSET \
 		    ./matprod_iter_kaapi++ $m $b $verif"
-	    KAAPI_STACKSIZE=536870912 \
-		    ./matprod_iter_kaapi++ $m $b $verif
+	    KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
 #	    	KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
 #       KAAPI_STACKSIZE=536870912 gdb ./matprod_iter_kaapi++ 
 	    done

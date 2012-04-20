@@ -256,8 +256,8 @@ libkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda_data_async.c \
   machine/cuda/kaapi_cuda_mem.h \
   machine/cuda/kaapi_cuda_mem.c \
-  machine/cuda/kaapi_cuda_pool.h \
-  machine/cuda/kaapi_cuda_pool.c \
+  machine/cuda/kaapi_cuda_stream.h \
+  machine/cuda/kaapi_cuda_stream.c \
   machine/cuda/kaapi_cuda_taskmovealloc.h \
   machine/cuda/kaapi_cuda_taskmovealloc.c \
   machine/cuda/kaapi_cuda_dev.h \

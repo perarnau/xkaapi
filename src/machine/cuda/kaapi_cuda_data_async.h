@@ -48,18 +48,21 @@
 #define KAAPI_CUDA_DATA_ASYNC_H_INCLUDED
 
 int kaapi_cuda_data_async_allocate( 
-	kaapi_format_t*		   fmt,
-	void*			sp
+	kaapi_cuda_stream_t* kstream,
+	kaapi_tasklist_t*   tasklist,
+	kaapi_taskdescr_t*  td
 );
 
 int kaapi_cuda_data_async_send( 
-	kaapi_format_t*		   fmt,
-	void*			sp
+	kaapi_cuda_stream_t* kstream,
+	kaapi_tasklist_t*   tasklist,
+	kaapi_taskdescr_t*  td
 );
 
 int kaapi_cuda_data_async_recv( 
-	kaapi_format_t*		   fmt,
-	void*			sp
+	kaapi_cuda_stream_t* kstream,
+	kaapi_tasklist_t*   tasklist,
+	kaapi_taskdescr_t*  td
 );
 
 #if	KAAPI_CUDA_MEM_ALLOC_MANAGER

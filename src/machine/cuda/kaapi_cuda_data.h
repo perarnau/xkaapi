@@ -60,29 +60,32 @@
 
 static inline int
 kaapi_cuda_data_allocate( 
-	kaapi_format_t*		   fmt,
-	void*			sp
+	kaapi_cuda_stream_t* kstream,
+	kaapi_tasklist_t*   tasklist,
+	kaapi_taskdescr_t*  td
 )
 {
-    return kaapi_cuda_data_async_allocate( fmt, sp );
+    return kaapi_cuda_data_async_allocate( kstream, tasklist, td );
 }
 
 static inline int
 kaapi_cuda_data_send( 
-	kaapi_format_t*		   fmt,
-	void*			sp
+	kaapi_cuda_stream_t* kstream,
+	kaapi_tasklist_t*   tasklist,
+	kaapi_taskdescr_t*  td
 )
 {
-    return kaapi_cuda_data_async_send( fmt, sp );
+    return kaapi_cuda_data_async_send( kstream, tasklist, td );
 }
 
 static inline int
 kaapi_cuda_data_recv( 
-	kaapi_format_t*		   fmt,
-	void*			sp
+	kaapi_cuda_stream_t* kstream,
+	kaapi_tasklist_t*   tasklist,
+	kaapi_taskdescr_t*  td
 )
 {
-    return kaapi_cuda_data_async_recv( fmt, sp );
+    return kaapi_cuda_data_async_recv( kstream, tasklist, td );
 }
 
 /* ** Memory system **
@@ -107,8 +110,9 @@ kaapi_cuda_data_sync_host( kaapi_data_t* kdata, cudaStream_t stream )
     return kaapi_cuda_data_async_sync_host( kdata, stream );
 }
 
-#else /* BASIC mode */
+#endif
 
+#if 0
 #include "kaapi_cuda_data_basic.h"
 
 static inline int

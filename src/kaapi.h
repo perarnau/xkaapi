@@ -61,7 +61,7 @@
 
 #define KAAPI_NO_CPU	    1	/* no CPU task executed */
 //#define KAAPI_CUDA_NO_H2D   1	/* host to device copies disabled */
-#define KAAPI_CUDA_NO_D2H   1	/* device to host copies disabled */
+//#define KAAPI_CUDA_NO_D2H   1	/* device to host copies disabled */
 
 #define __KAAPI__ 1
 #define __KAAPI_MINOR__ 2
@@ -1562,9 +1562,6 @@ typedef struct kaapi_data_t {
   kaapi_pointer_t               ptr;                /* address of data */
   kaapi_memory_view_t           view;               /* view of data */
   struct kaapi_metadata_info_t* mdi;                /* if not null, pointer to the meta data */
-#if defined(KAAPI_USE_CUDA)
-  cudaEvent_t event;
-#endif
 } kaapi_data_t;
 
 

@@ -45,9 +45,10 @@
 #ifndef KAAPI_CUDA_H_INCLUDED
 #define KAAPI_CUDA_H_INCLUDED
 
+#include <cuda_runtime_api.h>
 
-/* top level include file */
 #include "kaapi_cuda_execframe.h"
-
+#include "kaapi_cuda_stream.h"
+#include "kaapi_cuda_proc.h"
 
 #endif /* ! KAAPI_CUDA_H_INCLUDED */
