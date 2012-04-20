@@ -60,6 +60,7 @@ extern void _kaapic_register_task_format(void);
 typedef struct kaapic_body_arg_t {
   union {
     void (*f_c)(int32_t, int32_t, int32_t, ...);
+    void (*f_c_ull)(unsigned long long, unsigned long long, int32_t, ...);
     void (*f_f)(int32_t*, int32_t*, int32_t*, ...);
   } u;
   unsigned int        nargs;
@@ -72,6 +73,17 @@ typedef struct kaapic_body_arg_t {
    computation over the range [first,last[.
 */
 typedef void (*kaapic_foreach_body_t)(int32_t, int32_t, int32_t, kaapic_body_arg_t* );
+
+/* Signature of foreach body 
+   Called with (first, last, tid, arg) in order to do
+   computation over the range [first,last[.
+*/
+typedef void (*kaapic_foreach_body_ull_t)(
+  unsigned long long, 
+  unsigned long long, 
+  int32_t, 
+  kaapic_body_arg_t* 
+);
 
 
 /* Default attribut if not specified
@@ -94,12 +106,34 @@ extern int kaapic_foreach_common
   kaapic_body_arg_t*      body_args
 );
 
+/* exported foreach interface 
+   evaluate body_f(first, last, body_args) in parallel, assuming
+   that the evaluation of body_f(i, j, body_args) does not impose
+   dependency with evaluation of body_f(k,l, body_args) if [i,j[ and [k,l[
+   does not intersect.
+*/
+extern int kaapic_foreach_common_ull
+(
+  kaapi_workqueue_index_ull_t  first,
+  kaapi_workqueue_index_ull_t  last,
+  const kaapic_foreach_attr_t* attr,
+  kaapic_foreach_body_ull_t    body_f,
+  kaapic_body_arg_t*           body_args
+);
+
 
 /* wrapper for kaapic_foreach(...) and kaapic_foreach_withformat(...)
 */
 extern void kaapic_foreach_body2user(
   int32_t first, 
   int32_t last, 
+  int32_t tid, 
+  kaapic_body_arg_t* arg 
+);
+
+extern void kaapic_foreach_body2user_ull(
+  unsigned long long first, 
+  unsigned long long last, 
   int32_t tid, 
   kaapic_body_arg_t* arg 
 );
@@ -157,7 +191,10 @@ typedef struct work_array
 {
   kaapi_bitmap_t       map;
   uint8_t              tid2pos[KAAPI_MAX_PROCESSOR];
-  long                 startindex[1+KAAPI_MAX_PROCESSOR];
+  union {
+    kaapi_workqueue_index_t     startindex[1+KAAPI_MAX_PROCESSOR];
+    kaapi_workqueue_index_ull_t startindex_ull[1+KAAPI_MAX_PROCESSOR];
+  };
 } kaapic_work_distribution_t;
 
 
@@ -165,8 +202,16 @@ typedef struct work_array
 typedef struct work_info
 {
   /* grains */
-  long par_grain;
-  long seq_grain;
+  union {
+    struct {
+      long par_grain;
+      long seq_grain;
+    } li;
+    struct {
+      unsigned long long par_grain;
+      unsigned long long seq_grain;
+    } ull;
+  } rep;
 
 } kaapic_work_info_t;
 
@@ -204,7 +249,10 @@ typedef struct global_work
   kaapic_local_work_t lwork[KAAPI_MAX_PROCESSOR];
 
   /* work routine */
-  kaapic_foreach_body_t body_f;
+  union {
+    kaapic_foreach_body_t     body_f;
+    kaapic_foreach_body_ull_t body_f_ull;
+  };
   kaapic_body_arg_t*    body_args;
 
   /* infos container */
@@ -219,12 +267,25 @@ typedef struct global_work
    \retval returns non zero if there is work to do, else returns 0
 */
 extern kaapic_local_work_t*  kaapic_foreach_workinit(
-  kaapi_thread_context_t*       self_thread,
-  kaapi_workqueue_index_t       first, 
-  kaapi_workqueue_index_t       last,
-  const kaapic_foreach_attr_t*  attr,
-  kaapic_foreach_body_t         body_f,
-  kaapic_body_arg_t*            body_args
+  kaapi_thread_context_t*      self_thread,
+  kaapi_workqueue_index_t      first, 
+  kaapi_workqueue_index_t      last,
+  const kaapic_foreach_attr_t* attr,
+  kaapic_foreach_body_t        body_f,
+  kaapic_body_arg_t*           body_args
+);
+
+
+/* init work 
+   \retval returns non zero if there is work to do, else returns 0
+*/
+extern kaapic_local_work_t*  kaapic_foreach_workinit_ull(
+  kaapi_thread_context_t*      self_thread,
+  kaapi_workqueue_index_ull_t  first, 
+  kaapi_workqueue_index_ull_t  last,
+  const kaapic_foreach_attr_t* attr,
+  kaapic_foreach_body_ull_t    body_f,
+  kaapic_body_arg_t*           body_args
 );
 
 
@@ -232,12 +293,24 @@ extern kaapic_local_work_t*  kaapic_foreach_workinit(
 */
 extern kaapic_global_work_t* kaapic_foreach_global_workinit
 (
-  kaapi_thread_context_t* self_thread,
-  kaapi_workqueue_index_t first, 
-  kaapi_workqueue_index_t last,
-  const kaapic_foreach_attr_t*  attr,
-  kaapic_foreach_body_t   body_f,
-  kaapic_body_arg_t*      body_args
+  kaapi_thread_context_t*      self_thread,
+  kaapi_workqueue_index_t      first, 
+  kaapi_workqueue_index_t      last,
+  const kaapic_foreach_attr_t* attr,
+  kaapic_foreach_body_t        body_f,
+  kaapic_body_arg_t*           body_args
+);
+
+/*
+*/
+extern kaapic_global_work_t* kaapic_foreach_global_workinit_ull
+(
+  kaapi_thread_context_t*      self_thread,
+  kaapi_workqueue_index_ull_t  first, 
+  kaapi_workqueue_index_ull_t  last,
+  const kaapic_foreach_attr_t* attr,
+  kaapic_foreach_body_ull_t    body_f,
+  kaapic_body_arg_t*           body_args
 );
 
 
@@ -252,6 +325,17 @@ extern kaapic_local_work_t* kaapic_foreach_local_workinit(
   kaapi_workqueue_index_t last
 );
 
+/* init local work if know global work.
+   May be called by each runing threads that decide to cooperate together
+   to execute in common a global work.
+   \retval returns non zero if there is work to do, else returns 0
+*/
+extern kaapic_local_work_t* kaapic_foreach_local_workinit_ull(
+  kaapic_local_work_t*        lwork,
+  kaapi_workqueue_index_ull_t first,
+  kaapi_workqueue_index_ull_t last
+);
+
 
 extern int kaapic_global_work_pop
 (
@@ -259,6 +343,14 @@ extern int kaapic_global_work_pop
   kaapi_processor_id_t tid, 
   kaapi_workqueue_index_t* i, 
   kaapi_workqueue_index_t* j
+);
+
+extern int kaapic_global_work_pop_ull
+(
+  kaapic_global_work_t*        gw,
+  kaapi_processor_id_t         tid, 
+  kaapi_workqueue_index_ull_t* i, 
+  kaapi_workqueue_index_ull_t* j
 );
 
 /* 
@@ -269,6 +361,17 @@ extern int kaapic_foreach_worknext(
   kaapic_local_work_t*    work,
   kaapi_workqueue_index_t* first,
   kaapi_workqueue_index_t* last
+);
+
+
+/* 
+  Return !=0 iff first and last have been filled for the next piece
+  of work to execute
+*/
+extern int kaapic_foreach_worknext_ull(
+  kaapic_local_work_t*         work,
+  kaapi_workqueue_index_ull_t* first,
+  kaapi_workqueue_index_ull_t* last
 );
 
 
@@ -288,6 +391,11 @@ int kaapic_foreach_workend
   kaapi_thread_context_t* self_thread,
   kaapic_local_work_t*    work
 );
+
+/* misc: for API F */
+extern void kaapic_save_frame(void);
+extern void kaapic_restore_frame(void);
+extern void kaapic_dfg_body(void* p, kaapi_thread_t* t);
 
 #if defined(__cplusplus)
 }

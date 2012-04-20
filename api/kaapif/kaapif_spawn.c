@@ -50,7 +50,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-extern void kaapic_dfg_body(void* p, kaapi_thread_t* t);
 
 /* dataflow interface */
 int kaapif_spawn_

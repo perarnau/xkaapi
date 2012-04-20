@@ -136,9 +136,9 @@ static inline int kaapi_bitmap_value_empty_32( const kaapi_bitmap_value32_t* b )
   return b->proc32 ==0;
 }
 
-static inline unsigned long kaapi_bitmap_value_count_32( const kaapi_bitmap_value32_t* b )
+static inline int kaapi_bitmap_value_count_32( const kaapi_bitmap_value32_t* b )
 { 
-  return (unsigned long)__builtin_popcount(b->proc32);
+  return __builtin_popcount(b->proc32);
 }
 
 static inline void kaapi_bitmap_value_set_32( kaapi_bitmap_value32_t* b, int i ) 
@@ -306,10 +306,10 @@ static inline int kaapi_bitmap_init_64(
   return 0;
 }
 
- static inline unsigned long kaapi_bitmap_value_count_64
+ static inline int kaapi_bitmap_value_count_64
 ( const kaapi_bitmap_value64_t* b )
 { 
-  return (unsigned long)__builtin_popcountl(b->proc64);
+  return __builtin_popcountl(b->proc64);
 }
 
 static inline void kaapi_bitmap_value_clear_64( kaapi_bitmap_value64_t* b )
@@ -505,14 +505,13 @@ static inline void kaapi_bitmap_value_full_128( kaapi_bitmap_value128_t* b )
   b->proc128[1] =~(uint64_t)0;
 }
 
-static inline unsigned long kaapi_bitmap_value_count_128
+static inline int kaapi_bitmap_value_count_128
 ( const kaapi_bitmap_value128_t* b )
 { 
-  return (unsigned long)
-    (
+  return 
      __builtin_popcountl(b->proc128[0]) +
      __builtin_popcountl(b->proc128[1])
-    );
+  ;
 }
 
 static inline int kaapi_bitmap_value_empty_128( const kaapi_bitmap_value128_t* b )

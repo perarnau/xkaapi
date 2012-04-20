@@ -50,10 +50,14 @@ libkaapic_la_SOURCES=\
 	kaapic_spawn_attr.c \
 	kaapic_alloca.c \
 	kaapic_work.c \
+	kaapic_work_ull.c \
 	kaapic_foreach_docall.c \
+	kaapic_foreach_docall_ull.c \
 	kaapic_foreach_attr.c \
 	kaapic_foreach.c \
+	kaapic_foreach_ull.c \
 	kaapic_foreach_withformat.c \
+	kaapic_foreach_withformat_ull.c \
 	$(include_HEADERS)\
 	kaapic_impl.h \
 	$(M4_BUILT_FILES)

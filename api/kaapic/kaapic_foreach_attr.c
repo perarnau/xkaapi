@@ -45,8 +45,8 @@
 
 int kaapic_foreach_attr_init(kaapic_foreach_attr_t* attr)
 {
-  attr->s_grain  = 1;
-  attr->p_grain  = 1;
+  attr->rep.li.s_grain  = 1;
+  attr->rep.li.p_grain  = 1;
   attr->nthreads = -1;
   attr->policy   = 0;
   kaapi_cpuset_full(&attr->cpuset);
@@ -55,12 +55,23 @@ int kaapic_foreach_attr_init(kaapic_foreach_attr_t* attr)
 
 int kaapic_foreach_attr_set_grains(
   kaapic_foreach_attr_t* attr, 
-  uint32_t s_grain,
-  uint32_t p_grain
+  long s_grain,
+  long p_grain
 )
 {
-  attr->s_grain = s_grain;
-  attr->p_grain = p_grain;
+  attr->rep.li.s_grain = s_grain;
+  attr->rep.li.p_grain = p_grain;
+  return 0;
+}
+
+int kaapic_foreach_attr_set_grains_ull(
+  kaapic_foreach_attr_t* attr, 
+  unsigned long long s_grain,
+  unsigned long long p_grain
+)
+{
+  attr->rep.ull.s_grain = s_grain;
+  attr->rep.ull.p_grain = p_grain;
   return 0;
 }
 

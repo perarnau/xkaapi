@@ -1,6 +1,7 @@
 /*
  ** xkaapi
  ** 
+ ** Created on Tue Mar 31 15:19:14 2009
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
@@ -43,10 +44,16 @@
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
 #include <stdarg.h>
-#include <string.h>
 
 
-void* kaapic_alloca( size_t sz )
+/* main entry point */
+void kaapic_foreach_body2user_ull(
+  unsigned long long first, 
+  unsigned long long last, 
+  int32_t tid, 
+  kaapic_body_arg_t* call 
+)
 {
-  return kaapi_alloca( kaapi_self_thread(), (uint32_t)sz );
+#include "kaapic_adaptive_switch_ull.h"
+  KAAPIC_ADAPTIVE_SWITCH_ULL(call, first, last, tid);
 }
