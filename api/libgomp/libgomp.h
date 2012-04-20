@@ -129,8 +129,18 @@ typedef struct komp_teaminfo_t {
 */
 typedef struct komp_workshare_t {
   kaapic_local_work_t*         lwork;  /* last foreach loop context */
-  long                         start;  /* start index of the Kaapi/GOMP slice*/
-  long                         incr;   /* scaling factor between Kaapi/GOMP */
+  int                          isull;  /* 1 iff unsigned long long version else 0 */
+  union {
+    struct {
+      long                     start;  /* start index of the Kaapi/GOMP slice*/
+      long                     incr;   /* scaling factor between Kaapi/GOMP */
+    } li;
+    struct {
+      unsigned long long       start;  /* start index of the Kaapi/GOMP slice*/
+      unsigned long long       incr;   /* scaling factor between Kaapi/GOMP */
+      bool                     up;     /* upward / downward count */
+    } ull;
+  } rep;
   unsigned long                serial; /* serial number of workshare construct */
 } komp_workshare_t;
 

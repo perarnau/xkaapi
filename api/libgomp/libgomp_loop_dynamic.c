@@ -112,8 +112,8 @@ static inline komp_workshare_t*  komp_loop_dynamic_start_init(
     workshare = kaapi_thread_pushdata(thread, sizeof(komp_workshare_t) );
     ctxt->workshare = workshare;
   }
-  workshare->start  = start;
-  workshare->incr   = incr;
+  workshare->rep.li.start  = start;
+  workshare->rep.li.incr   = incr;
   workshare->serial = ++teaminfo->serial;
   return workshare;
 }
@@ -248,8 +248,10 @@ bool GOMP_loop_dynamic_start (
         iend)
       )
   {
-    *istart = ctxt->workshare->start + *istart * ctxt->workshare->incr;
-    *iend   = ctxt->workshare->start + *iend   * ctxt->workshare->incr;
+    *istart = ctxt->workshare->rep.li.start + 
+               *istart * ctxt->workshare->rep.li.incr;
+    *iend   = ctxt->workshare->rep.li.start + 
+               *iend   * ctxt->workshare->rep.li.incr;
     return 1;
   }
   return 0;
@@ -269,8 +271,10 @@ bool GOMP_loop_dynamic_next (long *istart, long *iend)
         iend)
   )
   {
-    *istart = ctxt->workshare->start + *istart * ctxt->workshare->incr;
-    *iend   = ctxt->workshare->start + *iend   * ctxt->workshare->incr;
+    *istart = ctxt->workshare->rep.li.start + 
+               *istart * ctxt->workshare->rep.li.incr;
+    *iend   = ctxt->workshare->rep.li.start + 
+               *iend   * ctxt->workshare->rep.li.incr;
     return 1;
   }
   return 0;

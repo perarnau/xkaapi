@@ -44,30 +44,53 @@
 #include "libgomp.h"
 
 
-bool GOMP_loop_guided_start (long, long, long, long, long *, long *)
+bool GOMP_loop_guided_start (
+        long start, 
+        long end, 
+        long incr, 
+        long chunk_size,
+        long *istart, 
+        long *iend
+)      
+{
+  printf("%s:: \n", __FUNCTION__);
+  return 0;
+}
+
+bool GOMP_loop_guided_next (long *istart, long *iend)
+{
+  printf("%s:: \n", __FUNCTION__);
+  return 0;
+}
+
+void GOMP_parallel_loop_guided_start (
+        void (*fn) (void *), void *data,
+				unsigned num_threads, 
+        long start, 
+        long end,
+				long incr, 
+        long chunk_size
+)
 {
   printf("%s:: \n", __FUNCTION__);
 }
 
-bool GOMP_loop_guided_next (long *, long *)
+bool GOMP_loop_ordered_guided_start (
+        long start, 
+        long end, 
+        long incr,
+				long chunk_size, 
+        long *istart, 
+        long *iend
+)
 {
   printf("%s:: \n", __FUNCTION__);
+  return 0;
 }
 
-void GOMP_parallel_loop_guided_start (void (*)(void *), void *,
-					     unsigned, long, long, long, long)
+bool GOMP_loop_ordered_guided_next (long *istart, long *iend)
 {
   printf("%s:: \n", __FUNCTION__);
-}
-
-bool GOMP_loop_ordered_guided_start (long, long, long, long,
-					     long *, long *)
-{
-  printf("%s:: \n", __FUNCTION__);
-}
-
-bool GOMP_loop_ordered_guided_next (long *, long *)
-{
-  printf("%s:: \n", __FUNCTION__);
+  return 0;
 }
 
