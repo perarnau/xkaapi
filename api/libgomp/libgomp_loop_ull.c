@@ -85,10 +85,21 @@ static inline void komp_loop_dynamic_start_master_ull(
   kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
   komp_teaminfo_t* teaminfo = ctxt->teaminfo;
 
-  /* loop normalization is required */
-#warning "Loop normalisation"  
-  unsigned long long ka_start = 0;
-  unsigned long long ka_end   = (end-start+incr-1)/incr;
+  /* loop normalization is required:
+     - kaapic_foreach iterate from [beg,end), assuming beg<end
+     and positive (ull version).
+     - if up=1 -> map libKOMP [start,end,1) directly to KaapiC [0,end-start)
+     and i_libkomp = start+i_kaapic
+     - if up=0 -> start > end >=0, so map libKOMP [start,end,-1)
+     to [0,start-end), start-end>0 and i_libkomp = start - i_kaapic
+  */
+  unsigned long long ka_start; 
+  unsigned long long ka_end;
+  ka_start = 0;
+  if (up)
+    ka_end = (end-start+incr-1)/incr;
+  else
+    ka_end = (start-end+incr-1)/incr;
   
   /* TODO: automatic adaptation on the chunksize here
      or (better) automatic adaptation in libkaapic
@@ -133,13 +144,13 @@ static inline void komp_loop_dynamic_start_slave(
   kaapic_global_work_t* gwork
 )
 {
-  long start, end;
+  unsigned long long start, end;
 
   /* wait global work becomes ready */
   kaapi_assert_debug(gwork !=0);
         
   /* get own slice */
-  if (!kaapic_global_work_pop( gwork, kproc->kid, &start, &end))
+  if (!kaapic_global_work_pop_ull( gwork, kproc->kid, &start, &end))
     start = end = 0;
 
   workshare->lwork = kaapic_foreach_local_workinit_ull( 
@@ -164,7 +175,7 @@ bool GOMP_loop_ull_dynamic_start (
   kaapic_global_work_t* gwork;
 
   komp_workshare_t* workshare = 
-    komp_loop_dynamic_start_init_ull( kproc,up,  start, incr );
+    komp_loop_dynamic_start_init_ull( kproc, up,  start, incr );
 
   if (ctxt->icv.thread_id ==0)
   {
@@ -200,8 +211,19 @@ bool GOMP_loop_ull_dynamic_start (
         iend)
       )
   {
-    *istart = ctxt->workshare->rep.ull.start + *istart * ctxt->workshare->rep.ull.incr;
-    *iend   = ctxt->workshare->rep.ull.start + *iend   * ctxt->workshare->rep.ull.incr;
+    if (ctxt->workshare->rep.ull.up)
+    {
+      *istart = ctxt->workshare->rep.ull.start 
+         + *istart * ctxt->workshare->rep.ull.incr;
+      *iend   = ctxt->workshare->rep.ull.start 
+         + *iend   * ctxt->workshare->rep.ull.incr;
+    }
+    else {
+      *istart = ctxt->workshare->rep.ull.start 
+         - *istart * ctxt->workshare->rep.ull.incr;
+      *iend   = ctxt->workshare->rep.ull.start 
+         - *iend   * ctxt->workshare->rep.ull.incr;
+    }
     return 1;
   }
   return 0;
@@ -214,6 +236,29 @@ bool GOMP_loop_ull_dynamic_next (
 					unsigned long long *iend
 )
 {
-  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
-  return false;
+  kaapi_processor_t*   kproc = kaapi_get_current_processor();
+  kompctxt_t* ctxt  = komp_get_ctxtkproc( kproc );
+
+  if (kaapic_foreach_worknext_ull(
+        ctxt->workshare->lwork, 
+        istart,
+        iend)
+  )
+  {
+    if (ctxt->workshare->rep.ull.up)
+    {
+      *istart = ctxt->workshare->rep.ull.start 
+         + *istart * ctxt->workshare->rep.ull.incr;
+      *iend   = ctxt->workshare->rep.ull.start 
+         + *iend   * ctxt->workshare->rep.ull.incr;
+    }
+    else {
+      *istart = ctxt->workshare->rep.ull.start 
+         - *istart * ctxt->workshare->rep.ull.incr;
+      *iend   = ctxt->workshare->rep.ull.start 
+         - *iend   * ctxt->workshare->rep.ull.incr;
+    }
+    return 1;
+  }
+  return 0;
 }

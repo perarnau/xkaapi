@@ -129,7 +129,6 @@ typedef struct komp_teaminfo_t {
 */
 typedef struct komp_workshare_t {
   kaapic_local_work_t*         lwork;  /* last foreach loop context */
-  int                          isull;  /* 1 iff unsigned long long version else 0 */
   union {
     struct {
       long                     start;  /* start index of the Kaapi/GOMP slice*/
