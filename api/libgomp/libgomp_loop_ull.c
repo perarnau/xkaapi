@@ -98,8 +98,10 @@ static inline void komp_loop_dynamic_start_master_ull(
   ka_start = 0;
   if (up)
     ka_end = (end-start+incr-1)/incr;
-  else
-    ka_end = (start-end+incr-1)/incr;
+  else {
+    /* seems that incr is -incr */
+    ka_end = (start-end-incr-1)/-incr;
+  }
   
   /* TODO: automatic adaptation on the chunksize here
      or (better) automatic adaptation in libkaapic
@@ -220,9 +222,9 @@ bool GOMP_loop_ull_dynamic_start (
     }
     else {
       *istart = ctxt->workshare->rep.ull.start 
-         - *istart * ctxt->workshare->rep.ull.incr;
+         + *istart * ctxt->workshare->rep.ull.incr;
       *iend   = ctxt->workshare->rep.ull.start 
-         - *iend   * ctxt->workshare->rep.ull.incr;
+         + *iend   * ctxt->workshare->rep.ull.incr;
     }
     return 1;
   }
@@ -254,9 +256,9 @@ bool GOMP_loop_ull_dynamic_next (
     }
     else {
       *istart = ctxt->workshare->rep.ull.start 
-         - *istart * ctxt->workshare->rep.ull.incr;
+         + *istart * ctxt->workshare->rep.ull.incr;
       *iend   = ctxt->workshare->rep.ull.start 
-         - *iend   * ctxt->workshare->rep.ull.incr;
+         + *iend   * ctxt->workshare->rep.ull.incr;
     }
     return 1;
   }
