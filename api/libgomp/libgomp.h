@@ -51,6 +51,18 @@
 
 #if defined(__linux__)
 #include <omp.h>
+#else
+/* function from the runtime support of OMP: need for mac... */
+typedef enum omp_sched_t {
+    omp_sched_static = 1,
+    omp_sched_dynamic = 2,
+    omp_sched_guided = 3,
+    omp_sched_auto = 4
+} omp_sched_t;
+
+//typedef kaapi_atomic8_t omp_lock_t;
+//typedef kaapi_atomic32_t omp_nest_lock_t;
+#endif
 #endif
 
 #include "kaapi_impl.h"
@@ -91,10 +103,10 @@ typedef struct komp_icv_t {
   int                next_numthreads; /* number of thread for the next // region */
   int                nested_level;    /* nested level of // region */
   int                nested_parallel; /* !=0 iff nest allowed */
-  int                dynamic_numthreads;    /* number of threads the
-					       runtime can dynamically
-					       adjust the next
-					       parallel region to. */
+  int                dynamic_numthreads;  /* number of threads the runtime can dynamically
+                                             adjust the next parallel region to. */
+  omp_sched_t        run_sched;
+  int                chunk_size;
 } komp_icv_t;
 
 /* Team information : common to all threads that shared a same parallel region.
@@ -174,6 +186,9 @@ static inline kompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc )
     first->ctxt.icv.nested_parallel     = 1;
     first->ctxt.icv.dynamic_numthreads  = 0; /* Not sure of this initial value, next_numthreads may
                                      					  be more appropriate here... */
+    first->ctxt.icv.run_sched           = omp_sched_dynamic;
+    first->ctxt.icv.chunk_size          = 0; /* default */
+
     kaapi_atomic_initlock(&first->teaminfo.lock);
     komp_barrier_init (&first->teaminfo.barrier, 1);
     first->teaminfo.single_data = 0;
@@ -210,18 +225,6 @@ extern void komp_parallel_start (
 # pragma GCC visibility pop
 #endif
 
-#if !defined(__linux__)
-/* function from the runtime support of OMP: need for mac... */
-typedef enum omp_sched_t {
-    omp_sched_static = 1,
-    omp_sched_dynamic = 2,
-    omp_sched_guided = 3,
-    omp_sched_auto = 4
-} omp_sched_t;
-
-//typedef kaapi_atomic8_t omp_lock_t;
-//typedef kaapi_atomic32_t omp_nest_lock_t;
-#endif
 
 #include "libgomp_g.h"
 

@@ -131,8 +131,17 @@ omp_get_nested(void)
 /*
 */
 void 
-omp_set_schedule(omp_sched_t kind __attribute__((unused)), int modifier __attribute__((unused)))
+omp_set_schedule(omp_sched_t kind, int modifier )
 {
+  kompctxt_t* ctxt = komp_get_ctxt();
+  kaapi_assert( (kind == omp_sched_dynamic)
+             || (kind == omp_sched_static)
+             || (kind == omp_sched_guided)
+             || (kind == omp_sched_auto)
+  );
+  if (kind == omp_sched_auto) modifier = 0;
+  ctxt->icv.run_sched  = kind;
+  ctxt->icv.chunk_size = modifier;
 }
 
 /*
@@ -140,8 +149,9 @@ omp_set_schedule(omp_sched_t kind __attribute__((unused)), int modifier __attrib
 void 
 omp_get_schedule(omp_sched_t * kind, int * modifier )
 {
-  *kind = omp_sched_dynamic;
-  *modifier = -1;
+  kompctxt_t* ctxt = komp_get_ctxt();
+  *kind = ctxt->icv.run_sched;
+  *modifier = ctxt->icv.chunk_size;
 }
 
 /*
