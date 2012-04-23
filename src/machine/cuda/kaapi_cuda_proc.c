@@ -82,24 +82,7 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
 
   kaapi_cuda_sync();
 
-  kaapi_cuda_stream_init( 16, proc );
-#if 0
-    int i;
-    for( i = 0; i < KAAPI_CUDA_MAX_STREAMS; i++ ) {
-	res = cudaStreamCreate( &proc->stream[i] );
-	if (res != cudaSuccess) {
-	    fprintf(stdout, "%s: cudaStreamCreate ERROR %d\n", __FUNCTION__, res );
-	    fflush(stdout);
-	    abort();
-	}
-    }
-  res = cudaEventCreateWithFlags( &proc->event, cudaEventDisableTiming );
-  if (res != cudaSuccess) {
-	    fprintf(stdout, "%s: cudaEventCreate ERROR %d\n", __FUNCTION__, res );
-	    fflush(stdout);
-	    abort();
-  }
-#endif
+  kaapi_cuda_stream_init( 32, proc );
 
   /* pop the context to make it floating. doing
      so allow another thread to use it, such

@@ -279,7 +279,7 @@ execute_first:
     kaapi_cuda_test_stream( kstream );
 
     /* ok, now push pushed task into the wq and restore the next td to execute */
-    if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0)
+    if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0 )
 	  goto execute_first;
     //kaapi_thread_tasklist_commit_ready( tasklist );
             

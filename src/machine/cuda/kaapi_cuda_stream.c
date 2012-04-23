@@ -535,15 +535,9 @@ kaapi_cuda_test_stream(
 	kaapi_cuda_stream_t*    stream
 )
 {
-  if( kaapi_cuda_test_fifo_stream( stream, &stream->input_fifo ) 
-	  == KAAPI_CUDA_STREAM_BUSY )
-      return KAAPI_CUDA_STREAM_BUSY;
-  if( kaapi_cuda_test_fifo_stream( stream, &stream->output_fifo )
-	  == KAAPI_CUDA_STREAM_BUSY )
-      return KAAPI_CUDA_STREAM_BUSY;
-  if( kaapi_cuda_test_fifo_stream( stream, &stream->kernel_fifo )
-	  == KAAPI_CUDA_STREAM_BUSY )
-      return KAAPI_CUDA_STREAM_BUSY;
+  kaapi_cuda_test_fifo_stream( stream, &stream->input_fifo );
+  kaapi_cuda_test_fifo_stream( stream, &stream->output_fifo );
+  kaapi_cuda_test_fifo_stream( stream, &stream->kernel_fifo );
 
   return KAAPI_CUDA_STREAM_READY;
 }
