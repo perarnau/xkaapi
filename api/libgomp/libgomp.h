@@ -63,7 +63,6 @@ typedef enum omp_sched_t {
 //typedef kaapi_atomic8_t omp_lock_t;
 //typedef kaapi_atomic32_t omp_nest_lock_t;
 #endif
-#endif
 
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
