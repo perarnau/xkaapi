@@ -162,11 +162,20 @@ omp_get_thread_limit(void)
   return kaapi_getconcurrency();
 }
 
+
+/* TODO: 
+   1/ parse OMP_MAX_ACTIVE_LEVELS
+   2/ do not add thread is nested level > omp_max_active_levels
+*/
+int omp_max_active_levels = KAAPI_MAX_RECCALL;
+
 /*
 */
 void 
-omp_set_max_active_levels (int max_levels __attribute__((unused)))
+omp_set_max_active_levels (int max_levels )
 {
+  if (max_levels >=0)
+    omp_max_active_levels = max_levels;
 }
 
 /*
@@ -174,7 +183,7 @@ omp_set_max_active_levels (int max_levels __attribute__((unused)))
 int 
 omp_get_max_active_levels(void)
 {
-  return 256;
+  return omp_max_active_levels;
 }
 
 /*

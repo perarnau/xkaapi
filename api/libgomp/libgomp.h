@@ -162,7 +162,16 @@ typedef struct kompctxt_t {
   komp_icv_t          icv;           /* current icv data */
   int                 inside_single;
   struct kompctxt_t*  save_ctxt;     /* to restore on pop */
-} kompctxt_t ;
+} kompctxt_t;
+
+/* omp_max_active_levels:
+   OpenMP 3.1: 
+   "This routine has the described effect only when called from 
+   the sequential part of the program. When called from within 
+   an explicit parallel region, the effect of this routine is 
+   implementation defined."
+ */
+extern int omp_max_active_levels;
 
 
 /** Initial context with teaminformation */
