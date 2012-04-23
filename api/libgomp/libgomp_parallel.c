@@ -150,7 +150,9 @@ komp_init_parallel_start (
   kompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
 
   /* pseudo OpenMP spec algorithm to compute the number of threads */
-  if ( !ctxt->icv.nested_parallel && (ctxt->icv.nested_level >0))
+  if ( (!ctxt->icv.nested_parallel && (ctxt->icv.nested_level >0)) 
+    ||  (ctxt->icv.nested_level >= omp_max_active_levels)
+  )
     num_threads = 1;
   else {
     if (num_threads == 0)
