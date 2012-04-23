@@ -64,17 +64,18 @@ libgomp_la_SOURCES=\
     libgomp_single.c \
     libgomp_lock.c \
     libgomp_loop.c \
-    libgomp_loop_ull.c \
     libgomp_loop_dynamic.c \
     libgomp_loop_static.c \
-    libgomp_section.c \
+    libgomp_loop_guided.c \
     libgomp_loop_runtime.c \
+    libgomp_loop_ull.c \
+    libgomp_loop_wrapper_ull.c \
+    libgomp_section.c \
     libgomp_task.c \
     libgomp_init.c \
     libomprt.c\
     libgomp_g.h \
     libgomp.h \
-    libgomp_loop_wrapper_ull.c \
     lock-internal.h \
     $(include_HEADERS)
 
