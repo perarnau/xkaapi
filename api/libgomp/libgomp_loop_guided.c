@@ -53,14 +53,16 @@ bool GOMP_loop_guided_start (
         long *iend
 )      
 {
-  printf("%s:: \n", __FUNCTION__);
-  return 0;
+  return GOMP_loop_dynamic_start(
+              start, end, incr,
+              chunk_size,
+              istart, 
+              iend );
 }
 
 bool GOMP_loop_guided_next (long *istart, long *iend)
 {
-  printf("%s:: \n", __FUNCTION__);
-  return 0;
+  return GOMP_loop_dynamic_next(istart, iend);
 }
 
 void GOMP_parallel_loop_guided_start (
@@ -72,7 +74,13 @@ void GOMP_parallel_loop_guided_start (
         long chunk_size
 )
 {
-  printf("%s:: \n", __FUNCTION__);
+  GOMP_parallel_loop_dynamic_start( 
+          fn, data,
+          num_threads, 
+          start, 
+          end,
+          incr,
+          chunk_size );
 }
 
 bool GOMP_loop_ordered_guided_start (
