@@ -87,8 +87,14 @@ typedef struct kaapi_cuda_mem
 {
 	size_t total;
 	size_t used;
-	struct kaapi_cuda_mem_blk_t* beg;
-	struct kaapi_cuda_mem_blk_t* end;
+	struct {
+	    struct kaapi_cuda_mem_blk_t* beg;
+	    struct kaapi_cuda_mem_blk_t* end;
+	} ro;
+	struct {
+	    struct kaapi_cuda_mem_blk_t* beg;
+	    struct kaapi_cuda_mem_blk_t* end;
+	} rw;
 
 	/* all GPU allocated pointers */
 	kaapi_big_hashmap_t kmem;

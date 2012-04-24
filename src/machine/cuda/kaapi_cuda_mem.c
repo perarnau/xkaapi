@@ -12,43 +12,218 @@
 
 
 typedef struct kaapi_cuda_mem_blk_t {
-	struct kaapi_cuda_mem_blk_t* next;
-	struct kaapi_cuda_mem_blk_t* prev;
 	kaapi_pointer_t		    ptr;
 	size_t			    size;
+	struct kaapi_cuda_mem_blk_t* next;
+	struct kaapi_cuda_mem_blk_t* prev;
 } kaapi_cuda_mem_blk_t;
+
+static inline void
+kaapi_cuda_mem_blk_insert_ro(
+	    kaapi_cuda_mem_t* mem,
+	    kaapi_cuda_mem_blk_t *blk
+	)
+{
+    if( mem->ro.beg == NULL ) {
+	mem->ro.beg = blk;
+    } else {
+	blk->prev= mem->ro.end;
+	mem->ro.end->next = blk;
+    }
+    mem->ro.end = blk;
+}
+
+static inline void
+kaapi_cuda_mem_blk_insert_rw(
+	    kaapi_cuda_mem_t* mem,
+	    kaapi_cuda_mem_blk_t *blk
+	)
+{
+    if( mem->rw.beg == NULL ) {
+	mem->rw.beg = blk;
+    } else {
+	blk->prev= mem->rw.end;
+	mem->rw.end->next = blk;
+    }
+    mem->rw.end = blk;
+}
 
 static int
 kaapi_cuda_mem_blk_insert(
 		kaapi_processor_t*	proc,
 		kaapi_pointer_t*	ptr,
-		size_t			size
+		size_t			size,
+		kaapi_access_mode_t	m
 	)
 {
-	kaapi_hashentries_t* entry;
-	kaapi_cuda_mem_t* cuda_mem = &proc->cuda_proc.memory;
-	kaapi_cuda_mem_blk_t *blk= (kaapi_cuda_mem_blk_t*)malloc(
-			sizeof(kaapi_cuda_mem_blk_t) );
-	if( blk == NULL )
-		return -1;
+    kaapi_hashentries_t* entry;
+    kaapi_cuda_mem_t* cuda_mem = &proc->cuda_proc.memory;
+    kaapi_cuda_mem_blk_t *blk= (kaapi_cuda_mem_blk_t*)malloc(
+		    sizeof(kaapi_cuda_mem_blk_t) );
+    if( blk == NULL )
+	    return -1;
 
-	blk->ptr = *ptr;
-	blk->size = size;
-	blk->prev = blk->next = NULL;
-	if( cuda_mem->beg == NULL ) {
-		cuda_mem->beg = blk;
-	} else {
-		blk->prev= cuda_mem->end;
-		cuda_mem->end->next = blk;
+    blk->ptr = *ptr;
+    blk->size = size;
+    blk->prev = blk->next = NULL;
+    if( KAAPI_ACCESS_IS_WRITE(m) )
+	kaapi_cuda_mem_blk_insert_rw( cuda_mem, blk );
+    else
+	kaapi_cuda_mem_blk_insert_ro( cuda_mem, blk );
+
+    entry = kaapi_big_hashmap_findinsert( &cuda_mem->kmem,
+	    __kaapi_pointer2void(*ptr) );
+    entry->u.block = blk;
+    cuda_mem->used += size;
+
+    return 0;
+}
+
+static inline void*
+kaapi_cuda_mem_blk_remove_ro( 
+		kaapi_processor_t*	proc,
+		const size_t size
+	)
+{
+    kaapi_pointer_t ptr;
+    kaapi_hashentries_t* entry;
+    kaapi_cuda_mem_blk_t *blk;
+    kaapi_cuda_mem_t* cuda_mem = &proc->cuda_proc.memory;
+    size_t mem_free= 0;
+    size_t ptr_size;
+    void* devptr = NULL;
+
+    if( cuda_mem->ro.beg == NULL )
+	    return NULL;
+
+    while( NULL != (blk= cuda_mem->ro.beg) ) {
+	    cuda_mem->ro.beg = blk->next;
+	    if( cuda_mem->ro.beg != NULL )
+		cuda_mem->ro.beg->prev = NULL;
+	    ptr = blk->ptr;
+	    ptr_size = blk->size;
+	    free( blk );
+	    entry = kaapi_big_hashmap_findinsert( &cuda_mem->kmem,
+		    __kaapi_pointer2void(ptr) );
+	    entry->u.block = NULL;
+	    if( ptr_size >= size ) {
+		devptr = __kaapi_pointer2void(ptr);
+	    } else 
+		kaapi_cuda_mem_free( &ptr );
+	    mem_free += ptr_size;
+	    if( mem_free >= (size * KAAPI_CUDA_MEM_FREE_FACTOR) )
+		    break;
+    }
+#if KAAPI_VERBOSE
+    fprintf(stdout, "[%s] kid=%lu lid=%d size=%lu(%lu) used=%lu total=%lu\n",
+		    __FUNCTION__,
+		    (long unsigned int)kaapi_get_current_kid(),
+		    cuda_asid, size, mem_free, cuda_mem->used,
+		    cuda_mem->total );
+    fflush(stdout);
+#endif
+    if( cuda_mem->used < mem_free )
+	cuda_mem->used = 0;
+    else
+	cuda_mem->used -= mem_free;
+
+    return devptr;
+}
+
+static inline void
+kaapi_cuda_mem_blk_check_host( 
+        kaapi_pointer_t ptr
+    )
+{
+    kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
+    const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
+    kaapi_mem_data_t *kmd;
+
+    kaapi_mem_host_map_find_or_insert( cuda_map,
+	    (kaapi_mem_addr_t)__kaapi_pointer2void(ptr), &kmd );
+    if( kaapi_mem_data_has_addr( kmd, cuda_asid ) ) {
+	if ( !kaapi_mem_data_is_dirty( kmd, cuda_asid ) ) {
+	    const kaapi_mem_host_map_t* host_map = 
+		kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
+	    const kaapi_mem_asid_t host_asid =
+		kaapi_mem_host_map_get_asid(host_map);
+	    kaapi_mem_asid_t valid_asid =
+		kaapi_mem_data_get_nondirty_asid_( kmd, cuda_asid );
+
+	    /* copy memory to host and deallocate */
+	    if( valid_asid == KAAPI_MEM_ASID_MAX ) {
+		kaapi_data_t* src =
+		    (kaapi_data_t*)kaapi_mem_data_get_addr( kmd,
+			    cuda_asid );
+		kaapi_data_t* dest = 
+		    (kaapi_data_t*)kaapi_mem_data_get_addr( kmd,
+			    host_asid );
+		/* TODO: optimize cudaSynchronize here */
+		kaapi_cuda_mem_copy_dtoh( dest->ptr, &dest->view, 
+			src->ptr, &src->view );
+		cudaStreamSynchronize( kaapi_cuda_DtoH_stream() );
+		kaapi_mem_data_clear_dirty( kmd, host_asid );
+	    }
+
 	}
-	cuda_mem->end = blk;
+	/* TODO: see dirty/valid addresses and use */
+	kaapi_mem_data_clear_addr( kmd, cuda_asid );
+	kaapi_mem_data_clear_dirty( kmd, cuda_asid );
+    }
+}
 
-	entry = kaapi_big_hashmap_findinsert( &cuda_mem->kmem,
-		__kaapi_pointer2void(*ptr) );
-	entry->u.block = blk;
-	cuda_mem->used += size;
+static inline void*
+kaapi_cuda_mem_blk_remove_rw( 
+		kaapi_processor_t*	proc,
+		const size_t size
+	)
+{
+    kaapi_pointer_t ptr;
+    kaapi_hashentries_t* entry;
+    kaapi_cuda_mem_blk_t *blk;
+    kaapi_cuda_mem_t* cuda_mem = &proc->cuda_proc.memory;
+    size_t mem_free= 0;
+    size_t ptr_size;
+    void* devptr = NULL;
 
-	return 0;
+    if( cuda_mem->rw.beg == NULL )
+	    return NULL;
+
+    while( NULL != (blk= cuda_mem->rw.beg) ) {
+	    cuda_mem->rw.beg = blk->next;
+	    if( cuda_mem->rw.beg != NULL )
+		cuda_mem->rw.beg->prev = NULL;
+	    ptr = blk->ptr;
+	    ptr_size = blk->size;
+	    free( blk );
+	    entry = kaapi_big_hashmap_findinsert( &cuda_mem->kmem,
+		    __kaapi_pointer2void(ptr) );
+	    entry->u.block = NULL;
+
+	    kaapi_cuda_mem_blk_check_host( ptr );
+
+	    if( ptr_size >= size ) {
+		devptr = __kaapi_pointer2void(ptr);
+	    } else 
+		kaapi_cuda_mem_free( &ptr );
+	    mem_free += ptr_size;
+	    if( mem_free >= (size * KAAPI_CUDA_MEM_FREE_FACTOR) )
+		    break;
+    }
+#if KAAPI_VERBOSE
+    fprintf(stdout, "[%s] kid=%lu lid=%d size=%lu(%lu) used=%lu total=%lu\n",
+	    __FUNCTION__,
+	    (long unsigned int)kaapi_get_current_kid(),
+	    cuda_asid, size, mem_free, cuda_mem->used,
+	    cuda_mem->total );
+    fflush(stdout);
+#endif
+    if( cuda_mem->used < mem_free )
+	cuda_mem->used = 0;
+    else
+	cuda_mem->used -= mem_free;
+
+    return devptr;
 }
 
 static void* 
@@ -57,79 +232,11 @@ kaapi_cuda_mem_blk_remove(
 		const size_t size
 	)
 {
-	kaapi_pointer_t ptr;
-	kaapi_hashentries_t* entry;
-	kaapi_cuda_mem_blk_t *blk;
-	kaapi_cuda_mem_t* cuda_mem = &proc->cuda_proc.memory;
-	kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
-	const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
-	kaapi_mem_data_t *kmd;
-	size_t mem_free= 0;
-	size_t ptr_size;
 	void* devptr = NULL;
 
-
-	if( cuda_mem->beg == NULL )
-		return NULL;
-
-	while( NULL != (blk= cuda_mem->beg) ) {
-		cuda_mem->beg = blk->next;
-		if( cuda_mem->beg != NULL )
-		    cuda_mem->beg->prev = NULL;
-		ptr = blk->ptr;
-		ptr_size = blk->size;
-		free( blk );
-		kaapi_mem_host_map_find_or_insert( cuda_map,
-			(kaapi_mem_addr_t)__kaapi_pointer2void(ptr), &kmd );
-		entry = kaapi_big_hashmap_findinsert( &cuda_mem->kmem,
-			__kaapi_pointer2void(ptr) );
-		entry->u.block = NULL;
-		if( kaapi_mem_data_has_addr( kmd, cuda_asid ) ) {
-		    if ( !kaapi_mem_data_is_dirty( kmd, cuda_asid ) ) {
-			const kaapi_mem_host_map_t* host_map = 
-			    kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
-			const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
-			kaapi_mem_asid_t valid_asid =
-			    kaapi_mem_data_get_nondirty_asid_( kmd, cuda_asid );
-
-			/* copy memory to host and deallocate */
-			if( valid_asid == KAAPI_MEM_ASID_MAX ) {
-			    kaapi_data_t* src =
-				(kaapi_data_t*)kaapi_mem_data_get_addr( kmd,
-					cuda_asid );
-			    kaapi_data_t* dest = 
-				(kaapi_data_t*)kaapi_mem_data_get_addr( kmd,
-					host_asid );
-			    kaapi_cuda_mem_copy_dtoh( dest->ptr, &dest->view, 
-				    src->ptr, &src->view );
-			    kaapi_mem_data_clear_dirty( kmd, host_asid );
-			}
-
-		    }
-		    /* TODO: see dirty/valid addresses and use */
-		    kaapi_mem_data_clear_addr( kmd, cuda_asid );
-		    kaapi_mem_data_clear_dirty( kmd, cuda_asid );
-		}
-		if( ptr_size >= size ) {
-		    devptr = __kaapi_pointer2void(ptr);
-		} else 
-		    kaapi_cuda_mem_free( &ptr );
-		mem_free += ptr_size;
-		if( mem_free >= (size * KAAPI_CUDA_MEM_FREE_FACTOR) )
-			break;
-	}
-#if KAAPI_VERBOSE
-	fprintf(stdout, "[%s] kid=%lu lid=%d size=%lu(%lu) used=%lu total=%lu\n",
-			__FUNCTION__,
-			(long unsigned int)kaapi_get_current_kid(),
-			cuda_asid, size, mem_free, cuda_mem->used,
-			cuda_mem->total );
-	fflush(stdout);
-#endif
-	if( cuda_mem->used < mem_free )
-	    cuda_mem->used = 0;
-	else
-	    cuda_mem->used -= mem_free;
+	devptr = kaapi_cuda_mem_blk_remove_ro( proc, size );
+	if( devptr == NULL )
+	    devptr= kaapi_cuda_mem_blk_remove_rw( proc, size );
 
 	return devptr;
 }
@@ -147,6 +254,7 @@ __kaapi_cuda_mem_is_full( kaapi_processor_t* proc, const size_t size )
 int 
 kaapi_cuda_mem_mgmt_check( kaapi_processor_t* proc )
 {
+#if 0
 	kaapi_cuda_mem_blk_t *blk;
 	kaapi_cuda_mem_t* cuda_mem = &proc->cuda_proc.memory;
 	kaapi_hashentries_t* entry;
@@ -214,6 +322,7 @@ kaapi_cuda_mem_mgmt_check( kaapi_processor_t* proc )
 		blk = blk->next;
 	}
 
+#endif
 	return 0;
 }
 
@@ -244,7 +353,7 @@ kaapi_cuda_mem_alloc(
 		kaapi_pointer_t *ptr,
 		const kaapi_address_space_id_t kasid,
 		const size_t size,
-		const int flag
+		const kaapi_access_mode_t m
 	)
 {
 	void* devptr= NULL;
@@ -272,7 +381,7 @@ out_of_memory:
 
 	ptr->ptr = (uintptr_t)devptr;
 	ptr->asid = kasid;
-	kaapi_cuda_mem_blk_insert( proc, ptr, size );
+	kaapi_cuda_mem_blk_insert( proc, ptr, size, m );
 
 	return res;
 }
@@ -286,41 +395,89 @@ kaapi_cuda_mem_free( kaapi_pointer_t *ptr )
 	return 0;
 }
 
-int
-kaapi_cuda_mem_inc_use( kaapi_pointer_t *ptr ) 
+static inline int
+kaapi_cuda_mem_inc_use_ro(
+	kaapi_cuda_mem_t* mem,
+	kaapi_cuda_mem_blk_t *blk
+    )
 {
-    kaapi_hashentries_t* entry;
-    void* devptr = __kaapi_pointer2void(*ptr);
-    kaapi_cuda_mem_t* cuda_mem =
-	&kaapi_get_current_processor()->cuda_proc.memory;
-    kaapi_cuda_mem_blk_t *blk;
     kaapi_cuda_mem_blk_t *blk_next;
     kaapi_cuda_mem_blk_t *blk_prev;
 
-    entry = kaapi_big_hashmap_findinsert( &cuda_mem->kmem, (void*)devptr );
-    if (entry->u.block == 0)
-	return -1;
-    blk= (kaapi_cuda_mem_blk_t*)entry->u.block;
-    if( cuda_mem->end == blk )
+//    if( mem->ro.end == blk )
+    if( NULL == blk->next )
 	return 0;
 
     blk_prev = blk->prev;
     blk_next = blk->next;
     /* remove */
-
     blk_next->prev = blk_prev;
     if( blk_prev != NULL )
 	blk_prev->next = blk_next;
     else /* first block */
-	cuda_mem->beg = blk_next;
+	mem->ro.beg = blk_next;
 
-    if( cuda_mem->end != NULL )
-	cuda_mem->end->next = blk;
-    blk->prev = cuda_mem->end;
+    if( mem->ro.end != NULL )
+	mem->ro.end->next = blk;
+    blk->prev = mem->ro.end;
     blk->next = NULL;
-    cuda_mem->end = blk;
+    mem->ro.end = blk;
 
     return 0;
+}
+
+static inline int
+kaapi_cuda_mem_inc_use_rw(
+	kaapi_cuda_mem_t* mem,
+	kaapi_cuda_mem_blk_t *blk
+    )
+{
+    kaapi_cuda_mem_blk_t *blk_next;
+    kaapi_cuda_mem_blk_t *blk_prev;
+
+//    if( mem->rw.end == blk )
+    if( NULL == blk->next )
+	return 0;
+
+    blk_prev = blk->prev;
+    blk_next = blk->next;
+    /* remove */
+    blk_next->prev = blk_prev;
+    if( blk_prev != NULL )
+	blk_prev->next = blk_next;
+    else /* first block */
+	mem->rw.beg = blk_next;
+
+    if( mem->rw.end != NULL )
+	mem->rw.end->next = blk;
+    blk->prev = mem->rw.end;
+    blk->next = NULL;
+    mem->rw.end = blk;
+
+    return 0;
+}
+
+int
+kaapi_cuda_mem_inc_use(
+	kaapi_pointer_t *ptr,
+       	const kaapi_access_mode_t m 
+    ) 
+{
+    kaapi_hashentries_t* entry;
+    kaapi_cuda_mem_blk_t *blk;
+    void* devptr = __kaapi_pointer2void(*ptr);
+    kaapi_cuda_mem_t* cuda_mem =
+	&kaapi_get_current_processor()->cuda_proc.memory;
+
+    entry = kaapi_big_hashmap_findinsert( &cuda_mem->kmem, (void*)devptr );
+    if (entry->u.block == 0)
+	return -1;
+    blk= (kaapi_cuda_mem_blk_t*)entry->u.block;
+
+    if( KAAPI_ACCESS_IS_WRITE(m) )
+	return kaapi_cuda_mem_inc_use_rw( cuda_mem, blk );
+    else
+	return kaapi_cuda_mem_inc_use_ro( cuda_mem, blk );
 }
 
 int kaapi_cuda_mem_copy_htod_(
@@ -658,7 +815,15 @@ kaapi_cuda_mem_destroy( kaapi_cuda_proc_t* proc )
     kaapi_cuda_mem_t* cuda_mem = &proc->memory;
 
     /* first check: beg to end */
-    blk = cuda_mem->beg;
+    blk = cuda_mem->ro.beg;
+    while( blk != NULL ) {
+	if( kaapi_pointer2void(blk->ptr) != NULL ) 
+	    kaapi_cuda_mem_free( &blk->ptr );
+	p = blk;
+	blk = blk->next;
+	free( p );
+    }
+    blk = cuda_mem->rw.beg;
     while( blk != NULL ) {
 	if( kaapi_pointer2void(blk->ptr) != NULL ) 
 	    kaapi_cuda_mem_free( &blk->ptr );
@@ -667,7 +832,8 @@ kaapi_cuda_mem_destroy( kaapi_cuda_proc_t* proc )
 	free( p );
     }
     kaapi_big_hashmap_destroy( &cuda_mem->kmem );  
-    cuda_mem->beg = cuda_mem->end = NULL;
+    cuda_mem->ro.beg = cuda_mem->ro.end = NULL;
+    cuda_mem->rw.beg = cuda_mem->rw.end = NULL;
 
     return 0;
 }

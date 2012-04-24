@@ -11,7 +11,7 @@ int kaapi_cuda_mem_free( kaapi_pointer_t *ptr );
 int kaapi_cuda_mem_alloc(
 	       	kaapi_pointer_t *ptr,
 		const kaapi_address_space_id_t kasid,
-		const size_t size, const int flag );
+		const size_t size, const kaapi_access_mode_t m );
 
 int kaapi_cuda_mem_alloc_(
 		kaapi_mem_addr_t* addr,
@@ -22,7 +22,7 @@ int kaapi_cuda_mem_register( kaapi_pointer_t ptr,
 		const kaapi_memory_view_t *view );
 
 int
-kaapi_cuda_mem_inc_use( kaapi_pointer_t *ptr );
+kaapi_cuda_mem_inc_use( kaapi_pointer_t *ptr, const kaapi_access_mode_t m );
 
 /*****************************************************************************/
 /* Memory copy functions */

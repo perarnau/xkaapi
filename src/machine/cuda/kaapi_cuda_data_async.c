@@ -11,26 +11,6 @@
 #include "kaapi_cuda_ctx.h"
 #include "kaapi_cuda_data_async.h"
 
-#ifdef	KAAPI_CUDA_MEM_ALLOC_MANAGER
-static inline void
-xxx_kaapi_cuda_data_async_inc_use(
-		const kaapi_mem_host_map_t* map,
-		kaapi_mem_data_t* kmd,
-		kaapi_data_t* src
-		)
-{
-	const kaapi_mem_asid_t asid = kaapi_mem_host_map_get_asid(map);
-
-	if( kaapi_mem_data_has_addr( kmd, asid ) ) {
-	    kaapi_data_t* dest= (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
-		     asid );
-	    kaapi_cuda_mem_inc_use( &dest->ptr );
-	}
-
-}
-
-#endif /* KAAPI_CUDA_MEM_ALLOC_MANAGER */
-
 static inline void
 kaapi_cuda_data_async_view_convert( kaapi_memory_view_t* dest_view, const
 	kaapi_memory_view_t* src_view )
@@ -62,7 +42,8 @@ static inline kaapi_data_t*
 xxx_kaapi_cuda_data_async_allocate(
 		const kaapi_mem_host_map_t* cuda_map,
 		kaapi_mem_data_t* kmd,
-		kaapi_data_t* src
+		kaapi_data_t* src,
+		kaapi_access_mode_t m
 		)
 {
 	const kaapi_mem_asid_t asid = kaapi_mem_host_map_get_asid(cuda_map);
@@ -70,7 +51,7 @@ xxx_kaapi_cuda_data_async_allocate(
 	if( !kaapi_mem_data_has_addr( kmd, asid ) ) {
 		kaapi_data_t* dest = (kaapi_data_t*)calloc( 1, sizeof(kaapi_data_t) );
 		kaapi_cuda_mem_alloc( &dest->ptr, 0UL, 
-		    kaapi_memory_view_size(&src->view), 0 );
+		    kaapi_memory_view_size(&src->view), m );
 	    	kaapi_cuda_data_async_view_convert( &dest->view, &src->view );
 		kaapi_mem_data_set_addr( kmd, asid, (kaapi_mem_addr_t)dest );
 		kaapi_mem_data_set_dirty( kmd, asid );
@@ -81,7 +62,7 @@ xxx_kaapi_cuda_data_async_allocate(
 	} else {
 	    kaapi_data_t* dest= (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
 		     asid );
-	    kaapi_cuda_mem_inc_use( &dest->ptr );
+	    kaapi_cuda_mem_inc_use( &dest->ptr, m );
 	    return dest;
 	}
 
@@ -134,7 +115,8 @@ int kaapi_cuda_data_async_allocate(
 		    kaapi_mem_data_set_addr( kmd, host_asid,
 			    (kaapi_mem_addr_t)src );
 
-		kaapi_data_t* dest= xxx_kaapi_cuda_data_async_allocate( cuda_map, kmd, src );
+		kaapi_data_t* dest=
+		    xxx_kaapi_cuda_data_async_allocate( cuda_map, kmd, src, m );
 
 		/* sets new pointer to the task */
 		access.data =  dest;
@@ -355,13 +337,20 @@ kaapi_cuda_data_async_sync_host_transfer(
 	cudaStream_t stream
 	)
 {
-#if 0
     cudaError_t res;
     kaapi_cuda_ctx_set( src_asid-1 );
-    res= cudaEventSynchronize( src->event );
+    cudaEvent_t event;
+    cudaEventCreateWithFlags( &event, cudaEventDisableTiming );
+    kaapi_cuda_mem_copy_dtoh_(
+	    dest->ptr, &dest->view,
+	    src->ptr, &src->view,
+	    stream
+	    );
+    cudaEventRecord( event, stream );
+    cudaStreamWaitEvent( stream, event, 0 );
+#if 0
     KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
     KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END );
-    cudaStreamWaitEvent( stream, src->event, 0 );
 #endif
     return 0;
 }

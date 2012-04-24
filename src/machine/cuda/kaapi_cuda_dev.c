@@ -37,7 +37,8 @@ kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
     /* 80% of total memory */
     proc->memory.total = 0.8*proc->deviceProp.totalGlobalMem;
     proc->memory.used= 0;
-    proc->memory.beg = proc->memory.end = NULL;
+    proc->memory.ro.beg = proc->memory.ro.end = NULL;
+    proc->memory.rw.beg = proc->memory.rw.end = NULL;
     kaapi_big_hashmap_init( &proc->memory.kmem, 0 );  
 
     return 0;
