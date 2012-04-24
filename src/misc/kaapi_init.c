@@ -68,6 +68,9 @@ kaapi_rtparam_t kaapi_default_param = {
 #if defined(KAAPI_USE_CUPTI)
    .cudastartuptime = 0,
 #endif
+#if defined(KAAPI_USE_CUDA)
+   .cudawindowsize = 1,
+#endif
    .stacksize   = 64*4096, /**/
    .stacksize_master = 64*4096, /**/
    .cpucount    = 0,
@@ -217,6 +220,13 @@ static int kaapi_setup_param()
     kaapi_event_mask = (kaapi_event_mask_type_t)kaapi_default_param.eventmask;
   }
 #endif  
+
+#if defined(KAAPI_USE_CUDA)
+  if (getenv("KAAPI_WINDOW_SIZE") !=0 ) {
+	kaapi_default_param.cudawindowsize =
+	    atoll(getenv("KAAPI_WINDOW_SIZE"));
+  }
+#endif
   
   return 0;
 }

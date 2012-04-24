@@ -63,8 +63,6 @@
 
 #define KAAPI_CUDA_MAX_STREAMS	4
 
-#define KAAPI_CUDA_SLIDING_WINDOW	4
-
 #define KAAPI_CUDA_KSTREAM	1
 
 struct kaapi_cuda_stream_t;

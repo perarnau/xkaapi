@@ -82,7 +82,13 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
 
   kaapi_cuda_sync();
 
-  kaapi_cuda_stream_init( 256, proc );
+  if( kaapi_default_param.cudawindowsize > 0 )
+      kaapi_cuda_stream_init(
+	      kaapi_default_param.cudawindowsize * 3,
+	      proc 
+	      );
+  else
+      kaapi_cuda_stream_init( 64, proc );
 
   /* pop the context to make it floating. doing
      so allow another thread to use it, such

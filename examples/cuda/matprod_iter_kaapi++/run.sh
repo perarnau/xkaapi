@@ -26,16 +26,20 @@ function run_test {
 #    msizes="1024"
 #    msizes="2048"
 #    msizes="2048"
-    msizes="16384"
+    msizes="8192"
 #    msizes="2048"
-    bsizes="2048"
+    bsizes="512"
+    nwindow="1 2 4 8 10 12 16"
     niter=1
 #    verif=1
+    for w in $nwindow
+    do
+    export KAAPI_WINDOW_SIZE=$w
     for m in $msizes ; do
 	    for b in $bsizes; do
 	    for i in `seq 1 $niter`
 	    do
-	    echo "$KAAPI_CPUSET $KAAPI_GPUSET \
+	    echo "window $KAAPI_WINDOW_SIZE $KAAPI_CPUSET $KAAPI_GPUSET \
 		    ./matprod_iter_kaapi++ $m $b $verif"
 	    KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
 #	    	KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
@@ -43,6 +47,7 @@ function run_test {
 	    done
 	done
     done
+    done	
 }
 
 run_test

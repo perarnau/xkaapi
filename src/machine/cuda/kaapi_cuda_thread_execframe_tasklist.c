@@ -276,10 +276,18 @@ execute_first:
     {
     }
 
-    /* if we have more than KAAPI_CUDA_SLIDING_WINDOW request, wait */
-    while( KAAPI_CUDA_SLIDING_WINDOW <=
-	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_input_fifo(kstream)))
+    /* The slicing window is applied to all streams */
+    while( 
+	    (kaapi_default_param.cudawindowsize <=
+	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_input_fifo(kstream))) ||
+	    (kaapi_default_param.cudawindowsize <=
+	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_output_fifo(kstream))) ||
+	    (kaapi_default_param.cudawindowsize <=
+	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_kernel_fifo(kstream)))
+	    )
+    {
         kaapi_cuda_test_stream( kstream );
+    }
 
     /* ok, now push pushed task into the wq and restore the next td to execute */
     if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0 )
@@ -290,6 +298,7 @@ execute_first:
 
   } /* while */
 
+    /* finish all GPU CUDA operations */
     while( kaapi_cuda_waitfirst_stream( kstream ) != KAAPI_CUDA_STREAM_EMPTY ){
     if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0)
 	  goto execute_first;
