@@ -85,7 +85,7 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
 #if defined(KAAPI_USE_WINDOW)
   if( kaapi_default_param.cudawindowsize > 0 )
       kaapi_cuda_stream_init(
-	      kaapi_default_param.cudawindowsize * 3,
+	      kaapi_default_param.cudawindowsize * 2,
 	      proc 
 	      );
   else

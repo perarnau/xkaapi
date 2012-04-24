@@ -86,30 +86,13 @@ kaapi_cuda_thread_tasklist_activate_deps(
 
 /* call back to push ready task into the tasklist after terminaison of a task */
 static int
-kaapi_cuda_callback3_output(
-	kaapi_cuda_stream_t* kstream,
-	kaapi_tasklist_t*    tasklist,
-	kaapi_taskdescr_t*   td
-    )
-{
-    kaapi_cuda_thread_tasklist_activate_deps( tasklist, td );  
-    return 0;
-}
-
-static int
 kaapi_cuda_callback2_kernel(
 	kaapi_cuda_stream_t* kstream,
 	kaapi_tasklist_t*    tasklist,
 	kaapi_taskdescr_t*   td
     )
 {
-    kaapi_cuda_ctx_push( );
-#if !defined(KAAPI_CUDA_NO_D2H)
-    kaapi_cuda_data_async_recv( kstream, tasklist, td );
-#endif
-    kaapi_cuda_ctx_pop( );
-    kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_D2H, 
-	    kaapi_cuda_callback3_output, tasklist, td );
+    kaapi_cuda_thread_tasklist_activate_deps( tasklist, td );  
     return 0;
 }
 
@@ -281,8 +264,6 @@ execute_first:
     while( 
 	    (kaapi_default_param.cudawindowsize <=
 	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_input_fifo(kstream))) ||
-	    (kaapi_default_param.cudawindowsize <=
-	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_output_fifo(kstream))) ||
 	    (kaapi_default_param.cudawindowsize <=
 	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_kernel_fifo(kstream)))
 	    )
