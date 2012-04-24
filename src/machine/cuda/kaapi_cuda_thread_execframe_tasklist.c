@@ -276,7 +276,10 @@ execute_first:
     {
     }
 
-    kaapi_cuda_test_stream( kstream );
+    /* if we have more than KAAPI_CUDA_SLIDING_WINDOW request, wait */
+    while( KAAPI_CUDA_SLIDING_WINDOW <=
+	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_input_fifo(kstream)))
+        kaapi_cuda_test_stream( kstream );
 
     /* ok, now push pushed task into the wq and restore the next td to execute */
     if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0 )

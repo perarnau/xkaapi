@@ -122,6 +122,7 @@ typedef struct kaapi_cuda_request_t {
 typedef struct kaapi_cuda_fifo_stream_t
 {
   cudaStream_t          stream;
+  uint64_t		cnt;	/* number of requests */
   kaapi_cuda_request_t* head;  /* first in the fifo order (insertion in tail)*/
   kaapi_cuda_request_t* tail;  /* last pushed in the fifo order */
 } kaapi_cuda_fifo_stream_t;
@@ -247,39 +248,51 @@ extern kaapi_cuda_stream_state_t kaapi_cuda_wait_stream(
     
     \retval ENOENT if all streams are empty
 */
-extern kaapi_cuda_stream_state_t kaapi_cuda_waitfirst_stream(
+extern kaapi_cuda_stream_state_t
+kaapi_cuda_waitfirst_stream(
   kaapi_cuda_stream_t*    stream
 );
 
 /** Non blocking operation
 */
-extern kaapi_cuda_stream_state_t kaapi_cuda_test_stream(
+extern kaapi_cuda_stream_state_t
+kaapi_cuda_test_stream(
   kaapi_cuda_stream_t*    stream
 );
 
 /**
 */
-extern kaapi_cuda_fifo_stream_t* kaapi_cuda_get_kernel_fifo(kaapi_cuda_stream_t* stream);
+extern kaapi_cuda_fifo_stream_t*
+kaapi_cuda_get_kernel_fifo(kaapi_cuda_stream_t* stream);
 
 /**
 */
-static inline kaapi_cuda_fifo_stream_t* kaapi_cuda_get_input_fifo(kaapi_cuda_stream_t* stream)
+static inline kaapi_cuda_fifo_stream_t*
+kaapi_cuda_get_input_fifo(kaapi_cuda_stream_t* stream)
 { 
   return &stream->input_fifo;
 }
 
 /**
 */
-static inline kaapi_cuda_fifo_stream_t* kaapi_cuda_get_output_fifo(kaapi_cuda_stream_t* stream)
+static inline kaapi_cuda_fifo_stream_t*
+kaapi_cuda_get_output_fifo(kaapi_cuda_stream_t* stream)
 { 
   return &stream->output_fifo;
 }
 
 /**
 */
-static inline cudaStream_t kaapi_cuda_get_cudastream(kaapi_cuda_fifo_stream_t* stream)
+static inline cudaStream_t
+kaapi_cuda_get_cudastream(kaapi_cuda_fifo_stream_t* stream)
 { 
   return stream->stream;
+}
+
+static inline int64_t
+kaapi_cuda_get_active_count_fifo( kaapi_cuda_fifo_stream_t* stream )
+{
+    return stream->cnt;
 }
 
 #endif

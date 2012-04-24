@@ -130,9 +130,9 @@ int kaapi_cuda_proc_cleanup( kaapi_cuda_proc_t* proc )
 
 //  kaapi_cuda_ctx_pop( );
    kaapi_cuda_stream_destroy( proc->kstream );
+  kaapi_cuda_dev_close( proc );
 #endif
   kaapi_cuda_mem_destroy( proc );
-  kaapi_cuda_dev_close( proc );
   proc->is_initialized = 0;
 
   return 0;

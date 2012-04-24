@@ -831,7 +831,7 @@ kaapi_cuda_mem_destroy( kaapi_cuda_proc_t* proc )
 	blk = blk->next;
 	free( p );
     }
-    kaapi_big_hashmap_destroy( &cuda_mem->kmem );  
+//    kaapi_big_hashmap_destroy( &cuda_mem->kmem );  
     cuda_mem->ro.beg = cuda_mem->ro.end = NULL;
     cuda_mem->rw.beg = cuda_mem->rw.end = NULL;
 

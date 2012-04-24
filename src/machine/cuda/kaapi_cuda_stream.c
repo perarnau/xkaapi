@@ -87,6 +87,7 @@ static inline int kaapi_cuda_fifo_stream_init(kaapi_cuda_fifo_stream_t* fifo)
 
   fifo->head = NULL;
   fifo->tail = NULL;
+  fifo->cnt = 0;
 
   return 0;
 }
@@ -128,6 +129,7 @@ static kaapi_cuda_request_t* kaapi_cuda_fifo_stream_pop(
   if (fifo->head == 0) 
     fifo->tail = 0;
   retval->next = 0;
+  fifo->cnt--;
 
   /* destroy the cuda ressource. Even if the request is not complet,
      remove it from the queue and destroy the cuda event (if configured with).
@@ -292,6 +294,8 @@ kaapi_cuda_fifo_stream_enqueue(
   }
 #endif
   req->status.state = KAAPI_CUDA_REQUEST_PUSH; 
+  fifostream->cnt++;
+
   return req;
 }
 
