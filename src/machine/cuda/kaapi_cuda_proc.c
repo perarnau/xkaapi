@@ -82,13 +82,15 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
 
   kaapi_cuda_sync();
 
+#if defined(KAAPI_USE_WINDOW)
   if( kaapi_default_param.cudawindowsize > 0 )
       kaapi_cuda_stream_init(
 	      kaapi_default_param.cudawindowsize * 3,
 	      proc 
 	      );
   else
-      kaapi_cuda_stream_init( 64, proc );
+#endif
+      kaapi_cuda_stream_init( 512, proc );
 
   /* pop the context to make it floating. doing
      so allow another thread to use it, such
@@ -137,8 +139,9 @@ int kaapi_cuda_proc_cleanup( kaapi_cuda_proc_t* proc )
 //  kaapi_cuda_ctx_pop( );
    kaapi_cuda_stream_destroy( proc->kstream );
   kaapi_cuda_dev_close( proc );
-#endif
   kaapi_cuda_mem_destroy( proc );
+  /* TODO MAGMA is breaking Free codes */
+#endif
   proc->is_initialized = 0;
 
   return 0;

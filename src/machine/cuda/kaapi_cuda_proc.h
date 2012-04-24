@@ -65,6 +65,8 @@
 
 #define KAAPI_CUDA_KSTREAM	1
 
+#define	KAAPI_USE_WINDOW	1
+
 struct kaapi_cuda_stream_t;
 
 enum {

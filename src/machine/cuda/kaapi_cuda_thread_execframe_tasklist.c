@@ -276,6 +276,7 @@ execute_first:
     {
     }
 
+#if defined(KAAPI_USE_WINDOW)
     /* The slicing window is applied to all streams */
     while( 
 	    (kaapi_default_param.cudawindowsize <=
@@ -288,6 +289,7 @@ execute_first:
     {
         kaapi_cuda_test_stream( kstream );
     }
+#endif
 
     /* ok, now push pushed task into the wq and restore the next td to execute */
     if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0 )
