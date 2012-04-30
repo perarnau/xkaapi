@@ -126,6 +126,27 @@ kaapi_cuda_callback1_input(
     return 0;
 }
 
+static int
+kaapi_cuda_callback1_host_input(
+	kaapi_cuda_stream_t* kstream,
+	kaapi_tasklist_t*    tasklist,
+	kaapi_taskdescr_t*   td
+    )
+{
+    kaapi_task_t*              pc;
+#if defined(KAAPI_TASKLIST_POINTER_TASK)
+    pc = td->task;
+#else
+    pc = &td->task;
+#endif
+    kaapi_assert_debug(pc != 0);
+    kaapi_task_body_t body = kaapi_task_getbody( pc );
+    kaapi_assert_debug(body != 0);
+    body( pc->sp, 0 );
+    kaapi_cuda_thread_tasklist_activate_deps( tasklist, td );  
+    return 0;
+}
+
 int kaapi_cuda_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 {
   kaapi_stack_t* const stack = &thread->stack;
@@ -205,18 +226,34 @@ execute_first:
     /* start execution of the user body of the task */
     KAAPI_DEBUG_INST(kaapi_assert( td->u.acl.exec_date == 0 ));
     KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
+
     /* get the correct body for the proc type */
-    if ( (td->fmt == 0) ||
-	    (td->fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0) ) {
+    if( td->fmt == 0 ){
 	/* currently some internal tasks do not have format */
 	kaapi_task_body_t body = kaapi_task_getbody( pc );
         kaapi_assert_debug(body != 0);
 	body( pc->sp, (kaapi_thread_t*)stack->sfp );
+    } else if( td->fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0 ) {
+	/* task with no TaskBodyGPU */
+#if !defined(KAAPI_CUDA_NO_D2H)
+	kaapi_cuda_ctx_push( );
+	kaapi_cuda_data_input_host_sync( kstream, tasklist, td );
+	kaapi_cuda_ctx_pop( );
+#endif
+#if 1
+	cudaStreamSynchronize( kaapi_cuda_DtoH_stream() );
+	kaapi_task_body_t body = kaapi_task_getbody( pc );
+        kaapi_assert_debug(body != 0);
+	body( pc->sp, (kaapi_thread_t*)stack->sfp );
+	kaapi_cuda_thread_tasklist_activate_deps( tasklist, td );  
+#endif
+//	kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_D2H, 
+//		kaapi_cuda_callback1_host_input, tasklist, td );
     } else {
 #if !defined(KAAPI_CUDA_NO_H2D)
 	kaapi_cuda_ctx_push( );
-	kaapi_cuda_data_allocate( kstream, tasklist, td );
-	kaapi_cuda_data_send( kstream, tasklist, td );
+	kaapi_cuda_data_input_alloc( kstream, tasklist, td );
+	kaapi_cuda_data_input_dev_sync( kstream, tasklist, td );
 	kaapi_cuda_ctx_pop( );
 #endif
 	kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_H2D, 

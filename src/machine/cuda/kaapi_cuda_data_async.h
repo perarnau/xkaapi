@@ -47,13 +47,23 @@
 #ifndef KAAPI_CUDA_DATA_ASYNC_H_INCLUDED
 #define KAAPI_CUDA_DATA_ASYNC_H_INCLUDED
 
-int kaapi_cuda_data_async_allocate( 
+int kaapi_cuda_data_async_input_alloc( 
 	kaapi_cuda_stream_t* kstream,
 	kaapi_tasklist_t*   tasklist,
 	kaapi_taskdescr_t*  td
 );
 
-int kaapi_cuda_data_async_send( 
+int kaapi_cuda_data_async_input_dev_sync( 
+	kaapi_cuda_stream_t* kstream,
+	kaapi_tasklist_t*   tasklist,
+	kaapi_taskdescr_t*  td
+);
+
+/** 
+ * \brief synchronize host memory from a GPU thread.
+ * Method called from a GPU thread and synchronizes host memory.
+ */
+int kaapi_cuda_data_async_input_host_sync( 
 	kaapi_cuda_stream_t* kstream,
 	kaapi_tasklist_t*   tasklist,
 	kaapi_taskdescr_t*  td
@@ -85,5 +95,11 @@ valid copy on the GPUs.
 */
 int
 kaapi_cuda_data_async_sync_host( kaapi_data_t* kdata, cudaStream_t stream );
+
+/**
+ * Synchronize host pointers from a GPU thread.
+ */
+int
+kaapi_cuda_data_async_sync_host2( kaapi_data_t* kdata );
 
 #endif /* KAAPI_CUDA_DATA_ASYNC_H_INCLUDED */

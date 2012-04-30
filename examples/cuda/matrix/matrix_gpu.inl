@@ -678,7 +678,7 @@ template<> struct TaskBodyGPU<TaskDGETRFNoPiv>
   }
 };
 
-
+#if 0
 template<> struct TaskBodyGPU<TaskDPOTRF>
 {
   void operator()
@@ -693,7 +693,7 @@ template<> struct TaskBodyGPU<TaskDPOTRF>
     const int lda   = A.lda();
     double_type* const a = A.ptr();
 
-#if KAAPI_VERBOSE
+#if 1
     fprintf(stdout, "TaskGPU DPOTRF m=%d A=%p lda=%d\n", n, (void*)a, lda ); fflush(stdout);
 #endif
 #if CONFIG_USE_MAGMA
@@ -720,6 +720,6 @@ template<> struct TaskBodyGPU<TaskDPOTRF>
 
   }
 };
-
+#endif
 
 #endif /* ! MATRIX_GPU_INL_INCLUDED */

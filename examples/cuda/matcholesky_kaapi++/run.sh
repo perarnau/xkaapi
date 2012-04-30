@@ -22,7 +22,7 @@ function run_test {
 #    export KAAPI_RECORD_TRACE=1
 #    export KAAPI_RECORD_MASK="COMPUTE,IDLE"
 #    msizes="10240"
-    msizes="8192"
+    msizes="2048"
 #    bsizes="1024"
 #    bsizes="2048"
     bsizes="1024"
@@ -42,9 +42,8 @@ function run_test {
     done
 }
 
-#run_test
-
-#exit 0
+run_test
+exit 0
 
 function run_potrf {
     ncpu="$1"

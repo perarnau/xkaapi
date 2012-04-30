@@ -340,6 +340,9 @@ struct TaskBodyCPU<TaskDPOTRF> {
     const int n     = A.dim(0); 
     const int lda   = A.lda();
     double_type* const a = A.ptr();
+#if 0
+    fprintf(stdout, "TaskCPU DPOTRF m=%d A=%p lda=%d\n", n, (void*)a, lda ); fflush(stdout);
+#endif
     clapack_potrf( order, uplo, n, a, lda );
   }
 };

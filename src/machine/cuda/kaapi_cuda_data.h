@@ -59,23 +59,33 @@
 #include "kaapi_cuda_data_async.h"
 
 static inline int
-kaapi_cuda_data_allocate( 
+kaapi_cuda_data_input_alloc( 
 	kaapi_cuda_stream_t* kstream,
 	kaapi_tasklist_t*   tasklist,
 	kaapi_taskdescr_t*  td
 )
 {
-    return kaapi_cuda_data_async_allocate( kstream, tasklist, td );
+    return kaapi_cuda_data_async_input_alloc( kstream, tasklist, td );
 }
 
 static inline int
-kaapi_cuda_data_send( 
+kaapi_cuda_data_input_dev_sync( 
 	kaapi_cuda_stream_t* kstream,
 	kaapi_tasklist_t*   tasklist,
 	kaapi_taskdescr_t*  td
 )
 {
-    return kaapi_cuda_data_async_send( kstream, tasklist, td );
+    return kaapi_cuda_data_async_input_dev_sync( kstream, tasklist, td );
+}
+
+static inline int
+kaapi_cuda_data_input_host_sync( 
+	kaapi_cuda_stream_t* kstream,
+	kaapi_tasklist_t*   tasklist,
+	kaapi_taskdescr_t*  td
+)
+{
+    return kaapi_cuda_data_async_input_host_sync( kstream, tasklist, td );
 }
 
 static inline int
