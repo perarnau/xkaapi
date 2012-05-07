@@ -300,12 +300,6 @@ kaapi_cuda_data_async_sync_device_transfer(
     const int dest_dev = dest_asid - 1;
     const int src_dev = src_asid - 1;
 
-    fprintf( stdout, "%s: %d (%p) -> %d (%p)\n",
-	    __FUNCTION__,
-	    src_asid, kaapi_pointer2void(src->ptr),
-	    dest_asid, kaapi_pointer2void(dest->ptr)
-	    );
-    fflush(stdout);
     if( src_asid == 0 ) {
 	kaapi_cuda_mem_copy_htod( dest->ptr, &dest->view,
 		src->ptr, &src->view );
@@ -432,12 +426,6 @@ kaapi_cuda_data_async_sync_host_transfer2(
 	kaapi_data_t* src,  const kaapi_mem_asid_t src_asid
 	)
 {
-    fprintf( stdout, "%s: %d (%p) -> %d (%p)\n",
-	    __FUNCTION__,
-	    src_asid, kaapi_pointer2void(src->ptr),
-	    dest_asid, kaapi_pointer2void(dest->ptr)
-	    );
-    fflush(stdout);
     return kaapi_cuda_mem_copy_dtoh(
 	    dest->ptr, &dest->view,
 	    src->ptr, &src->view

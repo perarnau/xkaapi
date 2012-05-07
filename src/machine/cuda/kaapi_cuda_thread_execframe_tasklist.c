@@ -127,6 +127,22 @@ kaapi_cuda_callback1_input(
 }
 
 static int
+kaapi_cuda_callback0_input(
+	kaapi_cuda_stream_t* kstream,
+	kaapi_tasklist_t*    tasklist,
+	kaapi_taskdescr_t*   td
+    )
+{
+    kaapi_cuda_ctx_push( );
+    kaapi_cuda_data_input_alloc( kstream, tasklist, td );
+    kaapi_cuda_data_input_dev_sync( kstream, tasklist, td );
+    kaapi_cuda_ctx_pop( );
+    kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_H2D, 
+	    kaapi_cuda_callback1_input, tasklist, td );
+    return 0;
+}
+
+static int
 kaapi_cuda_callback1_host_input(
 	kaapi_cuda_stream_t* kstream,
 	kaapi_tasklist_t*    tasklist,
@@ -140,10 +156,27 @@ kaapi_cuda_callback1_host_input(
     pc = &td->task;
 #endif
     kaapi_assert_debug(pc != 0);
-    kaapi_task_body_t body = kaapi_task_getbody( pc );
+    kaapi_task_body_t body = td->fmt->entrypoint_wh[KAAPI_PROC_TYPE_HOST];
     kaapi_assert_debug(body != 0);
     body( pc->sp, 0 );
     kaapi_cuda_thread_tasklist_activate_deps( tasklist, td );  
+    return 0;
+}
+
+static int
+kaapi_cuda_callback0_host_input(
+	kaapi_cuda_stream_t* kstream,
+	kaapi_tasklist_t*    tasklist,
+	kaapi_taskdescr_t*   td
+    )
+{
+#if !defined(KAAPI_CUDA_NO_D2H)
+    kaapi_cuda_ctx_push( );
+    kaapi_cuda_data_input_host_sync( kstream, tasklist, td );
+    kaapi_cuda_ctx_pop( );
+#endif
+    kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_D2H, 
+	   kaapi_cuda_callback1_host_input, tasklist, td );
     return 0;
 }
 
@@ -234,30 +267,11 @@ execute_first:
         kaapi_assert_debug(body != 0);
 	body( pc->sp, (kaapi_thread_t*)stack->sfp );
     } else if( td->fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0 ) {
-	/* task with no TaskBodyGPU */
-#if !defined(KAAPI_CUDA_NO_D2H)
-	kaapi_cuda_ctx_push( );
-	kaapi_cuda_data_input_host_sync( kstream, tasklist, td );
-	kaapi_cuda_ctx_pop( );
-#endif
-#if 1
-	cudaStreamSynchronize( kaapi_cuda_DtoH_stream() );
-	kaapi_task_body_t body = kaapi_task_getbody( pc );
-        kaapi_assert_debug(body != 0);
-	body( pc->sp, (kaapi_thread_t*)stack->sfp );
-	kaapi_cuda_thread_tasklist_activate_deps( tasklist, td );  
-#endif
-//	kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_D2H, 
-//		kaapi_cuda_callback1_host_input, tasklist, td );
+	kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_D2H, 
+	       kaapi_cuda_callback0_host_input, tasklist, td );
     } else {
-#if !defined(KAAPI_CUDA_NO_H2D)
-	kaapi_cuda_ctx_push( );
-	kaapi_cuda_data_input_alloc( kstream, tasklist, td );
-	kaapi_cuda_data_input_dev_sync( kstream, tasklist, td );
-	kaapi_cuda_ctx_pop( );
-#endif
 	kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_H2D, 
-		kaapi_cuda_callback1_input, tasklist, td );
+		kaapi_cuda_callback0_input, tasklist, td );
     }
     KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_END );
     KAAPI_DEBUG_INST( td->u.acl.exec_date = kaapi_get_elapsedns() );
@@ -300,12 +314,16 @@ execute_first:
     /* The slicing window is applied to all streams */
     while( 
 	    (kaapi_default_param.cudawindowsize <=
-	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_input_fifo(kstream))) ||
+	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_input_fifo(kstream)))
+	||
 	    (kaapi_default_param.cudawindowsize <=
 	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_kernel_fifo(kstream)))
-	    )
+	||
+	    (kaapi_default_param.cudawindowsize <=
+	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_output_fifo(kstream)))
+	 )
     {
-        kaapi_cuda_test_stream( kstream );
+	kaapi_cuda_test_stream( kstream );
     }
 #endif
 

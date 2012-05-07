@@ -540,8 +540,8 @@ kaapi_cuda_test_stream(
 )
 {
   kaapi_cuda_test_fifo_stream( stream, &stream->input_fifo );
-  kaapi_cuda_test_fifo_stream( stream, &stream->output_fifo );
   kaapi_cuda_test_fifo_stream( stream, &stream->kernel_fifo );
+  kaapi_cuda_test_fifo_stream( stream, &stream->output_fifo );
 
   return KAAPI_CUDA_STREAM_READY;
 }
@@ -612,7 +612,8 @@ kaapi_cuda_waitfirst_fifo_stream(
 #if CONFIG_USE_EVENT
   /* test all requests begining from the oldest (the first to complet) */
   cudaError_t err;
-  kaapi_cuda_request_t* first = fifostream->head;
+//  kaapi_cuda_request_t* first = fifostream->head;
+  kaapi_cuda_request_t* first = kaapi_cuda_fifo_stream_first(fifostream);
   if( first == NULL ) return KAAPI_CUDA_STREAM_EMPTY;
   
   err = cudaEventSynchronize(first->event);
@@ -683,4 +684,16 @@ void kaapi_cuda_stream_destroy( kaapi_cuda_stream_t* stream )
 #else /* ! CONFIG_USE_CONCURRENT_KERNELS */
     kaapi_cuda_fifo_stream_destroy( &stream->kernel_fifo );
 #endif /* CONFIG_USE_CONCURRENT_KERNELS */
+}
+
+kaapi_cuda_stream_state_t
+kaapi_cuda_waitfirst_input( kaapi_cuda_stream_t*      stream )
+{
+    return kaapi_cuda_waitfirst_fifo_stream( stream, kaapi_cuda_get_input_fifo(stream) );
+}
+
+kaapi_cuda_stream_state_t
+kaapi_cuda_waitfirst_kernel( kaapi_cuda_stream_t*      stream )
+{
+    return kaapi_cuda_waitfirst_fifo_stream( stream, kaapi_cuda_get_kernel_fifo(stream) );
 }

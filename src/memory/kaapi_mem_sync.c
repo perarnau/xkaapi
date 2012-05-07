@@ -80,7 +80,7 @@ kaapi_memory_host_synchronize( void )
 
 int kaapi_memory_synchronize( void )
 {
-#if !defined(KAAPI_CUDA_NO_D2H)
+#if !defined(KAAPI_CUDA_NO_D2H) && defined(KAAPI_USE_CUDA)
     kaapi_memory_host_synchronize();
 #endif
     return 0;

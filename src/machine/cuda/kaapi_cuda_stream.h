@@ -295,4 +295,11 @@ kaapi_cuda_get_active_count_fifo( kaapi_cuda_fifo_stream_t* stream )
     return stream->cnt;
 }
 
+kaapi_cuda_stream_state_t
+kaapi_cuda_waitfirst_input( kaapi_cuda_stream_t*      stream );
+
+
+kaapi_cuda_stream_state_t
+kaapi_cuda_waitfirst_kernel( kaapi_cuda_stream_t*      stream );
+
 #endif
