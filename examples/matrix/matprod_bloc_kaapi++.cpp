@@ -35,31 +35,6 @@
 static int BLOCSIZE = 0;
 
 
-/* Task Error
- * Compute the || ||2 matrix norm of A-B
- */
-struct TaskError : public ka::Task<2>::Signature<ka::R<ka::range2d<double> >, ka::R<ka::range2d<double> > > {};
-
-template<>
-struct TaskBodyCPU<TaskError> {
-  void operator() ( ka::range2d_r<double> A, ka::range2d_r<double> B  )
-  {
-    size_t d0 = A.dim(0);
-    size_t d1 = A.dim(1);
-    double error = 0.0;
-    for (size_t i=0; i < d0; ++i)
-    {
-      for (size_t j=0; j < d1; ++j)
-      {
-        double diff = fabs(A(i,j)-B(i,j));
-        error += diff*diff;
-      }
-    }
-    std::cout << "*** Error: " << sqrt(error) << std::endl;
-  }
-};
-
-
 /** Parallel bloc matrix product
 */
 struct TaskMatProduct: public ka::Task<3>::Signature<
@@ -70,11 +45,15 @@ struct TaskMatProduct: public ka::Task<3>::Signature<
 
 template<>
 struct TaskBodyCPU<TaskMatProduct> {
-  void operator()( ka::range2d_r<double> A, ka::range2d_r<double> B, ka::range2d_rpwp<double> C )
+  void operator()( 
+    ka::range2d_r<double> A, 
+    ka::range2d_r<double> B, 
+    ka::range2d_rpwp<double> C 
+  )
   {
-    size_t M = A.dim(0);
-    size_t K = B.dim(0);
-    size_t N = B.dim(1);
+    size_t M = A->dim(0);
+    size_t K = B->dim(0);
+    size_t N = B->dim(1);
     int bloc = BLOCSIZE;
     
     for (size_t i=0; i<M; i += bloc)
@@ -93,8 +72,17 @@ struct TaskBodyCPU<TaskMatProduct> {
   }
 };
 
-
-
+/*
+*/
+static void Usage(const char* progname)
+{
+  std::cerr << "**** usage: " << progname << " N NB [verif]\n"
+            << " N    : matrix dimension\n"
+            << " BS   : block size\n"
+            << " verif: optional value 1 do verification, 0 do not verify, default 0"
+            << std::endl;
+  exit(1);
+}
 
 /* Main of the program
 */
@@ -103,14 +91,22 @@ struct doit {
   {
     int n = 2;
     int nb = 1;
-    if (argc > 1) {
-        n = atoi(argv[1]);
-    }
-    if (argc > 2) {
-        nb = atoi(argv[2]);
-    }
-    BLOCSIZE = n / nb;
-//    n *= BLOCSIZE;
+    int verif = 0;
+    
+    if (argc <3) 
+      Usage(argv[0]);
+
+    if (argc > 1) 
+      n = atoi(argv[1]);
+
+    if (argc > 2) 
+      BLOCSIZE = atoi(argv[2]);
+
+    if (argc >3)
+      verif = atoi(argv[3]);
+
+    nb = n / BLOCSIZE;
+    n = BLOCSIZE * nb;
 
     double* dA = (double*) calloc(n* n, sizeof(double));
     double* dB = (double*) calloc(n* n, sizeof(double));
@@ -125,10 +121,10 @@ struct doit {
     // Populate B and C pseudo-randomly - 
     // The matrices are populated with random numbers in the range (-1.0, +1.0)
     for(int i = 0; i < n * n; ++i) {
-        dB[i] = (float) ((i * i) % 1024 - 512) / 512;
+        dB[i] = 2.0*drand48()-1.0;
     }
     for(int i = 0; i < n * n; ++i) {
-        dA[i] = (float) (((i + 1) * i) % 1024 - 512) / 512;
+        dA[i] = 2.0*drand48()-1.0;
     }
     for(int i = 0; i < n * n; ++i) {
         dC[i] = 0.0;
@@ -157,19 +153,24 @@ struct doit {
       ka::Sync();
     } 
     
-    /* a call to blas to verify */
-    double* dCv = (double*)calloc(n* n, sizeof(double));
-    ka::array<2, double> Cv(dCv, n, n, n);
+    if (verif)
+    {
+      /* a call to blas to verify */
+      double* dCv = (double*)calloc(n* n, sizeof(double));
+      ka::array<2, double> Cv(dCv, n, n, n);
 
-    t0 = kaapi_get_elapsedtime();
-    ka::Spawn<TaskDGEMM>(ka::SetStaticSched()) (CblasNoTrans, CblasNoTrans, 1.0, A, B, 1.0, Cv );
-    ka::Sync();
-    t1 = kaapi_get_elapsedtime();
+      t0 = kaapi_get_elapsedtime();
+      ka::Spawn<TaskDGEMM>(ka::SetStaticSched()) (CblasNoTrans, CblasNoTrans, 1.0, A, B, 1.0, Cv );
+      ka::Sync();
+      t1 = kaapi_get_elapsedtime();
 
-    std::cout << " Sequential matrix multiply took " << t1-t0 << " seconds." << std::endl;
+      std::cout << " Sequential matrix multiply took " << t1-t0 << " seconds." << std::endl;
 
-    ka::Spawn<TaskError>()( Cv, C );
-    ka::Sync();
+      double error;
+      ka::Spawn<TaskNorm2>()( &error, Cv, C );
+      ka::Sync();
+      std::cout << "*** Error: " << error << std::endl;
+    }
 
     free(dA);
     free(dB);

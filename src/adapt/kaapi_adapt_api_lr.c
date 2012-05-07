@@ -48,7 +48,7 @@
 int kaapi_api_listrequest_iterator_count(
   struct kaapi_listrequest_iterator_t* lrrange
 )
-{ return kaapi_listrequest_iterator_count(lrrange); }
+{ return (int)kaapi_listrequest_iterator_count(lrrange); }
 
 kaapi_request_t* kaapi_api_listrequest_iterator_get( 
   struct kaapi_listrequest_t* lrequests, struct kaapi_listrequest_iterator_t* lrrange 

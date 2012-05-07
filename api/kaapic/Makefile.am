@@ -47,6 +47,7 @@ libkaapic_la_SOURCES=\
 	kaapic.c \
 	kaapic_impl.h \
 	kaapic_spawn.c \
+	kaapic_spawn_attr.c \
 	kaapic_alloca.c \
 	kaapic_work.c \
 	kaapic_foreach_docall.c \

@@ -1,7 +1,6 @@
 /*
  ** xkaapi
  ** 
- ** Created on Tue Mar 31 15:19:14 2009
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
@@ -44,32 +43,37 @@
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
 #include <stdarg.h>
+#include <string.h>
+
 
 /*
 */
-void kaapic_foreach( 
-  int32_t first, 
-  int32_t last, 
-  const kaapic_foreach_attr_t* attr,
-  int32_t nargs, 
-  ...
+int kaapic_spawn_attr_init(kaapic_spawn_attr_t* attr)
+{
+  if (attr ==0) return EINVAL;
+  attr->kid = ~0U;
+  return 0;
+}
+
+
+/*
+*/
+int kaapic_spawn_attr_set_kproc(
+  kaapic_spawn_attr_t* attr, 
+  int kid
 )
 {
-  int32_t k;
-  kaapic_body_arg_t* body_arg = (kaapic_body_arg_t*)alloca(
-    offsetof(kaapic_body_arg_t, args) + nargs * sizeof(void*)
-  ); 
-  va_list va_args;
-  va_start(va_args, nargs);
-  
-  /* format of each effective parameter is a list of tuple:
-       @
-  */
-  body_arg->u.f_c = va_arg(va_args, void (*)(int32_t, int32_t, int32_t, ...));
-  body_arg->nargs = nargs;
-  for (k = 0; k < nargs; ++k)
-    body_arg->args[k] = va_arg(va_args, void*);
-  va_end(va_args);
-  
-  kaapic_foreach_common( first, last, attr, kaapic_foreach_body2user, body_arg);
+  if (kid == -1)
+  {
+    attr->kid = ~0U;
+    return 0;
+  }
+  if (kid <0) 
+    return EINVAL;
+  if (kid >= kaapi_getconcurrency())
+    kid %= kaapi_getconcurrency();
+  attr->kid = (uint32_t)kid;
+  return 0;
 }
+
+

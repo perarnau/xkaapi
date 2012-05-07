@@ -1,9 +1,8 @@
 /*
-** kaapi_hws_pushtask.c
 ** xkaapi
 ** 
-**
-** Copyright 2009 INRIA.
+** 
+** Copyright 2010 INRIA.
 **
 ** Contributors :
 **
@@ -43,64 +42,52 @@
 ** terms.
 ** 
 */
-
 #include "kaapi_impl.h"
-#include "kaapi_hws.h"
-#include "kaapi_ws_queue.h"
 
-/* return the queue at a given hierarchy level
- */
-static inline kaapi_ws_block_t* __kaapi_hws_block_atlevel (
-  kaapi_hws_levelid_t levelid
+/** 
+*/
+int kaapi_workqueue_init_ull( 
+    kaapi_workqueue_t* kwq, 
+    kaapi_workqueue_index_ull_t b, 
+    kaapi_workqueue_index_ull_t e 
 )
 {
-  /* kaapi_assert(kaapi_hws_is_levelid_set(levelid)); */
-
+  kaapi_mem_barrier();
   kaapi_processor_t* const kproc = kaapi_get_current_processor();
-  kaapi_ws_block_t* const ws_block = hws_levels[levelid].kid_to_block[kproc->kid];
-  return  ws_block;
-}
-
-/* extern definition
- */
-kaapi_ws_queue_t* kaapi_hws_queue_atlevel (
-  kaapi_hws_levelid_t levelid
-)
-{
-  return __kaapi_hws_block_atlevel( levelid )->queue;
-}
-
-
-/* push a task at a given hierarchy level
- */
-int kaapi_thread_pushtask_atlevel (
-  kaapi_task_t* task,
-  kaapi_hws_levelid_t levelid
-)
-{
-  /* kaapi_assert(kaapi_hws_is_levelid_set(levelid)); */
-
-  kaapi_ws_block_t* const ws_block = __kaapi_hws_block_atlevel(levelid);
-  kaapi_ws_queue_t* const queue = ws_block->queue;
-  kaapi_ws_queue_push(ws_block, queue, task);
-
+#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)||defined(__ppc__) ||defined(__arm__)
+  kaapi_assert_debug( (((unsigned long)&kwq->rep.ull.beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
+  kaapi_assert_debug( (((unsigned long)&kwq->rep.ull.end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
+#else
+#  error "May be alignment constraints exit to garantee atomic read write"
+#endif
+  kaapi_assert_debug( b <= e );
+  kwq->rep.ull.beg  = b;
+  kwq->rep.ull.end  = e;
+  kwq->lock = &kproc->lock;
   return 0;
 }
 
 
-int kaapi_thread_pushtask_atlevel_with_nodeid (
-  kaapi_task_t* task,
-  kaapi_hws_levelid_t levelid,
-  unsigned int nodeid
+/** 
+*/
+int kaapi_workqueue_init_with_lock_ull( 
+    kaapi_workqueue_t*          kwq, 
+    kaapi_workqueue_index_ull_t b, 
+    kaapi_workqueue_index_ull_t e, 
+    kaapi_lock_t*               thelock 
 )
 {
-  /* kaapi_assert(kaapi_hws_is_levelid_set(levelid)); */
-
-//unused  kaapi_processor_t* const kproc = kaapi_get_current_processor();
-  kaapi_ws_block_t* const ws_block = &hws_levels[levelid].blocks[nodeid];
-  kaapi_ws_queue_t* const queue = ws_block->queue;
-
-  kaapi_ws_queue_push(ws_block, queue, task);
-
+  kaapi_mem_barrier();
+#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)||defined(__ppc__)||defined(__arm__)
+  kaapi_assert_debug( (((unsigned long)&kwq->rep.ull.beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
+  kaapi_assert_debug( (((unsigned long)&kwq->rep.ull.end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
+#else
+#  error "May be alignment constraints exit to garantee atomic read write"
+#endif
+  kaapi_assert_debug( b <= e );
+  kaapi_assert_debug( thelock != 0 );
+  kwq->rep.ull.beg  = b;
+  kwq->rep.ull.end  = e;
+  kwq->lock = thelock;
   return 0;
 }

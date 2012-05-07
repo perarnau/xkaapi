@@ -1,5 +1,4 @@
 /*
-** kaapi_hws_misc.c
 ** xkaapi
 ** 
 **
@@ -7,8 +6,7 @@
 **
 ** Contributors :
 **
-** thierry.gautier@inrialpes.fr
-** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+** Thierry Gautier, thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -43,40 +41,64 @@
 ** terms.
 ** 
 */
+#ifndef KAAPI_TRACE_READER_FNC_H
+#define KAAPI_TRACE_READER_FNC_H
 
+#include "kaapi_event.h"
+#include <stdint.h>
 
-#include "kaapi_impl.h"
-#include "kaapi_hws.h"
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
+/* Set of files 
+*/
+struct FileSet;
 
-void kaapi_ws_queue_unimpl_destroy(void* fu)
-{
+/* Open a set of event files
+*/
+extern struct FileSet* OpenFiles( int count, const char** filenames );
+
+/* Return the header information of the ith file of the set fdset.
+   Return 0 in case of success.
+*/
+extern int GetHeader(struct FileSet* fdset, int ith, kaapi_eventfile_header* header );
+
+/* Return the [min,max] date value. Return 0 in case of success.
+   Return 0 in case of success.
+*/
+extern int GetInterval(struct FileSet* fdset, uint64_t* tmin, uint64_t* tmax );
+
+/* Return the number of kprocessor. -1 in case of error
+   Return 0 in case of success.
+*/
+extern int GetProcessorCount(struct FileSet* fdset );
+
+/* Read and call callback on each event, ordered by date (in nanosecond).
+   It is safe for the callback to iterate through event[0]...event[k] until event[k] is the KAAPI_EVT_KPROC_STOP
+   event.
+   Return 0 in case of success.
+*/
+extern int ReadFiles(struct FileSet* fdset, void (*callback)( char* name, const kaapi_event_t* event) );
+
+/* Return true iff no more event
+*/
+extern int EmptyEvent(struct FileSet* fdset);
+
+/* Return current event
+*/
+extern const kaapi_event_t* TopEvent(struct FileSet* fdset);
+
+/* Pass to the next
+*/
+extern void NextEvent(struct FileSet* fdset);
+
+/* Read and call callback on each event, ordered by date
+*/
+extern int CloseFiles(struct FileSet* fdset );
+
+#if defined(__cplusplus)
 }
+#endif
 
-
-unsigned int kaapi_hws_get_request_nodeid(const kaapi_request_t* req)
-{
-  return (unsigned int)req->ident;
-} 
-
-
-unsigned int kaapi_hws_get_node_count(kaapi_hws_levelid_t levelid)
-{
-  kaapi_assert_debug(kaapi_hws_is_levelid_set(levelid));
-  return hws_levels[levelid].block_count;
-}
-
-
-unsigned int kaapi_hws_get_leaf_count(kaapi_hws_levelid_t levelid)
-{
-  /* fixme:
-     assume the leaf count is the same for all
-     trees of a given level. otherwise, the tree
-     (ie. actually the steal block) must be passed
-     as an argument, but this is not yet available
-     in the splitter.
-   */
-
-  kaapi_assert_debug(kaapi_hws_is_levelid_set(levelid));
-  return hws_levels[levelid].blocks[0].kid_count;
-}
+#endif

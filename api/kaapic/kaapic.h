@@ -146,7 +146,7 @@ static inline int kaapic_foreach_attr_destroy(kaapic_foreach_attr_t* attr)
 extern void kaapic_foreach( 
   int32_t beg, 
   int32_t last, 
-  kaapic_foreach_attr_t* attr,
+  const kaapic_foreach_attr_t* attr,
   int32_t nparam, 
   /* void (*body)(int32_t, int32_t, int32_t, ...), */
   ...
@@ -158,7 +158,7 @@ extern void kaapic_foreach(
 extern void kaapic_foreach_with_format(
   int32_t beg, 
   int32_t last, 
-  kaapic_foreach_attr_t* attr,
+  const kaapic_foreach_attr_t* attr,
   int32_t nparam, 
   /* void (*body)(int32_t, int32_t, int32_t, ...), */
   ...
@@ -168,14 +168,41 @@ extern void kaapic_foreach_with_format(
 */
 extern void* kaapic_alloca( size_t sz );
 
-/* Create a task that may be steal.
+
+/*
+*/
+typedef struct kaapic_spawn_attr_t {
+  uint32_t             kid;     /* -1 if any kprocessor */
+} kaapic_spawn_attr_t;
+  
+/*
+*/
+extern int kaapic_spawn_attr_init(kaapic_spawn_attr_t* attr);
+
+/*
+*/
+static inline int kaapic_spawn_attr_destroy(kaapic_spawn_attr_t* attr)
+{ return 0; }
+
+/* Specify that task should be push into the queue of the kid kprocessor.
+   If kid is bigger than the number of active kprocessor then the kid is
+   considered as modulo the number of active kprocessor.
+*/
+extern int kaapic_spawn_attr_set_kproc(
+  kaapic_spawn_attr_t* attr, 
+  int kid
+);
+
+
+/* Create a task that may steal.
    See documentation for restriction on by value passing rule.
+   The attribut attr may be null and correspond to the default attribut.
    \param body : the task body. 
    \param nargs: the argument count. 
    \param ...: a list of tuple { MODE, VALUE/@, COUNT, TYPE  } tuple list.
    \retval 0 in case of success, else an error code
 */
-extern int kaapic_spawn(int32_t nargs, ...);
+extern int kaapic_spawn(const kaapic_spawn_attr_t* attr, int32_t nargs, ...);
 
 /*
 */

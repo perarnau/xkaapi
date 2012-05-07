@@ -167,6 +167,15 @@ extern void kaapi_mt_resume_threads(void);
 */
 extern void kaapi_mt_suspendresume_init(void);
 
+/**
+*/
+extern void kaapi_mt_begin_parallel(void);
+
+/**
+*/
+extern void kaapi_mt_end_parallel(void);
+
+
 
 /** Initialize hw topo.
     Based on hwloc library.
@@ -446,8 +455,6 @@ extern uint64_t kaapi_perf_thread_delayinstate(struct kaapi_processor_t* kproc);
 #include "kaapi_machine.h"
 /* ========== MACHINE DEPEND DATA STRUCTURE =========== */
 
-#include "kaapi_hws.h"
-
 
 #include "kaapi_tasklist.h"
 
@@ -489,13 +496,6 @@ static inline void kaapi_sched_waitlock( kaapi_lock_t* lock)
 {
   kaapi_atomic_waitlock(lock);
 }
-
-
-/* Return the hws queueblock at level levelid
-*/
-extern kaapi_ws_queue_t* kaapi_hws_queue_atlevel (
-  kaapi_hws_levelid_t levelid
-);
 
 
 static inline
@@ -664,33 +664,6 @@ extern kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kp
     \retval an error code
 */
 extern int kaapi_sched_flat_emitsteal_init(kaapi_processor_t*);
-
-/** \ingroup HWS
-    Hierarchical workstealing routine
-    \retval KAAPI_REQUEST_S_NOK in case of failure of stealing something
-    \retval KAAPI_REQUEST_S_OK in case of success of the steal operation
-*/
-extern kaapi_request_status_t kaapi_hws_emitsteal ( kaapi_processor_t* kproc );
-
-/** \ingroup WS
-    The method initialize the information required for the hierarchical emitsteal function.
-    \retval 0 in case success
-    \retval an error code
-*/
-extern int kaapi_hws_emitsteal_init(kaapi_processor_t*);
-
-/** \ingroup HWS
-    Split the task among the given level leaves
-    \retval the splitter returned value
-*/
-extern int kaapi_hws_splitter
-(kaapi_stealcontext_t*, kaapi_task_splitter_t, void*, kaapi_hws_levelid_t);
-
-/** \ingroup HWS
-    equivalent of kaapi_taskadapt_body, tailored for HWS
-*/
-extern void kaapi_hws_adapt_body(void* arg, kaapi_thread_t* thread);
-
 
 /** \ingroup WS
     Advance polling of request for the current running thread.

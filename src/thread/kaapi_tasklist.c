@@ -127,12 +127,12 @@ int kaapi_readytasklist_reserve(
 #endif
       rtl->prl[i].base         += cnt_tasks[i];
       rtl->prl[i].dynallocated = 1;
-      rtl->prl[i].size         = cnt_tasks[i];
+      rtl->prl[i].size         = (int)cnt_tasks[i];
     }
     else if (cnt_tasks[i] >0)
     {
       rtl->prl[i].base         = base+cnt_tasks[i]; /* because index are negative */
-      rtl->prl[i].size         = cnt_tasks[i];
+      rtl->prl[i].size         = (int)cnt_tasks[i];
       base += cnt_tasks[i];
       capacity -= cnt_tasks[i];
     }
@@ -175,7 +175,7 @@ int _kaapi_readylist_extend_wq( kaapi_onereadytasklist_t* onertl )
 
 #if defined(KAAPI_DEBUG)
 {
-  int i;
+  long i;
   for (i= onertl->next+1; i<0; ++i)
     kaapi_assert( newbase[i] == oldbase[i] );
 }
@@ -230,7 +230,9 @@ void kaapi_tasklist_push_broadcasttask(
 {
   kaapi_activationlink_t* al = kaapi_tasklist_allocate_al(tl);
   al->td    = td_bcast;
+#if 0
   al->queue = 0;
+#endif
   al->next  = 0;
   if (td_writer->u.acl.bcast ==0) 
     td_writer->u.acl.bcast = (kaapi_activationlist_t*)kaapi_tasklist_allocate(tl, sizeof(kaapi_activationlist_t));

@@ -1,13 +1,12 @@
 /*
 ** xkaapi
 ** 
-** 
-** Copyright 2010 INRIA.
+**
+** Copyright 2009 INRIA.
 **
 ** Contributors :
 **
-** thierry.gautier@inrialpes.fr
-** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+** Thierry Gautier, thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -42,52 +41,41 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
+#ifndef KAAPI_TRACE_SIMULATOR_H
+#define KAAPI_TRACE_SIMULATOR_H
 
-/** 
-*/
-int kaapi_workqueue_init( 
-    kaapi_workqueue_t* kwq, 
-    kaapi_workqueue_index_t b, 
-    kaapi_workqueue_index_t e 
-)
-{
-  kaapi_mem_barrier();
-  kaapi_processor_t* const kproc = kaapi_get_current_processor();
-#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)||defined(__ppc__) ||defined(__arm__)
-  kaapi_assert_debug( (((unsigned long)&kwq->rep.li.beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
-  kaapi_assert_debug( (((unsigned long)&kwq->rep.li.end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
-#else
-#  error "May be alignment constraints exit to garantee atomic read write"
+#include "kaapi_trace_reader.h"
+
+#if defined(__cplusplus)
+extern "C" {
 #endif
-  kaapi_assert_debug( b <= e );
-  kwq->rep.li.beg  = b;
-  kwq->rep.li.end  = e;
-  kwq->lock = &kproc->lock;
-  return 0;
-}
 
-
-/** 
+/* Set of files 
 */
-int kaapi_workqueue_init_with_lock( 
-    kaapi_workqueue_t*      kwq, 
-    kaapi_workqueue_index_t b, 
-    kaapi_workqueue_index_t e, 
-    kaapi_lock_t*           thelock 
-)
-{
-  kaapi_mem_barrier();
-#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)||defined(__ppc__)||defined(__arm__)
-  kaapi_assert_debug( (((unsigned long)&kwq->rep.li.beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
-  kaapi_assert_debug( (((unsigned long)&kwq->rep.li.end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
-#else
-#  error "May be alignment constraints exit to garantee atomic read write"
-#endif
-  kaapi_assert_debug( b <= e );
-  kaapi_assert_debug( thelock != 0 );
-  kwq->rep.li.beg  = b;
-  kwq->rep.li.end  = e;
-  kwq->lock = thelock;
-  return 0;
+struct Simulator;
+
+/* Open a set of event files
+*/
+extern struct Simulator* OpenSimulator( struct FileSet* fds, double hres );
+
+/* Do one step of simulation and return the synthetized information
+   (date, count, efficiencies[i]) for each processor.
+   Return 0 if no more event to simulate.
+   *date = *count = 0 iff event set is empty.
+*/
+extern int OneStepSimulator( struct Simulator* sim,
+                             double* date,
+                             int* count, 
+                             const double** efficiencies,
+                             const uint64_t** count_stealok
+                           );
+
+/* Read and call callback on each event, ordered by date
+*/
+extern int CloseSimulator(struct Simulator* sim );
+
+#if defined(__cplusplus)
 }
+#endif
+
+#endif

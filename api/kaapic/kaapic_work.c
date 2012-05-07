@@ -245,14 +245,19 @@ static int kaapic_global_work_steal
      - any try to pop a slice closed to the tid of the thread
      - only 0 can pop a non poped slice
   */
-#if 0
+#if 1
   /* caller has already pop and finish its slice, if it is 0 then may pop
      the next non null entry
   */
+#if 0
   int tid = kproc->kid;
   if (tid == 0)
   {
     kaapi_assert_debug(tid<KAAPI_MAX_PROCESSOR);
+#else
+  if (1)
+  {
+#endif
     int tidpos = kaapi_bitmap_first1( &gwork->wa.map );
     if ((tidpos !=0) && kaapic_global_work_pop(gwork, tidpos-1, i, j ))
     {
@@ -602,7 +607,9 @@ static int _kaapic_split_task
   for (; !kaapi_listrequest_iterator_empty(&cpy_lri); ) 
   {
     kaapi_request_t* req = kaapi_listrequest_iterator_get(lr, &cpy_lri);
-    kaapi_bitmap_value_set( &mask, gwork->wa.tid2pos[ req->ident ] );
+    int pos = gwork->wa.tid2pos[ req->ident ];
+    if (pos != (uint8_t)-1)
+      kaapi_bitmap_value_set( &mask, pos );
     
     kaapi_listrequest_iterator_next(lr, &cpy_lri);
   }
@@ -1085,7 +1092,7 @@ int kaapic_foreach_common
 (
   kaapi_workqueue_index_t first,
   kaapi_workqueue_index_t last,
-  kaapic_foreach_attr_t*  attr,
+  const kaapic_foreach_attr_t*  attr,
   kaapic_foreach_body_t   body_f,
   kaapic_body_arg_t*      body_args
 )

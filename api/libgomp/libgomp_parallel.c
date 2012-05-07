@@ -238,7 +238,9 @@ komp_parallel_start (
   
   /* allocate in the caller stack the tasks for the parallel region */
   allarg = kaapi_thread_pushdata(thread, num_threads * sizeof(komp_parallel_task_arg_t));
-  
+
+
+#if 1  /* OLD CODE: push locally all tasks that may be steal by any thread */
   /* The master thread (id 0) calls fn (data) directly. That's why we
      start this loop from id = 1.*/
   task = kaapi_thread_toptask(thread);
@@ -262,6 +264,39 @@ komp_parallel_start (
     task = kaapi_thread_nexttask(thread, task);
   }
   kaapi_thread_push_packedtasks(thread, num_threads-1);
+
+#else 
+  /* push the task for the i-th kprocessor queue... 
+     - work fine for 1rst level parallel region.
+     - else may introduce deadlock because threads are not reused (...)
+     If thread i (kprocessor i) is waiting on a barrier while and other
+     thread push a task into its mailbox, then thread-i is unable to execute
+     the task (...)
+  */
+
+  /* The master thread (id 0) calls fn (data) directly. That's why we
+     start this loop from id = 1.*/
+  for (int i = 1; i < num_threads; i++)
+  {
+    task = kaapi_thread_toptask(thread);
+    kaapi_task_init( 
+        task, 
+        komp_trampoline_task_parallel, 
+        allarg+i
+    );
+    arg = kaapi_task_getargst( task, komp_parallel_task_arg_t );
+    arg->threadid       = i;
+    arg->fn             = fn;
+    arg->data           = data;
+    arg->teaminfo       = teaminfo;
+    /* WARNING: see spec: nextnum threads is inherited ? */
+    arg->nextnumthreads = ctxt->icv.next_numthreads;
+    arg->nestedlevel    = ctxt->icv.nested_level;
+    arg->nestedparallel = ctxt->icv.nested_parallel;
+
+    kaapi_thread_distribute_task( thread, i );
+  }
+#endif  
 }
 
 

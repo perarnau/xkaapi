@@ -42,7 +42,8 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include "machine/mt/kaapi_mt_condvar.h"
+//#include "machine/mt/kaapi_mt_condvar.h"
+#include "kaapi_mt_condvar.h"
 
 /*
 */

@@ -55,9 +55,7 @@ extern "C" {
 #include <clapack.h> // assume MKL/ATLAS clapack version
 }
 
-
 #include "kaapi++" // this is the new C++ interface for Kaapi
-
 
 /* Compute inplace LLt factorization of A, ie L such that A = L * Lt
    with L lower triangular.
@@ -174,11 +172,11 @@ struct TaskDGEMM: public ka::Task<8>::Signature<
       CBLAS_TRANSPOSE,             /* NoTrans/Trans for A */
       CBLAS_TRANSPOSE,             /* NoTrans/Trans for B */
       double,                      /* alpha */
-      ka::R<double>, /* Aik   */
-      ka::R<double>, /* Akj   */
+      ka::R<double>,               /* Aik   */
+      ka::R<double>,               /* Akj   */
       double,                      /* beta */
-      ka::RW<double>, /* Aij   */
-      int /* NB */
+      ka::RW<double>,              /* Aij   */
+      int                          /* NB */
 >{};
 template<>
 struct TaskBodyCPU<TaskDGEMM> {
@@ -319,7 +317,6 @@ struct doit {
 #endif
       }
 
-
               
     // Cholesky factorization of A 
     double sumt = 0.0;
@@ -363,7 +360,6 @@ struct doit {
       }
 }
 #endif
-
       t0 = kaapi_get_elapsedtime();
       ka::Spawn<TaskCholesky>( ka::SetStaticSched() )(block_count, NB, (uintptr_t)&dAbloc);
       ka::Sync();
@@ -433,7 +429,7 @@ struct doit {
     
     //int nmax = n+16*incr;
     printf("size   #threads #bs    time      GFlop/s   Deviation\n");
-    //for (int k=9; k<15; ++k, ++n )
+    for (int k=0; k<niter; ++k )
     {
       //doone_exp( 1<<k, block_count, niter, verif );
       doone_exp( n, block_count, niter, verif );

@@ -55,168 +55,16 @@
   ((kproc)->curr_perf_regs == (kproc)->perf_regs[KAAPI_PERF_USER_STATE] ? KAAPI_PERF_USER_STATE : KAAPI_PERF_SCHEDULE_STATE)
 
 
-/* global mask of events to register */
-uint64_t kaapi_event_mask;
-
-/** Fifo List of buffers to record
-    - push in tail
-    - pop in head
-*/
-static kaapi_event_buffer_t*  listevt_head =0;
-static kaapi_event_buffer_t*  listevt_tail =0;
-static pthread_mutex_t mutex_listevt;
-
-static pthread_cond_t signal_thread;
-
-/** List of free buffers
-*/
-static kaapi_event_buffer_t*  listevtfree_head =0;
-static pthread_mutex_t mutex_listevtfree_head;
-
-
-/** List of fd, one for each core:
-    avoid to reorder buffer... if kaapi_event_reader is
-    recoded, we can write all event buffers in one file.
-*/
-static int listfd_set[KAAPI_MAX_PROCESSOR];
-
-/** The thread to join in termination
-*/
-static pthread_t collector_threadid;
-
-/* write one bloc. Should not be concurrent */
-static void _kaapi_write_evb( kaapi_event_buffer_t* evb )
-{
-  int kid = evb->kid;
-  if (listfd_set[kid] == -1)
-  {
-    char filename[128]; 
-    if (getenv("USER") !=0)
-      sprintf(filename,"/tmp/events.%s.%i.evt", getenv("USER"), kid );
-    else
-      sprintf(filename,"/tmp/events.%i.evt", kid );
-
-    /* open it */
-    listfd_set[kid] = open(filename, O_WRONLY|O_CREAT|O_TRUNC);
-    kaapi_assert( listfd_set[kid] != -1 );
-    fchmod( listfd_set[kid], S_IRUSR|S_IWUSR);
-  }
-  ssize_t sz_write = write(listfd_set[kid], evb->buffer, sizeof(kaapi_event_t)*evb->pos);
-  kaapi_assert( sz_write == (ssize_t)(sizeof(kaapi_event_t)*evb->pos) );
-  evb->pos = 0;
-}
-
-/* infinite loop to write generated buffer */
-static void* _kaapi_event_flushimator(void* arg)
-{
-  kaapi_event_buffer_t* evb;
-  while (1)
-  {    
-    pthread_mutex_lock(&mutex_listevt);
-    while (listevt_head ==0)
-    {
-      if (kaapi_isterminated()) 
-        goto exit_fromterm;
-      pthread_cond_wait(&signal_thread, &mutex_listevt);
-    }
-    /* pick up atomically */
-    evb = listevt_head;
-    listevt_head = evb->next;
-    if (listevt_head ==0)
-      listevt_tail = 0;
-    pthread_mutex_unlock(&mutex_listevt);
-    
-    evb->next = 0;
-    _kaapi_write_evb(evb);
-    
-    /* free buffer */
-    pthread_mutex_lock(&mutex_listevtfree_head);
-    evb->next = listevtfree_head;
-    listevtfree_head = evb;
-    pthread_mutex_unlock(&mutex_listevtfree_head);    
-  }
-
-exit_fromterm:
-  pthread_mutex_unlock(&mutex_listevt);
-  return 0;
-}
-
-
-/**
-*/
-void kaapi_event_flushbuffer( kaapi_processor_t* kproc )
-{
-  kaapi_event_buffer_t* evb = kproc->eventbuffer;
-  if (evb ==0) return;
-
-  /* push buffer in listevt buffer list */
-  kproc->eventbuffer = 0;
-  pthread_mutex_lock(&mutex_listevt);
-  evb->next = 0;
-  if (listevt_head !=0)
-    listevt_tail->next = evb;
-  else listevt_head = evb;
-  listevt_tail = evb;
-  pthread_mutex_unlock(&mutex_listevt);
-  pthread_cond_signal(&signal_thread);
-
-  /* alloc new buffer */
-  if (listevtfree_head ==0)
-    evb = (kaapi_event_buffer_t*)malloc(sizeof(kaapi_event_buffer_t));
-  else 
-  {
-    pthread_mutex_lock(&mutex_listevtfree_head);
-    evb = listevtfree_head;
-    listevtfree_head = evb->next;
-    pthread_mutex_unlock(&mutex_listevtfree_head);    
-  }
-
-  evb->next = 0;
-  evb->pos  = 0;
-  evb->kid  = kproc->kid;
-
-  kproc->eventbuffer = evb;
-}
-
-
-/*
-*/
-void kaapi_event_closebuffer( kaapi_processor_t* kproc )
-{
-  kaapi_event_buffer_t* evb = kproc->eventbuffer;
-  if (evb ==0) return;
-
-  kproc->eventbuffer = 0;
-  pthread_mutex_lock(&mutex_listevt);
-  evb->next = 0;
-  if (listevt_head !=0)
-    listevt_tail->next = evb;
-  else listevt_head = evb;
-  listevt_tail = evb;
-  pthread_mutex_unlock(&mutex_listevt);
-  pthread_cond_signal(&signal_thread);
-}
-
-
-
 /**
 */
 void kaapi_perf_global_init(void)
 {
-  int i;
-  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
-    listfd_set[i] = -1;
-
 #if defined(KAAPI_USE_PERFCOUNTER)
   if (getenv("KAAPI_RECORD_TRACE") !=0)
   {
-    pthread_mutex_init(&mutex_listevt, 0);
-    pthread_mutex_init(&mutex_listevtfree_head, 0);
-    pthread_cond_init(&signal_thread, 0);
-    pthread_create(&collector_threadid, 0, _kaapi_event_flushimator, 0);
+    kaapi_eventrecorder_init();
   }
 #endif
-  
 
   kaapi_mt_perf_init();
 }
@@ -227,52 +75,21 @@ void kaapi_perf_global_init(void)
 */
 void kaapi_perf_global_fini(void)
 {
-  void* result;
-  int i;
-  kaapi_event_buffer_t* evb;
-  
   /* close and flush */
   kaapi_mt_perf_fini();
 
   kaapi_assert( kaapi_isterminated() );
 
+  kaapi_collect_trace();
+
 #if defined(KAAPI_USE_PERFCOUNTER)
   if (getenv("KAAPI_RECORD_TRACE") !=0)
   {
-    pthread_mutex_lock(&mutex_listevt);
-    pthread_cond_signal(&signal_thread);
-    pthread_mutex_unlock(&mutex_listevt);
-    pthread_join(collector_threadid, &result);
-  
-    /* flush remains buffer */
-    pthread_mutex_lock(&mutex_listevt);
-    while (listevt_head !=0)
-    {
-      evb = listevt_head;
-      listevt_head = evb->next;
-      if (listevt_head ==0)
-        listevt_tail = 0;
-      evb->next = 0;
-      _kaapi_write_evb(evb);
-      free(evb);
-    }
-    pthread_mutex_unlock(&mutex_listevt);
-  }
-    
-  /* close all file descriptors */
-  for (i=0; i<KAAPI_MAX_PROCESSOR; ++i)
-    if (listfd_set[i] != -1)
-      close(listfd_set[i]);
-
-  if (getenv("KAAPI_RECORD_TRACE") !=0)
-  {
-    /* destroy mutexes/conditions */
-    pthread_cond_destroy(&signal_thread);
-    pthread_mutex_destroy(&mutex_listevt);
-    pthread_mutex_destroy(&mutex_listevtfree_head);
+    kaapi_eventrecorder_fini();
   }
 #endif
 }
+
 
 
 /**
@@ -283,11 +100,7 @@ void kaapi_perf_thread_init(kaapi_processor_t* kproc, int isuser)
 
   if (getenv("KAAPI_RECORD_TRACE") !=0)
   {
-    kproc->eventbuffer = 
-      (kaapi_event_buffer_t*)malloc(sizeof(kaapi_event_buffer_t));
-    kproc->eventbuffer->pos  = 0;
-    kproc->eventbuffer->kid  = kproc->kid;
-    kproc->eventbuffer->next = 0;
+    kproc->eventbuffer = kaapi_event_openbuffer(kproc->kid);
   }
   
   memset( kproc->perf_regs, 0, sizeof( kproc->perf_regs) );
@@ -303,7 +116,10 @@ void kaapi_perf_thread_init(kaapi_processor_t* kproc, int isuser)
 void kaapi_perf_thread_fini(kaapi_processor_t* kproc)
 {
   if (kproc->eventbuffer !=0)
-    kaapi_event_closebuffer(kproc);
+  {
+    kaapi_event_closebuffer(kproc->eventbuffer);
+    kproc->eventbuffer = 0;
+  }
 }
 
 
@@ -363,27 +179,15 @@ void kaapi_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser )
 */
 void _kaapi_signal_dump_counters(int xxdummy)
 {
-  kaapi_event_buffer_t* evb;
   uint32_t i;
   
   for (i=0; i<kaapi_count_kprocessors; ++i)
   {
-    kaapi_event_closebuffer( kaapi_all_kprocessors[i] );
+    kaapi_event_closebuffer( kaapi_all_kprocessors[i]->eventbuffer );
+    kaapi_all_kprocessors[i]->eventbuffer = 0;
   }
 
-  pthread_mutex_lock(&mutex_listevt);
-  while (listevt_head !=0)
-  {
-    evb = listevt_head;
-    listevt_head = evb->next;
-    if (listevt_head ==0)
-      listevt_tail = 0;
-    evb->next = 0;
-    _kaapi_write_evb(evb);
-    free(evb);
-  }
-  pthread_mutex_unlock(&mutex_listevt);
-
+  kaapi_event_fencebuffers();
   _exit(0);
 }
 
@@ -520,22 +324,34 @@ void _kaapi_perf_accum_register(const kaapi_perf_idset_t* idset, int isuser, kaa
 }
 
 
+/*
+*/
 const char* kaapi_perf_id_to_name(kaapi_perf_id_t id)
 {
+  /* see kaapi.h
+     Basic perf counter name.
+  */
   static const char* names[] =
   {
     "TASKS",
     "STEALREQOK",
     "STEALREQ",
     "STEALOP",
+    "STEALIN",
     "SUSPEND",
-    "PAPI_0",
-    "PAPI_1",
-    "PAPI_2"
+    "T1",
+    "TPREEMPT",
+    "ALLOCTHREAD",
+    "FREETHREAD",
+    "QUEUETHREAD",
+    "TASKLISTCALC"
   };
   
-  if (id <5) return names[(size_t)id];
-  return kaapi_perf_id_to_name( id - 5 );
+  if (id <= KAAPI_PERF_ID_TASKLISTCALC) 
+    return names[(size_t)id];
+  if ((id <KAAPI_PERF_ID_ENDSOFTWARE) || (id >= KAAPI_PERF_ID_MAX))
+    return "<undefined>";
+  return kaapi_mt_perf_id_to_name( id - KAAPI_PERF_ID_ENDSOFTWARE );
 }
 
 

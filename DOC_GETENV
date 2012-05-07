@@ -32,8 +32,12 @@ KAAPI_NETWORK_BASE_ADDR:
 
 
 KAAPI_DISPLAY_PERF:
+
 KAAPI_RECORD_TRACE: defined to generate trace of events at runtime.
   Only available if the library was configured with --with-perfcounter
+KAAPI_RECORD_MASK: name[,name]* where name is either compute, idle, steal or the event number.
+  Only record event in the mask.
+  
 KAAPI_PERF_PAPIES:
 
 KAAPI_DUMP_GRAPH:

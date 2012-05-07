@@ -42,37 +42,6 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include "kaapi_hws.h"
-
-static uintptr_t last_addr  = 0;
-static size_t size_bloc = 0;
-void kaapi_memory_distribute_1Dcyclic(void* base_addr, void* end_addr, size_t bloc_size)
-{
-  last_addr = (uintptr_t)base_addr;
-  size_bloc = bloc_size;
-  if (last_addr ==0) return;
-  
-  uintptr_t baddr = last_addr;
-  uintptr_t eaddr = (uintptr_t)end_addr;
-  if ((bloc_size % 4096) != 0)
-    fprintf(stderr, "Size %lu not multiple of page size\n", bloc_size);
-  int count = hws_levels[KAAPI_HWS_LEVELID_NUMA].block_count;
-  int nodeid = 0;
-  while (baddr < eaddr)
-  {
-    if ((baddr & 0xfff) != 0)
-      fprintf(stderr, "@ %p not aligned\n", (void*)baddr);
-    nodeid = ((baddr-last_addr) / size_bloc) % count;
-    int err = kaapi_numa_bind((void*)baddr, bloc_size, nodeid);
-    if (err !=0)
-    {
-      printf("kaapi_numa_bind: err=%i\n", errno);
-    }
-    kaapi_assert( 0 ==  err );
-
-    baddr += bloc_size;
-  }
-}
 
 /** Activate and push ready tasks of an activation link.
     Return 1 if at least one ready task has been pushed into ready queue.
@@ -87,8 +56,8 @@ int kaapi_tasklist_pushready_td(
     int                     priority
 )
 {
-  kaapi_ws_queue_t* queue = 0;
 #if 0 /* desactivate this portion of code if you do not want push on remote queue */
+  kaapi_ws_queue_t* queue = 0;
   int nodeid;
   kaapi_bitmap_value32_t ocr = td->ocr;
   uintptr_t addr = 0;
@@ -137,7 +106,7 @@ int kaapi_tasklist_pushready_td(
   }
 #endif
   
-  if (queue == 0)
+  if (1) //(queue == 0)
   {
     /* I was not able to identify a queue for the task: push locally */
     kaapi_readylist_pushone_td( 

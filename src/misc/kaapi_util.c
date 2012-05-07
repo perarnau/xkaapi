@@ -50,7 +50,7 @@
 
 struct constant {
   const char* ident;
-  int         value;
+  int64_t     value;
 };
 
 struct _kaapi_parser {
@@ -157,7 +157,7 @@ int kaapi_util_parse_list(
     for (int i=0; i<count_constants; ++i)
     {
       kp.listconstants[i].ident = va_arg(va_args, const char*);
-      kp.listconstants[i].value = va_arg(va_args, uint64_t);
+      kp.listconstants[i].value = (int)va_arg(va_args, uint64_t);
     }
     va_end(va_args);
   }
