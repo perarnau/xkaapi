@@ -23,14 +23,14 @@ kaapi_mem_host_map_get_asid( const kaapi_mem_host_map_t* map )
 { return map->asid; }
 
 int
-kaapi_mem_host_map_find( const kaapi_mem_host_map_t*, kaapi_mem_addr_t, kaapi_mem_data_t** );
+kaapi_mem_host_map_find( kaapi_mem_host_map_t*, kaapi_mem_addr_t, kaapi_mem_data_t** );
 
 int
-kaapi_mem_host_map_find_or_insert( const kaapi_mem_host_map_t*,
+kaapi_mem_host_map_find_or_insert( kaapi_mem_host_map_t*,
 	kaapi_mem_addr_t, kaapi_mem_data_t** );
 
 int
-kaapi_mem_host_map_find_or_insert_( const kaapi_mem_host_map_t*, 
+kaapi_mem_host_map_find_or_insert_( kaapi_mem_host_map_t*, 
 	kaapi_mem_addr_t, kaapi_mem_data_t**);
 
 int

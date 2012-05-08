@@ -40,7 +40,7 @@ kaapi_cuda_data_async_view_convert( kaapi_memory_view_t* dest_view, const
  */
 static inline kaapi_data_t*
 xxx_kaapi_cuda_data_async_allocate(
-		const kaapi_mem_host_map_t* cuda_map,
+		kaapi_mem_host_map_t* cuda_map,
 		kaapi_mem_data_t* kmd,
 		kaapi_data_t* src,
 		kaapi_access_mode_t m
@@ -76,8 +76,8 @@ int kaapi_cuda_data_async_input_alloc(
 )
 {
     size_t i;
-    const kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
-    const kaapi_mem_host_map_t* host_map = 
+    kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
+    kaapi_mem_host_map_t* host_map = 
 	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
     const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
     kaapi_mem_data_t *kmd;
@@ -140,7 +140,7 @@ int kaapi_cuda_data_async_input_dev_sync(
 {
     size_t i;
     kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
-    const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
+    kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
     kaapi_mem_data_t *kmd;
     void* sp;
 #if defined(KAAPI_TASKLIST_POINTER_TASK)
@@ -211,7 +211,7 @@ int kaapi_cuda_data_async_input_host_sync(
 	    kaapi_cuda_data_async_sync_host2( host_data );
 
 	    if( KAAPI_ACCESS_IS_WRITE(m) ) {
-		const kaapi_mem_host_map_t* host_map = 
+		kaapi_mem_host_map_t* host_map = 
 		    kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
 		const kaapi_mem_asid_t host_asid =
 		    kaapi_mem_host_map_get_asid(host_map);
@@ -235,7 +235,7 @@ int kaapi_cuda_data_async_recv(
 {
     size_t i;
     kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
-    const kaapi_mem_host_map_t* host_map = 
+    kaapi_mem_host_map_t* host_map = 
 	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
     const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
     kaapi_mem_data_t *kmd;
@@ -304,7 +304,7 @@ kaapi_cuda_data_async_sync_device_transfer(
 	kaapi_cuda_mem_copy_htod( dest->ptr, &dest->view,
 		src->ptr, &src->view );
     } else {
-	    const kaapi_mem_host_map_t* host_map = 
+	    kaapi_mem_host_map_t* host_map = 
 		kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
 	    const kaapi_mem_asid_t host_asid =
 		kaapi_mem_host_map_get_asid(host_map);
@@ -352,7 +352,7 @@ kaapi_cuda_data_async_sync_device_transfer(
 int
 kaapi_cuda_data_async_sync_device( kaapi_data_t* kdata )
 {
-    const kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
+    kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
     const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
     kaapi_mem_data_t *kmd;
     kaapi_mem_asid_t valid_asid;
@@ -400,7 +400,7 @@ kaapi_cuda_data_async_sync_host_transfer(
 int
 kaapi_cuda_data_async_sync_host( kaapi_data_t* kdata, cudaStream_t stream )
 {
-    const kaapi_mem_host_map_t* host_map = 
+    kaapi_mem_host_map_t* host_map = 
 	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
     const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
     kaapi_mem_data_t *kmd;
@@ -435,7 +435,7 @@ kaapi_cuda_data_async_sync_host_transfer2(
 int
 kaapi_cuda_data_async_sync_host2( kaapi_data_t* kdata )
 {
-    const kaapi_mem_host_map_t* host_map = 
+    kaapi_mem_host_map_t* host_map = 
 	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
     const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
     kaapi_mem_data_t *kmd;

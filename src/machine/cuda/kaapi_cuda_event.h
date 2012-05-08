@@ -54,14 +54,10 @@
 
 #if defined(KAAPI_USE_PERFCOUNTER)
 
-#if 0
-void kaapi_cuda_event_flushbuffer( kaapi_processor_t* kproc );
-#endif
-
-static inline void KAAPI_CUDA_EVENT_PUSH0_(
-    kaapi_processor_t*      kproc, 
+static inline kaapi_event_buffer_t*
+kaapi_cuda_event_push0(
+    kaapi_event_buffer_t*   evb, 
     uint64_t                tclock,
-    kaapi_thread_context_t* thread, 
     uint8_t                 eventno
 )
 {
@@ -70,24 +66,41 @@ static inline void KAAPI_CUDA_EVENT_PUSH0_(
 #else
   tclock -= kaapi_default_param.startuptime;
 #endif
-  kaapi_event_t* evt = &kproc->eventbuffer->buffer[kproc->eventbuffer->pos++];
+  kaapi_event_t* evt = &evb->buffer[evb->pos++];
   evt->evtno   = eventno;
+#if defined(KAAPI_USE_CUDA)
+  evt->type    = kaapi_processor_get_type(kaapi_get_current_processor());
+#else
   evt->type    = 0;
-  evt->kid     = kproc->kid;
+#endif
+  evt->kid     = evb->kid;
   evt->gid     = 0;
   evt->date    = tclock;
 
-  if (kproc->eventbuffer->pos == KAAPI_EVENT_BUFFER_SIZE) 
-	kaapi_event_flushbuffer(kproc);
+  if (evb->pos == KAAPI_EVENT_BUFFER_SIZE)
+    return kaapi_event_flushbuffer(evb);
+  return evb;
 }
 
 #  define KAAPI_CUDA_EVENT_PUSH0(kproc, kthread, eventno ) \
-    if ((kproc->eventbuffer) && (kaapi_event_mask & KAAPI_EVT_MASK(eventno)))\
-      KAAPI_CUDA_EVENT_PUSH0_(kproc, kaapi_event_date(), kthread, eventno )
+    if ((kproc->eventbuffer) )\
+    {\
+      kaapi_event_buffer_t* evb = kaapi_cuda_event_push0(kproc->eventbuffer, kaapi_event_date(), eventno ); \
+      if (evb != kproc->eventbuffer) kproc->eventbuffer = evb;\
+    }
+
+#  define KAAPI_CUDA_EVENT_PUSH0_(kproc, tclock, eventno ) \
+    if ((kproc->eventbuffer) )\
+    {\
+      kaapi_event_buffer_t* evb = kaapi_cuda_event_push0(kproc->eventbuffer, tclock, eventno ); \
+      if (evb != kproc->eventbuffer) kproc->eventbuffer = evb;\
+    }
 
 #else
 
 #define KAAPI_CUDA_EVENT_PUSH0(kproc, kthread, eventno)
+
+#define KAAPI_CUDA_EVENT_PUSH0_(kproc, tclock, eventno) 
 
 #endif
 

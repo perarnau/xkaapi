@@ -18,7 +18,7 @@ _kaapi_mem_data_alloc( void )
 }
 
 int
-kaapi_mem_host_map_find( const kaapi_mem_host_map_t* map, 
+kaapi_mem_host_map_find( kaapi_mem_host_map_t* map, 
 	kaapi_mem_addr_t addr,
 	kaapi_mem_data_t** data
 	)
@@ -35,7 +35,7 @@ kaapi_mem_host_map_find( const kaapi_mem_host_map_t* map,
 }
 
 int
-kaapi_mem_host_map_find_or_insert( const kaapi_mem_host_map_t* map,
+kaapi_mem_host_map_find_or_insert( kaapi_mem_host_map_t* map,
 	kaapi_mem_addr_t addr,
 	kaapi_mem_data_t** kmd
 	)
@@ -58,7 +58,7 @@ kaapi_mem_host_map_find_or_insert( const kaapi_mem_host_map_t* map,
 }
 
 int
-kaapi_mem_host_map_find_or_insert_( const kaapi_mem_host_map_t* map,
+kaapi_mem_host_map_find_or_insert_( kaapi_mem_host_map_t* map,
 	kaapi_mem_addr_t addr, kaapi_mem_data_t** kmd )
 {
     kaapi_hashentries_t* entry;
@@ -91,7 +91,7 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, void* sp )
 #endif
 
 	if( KAAPI_ACCESS_IS_WRITE(m) ) {
-	    const kaapi_mem_host_map_t* host_map = 
+	    kaapi_mem_host_map_t* host_map = 
 		kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
 	    const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
 	    kaapi_mem_data_t *kmd;

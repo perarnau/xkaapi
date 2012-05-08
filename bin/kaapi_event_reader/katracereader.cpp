@@ -521,8 +521,8 @@ static void callback_display_paje_event(
       pajeCreateContainer (d0, tmp, "THREAD", "root", tmp);
       sprintf(name,"steal-%i",kid);
       pajeCreateContainer (d0, name, "STEAL", tmp, name);
-#if 0
-      if( event->ktype == KAAPI_PROC_TYPE_CUDA ){
+#if defined(KAAPI_USE_CUDA)
+      if( event->type == KAAPI_PROC_TYPE_CUDA ){
 	  sprintf(name,"htod-%i",kid);
 	  pajeCreateContainer (d0, name, "GPU", tmp, name);
 	  sprintf(name,"kernel-%i",kid);
@@ -540,8 +540,8 @@ static void callback_display_paje_event(
       kid = event->kid;
       sprintf(name,"steal-%i",kid);
       pajeDestroyContainer (d0, "THREAD", name);
-#if 0
-      if( event->ktype == KAAPI_PROC_TYPE_CUDA ){
+#if defined(KAAPI_USE_CUDA)
+      if( event->type == KAAPI_PROC_TYPE_CUDA ){
 	  sprintf(name,"dtoh-%i",kid);
 	  pajeDestroyContainer (d0, "GPU", name);
 	  sprintf(name,"kernel-%i",kid);
@@ -752,6 +752,7 @@ static void callback_display_paje_event(
       }
     break;
 
+#if defined(KAAPI_USE_CUDA)
     case KAAPI_EVT_CUDA_GPU_HTOD_BEG:
       d0   = 1e-9*(double)event->date;
       kid = event->kid;
@@ -800,17 +801,6 @@ static void callback_display_paje_event(
     break;
 
     case KAAPI_EVT_CUDA_CPU_SYNC_END:
-      d1   = 1e-9*(double)event->date;
-      pajePopState (d1, name, "STATE");
-    break;
-
-#if 0
-    case KAAPI_EVT_CUDA_MEM_ALLOC_BEG:
-      d0   = 1e-9*(double)event->date;
-      pajePushState (d0, name, "STATE", "alloc");          
-    break;
-
-    case KAAPI_EVT_CUDA_MEM_ALLOC_END:
       d1   = 1e-9*(double)event->date;
       pajePopState (d1, name, "STATE");
     break;
@@ -875,7 +865,9 @@ static int fnc_paje_gantt_header()
   pajeDefineContainerType("THREAD", "ROOT", "THREAD");
   pajeDefineContainerType("WORKER", "THREAD", "WORKER");
   pajeDefineContainerType("STEAL", "THREAD", "STEAL");
+#if defined(KAAPI_USE_CUDA)
   pajeDefineContainerType("GPU", "THREAD", "GPU");
+#endif
 
   pajeDefineStateType("STATE",   "THREAD", "STATE");
 
@@ -927,6 +919,7 @@ static int fnc_paje_gantt_header()
   /* link: successfull steal  */
   pajeDefineEntityValue("riok", "LINK", "steal", "0.0 1.0 0.2");
 
+#if defined(KAAPI_USE_CUDA)
   /* CUDA host-to-device copy operation */
   pajeDefineEntityValue("htod", "STATE", "htod", "0.6 0.0 1.0");
 
@@ -938,6 +931,7 @@ static int fnc_paje_gantt_header()
 
 //  /* CUDA synchronizations by CPU */
   pajeDefineEntityValue("sync", "STATE", "sync", "0.0 0.6 0.6");
+#endif
 
 #if 0
 

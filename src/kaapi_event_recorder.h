@@ -117,7 +117,11 @@ static inline kaapi_event_buffer_t* kaapi_event_push0(
   tclock -= kaapi_event_startuptime;
   kaapi_event_t* evt = &evb->buffer[evb->pos++];
   evt->evtno   = eventno;
+#if defined(KAAPI_USE_CUDA)
+  evt->type    = kaapi_processor_get_type(kaapi_get_current_processor());
+#else
   evt->type    = 0;
+#endif
   evt->kid     = evb->kid;
   evt->gid     = 0;
   evt->date    = tclock;
@@ -142,7 +146,11 @@ static inline kaapi_event_buffer_t*  kaapi_event_push1(
   tclock -= kaapi_event_startuptime;
   kaapi_event_t* evt = &evb->buffer[evb->pos++];
   evt->evtno   = eventno;
+#if defined(KAAPI_USE_CUDA)
+  evt->type    = kaapi_processor_get_type(kaapi_get_current_processor());
+#else
   evt->type    = 0;
+#endif
   evt->kid     = evb->kid;
   evt->gid     = 0;
   evt->date    = tclock;
@@ -169,7 +177,11 @@ static inline kaapi_event_buffer_t*  kaapi_event_push2(
   tclock -= kaapi_event_startuptime;
   kaapi_event_t* evt = &evb->buffer[evb->pos++];
   evt->evtno   = eventno;
+#if defined(KAAPI_USE_CUDA)
+  evt->type    = kaapi_processor_get_type(kaapi_get_current_processor());
+#else
   evt->type    = 0;
+#endif
   evt->kid     = evb->kid;
   evt->gid     = 0;
   evt->date    = tclock;
@@ -198,7 +210,11 @@ static inline kaapi_event_buffer_t*  kaapi_event_push3(
   tclock -= kaapi_event_startuptime;
   kaapi_event_t* evt = &evb->buffer[evb->pos++];
   evt->evtno   = eventno;
+#if defined(KAAPI_USE_CUDA)
+  evt->type    = kaapi_processor_get_type(kaapi_get_current_processor());
+#else
   evt->type    = 0;
+#endif
   evt->kid     = evb->kid;
   evt->gid     = 0;
   evt->date    = tclock;

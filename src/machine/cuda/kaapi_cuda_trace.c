@@ -101,12 +101,12 @@ kaapi_cuda_trace_record_memcpy( kaapi_processor_t *kproc,
 
     switch (kind) {
     case CUPTI_ACTIVITY_MEMCPY_KIND_HTOD:
-	KAAPI_CUDA_EVENT_PUSH0_( kproc, memcpy->start, NULL, KAAPI_EVT_CUDA_GPU_HTOD_BEG );
-	KAAPI_CUDA_EVENT_PUSH0_( kproc, memcpy->end, NULL, KAAPI_EVT_CUDA_GPU_HTOD_END );
+	KAAPI_CUDA_EVENT_PUSH0_( kproc, memcpy->start, KAAPI_EVT_CUDA_GPU_HTOD_BEG );
+	KAAPI_CUDA_EVENT_PUSH0_( kproc, memcpy->end, KAAPI_EVT_CUDA_GPU_HTOD_END );
 	break;
     case CUPTI_ACTIVITY_MEMCPY_KIND_DTOH:
-	KAAPI_CUDA_EVENT_PUSH0_( kproc, memcpy->start, NULL, KAAPI_EVT_CUDA_GPU_DTOH_BEG );
-	KAAPI_CUDA_EVENT_PUSH0_( kproc, memcpy->end, NULL, KAAPI_EVT_CUDA_GPU_DTOH_END );
+	KAAPI_CUDA_EVENT_PUSH0_( kproc, memcpy->start, KAAPI_EVT_CUDA_GPU_DTOH_BEG );
+	KAAPI_CUDA_EVENT_PUSH0_( kproc, memcpy->end, KAAPI_EVT_CUDA_GPU_DTOH_END );
 	break;
     default:
 	break;
@@ -117,8 +117,8 @@ static inline void
 kaapi_cuda_trace_record_kernel( kaapi_processor_t *kproc,
 	CUpti_ActivityKernel* kernel  )
 {
-    KAAPI_CUDA_EVENT_PUSH0_( kproc, kernel->start, NULL, KAAPI_EVT_CUDA_GPU_KERNEL_BEG );
-    KAAPI_CUDA_EVENT_PUSH0_( kproc, kernel->end, NULL, KAAPI_EVT_CUDA_GPU_KERNEL_END );
+    KAAPI_CUDA_EVENT_PUSH0_( kproc, kernel->start, KAAPI_EVT_CUDA_GPU_KERNEL_BEG );
+    KAAPI_CUDA_EVENT_PUSH0_( kproc, kernel->end, KAAPI_EVT_CUDA_GPU_KERNEL_END );
 }
 
 static inline void
@@ -192,14 +192,6 @@ kaapi_cuda_trace_dump( CUcontext context, uint32_t streamId )
     if (status == CUPTI_ERROR_QUEUE_EMPTY)
 	return NULL;
 
-    if (context == NULL) {
-    printf("==== Starting dump for global ====\n");
-    } else if (streamId == 0) {
-    printf("==== Starting dump for context %p ====\n", context);
-    } else {
-    printf("==== Starting dump for context %p, stream %u ====\n", context, streamId);
-    }
-
     CUpti_Activity *record = NULL;
     do {
 	status = cuptiActivityGetNextRecord(buffer, validBufferSizeBytes,
@@ -216,7 +208,10 @@ kaapi_cuda_trace_dump( CUcontext context, uint32_t streamId )
     size_t dropped;
     cuptiActivityGetNumDroppedRecords(context, streamId, &dropped);
     if (dropped != 0) 
-	printf("# ERROR Dropped %u activity records\n", (unsigned int)dropped);
+	fprintf( stdout, 
+	    "%s: ERROR Dropped %u activity records\n", __FUNCTION__,
+	    (unsigned int)dropped
+	    );
 
     return buffer;
 }
@@ -303,13 +298,14 @@ int kaapi_cuda_trace_init( void )
 	fprintf(stdout, "%s: cuptiEnableDomain ERROR %d\n", __FUNCTION__, res );
 	fflush(stdout); 
     }
-//    cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONTEXT);
-//    cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DRIVER);
-//    cuptiActivityEnable(CUPTI_ACTIVITY_KIND_RUNTIME);
-//    cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMSET);
+#if 0
+    cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONTEXT);
+    cuptiActivityEnable(CUPTI_ACTIVITY_KIND_DRIVER);
+    cuptiActivityEnable(CUPTI_ACTIVITY_KIND_RUNTIME);
+    cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMSET);
+#endif
     cuptiActivityEnable(CUPTI_ACTIVITY_KIND_MEMCPY);
     cuptiActivityEnable(CUPTI_ACTIVITY_KIND_KERNEL);
-//
     cuptiGetTimestamp( &kaapi_default_param.cudastartuptime );
 
     return 0;

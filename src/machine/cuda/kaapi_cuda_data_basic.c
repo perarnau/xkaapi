@@ -35,7 +35,7 @@ kaapi_cuda_data_basic_view_convert( kaapi_memory_view_t* dest_view, const
 
 static inline kaapi_data_t*
 xxx_kaapi_cuda_data_basic_allocate(
-		const kaapi_mem_host_map_t* cuda_map,
+		kaapi_mem_host_map_t* cuda_map,
 		kaapi_mem_data_t* kmd,
 		kaapi_data_t* src
 	)
@@ -60,8 +60,8 @@ int kaapi_cuda_data_basic_allocate(
 {
     const size_t count_params = kaapi_format_get_count_params(fmt, sp );
     size_t i;
-    const kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
-    const kaapi_mem_host_map_t* host_map = 
+    kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
+    kaapi_mem_host_map_t* host_map = 
 	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
     const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
     kaapi_mem_data_t *kmd;
@@ -111,7 +111,7 @@ int kaapi_cuda_data_basic_send(
     const size_t count_params = kaapi_format_get_count_params(fmt, sp );
     size_t i;
     kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
-    const kaapi_mem_host_map_t* host_map = 
+    kaapi_mem_host_map_t* host_map = 
 	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
     const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
 
@@ -158,7 +158,7 @@ int kaapi_cuda_data_basic_recv(
     size_t i;
     kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
     const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
-    const kaapi_mem_host_map_t* host_map = 
+    kaapi_mem_host_map_t* host_map = 
 	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
     const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
     kaapi_mem_data_t *kmd;

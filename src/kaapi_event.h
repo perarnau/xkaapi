@@ -110,7 +110,7 @@ extern "C" {
 
 /** Size of the event mask 
 */
-typedef uint32_t kaapi_event_mask_type_t;
+typedef uint64_t kaapi_event_mask_type_t;
 
 /** Heler for creating mask from an event
 */
@@ -134,6 +134,14 @@ typedef uint32_t kaapi_event_mask_type_t;
      | KAAPI_EVT_MASK(KAAPI_EVT_FOREACH_BEG) \
      | KAAPI_EVT_MASK(KAAPI_EVT_FOREACH_END) \
      | KAAPI_EVT_MASK(KAAPI_EVT_FOREACH_STEAL) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_GPU_HTOD_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_GPU_HTOD_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_GPU_DTOH_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_GPU_DTOH_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_GPU_KERNEL_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_GPU_KERNEL_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_CPU_SYNC_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_CPU_SYNC_END) \
     )
 
 #define KAAPI_EVT_MASK_IDLE \

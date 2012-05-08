@@ -122,7 +122,7 @@ static inline void unlock_thread(kaapi_thread_context_t* thread)
 #if 1 /* unused */
 static inline int is_task_ready(const kaapi_task_t* task)
 {
-  if (kaapi_task_getbody(task) == kaapi_taskadapt_body)
+  if (kaapi_task_getbody(task) == (kaapi_task_body_t)kaapi_taskadapt_body)
     return 1;
   return kaapi_task_isstealable(task);
 }
