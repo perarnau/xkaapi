@@ -55,6 +55,7 @@
 static int noprint_activationlink = 0;
 static int noprint_versionlink = 0;
 static int noprint_label = 0;
+static int noprint_label_info = 0;
 static int noprint_data = 0;
 
 /**/
@@ -156,6 +157,7 @@ static void _kaapi_print_task(
   kaapi_taskdescr_t* tda;
   char bname[128];
   const char* fname = "<empty format>";
+  const char* color = "orange";
   const char* shape = "ellipse";
   const kaapi_format_t* fmt;
   kaapi_task_body_t body;
@@ -165,7 +167,16 @@ static void _kaapi_print_task(
   if ((td !=0) && (td->fmt !=0))
   {
     fmt = td->fmt;
+#if defined(KAAPI_DEBUG)
+    if( fmt->name_dot != NULL )
+	fname = fmt->name_dot;
+    else
+	fname = fmt->name;
+    if( fmt->color_dot != NULL )
+	color = fmt->color_dot;
+#else
     fname = fmt->name;
+#endif
     kaapi_assert_debug(task == td->task);    
   } 
   else 
@@ -199,7 +210,7 @@ static void _kaapi_print_task(
         fname = "move";
       else if (body == kaapi_taskalloc_body)
         fname = "alloc";
-    }
+   }
     if (!noprint_data)
     {
       kaapi_move_arg_t* argtask = (kaapi_move_arg_t*)sp;
@@ -323,23 +334,30 @@ static void _kaapi_print_task(
         (uintptr_t)task, fname, (void*)task, task->sp, shape
       );
   }
-  else
+  else 
   {
+    if( (body == kaapi_taskmove_body) && (noprint_data) )
+	return;
     /* print the task */
     if (noprint_label)
       fprintf( file, "%lu [label=\"\", shape=%s, style=filled, color=orange];\n", 
         (uintptr_t)task,
         shape
       );
+    else if( noprint_label_info )
+      fprintf( file, "%lu [label=\"%s\", shape=%s, style=filled, color=%s];\n", 
+        (uintptr_t)task, fname, shape, color
+      );
     else
       fprintf( file, "%lu [label=\"%s\\ntask=%p\\nsp=%p\\ndate=%" PRIu64
-               "\\ntd=%p\\n wc=%i, counter=%i, \", shape=%s, style=filled, color=orange];\n", 
+               "\\ntd=%p\\n wc=%i, counter=%i, \", shape=%s, style=filled, color=%s];\n", 
         (uintptr_t)task, fname, (void*)task, task->sp,
         td->u.acl.date, 
         (void*)td,
         (int)td->wc,
         (int)KAAPI_ATOMIC_READ(&td->counter),
-        shape
+        shape,
+	color
       );
   }
 
@@ -473,6 +491,7 @@ int kaapi_thread_tasklist_print_dot  ( FILE* file, const kaapi_tasklist_t* taskl
   noprint_versionlink    = (0 != getenv("KAAPI_DOT_NOVERSION_LINK"));
   noprint_data           = (0 != getenv("KAAPI_DOT_NODATA_LINK"));
   noprint_label          = (0 != getenv("KAAPI_DOT_NOLABEL"));
+  noprint_label_info     = (0 != getenv("KAAPI_DOT_NOLABEL_INFO"));
 
   /* be carrefull, the map should be clear before used */
   kaapi_hashmap_init( &the_hash_map.data_khm, 0 );

@@ -84,6 +84,7 @@ libkaapi_la_SOURCES=\
   task/kaapi_fmt_taskregister.c \
   task/kaapi_fmt_taskregister_func.c \
   task/kaapi_fmt_taskregister_static.c \
+  task/kaapi_fmt_dot.c \
   task/kaapi_task_aftersteal.c \
   task/kaapi_task_computeready.c \
   task/kaapi_task_initflag.c \

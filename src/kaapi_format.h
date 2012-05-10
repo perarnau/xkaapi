@@ -81,6 +81,10 @@ typedef struct kaapi_format_t {
   kaapi_format_id_t          fmtid;                                   /* identifier of the format */
   short                      isinit;                                  /* ==1 iff initialize */
   const char*                name;                                    /* debug information */
+#if defined(KAAPI_DEBUG)
+  const char*		    name_dot;				    /* name for DOT */
+  const char*		    color_dot;				    /* color for DOT */
+#endif
   
   /* flag to indicate how to interpret the following fields */
   kaapi_format_flag_t        flag;

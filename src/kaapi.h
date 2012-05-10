@@ -2517,6 +2517,12 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     kaapi_format_structregister( &formatobject, name, size, cstor, dstor, cstorcopy, copy, assign );\
   }
 
+#if defined(KAAPI_DEBUG)
+extern void kaapi_fmt_set_dot_name( struct kaapi_format_t* , const char* );
+
+extern void kaapi_fmt_set_dot_color( struct kaapi_format_t* , const char* );
+#endif
+
 
 #ifdef __cplusplus
 }

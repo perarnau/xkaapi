@@ -141,6 +141,142 @@ static int kaapi_task_splitter_readylist(
 }
 
 
+#if defined(KAAPI_USE_CUDA)
+
+static inline void
+kaapi_sched_stealtasklist_cpu( 
+                           kaapi_thread_context_t*       thread, 
+                           kaapi_tasklist_t*             tasklist, 
+                           kaapi_listrequest_t*          lrequests, 
+                           kaapi_listrequest_iterator_t* lrrange
+)
+{
+  int                     i, err;
+  kaapi_readytasklist_t*  rtl;
+  kaapi_onereadytasklist_t* onertl;
+  kaapi_taskdescr_t**     steal_td_beg;
+  kaapi_taskdescr_t**     steal_td_end;
+  kaapi_workqueue_index_t size_ws, size_steal;
+  kaapi_workqueue_index_t steal_beg, steal_end;
+  
+  kaapi_workqueue_index_t count_req 
+       = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
+  
+  rtl = &tasklist->rtl;
+  
+  //#warning "Only for debug here"
+  for(i =KAAPI_TASKLIST_MIN_PRIORITY; (i > 0) && (count_req >0); i-- )
+  {
+    onertl = &rtl->prl[i];
+    size_steal = count_req;
+    if (onertl->next == -1) 
+      continue;
+    size_ws = kaapi_workqueue_size( &onertl->wq );
+    if (size_ws ==0) continue;
+#if defined(TASKLIST_REPLY_ONETD)
+    if ((size_ws>0) && (size_steal > size_ws)) size_steal = size_ws;
+#else
+    size_steal = count_req * size_ws / (count_req+1);
+    if (size_steal ==0) size_steal = size_ws;
+#endif
+    err = kaapi_workqueue_steal(&onertl->wq, &steal_beg, &steal_end, size_steal);
+    if (err ==0) 
+    {
+      kaapi_processor_decr_workload( thread->stack.proc, steal_end-steal_beg );
+      steal_td_beg = onertl->base + steal_beg;
+      steal_td_end = onertl->base + steal_end;
+      kaapi_task_splitter_readylist( 
+                                    thread,
+                                    tasklist,
+                                    steal_td_beg,
+                                    steal_td_end,
+                                    lrequests, 
+                                    lrrange,
+                                    count_req
+      );
+      count_req 
+         = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
+    }
+  }
+  return ;
+}
+
+static inline void
+kaapi_sched_stealtasklist_gpu( 
+                           kaapi_thread_context_t*       thread, 
+                           kaapi_tasklist_t*             tasklist, 
+                           kaapi_listrequest_t*          lrequests, 
+                           kaapi_listrequest_iterator_t* lrrange
+)
+{
+  int                     i, err;
+  kaapi_readytasklist_t*  rtl;
+  kaapi_onereadytasklist_t* onertl;
+  kaapi_taskdescr_t**     steal_td_beg;
+  kaapi_taskdescr_t**     steal_td_end;
+  kaapi_workqueue_index_t size_ws, size_steal;
+  kaapi_workqueue_index_t steal_beg, steal_end;
+  
+  kaapi_workqueue_index_t count_req 
+       = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
+  
+  rtl = &tasklist->rtl;
+  
+  //#warning "Only for debug here"
+  for (i =KAAPI_TASKLIST_MAX_PRIORITY; (i< KAAPI_TASKLIST_NUM_PRIORITY) && (count_req >0); ++i)
+  {
+    onertl = &rtl->prl[i];
+    size_steal = count_req;
+    if (onertl->next == -1) 
+      continue;
+    size_ws = kaapi_workqueue_size( &onertl->wq );
+    if (size_ws ==0) continue;
+#if defined(TASKLIST_REPLY_ONETD)
+    if ((size_ws>0) && (size_steal > size_ws)) size_steal = size_ws;
+#else
+    size_steal = count_req * size_ws / (count_req+1);
+    if (size_steal ==0) size_steal = size_ws;
+#endif
+    err = kaapi_workqueue_steal(&onertl->wq, &steal_beg, &steal_end, size_steal);
+    if (err ==0) 
+    {
+      kaapi_processor_decr_workload( thread->stack.proc, steal_end-steal_beg );
+      steal_td_beg = onertl->base + steal_beg;
+      steal_td_end = onertl->base + steal_end;
+      kaapi_task_splitter_readylist( 
+                                    thread,
+                                    tasklist,
+                                    steal_td_beg,
+                                    steal_td_end,
+                                    lrequests, 
+                                    lrrange,
+                                    count_req
+      );
+      count_req 
+         = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
+    }
+  }
+  return ;
+}
+
+/** Steal ready task in tasklist 
+ */
+void
+kaapi_sched_stealtasklist( 
+                           kaapi_thread_context_t*       thread, 
+                           kaapi_tasklist_t*             tasklist, 
+                           kaapi_listrequest_t*          lrequests, 
+                           kaapi_listrequest_iterator_t* lrrange
+)
+{
+    if( kaapi_processor_get_type(kaapi_get_current_processor()) == KAAPI_PROC_TYPE_HOST ) {
+	kaapi_sched_stealtasklist_cpu( thread, tasklist, lrequests, lrrange );
+    } else if( kaapi_processor_get_type(kaapi_get_current_processor()) == KAAPI_PROC_TYPE_CUDA ) {
+	kaapi_sched_stealtasklist_gpu( thread, tasklist, lrequests, lrrange );
+    }
+}
+
+#else /* KAAPI_USE_CUDA */
 
 /** Steal ready task in tasklist 
  */
@@ -200,3 +336,5 @@ void kaapi_sched_stealtasklist(
   }
   return ;
 }
+
+#endif
