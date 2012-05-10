@@ -59,7 +59,7 @@
 
 //#define KAAPI_VERBOSE 1
 
-#define KAAPI_NO_CPU	    1	/* no CPU task executed */
+//#define KAAPI_NO_CPU	    1	/* no CPU task executed */
 //#define KAAPI_CUDA_NO_H2D   1	/* host to device copies disabled */
 //#define KAAPI_CUDA_NO_D2H   1	/* device to host copies disabled */
 
