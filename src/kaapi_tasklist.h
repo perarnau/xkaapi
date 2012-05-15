@@ -740,7 +740,70 @@ static inline int kaapi_readylist_pop( kaapi_readytasklist_t* rtl, kaapi_taskdes
   return EBUSY;
 }
 
+#if defined(KAAPI_USE_CUDA)
 
+static inline int kaapi_readylist_pop_cpu( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t** td )
+{
+  kaapi_onereadytasklist_t* onertl;
+  int i,err;
+  kaapi_workqueue_index_t local_end;
+  kaapi_workqueue_index_t local_beg;
+
+  for(i =KAAPI_TASKLIST_MIN_PRIORITY; (i > 0); i-- )
+  {
+    onertl = &rtl->prl[i];
+    if (onertl->next == -1) continue;
+    err = kaapi_workqueue_pop(&onertl->wq, &local_beg, &local_end, 1);
+    if (err ==0) 
+    {
+      kaapi_assert_debug( (local_beg< 0) && (local_beg >= -onertl->size) );
+      *td = onertl->base[local_beg];
+      /* next to push: */
+      onertl->next = local_beg;
+      return 0;
+    }
+    else if (err !=EBUSY) return err;
+  }
+  return EBUSY;
+}
+
+static inline int kaapi_readylist_pop_gpu( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t** td )
+{
+  kaapi_onereadytasklist_t* onertl;
+  int i,err;
+  kaapi_workqueue_index_t local_end;
+  kaapi_workqueue_index_t local_beg;
+
+  for (i =KAAPI_TASKLIST_MAX_PRIORITY; i<(1+KAAPI_TASKLIST_MIN_PRIORITY); ++i)
+  {
+    onertl = &rtl->prl[i];
+    if (onertl->next == -1) continue;
+    err = kaapi_workqueue_pop(&onertl->wq, &local_beg, &local_end, 1);
+    if (err ==0) 
+    {
+      kaapi_assert_debug( (local_beg< 0) && (local_beg >= -onertl->size) );
+      *td = onertl->base[local_beg];
+      /* next to push: */
+      onertl->next = local_beg;
+#if 0
+	if( 0 == (*td)->fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] ) {
+	    fprintf( stdout, "%s: NOGPU td=%p(wc=%d,name=%s)\n",
+		    __FUNCTION__, 
+		    (void*)*td,
+		    (int)(*td)->wc,
+		    (*td)->fmt->name
+		    );
+	    fflush(stdout);
+	} 
+#endif
+      return 0;
+    }
+    else if (err !=EBUSY) return err;
+  }
+  return EBUSY;
+}
+
+#endif /* KAAPI_USE_CUDA */
 
 /** Double the size of the workqueue.
     \retval 0 in case of success

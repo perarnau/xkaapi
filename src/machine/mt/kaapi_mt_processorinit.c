@@ -101,6 +101,11 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   kproc->fnc_selecarg[1] = 0;
   kproc->fnc_selecarg[2] = 0;
   kproc->fnc_selecarg[3] = 0;
+#if defined(KAAPI_USE_CUDA)
+  if( kproc->proc_type == KAAPI_PROC_TYPE_CUDA )
+	kproc->fnc_select = kaapi_sched_select_victim_with_cuda_tasks;
+  else
+#endif
   kproc->fnc_select      = kaapi_default_param.wsselect;
 
   /* not that, as all other fields, the processor_init is called
@@ -149,12 +154,9 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
 
 #if defined(KAAPI_USE_CUDA)
   /* initialize cuda processor */
-  if (kpi->proc_type == KAAPI_PROC_TYPE_CUDA)
-  {
+  if (kpi->proc_type == KAAPI_PROC_TYPE_CUDA) {
     if (kaapi_cuda_proc_initialize(&kproc->cuda_proc, kpi->proc_index))
       return -1;
-
-    kproc->fnc_select = kaapi_sched_select_victim_with_cuda_tasks;
   }
 #endif
   

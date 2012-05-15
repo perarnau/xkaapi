@@ -133,7 +133,11 @@ redo_while:
 #endif
   while (!kaapi_tasklist_isempty( tasklist ))
   {
+#if defined(KAAPI_USE_CUDA)
+    err = kaapi_readylist_pop_cpu( &tasklist->rtl, &td );
+#else
     err = kaapi_readylist_pop( &tasklist->rtl, &td );
+#endif
 
     if (err ==0)
     {

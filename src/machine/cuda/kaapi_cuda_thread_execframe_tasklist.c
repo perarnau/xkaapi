@@ -235,7 +235,11 @@ int kaapi_cuda_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist = *tasklist; )
 
   while (!kaapi_tasklist_isempty( tasklist )) {
+#if defined(KAAPI_USE_CUDA)
+    err = kaapi_readylist_pop_gpu( &tasklist->rtl, &td );
+#else
     err = kaapi_readylist_pop( &tasklist->rtl, &td );
+#endif
 
     if (err == 0) {
       kaapi_processor_decr_workload( stack->proc, 1 );

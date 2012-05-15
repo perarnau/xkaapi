@@ -54,6 +54,8 @@
 #include <cuda_runtime_api.h>
 #include "cublas_v2.h"
 
+#define	KAAPI_CUDA_MAX_DEV	16
+
 #define KAAPI_CUDA_ASYNC	1
 #define KAAPI_CUDA_MEM_ALLOC_MANAGER	1
 #define KAAPI_CUDA_MEM_FREE_FACTOR	1
@@ -104,17 +106,8 @@ typedef struct kaapi_cuda_proc
 {
     unsigned int index;
     struct cudaDeviceProp  deviceProp;
-
-#if 0
-    /* WARNING: some old devices get errors on multiple stream */
-    cudaStream_t stream[KAAPI_CUDA_MAX_STREAMS];
-    cudaEvent_t event;
-#endif
-
     struct kaapi_cuda_stream_t* kstream;
-
     kaapi_cuda_ctx_t ctx;
-
     kaapi_cuda_mem_t memory;
 
     int is_initialized;
@@ -125,15 +118,13 @@ typedef struct kaapi_cuda_proc
 
 } kaapi_cuda_proc_t;
 
+extern struct kaapi_processor_t*  kaapi_cuda_all_kprocessors[KAAPI_CUDA_MAX_DEV];
 
 int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t*, unsigned int);
 
 int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t*);
 
 size_t kaapi_cuda_get_proc_count(void);
-
-struct kaapi_processor_t;
-struct kaapi_processor_t* kaapi_cuda_get_proc_by_dev( unsigned int id );
 
 cudaStream_t kaapi_cuda_kernel_stream(void);
 
@@ -152,6 +143,15 @@ kaapi_cuda_sync( void )
 	    fflush(stdout);
     }
     return (int)res;
+}
+
+static inline struct kaapi_processor_t*
+kaapi_cuda_get_proc_by_dev( unsigned int id )
+{
+    if( KAAPI_CUDA_MAX_DEV > id )
+	return kaapi_cuda_all_kprocessors[id];
+
+    return NULL;
 }
 
 #endif /* ! KAAPI_CUDA_PROC_H_INCLUDED */

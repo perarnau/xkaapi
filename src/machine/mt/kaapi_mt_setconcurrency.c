@@ -285,11 +285,12 @@ void* kaapi_sched_run_processor( void* arg )
   kaapi_perf_thread_stop(kproc);
   KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_KPROC_STOP );
   /*  */
-#if defined(KAAPI_USE_CUDA)
+#if defined(KAAPI_USE_CUPTI)
   if (getenv("KAAPI_RECORD_TRACE") !=0) {
-      kaapi_cuda_trace_thread_finalize();
+    if ( kproc->proc_type == KAAPI_PROC_TYPE_CUDA )
+	kaapi_cuda_trace_thread_finalize();
   }
-#endif /* KAAPI_USE_CUDA */
+#endif /* KAAPI_USE_CUPTI */
   kaapi_mt_perf_thread_fini( kproc );
 #endif
   

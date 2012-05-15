@@ -67,7 +67,11 @@
 #include "kaapi_cuda_pool.h"
 #endif
 
+/* number of CUDA devices */
+uint32_t kaapi_cuda_count_kprocessors = 0;
 
+/* index of kprocessors by CUDA devid */
+kaapi_processor_t*  kaapi_cuda_all_kprocessors[KAAPI_CUDA_MAX_DEV];
 /* exported */
 
 int
@@ -117,6 +121,9 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
   proc->asid = kaapi_memory_address_space_create
     ( idev, KAAPI_MEM_TYPE_CUDA, 0x100000000UL );
 
+  kaapi_cuda_all_kprocessors[idev] = kaapi_get_current_processor();
+  kaapi_cuda_count_kprocessors++;
+
 
   return 0;
 }
@@ -150,6 +157,8 @@ int kaapi_cuda_proc_cleanup( kaapi_cuda_proc_t* proc )
 
 size_t kaapi_cuda_get_proc_count(void)
 {
+    return kaapi_cuda_count_kprocessors;
+#if 0
   /* returns the number of kproc being of cuda type */
   /* todo: dont walk the kproc list every time, ok for now */
   kaapi_processor_t** pos = kaapi_all_kprocessors;
@@ -159,6 +168,7 @@ size_t kaapi_cuda_get_proc_count(void)
     if ((*pos)->proc_type == KAAPI_PROC_TYPE_CUDA)
       ++count;
   return count;
+#endif
 }
 
 cudaStream_t kaapi_cuda_kernel_stream(void)
@@ -241,19 +251,4 @@ void kaapi_cuda_event_record_( cudaStream_t stream )
 }
 
 #endif
-
-kaapi_processor_t*
-kaapi_cuda_get_proc_by_dev( unsigned int id )
-{
-    kaapi_processor_t** pos = kaapi_all_kprocessors;
-    size_t i;
-
-    for (i = 0; i < kaapi_count_kprocessors; ++i, ++pos)
-	if ((*pos)->proc_type == KAAPI_PROC_TYPE_CUDA) {
-	    if( (*pos)->cuda_proc.index == id )
-		return *pos;
-	}
-
-    return NULL;
-}
 
