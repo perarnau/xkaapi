@@ -300,8 +300,6 @@ struct KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`, TraitForma
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` ')>
 TaskBodyGPU<TASK>  KAAPIWRAPPER_GPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`, TraitFormalParam$1', `', ` ')>::dummy;
 
-
-
 template<class TASK M4_PARAM(`,typename TraitFormalParam$1', `', ` '), bool istatic>
 struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS) {};
 
@@ -705,7 +703,6 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     return body;
   }
 
-#if 1
   /* Alpha value registration */
 
   /* trap function for undefined body */
@@ -726,8 +723,6 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     return body;
   }
 
-#endif
-
   ifelse(KAAPI_NUMBER_PARAMS,0,`',`template<M4_PARAM(`typename SIG$1_t', `', `,') >')
   static kaapi_bodies_t registerbodies( kaapi_format_t* fmt, void (TASK::*method)( Thread* thread M4_PARAM(`, SIG$1_t', `', `') ) )
   {
@@ -745,3 +740,4 @@ kaapi_bodies_t KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFor
     kaapi_bodies_t( KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::registercpubody( KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::registerformat(), &TaskBodyCPU<TASK>::operator() ), 
                     KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::registergpubody( KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::registerformat(), &TaskBodyGPU<TASK>::operator() ),
                     KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::registeralphabody( KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::registerformat(), &TaskBodyAlpha<TASK>::operator() ) );
+

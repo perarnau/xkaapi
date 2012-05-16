@@ -213,8 +213,6 @@ int kaapi_thread_computedep_task(
       taskdescr->priority = KAAPI_TASKLIST_MIN_PRIORITY-kaapi_task_get_priority(task);
   }
 
-  fprintf(stdout, "%s: prio=%d\n", __FUNCTION__, taskdescr->priority );
-  fflush(stdout);
   kaapi_task_set_priority( task, taskdescr->priority );
   /* call to reserved memory before execution without several memory allocation */
   kaapi_tasklist_newpriority_task( tasklist, taskdescr->priority );

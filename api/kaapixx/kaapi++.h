@@ -2997,7 +2997,6 @@ __attribute__((deprecated))
   template<class TASK>
   struct TaskBodyGPU : public TASK {};
 
-  // --------------------------------------------------------------------
   template<class TASK>
   struct TaskBodyAlpha : public TASK {};
 
