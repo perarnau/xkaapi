@@ -154,6 +154,7 @@ typedef struct kaapi_taskdescr_t {
 #endif
   const kaapi_format_t*         fmt;       /* format of the task */
   int                           priority;
+  float				alpha;	    /* alpha value */
   kaapi_bitmap_value32_t        ocr;       /* OCR flag for the task */  
   kaapi_task_t                  tasksteal; /* used if task is pushed into remote queue */
   kaapi_taskstealready_arg_t    tasksteal_arg; /* put it together with taskdescr to avoid dynamic alloc */

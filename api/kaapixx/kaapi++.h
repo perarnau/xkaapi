@@ -78,8 +78,10 @@ namespace ka {
   // --------------------------------------------------------------------
   struct kaapi_bodies_t {
     kaapi_bodies_t( kaapi_task_body_t cpu_body, kaapi_task_body_t gpu_body );
+    kaapi_bodies_t( kaapi_task_body_t cpu_body, kaapi_task_body_t gpu_body, kaapi_task_body_t alpha_body );
     kaapi_task_body_t cpu_body;
     kaapi_task_body_t gpu_body;
+    kaapi_task_body_t alpha_body;
     kaapi_task_body_t default_body;
   };
     
@@ -2994,6 +2996,10 @@ __attribute__((deprecated))
   // --------------------------------------------------------------------
   template<class TASK>
   struct TaskBodyGPU : public TASK {};
+
+  // --------------------------------------------------------------------
+  template<class TASK>
+  struct TaskBodyAlpha : public TASK {};
 
   // --------------------------------------------------------------------  
   template<class TASK>

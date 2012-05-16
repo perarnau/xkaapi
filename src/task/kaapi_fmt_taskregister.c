@@ -108,3 +108,13 @@ kaapi_task_body_t kaapi_format_taskregister_body(
   /* already registered into hashmap: fmtid -> fmt */  
   return body;
 }
+
+kaapi_task_body_t
+kaapi_format_taskregister_alphabody( 
+        kaapi_format_t*             fmt,
+        kaapi_task_body_t           body
+    )
+{
+    fmt->alpha_body = body;
+    return body;
+}

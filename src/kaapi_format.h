@@ -102,6 +102,7 @@ typedef struct kaapi_format_t {
   kaapi_task_body_t          default_body;                            /* iff a task used on current node */
   kaapi_task_body_t          entrypoint[KAAPI_PROC_TYPE_MAX];         /* maximum architecture considered in the configuration */
   kaapi_task_body_t          entrypoint_wh[KAAPI_PROC_TYPE_MAX];      /* same as entrypoint, except that shared params are handle to memory location */
+  kaapi_task_body_t	     alpha_body;				/* alpha function of acceleration */
 
   /* case of format for a structure or for a task with flag= KAAPI_FORMAT_STATIC_FIELD */
   int                         _count_params;                          /* number of parameters */

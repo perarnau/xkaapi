@@ -49,6 +49,8 @@
 #include "memory/kaapi_mem_host_map.h"
 #endif
 
+typedef void (*kaapi_task_alpha_body_t)( void*, float * const );
+
 static inline uint64_t _kaapi_max(uint64_t d1, uint64_t d2)
 { return (d1 < d2 ? d2 : d1); }
 
@@ -188,21 +190,35 @@ int kaapi_thread_computedep_task(
 
   } /* end for all arguments of the task */
 
+  /* store the format to avoid lookup */
+  taskdescr->fmt = task_fmt;
+
+  /* Gets the alpha value for the task */
+  if( task_fmt->alpha_body != 0 ) {
+      float alpha= .0f;
+      kaapi_task_alpha_body_t alpha_body =
+	  (kaapi_task_alpha_body_t)task_fmt->alpha_body;
+      alpha_body( sp, &alpha );
+      taskdescr->alpha = alpha;
+      taskdescr->priority = KAAPI_TASKLIST_MIN_PRIORITY -
+	  kaapi_task_get_priority_by_alpha( task, taskdescr->alpha );
+  } else {
+      /* Convert TASK priority to internal management of priority:
+	 KAAPI_TASK_MAX_PRIORITY >0
+	 KAAPI_TASK_MIN_PRIORITY ==0 (default value)
+	 
+	 KAAPI_TASKLIST_MAX_PRIORITY=0
+	 KAAPI_TASKLIST_MIN_PRIORITY>0
+      */
+      taskdescr->priority = KAAPI_TASKLIST_MIN_PRIORITY-kaapi_task_get_priority(task);
+  }
+
+  fprintf(stdout, "%s: prio=%d\n", __FUNCTION__, taskdescr->priority );
+  fflush(stdout);
+  kaapi_task_set_priority( task, taskdescr->priority );
   /* call to reserved memory before execution without several memory allocation */
   kaapi_tasklist_newpriority_task( tasklist, taskdescr->priority );
   
-  /* store the format to avoid lookup */
-  taskdescr->fmt = task_fmt;
-  
-  /* Convert TASK priority to internal management of priority:
-     KAAPI_TASK_MAX_PRIORITY >0
-     KAAPI_TASK_MIN_PRIORITY ==0 (default value)
-     
-     KAAPI_TASKLIST_MAX_PRIORITY=0
-     KAAPI_TASKLIST_MIN_PRIORITY>0
-  */
-  taskdescr->priority = KAAPI_TASKLIST_MIN_PRIORITY-kaapi_task_get_priority(task);
-
   /* if wc ==0, push the task into the ready list */
   if (taskdescr->wc == 0)
     kaapi_tasklist_pushback_ready(tasklist, taskdescr);
