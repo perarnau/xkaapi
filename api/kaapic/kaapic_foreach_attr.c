@@ -47,9 +47,10 @@ int kaapic_foreach_attr_init(kaapic_foreach_attr_t* attr)
 {
   attr->rep.li.s_grain  = 1;
   attr->rep.li.p_grain  = 1;
+  attr->datadist.type   = KAAPIC_DATADIST_VOID; /* means no distribution */
   attr->nthreads = -1;
   attr->policy   = 0;
-  kaapi_cpuset_full(&attr->cpuset);
+  kaapi_cpuset_full(&attr->threadset);
   return 0;
 }
 
@@ -81,5 +82,20 @@ int kaapic_foreach_attr_set_threads(
 )
 {
   attr->nthreads = nthreads;
+  return 0;
+}
+
+int kaapic_foreach_attr_set_bloccyclic_datadistribution(
+  kaapic_foreach_attr_t* attr, 
+  unsigned long long blocsize,
+  unsigned int cyclelength
+)
+{
+  if ((blocsize == 0) || (cyclelength == 0))
+    return EINVAL;
+
+  attr->datadist.type   = KAAPIC_DATADIST_BLOCCYCLIC; /* means no distribution */    
+  attr->datadist.dist.bloccyclic.size   = blocsize;
+  attr->datadist.dist.bloccyclic.length = cyclelength;
   return 0;
 }

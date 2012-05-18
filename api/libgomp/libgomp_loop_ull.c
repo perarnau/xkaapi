@@ -120,7 +120,11 @@ static inline void komp_loop_dynamic_start_master_ull(
   kaapic_foreach_attr_set_grains_ull( &attr, chunk_size, 1);
   //kaapic_foreach_attr_set_grains( &attr, 128, 256);
   kaapic_foreach_attr_set_threads( &attr, teaminfo->numthreads );
-      
+
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  attr.datadist = ctxt->icv.attr.datadist;
+#endif
+
   /* initialize the master if not already done */
   workshare->lwork = kaapic_foreach_workinit_ull(self_thread, 
         ka_start, 

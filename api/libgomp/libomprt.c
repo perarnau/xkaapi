@@ -241,3 +241,10 @@ double omp_get_wtick(void)
   return 1e-6; /* elapsed time is assumed to be in micro second ?? */
 }
 
+
+extern void 
+omp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length )
+{
+  kompctxt_t* ctxt = komp_get_ctxt();
+  kaapic_foreach_attr_set_bloccyclic_datadistribution( &ctxt->icv.attr, size, length );
+}

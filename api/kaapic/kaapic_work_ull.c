@@ -479,7 +479,7 @@ kaapic_global_work_t* kaapic_foreach_global_workinit_ull
   _kaapic_foreach_initwa_ull(
       &gwork->wa, 
       localtid, 
-      (kaapi_bitmap_value_t*)&attr->cpuset, 
+      (kaapi_bitmap_value_t*)&attr->threadset, 
       nthreads,
       first, last
   );
@@ -773,9 +773,6 @@ static void _kaapic_thief_entrypoint_ull(
   /* process the work */
   kaapic_local_work_t* const lwork = (kaapic_local_work_t*)arg;
   kaapic_global_work_t* const gwork = lwork->global;
-
-  /* work info */
-  const kaapic_work_info_t* const wi = &gwork->wi;
   
   /* asserts */
   kaapi_assert_debug(lwork->workdone == 0);
@@ -786,6 +783,10 @@ static void _kaapic_thief_entrypoint_ull(
 #endif
   kaapi_assert_debug( kproc->kid == lwork->tid );
   
+#if 0 // OLD LOOP
+  /* work info */
+  const kaapic_work_info_t* const wi = &gwork->wi;
+
   /* while there is sequential work to do in local work */
   while (kaapi_workqueue_pop_ull(&lwork->cr, &i, &j, wi->rep.ull.seq_grain) ==0)
   {
@@ -797,6 +798,17 @@ redo_local_work:
     gwork->body_f((int)i, (int)j, (int)lwork->tid, gwork->body_args);
   }
   lwork->init = 0;
+#endif
+
+  /* while there is sequential work to do in local work */
+  while (kaapic_foreach_worknext_ull(lwork, &i, &j) !=0)
+  {
+redo_local_work:
+    kaapi_assert_debug( i < j );
+    /* apply w->f on [i, j[ */
+    gwork->body_f((int)i, (int)j, (int)lwork->tid, gwork->body_args);
+  }
+  kaapi_assert_debug( kaapi_workqueue_isempty(&lwork->cr) );
 
   /* */
   KAAPI_SET_SELF_WORKLOAD(0);
@@ -982,6 +994,26 @@ int kaapic_foreach_worknext_ull(
 
   KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), 0, KAAPI_EVT_SCHED_IDLE_BEG );
 
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  if (kaapic_local_workqueue_isempty_ull(&lwork->local_cr))
+  {
+    if (kaapi_workqueue_pop_ull(&lwork->cr, first, last, sgrain) == 0)
+    {
+      KAAPI_SET_SELF_WORKLOAD(
+          kaapi_workqueue_size(&lwork->cr)
+      );
+      lwork->workdone += *last-*first; /* even if work is not yet performed, the poped range is considered to be sequentially executed */
+      kaapic_local_workqueue_set_ull( &lwork->local_cr, *first, *last );
+    }
+    else
+      goto fail_pop;
+  }
+  kaapi_assert( kaapic_local_workqueue_pop_withdatadistribution_ull( &lwork->local_cr, &gwork->wi.dist, first, last, sgrain ) == 0 );
+  retval = 1;
+  goto return_value;
+
+#else
+
   if (kaapi_workqueue_pop_ull(&lwork->cr, first, last, sgrain) == 0)
   {
     KAAPI_SET_SELF_WORKLOAD(
@@ -992,6 +1024,9 @@ int kaapic_foreach_worknext_ull(
     retval = 1;
     goto return_value;
   }
+#endif
+
+fail_pop:
   kaapi_assert_debug( kaapi_workqueue_isempty_ull(&lwork->cr) );
   lwork->init = 0;
 
@@ -1052,6 +1087,8 @@ int kaapic_foreach_common_ull
 #endif
 
   gwork = lwork->global;
+
+#if 0 //OLD LOOP
   long seq_grain = gwork->wi.rep.ull.seq_grain;
   
   /* while there is sequential work to do in local work */
@@ -1065,6 +1102,17 @@ redo_local_work:
     body_f(first, last, (int)tid, body_args);
   }
   lwork->init = 0;
+#endif
+
+  /* while there is sequential work to do in local work */
+  while (kaapic_foreach_worknext_ull(lwork, &first, &last) !=0)
+  {
+redo_local_work:
+    kaapi_assert_debug( first < last );
+    /* apply w->f on [i, j[ */
+    body_f((int)first, (int)last, (int)tid, body_args);
+  }
+
   kaapi_assert_debug( kaapi_workqueue_isempty(&lwork->cr) );
 
   /* */

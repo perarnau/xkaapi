@@ -53,6 +53,7 @@ extern "C" {
 #endif
 
 #define KAAPIC_USE_KPROC_LOCK 1
+#define KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION 1
 
 extern void _kaapic_register_task_format(void);
 
@@ -91,6 +92,12 @@ typedef void (*kaapic_foreach_body_ull_t)(
 extern kaapic_foreach_attr_t kaapic_default_attr;
 
 
+/* Return true iff attribut define a distribution 
+*/
+static inline int kaapic_foreach_attr_hasdatadistribution( const kaapic_foreach_attr_t*  attr )
+{ return attr->datadist.type != KAAPIC_DATADIST_VOID; }
+
+
 /* exported foreach interface 
    evaluate body_f(first, last, body_args) in parallel, assuming
    that the evaluation of body_f(i, j, body_args) does not impose
@@ -105,6 +112,7 @@ extern int kaapic_foreach_common
   kaapic_foreach_body_t   body_f,
   kaapic_body_arg_t*      body_args
 );
+
 
 /* exported foreach interface 
    evaluate body_f(first, last, body_args) in parallel, assuming
@@ -130,6 +138,7 @@ extern void kaapic_foreach_body2user(
   int32_t tid, 
   kaapic_body_arg_t* arg 
 );
+
 
 extern void kaapic_foreach_body2user_ull(
   unsigned long long first, 
@@ -212,9 +221,28 @@ typedef struct work_info
       unsigned long long seq_grain;
     } ull;
   } rep;
-
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  _kaapic_foreach_attr_datadist_t dist;
+#endif
 } kaapic_work_info_t;
 
+
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+/* store current range from previous poped ranged from the workqueue
+   Used to inorder to transform range indexes between internal iteration and
+   user level iteration in order to ensure local access of data.
+*/
+typedef union kaapic_local_workqueue_t {
+  struct {
+    kaapi_workqueue_index_t end;
+    kaapi_workqueue_index_t beg;
+  } li;
+  struct {
+    kaapi_workqueue_index_ull_t end;
+    kaapi_workqueue_index_ull_t beg;
+  } ull;
+} kaapic_local_workqueue_t;
+#endif
 
 /* local work: used by each worker to process its work */
 typedef struct local_work
@@ -223,6 +251,9 @@ typedef struct local_work
 #if defined(KAAPIC_USE_KPROC_LOCK)
 #else
   kaapi_lock_t            lock;
+#endif
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  kaapic_local_workqueue_t local_cr;
 #endif
   int volatile            init;      /* !=0 iff init */
 
@@ -241,22 +272,22 @@ typedef struct local_work
 */
 typedef struct global_work
 {
-  kaapi_atomic64_t workremain __attribute__((aligned(KAAPI_CACHE_LINE)));
-  kaapi_atomic64_t workerdone;
+  kaapi_atomic64_t            workremain __attribute__((aligned(KAAPI_CACHE_LINE)));
+  kaapi_atomic64_t            workerdone;
   
   /* global distribution */
-  kaapic_work_distribution_t wa  __attribute__((aligned(KAAPI_CACHE_LINE)));
-  kaapic_local_work_t lwork[KAAPI_MAX_PROCESSOR];
+  kaapic_work_distribution_t  wa  __attribute__((aligned(KAAPI_CACHE_LINE)));
+  kaapic_local_work_t         lwork[KAAPI_MAX_PROCESSOR];
 
   /* work routine */
   union {
     kaapic_foreach_body_t     body_f;
     kaapic_foreach_body_ull_t body_f_ull;
   };
-  kaapic_body_arg_t*    body_args;
+  kaapic_body_arg_t*          body_args;
 
   /* infos container */
-  kaapic_work_info_t wi;
+  kaapic_work_info_t          wi;
 } kaapic_global_work_t;
 
 
@@ -391,6 +422,127 @@ int kaapic_foreach_workend
   kaapi_thread_context_t* self_thread,
   kaapic_local_work_t*    work
 );
+
+
+/*
+*/
+static inline int kaapic_local_workqueue_isempty( const kaapic_local_workqueue_t* lcr )
+{
+  return (lcr->li.end <= lcr->li.beg);
+}
+static inline int kaapic_local_workqueue_isempty_ull( const kaapic_local_workqueue_t* lcr )
+{
+  return (lcr->ull.end <= lcr->ull.beg);
+}
+
+
+static inline int kaapic_local_workqueue_set( 
+  kaapic_local_workqueue_t* lcr,
+  kaapi_workqueue_index_t begin, 
+  kaapi_workqueue_index_t end
+)
+{
+  lcr->li.end = end;
+  lcr->li.beg = begin;
+  return 0;
+}
+static inline int kaapic_local_workqueue_set_ull( 
+  kaapic_local_workqueue_t* lcr,
+  kaapi_workqueue_index_ull_t begin, 
+  kaapi_workqueue_index_ull_t end
+)
+{
+  lcr->ull.end = end;
+  lcr->ull.beg = begin;
+  return 0;
+}
+
+
+static inline kaapi_workqueue_index_t* kaapic_local_workqueue_begin_ptr( kaapic_local_workqueue_t* lcr )
+{
+  return &lcr->li.beg;
+}
+static inline kaapi_workqueue_index_t* kaapic_local_workqueue_end_ptr( kaapic_local_workqueue_t* lcr )
+{
+  return &lcr->li.end;
+}
+
+static inline kaapi_workqueue_index_ull_t* kaapic_local_workqueue_begin_ptr_ull( kaapic_local_workqueue_t* lcr )
+{
+  return &lcr->ull.beg;
+}
+static inline kaapi_workqueue_index_ull_t* kaapic_local_workqueue_end_ptr_ull( kaapic_local_workqueue_t* lcr )
+{
+  return &lcr->ull.end;
+}
+
+/*  Benjamin, a implementer:
+    - doit retourner dans beg,end le range utilisateur qui est le plus grand range possible de valeurs contigues
+    contenu dans la local_workqueue (ie. kwq->li.beg..kwq->li.end)
+    - la taille retournée doit être <= sgrain
+    - la localworkqueue doit etre mise a jour pour le prochain pop
+    Return 0 in case of success 
+    Return EBUSY is the queue is empty
+    Return EINVAL if invalid arguments
+*/
+static inline int kaapic_local_workqueue_pop_withdatadistribution(
+  kaapic_local_workqueue_t*              kwq, 
+  const _kaapic_foreach_attr_datadist_t* attr,
+  kaapi_workqueue_index_t*               beg,
+  kaapi_workqueue_index_t*               end,
+  kaapi_workqueue_index_t                sgrain
+)
+{
+  switch (attr->type) {
+  case KAAPIC_DATADIST_VOID:
+    *beg = kwq->li.beg; kwq->li.beg = 0;
+    *end = kwq->li.end; kwq->li.end = 0;
+    break;
+  case KAAPIC_DATADIST_BLOCCYCLIC:
+    kaapi_assert_m(0,"Benjamin: todo");
+    break;
+  default:
+    break;
+  }
+  if (*end <= *beg) return EBUSY;
+  return 0;
+}
+
+
+/*  Benjamin, a implementer: idem kaapic_local_workqueue_pop_withdatadistribution mais avec des indices de type
+    unsigned long long [attention au calcul...]
+    - doit retourner dans beg,end le range utilisateur qui est le plus grand range possible de valeurs contigues
+    contenu dans la local_workqueue (ie. kwq->li.beg..kwq->li.end)
+    - la taille retournée doit être <= sgrain
+    - la localworkqueue doit etre mise a jour pour le prochain pop
+    Return 0 in case of success 
+    Return EBUSY is the queue is empty
+    Return EINVAL if invalid arguments
+*/
+static inline int kaapic_local_workqueue_pop_withdatadistribution_ull(
+  kaapic_local_workqueue_t*              kwq, 
+  const _kaapic_foreach_attr_datadist_t* attr,
+  kaapi_workqueue_index_ull_t*           beg,
+  kaapi_workqueue_index_ull_t*           end,
+  kaapi_workqueue_index_ull_t            sgrain
+)
+{
+  switch (attr->type) {
+  case KAAPIC_DATADIST_VOID:
+    *beg = kwq->ull.beg; kwq->ull.beg = 0;
+    *end = kwq->ull.end; kwq->ull.end = 0;
+    break;
+  case KAAPIC_DATADIST_BLOCCYCLIC:
+    kaapi_assert_m(0,"Benjamin: todo");
+    break;
+  default:
+    break;
+  }
+  if (*end <= *beg) return EBUSY;
+  return 0;
+}
+
+
 
 /* misc: for API F */
 extern void kaapic_save_frame(void);
