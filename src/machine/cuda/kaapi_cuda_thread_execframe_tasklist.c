@@ -61,6 +61,18 @@
 
 #include "kaapi_cuda_stream.h"
 
+/** \ingroup TASK
+    Register a task format 
+*/
+static inline kaapi_task_body_t
+kaapi_format_get_task_body_by_arch(
+	const kaapi_format_t*	const	fmt,
+	unsigned int		arch
+	)
+{
+    return fmt->entrypoint_wh[arch];
+}
+
 /* cuda task body */
 typedef void (*kaapi_cuda_task_body_t)(
 	void*,
@@ -104,8 +116,11 @@ kaapi_cuda_callback1_input(
     )
 {
     kaapi_task_t*              pc;         /* cache */
-    kaapi_cuda_task_body_t body =
-	(kaapi_cuda_task_body_t) td->fmt->entrypoint_wh[KAAPI_PROC_TYPE_CUDA];
+    kaapi_cuda_task_body_t body = (kaapi_cuda_task_body_t)
+	kaapi_format_get_task_body_by_arch(
+		td->fmt,
+		KAAPI_PROC_TYPE_CUDA
+	    );
     kaapi_assert_debug(body != 0);
 #if defined(KAAPI_TASKLIST_POINTER_TASK)
     pc = td->task;
@@ -114,7 +129,7 @@ kaapi_cuda_callback1_input(
 #endif
     kaapi_assert_debug(pc != 0);
     kaapi_cuda_ctx_push( );
-    body( pc->sp, kaapi_cuda_kernel_stream() );
+    body( kaapi_task_getargs(pc), kaapi_cuda_kernel_stream() );
 #ifndef	    KAAPI_CUDA_ASYNC /* Synchronous execution */
     KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread_context(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
 	kaapi_cuda_sync();
@@ -156,9 +171,12 @@ kaapi_cuda_callback1_host_input(
     pc = &td->task;
 #endif
     kaapi_assert_debug(pc != 0);
-    kaapi_task_body_t body = td->fmt->entrypoint_wh[KAAPI_PROC_TYPE_HOST];
+    kaapi_task_body_t body = kaapi_format_get_task_body_by_arch(
+	    td->fmt, 
+	    KAAPI_PROC_TYPE_HOST
+	);
     kaapi_assert_debug(body != 0);
-    body( pc->sp, 0 );
+    body( kaapi_task_getargs(pc), 0 );
     kaapi_cuda_thread_tasklist_activate_deps( tasklist, td );  
     return 0;
 }
@@ -187,7 +205,6 @@ int kaapi_cuda_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   kaapi_tasklist_t*          tasklist;
   kaapi_taskdescr_t*         td;
   kaapi_frame_t*             fp;
-//  unsigned int               proc_type;
   int                        err =0;
   uint32_t                   cnt_exec; /* executed tasks during one call of execframe_tasklist */
 //  uint32_t                   cnt_pushed;
@@ -232,9 +249,10 @@ int kaapi_cuda_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   
   /* force previous write before next write */
   //kaapi_writemem_barrier();
-KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist = *tasklist; )
+    KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist = *tasklist; )
 
   while (!kaapi_tasklist_isempty( tasklist )) {
+execute_pop:
 #if defined(KAAPI_USE_CUDA)
     err = kaapi_readylist_pop_gpu( &tasklist->rtl, &td );
 #else
@@ -269,8 +287,8 @@ execute_first:
 	/* currently some internal tasks do not have format */
 	kaapi_task_body_t body = kaapi_task_getbody( pc );
         kaapi_assert_debug(body != 0);
-	body( pc->sp, (kaapi_thread_t*)stack->sfp );
-    } else if( td->fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0 ) {
+	body( kaapi_task_getargs(pc), (kaapi_thread_t*)stack->sfp );
+    } else if( kaapi_format_get_task_body_by_arch( td->fmt, KAAPI_PROC_TYPE_CUDA ) == 0 ) {
 	kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_D2H, 
 	       kaapi_cuda_callback0_host_input, tasklist, td );
     } else {
@@ -305,6 +323,8 @@ execute_first:
 	kaapi_cuda_thread_tasklist_activate_deps( tasklist, td );  
 
     } /* err == 0 */
+    else 
+	break;
     
     /* recv incomming synchronisation 
        - process it before the activation list of the executed
@@ -332,9 +352,11 @@ execute_first:
 #endif
 
     /* ok, now push pushed task into the wq and restore the next td to execute */
+#if 0
     if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0 )
 	  goto execute_first;
-    //kaapi_thread_tasklist_commit_ready( tasklist );
+#endif
+    kaapi_thread_tasklist_commit_ready( tasklist );
             
     KAAPI_DEBUG_INST(save_tasklist = *tasklist;)
 
@@ -342,8 +364,11 @@ execute_first:
 
     /* finish all GPU CUDA operations */
     while( kaapi_cuda_waitfirst_stream( kstream ) != KAAPI_CUDA_STREAM_EMPTY ){
-    if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0)
-	  goto execute_first;
+///	if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0 )
+	kaapi_thread_tasklist_commit_ready( tasklist );
+	err = kaapi_readylist_pop_gpu( &tasklist->rtl, &td );
+	if( err == 0 )
+	      goto execute_first;
     }
 
   /* here... end execute frame tasklist*/
@@ -351,9 +376,7 @@ execute_first:
   
   KAAPI_ATOMIC_ADD(&tasklist->cnt_exec, cnt_exec);
 
-//KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist = *tasklist; )
-
-  kaapi_assert(kaapi_tasklist_isempty(tasklist));
+//  kaapi_assert(kaapi_tasklist_isempty(tasklist));
 
   /* signal the end of the step for the thread
      - if no more recv (and then no ready task activated)

@@ -76,6 +76,11 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
 #if defined(KAAPI_USE_NETWORK)
     kaapi_network_poll();
 #endif
+#if 0
+    if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA) {
+	kaapi_cuda_memory_poll( kproc );
+    }
+#endif
     if (kaapi_suspendflag)
       kaapi_mt_suspend_self(kproc);
     
@@ -118,6 +123,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     ws_status = kproc->emitsteal(kproc);
     if (ws_status != KAAPI_REQUEST_S_OK)
       continue;
+    /* TODO: point to test idle */
 
 redo_execute:    
     kproc->isidle = 0;

@@ -108,7 +108,13 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
 
   /* keep the first task to execute outside the workqueue */
   tasklist->context.chkpt = 2;
+#if defined(KAAPI_USE_CUDA)
+    if( kaapi_processor_get_type(kaapi_get_current_processor()) == KAAPI_PROC_TYPE_CUDA )
+	tasklist->context.td    =  kaapi_thread_tasklist_commit_ready_and_steal_gpu( tasklist );
+    else
+#else
   tasklist->context.td    =  kaapi_thread_tasklist_commit_ready_and_steal( tasklist );
+#endif
   
   kaapi_writemem_barrier();
   frame->tasklist = tasklist;

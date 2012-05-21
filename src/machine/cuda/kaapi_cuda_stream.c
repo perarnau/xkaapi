@@ -697,3 +697,11 @@ kaapi_cuda_waitfirst_kernel( kaapi_cuda_stream_t*      stream )
 {
     return kaapi_cuda_waitfirst_fifo_stream( stream, kaapi_cuda_get_kernel_fifo(stream) );
 }
+
+void
+kaapi_cuda_stream_poll( kaapi_processor_t* const kproc )
+{
+    kaapi_cuda_stream_t* const kstream = kproc->cuda_proc.kstream;
+    if( !kaapi_cuda_stream_is_empty( kstream ) )
+	kaapi_cuda_test_stream( kstream );
+}

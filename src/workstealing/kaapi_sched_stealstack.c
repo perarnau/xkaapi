@@ -92,8 +92,14 @@ int kaapi_sched_stealstack
       if (top_frame->pc == top_frame->sp) continue;
       kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );
     } else 
-      /* */
+#if defined(KAAPI_USE_CUDA)
+	if( kaapi_processor_get_type(kaapi_get_current_processor()) == KAAPI_PROC_TYPE_CUDA )
+	    kaapi_sched_stealtasklist_gpu( thread, top_frame->tasklist, lrequests, lrrange );
+	else
+	    kaapi_sched_stealtasklist_cpu( thread, top_frame->tasklist, lrequests, lrrange );
+#else
       kaapi_sched_stealtasklist( thread, top_frame->tasklist, lrequests, lrrange );
+#endif
   }
   thread->stack.thieffp = 0;
 

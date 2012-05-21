@@ -472,7 +472,7 @@ typedef struct kaapi_task_binding
 /* ========================================================================= */
 /** Task priority
 */
-#define KAAPI_TASK_MAX_PRIORITY     10
+#define KAAPI_TASK_MAX_PRIORITY     12
 #define KAAPI_TASK_MIN_PRIORITY     0
 
 #define KAAPI_TASK_STATE_SIGNALED   0x20   /* mask: extra flag to set the task as signaled for preemption */
@@ -531,10 +531,11 @@ static inline void kaapi_task_set_priority(kaapi_task_t* task, uint8_t prio)
   task->u.s.priority = prio; 
 }
 
-static inline uint8_t kaapi_task_get_priority_by_alpha( kaapi_task_t* task, 
+static inline uint8_t
+kaapi_task_get_priority_by_alpha( kaapi_task_t* task, 
 	const float alpha )
 {
-    return  ( ((uint8_t)(alpha*10))%KAAPI_TASK_MAX_PRIORITY );
+    return  ( ((uint8_t)alpha)%(KAAPI_TASK_MAX_PRIORITY+1) );
 }
 
 /* ========================================================================= */

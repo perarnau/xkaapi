@@ -504,7 +504,9 @@ static inline kaapi_taskdescr_t* kaapi_allocator_allocate_td(
   td->task       = task;
 #endif
   td->fmt 	     = task_fmt;
-  td->priority   = KAAPI_TASKLIST_MIN_PRIORITY;
+  /* TODO: here */
+  td->priority   = KAAPI_TASKLIST_CPU_MIN_PRIORITY;
+//  td->priority   = KAAPI_TASKLIST_MIN_PRIORITY;
 #if 0 // DEPRECATED_ATTRIBUTE
   td->next       = 0;
   td->prev       = 0;
@@ -750,7 +752,10 @@ static inline int kaapi_readylist_pop_cpu( kaapi_readytasklist_t* rtl, kaapi_tas
   kaapi_workqueue_index_t local_end;
   kaapi_workqueue_index_t local_beg;
 
-  for(i =KAAPI_TASKLIST_MIN_PRIORITY; (i > 0); i-- )
+  for( i = KAAPI_TASKLIST_CPU_MAX_PRIORITY;
+	  (i >= 0) && (i >= KAAPI_TASKLIST_CPU_MIN_PRIORITY);
+	  i--
+    ) 
   {
     onertl = &rtl->prl[i];
     if (onertl->next == -1) continue;
@@ -761,6 +766,17 @@ static inline int kaapi_readylist_pop_cpu( kaapi_readytasklist_t* rtl, kaapi_tas
       *td = onertl->base[local_beg];
       /* next to push: */
       onertl->next = local_beg;
+	if( (*td)->fmt == 0 ) {
+	    fprintf(stdout,"%s: prio=%d\n", __FUNCTION__, i );
+	    fflush(stdout);
+	} else {
+	    fprintf(stdout,"%s: prio=%d td=%p(wc=%d,name=%s)\n", __FUNCTION__, i,
+		    (void*)*td,
+		    (int)(*td)->wc,
+		    (*td)->fmt->name
+		);
+	    fflush(stdout);
+	}
       return 0;
     }
     else if (err !=EBUSY) return err;
@@ -775,7 +791,8 @@ static inline int kaapi_readylist_pop_gpu( kaapi_readytasklist_t* rtl, kaapi_tas
   kaapi_workqueue_index_t local_end;
   kaapi_workqueue_index_t local_beg;
 
-  for (i =KAAPI_TASKLIST_MAX_PRIORITY; i<(1+KAAPI_TASKLIST_MIN_PRIORITY); ++i)
+  for (i = KAAPI_TASKLIST_GPU_MAX_PRIORITY;
+	  i <= KAAPI_TASKLIST_GPU_MIN_PRIORITY; i++ )
   {
     onertl = &rtl->prl[i];
     if (onertl->next == -1) continue;
@@ -786,17 +803,17 @@ static inline int kaapi_readylist_pop_gpu( kaapi_readytasklist_t* rtl, kaapi_tas
       *td = onertl->base[local_beg];
       /* next to push: */
       onertl->next = local_beg;
-#if 0
-	if( 0 == (*td)->fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] ) {
-	    fprintf( stdout, "%s: NOGPU td=%p(wc=%d,name=%s)\n",
-		    __FUNCTION__, 
+	if( (*td)->fmt == 0 ) {
+	    fprintf(stdout,"%s: prio=%d\n", __FUNCTION__, i );
+	    fflush(stdout);
+	} else {
+	    fprintf(stdout,"%s: prio=%d td=%p(wc=%d,name=%s)\n", __FUNCTION__, i,
 		    (void*)*td,
 		    (int)(*td)->wc,
 		    (*td)->fmt->name
-		    );
+		);
 	    fflush(stdout);
-	} 
-#endif
+	}
       return 0;
     }
     else if (err !=EBUSY) return err;
@@ -981,11 +998,27 @@ kaapi_processor_incr_workload(kaapi_get_current_processor(),
 }
 
 
+/* TODO inverse order to CPU */
 /** Commit all previous pushed task descriptor to the other thieves.
     Return !=0 next task descriptor to execute, else return 0.
     In case tasks have been pushed, the function reserves the last pushed task
     for local execution and returns it.
 */
+#if defined(KAAPI_USE_CUDA)
+static inline kaapi_taskdescr_t* kaapi_thread_tasklist_commit_ready_and_steal( 
+    kaapi_tasklist_t* tasklist
+)
+{
+    kaapi_thread_tasklist_commit_ready( tasklist );
+    kaapi_taskdescr_t* td = 0;
+    if( kaapi_readylist_pop_cpu( &tasklist->rtl, &td ) == 0 )
+	return td;
+    
+    return 0;
+}
+
+#else 
+
 static inline kaapi_taskdescr_t* kaapi_thread_tasklist_commit_ready_and_steal( 
     kaapi_tasklist_t* tasklist
 )
@@ -1005,9 +1038,9 @@ static inline kaapi_taskdescr_t* kaapi_thread_tasklist_commit_ready_and_steal(
         kaapi_assert_debug( ((1+onertl->next)< 0) && ((onertl->next+1) >= -onertl->size) );
         td_steal = onertl->base[++onertl->next];
       }
-kaapi_processor_incr_workload(kaapi_get_current_processor(), 
-    kaapi_workqueue_range_begin( &onertl->wq ) - (1+onertl->next)
-);
+	kaapi_processor_incr_workload(kaapi_get_current_processor(), 
+	    kaapi_workqueue_range_begin( &onertl->wq ) - (1+onertl->next)
+	);
       kaapi_workqueue_lock( &onertl->wq );
       kaapi_workqueue_push(&onertl->wq, 1+onertl->next); 
       kaapi_workqueue_unlock( &onertl->wq );
@@ -1016,8 +1049,7 @@ kaapi_processor_incr_workload(kaapi_get_current_processor(),
 
   return td_steal;
 }
-
-
+#endif
 
 /** Used to steal a tasklist in the frame
 */
@@ -1027,6 +1059,22 @@ extern void kaapi_sched_stealtasklist(
                            kaapi_listrequest_t*          lrequests, 
                            kaapi_listrequest_iterator_t* lrrange
 );
+
+#if defined(KAAPI_USE_CUDA)
+extern void kaapi_sched_stealtasklist_cpu( 
+                           kaapi_thread_context_t*       thread, 
+                           kaapi_tasklist_t*             tasklist, 
+                           kaapi_listrequest_t*          lrequests, 
+                           kaapi_listrequest_iterator_t* lrrange
+);
+
+extern void kaapi_sched_stealtasklist_gpu( 
+                           kaapi_thread_context_t*       thread, 
+                           kaapi_tasklist_t*             tasklist, 
+                           kaapi_listrequest_t*          lrequests, 
+                           kaapi_listrequest_iterator_t* lrrange
+);
+#endif
 
 
 /** How to execute task with readylist

@@ -154,4 +154,7 @@ kaapi_cuda_get_proc_by_dev( unsigned int id )
     return NULL;
 }
 
+extern void
+kaapi_cuda_stream_poll( struct kaapi_processor_t* const );
+
 #endif /* ! KAAPI_CUDA_PROC_H_INCLUDED */

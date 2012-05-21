@@ -143,7 +143,7 @@ static int kaapi_task_splitter_readylist(
 
 #if defined(KAAPI_USE_CUDA)
 
-static inline void
+void
 kaapi_sched_stealtasklist_cpu( 
                            kaapi_thread_context_t*       thread, 
                            kaapi_tasklist_t*             tasklist, 
@@ -165,7 +165,8 @@ kaapi_sched_stealtasklist_cpu(
   rtl = &tasklist->rtl;
   
   //#warning "Only for debug here"
-  for(i =KAAPI_TASKLIST_MIN_PRIORITY; (i > 0) && (count_req >0); i-- )
+  for(i = KAAPI_TASKLIST_CPU_MAX_PRIORITY;
+	 (i >= 0) && (i >= KAAPI_TASKLIST_CPU_MIN_PRIORITY) && (count_req >0); i-- )
   {
     onertl = &rtl->prl[i];
     size_steal = count_req;
@@ -201,7 +202,7 @@ kaapi_sched_stealtasklist_cpu(
   return ;
 }
 
-static inline void
+void
 kaapi_sched_stealtasklist_gpu( 
                            kaapi_thread_context_t*       thread, 
                            kaapi_tasklist_t*             tasklist, 
@@ -223,7 +224,8 @@ kaapi_sched_stealtasklist_gpu(
   rtl = &tasklist->rtl;
   
   //#warning "Only for debug here"
-  for (i =KAAPI_TASKLIST_MAX_PRIORITY; (i< KAAPI_TASKLIST_NUM_PRIORITY) && (count_req >0); ++i)
+  for ( i = KAAPI_TASKLIST_GPU_MAX_PRIORITY;
+	  (i <= KAAPI_TASKLIST_GPU_MIN_PRIORITY) && (count_req >0); i++)
   {
     onertl = &rtl->prl[i];
     size_steal = count_req;
@@ -259,24 +261,7 @@ kaapi_sched_stealtasklist_gpu(
   return ;
 }
 
-/** Steal ready task in tasklist 
- */
-void
-kaapi_sched_stealtasklist( 
-                           kaapi_thread_context_t*       thread, 
-                           kaapi_tasklist_t*             tasklist, 
-                           kaapi_listrequest_t*          lrequests, 
-                           kaapi_listrequest_iterator_t* lrrange
-)
-{
-    if( kaapi_processor_get_type(kaapi_get_current_processor()) == KAAPI_PROC_TYPE_HOST ) {
-	kaapi_sched_stealtasklist_cpu( thread, tasklist, lrequests, lrrange );
-    } else if( kaapi_processor_get_type(kaapi_get_current_processor()) == KAAPI_PROC_TYPE_CUDA ) {
-	kaapi_sched_stealtasklist_gpu( thread, tasklist, lrequests, lrrange );
-    }
-}
-
-#else /* KAAPI_USE_CUDA */
+#endif /* KAAPI_USE_CUDA */
 
 /** Steal ready task in tasklist 
  */
@@ -337,4 +322,3 @@ void kaapi_sched_stealtasklist(
   return ;
 }
 
-#endif

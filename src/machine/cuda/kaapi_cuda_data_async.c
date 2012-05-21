@@ -455,3 +455,42 @@ kaapi_cuda_data_async_sync_host2( kaapi_data_t* kdata )
     return 0;
 }
 
+#if 0
+int
+kaapi_cuda_memory_poll( void )
+{
+    kaapi_mem_host_map_t* const host_map = 
+	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
+    const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
+    kaapi_mem_host_map_t* const cuda_map = kaapi_get_current_mem_host_map();
+    const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
+    static const uint32_t map_size = KAAPI_HASHMAP_BIG_SIZE;
+    kaapi_big_hashmap_t* hmap = &cuda_map->hmap;
+    kaapi_hashentries_t* entry;
+    uint32_t i;
+
+    for (i = 0; i < map_size; ++i) {
+	for (entry = hmap->entries[i]; entry != NULL; entry = entry->next) {
+	    const kaapi_mem_data_t *kmd = entry->u.kmd;
+	    if ( kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
+		kaapi_data_t* const host_data = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
+			host_asid );
+		kaapi_data_t* const dev_data = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
+			cuda_asid );
+		kaapi_cuda_data_async_sync_host_transfer2(
+			host_data, host_asid,
+			cuda_data, cuda_asid
+		    );
+		goto sync_data;
+	    }
+	}
+    }
+
+sync_data:
+    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
+    cudaStreamSynchronize(  );
+    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END );
+
+    return 0;
+}
+#endif

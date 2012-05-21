@@ -302,4 +302,17 @@ kaapi_cuda_waitfirst_input( kaapi_cuda_stream_t*      stream );
 kaapi_cuda_stream_state_t
 kaapi_cuda_waitfirst_kernel( kaapi_cuda_stream_t*      stream );
 
+static inline int 
+kaapi_cuda_stream_is_empty( kaapi_cuda_stream_t* kstream )
+{
+    return (
+	(kaapi_cuda_get_active_count_fifo(kaapi_cuda_get_input_fifo(kstream)) == 0) &&
+	(kaapi_cuda_get_active_count_fifo(kaapi_cuda_get_output_fifo(kstream)) == 0) &&
+	(kaapi_cuda_get_active_count_fifo(kaapi_cuda_get_kernel_fifo(kstream)) == 0) 
+	    );
+}
+
+void
+kaapi_cuda_stream_poll( kaapi_processor_t* const );
+
 #endif
