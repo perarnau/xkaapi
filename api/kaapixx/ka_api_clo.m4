@@ -518,6 +518,10 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
           &redinit,
           &get_task_binding
     );
+#if defined(KAAPI_DEBUG)
+    kaapi_fmt_set_dot_name( task_fmt.get_c_format(), TaskDOT<TASK>::name() );
+    kaapi_fmt_set_dot_color( task_fmt.get_c_format(), TaskDOT<TASK>::color() );
+#endif
       
     return task_fmt.get_c_format();
   }

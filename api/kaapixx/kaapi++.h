@@ -3000,6 +3000,8 @@ __attribute__((deprecated))
   template<class TASK>
   struct TaskBodyAlpha : public TASK {};
 
+#include "ka_api_dot.h"
+
   // --------------------------------------------------------------------  
   template<class TASK>
   struct TaskSplitter;

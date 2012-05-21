@@ -91,7 +91,7 @@ kaapi_format_id_t kaapi_format_register(
   head =  kaapi_all_format_byfmtid[entry];
   fmt->next_byfmtid = head;
   kaapi_all_format_byfmtid[entry] = fmt;
-  
+
   return fmt->fmtid;
 }
 
