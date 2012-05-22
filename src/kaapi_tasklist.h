@@ -766,6 +766,7 @@ static inline int kaapi_readylist_pop_cpu( kaapi_readytasklist_t* rtl, kaapi_tas
       *td = onertl->base[local_beg];
       /* next to push: */
       onertl->next = local_beg;
+#if 0
 	if( (*td)->fmt == 0 ) {
 	    fprintf(stdout,"%s: prio=%d\n", __FUNCTION__, i );
 	    fflush(stdout);
@@ -777,6 +778,7 @@ static inline int kaapi_readylist_pop_cpu( kaapi_readytasklist_t* rtl, kaapi_tas
 		);
 	    fflush(stdout);
 	}
+#endif
       return 0;
     }
     else if (err !=EBUSY) return err;
@@ -803,6 +805,7 @@ static inline int kaapi_readylist_pop_gpu( kaapi_readytasklist_t* rtl, kaapi_tas
       *td = onertl->base[local_beg];
       /* next to push: */
       onertl->next = local_beg;
+#if 0
 	if( (*td)->fmt == 0 ) {
 	    fprintf(stdout,"%s: prio=%d\n", __FUNCTION__, i );
 	    fflush(stdout);
@@ -814,6 +817,7 @@ static inline int kaapi_readylist_pop_gpu( kaapi_readytasklist_t* rtl, kaapi_tas
 		);
 	    fflush(stdout);
 	}
+#endif
       return 0;
     }
     else if (err !=EBUSY) return err;
@@ -850,6 +854,17 @@ static inline int kaapi_readylist_pushone_td( kaapi_readytasklist_t* rtl, kaapi_
   wq->task_pushed = 1;
   kaapi_bitmap_value_set_32(&rtl->task_pushed, priority);
   KAAPI_DEBUG_INST( if (rtl->max_task < -local_beg) rtl->max_task = -local_beg  );
+#if 0
+  if( td->fmt != 0 )
+      fprintf(stdout, "%s: pushed td=%p prio=%d name=%s\n", 
+	      __FUNCTION__,
+	      (void*)td, priority, td->fmt->name );
+  else
+      fprintf(stdout, "%s: pushed td=%p prio=%d\n", 
+	      __FUNCTION__,
+	      (void*)td, priority );
+  fflush(stdout);
+#endif
 
   return priority;
 }
@@ -1005,19 +1020,19 @@ kaapi_processor_incr_workload(kaapi_get_current_processor(),
     for local execution and returns it.
 */
 #if defined(KAAPI_USE_CUDA)
-static inline kaapi_taskdescr_t* kaapi_thread_tasklist_commit_ready_and_steal( 
+static inline kaapi_taskdescr_t* kaapi_thread_tasklist_commit_ready_and_steal_gpu( 
     kaapi_tasklist_t* tasklist
 )
 {
     kaapi_thread_tasklist_commit_ready( tasklist );
     kaapi_taskdescr_t* td = 0;
-    if( kaapi_readylist_pop_cpu( &tasklist->rtl, &td ) == 0 )
+    if( kaapi_readylist_pop_gpu( &tasklist->rtl, &td ) == 0 )
 	return td;
     
     return 0;
 }
 
-#else 
+#endif
 
 static inline kaapi_taskdescr_t* kaapi_thread_tasklist_commit_ready_and_steal( 
     kaapi_tasklist_t* tasklist
@@ -1049,7 +1064,6 @@ static inline kaapi_taskdescr_t* kaapi_thread_tasklist_commit_ready_and_steal(
 
   return td_steal;
 }
-#endif
 
 /** Used to steal a tasklist in the frame
 */
