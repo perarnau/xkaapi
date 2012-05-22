@@ -45,7 +45,6 @@
 
 #if defined(__linux__)
 extern void 
-extern void 
   komp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length )
     __attribute__((weak));
 #elif defined(__APPLE__)
