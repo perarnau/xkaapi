@@ -12,7 +12,7 @@ if KAAPI_LIBGOMP
 SUBDIRS=tests testsuite
 
 pkglib_LTLIBRARIES=libgomp.la
-lib_LTLIBRARIES=libkomp.la
+lib_LTLIBRARIES=libkomp.la libomp_ext.la
 
 if HAVE_VERSION_SCRIPT
 libgomp_version_script = -Wl,--version-script,$(srcdir)/libgomp.map
@@ -36,6 +36,12 @@ libkomp_la_CFLAGS=$(AM_CFLAGS) $(LIBGOMP_BUILD_CFLAGS)
 libkomp_la_CXXFLAGS=$(AM_CXXFLAGS) $(LIBGOMP_BUILD_CXXFLAGS)
 libkomp_la_LDFLAGS = -version-info 1:0:0 $(libgomp_version_script) $(LIBGOMP_BUILD_LDFLAGS)
 libkomp_la_LIBADD=../../src/libkaapi.la ../kaapic/libkaapic.la $(LIBGOMP_BUILD_LIBS)
+
+libomp_ext_la_CPPFLAGS=$(AM_CPPFLAGS) $(LIBGOMP_BUILD_CPPFLAGS) -DLIBKOMP
+libomp_ext_la_CFLAGS=$(AM_CFLAGS) $(LIBGOMP_BUILD_CFLAGS)
+libomp_ext_la_CXXFLAGS=$(AM_CXXFLAGS) $(LIBGOMP_BUILD_CXXFLAGS)
+libomp_ext_la_LDFLAGS = -version-info 1:0:0 $(libgomp_version_script) $(LIBGOMP_BUILD_LDFLAGS)
+libomp_ext_la_LIBADD=../../src/libkaapi.la ../kaapic/libkaapic.la $(LIBGOMP_BUILD_LIBS)
 
 bin_SCRIPTS = kaapi-gomp-wrapper
 CLEANFILES = $(bin_SCRIPTS)
@@ -81,6 +87,9 @@ libgomp_la_SOURCES=\
 
 libkomp_la_SOURCES=\
 	$(libgomp_la_SOURCES)
+
+libomp_ext_la_SOURCES=\
+	libomprt_ext.c
 
 check_PROGRAMS=check-headers
 
