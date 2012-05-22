@@ -43,10 +43,10 @@
 */
 #include "omp_ext.h"
 
+#include <stdio.h>
+
 #if defined(__linux__)
-extern void 
-  komp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length )
-    __attribute__((weak));
+__attribute__((weak)) void komp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length );
 #elif defined(__APPLE__)
 extern void 
   komp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length )
@@ -55,11 +55,13 @@ extern void
 #  warning "Unkown how to define weak symbol"
 #endif
 
-
 void 
 omp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length )
 {
   printf("In omp_set_datadistribution_bloccyclic\n");
   if (komp_set_datadistribution_bloccyclic != 0)
+  {
+    printf("In omp_set_datadistribution_bloccyclic: found symbol !!!\n");
     komp_set_datadistribution_bloccyclic( size, length );
+  }
 }

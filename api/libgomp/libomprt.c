@@ -242,7 +242,7 @@ double omp_get_wtick(void)
 }
 
 
-extern void 
+void 
 komp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length )
 {
   printf("In komp_set_datadistribution_bloccyclic\n");

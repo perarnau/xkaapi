@@ -287,4 +287,9 @@ extern int  komp_test_nest_lock_25 (omp_nest_lock_25_t *) __GOMP_NOTHROW;
 # define komp_test_nest_lock_30 omp_test_nest_lock
 #endif
 
+
+__attribute__((weak))
+extern void komp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length );
+
+
 #endif // #ifndef _KAAPI_LIBGOMP_

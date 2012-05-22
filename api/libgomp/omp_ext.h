@@ -44,14 +44,9 @@
 #ifndef _KAAPI_OMP_EXT_H_
 #define _KAAPI_OMP_EXT_H_
 
-#if defined(__linux__)
-#include <omp.h>
-#endif
-
 /* Doc: todo
 */
-extern void 
-omp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length );
+extern void omp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length );
 
 
 #endif // #ifndef _KAAPI_OMP_EXT_H_

@@ -17,6 +17,8 @@ lib_LTLIBRARIES=libkomp.la libomp_ext.la
 if HAVE_VERSION_SCRIPT
 libgomp_version_script = -Wl,--version-script,$(srcdir)/libgomp.map
 libgomp_version_dep = $(srcdir)/libgomp.map
+libomp_ext_version_script = -Wl,--version-script,$(srcdir)/libomp_ext.map
+libomp_ext_version_dep = $(srcdir)/libomp_ext.map
 else
 libgomp_version_script =
 libgomp_version_dep =
@@ -40,8 +42,9 @@ libkomp_la_LIBADD=../../src/libkaapi.la ../kaapic/libkaapic.la $(LIBGOMP_BUILD_L
 libomp_ext_la_CPPFLAGS=$(AM_CPPFLAGS) $(LIBGOMP_BUILD_CPPFLAGS) -DLIBKOMP
 libomp_ext_la_CFLAGS=$(AM_CFLAGS) $(LIBGOMP_BUILD_CFLAGS)
 libomp_ext_la_CXXFLAGS=$(AM_CXXFLAGS) $(LIBGOMP_BUILD_CXXFLAGS)
-libomp_ext_la_LDFLAGS = -version-info 1:0:0 $(libgomp_version_script) $(LIBGOMP_BUILD_LDFLAGS)
-libomp_ext_la_LIBADD=../../src/libkaapi.la ../kaapic/libkaapic.la $(LIBGOMP_BUILD_LIBS)
+libomp_ext_la_LDFLAGS = -version-info 1:0:0 $(libomp_ext_version_script) $(LIBGOMP_BUILD_LDFLAGS)
+libomp_ext_la_DEPENDENCIES = $(libomp_ext_version_dep)
+#libomp_ext_la_LIBADD=-lgomp
 
 bin_SCRIPTS = kaapi-gomp-wrapper
 CLEANFILES = $(bin_SCRIPTS)
