@@ -56,7 +56,7 @@ extern void
 #endif
 
 
-extern void 
+void 
 omp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length )
 {
   printf("In omp_set_datadistribution_bloccyclic\n");
