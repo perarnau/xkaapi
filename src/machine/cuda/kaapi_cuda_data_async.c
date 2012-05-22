@@ -290,6 +290,8 @@ kaapi_cuda_data_async_check( void )
 }
 #endif
 
+/* Function verifies the asid destination and switch between CPU-to-GPU or
+ * GPU-to-GPU transfer */
 static inline int
 kaapi_cuda_data_async_sync_device_transfer(
 	kaapi_mem_data_t *kmd,
@@ -304,16 +306,36 @@ kaapi_cuda_data_async_sync_device_transfer(
 	kaapi_cuda_mem_copy_htod( dest->ptr, &dest->view,
 		src->ptr, &src->view );
     } else {
-	    kaapi_mem_host_map_t* host_map = 
+	    kaapi_mem_host_map_t* const host_map = 
 		kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
 	    const kaapi_mem_asid_t host_asid =
 		kaapi_mem_host_map_get_asid(host_map);
-	    kaapi_data_t* host_data =
+	    kaapi_data_t* const host_data =
 		(kaapi_data_t*) kaapi_mem_data_get_addr( kmd, host_asid );
-	    kaapi_cuda_mem_copy_dtod_buffer(
-		dest->ptr, &dest->view,	dest_dev,
-		host_data->ptr, &host_data->view, src_dev
-		);
+
+#if KAAPI_VERBOSE
+	    fprintf(stdout, "[%s] kid=%lu %d -> %d\n",
+		   __FUNCTION__,
+		    (unsigned long)kaapi_get_current_kid(),
+		    src_dev,
+		    dest_dev );
+	    fflush(stdout);
+#endif
+	    /* host version is already valid ? */
+	    if ( !kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
+		kaapi_cuda_mem_copy_htod(
+			dest->ptr, &dest->view,
+			host_data->ptr, &host_data->view
+		    );
+	    } else {
+		kaapi_cuda_mem_copy_dtod_buffer(
+		    dest->ptr, &dest->view,	dest_dev,
+		    src->ptr, &src->view, src_dev,
+		    host_data->ptr, &host_data->view
+		   );
+		/* Since we use the host version as buffer, validate it */
+		kaapi_mem_data_clear_dirty( kmd, host_asid );
+	    }
 #if 0
 	int canAccessPeer;
 	cudaDeviceCanAccessPeer( &canAccessPeer,
@@ -420,6 +442,8 @@ kaapi_cuda_data_async_sync_host( kaapi_data_t* kdata, cudaStream_t stream )
     return 0;
 }
 
+/* It transfers from the current GPU to the host memory in order to execute a
+ * TaskCPU body */
 static inline int
 kaapi_cuda_data_async_sync_host_transfer2(
 	kaapi_data_t* dest, const kaapi_mem_asid_t dest_asid,
@@ -432,6 +456,32 @@ kaapi_cuda_data_async_sync_host_transfer2(
 	    );
 }
 
+/* It transfers from another GPU to the host memory to execute a
+ * TaskCPU body */
+static inline int
+kaapi_cuda_data_async_sync_host_transfer3(
+	kaapi_data_t* dest, const kaapi_mem_asid_t dest_asid,
+	kaapi_data_t* src,  const kaapi_mem_asid_t src_asid,
+	const kaapi_mem_asid_t curr_asid
+	)
+{
+#if KAAPI_VERBOSE
+    fprintf( stdout, "[%s] kid=%lu asid=%d (%d -> %d)\n",
+	    __FUNCTION__,
+	    (unsigned long)kaapi_get_current_kid(),
+	    curr_asid, src_asid-1, dest_asid
+	  );
+    fflush(stdout);
+#endif
+    cudaSetDevice( src_asid-1 );
+    kaapi_cuda_mem_copy_dtoh(
+	    dest->ptr, &dest->view,
+	    src->ptr, &src->view
+	    );
+    cudaSetDevice( curr_asid-1 );
+    return 0;
+}
+
 int
 kaapi_cuda_data_async_sync_host2( kaapi_data_t* kdata )
 {
@@ -439,16 +489,31 @@ kaapi_cuda_data_async_sync_host2( kaapi_data_t* kdata )
 	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
     const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
     kaapi_mem_data_t *kmd;
-    kaapi_mem_asid_t valid_asid;
 
     kaapi_mem_host_map_find_or_insert( host_map,
 	    (kaapi_mem_addr_t)kaapi_pointer2void(kdata->ptr),
 	    &kmd );
     if ( kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
-	valid_asid = kaapi_mem_data_get_nondirty_asid( kmd );
-	kaapi_data_t* valid_data = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd, valid_asid );
-	kaapi_cuda_data_async_sync_host_transfer2( kdata, host_asid, valid_data,
-		valid_asid );
+	kaapi_mem_host_map_t* const cuda_map = kaapi_get_current_mem_host_map();
+	const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
+	/* valid in this GPU */
+	if ( !kaapi_mem_data_is_dirty( kmd, cuda_asid ) ) {
+	    kaapi_data_t* const dev_data =
+		(kaapi_data_t*) kaapi_mem_data_get_addr( kmd, cuda_asid );
+	    kaapi_cuda_data_async_sync_host_transfer2(
+		    kdata, host_asid,
+		    dev_data, cuda_asid
+		);
+	} else { /* If not, this thread has to transfer from another GPU */
+	    const kaapi_mem_asid_t valid_asid = kaapi_mem_data_get_nondirty_asid( kmd );
+	    kaapi_data_t* valid_data = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd, valid_asid );
+	    kaapi_cuda_data_async_sync_host_transfer3(
+		    kdata, host_asid,
+		    valid_data, valid_asid,
+		    cuda_asid
+		);
+	}
+
 	kaapi_mem_data_clear_dirty( kmd, host_asid );
     }
 

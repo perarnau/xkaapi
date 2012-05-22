@@ -383,12 +383,27 @@ out_of_memory:
 	ptr->asid = kasid;
 	kaapi_cuda_mem_blk_insert( proc, ptr, size, m );
 
+#if KAAPI_VERBOSE
+	fprintf(stdout, "[%s] kid=%lu %p\n",
+		__FUNCTION__,
+		(unsigned long)kaapi_get_current_kid(),
+		(void*)devptr );
+	fflush(stdout);
+#endif
+
 	return res;
 }
 
 int
 kaapi_cuda_mem_free( kaapi_pointer_t *ptr )
 {
+#if KAAPI_VERBOSE
+	fprintf(stdout, "[%s] kid=%lu %p\n",
+		__FUNCTION__,
+		(unsigned long)kaapi_get_current_kid(),
+		__kaapi_pointer2void(*ptr) );
+	fflush(stdout);
+#endif
 	cudaFree( __kaapi_pointer2void(*ptr) );
 	ptr->ptr = 0;
 	ptr->asid = 0;
@@ -657,8 +672,9 @@ kaapi_cuda_mem_2dcopy_htod_(
 	cudaError_t res;
 
 #if KAAPI_VERBOSE
-		fprintf(stdout, "[%s] src=%p %ldx%ld lda=%ld dst=%p %ldx%ld lda=%ld size=%ld\n",
+		fprintf(stdout, "[%s] kid=%lu src=%p %ldx%ld lda=%ld dst=%p %ldx%ld lda=%ld size=%ld\n",
 				__FUNCTION__,
+				(unsigned long)kaapi_get_current_kid(),
 				__kaapi_pointer2void(src),
 				view_src->size[0], view_src->size[1],
 				view_src->lda,
@@ -713,8 +729,9 @@ kaapi_cuda_mem_2dcopy_dtoh_(
 	cudaError_t res;
 
 #if KAAPI_VERBOSE
-		fprintf(stdout, "[%s] src=%p %ldx%ld lda=%ld dst=%p %ldx%ld lda=%ld size=%ld\n",
+		fprintf(stdout, "[%s] kid=%lu src=%p %ldx%ld lda=%ld dst=%p %ldx%ld lda=%ld size=%ld\n",
 				__FUNCTION__,
+				(unsigned long)kaapi_get_current_kid(),
 				__kaapi_pointer2void(src),
 				view_src->size[0], view_src->size[1],
 				view_src->lda,
@@ -764,13 +781,36 @@ kaapi_cuda_mem_copy_dtod_buffer(
 	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
 	const int dest_dev,
 	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
-	const int src_dev
+	const int src_dev,
+	const kaapi_pointer_t host, const kaapi_memory_view_t* view_host
        	)
 {
+    cudaEvent_t event;
+    cudaError_t res;
     /* Just add a synchronization event waiting the HtoD copy from the source
      * device */
 //    cudaStreamWaitEvent( kaapi_cuda_HtoD_stream(), event, 0 );
-    kaapi_cuda_mem_copy_htod( dest, view_dest, src, view_src );
+    cudaSetDevice( src_dev );
+    res= cudaEventCreateWithFlags( &event, cudaEventDisableTiming );
+    if (res != cudaSuccess) {
+	    fprintf(stdout, "%s: ERROR cudaEventCreateWithFlags %d\n", __FUNCTION__, res );
+	    fflush(stdout);
+	    abort();
+    }
+    kaapi_processor_t* kproc = kaapi_cuda_get_proc_by_dev( src_dev );
+    kaapi_cuda_mem_copy_dtoh_( host, view_host, src, view_src, 
+	    kaapi_cuda_get_cudastream( kaapi_cuda_get_output_fifo(kproc->cuda_proc.kstream) )
+	);
+    res= cudaEventRecord( event,
+	    kaapi_cuda_get_cudastream( kaapi_cuda_get_output_fifo(kproc->cuda_proc.kstream) ) );
+    if (res != cudaSuccess) {
+	    fprintf(stdout, "%s: ERROR cudaEventRecord %d\n", __FUNCTION__, res );
+	    fflush(stdout);
+	    abort();
+    }
+    cudaSetDevice( dest_dev );
+    cudaStreamWaitEvent( kaapi_cuda_HtoD_stream(), event, 0 );
+    kaapi_cuda_mem_copy_htod( dest, view_dest, host, view_host );
 
     return 0;
 }

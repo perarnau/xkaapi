@@ -78,7 +78,7 @@ static inline void _kaapi_print_activation_link(
     const kaapi_taskdescr_t* td_dest
 )
 {
-  fprintf(file,"%lu -> %lu [arrowhead=halfopen, style=filled, color=red];\n", 
+  fprintf(file,"%lu -> %lu [arrowhead=halfopen, style=filled, color=black];\n", 
 #if defined(KAAPI_TASKLIST_POINTER_TASK)
     (uintptr_t)td_src->task, (uintptr_t)td_dest->task
 #else
