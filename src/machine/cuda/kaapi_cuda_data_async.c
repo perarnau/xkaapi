@@ -307,9 +307,7 @@ int kaapi_cuda_data_async_output_dev_dec_use(
 		    td->fmt, i, sp );
 	    kaapi_data_t* dev_data = kaapi_data( kaapi_data_t, &access );
 
-	    if( KAAPI_ACCESS_IS_WRITE(m) ) {
-		kaapi_cuda_mem_dec_use( &dev_data->ptr, m );
-	    }
+	    kaapi_cuda_mem_dec_use( &dev_data->ptr, m );
     }
 
     return 0;

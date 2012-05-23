@@ -17,7 +17,7 @@ typedef struct kaapi_cuda_mem_blk_t {
 	union {
 	    uint64_t		    wc;	/* RW number of write tasks on the GPU (not executed yet) */
 	    uint64_t		    rc;	/* RO number of read tasks on the GPU (not executed yet) */
-	}u;
+	} u;
 	struct kaapi_cuda_mem_blk_t* next;
 	struct kaapi_cuda_mem_blk_t* prev;
 } kaapi_cuda_mem_blk_t;
@@ -102,10 +102,27 @@ kaapi_cuda_mem_blk_remove_ro(
     if( cuda_mem->ro.beg == NULL )
 	    return NULL;
 
-    while( NULL != (blk= cuda_mem->ro.beg) ) {
-	    cuda_mem->ro.beg = blk->next;
-	    if( cuda_mem->ro.beg != NULL )
-		cuda_mem->ro.beg->prev = NULL;
+    blk = cuda_mem->ro.beg;
+    while( NULL != blk ) {
+	    if( blk->u.rc > 0 ){
+#if defined(KAAPI_VERBOSE)
+		fprintf( stdout, "[%s] head in use ptr=%p (rc=%lu)\n",
+			__FUNCTION__,
+			__kaapi_pointer2void(blk->ptr),
+			blk->u.rc
+		       );
+		fflush(stdout);
+#endif
+		blk = blk->next;
+		continue;
+	    }
+	    if( NULL == blk->prev )
+		cuda_mem->ro.beg = blk->next;
+	    else
+		blk->prev->next = blk->next;
+	    if( NULL != blk->next )
+		blk->next->prev = blk->prev;
+
 	    ptr = blk->ptr;
 	    ptr_size = blk->size;
 	    free( blk );
@@ -195,10 +212,27 @@ kaapi_cuda_mem_blk_remove_rw(
     if( cuda_mem->rw.beg == NULL )
 	    return NULL;
 
-    while( NULL != (blk= cuda_mem->rw.beg) ) {
-	    cuda_mem->rw.beg = blk->next;
-	    if( cuda_mem->rw.beg != NULL )
-		cuda_mem->rw.beg->prev = NULL;
+    blk = cuda_mem->rw.beg;
+    while( NULL != blk ) {
+	    if( blk->u.wc > 0 ){
+#if defined(KAAPI_VERBOSE)
+		fprintf( stdout, "[%s] head in use ptr=%p (wc=%lu)\n",
+			__FUNCTION__,
+			__kaapi_pointer2void(blk->ptr),
+			blk->u.wc
+		       );
+		fflush(stdout);
+#endif
+		blk = blk->next;
+		continue;
+	    }
+	    if( NULL == blk->prev )
+		cuda_mem->rw.beg = blk->next;
+	    else
+		blk->prev->next = blk->next;
+	    if( NULL != blk->next )
+		blk->next->prev = blk->prev;
+
 	    ptr = blk->ptr;
 	    ptr_size = blk->size;
 	    free( blk );
@@ -427,7 +461,16 @@ kaapi_cuda_mem_inc_use_ro(
     kaapi_cuda_mem_blk_t *blk_next;
     kaapi_cuda_mem_blk_t *blk_prev;
 
-//    if( mem->ro.end == blk )
+#if defined(KAAPI_VERBOSE)
+    fprintf(stdout, "[%s] kid=%lu ptr=%p (rc=%lu)\n",
+	    __FUNCTION__,
+	    (long unsigned int)kaapi_get_current_kid(),
+	    __kaapi_pointer2void(blk->ptr),
+	    blk->u.rc+1 );
+    fflush(stdout);	
+#endif
+
+    blk->u.rc++;
     if( NULL == blk->next )
 	return 0;
 
@@ -446,8 +489,6 @@ kaapi_cuda_mem_inc_use_ro(
     blk->next = NULL;
     mem->ro.end = blk;
 
-    blk->u.rc ++;
-
     return 0;
 }
 
@@ -460,7 +501,16 @@ kaapi_cuda_mem_inc_use_rw(
     kaapi_cuda_mem_blk_t *blk_next;
     kaapi_cuda_mem_blk_t *blk_prev;
 
-//    if( mem->rw.end == blk )
+#if defined(KAAPI_VERBOSE)
+    fprintf(stdout, "[%s] kid=%lu ptr=%p (wc=%lu)\n",
+	    __FUNCTION__,
+	    (long unsigned int)kaapi_get_current_kid(),
+	    __kaapi_pointer2void(blk->ptr),
+	    blk->u.wc+1 );
+    fflush(stdout);	
+#endif
+
+    blk->u.wc++;
     if( NULL == blk->next )
 	return 0;
 
@@ -478,8 +528,6 @@ kaapi_cuda_mem_inc_use_rw(
     blk->prev = mem->rw.end;
     blk->next = NULL;
     mem->rw.end = blk;
-
-    blk->u.wc ++;
 
     return 0;
 }
@@ -513,6 +561,27 @@ kaapi_cuda_mem_dec_use_rw(
 	kaapi_cuda_mem_blk_t *blk
     )
 {
+#if defined(KAAPI_DEBUG)
+    if( blk->u.wc == 0 ){
+	fprintf(stdout, "[%s] kid=%lu ERROR double free ptr=%p (wc=%lu)\n",
+		__FUNCTION__,
+		(long unsigned int)kaapi_get_current_kid(),
+		__kaapi_pointer2void(blk->ptr),
+		0 );
+	fflush(stdout);	
+	abort();
+    }
+#if defined(KAAPI_VERBOSE)
+    else {
+	fprintf(stdout, "[%s] kid=%lu ptr=%p (wc=%lu)\n",
+		__FUNCTION__,
+		(long unsigned int)kaapi_get_current_kid(),
+		__kaapi_pointer2void(blk->ptr),
+		blk->u.wc-1 );
+	fflush(stdout);	
+    }
+#endif /* KAAPI_VERBOSE */
+#endif /* KAAPI_DEBUG */
     return (--blk->u.wc);
 }
 
@@ -522,6 +591,27 @@ kaapi_cuda_mem_dec_use_ro(
 	kaapi_cuda_mem_blk_t *blk
     )
 {
+#if defined(KAAPI_DEBUG)
+    if( blk->u.rc == 0 ){
+	fprintf(stdout, "[%s] kid=%lu ERROR double free ptr=%p (rc=%lu)\n",
+		__FUNCTION__,
+		(long unsigned int)kaapi_get_current_kid(),
+		__kaapi_pointer2void(blk->ptr),
+		0 );
+	fflush(stdout);	
+	abort();
+    }
+#if defined(KAAPI_VERBOSE)
+    else {
+	fprintf(stdout, "[%s] kid=%lu ptr=%p (rc=%lu)\n",
+		__FUNCTION__,
+		(long unsigned int)kaapi_get_current_kid(),
+		__kaapi_pointer2void(blk->ptr),
+		blk->u.rc-1 );
+	fflush(stdout);	
+    }
+#endif
+#endif
     return (--blk->u.rc);
 }
 
@@ -837,9 +927,6 @@ kaapi_cuda_mem_copy_dtod_buffer(
 {
     cudaEvent_t event;
     cudaError_t res;
-    /* Just add a synchronization event waiting the HtoD copy from the source
-     * device */
-//    cudaStreamWaitEvent( kaapi_cuda_HtoD_stream(), event, 0 );
     cudaSetDevice( src_dev );
     res= cudaEventCreateWithFlags( &event, cudaEventDisableTiming );
     if (res != cudaSuccess) {
@@ -984,7 +1071,8 @@ kaapi_cuda_memory_poll( kaapi_processor_t* const kproc )
 
     blk= cuda_mem->rw.beg;
     while( NULL != blk ) {
-	if( !kaapi_cuda_memory_pool_validate_host(cuda_mem, blk) )
+	if( (blk->u.wc == 0) &&
+		(!kaapi_cuda_memory_pool_validate_host(cuda_mem, blk)) )
 	    return 0;
 	blk = blk->next;
     }
