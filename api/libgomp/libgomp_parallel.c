@@ -197,6 +197,8 @@ komp_init_parallel_start (
   new_ctxt->icv.next_numthreads = ctxt->icv.next_numthreads; /* WARNING: spec ? */
   new_ctxt->icv.nested_level    = 1+ctxt->icv.nested_level; 
   new_ctxt->icv.nested_parallel = ctxt->icv.nested_parallel; /* WARNING: spec ? */
+  new_ctxt->icv.attr            = ctxt->icv.attr;            /* WARNING: spec ? */
+  new_ctxt->icv.nested_parallel = ctxt->icv.nested_parallel; /* WARNING: spec ? */
   
   new_ctxt->inside_single       = 0;
   new_ctxt->save_ctxt           = ctxt;
