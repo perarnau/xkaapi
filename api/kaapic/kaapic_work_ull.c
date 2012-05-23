@@ -518,6 +518,14 @@ kaapic_global_work_t* kaapic_foreach_global_workinit_ull
   gwork->wi.rep.ull.par_grain = attr->rep.li.p_grain;
   gwork->wi.rep.ull.seq_grain = attr->rep.li.s_grain;
 
+  /* Initialize the information about distribution of iteration */
+  gwork->wi.nthreads  = nthreads;
+  gwork->wi.threadset = attr->threadset;
+  gwork->wi.itercount = last-first;
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  gwork->wi.dist   = attr->datadist;
+#endif
+
   gwork->body_f_ull = body_f;
   gwork->body_args  = body_args;
 
@@ -1008,7 +1016,7 @@ int kaapic_foreach_worknext_ull(
     else
       goto fail_pop;
   }
-  kaapi_assert( kaapic_local_workqueue_pop_withdatadistribution_ull( &lwork->local_cr, &gwork->wi.dist, first, last, sgrain ) == 0 );
+  kaapi_assert( kaapic_local_workqueue_pop_withdatadistribution_ull( &lwork->local_cr, &gwork->wi, first, last, sgrain ) == 0 );
   retval = 1;
   goto return_value;
 

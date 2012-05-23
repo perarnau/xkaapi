@@ -483,7 +483,7 @@ kaapic_global_work_t* kaapic_foreach_global_workinit
       nthreads,
       first, last
   );
-
+  
   /* reset the work remain/wokerdone field */
   KAAPI_ATOMIC_WRITE(&gwork->workremain, last - first);
   KAAPI_ATOMIC_WRITE(&gwork->workerdone, 0);
@@ -518,6 +518,10 @@ kaapic_global_work_t* kaapic_foreach_global_workinit
   gwork->wi.rep.li.par_grain = attr->rep.li.p_grain;
   gwork->wi.rep.li.seq_grain = attr->rep.li.s_grain;
 
+  /* Initialize the information about distribution of iteration */
+  gwork->wi.nthreads  = nthreads;
+  gwork->wi.threadset = attr->threadset;
+  gwork->wi.itercount = last-first;
 #if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
   gwork->wi.dist   = attr->datadist;
 #endif
@@ -1079,7 +1083,7 @@ int kaapic_foreach_worknext(
     else
       goto fail_pop;
   }
-  kaapi_assert( kaapic_local_workqueue_pop_withdatadistribution( &lwork->local_cr, &gwork->wi.dist, first, last, sgrain ) == 0 );
+  kaapi_assert( kaapic_local_workqueue_pop_withdatadistribution( &lwork->local_cr, &gwork->wi, first, last, sgrain ) == 0 );
   retval = 1;
   goto return_value;
 

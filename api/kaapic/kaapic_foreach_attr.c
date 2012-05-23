@@ -94,7 +94,7 @@ int kaapic_foreach_attr_set_bloccyclic_datadistribution(
   if ((blocsize == 0) || (cyclelength == 0))
     return EINVAL;
 
-  attr->datadist.type   = KAAPIC_DATADIST_BLOCCYCLIC; /* means no distribution */    
+  attr->datadist.type                   = KAAPIC_DATADIST_BLOCCYCLIC; /* means no distribution */    
   attr->datadist.dist.bloccyclic.size   = blocsize;
   attr->datadist.dist.bloccyclic.length = cyclelength;
   return 0;

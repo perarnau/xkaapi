@@ -120,7 +120,7 @@ typedef enum {
 /* Internal type, not documented to the user
 */
 typedef struct _kaapic_foreach_attr_datadist_t {
-  _kaapic_foreach_attr_datadist_type_t type;  /* discriminant for the distribution */
+  _kaapic_foreach_attr_datadist_type_t type;      /* discriminant for the distribution */
   union {
     struct { /* information about bloc-cyclic distribution of data */
       unsigned long long size;

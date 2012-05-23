@@ -221,6 +221,9 @@ typedef struct work_info
       unsigned long long seq_grain;
     } ull;
   } rep;
+  unsigned int         nthreads;  /* number of threads for initial splitting */
+  kaapi_cpuset_t       threadset; /* thread set used for initial distribution i = kid */
+  size_t               itercount; /* number of iterations */
 #if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
   _kaapic_foreach_attr_datadist_t dist;
 #endif
@@ -484,16 +487,24 @@ static inline kaapi_workqueue_index_ull_t* kaapic_local_workqueue_end_ptr_ull( k
     Return 0 in case of success 
     Return EBUSY is the queue is empty
     Return EINVAL if invalid arguments
+
+    Usefull data:
+    wi->dist : is the _kaapic_foreach_attr_datadist_t attribut about the data distribution
+    wi->itercount : the initial iteration count given by the foreach
+    wi->nthreads : the number of threads that is used for iteration
+    [not really tested: wi->threadset: the indexes of threads used for iteration]
 */
 static inline int kaapic_local_workqueue_pop_withdatadistribution(
   kaapic_local_workqueue_t*              kwq, 
-  const _kaapic_foreach_attr_datadist_t* attr,
+  const kaapic_work_info_t*              wi,
   kaapi_workqueue_index_t*               beg,
   kaapi_workqueue_index_t*               end,
   kaapi_workqueue_index_t                sgrain
 )
 {
-  switch (attr->type) {
+  const _kaapic_foreach_attr_datadist_t* attr = &wi->dist;
+  switch (attr->type) 
+  {
   case KAAPIC_DATADIST_VOID:
     *beg = kwq->li.beg; kwq->li.beg = 0;
     *end = kwq->li.end; kwq->li.end = 0;
@@ -518,16 +529,24 @@ static inline int kaapic_local_workqueue_pop_withdatadistribution(
     Return 0 in case of success 
     Return EBUSY is the queue is empty
     Return EINVAL if invalid arguments
+    
+    Usefull data:
+    wi->dist : is the _kaapic_foreach_attr_datadist_t attribut about the data distribution
+    wi->itercount : the initial iteration count given by the foreach
+    wi->nthreads : the number of threads that is used for iteration
+    [not really tested: wi->threadset: the indexes of threads used for iteration]
 */
 static inline int kaapic_local_workqueue_pop_withdatadistribution_ull(
   kaapic_local_workqueue_t*              kwq, 
-  const _kaapic_foreach_attr_datadist_t* attr,
+  const kaapic_work_info_t*              wi,
   kaapi_workqueue_index_ull_t*           beg,
   kaapi_workqueue_index_ull_t*           end,
   kaapi_workqueue_index_ull_t            sgrain
 )
 {
-  switch (attr->type) {
+  const _kaapic_foreach_attr_datadist_t* attr = &wi->dist;
+  switch (attr->type) 
+  {
   case KAAPIC_DATADIST_VOID:
     *beg = kwq->ull.beg; kwq->ull.beg = 0;
     *end = kwq->ull.end; kwq->ull.end = 0;
