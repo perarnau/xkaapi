@@ -98,6 +98,16 @@ kaapi_cuda_data_recv(
     return kaapi_cuda_data_async_recv( kstream, tasklist, td );
 }
 
+static inline int
+kaapi_cuda_data_output_dev_dec_use( 
+	kaapi_cuda_stream_t* kstream,
+	kaapi_tasklist_t*   tasklist,
+	kaapi_taskdescr_t*  td
+)
+{
+    return kaapi_cuda_data_async_output_dev_dec_use( kstream, tasklist, td );
+}
+
 /* ** Memory system **
     This method is called by a CUDA thread to synchronize the kdata parameter.
 It checks if the data is valid on the current kproc, otherwise searches for a

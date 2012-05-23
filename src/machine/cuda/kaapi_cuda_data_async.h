@@ -102,4 +102,10 @@ kaapi_cuda_data_async_sync_host( kaapi_data_t* kdata, cudaStream_t stream );
 int
 kaapi_cuda_data_async_sync_host2( kaapi_data_t* kdata );
 
+int kaapi_cuda_data_async_output_dev_dec_use( 
+	kaapi_cuda_stream_t* ,
+	kaapi_tasklist_t*   ,
+	kaapi_taskdescr_t*  
+);
+
 #endif /* KAAPI_CUDA_DATA_ASYNC_H_INCLUDED */

@@ -8,6 +8,7 @@
 **
 ** thierry.gautier@inrialpes.fr
 ** fabien.lementec@imag.fr
+** Joao.Lima@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -104,6 +105,7 @@ kaapi_cuda_callback2_kernel(
 	kaapi_taskdescr_t*   td
     )
 {
+    kaapi_cuda_data_output_dev_dec_use( kstream, tasklist, td );
     kaapi_cuda_thread_tasklist_activate_deps( tasklist, td );  
     return 0;
 }

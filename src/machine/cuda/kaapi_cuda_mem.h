@@ -21,8 +21,15 @@ int kaapi_cuda_mem_alloc_(
 int kaapi_cuda_mem_register( kaapi_pointer_t ptr, 
 		const kaapi_memory_view_t *view );
 
+/* Mark the GPU memory ptr as in use by some GPU task.
+ * It returns the number of tasks using ptr. */
 int
 kaapi_cuda_mem_inc_use( kaapi_pointer_t *ptr, const kaapi_access_mode_t m );
+
+/* Mark the GPU memory ptr as not any more in use by some GPU task.
+ * It returns the number of tasks using ptr */
+int
+kaapi_cuda_mem_dec_use( kaapi_pointer_t *ptr, const kaapi_access_mode_t m );
 
 /*****************************************************************************/
 /* Memory copy functions */

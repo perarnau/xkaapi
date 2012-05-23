@@ -100,6 +100,8 @@ typedef struct kaapi_cuda_mem
 
 	/* all GPU allocated pointers */
 	kaapi_big_hashmap_t kmem;
+
+	cudaEvent_t event; /* used to H2D events */
 } kaapi_cuda_mem_t;
 
 typedef struct kaapi_cuda_proc
@@ -156,5 +158,8 @@ kaapi_cuda_get_proc_by_dev( unsigned int id )
 
 extern void
 kaapi_cuda_stream_poll( struct kaapi_processor_t* const );
+
+extern int
+kaapi_cuda_memory_poll( struct kaapi_processor_t* const );
 
 #endif /* ! KAAPI_CUDA_PROC_H_INCLUDED */

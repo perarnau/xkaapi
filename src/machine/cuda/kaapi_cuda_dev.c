@@ -40,6 +40,12 @@ kaapi_cuda_dev_open( kaapi_cuda_proc_t* proc, unsigned int index )
     proc->memory.ro.beg = proc->memory.ro.end = NULL;
     proc->memory.rw.beg = proc->memory.rw.end = NULL;
     kaapi_big_hashmap_init( &proc->memory.kmem, 0 );  
+    res= cudaEventCreateWithFlags( &proc->memory.event, cudaEventDisableTiming );
+    if (res != cudaSuccess) {
+	fprintf( stdout, "%s: cudaEventCreateWithFlags ERROR %d\n", __FUNCTION__, res );
+	fflush( stdout );
+	abort();
+    }
 
     return 0;
 }

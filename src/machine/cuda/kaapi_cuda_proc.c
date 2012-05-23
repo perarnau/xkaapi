@@ -124,7 +124,6 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
   kaapi_cuda_all_kprocessors[idev] = kaapi_get_current_processor();
   kaapi_cuda_count_kprocessors++;
 
-
   return 0;
 }
 
