@@ -483,7 +483,7 @@ kaapic_global_work_t* kaapic_foreach_global_workinit
       nthreads,
       first, last
   );
-
+  
   /* reset the work remain/wokerdone field */
   KAAPI_ATOMIC_WRITE(&gwork->workremain, last - first);
   KAAPI_ATOMIC_WRITE(&gwork->workerdone, 0);
@@ -518,6 +518,10 @@ kaapic_global_work_t* kaapic_foreach_global_workinit
   gwork->wi.rep.li.par_grain = attr->rep.li.p_grain;
   gwork->wi.rep.li.seq_grain = attr->rep.li.s_grain;
 
+  /* Initialize the information about distribution of iteration */
+  gwork->wi.nthreads  = nthreads;
+  gwork->wi.threadset = attr->threadset;
+  gwork->wi.itercount = last-first;
 #if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
   gwork->wi.dist   = attr->datadist;
 #endif
@@ -993,7 +997,10 @@ int kaapic_foreach_workend
   Return !=0 iff first and last have been filled for the next piece
   of work to execute.
   The function try to steal from registered lwork in the global work.
-  The local workqueue is fill by poped range.
+  The workqueue is fill by poped range.
+  In case of data distribution attribut, the localworkqueue_t structure
+  if filled to the poped range and the returned first,last is the biggest
+  contiguous range of iteration.
 */
 static int kaapic_foreach_globalwork_next(
   kaapic_local_work_t*     lwork,
@@ -1037,6 +1044,11 @@ static int kaapic_foreach_globalwork_next(
 
 retval1:
   lwork->workdone += *last - *first;
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  long sgrain = gwork->wi.rep.li.seq_grain;
+  kaapic_local_workqueue_set( &lwork->local_cr, *first, *last );
+  kaapi_assert( kaapic_local_workqueue_pop_withdatadistribution( &lwork->local_cr, &gwork->wi, first, last, sgrain ) == 0 );
+#endif
   return 1;
 }
 
@@ -1079,7 +1091,7 @@ int kaapic_foreach_worknext(
     else
       goto fail_pop;
   }
-  kaapi_assert( kaapic_local_workqueue_pop_withdatadistribution( &lwork->local_cr, &gwork->wi.dist, first, last, sgrain ) == 0 );
+  kaapi_assert( kaapic_local_workqueue_pop_withdatadistribution( &lwork->local_cr, &gwork->wi, first, last, sgrain ) == 0 );
   retval = 1;
   goto return_value;
 
