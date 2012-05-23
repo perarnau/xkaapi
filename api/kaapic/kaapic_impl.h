@@ -476,6 +476,7 @@ static inline kaapi_workqueue_index_ull_t* kaapic_local_workqueue_end_ptr_ull( k
   return &lcr->ull.end;
 }
 
+
 /*  Benjamin, a implementer:
     - doit retourner dans beg,end le range utilisateur qui est le plus grand range possible de valeurs contigues
     contenu dans la local_workqueue (ie. kwq->li.beg..kwq->li.end)
@@ -493,13 +494,60 @@ static inline int kaapic_local_workqueue_pop_withdatadistribution(
   kaapi_workqueue_index_t                sgrain
 )
 {
+  /*
+   * @param       int             indice in kernel space
+   * @param       int             B bloc size
+   * @param       int             P parallel thread number
+   * @param       int             N iteration end number
+   *
+   */
+  int kernel2user (int indice, int B, int P, int N)
+  {
+  		int id_thread = 0;
+  		int offset = 0;
+  		int indice_local = 0;
+  
+  		id_thread = B * (indice / (N / P));
+  
+  		indice_local = (indice - ((indice / (N / P)) * (N / P))) / B * P * B;
+  
+  		offset = indice % B;
+  
+  		return (id_thread + indice_local + offset);
+  }
+
   switch (attr->type) {
   case KAAPIC_DATADIST_VOID:
     *beg = kwq->li.beg; kwq->li.beg = 0;
     *end = kwq->li.end; kwq->li.end = 0;
     break;
   case KAAPIC_DATADIST_BLOCCYCLIC:
-    kaapi_assert_m(0,"Benjamin: todo");
+
+        if (kwq->li.beg < kwq->li.end) {
+
+			int block = attr->dist.bloccyclic.size * attr->dist.bloccyclic.length;  // define a continuous distributed bloc
+			int limit = ((kwq->li.beg / block) * block) + block;
+
+			if ((kwq->li.beg + sgrain) < limit) {
+
+					*beg = kwq->li.beg;
+					*end = *beg + sgrain;
+					kwq->li.beg = *end;
+
+			}
+			else {
+
+					*beg = kwq->li.beg;
+					*end = limit;
+					kwq->li.beg = *end;
+
+			}
+//			*beg = kernel2user(*beg, block, t, workqueue_end);
+//			*end = kernel2user(*end - 1, block, t, workqueue_end) + 1;
+        }
+        else
+			return EBUSY;
+
     break;
   default:
     break;
