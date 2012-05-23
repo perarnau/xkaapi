@@ -84,6 +84,12 @@ static void komp_trampoline_task_parallel
   new_ctxt->icv.next_numthreads = taskarg->nextnumthreads; /* WARNING: spec ?*/
   new_ctxt->icv.nested_level    = 1+taskarg->nestedlevel;
   new_ctxt->icv.nested_parallel = taskarg->nestedparallel;
+
+  new_ctxt->icv.run_sched           = omp_sched_dynamic;
+  new_ctxt->icv.chunk_size          = 0; /* default */
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  kaapic_foreach_attr_init( &new_ctxt->icv.attr );
+#endif
   
   new_ctxt->inside_single      = 0;
   new_ctxt->save_ctxt          = ctxt;
@@ -197,8 +203,10 @@ komp_init_parallel_start (
   new_ctxt->icv.next_numthreads = ctxt->icv.next_numthreads; /* WARNING: spec ? */
   new_ctxt->icv.nested_level    = 1+ctxt->icv.nested_level; 
   new_ctxt->icv.nested_parallel = ctxt->icv.nested_parallel; /* WARNING: spec ? */
-  new_ctxt->icv.attr            = ctxt->icv.attr;            /* WARNING: spec ? */
   new_ctxt->icv.nested_parallel = ctxt->icv.nested_parallel; /* WARNING: spec ? */
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  new_ctxt->icv.attr            = ctxt->icv.attr;            /* WARNING: spec ? */
+#endif
   
   new_ctxt->inside_single       = 0;
   new_ctxt->save_ctxt           = ctxt;
