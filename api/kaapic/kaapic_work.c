@@ -997,7 +997,10 @@ int kaapic_foreach_workend
   Return !=0 iff first and last have been filled for the next piece
   of work to execute.
   The function try to steal from registered lwork in the global work.
-  The local workqueue is fill by poped range.
+  The workqueue is fill by poped range.
+  In case of data distribution attribut, the localworkqueue_t structure
+  if filled to the poped range and the returned first,last is the biggest
+  contiguous range of iteration.
 */
 static int kaapic_foreach_globalwork_next(
   kaapic_local_work_t*     lwork,
@@ -1041,6 +1044,11 @@ static int kaapic_foreach_globalwork_next(
 
 retval1:
   lwork->workdone += *last - *first;
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  long sgrain = gwork->wi.rep.li.seq_grain;
+  kaapic_local_workqueue_set( &lwork->local_cr, *first, *last );
+  kaapi_assert( kaapic_local_workqueue_pop_withdatadistribution( &lwork->local_cr, &gwork->wi, first, last, sgrain ) == 0 );
+#endif
   return 1;
 }
 
