@@ -76,8 +76,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
 #if defined(KAAPI_USE_NETWORK)
     kaapi_network_poll();
 #endif
-//#if defined(KAAPI_USE_CUDA)
-#if 1
+#if defined(KAAPI_USE_CUDA)
     if( (kproc->isidle) &&
 	    (kproc->proc_type == KAAPI_PROC_TYPE_CUDA) ) {
 	kaapi_cuda_memory_poll( kproc );
