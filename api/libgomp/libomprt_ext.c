@@ -48,9 +48,10 @@
 #if defined(__linux__)
 __attribute__((weak)) void komp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length );
 #elif defined(__APPLE__)
-extern void 
-  komp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length )
-    __attribute__((weak_import));
+__attribute__((weak_import)) 
+void 
+  komp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length );
+#warning "OK: on Mac!"
 #else
 #  warning "Unkown how to define weak symbol"
 #endif
