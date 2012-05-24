@@ -536,7 +536,7 @@ static inline int kaapic_local_workqueue_pop_withdatadistribution(
 
         if (kwq->li.beg < kwq->li.end) {
 
-			int block = attr->dist.bloccyclic.size * attr->dist.bloccyclic.length;  // define a continuous distributed bloc
+			int block = attr->dist.bloccyclic.size * attr->dist.bloccyclic.length;  // define a continuous distributed block
 			int limit = ((kwq->li.beg / block) * block) + block;
 
 			if ((kwq->li.beg + sgrain) < limit) {
@@ -553,8 +553,11 @@ static inline int kaapic_local_workqueue_pop_withdatadistribution(
 					kwq->li.beg = *end;
 
 			}
-//			*beg = kernel2user(*beg, block, t, workqueue_end);
-//			*end = kernel2user(*end - 1, block, t, workqueue_end) + 1;
+			int a = *beg, b = *end;
+			*beg = kernel2user(*beg, block, wi->nthreads, wi->itercount);
+			*end = kernel2user(*end - 1, block, wi->nthreads, wi->itercount) + 1;
+			printf("[%8d, %8d] --- [%8d, %8d]\n", a, b, *beg, *end);
+			printf("size: %d %d\n", b -a, *end - *beg);
         }
         else
 			return EBUSY;
