@@ -6,11 +6,11 @@ main (int argc, char **argv)
 {
   int i;
   
-  omp_set_datadistribution_bloccyclic( 32, 4 );
+  omp_set_datadistribution_bloccyclic( 8, 4 );
 #pragma omp parallel for schedule(dynamic)
-  for (i=0; i<128; ++i)
+  for (i=0; i<32; ++i)
   {
-    printf("%i\n",i);
+    printf("TAB[%i] !\n",i);
   }
 
   return 0;
