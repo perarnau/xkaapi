@@ -480,6 +480,29 @@ static inline kaapi_workqueue_index_ull_t* kaapic_local_workqueue_end_ptr_ull( k
 }
 
 
+/*
+ * @param       int             indice in kernel space
+ * @param       int             B bloc size
+ * @param       int             P parallel thread number
+ * @param       int             N iteration end number
+ *
+ */
+static inline long _kaapi_kernel2user (long indice, unsigned long B, unsigned long P, unsigned long N)
+{
+    unsigned long id_thread = 0;
+    unsigned long offset = 0;
+    long indice_local = 0;
+
+    id_thread = (int)(B * (indice / (N / P)));
+
+    indice_local = (indice - ((indice / (N / P)) * (N / P))) / B * P * B;
+
+    offset = indice % B;
+
+    return (id_thread + indice_local + offset);
+}
+
+
 /*  Benjamin, a implementer:
     - doit retourner dans beg,end le range utilisateur qui est le plus grand range possible de valeurs contigues
     contenu dans la local_workqueue (ie. kwq->li.beg..kwq->li.end)
@@ -496,75 +519,51 @@ static inline kaapi_workqueue_index_ull_t* kaapic_local_workqueue_end_ptr_ull( k
     [not really tested: wi->threadset: the indexes of threads used for iteration]
 */
 static inline int kaapic_local_workqueue_pop_withdatadistribution(
-  kaapic_local_workqueue_t*              kwq, 
-  const kaapic_work_info_t*              wi,
-  kaapi_workqueue_index_t*               beg,
-  kaapi_workqueue_index_t*               end,
-  kaapi_workqueue_index_t                sgrain
+          kaapic_local_workqueue_t*              kwq, 
+          const kaapic_work_info_t*              wi,
+          kaapi_workqueue_index_t*               beg,
+          kaapi_workqueue_index_t*               end,
+          kaapi_workqueue_index_t                sgrain
 )
 {
-  /*
-   * @param       int             indice in kernel space
-   * @param       int             B bloc size
-   * @param       int             P parallel thread number
-   * @param       int             N iteration end number
-   *
-   */
-  int kernel2user (int indice, int B, int P, int N)
-  {
-  		int id_thread = 0;
-  		int offset = 0;
-  		int indice_local = 0;
-  
-  		id_thread = B * (indice / (N / P));
-  
-  		indice_local = (indice - ((indice / (N / P)) * (N / P))) / B * P * B;
-  
-  		offset = indice % B;
-  
-  		return (id_thread + indice_local + offset);
-  }
-
   const _kaapic_foreach_attr_datadist_t* attr = &wi->dist;
   switch (attr->type) 
   {
-  case KAAPIC_DATADIST_VOID:
-    *beg = kwq->li.beg; kwq->li.beg = 0;
-    *end = kwq->li.end; kwq->li.end = 0;
-    break;
-  case KAAPIC_DATADIST_BLOCCYCLIC:
-
-        if (kwq->li.beg < kwq->li.end) {
-
-			int block = attr->dist.bloccyclic.size * attr->dist.bloccyclic.length;  // define a continuous distributed block
-			int limit = ((kwq->li.beg / block) * block) + block;
-
-			if ((kwq->li.beg + sgrain) < limit) {
-
-					*beg = kwq->li.beg;
-					*end = *beg + sgrain;
-					kwq->li.beg = *end;
-
-			}
-			else {
-
-					*beg = kwq->li.beg;
-					*end = limit;
-					kwq->li.beg = *end;
-
-			}
-			int a = *beg, b = *end;
-			*beg = kernel2user(*beg, block, wi->nthreads, wi->itercount);
-			*end = kernel2user(*end - 1, block, wi->nthreads, wi->itercount) + 1;
-			printf("[%8d, %8d] --- [%8d, %8d]\n", a, b, *beg, *end);
-			printf("size: %d %d\n", b -a, *end - *beg);
+    case KAAPIC_DATADIST_VOID:
+      *beg = kwq->li.beg; kwq->li.beg = 0;
+      *end = kwq->li.end; kwq->li.end = 0;
+      break;
+    case KAAPIC_DATADIST_BLOCCYCLIC:
+      
+      if (kwq->li.beg < kwq->li.end) {
+        
+        unsigned long block = attr->dist.bloccyclic.size * attr->dist.bloccyclic.length;  // define a continuous distributed block
+        unsigned long limit = ((kwq->li.beg / block) * block) + block;
+        
+        if ((kwq->li.beg + sgrain) < limit) 
+        {
+          *beg = kwq->li.beg;
+          *end = *beg + sgrain;
+          kwq->li.beg = *end; 
         }
-        else
-			return EBUSY;
-
-    break;
-  default:
-    break;
+        else {
+          *beg = kwq->li.beg;
+          *end = limit;
+          kwq->li.beg = *end;
+          
+        }
+        kaapi_workqueue_index_t a = *beg, b = *end;
+        *beg = _kaapi_kernel2user(*beg, block, wi->nthreads, wi->itercount);
+        *end = _kaapi_kernel2user(*end - 1, block, wi->nthreads, wi->itercount) + 1;
+        printf("[%8li, %8li] --- [%8li, %8li]\n", a, b, *beg, *end);
+        printf("size: %li %li\n", b -a, *end - *beg);
+      }
+      else
+        return EBUSY;
+      
+      break;
+    default:
+      break;
   }
   if (*end <= *beg) return EBUSY;
   return 0;
