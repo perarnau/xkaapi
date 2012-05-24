@@ -537,21 +537,15 @@ static inline int kaapic_local_workqueue_pop_withdatadistribution(
       
       if (kwq->li.beg < kwq->li.end) {
         
-        unsigned long block = attr->dist.bloccyclic.size * attr->dist.bloccyclic.length;  // define a continuous distributed block
+        unsigned long block = attr->dist.bloccyclic.size;
         unsigned long limit = ((kwq->li.beg / block) * block) + block;
         
+        *beg = kwq->li.beg;
         if ((kwq->li.beg + sgrain) < limit) 
-        {
-          *beg = kwq->li.beg;
           *end = *beg + sgrain;
-          kwq->li.beg = *end; 
-        }
-        else {
-          *beg = kwq->li.beg;
+        else 
           *end = limit;
-          kwq->li.beg = *end;
-          
-        }
+        kwq->li.beg = *end;
         kaapi_workqueue_index_t a = *beg, b = *end;
         *beg = _kaapi_kernel2user(*beg, block, wi->nthreads, wi->itercount);
         *end = _kaapi_kernel2user(*end - 1, block, wi->nthreads, wi->itercount) + 1;
