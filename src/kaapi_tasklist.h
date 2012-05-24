@@ -766,12 +766,19 @@ static inline int kaapi_readylist_pop_cpu( kaapi_readytasklist_t* rtl, kaapi_tas
       *td = onertl->base[local_beg];
       /* next to push: */
       onertl->next = local_beg;
-#if 0
+#if defined(KAAPI_VERBOSE)
 	if( (*td)->fmt == 0 ) {
-	    fprintf(stdout,"%s: prio=%d\n", __FUNCTION__, i );
+	    fprintf(stdout,"[%s] kid=%lu prio=%d\n",
+		    __FUNCTION__,
+		    (long unsigned int)kaapi_get_current_kid(),
+		    i
+		);
 	    fflush(stdout);
 	} else {
-	    fprintf(stdout,"%s: prio=%d td=%p(wc=%d,name=%s)\n", __FUNCTION__, i,
+	    fprintf(stdout,"[%s] kid=%lu prio=%d td=%p(wc=%d,name=%s)\n",
+		    __FUNCTION__,
+		    (long unsigned int)kaapi_get_current_kid(),
+		    i,
 		    (void*)*td,
 		    (int)(*td)->wc,
 		    (*td)->fmt->name
@@ -805,12 +812,19 @@ static inline int kaapi_readylist_pop_gpu( kaapi_readytasklist_t* rtl, kaapi_tas
       *td = onertl->base[local_beg];
       /* next to push: */
       onertl->next = local_beg;
-#if 0
+#if defined(KAAPI_VERBOSE)
 	if( (*td)->fmt == 0 ) {
-	    fprintf(stdout,"%s: prio=%d\n", __FUNCTION__, i );
+	    fprintf(stdout,"[%s] kid=%lu prio=%d\n",
+		    __FUNCTION__,
+		    (long unsigned int)kaapi_get_current_kid(),
+		    i
+		);
 	    fflush(stdout);
 	} else {
-	    fprintf(stdout,"%s: prio=%d td=%p(wc=%d,name=%s)\n", __FUNCTION__, i,
+	    fprintf(stdout,"[%s] kid=%lu prio=%d td=%p(wc=%d,name=%s)\n",
+		    __FUNCTION__,
+		    (long unsigned int)kaapi_get_current_kid(),
+		    i,
 		    (void*)*td,
 		    (int)(*td)->wc,
 		    (*td)->fmt->name
@@ -854,15 +868,23 @@ static inline int kaapi_readylist_pushone_td( kaapi_readytasklist_t* rtl, kaapi_
   wq->task_pushed = 1;
   kaapi_bitmap_value_set_32(&rtl->task_pushed, priority);
   KAAPI_DEBUG_INST( if (rtl->max_task < -local_beg) rtl->max_task = -local_beg  );
-#if 0
+#if defined(KAAPI_VERBOSE)
   if( td->fmt != 0 )
-      fprintf(stdout, "%s: pushed td=%p prio=%d name=%s\n", 
+      fprintf(stdout, "[%s] kid=%lu pushed td=%p prio=%d name=%s (counter=%d,wc=%d)\n", 
 	      __FUNCTION__,
-	      (void*)td, priority, td->fmt->name );
+		(long unsigned int)kaapi_get_current_kid(),
+	      (void*)td, priority, td->fmt->name,
+	      KAAPI_ATOMIC_READ(&td->counter),
+	      td->wc
+	      );
   else
-      fprintf(stdout, "%s: pushed td=%p prio=%d\n", 
+      fprintf(stdout, "[%s] kid=%lu pushed td=%p prio=%d (counter=%d,wc=%d)\n", 
 	      __FUNCTION__,
-	      (void*)td, priority );
+		(long unsigned int)kaapi_get_current_kid(),
+	      (void*)td, priority,
+	      KAAPI_ATOMIC_READ(&td->counter),
+	      td->wc
+	     );
   fflush(stdout);
 #endif
 

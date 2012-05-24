@@ -284,6 +284,25 @@ execute_first:
     KAAPI_DEBUG_INST(kaapi_assert( td->u.acl.exec_date == 0 ));
     KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
 
+#if defined(KAAPI_VERBOSE)
+  if( td->fmt != 0 )
+      fprintf(stdout, "[%s] kid=%lu td=%p name=%s (counter=%d,wc=%d)\n", 
+	      __FUNCTION__,
+		(long unsigned int)kaapi_get_current_kid(),
+	      (void*)td, td->fmt->name,
+	      KAAPI_ATOMIC_READ(&td->counter),
+	      td->wc
+	      );
+  else
+      fprintf(stdout, "[%s] kid=%lu td=%p (counter=%d,wc=%d)\n", 
+	      __FUNCTION__,
+		(long unsigned int)kaapi_get_current_kid(),
+	      (void*)td,
+	      KAAPI_ATOMIC_READ(&td->counter),
+	      td->wc
+	     );
+  fflush(stdout);
+#endif
     /* get the correct body for the proc type */
     if( td->fmt == 0 ){
 	/* currently some internal tasks do not have format */

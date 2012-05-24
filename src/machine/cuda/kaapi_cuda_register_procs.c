@@ -53,6 +53,7 @@
 int kaapi_cuda_register_procs(kaapi_procinfo_list_t* kpl)
 {
   const char* const gpuset_str = getenv("KAAPI_GPUSET");
+  const char* const gpucount_str = getenv("KAAPI_GPUCOUNT");
   kaapi_procinfo_t* pos = kpl->tail;
   unsigned int kid = kpl->count;
   int devcount;
@@ -72,8 +73,18 @@ int kaapi_cuda_register_procs(kaapi_procinfo_list_t* kpl)
   if (devcount == 0)
     return 0;
  
-  err = kaapi_procinfo_list_parse_string
-    (kpl, gpuset_str, KAAPI_PROC_TYPE_CUDA, (unsigned int)devcount);
+  if (gpucount_str != NULL) {
+    kaapi_default_param.gpucount = atoi(getenv("KAAPI_GPUCOUNT"));
+    if( kaapi_default_param.gpucount > devcount )
+      kaapi_default_param.gpucount = devcount;
+  } else {
+      kaapi_default_param.gpucount = devcount;
+  }
+
+  err = kaapi_procinfo_list_parse_string(
+	  kpl, gpuset_str, KAAPI_PROC_TYPE_CUDA,
+	  kaapi_default_param.gpucount
+     );
   if (err) return -1;
 
   if (kpl->tail == NULL) return 0;

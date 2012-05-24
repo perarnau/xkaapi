@@ -70,6 +70,7 @@ kaapi_rtparam_t kaapi_default_param = {
 #endif
 #if defined(KAAPI_USE_CUDA)
    .cudawindowsize = 1,
+   .gpucount	= 0,
 #endif
    .stacksize   = 64*4096, /**/
    .stacksize_master = 64*4096, /**/

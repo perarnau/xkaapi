@@ -197,9 +197,17 @@ kaapi_sched_stealtasklist_cpu(
       );
       count_req 
          = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
+#if defined(KAAPI_VERBOSE)
+	fprintf( stdout,"[%s] kid=%lu prio=%d size_steal=%d\n",
+		__FUNCTION__,
+		(long unsigned int)kaapi_get_current_kid(),
+		i,
+		size_steal
+	    );
+	fflush(stdout);
+#endif
     }
   }
-  return ;
 }
 
 void
@@ -256,9 +264,17 @@ kaapi_sched_stealtasklist_gpu(
       );
       count_req 
          = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
+#if defined(KAAPI_VERBOSE)
+	fprintf( stdout,"[%s] kid=%lu prio=%d size_steal=%d\n",
+		__FUNCTION__,
+		(long unsigned int)kaapi_get_current_kid(),
+		i,
+		size_steal
+	    );
+	fflush(stdout);
+#endif
     }
   }
-  return ;
 }
 
 #endif /* KAAPI_USE_CUDA */

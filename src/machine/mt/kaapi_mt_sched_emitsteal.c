@@ -129,6 +129,14 @@ redo_select:
   }
   kaapi_assert_debug( (victim.kproc->kid >=0) && (victim.kproc->kid <kaapi_count_kprocessors));
 
+#if 0
+  fprintf(stdout, "[%s] kid=%lu kvictim=%lu\n", 
+	  __FUNCTION__,
+	    (long unsigned int)kaapi_get_current_kid(),
+	    (long unsigned int)victim.kproc->kid
+	  );
+  fflush(stdout);
+#endif
 
   /* (1) 
      Fill & Post the request to the victim processor 
