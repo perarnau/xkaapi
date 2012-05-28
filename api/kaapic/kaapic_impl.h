@@ -510,17 +510,20 @@ static inline int kaapic_local_workqueue_pop_withdatadistribution(
    * @param       int             N iteration end number
    *
    */
-  int kernel2user (int indice, int B, int P, int N)
+  int kernel2user (int indice, int B, int L, int N)
   {
   		int id_thread = 0;
   		int offset = 0;
   		int indice_local = 0;
   
-  		id_thread = B * (indice / (N / P));
+  		id_thread = (indice / (N / L)) * B;
+//		printf("id_cycle: %d = (%d / (%d / %d)) * %d)\t", id_thread, indice, N, L, B);
   
-  		indice_local = (indice - ((indice / (N / P)) * (N / P))) / B * P * B;
+  		indice_local = (indice - ((indice / (N / L)) * (N / L))) / B * L * B;
+//		printf("indice_local: %d\t", indice_local);
   
   		offset = indice % B;
+//		printf("offset: %d\n", offset);
   
   		return (id_thread + indice_local + offset);
   }
@@ -533,31 +536,29 @@ static inline int kaapic_local_workqueue_pop_withdatadistribution(
     *end = kwq->li.end; kwq->li.end = 0;
     break;
   case KAAPIC_DATADIST_BLOCCYCLIC:
+//	printf("li.beg: %dn li.end: %d\t", kwq->li.beg, kwq->li.end);
 
         if (kwq->li.beg < kwq->li.end) {
 
-			int block = attr->dist.bloccyclic.size * attr->dist.bloccyclic.length;  // define a continuous distributed block
-			int limit = ((kwq->li.beg / block) * block) + block;
+			int limit = ((kwq->li.beg / attr->dist.bloccyclic.size) * attr->dist.bloccyclic.size) + attr->dist.bloccyclic.size;
+			if (limit > kwq->li.end)
+				limit = kwq->li.end;
+//			printf("limit: %d\n", limit);
 
-			if ((kwq->li.beg + sgrain) < limit) {
+			*beg = kwq->li.beg;
+			if ((kwq->li.beg + sgrain) < limit)
+				*end = *beg + sgrain;
+			else 
+				*end = limit;
+			kwq->li.beg = *end;
 
-					*beg = kwq->li.beg;
-					*end = *beg + sgrain;
-					kwq->li.beg = *end;
-
-			}
-			else {
-
-					*beg = kwq->li.beg;
-					*end = limit;
-					kwq->li.beg = *end;
-
-			}
 			int a = *beg, b = *end;
-			*beg = kernel2user(*beg, block, wi->nthreads, wi->itercount);
-			*end = kernel2user(*end - 1, block, wi->nthreads, wi->itercount) + 1;
-			printf("[%8d, %8d] --- [%8d, %8d]\n", a, b, *beg, *end);
-			printf("size: %d %d\n", b -a, *end - *beg);
+
+			*beg = kernel2user(*beg, attr->dist.bloccyclic.size, attr->dist.bloccyclic.length, wi->itercount);
+			*end = kernel2user(*end - 1, attr->dist.bloccyclic.size, attr->dist.bloccyclic.length, wi->itercount) + 1;
+
+//			printf("[%8d, %8d) --- [%8d, %8d)\n", a, b, *beg, *end);
+//			printf("size: %d %d\n", b -a, *end - *beg);
         }
         else
 			return EBUSY;

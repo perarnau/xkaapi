@@ -73,6 +73,8 @@
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
 
+#define _GNU_SOURCE
+#include <sched.h>
 
 /* set to 0 to disable workload */
 #define CONFIG_USE_WORKLOAD 1
@@ -216,6 +218,7 @@ repop_any:
   *i = gw->wa.startindex[pos];
   *j = gw->wa.startindex[pos+1];
   
+  printf("Thread %d (cpu %u) initial work: [%d, %d[\n", sched_getcpu(), tid, *i, *j);
   /* Here, because work may have been finished  
   */
   if (KAAPI_ATOMIC_READ(&gw->workremain) ==0)
