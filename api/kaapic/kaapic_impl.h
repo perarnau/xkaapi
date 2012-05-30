@@ -53,7 +53,7 @@ extern "C" {
 #endif
 
 #define KAAPIC_USE_KPROC_LOCK 1
-#define KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION 1
+/* #define KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION 1 */
 
 extern void _kaapic_register_task_format(void);
 
@@ -427,6 +427,8 @@ int kaapic_foreach_workend
 );
 
 
+
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
 /*
 */
 static inline int kaapic_local_workqueue_isempty( const kaapic_local_workqueue_t* lcr )
@@ -610,7 +612,7 @@ static inline int kaapic_local_workqueue_pop_withdatadistribution_ull(
   if (*end <= *beg) return EBUSY;
   return 0;
 }
-
+#endif
 
 
 /* misc: for API F */
