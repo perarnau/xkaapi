@@ -245,7 +245,9 @@ double omp_get_wtick(void)
 void 
 komp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length )
 {
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
   printf("In komp_set_datadistribution_bloccyclic\n");
   kompctxt_t* ctxt = komp_get_ctxt();
   kaapic_foreach_attr_set_bloccyclic_datadistribution( &ctxt->icv.attr, size, length );
+#endif
 }
