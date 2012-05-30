@@ -61,6 +61,7 @@ int kaapi_sched_select_victim_hwsn(
 {
   int victimid;
   int nbproc;
+  int rr;
   kaapi_hier_arg* arg;
   kaapi_onelevel_t* level;
 
@@ -104,14 +105,15 @@ int kaapi_sched_select_victim_hwsn(
     return EINVAL;
 
 redo_select:
+  rr = rand_r(&arg->seed);
   /* first: select in self set */
   if (arg->policy ==1)
   {
     level = &kproc->hlevel.levels[0];
-    victimid = level->notself[ rand_r(&arg->seed) % level->nnotself];
+    victimid = level->notself[ rr % level->nnotself];
   }
   else
-    victimid = rand_r( (unsigned int*)&arg->seed ) % nbproc;
+    victimid = rr % nbproc;
 
   victim->kproc = kaapi_all_kprocessors[ victimid ];
   if (victim->kproc ==0) 
