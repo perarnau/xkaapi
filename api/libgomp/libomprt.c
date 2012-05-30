@@ -89,7 +89,7 @@ int
 omp_in_parallel(void)
 {
   kompctxt_t* ctxt = komp_get_ctxt();
-  return (ctxt->teaminfo ==0) || (ctxt->teaminfo->numthreads ==1);
+  return (ctxt->teaminfo !=0) && (ctxt->teaminfo->numthreads >1);
 }
 
 /*
