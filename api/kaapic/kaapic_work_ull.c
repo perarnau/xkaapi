@@ -1034,7 +1034,9 @@ int kaapic_foreach_worknext_ull(
   }
 #endif
 
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
 fail_pop:
+#endif
   kaapi_assert_debug( kaapi_workqueue_isempty_ull(&lwork->cr) );
   lwork->init = 0;
 
