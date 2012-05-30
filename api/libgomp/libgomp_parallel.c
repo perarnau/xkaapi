@@ -252,7 +252,8 @@ komp_parallel_start (
   allarg = kaapi_thread_pushdata(thread, num_threads * sizeof(komp_parallel_task_arg_t));
 
 
-#if 1  /* OLD CODE: push locally all tasks that may be steal by any thread */
+//POUR BENJAMIN: force ou non a pousser une tache dans la queue d'un Kthread particulier
+#if 0  /* OLD CODE: push locally all tasks that may be steal by any thread */
   /* The master thread (id 0) calls fn (data) directly. That's why we
      start this loop from id = 1.*/
   task = kaapi_thread_toptask(thread);
