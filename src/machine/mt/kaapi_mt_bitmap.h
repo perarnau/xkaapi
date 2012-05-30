@@ -264,7 +264,7 @@ static inline int kaapi_bitmap_first1_and_zero_32( kaapi_bitmap32_t* b )
 */
 static inline void kaapi_bitmap_value_set_low_bits_32( kaapi_bitmap_value32_t* b, unsigned int i)
 {
-  kaapi_assert_debug(i < 32);
+  kaapi_assert_debug(i <= 32);
   b->proc32 = ((uint32_t)1 << i) - (uint32_t)1;
 }
 
