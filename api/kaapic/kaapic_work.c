@@ -73,6 +73,8 @@
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
 
+#define _GNU_SOURCE
+#include <sched.h>
 
 /* set to 0 to disable workload */
 #define CONFIG_USE_WORKLOAD 1
@@ -248,7 +250,7 @@ static int kaapic_global_work_steal
      - any try to pop a slice closed to the tid of the thread
      - only 0 can pop a non poped slice
   */
-#if 1
+#if defined(KAAPIC_ALLOWS_WORKER_STEAL_SLICE) //  Empeche le vol d'un slice 
   /* caller has already pop and finish its slice, if it is 0 then may pop
      the next non null entry
   */
@@ -422,6 +424,17 @@ static void _kaapic_foreach_initwa(
     wa->startindex[i+1] = wa->startindex[i]+scale;
   for (i=finalsize; i<concurrency; ++i)
     wa->startindex[i+1] = wa->startindex[finalsize];
+
+#if 1
+  for (i=0; i<concurrency; ++i)
+  {
+    int pos= wa->tid2pos[i];
+    if (pos != -1)
+      printf("Thread %i initial work: [%d, %d[\n", i, wa->startindex[pos], wa->startindex[pos+1]);
+    else
+      printf("Thread %i empty initial work\n", i);
+  }
+#endif
 
   kaapi_assert_debug(wa->startindex[finalsize] == last);
 }
