@@ -66,7 +66,7 @@ extern "C" {
    - this option may be mixed with KAAPIC_ALLOWS_WORKER_STEAL_SLICE. A better study
    of the impact of to guarantee locality versus to balance the workload must be do!
 */
-#define KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION 1 
+// #define KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION 1 
 
 
 extern void _kaapic_register_task_format(void);
