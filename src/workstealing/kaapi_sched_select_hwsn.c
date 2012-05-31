@@ -78,7 +78,8 @@ int kaapi_sched_select_victim_hwsn(
   if (flag == KAAPI_STEAL_FAILED)
   {
     ++arg->nfailed;
-    arg->policy = 2; /* random */
+    if (arg->nfailed > 3)
+      arg->policy = 2; /* random */
     return 0;
   }
 
