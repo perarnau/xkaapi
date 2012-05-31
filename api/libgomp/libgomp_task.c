@@ -46,11 +46,9 @@
 //#define USE_WORKLOAD 1
 
 typedef struct GOMP_trampoline_task_arg {
-  int                       threadid;
+  kompctxt_t*               parentctxt;
   void                     (*fn) (void *);
   void*                     data;
-  komp_teaminfo_t*          teaminfo;
-  int                       nextnumthreads;
 } GOMP_trampoline_task_arg;
 
 static void GOMP_trampoline_task(
@@ -72,11 +70,11 @@ static void GOMP_trampoline_task(
   
   /* init workshared construct */
   new_ctxt->workshare          = 0;
-  new_ctxt->teaminfo           = taskarg->teaminfo;
+  new_ctxt->teaminfo           = taskarg->parentctxt->teaminfo;
   
   /* initialize master context: nextnum thread is inherited */
-  new_ctxt->icv.thread_id       = taskarg->threadid;
-  new_ctxt->icv.next_numthreads = taskarg->nextnumthreads; /* WARNING: spec ?*/
+  new_ctxt->icv.thread_id       = taskarg->parentctxt->icv.thread_id;
+  new_ctxt->icv.next_numthreads = taskarg->parentctxt->icv.next_numthreads; /* WARNING: spec ?*/
   
   new_ctxt->inside_single      = 0;
   new_ctxt->save_ctxt          = ctxt;
@@ -94,28 +92,22 @@ KAAPI_REGISTER_TASKFORMAT(GOMP_task_format,
     "GOMP/Task",
     GOMP_trampoline_task,
     sizeof(GOMP_trampoline_task_arg),
-    5,
+    3,
     (kaapi_access_mode_t[]){ 
         KAAPI_ACCESS_MODE_V, 
         KAAPI_ACCESS_MODE_V, 
-        KAAPI_ACCESS_MODE_V, 
-        KAAPI_ACCESS_MODE_V,
         KAAPI_ACCESS_MODE_V 
     },
     (kaapi_offset_t[])     { 
-        offsetof(GOMP_trampoline_task_arg, threadid), 
+        offsetof(GOMP_trampoline_task_arg, parentctxt), 
         offsetof(GOMP_trampoline_task_arg, fn), 
-        offsetof(GOMP_trampoline_task_arg, data),
-        offsetof(GOMP_trampoline_task_arg, teaminfo), 
-        offsetof(GOMP_trampoline_task_arg, nextnumthreads), 
+        offsetof(GOMP_trampoline_task_arg, data)
     },
-    (kaapi_offset_t[])     { 0, 0, 0, 0,0 },
+    (kaapi_offset_t[])     { 0, 0, 0 },
     (const struct kaapi_format_t*[]) {
-        kaapi_int_format,
         kaapi_voidp_format, 
-        kaapi_voidp_format,
-        kaapi_voidp_format,
-        kaapi_int_format, 
+        kaapi_voidp_format, 
+        kaapi_voidp_format
       },
     0
 )
@@ -181,11 +173,9 @@ void GOMP_task(
     memcpy(userarg, data, arg_size);
 
   GOMP_trampoline_task_arg* arg = kaapi_task_getargst( task, GOMP_trampoline_task_arg );
-  arg->threadid       = ctxt->icv.thread_id;
+  arg->parentctxt     = ctxt;
   arg->fn             = fn;
   arg->data           = userarg;
-  arg->teaminfo       = ctxt->teaminfo;
-  arg->nextnumthreads = ctxt->icv.next_numthreads;
   kaapi_thread_pushtask(thread);
 }
 
