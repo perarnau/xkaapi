@@ -240,8 +240,6 @@ printf("EWOULDBLOCK case 1\n");
         kaapi_processor_incr_workload( stack->proc, cnt_pushed );
 #endif
     }
-    else
-	break;
     
     /* recv incomming synchronisation 
        - process it before the activation list of the executed
@@ -278,7 +276,7 @@ printf("EWOULDBLOCK case 1\n");
 #endif
 #endif
 
-//  kaapi_assert(kaapi_tasklist_isempty(tasklist));
+  kaapi_assert( kaapi_tasklist_isempty(tasklist) );
 
   /* signal the end of the step for the thread
      - if no more recv (and then no ready task activated)

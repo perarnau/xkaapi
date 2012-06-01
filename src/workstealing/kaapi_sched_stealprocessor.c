@@ -65,11 +65,11 @@ int kaapi_sched_stealprocessor(
 
   /* 2/ steal in suspended threads */
   cell = kproc->lsuspend.tail;
-  if ( !kaapi_listrequest_iterator_empty(lrrange) && (cell !=0))
-  {
+  while ( !kaapi_listrequest_iterator_empty(lrrange) && (cell !=0)) {
     thread = cell->thread;
     if (thread != 0)
       kaapi_sched_stealstack( thread, lrequests, lrrange );
+    cell = cell->prev;
   }
 
   /* 3/ steal current thread; make local copy because it can disappear */

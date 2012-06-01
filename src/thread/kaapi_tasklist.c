@@ -182,10 +182,10 @@ int _kaapi_readylist_extend_wq( kaapi_onereadytasklist_t* onertl )
 #endif
   
   /* the only part that need to be linearizable with stealer */
-  kaapi_atomic_lock( onertl->wq.lock );
+  //kaapi_atomic_lock( onertl->wq.lock );
   onertl->base = newbase;
   kaapi_mem_barrier();
-  kaapi_atomic_unlock( onertl->wq.lock );  
+  //kaapi_atomic_unlock( onertl->wq.lock );  
   
   if (onertl->dynallocated)
   {

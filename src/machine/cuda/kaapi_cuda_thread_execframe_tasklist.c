@@ -95,6 +95,9 @@ kaapi_cuda_thread_tasklist_activate_deps(
     if( td->u.acl.bcast !=0 ) 
 	kaapi_thread_tasklistready_pushactivated( tasklist,
 		td->u.acl.bcast->front );
+
+    kaapi_thread_tasklist_commit_ready( tasklist );
+    kaapi_thread_tasklist_commit_ready( tasklist->master );
 }
 
 /* call back to push ready task into the tasklist after terminaison of a task */
@@ -105,6 +108,16 @@ kaapi_cuda_callback2_kernel(
 	kaapi_taskdescr_t*   td
     )
 {
+#if defined(KAAPI_VERBOSE)
+  fprintf(stdout, "[%s] END kid=%lu td=%p name=%s (counter=%d,wc=%d)\n", 
+	  __FUNCTION__,
+	    (long unsigned int)kaapi_get_current_kid(),
+	  (void*)td, td->fmt->name,
+	  KAAPI_ATOMIC_READ(&td->counter),
+	  td->wc
+	  );
+  fflush(stdout);
+#endif
     kaapi_cuda_data_output_dev_dec_use( kstream, tasklist, td );
     kaapi_cuda_thread_tasklist_activate_deps( tasklist, td );  
     return 0;
@@ -128,6 +141,16 @@ kaapi_cuda_callback1_input(
     pc = td->task;
 #else
     pc = &td->task;
+#endif
+#if defined(KAAPI_VERBOSE)
+  fprintf(stdout, "[%s] INIT kid=%lu td=%p name=%s (counter=%d,wc=%d)\n", 
+	  __FUNCTION__,
+	    (long unsigned int)kaapi_get_current_kid(),
+	  (void*)td, td->fmt->name,
+	  KAAPI_ATOMIC_READ(&td->counter),
+	  td->wc
+	  );
+  fflush(stdout);
 #endif
     kaapi_assert_debug(pc != 0);
     kaapi_cuda_ctx_push( );
@@ -255,11 +278,7 @@ int kaapi_cuda_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 
   while (!kaapi_tasklist_isempty( tasklist )) {
 execute_pop:
-#if defined(KAAPI_USE_CUDA)
     err = kaapi_readylist_pop_gpu( &tasklist->rtl, &td );
-#else
-    err = kaapi_readylist_pop( &tasklist->rtl, &td );
-#endif
 
     if (err == 0) {
       kaapi_processor_decr_workload( stack->proc, 1 );
@@ -285,15 +304,7 @@ execute_first:
     KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
 
 #if defined(KAAPI_VERBOSE)
-  if( td->fmt != 0 )
-      fprintf(stdout, "[%s] kid=%lu td=%p name=%s (counter=%d,wc=%d)\n", 
-	      __FUNCTION__,
-		(long unsigned int)kaapi_get_current_kid(),
-	      (void*)td, td->fmt->name,
-	      KAAPI_ATOMIC_READ(&td->counter),
-	      td->wc
-	      );
-  else
+  if( td->fmt == 0 )
       fprintf(stdout, "[%s] kid=%lu td=%p (counter=%d,wc=%d)\n", 
 	      __FUNCTION__,
 		(long unsigned int)kaapi_get_current_kid(),
@@ -344,8 +355,6 @@ execute_first:
 	kaapi_cuda_thread_tasklist_activate_deps( tasklist, td );  
 
     } /* err == 0 */
-    else 
-	break;
     
     /* recv incomming synchronisation 
        - process it before the activation list of the executed
@@ -386,7 +395,6 @@ execute_first:
     /* finish all GPU CUDA operations */
     while( kaapi_cuda_waitfirst_stream( kstream ) != KAAPI_CUDA_STREAM_EMPTY ){
 ///	if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0 )
-	kaapi_thread_tasklist_commit_ready( tasklist );
 	err = kaapi_readylist_pop_gpu( &tasklist->rtl, &td );
 	if( err == 0 )
 	      goto execute_first;
@@ -397,7 +405,7 @@ execute_first:
   
   KAAPI_ATOMIC_ADD(&tasklist->cnt_exec, cnt_exec);
 
-//  kaapi_assert(kaapi_tasklist_isempty(tasklist));
+  kaapi_assert( kaapi_tasklist_isempty(tasklist) );
 
   /* signal the end of the step for the thread
      - if no more recv (and then no ready task activated)

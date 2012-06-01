@@ -109,6 +109,34 @@ int kaapi_tasklist_pushready_td(
   if (1) //(queue == 0)
   {
     /* I was not able to identify a queue for the task: push locally */
+#if defined(KAAPI_USE_CUDA)
+    if( kaapi_processor_get_type(kaapi_get_current_processor()) == KAAPI_PROC_TYPE_CUDA ) {
+	if( KAAPI_TASKLIST_CPU_INF_PRIORITY == priority )
+	    kaapi_readylist_pushone_td( 
+		&tasklist->master->rtl, 
+		td, 
+		(tasklist->t_infinity !=0) ?
+		  (tasklist->t_infinity - td->u.acl.date) * (KAAPI_TASKLIST_NUM_PRIORITY-1) / tasklist->t_infinity
+		:  td->priority 
+	    );
+	else
+	    kaapi_readylist_pushone_td( 
+		&tasklist->rtl, 
+		td, 
+		(tasklist->t_infinity !=0) ?
+		  (tasklist->t_infinity - td->u.acl.date) * (KAAPI_TASKLIST_NUM_PRIORITY-1) / tasklist->t_infinity
+		:  td->priority 
+	    );
+    } else {
+	kaapi_readylist_pushone_td( 
+	    &tasklist->rtl, 
+	    td, 
+	    (tasklist->t_infinity !=0) ?
+	      (tasklist->t_infinity - td->u.acl.date) * (KAAPI_TASKLIST_NUM_PRIORITY-1) / tasklist->t_infinity
+	    :  td->priority 
+	);
+    }
+#else
     kaapi_readylist_pushone_td( 
         &tasklist->rtl, 
         td, 
@@ -116,6 +144,7 @@ int kaapi_tasklist_pushready_td(
           (tasklist->t_infinity - td->u.acl.date) * (KAAPI_TASKLIST_NUM_PRIORITY-1) / tasklist->t_infinity
         :  td->priority 
     );
+#endif
     return 0;
   }
 

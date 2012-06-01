@@ -115,18 +115,24 @@ redo_select:
     goto redo_select;
   }
 
-#if 1 // TG: test, steal also allow to steal stack from myself. Else only wakeup
+  /* JOAO: need to allow kproc to steal itself */
+#if 0 // TG: test, steal also allow to steal stack from myself. Else only wakeup
   /* never pass by this function for a processor to steal itself */
   if (kproc == victim.kproc) 
     return KAAPI_REQUEST_S_NOK;
 #endif
 
+  /* JOAO: need to disable this code until a correct test for tasklist is
+   * develpped
+   */
+#if 0
   /* quick test to detect if thread has no work */
   if (kaapi_processor_has_nowork(victim.kproc))
   {
     (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_FAILED );
     goto redo_select;
   }
+#endif
   kaapi_assert_debug( (victim.kproc->kid >=0) && (victim.kproc->kid <kaapi_count_kprocessors));
 
 #if 0

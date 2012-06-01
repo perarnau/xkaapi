@@ -858,6 +858,7 @@ static inline int kaapi_readylist_pushone_td( kaapi_readytasklist_t* rtl, kaapi_
   kaapi_assert_debug( (priority >= KAAPI_TASKLIST_MAX_PRIORITY) && (priority <= KAAPI_TASKLIST_MIN_PRIORITY) );
 
   wq = &rtl->prl[priority];
+  kaapi_workqueue_lock( &wq->wq );
   local_beg = wq->next; /* reuse the position of the previous executed task */
   if (local_beg < -wq->size)
     _kaapi_readylist_extend_wq( wq );
@@ -865,6 +866,7 @@ static inline int kaapi_readylist_pushone_td( kaapi_readytasklist_t* rtl, kaapi_
   kaapi_assert_debug( (local_beg <0) && (local_beg >= -wq->size) );
   wq->base[local_beg] = td;  /* <=> (base - wq->size)[-localbeg] */
   wq->next = --local_beg;
+  kaapi_workqueue_unlock( &wq->wq );
   wq->task_pushed = 1;
   kaapi_bitmap_value_set_32(&rtl->task_pushed, priority);
   KAAPI_DEBUG_INST( if (rtl->max_task < -local_beg) rtl->max_task = -local_beg  );
@@ -1015,19 +1017,18 @@ static inline int kaapi_thread_tasklist_commit_ready( kaapi_tasklist_t* tasklist
   if (!kaapi_bitmap_value_empty_32(&tasklist->rtl.task_pushed))
   {
     /* ABA problem here if we suppress lock/unlock? seems to be true */
-    //kaapi_atomic_lock( &tasklist->thread->stack.lock );
+    kaapi_atomic_lock( &tasklist->thread->stack.lock );
     while (!kaapi_bitmap_value_empty_32(&tasklist->rtl.task_pushed))
     {
       int ith = kaapi_bitmap_value_first1_and_zero_32( &tasklist->rtl.task_pushed ) -1;
 
-kaapi_processor_incr_workload(kaapi_get_current_processor(), 
-    kaapi_workqueue_range_begin( &tasklist->rtl.prl[ith].wq ) - (1+tasklist->rtl.prl[ith].next)
-);
+	kaapi_processor_incr_workload(kaapi_get_current_processor(), 
+	    kaapi_workqueue_range_begin( &tasklist->rtl.prl[ith].wq ) - (1+tasklist->rtl.prl[ith].next)
+	);
       /* do not keep tasklist->next for local exec */
       kaapi_workqueue_push(&tasklist->rtl.prl[ith].wq, 1+tasklist->rtl.prl[ith].next); 
-
     }
-    //kaapi_atomic_unlock( &tasklist->thread->stack.lock );
+    kaapi_atomic_unlock( &tasklist->thread->stack.lock );
     kaapi_bitmap_value_clear_32(&tasklist->rtl.task_pushed);
     return 0;
   }
