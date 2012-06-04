@@ -52,17 +52,22 @@
 /*
 */
 static void kaapi_hwcpuset2affinity( 
-  kaapi_cpuset_t* affinity, 
-  int             nproc, 
-  hwloc_cpuset_t  cpuset 
+  kaapi_affinityset_t* affinityset, 
+  int                  nproc, 
+  hwloc_cpuset_t       cpuset 
 )
 {
   kaapi_cpuset_clear( affinity );
+  int count = 0;
   for (int i=0; i<nproc; ++i)
   {
     if (hwloc_bitmap_isset( cpuset, i) && kaapi_cpuset_has( &kaapi_default_param.usedcpu, i))
-      kaapi_cpuset_set( affinity, i);
+    {
+      kaapi_cpuset_set( &affinityset->who, i);
+      ++count;
+    }
   }
+  affinityset->ncpu = count;
 }
 
 /*
@@ -230,7 +235,7 @@ int kaapi_hw_init(void)
         kaapi_default_param.memory.levels[memdepth].affinity[0].type     
             = KAAPI_MEM_MACHINE;
         kaapi_hwcpuset2affinity(
-            &kaapi_default_param.memory.levels[memdepth].affinity[0].who,
+            &kaapi_default_param.memory.levels[memdepth].affinity[0],
             ncpu,
             obj->cpuset 
         );
@@ -259,10 +264,10 @@ int kaapi_hw_init(void)
             = KAAPI_HWS_LEVELID_SOCKET;
       else if (obj->type == HWLOC_OBJ_CACHE)
       {
-	if (obj->attr && (obj->attr->cache.depth == 3))
-	  kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_L3;
-	else
-	  kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_MAX;
+        if (obj->attr && (obj->attr->cache.depth == 3))
+          kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_L3;
+        else
+          kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_MAX;
       }
 
       /* iterator over all cousins */
@@ -291,7 +296,7 @@ int kaapi_hw_init(void)
         ncpu = hwloc_bitmap_weight( obj->cpuset );
         kaapi_default_param.memory.levels[memdepth].affinity[idx].ncpu = ncpu;
         kaapi_hwcpuset2affinity(
-            &kaapi_default_param.memory.levels[memdepth].affinity[idx].who,
+            &kaapi_default_param.memory.levels[memdepth].affinity[idx],
             KAAPI_MAX_PROCESSOR, 
             obj->cpuset 
         );
