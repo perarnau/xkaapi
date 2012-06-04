@@ -297,13 +297,12 @@ int kaapi_hw_init(void)
               = obj->os_index;
         }
 
-        ncpu = hwloc_bitmap_weight( obj->cpuset );
-        kaapi_default_param.memory.levels[memdepth].affinity[idx].ncpu = ncpu;
         kaapi_hwcpuset2affinity(
             &kaapi_default_param.memory.levels[memdepth].affinity[idx],
             KAAPI_MAX_PROCESSOR, 
             obj->cpuset 
         );
+        ncpu = kaapi_default_param.memory.levels[memdepth].affinity[idx].ncpu;
 
         if (ncpu !=0)
           ++idx;

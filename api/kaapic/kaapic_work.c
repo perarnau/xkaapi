@@ -484,7 +484,7 @@ static void _kaapic_foreach_initwa(
   {
     int pos= wa->tid2pos[i];
     if (pos != -1)
-      printf("Thread %i, cpuid: initial work: [%d, %d[\n", i, kaapi_all_kprocessors[i]->cpuid, wa->startindex[pos], wa->startindex[pos+1]);
+      printf("Thread %i, cpuid: %i,  initial work: [%d, %d[\n", i, kaapi_all_kprocessors[i]->cpuid, wa->startindex[pos], wa->startindex[pos+1]);
     else
       printf("Thread %i empty initial work\n", i);
   }
