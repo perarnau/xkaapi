@@ -434,15 +434,15 @@ static void _kaapic_foreach_initwa(
      where pos(k) is a local index in the cpuset affinity->who
   */
   int numalevelid = kaapi_default_param.memory.numalevel;
-  int threadpernumanode = kaapi_getconcurrency()/numalevel->count;
   kaapi_hierarchy_one_level_t* numalevel = &kaapi_default_param.memory.levels[numalevelid];
+  int threadpernumanode = kaapi_getconcurrency()/numalevel->count;
 
   for (i=0; i<numalevel->count; ++i)
   {
-    int numnodeid = numalevel->affinity[i].os_index;
+    int numanodeid = numalevel->affinity[i].os_index;
 
     /* assumption 1 */
-    kaapi_assert_debug( (numnodeid >=0) && (numnodeid <=numalevel->count) );
+    kaapi_assert_debug( (numanodeid >=0) && (numanodeid <=numalevel->count) );
 
     /* assumption 2 */
     kaapi_assert_debug( threadpernumanode == numalevel->affinity[i].ncpu );
@@ -484,7 +484,7 @@ static void _kaapic_foreach_initwa(
   {
     int pos= wa->tid2pos[i];
     if (pos != -1)
-      printf("Thread %i initial work: [%d, %d[\n", i, wa->startindex[pos], wa->startindex[pos+1]);
+      printf("Thread %i, cpuid: initial work: [%d, %d[\n", i, kaapi_all_kprocessors[i]->cpuid, wa->startindex[pos], wa->startindex[pos+1]);
     else
       printf("Thread %i empty initial work\n", i);
   }
