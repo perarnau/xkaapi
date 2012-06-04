@@ -395,6 +395,7 @@ static void _kaapic_foreach_initwa(
   range_size -= off;
   scale = range_size / finalsize;
   
+#if !defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION) || !defined(KAAPI_USE_HWLOC)
   /* init logical mapping from tid to [0, ..., n] such that localtid is attached to 0 if
      is in the set.
      Initialize also all the localwork to empty (but lock is initialized !)
@@ -414,6 +415,59 @@ static void _kaapic_foreach_initwa(
     else 
       wa->tid2pos[i] = (uint8_t)-1; /* not in the set */
   }
+#else
+  /* specific mapping in case of KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION + NUMA attribute 
+     - assumption 1: only numa nodes from 0 to M-1 are used.
+     - assumption 2: each numa node has the same number of threads = P/M.
+     - assumption 3: Kprocessor kid=0 is on numa node 0.
+     NUMA nodes and CPU ID attached to each numa node is available in
+     data structure kaapi_default_param.memory. More precisely, NUMA node
+     descriptions are at memory level 'kaapi_default_param.memory.numalevel',
+     i.e. memory.levels[memory.numalevel].
+     * NUMA ids are given by memory.levels[memory.numalevel].affinity[k].os_index
+     
+     The bloc distribution of Kaapi iteration space is ordered has the following:
+       [ numa node 0 | numa node 1 | ... | numa node M-1 )
+     The algorithm iterates through the numa node i and set up position of the cpu id k
+     in the who cpuset such that
+        tid2pos[ cpu2kid[k] ] = i *P/M + pos(k), 
+     where pos(k) is a local index in the cpuset affinity->who
+  */
+  int numalevelid = kaapi_default_param.memory.numalevel;
+  int threadpernumanode = kaapi_getconcurrency()/numalevel->count;
+  kaapi_hierarchy_one_level_t* numalevel = &kaapi_default_param.memory.levels[numalevelid];
+
+  for (i=0; i<numalevel->count; ++i)
+  {
+    int numnodeid = numalevel->affinity[i].os_index;
+
+    /* assumption 1 */
+    kaapi_assert_debug( (numnodeid >=0) && (numnodeid <=numalevel->count) );
+
+    /* assumption 2 */
+    kaapi_assert_debug( threadpernumanode == numalevel->affinity[i].ncpu );
+
+    /* assumption 3 */
+#if defined(KAAPI_DEBUG)
+    if (numalevel->affinity[i].os_index == 0)
+    {
+        kaapi_assert(
+          kaapi_cpuset_has(&numalevel->affinity[i].who, 
+                           kaapi_all_kprocessors[self_tid]->cpuid)
+        );
+    }
+#endif
+    kaapi_cpuset_t set_numanode;
+    kaapi_cpuset_copy(&set_numanode, &numalevel->affinity[i].who);
+    for (int k=0; k<numalevel->affinity[i].ncpu; ++k)
+    {
+      int cpuid = kaapi_cpuset_firstone_zero(&set_numanode);
+      kaapi_assert_debug(cpuid != -1);
+      int tid = kaapi_default_param.cpu2kid[cpuid];
+      wa->tid2pos[tid] = k + numanodeid * threadpernumanode;
+    }
+  }
+#endif
   
   /* fill the start indexes: here it should be important to
      allocate slices depending of the futur thread id... ?

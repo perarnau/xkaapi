@@ -87,8 +87,8 @@ static inline void kaapi_cpuset_full(kaapi_cpuset_t* affinity )
 /**
 */
 static inline int kaapi_cpuset_intersect(
-    kaapi_cpuset_t* s1, 
-    kaapi_cpuset_t* s2
+    const kaapi_cpuset_t* s1, 
+    const kaapi_cpuset_t* s2
 )
 {
   return ((s1->bits64[0] & s2->bits64[0]) != 0) || ((s1->bits64[1] & s2->bits64[1]) != 0);
@@ -97,7 +97,7 @@ static inline int kaapi_cpuset_intersect(
 
 /**
 */
-static inline int kaapi_cpuset_empty(kaapi_cpuset_t* affinity)
+static inline int kaapi_cpuset_empty(const kaapi_cpuset_t* affinity)
 {
   return (affinity->bits64[0] == 0) && (affinity->bits64[1] == 0);
 }
@@ -127,7 +127,7 @@ static inline int kaapi_cpuset_set(
 */
 static inline int kaapi_cpuset_copy(
     kaapi_cpuset_t* dest, 
-    kaapi_cpuset_t* src 
+    const kaapi_cpuset_t* src 
 )
 {
   dest->bits64[0] = src->bits64[0];
@@ -136,10 +136,17 @@ static inline int kaapi_cpuset_copy(
 }
 
 
+/* return position of the lowest bit set to 1 and zero it.
+   return -1 iff cpuset is empty
+*/
+extern int kaapi_cpuset_firstone_zero(
+    kaapi_cpuset_t* cpuset
+);
+
 /** Return non 0 iff th as affinity with kid
 */
 static inline int kaapi_cpuset_has(
-    kaapi_cpuset_t* affinity, 
+    const kaapi_cpuset_t* affinity, 
     unsigned int i 
 )
 {
