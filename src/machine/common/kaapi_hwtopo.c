@@ -305,13 +305,17 @@ int kaapi_hw_init(void)
             obj->cpuset 
         );
 
-        ++idx;
+        if (ncpu !=0)
+          ++idx;
+
         if (obj->next_sibling !=0) 
            obj = obj->next_sibling;
         else {
           obj = obj->next_cousin;
         }
       }
+      /* update correct number of cousins with at least one cpu */
+      kaapi_default_param.memory.levels[memdepth].count = idx;
     }
   }
   /* end of detection of memory hierarchy */
