@@ -45,6 +45,12 @@
 
 //#define USE_WORKLOAD 1
 
+
+/* This version pass to each created task a pointer to the parent context.
+   It is correct because:
+   - the parent thread will always waits for completion of the child tasks,
+   - a context has a scope at least equal to the task that creates it.
+*/
 typedef struct GOMP_trampoline_task_arg {
   kompctxt_t*               parentctxt;
   void                     (*fn) (void *);
@@ -139,7 +145,7 @@ void GOMP_task(
     
     /* init workshared construct */
     *new_ctxt = *ctxt;
-    new_ctxt->save_ctxt          = ctxt;
+    new_ctxt->save_ctxt = ctxt;
 
     /* swap context: until end_parallel, new_ctxt becomes the current context */
     kproc->libkomp_tls = new_ctxt;
