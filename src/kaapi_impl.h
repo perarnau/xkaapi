@@ -309,8 +309,8 @@ typedef struct kaapi_affinityset_t {
 typedef struct kaapi_hierarchy_one_level_t {
   unsigned short           count;       /* number of kaapi_affinityset_t at this level */
   kaapi_affinityset_t*     affinity; 
-  kaapi_hws_levelid_t		   levelid;
-  char*				             name;
+  kaapi_hws_levelid_t	   levelid;
+  char*	                   name;
 } kaapi_hierarchy_one_level_t;
 
 /** Memory hierarchy of the local machine
@@ -321,6 +321,7 @@ typedef struct kaapi_hierarchy_one_level_t {
 */
 typedef struct kaapi_hierarchy_t {
   unsigned short               depth;
+  unsigned short               numalevel;
   kaapi_hierarchy_one_level_t* levels;
 } kaapi_hierarchy_t;
 
