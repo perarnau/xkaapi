@@ -194,7 +194,7 @@ static inline kompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc )
     first->ctxt.icv.thread_id           = 0;
     first->ctxt.icv.next_numthreads     = kaapi_getconcurrency();
     first->ctxt.icv.nested_level        = 0;
-    first->ctxt.icv.nested_parallel     = 1;
+    first->ctxt.icv.nested_parallel     = 0;
     first->ctxt.icv.dynamic_numthreads  = 0; /* Not sure of this initial value, next_numthreads may
                                      					  be more appropriate here... */
     first->ctxt.icv.run_sched           = omp_sched_dynamic;
