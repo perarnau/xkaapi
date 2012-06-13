@@ -112,10 +112,9 @@ static inline komp_workshare_t*  komp_loop_dynamic_start_init(
     workshare = kaapi_thread_pushdata(thread, sizeof(komp_workshare_t) );
     ctxt->workshare = workshare;
   }
-  workshare->start  = start;
-  workshare->incr   = incr;
-  workshare->serial = teaminfo->serial;
-
+  workshare->rep.li.start  = start;
+  workshare->rep.li.incr   = incr;
+  workshare->serial = ++teaminfo->serial;
   return workshare;
 }
 
@@ -142,12 +141,24 @@ static inline void komp_loop_dynamic_start_master(
   */
   kaapic_foreach_attr_t attr;
   kaapic_foreach_attr_init(&attr);
-  if (1) { //(chunk_size == -1) {
-    chunk_size=(ka_end-ka_start)/1024*kaapi_getconcurrency();
-    if (chunk_size ==0) chunk_size = 1;
+  if (1) //(chunk_size == -1) 
+  {
+    chunk_size=(ka_end-ka_start)/(teaminfo->numthreads*teaminfo->numthreads);
+    if (chunk_size ==0) 
+    {
+      chunk_size = 1;
+    } else {
+      if (chunk_size > 2048) chunk_size /= 64;
+      else if (chunk_size > 1024) chunk_size /= 16;
+    }
   }
-  kaapic_foreach_attr_set_grains( &attr, chunk_size, 1 );
-  //kaapic_foreach_attr_set_grains( &attr, 8, 1); 
+  kaapic_foreach_attr_set_grains( &attr, chunk_size, 1);
+  //kaapic_foreach_attr_set_grains( &attr, 128, 256);
+  kaapic_foreach_attr_set_threads( &attr, teaminfo->numthreads );
+
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  attr.datadist = ctxt->icv.attr.datadist;
+#endif
       
   /* initialize the master if not already done */
   workshare->lwork = kaapic_foreach_workinit(self_thread, 
@@ -168,25 +179,22 @@ static inline void komp_loop_dynamic_start_master(
 */
 static inline void komp_loop_dynamic_start_slave(
   kaapi_processor_t* kproc,
-  komp_workshare_t*  workshare
+  komp_workshare_t*  workshare,
+  kaapic_global_work_t* gwork
 )
 {
-  kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
-  komp_teaminfo_t* teaminfo = ctxt->teaminfo;
   long start, end;
 
   /* wait global work becomes ready */
-  kaapi_assert_debug(teaminfo->gwork !=0);
+  kaapi_assert_debug(gwork !=0);
         
   /* get own slice */
-  if (!kaapic_global_work_pop( teaminfo->gwork, kproc->kid, &start, &end))
-  {
+  if (!kaapic_global_work_pop( gwork, kproc->kid, &start, &end))
     start = end = 0;
-  }
-  workshare->lwork = kaapic_foreach_local_workinit( 
-                          &teaminfo->gwork->lwork[kproc->kid],
-                          start, end );
 
+  workshare->lwork = kaapic_foreach_local_workinit( 
+                          &gwork->lwork[kproc->kid],
+                          start, end );
 }
 
 
@@ -206,11 +214,13 @@ bool GOMP_loop_dynamic_start (
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
   komp_teaminfo_t* teaminfo = ctxt->teaminfo;
+  kaapic_global_work_t* gwork;
 
   komp_workshare_t* workshare = 
     komp_loop_dynamic_start_init( kproc, start, incr );
 
   if (ctxt->icv.thread_id ==0)
+  {
     komp_loop_dynamic_start_master(
       kproc,
       workshare,
@@ -219,16 +229,19 @@ bool GOMP_loop_dynamic_start (
       incr,
       chunk_size
     );
+    gwork = teaminfo->gwork;
+  }
   else 
   {
     /* wait global work becomes ready */
-    while (teaminfo->gwork ==0)
+    while ( (gwork = teaminfo->gwork) ==0)
       kaapi_slowdown_cpu();
     kaapi_readmem_barrier();
 
     komp_loop_dynamic_start_slave(
       kproc,
-      workshare
+      workshare,
+      gwork
     );
   }
 
@@ -239,8 +252,10 @@ bool GOMP_loop_dynamic_start (
         iend)
       )
   {
-    *istart = ctxt->workshare->start + *istart * ctxt->workshare->incr;
-    *iend   = ctxt->workshare->start + *iend   * ctxt->workshare->incr;
+    *istart = ctxt->workshare->rep.li.start + 
+               *istart * ctxt->workshare->rep.li.incr;
+    *iend   = ctxt->workshare->rep.li.start + 
+               *iend   * ctxt->workshare->rep.li.incr;
     return 1;
   }
   return 0;
@@ -260,8 +275,10 @@ bool GOMP_loop_dynamic_next (long *istart, long *iend)
         iend)
   )
   {
-    *istart = ctxt->workshare->start + *istart * ctxt->workshare->incr;
-    *iend   = ctxt->workshare->start + *iend   * ctxt->workshare->incr;
+    *istart = ctxt->workshare->rep.li.start + 
+               *istart * ctxt->workshare->rep.li.incr;
+    *iend   = ctxt->workshare->rep.li.start + 
+               *iend   * ctxt->workshare->rep.li.incr;
     return 1;
   }
   return 0;
@@ -409,7 +426,8 @@ static void komp_trampoline_task_parallelfor
 
   komp_loop_dynamic_start_slave(
     kproc,
-    workshare
+    workshare,
+    new_ctxt->teaminfo->gwork
   );
 
   /* GCC compiled code */

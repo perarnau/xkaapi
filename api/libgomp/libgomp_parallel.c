@@ -84,6 +84,12 @@ static void komp_trampoline_task_parallel
   new_ctxt->icv.next_numthreads = taskarg->nextnumthreads; /* WARNING: spec ?*/
   new_ctxt->icv.nested_level    = 1+taskarg->nestedlevel;
   new_ctxt->icv.nested_parallel = taskarg->nestedparallel;
+
+  new_ctxt->icv.run_sched           = omp_sched_dynamic;
+  new_ctxt->icv.chunk_size          = 0; /* default */
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  kaapic_foreach_attr_init( &new_ctxt->icv.attr );
+#endif
   
   new_ctxt->inside_single      = 0;
   new_ctxt->save_ctxt          = ctxt;
@@ -150,7 +156,9 @@ komp_init_parallel_start (
   kompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
 
   /* pseudo OpenMP spec algorithm to compute the number of threads */
-  if ( !ctxt->icv.nested_parallel && (ctxt->icv.nested_level >0))
+  if ( (!ctxt->icv.nested_parallel && (ctxt->icv.nested_level >0)) 
+    ||  (ctxt->icv.nested_level >= omp_max_active_levels)
+  )
     num_threads = 1;
   else {
     if (num_threads == 0)
@@ -181,8 +189,7 @@ komp_init_parallel_start (
   /* barrier for the team */
   komp_barrier_init (&teaminfo->barrier, num_threads);
 
-  KAAPI_ATOMIC_WRITE(&teaminfo->single_state, 0);
-
+  teaminfo->single_data        = 0;
   teaminfo->numthreads         = num_threads;
   teaminfo->gwork              = 0;
   teaminfo->serial             = 0;
@@ -196,9 +203,13 @@ komp_init_parallel_start (
   new_ctxt->icv.next_numthreads = ctxt->icv.next_numthreads; /* WARNING: spec ? */
   new_ctxt->icv.nested_level    = 1+ctxt->icv.nested_level; 
   new_ctxt->icv.nested_parallel = ctxt->icv.nested_parallel; /* WARNING: spec ? */
+  new_ctxt->icv.nested_parallel = ctxt->icv.nested_parallel; /* WARNING: spec ? */
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  new_ctxt->icv.attr            = ctxt->icv.attr;            /* WARNING: spec ? */
+#endif
   
-  new_ctxt->inside_single      = 0;
-  new_ctxt->save_ctxt          = ctxt;
+  new_ctxt->inside_single       = 0;
+  new_ctxt->save_ctxt           = ctxt;
   
   /* swap context: until end_parallel, new_ctxt becomes the current context */
   kproc->libkomp_tls = new_ctxt;
@@ -208,9 +219,9 @@ komp_init_parallel_start (
 
 
 void 
-GOMP_parallel_start (
-  void (*fn) (void *), 
-  void *data, 
+komp_parallel_start (
+  void   (*fn) (void *), 
+  void*    data, 
   unsigned num_threads
 )
 {
@@ -239,7 +250,10 @@ GOMP_parallel_start (
   
   /* allocate in the caller stack the tasks for the parallel region */
   allarg = kaapi_thread_pushdata(thread, num_threads * sizeof(komp_parallel_task_arg_t));
-  
+
+
+//POUR BENJAMIN: force ou non a pousser une tache dans la queue d'un Kthread particulier
+#if 0  /* OLD CODE: push locally all tasks that may be steal by any thread */
   /* The master thread (id 0) calls fn (data) directly. That's why we
      start this loop from id = 1.*/
   task = kaapi_thread_toptask(thread);
@@ -263,6 +277,50 @@ GOMP_parallel_start (
     task = kaapi_thread_nexttask(thread, task);
   }
   kaapi_thread_push_packedtasks(thread, num_threads-1);
+
+#else 
+  /* push the task for the i-th kprocessor queue... 
+     - work fine for 1rst level parallel region.
+     - else may introduce deadlock because threads are not reused (...)
+     If thread i (kprocessor i) is waiting on a barrier while and other
+     thread push a task into its mailbox, then thread-i is unable to execute
+     the task (...)
+  */
+
+  /* The master thread (id 0) calls fn (data) directly. That's why we
+     start this loop from id = 1.*/
+  for (int i = 1; i < num_threads; i++)
+  {
+    task = kaapi_thread_toptask(thread);
+    kaapi_task_init( 
+        task, 
+        komp_trampoline_task_parallel, 
+        allarg+i
+    );
+    arg = kaapi_task_getargst( task, komp_parallel_task_arg_t );
+    arg->threadid       = i;
+    arg->fn             = fn;
+    arg->data           = data;
+    arg->teaminfo       = teaminfo;
+    /* WARNING: see spec: nextnum threads is inherited ? */
+    arg->nextnumthreads = ctxt->icv.next_numthreads;
+    arg->nestedlevel    = ctxt->icv.nested_level;
+    arg->nestedparallel = ctxt->icv.nested_parallel;
+
+    kaapi_thread_distribute_task( thread, i );
+  }
+#endif  
+}
+
+
+void 
+GOMP_parallel_start (
+  void (*fn) (void *), 
+  void *data, 
+  unsigned num_threads
+)
+{
+  komp_parallel_start( fn, data, num_threads );
 }
 
 

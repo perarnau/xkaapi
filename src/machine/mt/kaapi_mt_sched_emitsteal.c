@@ -1,6 +1,5 @@
 /*
 ** xkaapi
-** 
 **
 ** Copyright 2009 INRIA.
 **
@@ -82,6 +81,28 @@ kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
   kaapi_assert_debug( kproc->thread !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
   
+  
+  if (kproc->mailbox.head != 0 )
+  {
+    kaapi_task_withlink_t* taskwl;
+
+    /* pop the first item at kproc->mailbox.head
+       lock free MPSC FIFO queue must be used here.
+    */
+    kaapi_atomic_lock(&kproc->lock);
+    taskwl = kproc->mailbox.head;
+    if (kproc->mailbox.tail == taskwl)
+      kproc->mailbox.tail = 0;
+    kproc->mailbox.head = taskwl->next;
+    kaapi_atomic_unlock(&kproc->lock);
+    
+    /* push the task into local queue */
+    *kaapi_thread_toptask(&kproc->thread->stack.stackframe[0]) = taskwl->task;
+    kaapi_thread_pushtask(&kproc->thread->stack.stackframe[0]);
+
+    return KAAPI_REQUEST_S_OK;
+  }
+  
   if (kaapi_count_kprocessors <2) 
     return KAAPI_REQUEST_S_NOK;
     
@@ -94,7 +115,7 @@ redo_select:
     goto redo_select;
   }
 
-#if 0 // TG: test, steal also allow to steal stack from myself. Else only wakeup
+#if 1 // TG: test, steal also allow to steal stack from myself. Else only wakeup
   /* never pass by this function for a processor to steal itself */
   if (kproc == victim.kproc) 
     return KAAPI_REQUEST_S_NOK;
@@ -123,7 +144,8 @@ redo_select:
 #if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_IFUSE_TRACE(kproc,
     self_request->victim = (uintptr_t)victim.kproc->kid;
-    self_request->serial = serial = ++kproc->serial;
+    serial = ++kproc->serial;
+    self_request->serial = serial;
     KAAPI_EVENT_PUSH2(kproc, 0, KAAPI_EVT_STEAL_OP, 
         (uintptr_t)victim.kproc->kid, 
         self_request->serial
@@ -220,7 +242,7 @@ redo_select:
     if (kaapi_isterm)
     {
       const int err = kaapi_bitmap_unset
-         ( &victim_stealctxt->lr.bitmap, self_request->ident );
+         ( &victim_stealctxt->lr.bitmap, (int)self_request->ident );
 
       /* bit unset by me, no one saw my request and leaving is safe */
       if (err == 0) return KAAPI_REQUEST_S_NOK;

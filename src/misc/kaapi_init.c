@@ -71,7 +71,7 @@ kaapi_rtparam_t kaapi_default_param = {
    .kproc_list  = 0,
    .kid2cpu     = 0,
    .cpu2kid     = 0,
-   .eventmask   = ~(uint64_t)0
+   .eventmask   = KAAPI_EVT_MASK_COMPUTE|KAAPI_EVT_MASK_IDLE
 };
 
 
@@ -87,7 +87,6 @@ static int kaapi_setup_param()
 {
   const char* wsselect;
   const char* emitsteal;
-  int err;
     
   /* compute the number of cpu of the system */
 #if defined(__linux__)
@@ -161,6 +160,7 @@ static int kaapi_setup_param()
   emitsteal = getenv("KAAPI_EMITSTEAL");
   if (emitsteal != NULL)
   {
+#if 0
 #if KAAPI_USE_HWLOC
     if (strcmp(emitsteal, "hws") == 0)
     {
@@ -169,6 +169,7 @@ static int kaapi_setup_param()
     }
     else
 #endif /* KAAPI_USE_HWLOC */
+#endif
     if (strcmp(emitsteal, "flat") == 0)
     {
       kaapi_default_param.emitsteal          = kaapi_sched_flat_emitsteal;
@@ -192,7 +193,7 @@ static int kaapi_setup_param()
          grammar must be more complex using predefined set
       */
       uint64_t mask = 0;
-      err = kaapi_util_parse_list( &mask, getenv("KAAPI_RECORD_MASK"), ',',
+      int err = kaapi_util_parse_list( &mask, getenv("KAAPI_RECORD_MASK"), ',',
          3,
            "COMPUTE", (uint64_t)KAAPI_EVT_MASK_COMPUTE,
            "IDLE",    (uint64_t)KAAPI_EVT_MASK_IDLE,
@@ -205,13 +206,11 @@ static int kaapi_setup_param()
         );
         return EINVAL;
       }
-            
       /* always add startup set */
-      kaapi_default_param.eventmask = mask | KAAPI_EVT_MASK_STARTUP;
+      kaapi_default_param.eventmask = mask;
     }
-    
-    /* push back eventmask: downcast to event mask with may be fewer bits */
-    kaapi_event_mask = (kaapi_event_mask_type_t)kaapi_default_param.eventmask;
+    /* always add startup set */
+    kaapi_default_param.eventmask |= KAAPI_EVT_MASK_STARTUP;
   }
 #endif  
   

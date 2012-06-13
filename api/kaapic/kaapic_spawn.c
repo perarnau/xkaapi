@@ -228,17 +228,24 @@ void _kaapic_register_task_format(void)
 
 
 /* dataflow interface */
-int kaapic_spawn_ti(kaapi_thread_t* thread, kaapi_task_body_t body, kaapic_task_info_t* ti)
+int kaapic_spawn_ti( 
+  kaapi_thread_t* thread, 
+  const kaapic_spawn_attr_t*attr, 
+  kaapi_task_body_t body, 
+  kaapic_task_info_t* ti
+)
 {
   /* spawn the task */
   kaapi_task_init(kaapi_thread_toptask(thread), body, ti);
-  kaapi_thread_pushtask(thread);
-  
+  if (attr == 0)
+    kaapi_thread_pushtask(thread);
+  else
+    kaapi_thread_distribute_task(thread, attr->kid);
   return 0;
 }
 
 /* dataflow interface */
-int kaapic_spawn(int32_t nargs, ...)
+int kaapic_spawn(const kaapic_spawn_attr_t* attr, int32_t nargs, ...)
 {
   kaapi_thread_t* thread = kaapi_self_thread();
   kaapic_task_info_t* ti;
@@ -276,6 +283,9 @@ int kaapic_spawn(int32_t nargs, ...)
         break;
       case KAAPIC_MODE_RW: 
         ai->mode = KAAPI_ACCESS_MODE_RW; 
+        break;
+      case KAAPIC_MODE_CW: 
+        ai->mode = KAAPI_ACCESS_MODE_CW; 
         break;
       case KAAPIC_MODE_V:  
         if (count >1) 
@@ -330,5 +340,5 @@ int kaapic_spawn(int32_t nargs, ...)
   va_end(va_args);
 
   /* spawn the task */
-  return kaapic_spawn_ti( thread, kaapic_dfg_body, ti );
+  return kaapic_spawn_ti( thread, attr, kaapic_dfg_body, ti );
 }

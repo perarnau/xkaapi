@@ -58,10 +58,10 @@ int main(int argc, char** argv)
   t0 = kaapic_get_time();
   for ( i=0; i<10000; ++i)
   {
-    kaapic_begin_parallel();
+    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
     
     /* add implicit synchronization */
-    kaapic_end_parallel(0);
+    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
   }
   t1 = kaapic_get_time();
   printf("Time: %gs\n", (t1-t0)/10000.0);

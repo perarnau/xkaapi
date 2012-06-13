@@ -45,53 +45,101 @@
 #ifndef _KAAPI_EVENT_H_
 #define _KAAPI_EVENT_H_
 
-#include "config.h"
 #include <stdint.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
+#define __KAAPI_TRACE_VERSION__         1
+
 /** Definition of internal KAAPI events.
     Not that any extension or modification of the events must
     be reflected in the utility bin/kaapi_event_reader.
 */
-#define KAAPI_EVT_KPROC_START     0     /* kproc begins */
-#define KAAPI_EVT_KPROC_STOP      1     /* kproc ends */
+#define KAAPI_EVT_KPROC_START        0     /* kproc begins, i0: processor type (0:CPU, 1:GPU) */
+#define KAAPI_EVT_KPROC_STOP         1     /* kproc ends */
 
-#define KAAPI_EVT_TASK_BEG        2     /* begin execution of tasks */
-#define KAAPI_EVT_TASK_END        3     /* end execution of tasks */
+#define KAAPI_EVT_TASK_BEG           2     /* begin execution of tasks */
+#define KAAPI_EVT_TASK_END           3     /* end execution of tasks */
 
-#define KAAPI_EVT_FRAME_TL_BEG    4     /* begin execution using frame tasklist */
-#define KAAPI_EVT_FRAME_TL_END    5     /* end execution using frame tasklist */
+#define KAAPI_EVT_FRAME_TL_BEG       4     /* begin execution using frame tasklist */
+#define KAAPI_EVT_FRAME_TL_END       5     /* end execution using frame tasklist */
 
-#define KAAPI_EVT_STATIC_BEG      6     /* begin of static schedule computation */
-#define KAAPI_EVT_STATIC_END      7     /* end of static schedule computation */
+#define KAAPI_EVT_STATIC_BEG         6     /* begin of static schedule computation */
+#define KAAPI_EVT_STATIC_END         7     /* end of static schedule computation */
 
-#define KAAPI_EVT_STATIC_TASK_BEG 8     /* begin of task after static schedule, param:  */
-#define KAAPI_EVT_STATIC_TASK_END 9     /* end of task after static schedule */
+#define KAAPI_EVT_STATIC_TASK_BEG    8     /* begin of task after static schedule, param:  */
+#define KAAPI_EVT_STATIC_TASK_END    9     /* end of task after static schedule */
 
-#define KAAPI_EVT_SCHED_IDLE_BEG  10     /* begin when k-processor starts to steal */
-#define KAAPI_EVT_SCHED_IDLE_END  11    /* end when k-processor starts to steal */
+#define KAAPI_EVT_SCHED_IDLE_BEG     10     /* begin when k-processor starts to steal */
+#define KAAPI_EVT_SCHED_IDLE_END     11    /* end when k-processor starts to steal */
 
-#define KAAPI_EVT_SCHED_SUSPEND_BEG 12 /* when k-processor is suspending */
-#define KAAPI_EVT_SCHED_SUSPEND_END 13 /* when k-processor wakeup */
+#define KAAPI_EVT_SCHED_SUSPEND_BEG  12 /* when k-processor is suspending */
+#define KAAPI_EVT_SCHED_SUSPEND_END  13 /* when k-processor wakeup */
 
 #define KAAPI_EVT_SCHED_SUSPEND_POST 14 /* master thread post suspend */
 #define KAAPI_EVT_SCHED_SUSPWAIT_BEG 15 /* master thread wait */
 #define KAAPI_EVT_SCHED_SUSPWAIT_END 16 /* master thread end wait */
 
-#define KAAPI_EVT_REQUESTS_BEG    17 /* when k-processor begin to process requests, data=victim.id */
-#define KAAPI_EVT_REQUESTS_END    18 /* when k-processor end to process requests */
+#define KAAPI_EVT_REQUESTS_BEG       17 /* when k-processor begin to process requests, data=victim.id */
+#define KAAPI_EVT_REQUESTS_END       18 /* when k-processor end to process requests */
 
-#define KAAPI_EVT_STEAL_OP        19 /* when k-processor emit a steal request data=victimid, serial*/
-#define KAAPI_EVT_SEND_REPLY      20 /* when k-processor send a reply request data=victimid, thiefid, serial */
-#define KAAPI_EVT_RECV_REPLY      21 /* when k-processor recv reply, victim id, serial, status (1:ok 0:nok) */
+#define KAAPI_EVT_STEAL_OP           19 /* when k-processor emit a steal request data=victimid, serial*/
+#define KAAPI_EVT_SEND_REPLY         20 /* when k-processor send a reply request data=victimid, thiefid, serial */
+#define KAAPI_EVT_RECV_REPLY         21 /* when k-processor recv reply, victim id, serial, status (1:ok 0:nok) */
 
 
-#define KAAPI_EVT_FOREACH_BEG     25 /* */
-#define KAAPI_EVT_FOREACH_END     26 /* */
-#define KAAPI_EVT_FOREACH_STEAL   27 /* */
+#define KAAPI_EVT_FOREACH_BEG        25 /* */
+#define KAAPI_EVT_FOREACH_END        26 /* */
+#define KAAPI_EVT_FOREACH_STEAL      27 /* */
+
+
+
+/** Size of the event mask 
+*/
+typedef uint32_t kaapi_event_mask_type_t;
+
+/** Heler for creating mask from an event
+*/
+#define KAAPI_EVT_MASK(eventno) \
+  ((kaapi_event_mask_type_t)1 << eventno)
+
+/* The following set is always in the mask
+*/
+#define KAAPI_EVT_MASK_STARTUP \
+    (  KAAPI_EVT_MASK(KAAPI_EVT_KPROC_START) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_KPROC_STOP) \
+    )
+
+#define KAAPI_EVT_MASK_COMPUTE \
+    (  KAAPI_EVT_MASK(KAAPI_EVT_TASK_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_TASK_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_STATIC_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_STATIC_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_STATIC_TASK_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_STATIC_TASK_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_FOREACH_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_FOREACH_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_FOREACH_STEAL) \
+    )
+
+#define KAAPI_EVT_MASK_IDLE \
+    (  KAAPI_EVT_MASK(KAAPI_EVT_SCHED_IDLE_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_SCHED_IDLE_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_SCHED_SUSPEND_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_SCHED_SUSPEND_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_SCHED_SUSPWAIT_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_SCHED_SUSPWAIT_END) \
+    )
+
+#define KAAPI_EVT_MASK_STEALOP \
+    (  KAAPI_EVT_MASK(KAAPI_EVT_REQUESTS_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_REQUESTS_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_STEAL_OP) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_SEND_REPLY) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_RECV_REPLY) \
+    )
 
 
 /* ........................................ Implementation notes ........................................*/
@@ -102,6 +150,7 @@ typedef union {
     void*     p;
     uintptr_t i; 
 } kaapi_event_data_t;
+
 
 /* Event 
 */
@@ -125,6 +174,17 @@ typedef struct kaapi_event_buffer_t {
   int                                   kid;
   kaapi_event_t                         buffer[KAAPI_EVENT_BUFFER_SIZE];
 } kaapi_event_buffer_t;
+
+/** Header of the trace file. First block of each trace file.
+*/
+typedef struct kaapi_eventfile_header {
+  int       version;
+  int       minor_version;
+  int       trace_version;
+  int       cpucount;
+  uint64_t  event_mask;
+  char      package[128];
+} kaapi_eventfile_header;
 
 
 #if defined(__cplusplus)

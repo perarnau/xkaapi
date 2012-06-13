@@ -1,5 +1,4 @@
 /*
-** kaapi_hws_misc.c
 ** xkaapi
 ** 
 **
@@ -8,7 +7,6 @@
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -43,40 +41,28 @@
 ** terms.
 ** 
 */
+#include "omp_ext.h"
 
+#include <stdio.h>
 
-#include "kaapi_impl.h"
-#include "kaapi_hws.h"
+#if defined(__linux__)
+__attribute__((weak)) void komp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length );
+#elif defined(__APPLE__)
+__attribute__((weak_import)) 
+void 
+  komp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length );
+#warning "OK: on Mac!"
+#else
+#  warning "Unkown how to define weak symbol"
+#endif
 
-
-void kaapi_ws_queue_unimpl_destroy(void* fu)
+void 
+omp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length )
 {
-}
-
-
-unsigned int kaapi_hws_get_request_nodeid(const kaapi_request_t* req)
-{
-  return (unsigned int)req->ident;
-} 
-
-
-unsigned int kaapi_hws_get_node_count(kaapi_hws_levelid_t levelid)
-{
-  kaapi_assert_debug(kaapi_hws_is_levelid_set(levelid));
-  return hws_levels[levelid].block_count;
-}
-
-
-unsigned int kaapi_hws_get_leaf_count(kaapi_hws_levelid_t levelid)
-{
-  /* fixme:
-     assume the leaf count is the same for all
-     trees of a given level. otherwise, the tree
-     (ie. actually the steal block) must be passed
-     as an argument, but this is not yet available
-     in the splitter.
-   */
-
-  kaapi_assert_debug(kaapi_hws_is_levelid_set(levelid));
-  return hws_levels[levelid].blocks[0].kid_count;
+  printf("In omp_set_datadistribution_bloccyclic\n");
+  if (komp_set_datadistribution_bloccyclic != 0)
+  {
+    printf("In omp_set_datadistribution_bloccyclic: found symbol !!!\n");
+    komp_set_datadistribution_bloccyclic( size, length );
+  }
 }

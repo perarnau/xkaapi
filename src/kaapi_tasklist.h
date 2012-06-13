@@ -70,7 +70,9 @@ typedef uint64_t kaapi_comtag_t;
 */
 typedef struct kaapi_activationlink_t {
   struct kaapi_taskdescr_t*      td;     /* the task descriptor to activate */
+#if 0
   struct kaapi_tasklist_t*       queue;  /* where to push the task if activated, 0 == local task list */
+#endif
   struct kaapi_activationlink_t* next;   /* next task  in the activation list */
 } kaapi_activationlink_t;
 
@@ -194,7 +196,7 @@ typedef struct kaapi_onereadytasklist_t {
 typedef struct kaapi_readytasklist_t {
   kaapi_onereadytasklist_t prl[KAAPI_TASKLIST_NUM_PRIORITY]; 
 #if defined(KAAPI_DEBUG)
-  int32_t                  max_task;
+  kaapi_workqueue_index_t  max_task;
 #endif
   kaapi_bitmap_value32_t   task_pushed;  /* bit ith== i-th priority workqueue has new pushed tasks */
   kaapi_taskdescr_t*       staticcontainer[KAAPI_TASKLIST_NUM_PRIORITY*KAAPI_TASKLIST_INITIAL_CAPACITY];
@@ -551,7 +553,9 @@ static inline void kaapi_tasklist_pushback_ready( kaapi_tasklist_t* tl, kaapi_ta
   kaapi_activationlink_t* al =
       (kaapi_activationlink_t*)kaapi_allocator_allocate( &tl->allocator, sizeof(kaapi_activationlink_t) );
   al->td    = td;
+#if 0
   al->queue = 0;
+#endif
   if (tl->readylist.front ==0)
   {
     al->next  = 0;
@@ -593,7 +597,9 @@ static inline void kaapi_tasklist_push_successor(
   kaapi_activationlink_t* al = kaapi_tasklist_allocate_al(tl);
 
   al->td    = td_successor;
+#if 0
   al->queue = tl;
+#endif
   al->next  = 0;
   if (td->u.acl.list.back ==0)
     td->u.acl.list.front = td->u.acl.list.back = al;

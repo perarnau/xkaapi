@@ -51,10 +51,6 @@
 extern "C" {
 #endif
 
-/** Size of the event mask 
-*/
-typedef uint32_t kaapi_event_mask_type_t;
-
 /** Mask of events
     The mask is set at runtime to select events that will be registered
     to file.
@@ -64,194 +60,185 @@ typedef uint32_t kaapi_event_mask_type_t;
 */
 extern uint64_t kaapi_event_mask;
 
-/** Heler for creating mask from an event
+/** Statup time for event recorder.
+    Serve as the epoch for the event recorder sub library.
 */
-#define KAAPI_EVT_MASK(eventno) \
-  ((kaapi_event_mask_type_t)1 << eventno)
-  
-/** Standard mask' sets of event */
-
-/* The following set is always in the mask
-*/
-#define KAAPI_EVT_MASK_STARTUP \
-    (  KAAPI_EVT_MASK(KAAPI_EVT_KPROC_START) \
-     | KAAPI_EVT_MASK(KAAPI_EVT_KPROC_STOP) \
-    )
-
-#define KAAPI_EVT_MASK_COMPUTE \
-    (  KAAPI_EVT_MASK(KAAPI_EVT_TASK_BEG) \
-     | KAAPI_EVT_MASK(KAAPI_EVT_TASK_END) \
-     | KAAPI_EVT_MASK(KAAPI_EVT_STATIC_BEG) \
-     | KAAPI_EVT_MASK(KAAPI_EVT_STATIC_END) \
-     | KAAPI_EVT_MASK(KAAPI_EVT_STATIC_TASK_BEG) \
-     | KAAPI_EVT_MASK(KAAPI_EVT_STATIC_TASK_END) \
-     | KAAPI_EVT_MASK(KAAPI_EVT_FOREACH_BEG) \
-     | KAAPI_EVT_MASK(KAAPI_EVT_FOREACH_END) \
-     | KAAPI_EVT_MASK(KAAPI_EVT_FOREACH_STEAL) \
-    )
-
-#define KAAPI_EVT_MASK_IDLE \
-    (  KAAPI_EVT_MASK(KAAPI_EVT_SCHED_IDLE_BEG) \
-     | KAAPI_EVT_MASK(KAAPI_EVT_SCHED_IDLE_END) \
-     | KAAPI_EVT_MASK(KAAPI_EVT_SCHED_SUSPEND_BEG) \
-     | KAAPI_EVT_MASK(KAAPI_EVT_SCHED_SUSPEND_END) \
-     | KAAPI_EVT_MASK(KAAPI_EVT_SCHED_SUSPWAIT_BEG) \
-     | KAAPI_EVT_MASK(KAAPI_EVT_SCHED_SUSPWAIT_END) \
-    )
-
-#define KAAPI_EVT_MASK_STEALOP \
-    (  KAAPI_EVT_MASK(KAAPI_EVT_REQUESTS_BEG) \
-     | KAAPI_EVT_MASK(KAAPI_EVT_REQUESTS_END) \
-     | KAAPI_EVT_MASK(KAAPI_EVT_STEAL_OP) \
-     | KAAPI_EVT_MASK(KAAPI_EVT_SEND_REPLY) \
-     | KAAPI_EVT_MASK(KAAPI_EVT_RECV_REPLY) \
-    )
-
-
-/** Flush the event buffer of the kproc
-    \param kproc the kaapi_processor owner of the event buffer to flush
-*/
-extern void kaapi_event_flushbuffer( kaapi_processor_t* kproc );
-
-/** Flush the event buffer and close the associated file descriptor.
-*/
-extern void kaapi_event_closebuffer( kaapi_processor_t* kproc );
-
-/** Push a new event into the eventbuffer of the kprocessor.
-    Assume that the event buffer was allocated into the kprocessor.
-    Current implementation only work if library is compiled 
-    with KAAPI_USE_PERFCOUNTER flag.
-*/
-static inline void KAAPI_EVENT_PUSH0_(
-    kaapi_processor_t*      kproc, 
-    uint64_t                tclock,
-    kaapi_thread_context_t* thread, 
-    uint8_t                 eventno
-)
-{
-#if defined(KAAPI_USE_PERFCOUNTER)
-  tclock -= kaapi_default_param.startuptime;
-  kaapi_event_t* evt = &kproc->eventbuffer->buffer[kproc->eventbuffer->pos++];
-  evt->evtno   = eventno;
-  evt->type    = 0;
-  evt->kid     = kproc->kid;
-  evt->gid     = 0;
-  evt->date    = tclock;
-
-  if (kproc->eventbuffer->pos == KAAPI_EVENT_BUFFER_SIZE)
-    kaapi_event_flushbuffer(kproc);
-#endif
-}
-
-/** Push a new event into the eventbuffer of the kprocessor.
-    Assume that the event buffer was allocated into the kprocessor.
-    Current implementation only work if library is compiled 
-    with KAAPI_USE_PERFCOUNTER flag.
-*/
-static inline void KAAPI_EVENT_PUSH1_(
-    kaapi_processor_t*      kproc, 
-    uint64_t                tclock,
-    kaapi_thread_context_t* thread, 
-    uint8_t                 eventno, 
-    void*                   p0 
-)
-{
-#if defined(KAAPI_USE_PERFCOUNTER)
-  tclock -= kaapi_default_param.startuptime;
-  kaapi_event_t* evt = &kproc->eventbuffer->buffer[kproc->eventbuffer->pos++];
-  evt->evtno   = eventno;
-  evt->type    = 0;
-  evt->kid     = kproc->kid;
-  evt->gid     = 0;
-  evt->date    = tclock;
-  evt->d0.p    = p0;
-
-  if (kproc->eventbuffer->pos == KAAPI_EVENT_BUFFER_SIZE)
-    kaapi_event_flushbuffer(kproc);
-#endif
-}
-
-/** Push a new event into the eventbuffer of the kprocessor.
-    Assume that the event buffer was allocated into the kprocessor.
-    Current implementation only work if library is compiled 
-    with KAAPI_USE_PERFCOUNTER flag.
-*/
-static inline void KAAPI_EVENT_PUSH2_(
-    kaapi_processor_t*      kproc, 
-    uint64_t                tclock,
-    kaapi_thread_context_t* thread, 
-    uint8_t                 eventno, 
-    void*                   p0, 
-    void*                   p1
-)
-{
-#if defined(KAAPI_USE_PERFCOUNTER)
-  tclock -= kaapi_default_param.startuptime;
-  kaapi_event_t* evt = &kproc->eventbuffer->buffer[kproc->eventbuffer->pos++];
-  evt->evtno   = eventno;
-  evt->type    = 0;
-  evt->kid     = kproc->kid;
-  evt->gid     = 0;
-  evt->date    = tclock;
-  evt->d0.p    = p0;
-  evt->d1.p    = p1;
-
-  if (kproc->eventbuffer->pos == KAAPI_EVENT_BUFFER_SIZE)
-    kaapi_event_flushbuffer(kproc);
-#endif
-}
-
-/** Push a new event into the eventbuffer of the kprocessor.
-    Assume that the event buffer was allocated into the kprocessor.
-    Current implementation only work if library is compiled 
-    with KAAPI_USE_PERFCOUNTER flag.
-*/
-static inline void KAAPI_EVENT_PUSH3_(
-    kaapi_processor_t*      kproc, 
-    uint64_t                tclock,
-    kaapi_thread_context_t* thread, 
-    uint8_t                 eventno, 
-    void*                   p0, 
-    void*                   p1,
-    void*                   p2
-)
-{
-#if defined(KAAPI_USE_PERFCOUNTER)
-  tclock -= kaapi_default_param.startuptime;
-  kaapi_event_t* evt = &kproc->eventbuffer->buffer[kproc->eventbuffer->pos++];
-  evt->evtno   = eventno;
-  evt->type    = 0;
-  evt->kid     = kproc->kid;
-  evt->gid     = 0;
-  evt->date    = tclock;
-  evt->d0.p    = p0;
-  evt->d1.p    = p1;
-  evt->d2.p    = p2;
-
-  if (kproc->eventbuffer->pos == KAAPI_EVENT_BUFFER_SIZE)
-    kaapi_event_flushbuffer(kproc);
-#endif
-}
+extern uint64_t kaapi_event_startuptime;
 
 /* the datation used for event */
 static inline uint64_t kaapi_event_date(void)
 { return kaapi_get_elapsedns(); }
+
+/** Initialize the event recorder sub library.
+    Must be called before any other functions.
+*/
+void kaapi_eventrecorder_init(void);
+
+
+/** Destroy the event recorder sub library.
+*/
+void kaapi_eventrecorder_fini(void);
+
+/** Open a new buffer for kprocessor kid.
+    Kid must be less than KAAPI_MAX_PROCESSOR.
+    \param kid the identifier of a kprocessor. Must be unique between threads.
+    \retval a new eventbuffer
+*/
+extern kaapi_event_buffer_t* kaapi_event_openbuffer(int kid);
+
+
+/** Flush the event buffer evb and return and new buffer.
+    \param evb the event buffer to flush
+    \retval the new event buffer to use for futur records.
+*/
+extern kaapi_event_buffer_t* kaapi_event_flushbuffer( kaapi_event_buffer_t* evb );
+
+/** Flush the event buffer and close the associated file descriptor.
+*/
+extern void kaapi_event_closebuffer( kaapi_event_buffer_t* evb );
+
+
+/** Fence: write all flushed buffers and return
+*/
+void kaapi_event_fencebuffers(void);
+
+
+/** Push a new event into the eventbuffer of the kprocessor.
+    Assume that the event buffer was allocated into the kprocessor.
+    Current implementation only work if library is compiled 
+    with KAAPI_USE_PERFCOUNTER flag.
+*/
+static inline kaapi_event_buffer_t* kaapi_event_push0(
+    kaapi_event_buffer_t*   evb, 
+    uint64_t                tclock,
+    uint8_t                 eventno
+)
+{
+  tclock -= kaapi_event_startuptime;
+  kaapi_event_t* evt = &evb->buffer[evb->pos++];
+  evt->evtno   = eventno;
+  evt->type    = 0;
+  evt->kid     = evb->kid;
+  evt->gid     = 0;
+  evt->date    = tclock;
+
+  if (evb->pos == KAAPI_EVENT_BUFFER_SIZE)
+    return kaapi_event_flushbuffer(evb);
+  return evb;
+}
+
+/** Push a new event into the eventbuffer of the kprocessor.
+    Assume that the event buffer was allocated into the kprocessor.
+    Current implementation only work if library is compiled 
+    with KAAPI_USE_PERFCOUNTER flag.
+*/
+static inline kaapi_event_buffer_t*  kaapi_event_push1(
+    kaapi_event_buffer_t*   evb, 
+    uint64_t                tclock,
+    uint8_t                 eventno, 
+    uintptr_t               p0 
+)
+{
+  tclock -= kaapi_event_startuptime;
+  kaapi_event_t* evt = &evb->buffer[evb->pos++];
+  evt->evtno   = eventno;
+  evt->type    = 0;
+  evt->kid     = evb->kid;
+  evt->gid     = 0;
+  evt->date    = tclock;
+  evt->d0.i    = p0;
+
+  if (evb->pos == KAAPI_EVENT_BUFFER_SIZE)
+    return kaapi_event_flushbuffer(evb);
+  return evb;
+}
+
+/** Push a new event into the eventbuffer of the kprocessor.
+    Assume that the event buffer was allocated into the kprocessor.
+    Current implementation only work if library is compiled 
+    with KAAPI_USE_PERFCOUNTER flag.
+*/
+static inline kaapi_event_buffer_t*  kaapi_event_push2(
+    kaapi_event_buffer_t*   evb, 
+    uint64_t                tclock,
+    uint8_t                 eventno, 
+    uintptr_t               p0, 
+    uintptr_t               p1
+)
+{
+  tclock -= kaapi_event_startuptime;
+  kaapi_event_t* evt = &evb->buffer[evb->pos++];
+  evt->evtno   = eventno;
+  evt->type    = 0;
+  evt->kid     = evb->kid;
+  evt->gid     = 0;
+  evt->date    = tclock;
+  evt->d0.i    = p0;
+  evt->d1.i    = p1;
+
+  if (evb->pos == KAAPI_EVENT_BUFFER_SIZE)
+    return kaapi_event_flushbuffer(evb);
+  return evb;
+}
+
+/** Push a new event into the eventbuffer of the kprocessor.
+    Assume that the event buffer was allocated into the kprocessor.
+    Current implementation only work if library is compiled 
+    with KAAPI_USE_PERFCOUNTER flag.
+*/
+static inline kaapi_event_buffer_t*  kaapi_event_push3(
+    kaapi_event_buffer_t*   evb, 
+    uint64_t                tclock,
+    uint8_t                 eventno, 
+    uintptr_t               p0, 
+    uintptr_t               p1,
+    uintptr_t               p2
+)
+{
+  tclock -= kaapi_event_startuptime;
+  kaapi_event_t* evt = &evb->buffer[evb->pos++];
+  evt->evtno   = eventno;
+  evt->type    = 0;
+  evt->kid     = evb->kid;
+  evt->gid     = 0;
+  evt->date    = tclock;
+  evt->d0.i    = p0;
+  evt->d1.i    = p1;
+  evt->d2.i    = p2;
+
+  if (evb->pos == KAAPI_EVENT_BUFFER_SIZE)
+    return kaapi_event_flushbuffer(evb);
+  return evb;
+}
+
 
 #if defined(KAAPI_USE_PERFCOUNTER)
 #  define KAAPI_IFUSE_TRACE(kproc,inst) \
     if (kproc->eventbuffer) { inst; }
 #  define KAAPI_EVENT_PUSH0(kproc, kthread, eventno ) \
     if ((kproc->eventbuffer) && (kaapi_event_mask & KAAPI_EVT_MASK(eventno)))\
-      KAAPI_EVENT_PUSH0_(kproc, kaapi_event_date(), kthread, eventno )
+    {\
+      kaapi_event_buffer_t* evb = kaapi_event_push0(kproc->eventbuffer, kaapi_event_date(), eventno ); \
+      if (evb != kproc->eventbuffer) kproc->eventbuffer = evb;\
+    }
 #  define KAAPI_EVENT_PUSH1(kproc, kthread, eventno, p1 ) \
     if ((kproc->eventbuffer) && (kaapi_event_mask & KAAPI_EVT_MASK(eventno)))\
-      KAAPI_EVENT_PUSH1_(kproc, kaapi_event_date(), kthread, eventno, (void*)(p1))
+    {\
+      kaapi_event_buffer_t* evb = kaapi_event_push1(kproc->eventbuffer, kaapi_event_date(), eventno, (uintptr_t)(p1) ); \
+      if (evb != kproc->eventbuffer) kproc->eventbuffer = evb;\
+    }
 #  define KAAPI_EVENT_PUSH2(kproc, kthread, eventno, p1, p2 ) \
     if ((kproc->eventbuffer) && (kaapi_event_mask & KAAPI_EVT_MASK(eventno)))\
-      KAAPI_EVENT_PUSH2_(kproc, kaapi_event_date(), kthread, eventno, (void*)(p1), (void*)(p2))
+    {\
+      kaapi_event_buffer_t* evb = kaapi_event_push2(kproc->eventbuffer, kaapi_event_date(), eventno, (uintptr_t)(p1), (uintptr_t)(p2) ); \
+      if (evb != kproc->eventbuffer) kproc->eventbuffer = evb;\
+    }
 #  define KAAPI_EVENT_PUSH3(kproc, kthread, eventno, p1, p2, p3 ) \
     if ((kproc->eventbuffer) && (kaapi_event_mask & KAAPI_EVT_MASK(eventno)))\
-      KAAPI_EVENT_PUSH3_(kproc, kaapi_event_date(), kthread, eventno, (void*)(p1), (void*)(p2), (void*)(p3))
+    {\
+      kaapi_event_buffer_t* evb = kaapi_event_push3(kproc->eventbuffer, kaapi_event_date(), eventno, (uintptr_t)(p1), (uintptr_t)(p2), (uintptr_t)(p3) ); \
+      if (evb != kproc->eventbuffer) kproc->eventbuffer = evb;\
+    }
 
 /* push new event with given date (value return by kaapi_event_date()) */
 #  define KAAPI_EVENT_PUSH0_AT(kproc, tclock, kthread, eventno ) \

@@ -48,5 +48,5 @@
 
 void* kaapic_alloca( size_t sz )
 {
-  return kaapi_alloca( kaapi_self_thread(), sz );
+  return kaapi_alloca( kaapi_self_thread(), (uint32_t)sz );
 }

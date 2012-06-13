@@ -51,6 +51,17 @@
 
 #if defined(__linux__)
 #include <omp.h>
+#else
+/* function from the runtime support of OMP: need for mac... */
+typedef enum omp_sched_t {
+    omp_sched_static = 1,
+    omp_sched_dynamic = 2,
+    omp_sched_guided = 3,
+    omp_sched_auto = 4
+} omp_sched_t;
+
+//typedef kaapi_atomic8_t omp_lock_t;
+//typedef kaapi_atomic32_t omp_nest_lock_t;
 #endif
 
 #include "kaapi_impl.h"
@@ -73,6 +84,11 @@ typedef struct komp_barrier {
 } komp_barrier_t; 
 
 
+/* init.c */
+void komp_barrier_init (struct komp_barrier *barrier, unsigned int num);
+void komp_barrier_destroy (struct komp_barrier *barrier);
+void komp_barrier_wait (struct komp_barrier *barrier);
+
 struct kompctxt_t;
 struct komp_workshare_t;
 typedef kaapic_global_work_t komp_globalworkshare_t;
@@ -86,10 +102,13 @@ typedef struct komp_icv_t {
   int                next_numthreads; /* number of thread for the next // region */
   int                nested_level;    /* nested level of // region */
   int                nested_parallel; /* !=0 iff nest allowed */
-  int                dynamic_numthreads;    /* number of threads the
-					       runtime can dynamically
-					       adjust the next
-					       parallel region to. */
+  int                dynamic_numthreads;  /* number of threads the runtime can dynamically
+                                             adjust the next parallel region to. */
+  omp_sched_t        run_sched;
+  int                chunk_size;
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  kaapic_foreach_attr_t attr;         /* attribut for the next foreach loop */
+#endif
 } komp_icv_t;
 
 /* Team information : common to all threads that shared a same parallel region.
@@ -108,14 +127,15 @@ typedef struct komp_icv_t {
 typedef struct komp_teaminfo_t {
   kaapi_lock_t                     lock;
   komp_barrier_t                   barrier;
-  kaapi_atomic_t                   single_state;
+  void*  volatile                  single_data;  /* 0 or the & of copy_end */
+  unsigned int volatile            section_state;
   int                              numthreads;
   komp_globalworkshare_t* volatile gwork;      /* last foreach loop context */
   unsigned long                    serial;      /* serial number of workshare */
  } komp_teaminfo_t;
 
 
-/* Workshare structure: it defines work for all threads in a team
+/* Workshare structure: it defines loop work for all threads in a team
    - each thread owns its proper state defined by a komp_workshare_t data
    - the Kaapi iterates over [0,N) with increment=1, start and incr is used
    to convert [0,N) to [start,end) + incr ginve in for loop workshare construct.
@@ -123,8 +143,17 @@ typedef struct komp_teaminfo_t {
 */
 typedef struct komp_workshare_t {
   kaapic_local_work_t*         lwork;  /* last foreach loop context */
-  long                         start;  /* start index of the Kaapi/GOMP slice*/
-  long                         incr;   /* scaling factor between Kaapi/GOMP */
+  union {
+    struct {
+      long                     start;  /* start index of the Kaapi/GOMP slice*/
+      long                     incr;   /* scaling factor between Kaapi/GOMP */
+    } li;
+    struct {
+      unsigned long long       start;  /* start index of the Kaapi/GOMP slice*/
+      unsigned long long       incr;   /* scaling factor between Kaapi/GOMP */
+      bool                     up;     /* upward / downward count */
+    } ull;
+  } rep;
   unsigned long                serial; /* serial number of workshare construct */
 } komp_workshare_t;
 
@@ -136,26 +165,51 @@ typedef struct kompctxt_t {
   komp_icv_t          icv;           /* current icv data */
   int                 inside_single;
   struct kompctxt_t*  save_ctxt;     /* to restore on pop */
-} kompctxt_t ;
+} kompctxt_t;
+
+/* omp_max_active_levels:
+   OpenMP 3.1: 
+   "This routine has the described effect only when called from 
+   the sequential part of the program. When called from within 
+   an explicit parallel region, the effect of this routine is 
+   implementation defined."
+ */
+extern int omp_max_active_levels;
+
+
+/** Initial context with teaminformation */
+typedef struct kompctxt_first_t {
+  kompctxt_t      ctxt;
+  komp_teaminfo_t teaminfo; /* sequential thread */
+} kompctxt_first_t;
 
 
 static inline kompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc )
 { 
   if (kproc->libkomp_tls == 0)
   {
-    kompctxt_t* ctxt = (kompctxt_t*)malloc(sizeof(kompctxt_t));
-    ctxt->workshare               = 0;
-    ctxt->teaminfo                = 0;
-    ctxt->icv.thread_id           = 0;
-    ctxt->icv.next_numthreads     = kaapi_getconcurrency();
-    ctxt->icv.nested_level        = 0;
-    ctxt->icv.nested_parallel     = 1;
-    ctxt->icv.dynamic_numthreads  = 0; /* Not sure of this initial
-					  value, next_numthreads may
-					  be more appropriate
-					  here... */
-    kproc->libkomp_tls            = ctxt;
-    return ctxt;
+    kompctxt_first_t* first = (kompctxt_first_t*)malloc(sizeof(kompctxt_first_t));
+    first->ctxt.workshare               = 0;
+    first->ctxt.teaminfo                = &first->teaminfo;
+    first->ctxt.icv.thread_id           = 0;
+    first->ctxt.icv.next_numthreads     = kaapi_getconcurrency();
+    first->ctxt.icv.nested_level        = 0;
+    first->ctxt.icv.nested_parallel     = 1;
+    first->ctxt.icv.dynamic_numthreads  = 0; /* Not sure of this initial value, next_numthreads may
+                                     					  be more appropriate here... */
+    first->ctxt.icv.run_sched           = omp_sched_dynamic;
+    first->ctxt.icv.chunk_size          = 0; /* default */
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+    kaapic_foreach_attr_init( &first->ctxt.icv.attr );
+#endif
+    kaapi_atomic_initlock(&first->teaminfo.lock);
+    komp_barrier_init (&first->teaminfo.barrier, 1);
+    first->teaminfo.single_data = 0;
+    first->teaminfo.numthreads  = 1;
+    first->teaminfo.gwork       = 0;
+    first->teaminfo.serial      = 0;
+    kproc->libkomp_tls            = &first->ctxt;
+    return &first->ctxt;
   }
   return (kompctxt_t*)kproc->libkomp_tls;
 }
@@ -165,16 +219,18 @@ static inline kompctxt_t* komp_get_ctxt()
   return komp_get_ctxtkproc(kaapi_get_current_processor());
 }
 
+/* */
 extern komp_teaminfo_t*  komp_init_parallel_start (
   kaapi_processor_t* kproc,
   unsigned num_threads
 );
 
-
-/* init.c */
-void komp_barrier_init (struct komp_barrier *barrier, unsigned int num);
-void komp_barrier_destroy (struct komp_barrier *barrier);
-void komp_barrier_wait (struct komp_barrier *barrier);
+/* */
+extern void komp_parallel_start (
+  void (*fn) (void *), 
+  void *data, 
+  unsigned num_threads
+);
 
 
 /* going back to the previous visibility, ie "default" */
@@ -182,18 +238,6 @@ void komp_barrier_wait (struct komp_barrier *barrier);
 # pragma GCC visibility pop
 #endif
 
-#if !defined(__linux__)
-/* function from the runtime support of OMP: need for mac... */
-typedef enum omp_sched_t {
-    omp_sched_static = 1,
-    omp_sched_dynamic = 2,
-    omp_sched_guided = 3,
-    omp_sched_auto = 4
-} omp_sched_t;
-
-//typedef kaapi_atomic8_t omp_lock_t;
-//typedef kaapi_atomic32_t omp_nest_lock_t;
-#endif
 
 #include "libgomp_g.h"
 
@@ -247,5 +291,10 @@ extern int  komp_test_nest_lock_25 (omp_nest_lock_25_t *) __GOMP_NOTHROW;
 #define komp_lock_symver(fn)
 
 #endif
+
+
+__attribute__((weak))
+extern void komp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length );
+
 
 #endif // #ifndef _KAAPI_LIBGOMP_

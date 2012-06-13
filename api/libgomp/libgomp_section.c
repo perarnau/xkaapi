@@ -43,39 +43,20 @@
 */
 #include "libgomp.h"
 
-static struct current_selection {
-  kaapi_thread_context_t* master;
-  int                     maxvalue;
-  kaapi_atomic_t          iter;
-} selector = { 0, 0, {0} };
-
-unsigned GOMP_sections_start (unsigned maxsec)
+unsigned int GOMP_sections_start (unsigned maxsec)
 {
-  kaapi_thread_context_t* thread = kaapi_self_thread_context();
-  GOMP_critical_start();
-  if (selector.master == 0)
-  {
-    selector.master   = thread;
-    selector.maxvalue = maxsec;
-    KAAPI_ATOMIC_WRITE(&selector.iter, 0);
-  }
-  GOMP_critical_end();
-
-  return GOMP_sections_next();
+  long first, last;
+  if (GOMP_loop_dynamic_start( 0, maxsec, 1, 1, &first, &last ))
+    return (int)(1+first);
+  return 0;
 }
 
 unsigned GOMP_sections_next (void)
 {
-  unsigned retval = KAAPI_ATOMIC_INCR(&selector.iter);
-  if (retval == selector.maxvalue)
-  { /* reset to 0 */
-    GOMP_critical_start();
-    selector.master = 0;
-    selector.maxvalue = 0;
-    KAAPI_ATOMIC_WRITE(&selector.iter, 0);
-    GOMP_critical_start();
-  }
-  return (retval > selector.maxvalue) ? 0 : retval;
+  long first, last;
+  if (GOMP_loop_dynamic_next( &first, &last ))
+    return (int)(1+first);
+  return 0;
 }
 
 void GOMP_parallel_sections_start (
@@ -85,17 +66,25 @@ void GOMP_parallel_sections_start (
     unsigned count
 )
 {
-  printf("%s:: \n", __FUNCTION__);
+  GOMP_parallel_loop_dynamic_start(
+    fn, 
+    data,
+    num_threads,
+    0, 
+    count,
+    1,
+    1
+  );
 }
 
 void GOMP_sections_end (void)
 {
-  printf("%s:: \n", __FUNCTION__);
+  GOMP_loop_end();
 }
 
 void GOMP_sections_end_nowait (void)
 {
-  printf("%s:: \n", __FUNCTION__);
+  GOMP_loop_end();
 }
 
 

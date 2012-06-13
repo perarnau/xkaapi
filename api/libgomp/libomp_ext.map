@@ -1,0 +1,4 @@
+KOMP_1.0 {
+  global:
+	omp_set_datadistribution_bloccyclic;
+};

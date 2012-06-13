@@ -127,6 +127,7 @@ Vincent Danjean
   \and
 Thierry Gautier
 }
+ \RRNo{0417XX}
 
 \authorhead{Gautier \& Danjean \& Le Mentec}
 \RRtitle{\kaapi C programming interface}
@@ -145,8 +146,8 @@ Thierry Gautier
 %%\RRthemeProj{moais} % theme du projet Apics
 \RCGrenoble % Grenoble - Rh\^one-Alpes
 
+
 \begin{document}
- \RRNo{0417}
 % \makeRR % cas d'un rapport de recherche
 \makeRT % cas d'un rapport technique.
 
@@ -203,11 +204,12 @@ int kaapic_finalize(void)
     corresponding \fn{kaapic\_finalize} at the end of the program.
   \end{desc}
   \begin{params}
-    \param{flags} if zero, only start the main thread to avoid
+    \param{flags} if \texttt{KAAPIC\_START\_ONLY\_MAIN}, only start the main thread to avoid
     disturbing the execution until tasks are actually scheduled. The
     other threads are suspended waiting for a parallel region to be
     entered (refer to kaapic\_begin\_parallel in part
     \apirefp{parallel}).
+    If \texttt{KAAPIC\_START\_ALL} start all threads.
   \end{params}
   \begin{ret}
     \begin{itemize}
@@ -221,7 +223,7 @@ int kaapic_finalize(void)
 
   int main()
   {
-    int err = kaapic_init(1);
+    int err = kaapic_init(KAAPIC_START_ONLY_MAIN);
 
     ...
 
@@ -260,7 +262,7 @@ int kaapic_get_thread_num(void)
 
   int main()
   {
-    int err = kaapic_init(1);
+    int err = kaapic_init(KAAPIC_START_ONLY_MAIN);
 
    printf("#available threads: %i\n", 
       kaapic_get_concurrency() );
@@ -300,7 +302,7 @@ double kaapic_get_time(void)
 
   int main() {
     double start, stop;
-    int err = kaapic_init(1);
+    int err = kaapic_init(KAAPIC_START_ONLY_MAIN);
     start = kaapi_get_time();
     ...
     stop = kaapi_get_time();
@@ -322,7 +324,15 @@ double kaapic_get_time(void)
 int kaapic_foreach( 
   int first, 
   int last,
-  kaapic_foreach_attr_t* attr,
+  const kaapic_foreach_attr_t* attr,
+  int32_t nparam,
+  ...
+ ) 
+
+int kaapic_foreach_ull( 
+  unsigned long long first, 
+  unsigned long long last,
+  const kaapic_foreach_attr_t* attr,
   int32_t nparam,
   ...
  ) 
@@ -330,18 +340,47 @@ int kaapic_foreach(
 int kaapic_foreach_withformat( 
   int first, 
   int last,
-  kaapic_foreach_attr_t* attr,
+  const kaapic_foreach_attr_t* attr,
   int32_t nparam,
   ...
  ) 
+ 
+int kaapic_foreach_withformat_ull( 
+  unsigned long long first, 
+  unsigned long long last,
+  const kaapic_foreach_attr_t* attr,
+  int32_t nparam,
+  ...
+ ) 
+ 
+int kaapic_foreach_attr_init(
+  kaapic_foreach_attr_t* attr
+)
+
+int kaapic_foreach_attr_set_grains(
+  kaapic_foreach_attr_t* attr, 
+  uint32_t s_grain,
+  uint32_t p_grain
+)
+
+int kaapic_foreach_attr_set_grains_ull(
+  kaapic_foreach_attr_t* attr, 
+  unsigned long long s_grain,
+  unsigned long long p_grain
+)
+
+int kaapic_foreach_attr_destroy(
+  kaapic_foreach_attr_t* attr
+)
     \end{code}
   \end{synopsis}
 
   \begin{desc}
     Those routines run a parallel loop over the range [\textit{first},
-    \textit{last})\footnote{ This is an \textbf{exclusive} interval in
+    \textit{last})\footnote{This is an \textbf{exclusive} interval in
       the C interface and an \textbf{inclusive} interval in the
-      Fortran interface.}  The loop is given as function with its
+      Fortran interface.}, where \textit{first} $\leq$ \textit{last}.  
+    The loop is given as function with its
     parameters. The body function has \textit{nparam} parameters and
     it is passed in the \textit{...} optional effective parameter list
     of the foreach interface.
@@ -354,15 +393,17 @@ int kaapic_foreach_withformat(
     of the thread that makes the call. And the different calls can
     occur in parallel if they are done by different threads.
 
-    \textit{attr} is a pointer to an attribute that can be
-    pass tuning parameter to the runtime. It should be null for now,
-    until future extensions are developed and stabilized.
   \end{desc}
 
   \begin{params}
-    For \fn{kaapi\_foreach} interface, the format of the optional
+    For \fn{kaapic\_foreach} interface, the format of the optional
     parameter list is:
     \begin{parameters}
+    \param{attr} is a pointer to an attribute that can be
+    pass tuning parameter to the runtime. It could be null of used
+    to specify grain size (see \fn{kaapic\_foreach\_attr\_setgrain}).
+    until future extensions are developed and stabilized.
+
     \param{body} the function with signature\\
       \hspace*{5ex}\textit{void (*)(int, int, int [,type$_0$, .., type$_{nparam-1}$])}.\\
       Each type \textit{type$_i$} could be:
@@ -419,8 +460,7 @@ int kaapic_foreach_withformat(
     int i, int j, int tid, double* array, double* value
   ) 
   {
-    int k;
-    for (k = i; k < j; ++k)
+    for (int k = i; k < j; ++k)
       array[k] += *value;
   }
 
@@ -428,10 +468,12 @@ int kaapic_foreach_withformat(
   {
     double* array;
     double value;
-    int err = kaapic_init(1);
+    kaapic_foreach_attr_t attr;
+    int err = kaapic_init(KAAPIC_START_ONLY_MAIN);
     start = kaapi_get_time(); 
+    kaapic_foreach_attr_init(&attr);
     /* apply body on array[0..size-1] */
-    kaapic_foreach( 0, size, 2, body, array, &value );
+    kaapic_foreach( 0, size, &attr, 2, body, array, &value );
     stop = kaapi_get_time(); 
 
     printf("Time : %f (s)\n", stop-start );
@@ -448,8 +490,7 @@ int kaapic_foreach_withformat(
     int i, int j, int tid, double* array, double* value
   ) 
   {
-    int k;
-    for (k = i; k < j; ++k)
+    for (int k = i; k < j; ++k)
       array[k] += *value;
   }
 
@@ -457,10 +498,10 @@ int kaapic_foreach_withformat(
   {
     double* array;
     double value;
-    int err = kaapic_init(1);
+    int err = kaapic_init(KAAPIC_START_ONLY_MAIN);
     start = kaapi_get_time(); 
     /* apply body on array[0..size-1] */
-    kaapic_foreach_with_format( 0, size, 2, body, 
+    kaapic_foreach_with_format( 0, size, 0 /* attr */, 2, body, 
         KAAPIC_MODE_RW, array, size, KAAPIC_TYPE_DOUBLE
         KAAPIC_MODE_V, &value, 1,  KAAPIC_TYPE_DOUBLE
     );
@@ -473,14 +514,18 @@ int kaapic_foreach_withformat(
   \end{example}
 \end{apisection}
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%
 \begin{apisection}[dataflow]{Dataflow programming}
   \begin{synopsis}
     \begin{code}
 #include "kaapic.h"
 
-int kaapic_spawn(int32_t nargs, ...)
+int kaapic_spawn(const kaapic_attr_t* attr, int32_t nargs, ...)
+
+int kaapic_spawn_attr_init(kaapic_spawn_attr_t* attr)
+
+int kaapic_spawn_attr_destroy(kaapic_spawn_attr_t* attr)
+
     \end{code}
   \end{synopsis}
   \begin{desc}
@@ -490,6 +535,9 @@ int kaapic_spawn(int32_t nargs, ...)
     The function \fn{body} as well as its effective parameters are pass in the optional parameter list of \fn{kaapic\_spawn}.
     The format of the optional parameter list is:
     \begin{description}
+    \item[attr] is a pointer to an attribute that can be
+    pass tuning parameter to the runtime. It should be null for now.
+
     \item [body]: the function with signature\\
       \hspace*{5ex}\textit{void (*)([type$_0$, .., type$_{nparam-1}$])}.\\
       Each type \textit{type$_i$} could be:
@@ -589,7 +637,7 @@ int kaapic_spawn(int32_t nargs, ...)
   {
     int n = 30;
     int result= 0;
-    int err = kaapic_init(1);
+    int err = kaapic_init(KAAPIC_START_ONLY_MAIN);
 
     start = kaapi_get_time(); 
     /* apply body on array[0..size-1] */
@@ -614,7 +662,7 @@ int kaapic_spawn(int32_t nargs, ...)
     \begin{code}
 #include "kaapic.h"
 
-int kaapic_begin_parallel(void)
+int kaapic_begin_parallel(int flag)
 int kaapic_end_parallel(int flag)
     \end{code}
   \end{synopsis}
@@ -628,7 +676,12 @@ int kaapic_end_parallel(int flag)
     parameter.
   \end{desc}
   \begin{params}
-    \param{flag} if zero, an implicit synchronization is inserted
+    \param{flag} must be the same between begin and end calls. It must be ored value of:
+      \begin{itemize}
+      \item \verb+KAAPIC_FLAG_DEFAULT+: an implicit synchronization is inserted at the end
+      \item \verb+KAAPIC_FLAG_END_NOSYNC+: do not insert implicit synchronization
+      \item \verb+KAAPIC_FLAG_STATIC_SCHED+: precompute a static schedule of tasks generated between begin and end calls.
+      \end{itemize}
     before leaving the region.
   \end{params}
   \begin{ret}
@@ -640,11 +693,11 @@ int kaapic_end_parallel(int flag)
 
   int main()
   {
-    int err = kaapic_init(1);
+    int err = kaapic_init(KAAPIC_START_ONLY_MAIN);
 
-    kaapic_begin_parallel();
+    kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
     ...
-    kaapic_end_parallel();
+    kaapic_end_parallel(KAAPIC_FLAG_DEFAULT);
     ...
 
   }

@@ -43,16 +43,18 @@
 */
 #include <stdlib.h>
 
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
 #include <papi.h>
 #endif
+#include <string.h>
 #include "kaapi_impl.h"
 #include "kaapi_event_recorder.h"
 
 /* internal */
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
 static int papi_event_codes[KAAPI_PERF_ID_PAPI_MAX];
 static unsigned int papi_event_count = 0;
+static char* papi_names[4] = {0,0,0,0};
 #endif
 
 /**/
@@ -68,12 +70,16 @@ int kaapi_mt_perf_thread_state(kaapi_processor_t* kproc)
 }
 
 
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
 
 static inline int get_event_code(char* name, int* code)
 {
-  if (PAPI_event_name_to_code(name, code) != PAPI_OK)
+  int err = PAPI_event_name_to_code(name, code);
+  if (err != PAPI_OK)
+  {
+    fprintf(stderr, "PAPI error code:%i\n", err);
     return -1;
+  }
   return 0;
 }
 
@@ -83,8 +89,7 @@ static int get_papi_events(void)
 
   unsigned int i = 0;
   unsigned int j;
-  const char* p;
-  const char* s;
+  const char* s = 0;
   char name[PAPI_MIN_STR_LEN];
 
   s = getenv("KAAPI_PERF_PAPIES");
@@ -96,11 +101,10 @@ static int get_papi_events(void)
     if (i >= KAAPI_PERF_ID_PAPI_MAX)
       return -1;
 
-    p = s;
-
     for (j = 0; j < (sizeof(name) - 1) && *s && (*s != ','); ++s, ++j)
       name[j] = *s;
     name[j] = 0;
+    papi_names[i] = strdup(name);
 
     if (get_event_code(name, &papi_event_codes[i]) == -1)
       return -1;
@@ -124,7 +128,7 @@ static int get_papi_events(void)
 */
 void kaapi_mt_perf_init(void)
 {
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
   /* must be called once */
   int error;
 
@@ -144,8 +148,8 @@ void kaapi_mt_perf_init(void)
 */
 void kaapi_mt_perf_fini(void)
 {
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
-  PAPI_shutdown();
+#if defined(KAAPI_USE_PAPI)
+  //PAPI_shutdown();
 #endif
 }
 
@@ -156,7 +160,7 @@ void kaapi_mt_perf_thread_init( kaapi_processor_t* kproc, int isuser )
 {
   kaapi_assert( (isuser ==0)||(isuser==1) );
   
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
   kproc->papi_event_count = 0;
 
   if (papi_event_count)
@@ -192,8 +196,16 @@ void kaapi_mt_perf_thread_init( kaapi_processor_t* kproc, int isuser )
     err = PAPI_set_opt(PAPI_DOMAIN, &opt);
     kaapi_assert_m(PAPI_OK == err, "PAPI_set_opt_dom()");
 
+#if 0
     err = PAPI_add_events
       (kproc->papi_event_set, papi_event_codes, papi_event_count);
+#else
+    papi_event_count = 1;
+    papi_event_codes[0] = 0x40000079;
+    err = PAPI_add_events
+      (kproc->papi_event_set, papi_event_codes, papi_event_count);
+#endif
+if (err != PAPI_OK) fprintf(stderr,"PAPI error code:%i\n",err);
     kaapi_assert_m(PAPI_OK == err, "PAPI_add_events()\n");
 
     kproc->papi_event_count = papi_event_count;
@@ -207,7 +219,7 @@ void kaapi_mt_perf_thread_init( kaapi_processor_t* kproc, int isuser )
 
 /*
 */
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
 void kaapi_mt_perf_thread_fini(kaapi_processor_t* kproc)
 {
   if (kproc->papi_event_count)
@@ -229,7 +241,7 @@ void kaapi_mt_perf_thread_fini(kaapi_processor_t* kproc __attribute__((unused)) 
 
 /*
 */
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
 void kaapi_mt_perf_thread_start(kaapi_processor_t* kproc)
 {
   if (kproc->papi_event_count)
@@ -250,7 +262,7 @@ void kaapi_mt_perf_thread_start(kaapi_processor_t* kproc __attribute__((unused))
 
 /*
 */
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
 void kaapi_mt_perf_thread_stop(kaapi_processor_t* kproc)
 {
   if (kproc->papi_event_count)
@@ -275,7 +287,7 @@ void kaapi_mt_perf_thread_stop(kaapi_processor_t* kproc __attribute__((unused)) 
 
 /*
 */
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
 void kaapi_mt_perf_thread_stopswapstart( kaapi_processor_t* kproc, int isuser )
 {
   if (papi_event_count)
@@ -312,21 +324,22 @@ uint64_t kaapi_mt_perf_thread_delayinstate(kaapi_processor_t* kproc)
 
 const char* kaapi_mt_perf_id_to_name(kaapi_perf_id_t id)
 {
-  static const char* names[] =
-  {
-    "PAPI_0",
-    "PAPI_1",
-    "PAPI_2"
-  };
+#if defined(KAAPI_USE_PAPI)
   kaapi_assert_debug( (0 <= id) && (id <3) );
-  return names[(size_t)id];
+  const char* str = papi_names[(size_t)id];
+  if (str ==0) 
+    return "<undefined>";
+  return str;
+#else
+  return 0;
+#endif
 }
 
 
 size_t kaapi_mt_perf_counter_num(void)
 {
   return KAAPI_PERF_ID_PAPI_BASE
-#if defined(KAAPI_USE_PAPIPERFCOUNTER)
+#if defined(KAAPI_USE_PAPI)
     + papi_event_count
 #endif
     ;

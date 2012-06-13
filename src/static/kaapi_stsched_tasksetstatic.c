@@ -59,13 +59,6 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   kaapi_tasklist_t* tasklist;
   int16_t ngpu = 0;
   int16_t ncpu = 0;
-
-#if defined(KAAPI_USE_PERFCOUNTER)
-  double t0=0.0;
-  double t1=0.0;
-  double t0_exec=0.0;
-  double t1_exec=0.0;
-#endif
   
   kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)sp;
   kaapi_thread_context_t* thread = kaapi_self_thread_context();

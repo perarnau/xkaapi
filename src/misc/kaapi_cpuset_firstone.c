@@ -1,6 +1,4 @@
 /*
-** kaapi_hws_pushtask.c
-** xkaapi
 ** 
 **
 ** Copyright 2009 INRIA.
@@ -8,7 +6,6 @@
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -43,64 +40,14 @@
 ** terms.
 ** 
 */
-
 #include "kaapi_impl.h"
-#include "kaapi_hws.h"
-#include "kaapi_ws_queue.h"
 
-/* return the queue at a given hierarchy level
- */
-static inline kaapi_ws_block_t* __kaapi_hws_block_atlevel (
-  kaapi_hws_levelid_t levelid
+/*
+*/
+int kaapi_cpuset_firstone_zero(
+    kaapi_cpuset_t* cpuset
 )
 {
-  /* kaapi_assert(kaapi_hws_is_levelid_set(levelid)); */
-
-  kaapi_processor_t* const kproc = kaapi_get_current_processor();
-  kaapi_ws_block_t* const ws_block = hws_levels[levelid].kid_to_block[kproc->kid];
-  return  ws_block;
-}
-
-/* extern definition
- */
-kaapi_ws_queue_t* kaapi_hws_queue_atlevel (
-  kaapi_hws_levelid_t levelid
-)
-{
-  return __kaapi_hws_block_atlevel( levelid )->queue;
-}
-
-
-/* push a task at a given hierarchy level
- */
-int kaapi_thread_pushtask_atlevel (
-  kaapi_task_t* task,
-  kaapi_hws_levelid_t levelid
-)
-{
-  /* kaapi_assert(kaapi_hws_is_levelid_set(levelid)); */
-
-  kaapi_ws_block_t* const ws_block = __kaapi_hws_block_atlevel(levelid);
-  kaapi_ws_queue_t* const queue = ws_block->queue;
-  kaapi_ws_queue_push(ws_block, queue, task);
-
-  return 0;
-}
-
-
-int kaapi_thread_pushtask_atlevel_with_nodeid (
-  kaapi_task_t* task,
-  kaapi_hws_levelid_t levelid,
-  unsigned int nodeid
-)
-{
-  /* kaapi_assert(kaapi_hws_is_levelid_set(levelid)); */
-
-//unused  kaapi_processor_t* const kproc = kaapi_get_current_processor();
-  kaapi_ws_block_t* const ws_block = &hws_levels[levelid].blocks[nodeid];
-  kaapi_ws_queue_t* const queue = ws_block->queue;
-
-  kaapi_ws_queue_push(ws_block, queue, task);
-
-  return 0;
+  kaapi_bitmap_value64_t* bm = (kaapi_bitmap_value64_t*)cpuset;
+  return kaapi_bitmap_value_first1_and_zero_64(bm)-1;
 }

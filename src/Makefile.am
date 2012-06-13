@@ -44,12 +44,12 @@ libkaapi_la_SOURCES=\
   kaapi_event_recorder.h\
   kaapi_memory.h \
   kaapi_cpuset.h\
-  kaapi_hws.h\
   kaapi_ws_queue.h\
   kaapi_util.h\
   misc/kaapi_abort.c \
   misc/kaapi_allocator_allocate.c \
   misc/kaapi_cpuset2str.c \
+  misc/kaapi_cpuset_firstone.c \
   misc/kaapi_default_netapi.c \
   misc/kaapi_get_self_kid.c \
   misc/kaapi_hashmap.c \
@@ -63,12 +63,16 @@ libkaapi_la_SOURCES=\
   misc/kaapi_hashvalue.c \
   misc/kaapi_init.c \
   misc/kaapi_perf_trace.c \
+  misc/kaapi_collect_trace.c \
+  misc/kaapi_eventrecorder.c \
   misc/kaapi_malloc_align.c \
   misc/kaapi_time_elapse.c \
   misc/kaapi_time_elapsedns.c \
+  misc/kaapi_wq_init_ull.c \
   misc/kaapi_wq_init.c \
   misc/kaapi_wq_set.c \
   misc/kaapi_wq_slowpop.c \
+  misc/kaapi_wq_slowpop_ull.c \
   misc/kaapi_wq_lock.c \
   misc/kaapi_wq_unlock.c \
   misc/kaapi_util.c \
@@ -160,22 +164,10 @@ libkaapi_la_SOURCES=\
   workstealing/kaapi_sched_suspend.c \
   workstealing/kaapi_sched_sync.c \
   workstealing/kaapi_sched_wsqueue.c \
-  hws/kaapi_hws_initialize.c \
-  hws/kaapi_hws_emitsteal.c \
-  hws/kaapi_hws_pushtask.c \
-  hws/kaapi_hws_misc.c \
-  hws/kaapi_hws_sched_sync.c \
-  hws/kaapi_hws_counters.c \
-  hws/kaapi_ws_queue_lifo.c \
-  hws/kaapi_ws_queue_kproc.c \
   static/kaapi_stsched_tasksetstatic.c \
   static/kaapi_threadgroup_nothgrp.c\
   static/kaapi_stsched_taskrecv.c\
   static/kaapi_stsched_taskbcast.c
-
-#   misc/kaapi_splitter.c\
-   hws/kaapi_hws_splitter.c \
-  hws/kaapi_hws_adaptive.c 
 
 if KAAPI_TARGET_STATICSCHED
 #Partitionning

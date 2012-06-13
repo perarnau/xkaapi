@@ -1831,9 +1831,17 @@ namespace ka {
     const T& operator()(long i, long j) const { return array_rep<2,T,S>::operator()(i,j); }
     const T& operator()(unsigned long i, unsigned long j) const { return array_rep<2,T,S>::operator()(i,j); }
 
+    const array_rep<2,T,S>* operator->() const { return this; }
+
+    /* move deprecated all method on arrar rep: must use syntax range-> to 
+       have access to the correct representation interface */
+__attribute__((deprecated))    
     const T* ptr() { return array_rep<2,T,S>::ptr(); }
+__attribute__((deprecated))    
     const T* ptr() const { return array_rep<2,T,S>::ptr(); }
+__attribute__((deprecated))    
     size_t dim(int i) const { return array_rep<2,T,S>::dim(i); }
+__attribute__((deprecated))    
     size_t lda() const { return array_rep<2,T,S>::lda(); }
 
     range2d_r<T,S> operator()(const rangeindex& ri, const rangeindex& rj)  const 
@@ -1884,9 +1892,18 @@ namespace ka {
     T& operator()(long i, long j) { return array_rep<2,T,S>::operator()(i,j); }
     T& operator()(unsigned long i, unsigned long j) { return array_rep<2,T,S>::operator()(i,j); }
 
+    array_rep<2,T,S>* operator->() { return this; }
+
+    /* move deprecated all method on arrar rep: must use syntax range-> to 
+       have access to the correct representation interface */
+
+__attribute__((deprecated))    
     T* ptr() { return array_rep<2,T,S>::ptr(); }
+__attribute__((deprecated))    
     const T* ptr() const { return array_rep<2,T,S>::ptr(); }
+__attribute__((deprecated))    
     size_t dim(int i) const { return array_rep<2,T,S>::dim(i); }
+__attribute__((deprecated))    
     size_t lda() const { return array_rep<2,T,S>::lda(); }
 
     range2d_w<T,S> operator() (const rangeindex& ri, const rangeindex& rj) 
@@ -1939,9 +1956,17 @@ namespace ka {
     T& operator()(long i, long j) { return array_rep<2,T,S>::operator()(i,j); }
     T& operator()(unsigned long i, unsigned long j) { return array_rep<2,T,S>::operator()(i,j); }
 
+    array_rep<2,T,S>* operator->() { return this; }
+
+    /* move deprecated all method on arrar rep: must use syntax range-> to 
+       have access to the correct representation interface */
+__attribute__((deprecated))    
     T* ptr() { return array_rep<2,T,S>::ptr(); }
+__attribute__((deprecated))    
     const T* ptr() const { return array_rep<2,T,S>::ptr(); }
+__attribute__((deprecated))    
     size_t dim(int i) const { return array_rep<2,T,S>::dim(i); }
+__attribute__((deprecated))    
     size_t lda() const { return array_rep<2,T,S>::lda(); }
 
     range2d_rw<T,S> operator() (const rangeindex& ri, const rangeindex& rj) const 
@@ -1988,9 +2013,17 @@ namespace ka {
     range2d_rpwp( range2d<T>& a ) : pointer_rpwp<array<2,T,S> >(a) {}
     explicit range2d_rpwp( const array<2,T,S>& a ) : pointer_rpwp<array<2,T,S> >(a) {}
 
+    array_rep<2,T,S>* operator->() { return this; }
+
+    /* move deprecated all method on arrar rep: must use syntax range-> to 
+       have access to the correct representation interface */
+__attribute__((deprecated))    
     T* ptr() { return array_rep<2,T,S>::ptr(); }
+__attribute__((deprecated))    
     const T* ptr() const { return array_rep<2,T,S>::ptr(); }
+__attribute__((deprecated))    
     size_t dim(int i) const { return array_rep<2,T,S>::dim(i); }
+__attribute__((deprecated))    
     size_t lda() const { return array_rep<2,T,S>::lda(); }
 
     range2d_rpwp<T> operator() (const rangeindex& ri, const rangeindex& rj) const
@@ -2041,9 +2074,17 @@ namespace ka {
     T& operator()(long i, long j) { return array_rep<2,T,S>::operator()(i,j); }
     T& operator()(unsigned long i, unsigned long j) { return array_rep<2,T,S>::operator()(i,j); }
 
+    array_rep<2,T,S>* operator->() { return this; }
+
+    /* move deprecated all method on arrar rep: must use syntax range-> to 
+       have access to the correct representation interface */
+__attribute__((deprecated))    
     T* ptr() { return array_rep<2,T,S>::ptr(); }
+__attribute__((deprecated))    
     const T* ptr() const { return array_rep<2,T,S>::ptr(); }
+__attribute__((deprecated))    
     size_t dim(int i) const { return array_rep<2,T,S>::dim(i); }
+__attribute__((deprecated))    
     size_t lda() const { return array_rep<2,T,S>::lda(); }
 
     range2d_cw<T,S> operator() (const rangeindex& ri, const rangeindex& rj) const 

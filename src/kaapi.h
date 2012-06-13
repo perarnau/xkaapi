@@ -883,14 +883,11 @@ static inline int kaapi_thread_pushtask_withocr(kaapi_thread_t* thread, const vo
   return 0;
 }
 
-/*
-*/
-extern int kaapi_thread_pushtask_atlevel(kaapi_task_t*, kaapi_hws_levelid_t);
-extern int kaapi_thread_pushtask_atlevel_with_nodeid(kaapi_task_t*, kaapi_hws_levelid_t, unsigned int);
-
 /** \ingroup TASK
-    The function kaapi_thread_distribute_task() pushes the top task into the stack
-    and into a hierarchical queue specify by levelid.
+    The function kaapi_thread_distribute_task() pushes the top task into the mailbox of processor kid.
+    The task must be ready and does not have false dependencies (RAW or WAW) nor CW accesses.
+    If the kid correspond to the current kprocessor then the call to kaapi_thread_distribute_task()
+    is equivalent to the call of kaapi_thread_push().
     If successful, the kaapi_thread_distribute_task() function will return zero.
     Otherwise, an error number will be returned to indicate the error.
     \param stack INOUT a pointer to the kaapi_stack_t data structure.
@@ -898,11 +895,8 @@ extern int kaapi_thread_pushtask_atlevel_with_nodeid(kaapi_task_t*, kaapi_hws_le
 */
 extern int kaapi_thread_distribute_task (
   kaapi_thread_t* thread,
-  kaapi_hws_levelid_t levelid
+  kaapi_processor_id_t kid
 );
-
-extern int kaapi_thread_distribute_task_with_nodeid
-(kaapi_thread_t*, kaapi_hws_levelid_t, unsigned int);
 
 /** \ingroup TASK
     Task initialization routines
@@ -1736,11 +1730,23 @@ extern void kaapi_staticschedtask_body( void*, kaapi_thread_t*, kaapi_task_t* pc
      concurrent threads. Currently only IA32 & x86-64.
      An assertion is put inside the constructor to verify that this field are correctly aligned.
 */
+/* Original type */
 typedef long kaapi_workqueue_index_t;
 
+/* For OMP support of ull loop */
+typedef unsigned long long kaapi_workqueue_index_ull_t;
+
 typedef struct {
-  volatile kaapi_workqueue_index_t beg __attribute__((aligned(64))); /* cache line */
-  volatile kaapi_workqueue_index_t end __attribute__((aligned(64)));
+  union {
+    struct {
+      volatile kaapi_workqueue_index_t end __attribute__((aligned(64)));
+      volatile kaapi_workqueue_index_t beg __attribute__((aligned(64))); /* cache line */
+    } li;
+    struct {
+      volatile kaapi_workqueue_index_ull_t end __attribute__((aligned(64)));
+      volatile kaapi_workqueue_index_ull_t beg __attribute__((aligned(64))); /* cache line */   
+    } ull;
+  } rep;
   kaapi_lock_t*                    lock;
 } kaapi_workqueue_t;
 
@@ -1758,12 +1764,34 @@ extern int kaapi_workqueue_init(
 
 /** Initialize the workqueue to be an empty (null) range workqueue.
     Do memory barrier before updating the queue.
+    Attach the workqueue to the current kprocessor, ie the lock to ensure consistent concurrent operation
+    is the lock of the current kprocessor.
+*/
+extern int kaapi_workqueue_init_ull( 
+    kaapi_workqueue_t* kwq, 
+    kaapi_workqueue_index_ull_t b, 
+    kaapi_workqueue_index_ull_t e 
+);
+
+/** Initialize the workqueue to be an empty (null) range workqueue.
+    Do memory barrier before updating the queue.
     Explicit specification of the lock to used to ensure consistent concurrent operations.
 */
 extern int kaapi_workqueue_init_with_lock( 
     kaapi_workqueue_t* kwq, 
     kaapi_workqueue_index_t b, 
     kaapi_workqueue_index_t e, 
+    kaapi_lock_t* thelock 
+);
+
+/** Initialize the workqueue to be an empty (null) range workqueue.
+    Do memory barrier before updating the queue.
+    Explicit specification of the lock to used to ensure consistent concurrent operations.
+*/
+extern int kaapi_workqueue_init_with_lock_ull( 
+    kaapi_workqueue_t* kwq, 
+    kaapi_workqueue_index_ull_t b, 
+    kaapi_workqueue_index_ull_t e, 
     kaapi_lock_t* thelock 
 );
 
@@ -1775,29 +1803,49 @@ static inline int kaapi_workqueue_destroy( kaapi_workqueue_t* kwq )
 }
 
 /** This function set new bounds for the workqueue.
-    Their is no guarantee on this function with respect to concurrent thieves.
+    There is no guarantee on this function with respect to concurrent thieves.
     The caller must ensure atomic update by surrounding the call to
-    kaapi_workqueue_set by kaapi_workqueue_lock/kaapi_workqueue_unlock
+    kaapi_workqueue_reset by kaapi_workqueue_lock/kaapi_workqueue_unlock
     \retval 0 in case of success
-    \retval ESRCH if the current thread is not a kaapi thread.
+    \retval else an error code
 */
 static inline int kaapi_workqueue_reset( 
-  kaapi_workqueue_t* kwq, 
+  kaapi_workqueue_t*      kwq, 
   kaapi_workqueue_index_t beg, 
   kaapi_workqueue_index_t end
 )
 {
-  if ( kwq->lock ==0 ) return ESRCH;
-
   kaapi_assert_debug( beg <= end );
   
   /* may be not thread save ! */
-  kwq->beg = beg;
-  kwq->end = end;
+  kwq->rep.li.beg = beg;
+  kwq->rep.li.end = end;
   return 0;  
 }
 
-/* deprecated: assume lock is free */
+/** This function set new bounds for the workqueue.
+    There is no guarantee on this function with respect to concurrent thieves.
+    The caller must ensure atomic update by surrounding the call to
+    kaapi_workqueue_reset by kaapi_workqueue_lock/kaapi_workqueue_unlock
+    \retval 0 in case of success
+    \retval else an error code
+*/
+static inline int kaapi_workqueue_reset_ull( 
+  kaapi_workqueue_t*          kwq, 
+  kaapi_workqueue_index_ull_t beg, 
+  kaapi_workqueue_index_ull_t end
+)
+{
+  kaapi_assert_debug( beg <= end );
+  
+  /* may be not thread save ! */
+  kwq->rep.ull.beg = beg;
+  kwq->rep.ull.end = end;
+  return 0;  
+}
+
+
+/* deprecated: */
 __attribute__((deprecated))
 extern int kaapi_workqueue_set( 
   kaapi_workqueue_t* kwq, 
@@ -1805,38 +1853,79 @@ extern int kaapi_workqueue_set(
   kaapi_workqueue_index_t end
 );
 
+
 /**
 */
-static inline kaapi_workqueue_index_t kaapi_workqueue_range_begin( kaapi_workqueue_t* kwq )
+static inline kaapi_workqueue_index_t 
+  kaapi_workqueue_range_begin( kaapi_workqueue_t* kwq )
 {
-  return kwq->beg;
+  return kwq->rep.li.beg;
 }
 
 /**
 */
-static inline kaapi_workqueue_index_t kaapi_workqueue_range_end( kaapi_workqueue_t* kwq )
+static inline kaapi_workqueue_index_ull_t 
+  kaapi_workqueue_range_begin_ull( kaapi_workqueue_t* kwq )
 {
-  return kwq->end;
+  return kwq->rep.ull.beg;
 }
 
 /**
 */
-static inline kaapi_workqueue_index_t kaapi_workqueue_size( kaapi_workqueue_t* kwq )
+static inline kaapi_workqueue_index_t 
+  kaapi_workqueue_range_end( kaapi_workqueue_t* kwq )
 {
-  kaapi_workqueue_index_t size = kwq->end - kwq->beg;
+  return kwq->rep.li.end;
+}
+
+/**
+*/
+static inline kaapi_workqueue_index_ull_t 
+  kaapi_workqueue_range_end_ull( kaapi_workqueue_t* kwq )
+{
+  return kwq->rep.ull.end;
+}
+
+/**
+*/
+static inline kaapi_workqueue_index_t 
+  kaapi_workqueue_size( kaapi_workqueue_t* kwq )
+{
+  kaapi_workqueue_index_t size = kwq->rep.li.end - kwq->rep.li.beg;
   return (size <0 ? 0 : size);
+}
+
+/**
+*/
+static inline kaapi_workqueue_index_ull_t 
+  kaapi_workqueue_size_ull( kaapi_workqueue_t* kwq )
+{
+  kaapi_workqueue_index_ull_t b = kwq->rep.ull.beg;
+  kaapi_workqueue_index_ull_t e = kwq->rep.ull.end;
+  if (e <= b) return 0;
+  return e - b;
 }
 
 /**
 */
 static inline unsigned int kaapi_workqueue_isempty( const kaapi_workqueue_t* kwq )
 {
-  kaapi_workqueue_index_t size = kwq->end - kwq->beg;
+  kaapi_workqueue_index_t size = kwq->rep.li.end - kwq->rep.li.beg;
   return size <= 0;
 }
 
+/**
+*/
+static inline unsigned int kaapi_workqueue_isempty_ull( const kaapi_workqueue_t* kwq )
+{
+  kaapi_workqueue_index_ull_t b = kwq->rep.ull.beg;
+  kaapi_workqueue_index_ull_t e = kwq->rep.ull.end;
+  if (e <= b) return 1;
+  return 0;
+}
+
 /** This function should be called by the current kaapi thread that own the workqueue.
-    The function push work into the workqueue.
+    The function pushes work into the workqueue.
     Assuming that before the call, the workqueue is [beg,end).
     After the successful call to the function the workqueu becomes [newbeg,end).
     newbeg is assumed to be less than beg. Else it is a pop operation, 
@@ -1845,14 +1934,37 @@ static inline unsigned int kaapi_workqueue_isempty( const kaapi_workqueue_t* kwq
     Return EINVAL if invalid arguments
 */
 static inline int kaapi_workqueue_push(
-  kaapi_workqueue_t* kwq, 
+  kaapi_workqueue_t*      kwq, 
   kaapi_workqueue_index_t newbeg
 )
 {
-  if ( kwq->beg  > newbeg )
+  if ( kwq->rep.li.beg  > newbeg )
   {
     kaapi_mem_barrier();
-    kwq->beg = newbeg;
+    kwq->rep.li.beg = newbeg;
+    return 0;
+  }
+  return EINVAL;
+}
+
+/** This function should be called by the current kaapi thread that own the workqueue.
+    The function pushes work into the workqueue.
+    Assuming that before the call, the workqueue is [beg,end).
+    After the successful call to the function the workqueu becomes [newbeg,end).
+    newbeg is assumed to be less than beg. Else it is a pop operation, 
+    see kaapi_workqueue_pop.
+    Return 0 in case of success 
+    Return EINVAL if invalid arguments
+*/
+static inline int kaapi_workqueue_push_ull(
+  kaapi_workqueue_t*          kwq, 
+  kaapi_workqueue_index_ull_t newbeg
+)
+{
+  if ( kwq->rep.ull.beg  > newbeg )
+  {
+    kaapi_mem_barrier();
+    kwq->rep.ull.beg = newbeg;
     return 0;
   }
   return EINVAL;
@@ -1864,10 +1976,22 @@ static inline int kaapi_workqueue_push(
     Return ESRCH if the current thread is not a kaapi thread.
 */
 extern int kaapi_workqueue_slowpop(
-  kaapi_workqueue_t* kwq, 
+  kaapi_workqueue_t*       kwq, 
   kaapi_workqueue_index_t* beg,
   kaapi_workqueue_index_t* end,
   kaapi_workqueue_index_t  size
+);
+
+/** Helper function called in case of conflict.
+    Return EBUSY is the queue is empty.
+    Return EINVAL if invalid arguments
+    Return ESRCH if the current thread is not a kaapi thread.
+*/
+extern int kaapi_workqueue_slowpop_ull(
+  kaapi_workqueue_t*           kwq, 
+  kaapi_workqueue_index_ull_t* beg,
+  kaapi_workqueue_index_ull_t* end,
+  kaapi_workqueue_index_ull_t  size
 );
 
 /** This function should be called by the current kaapi thread that own the workqueue.
@@ -1887,24 +2011,61 @@ static inline int kaapi_workqueue_pop(
   kaapi_workqueue_index_t loc_init;
   kaapi_assert_debug( max_size >0 );
 
-  loc_beg = kwq->beg;
+  loc_beg = kwq->rep.li.beg;
   loc_init = loc_beg;
   loc_beg += max_size;
-  kwq->beg = loc_beg;
+  kwq->rep.li.beg = loc_beg;
   kaapi_mem_barrier();
 
-  if (loc_beg < kwq->end)
+  if (loc_beg < kwq->rep.li.end)
   {
     /* no conflict */
     *end = loc_beg;
-    *beg = *end - max_size;
+    *beg = loc_beg - max_size;
     return 0;
   }
 
   /* conflict */
-  kwq->beg = loc_init;
+  kwq->rep.li.beg = loc_init;
   return kaapi_workqueue_slowpop(kwq, beg, end, max_size);
 }
+
+
+/** This function should be called by the current kaapi thread that own the workqueue.
+    Return 0 in case of success 
+    Return EBUSY is the queue is empty
+    Return EINVAL if invalid arguments
+    Return ESRCH if the current thread is not a kaapi thread.
+*/
+static inline int kaapi_workqueue_pop_ull(
+  kaapi_workqueue_t*           kwq, 
+  kaapi_workqueue_index_ull_t* beg,
+  kaapi_workqueue_index_ull_t* end,
+  kaapi_workqueue_index_ull_t  max_size
+)
+{
+  kaapi_workqueue_index_ull_t loc_beg;
+  kaapi_workqueue_index_ull_t loc_init;
+
+  loc_beg = kwq->rep.ull.beg;
+  loc_init = loc_beg;
+  loc_beg += max_size;
+  kwq->rep.ull.beg = loc_beg;
+  kaapi_mem_barrier();
+
+  if (loc_beg < kwq->rep.ull.end)
+  {
+    /* no conflict */
+    *end = loc_beg;
+    *beg = loc_beg - max_size;
+    return 0;
+  }
+
+  /* conflict */
+  kwq->rep.ull.beg = loc_init;
+  return kaapi_workqueue_slowpop_ull(kwq, beg, end, max_size);
+}
+
 
 /** This function should only be called into a splitter to ensure correctness
     the lock of the victim kprocessor is assumed to be locked to handle conflict.
@@ -1924,27 +2085,74 @@ static inline int kaapi_workqueue_steal(
   kaapi_assert_debug( 0 < size );
   kaapi_assert_debug( kaapi_atomic_assertlocked(kwq->lock) );
 
+#if 0
   /* disable gcc warning */
   *beg = 0;
   *end = 0;
+#endif
 
-  loc_end  = kwq->end;
+  loc_end  = kwq->rep.li.end;
   loc_init = loc_end;
   loc_end -= size;
-  kwq->end = loc_end;
+  kwq->rep.li.end = loc_end;
   kaapi_mem_barrier();
 
-  if (loc_end < kwq->beg)
+  if (loc_end < kwq->rep.li.beg)
   {
-    kwq->end = loc_init;
+    kwq->rep.li.end = loc_init;
     return ERANGE; /* false */
   }
 
   *beg = loc_end;
-  *end = *beg + size;
+  *end = loc_end + size;
   
   return 0; /* true */
 }  
+
+
+/** This function should only be called into a splitter to ensure correctness
+    the lock of the victim kprocessor is assumed to be locked to handle conflict.
+    Return 0 in case of success 
+    Return ERANGE if the queue is empty or less than requested size.
+ */
+static inline int kaapi_workqueue_steal_ull(
+  kaapi_workqueue_t*           kwq, 
+  kaapi_workqueue_index_ull_t* beg,
+  kaapi_workqueue_index_ull_t* end,
+  kaapi_workqueue_index_ull_t  size
+)
+{
+  kaapi_workqueue_index_ull_t loc_end;
+  kaapi_workqueue_index_ull_t loc_init;
+
+  kaapi_assert_debug( kaapi_atomic_assertlocked(kwq->lock) );
+
+#if 0
+  /* disable gcc warning */
+  *beg = 0;
+  *end = 0;
+#endif
+
+  loc_end  = kwq->rep.ull.end;
+  if (loc_end < size) 
+    return ERANGE;
+  loc_init = loc_end;
+  loc_end -= size;
+  kwq->rep.ull.end = loc_end;
+  kaapi_mem_barrier();
+
+  if (loc_end < kwq->rep.ull.beg)
+  {
+    kwq->rep.ull.end = loc_init;
+    return ERANGE; /* false */
+  }
+
+  *beg = loc_end;
+  *end = loc_end + size;
+  
+  return 0; /* true */
+}  
+
 
 /** Lock the workqueue
 */
@@ -1997,7 +2205,6 @@ int kaapi_splitter_default
 
 #define KAAPI_PERF_ID_SUSPEND       5  /* count number of suspended thread */
 #define KAAPI_PERF_ID_T1            6  /* nano second of compte time */
-/*#define KAAPI_PERF_ID_TIDLE         6  / * nano second of idle time */ 
 
 #define KAAPI_PERF_ID_TPREEMPT      7  /* nano second of preempt time */
 #define KAAPI_PERF_ID_ALLOCTHREAD   8  /* count number of allocated thread */
@@ -2294,88 +2501,6 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     isinit = 1;\
     kaapi_format_structregister( &formatobject, name, size, cstor, dstor, cstorcopy, copy, assign );\
   }
-
-
-/* ========================================================================== */
-/** \ingroup HWS
-    initialize hierarchical workstealing. must be called only once globally.
-    \retval -1 on error, 0 on success
- */
-extern int kaapi_hws_init_global(void);
-extern int kaapi_hws_fini_global(void);
-
-/* ========================================================================== */
-/** \ingroup HWS
-    initialize hierarchical workstealing. must be called only once per kproc.
-    \retval -1 on error, 0 on success
- */
-extern int kaapi_hws_init_perproc(struct kaapi_processor_t*);
-extern int kaapi_hws_fini_perproc(struct kaapi_processor_t*);
-
-
-/* ========================================================================== */
-/** \ingroup HWS
-    push a task at a given hierarchy level
-    \retval -1 on error, 0 on success
- */
-/* DEPRECATED: move to kaapi_thread_pushtask_atlevel */
-static inline int kaapi_hws_pushtask(kaapi_task_t* task, kaapi_hws_levelid_t lid)
-{ return kaapi_thread_pushtask_atlevel(task, lid); }
-
-static inline int kaapi_hws_pushtask_flat(kaapi_task_t* task)
-{
-  return kaapi_thread_pushtask_atlevel(task, KAAPI_HWS_LEVELID_FLAT);
-}
-
-static inline int kaapi_hws_pushtask_machine(kaapi_task_t* task)
-{
-  return kaapi_thread_pushtask_atlevel(task, KAAPI_HWS_LEVELID_MACHINE);
-}
-
-static inline int kaapi_hws_pushtask_numa(kaapi_task_t* task)
-{
-  return kaapi_thread_pushtask_atlevel(task, KAAPI_HWS_LEVELID_NUMA);
-}
-/* ========================================================================== */
-/** \ingroup HWS
-    retrieve the memory node id for the given request
-    \retval the node id
- */
-extern unsigned int kaapi_hws_get_request_nodeid(const struct kaapi_request_t*);
-
-/* ========================================================================== */
-/** \ingroup HWS
-    get the node count at the given hierarchy level
-    \retval the node count
- */
-extern unsigned int kaapi_hws_get_node_count(kaapi_hws_levelid_t);
-
-/* ========================================================================== */
-/** \ingroup HWS
-    get the leaf count at the given hierarchy level
-    \retval the leaf count
- */
-extern unsigned int kaapi_hws_get_leaf_count(kaapi_hws_levelid_t);
-
-#if 0
-/* ========================================================================== */
-/** \ingroup HWS
-    get splitter info related to HWS
-    \retval -1 if this is not a HWS splitter. 0 otherwise.
- */
-extern int kaapi_hws_get_splitter_info
-(kaapi_stealcontext_t*, kaapi_hws_levelid_t*);
-extern void kaapi_hws_clear_splitter_info
-(kaapi_stealcontext_t*);
-
-extern void kaapi_hws_end_adaptive(kaapi_stealcontext_t* sc);
-#endif // #if 0
-
-/* ========================================================================== */
-/** \ingroup HWS
-    print counters
- */
-void kaapi_hws_print_counters(void);
 
 
 #ifdef __cplusplus

@@ -43,128 +43,228 @@
 */
 #include "libgomp.h"
 
-bool GOMP_loop_ull_static_start (bool, unsigned long long,
-					unsigned long long,
-					unsigned long long,
-					unsigned long long,
-					unsigned long long *,
-					unsigned long long *)
+static inline komp_workshare_t*  komp_loop_dynamic_start_init_ull(
+  kaapi_processor_t* kproc,
+  bool up, 
+  unsigned long long start,
+  unsigned long long incr
+)
 {
-  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
-}
-                  
-bool GOMP_loop_ull_dynamic_start (bool, unsigned long long,
-					 unsigned long long,
-					 unsigned long long,
-					 unsigned long long,
-					 unsigned long long *,
-					 unsigned long long *)
-{
-  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
-}
+  kaapi_thread_t* thread = kaapi_threadcontext2thread(kproc->thread);
+  kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
+  komp_teaminfo_t* teaminfo = ctxt->teaminfo;
+  komp_workshare_t* workshare = ctxt->workshare;
 
-bool GOMP_loop_ull_guided_start (bool, unsigned long long,
-					unsigned long long,
-					unsigned long long,
-					unsigned long long,
-					unsigned long long *,
-					unsigned long long *)
-{
-  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
+  /* initialize the work share data: reuse previous allocated workshare if !=0 */
+  if (workshare ==0)
+  {
+    workshare = kaapi_thread_pushdata(thread, sizeof(komp_workshare_t) );
+    ctxt->workshare = workshare;
+  }
+  workshare->rep.ull.start  = start;
+  workshare->rep.ull.incr   = incr;
+  workshare->rep.ull.up     = up;
+  workshare->serial = ++teaminfo->serial;
+  return workshare;
 }
 
-bool GOMP_loop_ull_runtime_start (bool, unsigned long long,
-					 unsigned long long,
-					 unsigned long long,
-					 unsigned long long *,
-					 unsigned long long *)
+
+/*
+*/
+static inline void komp_loop_dynamic_start_master_ull(
+  kaapi_processor_t* kproc,
+  komp_workshare_t* workshare,
+  bool up, 
+  unsigned long long start,
+  unsigned long long end,
+  unsigned long long incr,
+  unsigned long long chunk_size
+)
 {
-  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
+  kaapi_thread_context_t* const self_thread = kproc->thread;
+  kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
+  komp_teaminfo_t* teaminfo = ctxt->teaminfo;
+
+  /* loop normalization is required:
+     - kaapic_foreach iterate from [beg,end), assuming beg<end
+     and positive (ull version).
+     - if up=1 -> map libKOMP [start,end,1) directly to KaapiC [0,end-start)
+     and i_libkomp = start+i_kaapic
+     - if up=0 -> start > end >=0, so map libKOMP [start,end,-1)
+     to [0,start-end), start-end>0 and i_libkomp = start - i_kaapic
+  */
+  unsigned long long ka_start; 
+  unsigned long long ka_end;
+  ka_start = 0;
+  if (up)
+    ka_end = (end-start+incr-1)/incr;
+  else {
+    /* seems that incr is -incr */
+    ka_end = (start-end-incr-1)/-incr;
+  }
+  
+  /* TODO: automatic adaptation on the chunksize here
+     or (better) automatic adaptation in libkaapic
+  */
+  kaapic_foreach_attr_t attr;
+  kaapic_foreach_attr_init(&attr);
+  if (1) //(chunk_size == -1) 
+  {
+    chunk_size=(ka_end-ka_start)/(teaminfo->numthreads*teaminfo->numthreads);
+    if (chunk_size ==0) 
+    {
+      chunk_size = 1;
+    } else {
+      if (chunk_size > 2048) chunk_size /= 64;
+      else if (chunk_size > 1024) chunk_size /= 16;
+    }
+  }
+  kaapic_foreach_attr_set_grains_ull( &attr, chunk_size, 1);
+  //kaapic_foreach_attr_set_grains( &attr, 128, 256);
+  kaapic_foreach_attr_set_threads( &attr, teaminfo->numthreads );
+
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  attr.datadist = ctxt->icv.attr.datadist;
+#endif
+
+  /* initialize the master if not already done */
+  workshare->lwork = kaapic_foreach_workinit_ull(self_thread, 
+        ka_start, 
+        ka_end, 
+        &attr, /* attr */
+        0,     /* body */
+        0      /* arg */
+    );
+
+  /* publish the global work information */
+  kaapi_writemem_barrier();
+  teaminfo->gwork = workshare->lwork->global;
 }
 
-bool GOMP_loop_ull_ordered_static_start (bool, unsigned long long,
-						unsigned long long,
-						unsigned long long,
-						unsigned long long,
-						unsigned long long *,
-						unsigned long long *)
+
+/*
+*/
+static inline void komp_loop_dynamic_start_slave(
+  kaapi_processor_t* kproc,
+  komp_workshare_t*  workshare,
+  kaapic_global_work_t* gwork
+)
 {
-  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
+  unsigned long long start, end;
+
+  /* wait global work becomes ready */
+  kaapi_assert_debug(gwork !=0);
+        
+  /* get own slice */
+  if (!kaapic_global_work_pop_ull( gwork, kproc->kid, &start, &end))
+    start = end = 0;
+
+  workshare->lwork = kaapic_foreach_local_workinit_ull( 
+                          &gwork->lwork[kproc->kid],
+                          start, end );
 }
 
-bool GOMP_loop_ull_ordered_dynamic_start (bool, unsigned long long,
-						 unsigned long long,
-						 unsigned long long,
-						 unsigned long long,
-						 unsigned long long *,
-						 unsigned long long *)
+
+bool GOMP_loop_ull_dynamic_start (
+          bool up, 
+          unsigned long long start,
+					unsigned long long end,
+					unsigned long long incr,
+					unsigned long long chunk_size,
+					unsigned long long *istart,
+					unsigned long long *iend
+)
 {
-  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
+  kaapi_processor_t* kproc = kaapi_get_current_processor();
+  kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
+  komp_teaminfo_t* teaminfo = ctxt->teaminfo;
+  kaapic_global_work_t* gwork;
+
+  komp_workshare_t* workshare = 
+    komp_loop_dynamic_start_init_ull( kproc, up,  start, incr );
+
+  if (ctxt->icv.thread_id ==0)
+  {
+    komp_loop_dynamic_start_master_ull(
+      kproc,
+      workshare,
+      up,
+      start,
+      end,
+      incr,
+      chunk_size
+    );
+    gwork = teaminfo->gwork;
+  }
+  else 
+  {
+    /* wait global work becomes ready */
+    while ( (gwork = teaminfo->gwork) ==0)
+      kaapi_slowdown_cpu();
+    kaapi_readmem_barrier();
+
+    komp_loop_dynamic_start_slave(
+      kproc,
+      workshare,
+      gwork
+    );
+  }
+
+  /* pop next range and start execution (on return...) */
+  if (kaapic_foreach_worknext_ull(
+        workshare->lwork, 
+        istart,
+        iend)
+      )
+  {
+    if (ctxt->workshare->rep.ull.up)
+    {
+      *istart = ctxt->workshare->rep.ull.start 
+         + *istart * ctxt->workshare->rep.ull.incr;
+      *iend   = ctxt->workshare->rep.ull.start 
+         + *iend   * ctxt->workshare->rep.ull.incr;
+    }
+    else {
+      *istart = ctxt->workshare->rep.ull.start 
+         + *istart * ctxt->workshare->rep.ull.incr;
+      *iend   = ctxt->workshare->rep.ull.start 
+         + *iend   * ctxt->workshare->rep.ull.incr;
+    }
+    return 1;
+  }
+  return 0;
 }
 
-bool GOMP_loop_ull_ordered_guided_start (bool, unsigned long long,
-						unsigned long long,
-						unsigned long long,
-						unsigned long long,
-						unsigned long long *,
-						unsigned long long *)
-{
-  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
-}
 
-bool GOMP_loop_ull_ordered_runtime_start (bool, unsigned long long,
-						 unsigned long long,
-						 unsigned long long,
-						 unsigned long long *,
-						 unsigned long long *)
-{
-  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
-}                         
 
-bool GOMP_loop_ull_static_next (unsigned long long *,
-				       unsigned long long *)
+bool GOMP_loop_ull_dynamic_next (
+					unsigned long long *istart,
+					unsigned long long *iend
+)
 {
-  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
-}
+  kaapi_processor_t*   kproc = kaapi_get_current_processor();
+  kompctxt_t* ctxt  = komp_get_ctxtkproc( kproc );
 
-bool GOMP_loop_ull_dynamic_next (unsigned long long *,
-					unsigned long long *)
-{
-  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
-}
-
-bool GOMP_loop_ull_guided_next (unsigned long long *,
-				       unsigned long long *)
-{
-  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
-}
-
-bool GOMP_loop_ull_runtime_next (unsigned long long *,
-					unsigned long long *)
-{
-  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
-}
-
-bool GOMP_loop_ull_ordered_static_next (unsigned long long *,
-					       unsigned long long *)
-{
-  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
-}
-
-bool GOMP_loop_ull_ordered_dynamic_next (unsigned long long *,
-						unsigned long long *)
-{
-  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
-}
-
-bool GOMP_loop_ull_ordered_guided_next (unsigned long long *,
-					       unsigned long long *)
-{
-  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
-}
-
-bool GOMP_loop_ull_ordered_runtime_next (unsigned long long *,
-						unsigned long long *)
-{
-  printf("%s not implemented\n", __PRETTY_FUNCTION__ ); fflush(stdout);
+  if (kaapic_foreach_worknext_ull(
+        ctxt->workshare->lwork, 
+        istart,
+        iend)
+  )
+  {
+    if (ctxt->workshare->rep.ull.up)
+    {
+      *istart = ctxt->workshare->rep.ull.start 
+         + *istart * ctxt->workshare->rep.ull.incr;
+      *iend   = ctxt->workshare->rep.ull.start 
+         + *iend   * ctxt->workshare->rep.ull.incr;
+    }
+    else {
+      *istart = ctxt->workshare->rep.ull.start 
+         + *istart * ctxt->workshare->rep.ull.incr;
+      *iend   = ctxt->workshare->rep.ull.start 
+         + *iend   * ctxt->workshare->rep.ull.incr;
+    }
+    return 1;
+  }
+  return 0;
 }

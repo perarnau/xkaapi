@@ -165,6 +165,15 @@ extern void kaapi_mt_resume_threads(void);
 */
 extern void kaapi_mt_suspendresume_init(void);
 
+/**
+*/
+extern void kaapi_mt_begin_parallel(void);
+
+/**
+*/
+extern void kaapi_mt_end_parallel(void);
+
+
 
 /** Initialize hw topo.
     Based on hwloc library.
@@ -288,21 +297,20 @@ struct kaapi_taskdescr_t;
 /**
 */
 typedef struct kaapi_affinityset_t {
-    kaapi_cpuset_t                 who;       /* who is in this set */
-    size_t                         mem_size;
+    kaapi_cpuset_t                 who;       /* cpu id in this set */
+    size_t                         mem_size;  /* memory size of this set */
     int                            os_index;  /* numa node id or ??? */
-    int                            ncpu;
+    int                            ncpu;      /* number of cpu */
     short                          type;      /* see kaapi_memory_t */
-    struct kaapi_affinity_queue_t* queue;     /* yes ! */ 
 } kaapi_affinityset_t;
 
 /**
 */
 typedef struct kaapi_hierarchy_one_level_t {
-  unsigned short                count;           /* number of kaapi_affinityset_t at this level */
-  kaapi_affinityset_t*          affinity; 
-  kaapi_hws_levelid_t		levelid;
-  char*				name;
+  unsigned short           count;       /* number of kaapi_affinityset_t at this level */
+  kaapi_affinityset_t*     affinity; 
+  kaapi_hws_levelid_t      levelid;
+  char*	                   name;
 } kaapi_hierarchy_one_level_t;
 
 /** Memory hierarchy of the local machine
@@ -313,6 +321,7 @@ typedef struct kaapi_hierarchy_one_level_t {
 */
 typedef struct kaapi_hierarchy_t {
   unsigned short               depth;
+  unsigned short               numalevel;
   kaapi_hierarchy_one_level_t* levels;
 } kaapi_hierarchy_t;
 
@@ -437,8 +446,6 @@ extern uint64_t kaapi_perf_thread_delayinstate(struct kaapi_processor_t* kproc);
 #include "kaapi_machine.h"
 /* ========== MACHINE DEPEND DATA STRUCTURE =========== */
 
-#include "kaapi_hws.h"
-
 
 #include "kaapi_tasklist.h"
 
@@ -480,13 +487,6 @@ static inline void kaapi_sched_waitlock( kaapi_lock_t* lock)
 {
   kaapi_atomic_waitlock(lock);
 }
-
-
-/* Return the hws queueblock at level levelid
-*/
-extern kaapi_ws_queue_t* kaapi_hws_queue_atlevel (
-  kaapi_hws_levelid_t levelid
-);
 
 
 static inline
@@ -655,33 +655,6 @@ extern kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kp
     \retval an error code
 */
 extern int kaapi_sched_flat_emitsteal_init(kaapi_processor_t*);
-
-/** \ingroup HWS
-    Hierarchical workstealing routine
-    \retval KAAPI_REQUEST_S_NOK in case of failure of stealing something
-    \retval KAAPI_REQUEST_S_OK in case of success of the steal operation
-*/
-extern kaapi_request_status_t kaapi_hws_emitsteal ( kaapi_processor_t* kproc );
-
-/** \ingroup WS
-    The method initialize the information required for the hierarchical emitsteal function.
-    \retval 0 in case success
-    \retval an error code
-*/
-extern int kaapi_hws_emitsteal_init(kaapi_processor_t*);
-
-/** \ingroup HWS
-    Split the task among the given level leaves
-    \retval the splitter returned value
-*/
-extern int kaapi_hws_splitter
-(kaapi_stealcontext_t*, kaapi_task_splitter_t, void*, kaapi_hws_levelid_t);
-
-/** \ingroup HWS
-    equivalent of kaapi_taskadapt_body, tailored for HWS
-*/
-extern void kaapi_hws_adapt_body(void* arg, kaapi_thread_t* thread);
-
 
 /** \ingroup WS
     Advance polling of request for the current running thread.

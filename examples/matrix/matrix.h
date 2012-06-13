@@ -66,14 +66,17 @@ extern "C" {
  * this task prints the matrix using Maple matrix format
  */
 template<typename T>
-struct TaskPrintMatrix : public ka::Task<2>::Signature<std::string,  ka::R<ka::range2d<T> > > {};
+struct TaskPrintMatrix : public ka::Task<2>::Signature<
+  std::string, 
+  ka::R<ka::range2d<T> 
+> > {};
 
 template<typename T>
 struct TaskBodyCPU<TaskPrintMatrix<T> > {
   void operator() ( std::string msg, ka::range2d_r<T> A  )
   {
-    size_t d0 = A.dim(0);
-    size_t d1 = A.dim(1);
+    size_t d0 = A->dim(0);
+    size_t d1 = A->dim(1);
     std::cout << msg << " :=matrix( [" << std::endl;
     for (size_t i=0; i < d0; ++i)
     {
@@ -102,13 +105,13 @@ template<>
 struct TaskBodyCPU<TaskDTRSM_left> {
   void operator()( ka::range2d_r<double> Akk, ka::range2d_rw<double> Akj )
   {
-    const double* const a = Akk.ptr();
-    const int lda = Akk.lda();
+    const double* const a = Akk->ptr();
+    const int lda = Akk->lda();
 
-    double* const b = Akj.ptr();
-    const int ldb   = Akj.lda();
-    const int n     = Akj.dim(0);
-    const int m     = Akj.dim(1);
+    double* const b = Akj->ptr();
+    const int ldb   = Akj->lda();
+    const int n     = Akj->dim(0);
+    const int m     = Akj->dim(1);
 
     cblas_dtrsm
     (
@@ -130,13 +133,13 @@ template<>
 struct TaskBodyCPU<TaskDTRSM_right> {
   void operator()( ka::range2d_r<double> Akk, ka::range2d_rw<double> Aik )
   {
-    const double* const a = Akk.ptr();
-    const int lda = Akk.lda();
+    const double* const a = Akk->ptr();
+    const int lda = Akk->lda();
 
-    double* const b = Aik.ptr();
-    const int ldb = Aik.lda();
-    const int n = Aik.dim(0); // b.rows();
-    const int m = Aik.dim(1); // b.cols();
+    double* const b = Aik->ptr();
+    const int ldb = Aik->lda();
+    const int n = Aik->dim(0); // b.rows();
+    const int m = Aik->dim(1); // b.cols();
 
     cblas_dtrsm
     (
@@ -172,17 +175,17 @@ struct TaskBodyCPU<TaskDGEMM> {
     ka::range2d_rw<double> Aij
   )
   {
-    const double* const a = Aik.ptr();
-    const double* const b = Akj.ptr();
-    double* const c       = Aij.ptr();
+    const double* const a = Aik->ptr();
+    const double* const b = Akj->ptr();
+    double* const c       = Aij->ptr();
 
-    const int m = Aij.dim(0); 
-    const int n = Aij.dim(1);
-    const int k = (transA == CblasNoTrans ? Aik.dim(1) : Aik.dim(0) );
+    const int m = Aij->dim(0); 
+    const int n = Aij->dim(1);
+    const int k = (transA == CblasNoTrans ? Aik->dim(1) : Aik->dim(0) );
 
-    const int lda = Aik.lda();
-    const int ldb = Akj.lda();
-    const int ldc = Aij.lda();
+    const int lda = Aik->lda();
+    const int ldb = Akj->lda();
+    const int ldc = Aij->lda();
 
     cblas_dgemm
     (
@@ -215,13 +218,13 @@ struct TaskBodyCPU<TaskDSYRK> {
     ka::range2d_rw<double> C 
   )
   {
-    const int n     = A.dim(0); 
-    const int k     = A.dim(1); // eq. to Akj.rows();
-    const int lda   = A.lda();
-    const double* const a = A.ptr();
+    const int n     = A->dim(0); 
+    const int k     = A->dim(1); // eq. to Akj.rows();
+    const int lda   = A->lda();
+    const double* const a = A->ptr();
 
-    const int ldc   = C.lda();
-    double* const c = C.ptr();
+    const int ldc   = C->lda();
+    double* const c = C->ptr();
 
     cblas_dsyrk
     (
@@ -256,14 +259,14 @@ struct TaskBodyCPU<TaskDTRSM> {
     ka::range2d_rw<double> C
   )
   {
-    const double* const a = A.ptr();
-    const int lda = A.lda();
+    const double* const a = A->ptr();
+    const int lda = A->lda();
 
-    double* const c = C.ptr();
-    const int ldc = C.lda();
+    double* const c = C->ptr();
+    const int ldc = C->lda();
 
-    const int n = C.dim(0);
-    const int k = (transA == CblasNoTrans ? A.dim(1) : A.dim(0) );
+    const int n = C->dim(0);
+    const int k = (transA == CblasNoTrans ? A->dim(1) : A->dim(0) );
 
     cblas_dtrsm
     (
@@ -289,11 +292,11 @@ struct TaskBodyCPU<TaskDGETRF> {
     ka::range1d_w<int> piv
   )
   {
-    const int m        = A.dim(0); 
-    const int n        = A.dim(0); 
-    const int lda      = A.lda();
-    double* const a    = A.ptr();
-    int* const ipiv    = piv.ptr();
+    const int m        = A->dim(0); 
+    const int n        = A->dim(0); 
+    const int lda      = A->lda();
+    double* const a    = A->ptr();
+    int* const ipiv    = piv->ptr();
 
     clapack_dgetrf(
       CblasRowMajor, m, n, a, lda, ipiv
@@ -315,12 +318,49 @@ struct TaskBodyCPU<TaskDPOTRF> {
     CBLAS_UPLO uplo, ka::range2d_rw<double> A 
   )
   {
-    const int n     = A.dim(0); 
-    const int lda   = A.lda();
-    double* const a = A.ptr();
+    const int n     = A->dim(0); 
+    const int lda   = A->lda();
+    double* const a = A->ptr();
     clapack_dpotrf(
       CblasRowMajor, uplo, n, a, lda
     );
+  }
+};
+
+
+/* =================== Misc routines =================== */
+
+/* Compute the norm_infty of A-B 
+*/
+/* Task Error
+ * Compute the || ||2 matrix norm of A-B
+ */
+struct TaskNorm2 : public ka::Task<3>::Signature<
+  ka::W<double>,               /* norm */
+  ka::R<ka::range2d<double> >, /* A */
+  ka::R<ka::range2d<double> >  /* B */
+> {};
+
+template<>
+struct TaskBodyCPU<TaskNorm2> {
+  void operator() ( 
+    ka::pointer_w<double> norm,
+    ka::range2d_r<double> A, 
+    ka::range2d_r<double> B  
+  )
+  {
+    size_t d0 = A->dim(0);
+    size_t d1 = A->dim(1);
+    double error = 0.0;
+    for (size_t i=0; i < d0; ++i)
+    {
+      for (size_t j=0; j < d1; ++j)
+      {
+        double diff = fabs(A(i,j)-B(i,j));
+        error += diff*diff;
+      }
+    }
+    *norm = sqrt(error);
   }
 };
 

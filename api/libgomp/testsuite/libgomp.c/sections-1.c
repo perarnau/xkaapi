@@ -40,7 +40,9 @@ static void f_1 (void *dummy)
   unsigned long s;
 
   for (s = GOMP_sections_start (N); s ; s = GOMP_sections_next ())
+  {
     set_data (s, iam);
+  }
   GOMP_sections_end ();
 }
 

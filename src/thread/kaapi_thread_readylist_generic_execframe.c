@@ -102,7 +102,9 @@ int kaapi_thread_abstractexec_readylist(
   {
     kaapi_activationlink_t* al = _kaapi_alloc_link(&free_al, &allocator);
     al->td = curr->td;
+#if 0
     al->queue = 0;
+#endif
     kaapi_activationlist_pushback(&readylist, al);
     curr = curr->next;
   }
@@ -129,7 +131,9 @@ redo_once:
           {
             kaapi_activationlink_t* al = _kaapi_alloc_link(&free_al, &allocator);
             al->td    = curr_activated->td;
+#if 0
             al->queue = 0;
+#endif
             kaapi_activationlist_pushback(&readylist, al);
           }
           curr_activated = curr_activated->next;
@@ -146,7 +150,9 @@ redo_once:
           {
             kaapi_activationlink_t* al = _kaapi_alloc_link(&free_al, &allocator);
             al->td    = curr_activated->td;
+#if 0
             al->queue = 0;
+#endif
             kaapi_activationlist_pushback(&readylist, al);
           }
           curr_activated = curr_activated->next;
@@ -162,7 +168,9 @@ redo_once:
   if (recv !=0)
   {
     kaapi_activationlink_t* al = _kaapi_alloc_link(&free_al, &allocator);
+#if 0
     al->queue = 0;
+#endif
     al->td    = recv->td;
     kaapi_activationlist_pushback(&readylist, al);
     recv = recv->next;
