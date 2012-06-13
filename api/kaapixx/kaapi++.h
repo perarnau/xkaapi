@@ -3000,7 +3000,9 @@ __attribute__((deprecated))
   template<class TASK>
   struct TaskBodyAlpha : public TASK {};
 
+#if defined(KAAPI_DEBUG)
 #include "ka_api_dot.h"
+#endif
 
   // --------------------------------------------------------------------  
   template<class TASK>

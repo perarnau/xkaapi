@@ -111,7 +111,7 @@ int kaapi_tasklist_pushready_td(
     /* I was not able to identify a queue for the task: push locally */
 #if defined(KAAPI_USE_CUDA)
     if( kaapi_processor_get_type(kaapi_get_current_processor()) == KAAPI_PROC_TYPE_CUDA ) {
-	if( KAAPI_TASKLIST_CPU_INF_PRIORITY == priority )
+	if( KAAPI_TASKLIST_GPU_MIN_PRIORITY < priority )
 	    kaapi_readylist_pushone_td( 
 		&tasklist->master->rtl, 
 		td, 
