@@ -100,9 +100,23 @@ kaapi_cuda_thread_tasklist_activate_deps(
     kaapi_thread_tasklist_commit_ready( tasklist->master );
 }
 
+#if defined(KAAPI_CUDA_DATA_WRITE_BACK)
+static int
+kaapi_cuda_gpu_task_callback3_sync_host(
+	kaapi_cuda_stream_t* kstream,
+	kaapi_tasklist_t*    tasklist,
+	kaapi_taskdescr_t*   td
+    )
+{
+    kaapi_cuda_data_output_dev_dec_use( kstream, tasklist, td );
+    kaapi_cuda_thread_tasklist_activate_deps( tasklist, td );  
+    return 0;
+}
+#endif
+
 /* call back to push ready task into the tasklist after terminaison of a task */
 static int
-kaapi_cuda_callback2_kernel(
+kaapi_cuda_gpu_task_callback2_after_kernel(
 	kaapi_cuda_stream_t* kstream,
 	kaapi_tasklist_t*    tasklist,
 	kaapi_taskdescr_t*   td
@@ -118,13 +132,20 @@ kaapi_cuda_callback2_kernel(
 	  );
   fflush(stdout);
 #endif
+#if defined(KAAPI_CUDA_DATA_WRITE_BACK)
+    /* write-back policy */
+    kaapi_cuda_data_async_recv( kstream, tasklist, td );
+    kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_D2H, 
+	   kaapi_cuda_gpu_task_callback3_sync_host, tasklist, td );
+#else
     kaapi_cuda_data_output_dev_dec_use( kstream, tasklist, td );
     kaapi_cuda_thread_tasklist_activate_deps( tasklist, td );  
+#endif
     return 0;
 }
 
 static int
-kaapi_cuda_callback1_input(
+kaapi_cuda_gpu_task_callback1_exec_task(
 	kaapi_cuda_stream_t* kstream,
 	kaapi_tasklist_t*    tasklist,
 	kaapi_taskdescr_t*   td
@@ -162,12 +183,12 @@ kaapi_cuda_callback1_input(
 #endif
     kaapi_cuda_ctx_pop( );
     kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_KER, 
-	    kaapi_cuda_callback2_kernel, tasklist, td );
+	    kaapi_cuda_gpu_task_callback2_after_kernel, tasklist, td );
     return 0;
 }
 
 static int
-kaapi_cuda_callback0_input(
+kaapi_cuda_gpu_task_callback0_sync_gpu(
 	kaapi_cuda_stream_t* kstream,
 	kaapi_tasklist_t*    tasklist,
 	kaapi_taskdescr_t*   td
@@ -178,12 +199,12 @@ kaapi_cuda_callback0_input(
     kaapi_cuda_data_input_dev_sync( kstream, tasklist, td );
     kaapi_cuda_ctx_pop( );
     kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_H2D, 
-	    kaapi_cuda_callback1_input, tasklist, td );
+	    kaapi_cuda_gpu_task_callback1_exec_task, tasklist, td );
     return 0;
 }
 
 static int
-kaapi_cuda_callback1_host_input(
+kaapi_cuda_host_task_callback1_exec_task(
 	kaapi_cuda_stream_t* kstream,
 	kaapi_tasklist_t*    tasklist,
 	kaapi_taskdescr_t*   td
@@ -207,7 +228,7 @@ kaapi_cuda_callback1_host_input(
 }
 
 static int
-kaapi_cuda_callback0_host_input(
+kaapi_cuda_host_task_callback0_sync_host(
 	kaapi_cuda_stream_t* kstream,
 	kaapi_tasklist_t*    tasklist,
 	kaapi_taskdescr_t*   td
@@ -219,7 +240,7 @@ kaapi_cuda_callback0_host_input(
     kaapi_cuda_ctx_pop( );
 #endif
     kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_D2H, 
-	   kaapi_cuda_callback1_host_input, tasklist, td );
+	   kaapi_cuda_host_task_callback1_exec_task, tasklist, td );
     return 0;
 }
 
@@ -321,11 +342,12 @@ execute_first:
         kaapi_assert_debug(body != 0);
 	body( kaapi_task_getargs(pc), (kaapi_thread_t*)stack->sfp );
     } else if( kaapi_format_get_task_body_by_arch( td->fmt, KAAPI_PROC_TYPE_CUDA ) == 0 ) {
+	/* execute a CPU task in the GPU thread */
 	kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_D2H, 
-	       kaapi_cuda_callback0_host_input, tasklist, td );
+	       kaapi_cuda_host_task_callback0_sync_host, tasklist, td );
     } else {
 	kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_H2D, 
-		kaapi_cuda_callback0_input, tasklist, td );
+		kaapi_cuda_gpu_task_callback0_sync_gpu, tasklist, td );
     }
     KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_END );
     KAAPI_DEBUG_INST( td->u.acl.exec_date = kaapi_get_elapsedns() );

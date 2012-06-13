@@ -276,6 +276,7 @@ int kaapi_cuda_data_async_recv(
 			host_data->ptr, &host_data->view,
 			dev_data->ptr, &dev_data->view
 			);
+		kaapi_mem_data_clear_dirty( kmd, host_asid );
 	    }
     }
 
