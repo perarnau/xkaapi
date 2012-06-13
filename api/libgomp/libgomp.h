@@ -241,6 +241,11 @@ extern int  komp_test_nest_lock_25 (omp_nest_lock_25_t *) __GOMP_NOTHROW;
 # define komp_set_nest_lock_30 omp_set_nest_lock
 # define komp_unset_nest_lock_30 omp_unset_nest_lock
 # define komp_test_nest_lock_30 omp_test_nest_lock
+
+#define strong_alias(fn, al)
+#define komp_lock_symver30(fn)
+#define komp_lock_symver(fn)
+
 #endif
 
 #endif // #ifndef _KAAPI_LIBGOMP_
