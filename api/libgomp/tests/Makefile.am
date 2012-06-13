@@ -2,7 +2,8 @@
 AM_CFLAGS=-fopenmp -fdump-tree-all
 AM_LDFLAGS=-lgomp
 
-PROGS= parallel shared critical nested barrier single fibo task-firstprivate loop loop2 loop3 loop4
+PROGS= parallel shared critical nested barrier single fibo task-firstprivate loop loop2 loop3 
+#loop4
 
 check_PROGRAMS=$(PROGS)
 
