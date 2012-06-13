@@ -100,7 +100,7 @@ kaapi_cuda_thread_tasklist_activate_deps(
     kaapi_thread_tasklist_commit_ready( tasklist->master );
 }
 
-#if defined(KAAPI_CUDA_DATA_WRITE_BACK)
+#if defined(KAAPI_CUDA_DATA_WRITE_THROUGH)
 static int
 kaapi_cuda_gpu_task_callback3_sync_host(
 	kaapi_cuda_stream_t* kstream,
@@ -132,7 +132,7 @@ kaapi_cuda_gpu_task_callback2_after_kernel(
 	  );
   fflush(stdout);
 #endif
-#if defined(KAAPI_CUDA_DATA_WRITE_BACK)
+#if defined(KAAPI_CUDA_DATA_WRITE_THROUGH)
     /* write-back policy */
     kaapi_cuda_data_async_recv( kstream, tasklist, td );
     kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_D2H, 

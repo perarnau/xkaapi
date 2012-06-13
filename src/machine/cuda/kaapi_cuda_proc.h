@@ -69,7 +69,7 @@
 
 #define	KAAPI_USE_WINDOW	1
 
-//#define KAAPI_CUDA_DATA_WRITE_BACK  1
+//#define KAAPI_CUDA_DATA_WRITE_THROUGH 1
 
 struct kaapi_cuda_stream_t;
 
