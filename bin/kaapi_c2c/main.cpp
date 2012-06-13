@@ -150,17 +150,23 @@ int main(int argc, char **argv)
             )
         );
 
+#if 0
 	// add stddef.h
         SageInterface::addTextForUnparser(file->get_globalScope(),
                     "#include <stddef.h>\n",
                     AstUnparseAttribute::e_before
         );
+#endif
         
 #if 0 // do not work properly
         SageInterface::insertHeader ("kaapi.h", PreprocessingInfo::after, false, gscope);
 #else
         /** Add #include <kaapi.h> to each input file
         */
+        SageInterface::addTextForUnparser(file->get_globalScope(),
+                    "#include <kaapic.h>\n",
+                    AstUnparseAttribute::e_before
+        );
         SageInterface::addTextForUnparser(file->get_globalScope(),
                     "#include <kaapi.h>\n",
                     AstUnparseAttribute::e_before
@@ -390,6 +396,7 @@ int main(int argc, char **argv)
               SageBuilder::buildVoidType(),
               SageBuilder::buildFunctionParameterList( 
                   SageBuilder::buildFunctionParameterTypeList( 
+                    SageBuilder::buildPointerType(kaapi_thread_ROSE_type),
                     SageBuilder::buildPointerType(kaapi_stealcontext_ROSE_type)
                   )
               ),

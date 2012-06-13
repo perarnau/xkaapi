@@ -1,0 +1,3 @@
+This is a minimal implementation of the libgomp OpenMP runtime system used by gcc.
+
+Once created, libgomp.{a,so} can replace the original libgomp library provided by gcc.

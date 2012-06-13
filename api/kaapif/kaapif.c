@@ -41,9 +41,9 @@
  ** terms.
  ** 
  */
+#include "kaapic_impl.h"
 #include <string.h>
 #include "kaapif.h"
-#include "kaapic_impl.h"
 
 
 extern void _kaapif_register_task_format(void);

@@ -46,11 +46,11 @@ libkaapi_la_SOURCES=\
   kaapi_cpuset.h\
   kaapi_hws.h\
   kaapi_ws_queue.h\
+  kaapi_util.h\
   misc/kaapi_abort.c \
   misc/kaapi_allocator_allocate.c \
   misc/kaapi_cpuset2str.c \
   misc/kaapi_default_netapi.c \
-  misc/kaapi_event_flush.c \
   misc/kaapi_get_self_kid.c \
   misc/kaapi_hashmap.c \
   misc/kaapi_hashmap_big.c \
@@ -62,6 +62,7 @@ libkaapi_la_SOURCES=\
   misc/kaapi_hashmap_insert.c \
   misc/kaapi_hashvalue.c \
   misc/kaapi_init.c \
+  misc/kaapi_perf_trace.c \
   misc/kaapi_malloc_align.c \
   misc/kaapi_time_elapse.c \
   misc/kaapi_time_elapsedns.c \
@@ -70,6 +71,7 @@ libkaapi_la_SOURCES=\
   misc/kaapi_wq_slowpop.c \
   misc/kaapi_wq_lock.c \
   misc/kaapi_wq_unlock.c \
+  misc/kaapi_util.c \
   task/kaapi_fmt_accessors.c \
   task/kaapi_fmt_initbasic.c \
   task/kaapi_fmt_register.c \
@@ -144,6 +146,9 @@ libkaapi_la_SOURCES=\
   workstealing/kaapi_sched_select_rand_f0.c \
   workstealing/kaapi_sched_select_workload_rand.c \
   workstealing/kaapi_sched_select_hierarchy.c\
+  workstealing/kaapi_sched_select_hwsn.c\
+  workstealing/kaapi_sched_select_pws.c\
+  workstealing/kaapi_sched_select_aff.c \
   workstealing/kaapi_sched_stealprocessor.c \
   workstealing/kaapi_sched_stealstack.c \
   workstealing/kaapi_sched_stealframe.c \
@@ -214,8 +219,8 @@ libkaapi_la_SOURCES+=\
   machine/mt/kaapi_mt_bitmap.h \
   machine/mt/kaapi_mt_perf.c \
   machine/mt/kaapi_mt_register_procs.c \
-  machine/mt/kaapi_mt_suspendresume.c \
   machine/mt/kaapi_mt_condvar.c \
+  machine/mt/kaapi_mt_suspendresume.c \
   machine/mt/kaapi_mt_condvar.h
 endif
 
@@ -240,6 +245,7 @@ include_HEADERS=\
   kaapi.h \
   kaapi_defs.h \
   kaapi_atomic.h\
+  kaapi_cpuset.h\
   kaapi_error.h
 
 if KAAPI_TARGET_CUDA

@@ -84,7 +84,7 @@ int kaapi_sched_sync_(kaapi_thread_context_t* thread)
   kaapi_frame_t*          save_esfp;
 #if defined(KAAPI_DEBUG)
   kaapi_frame_t*          save_fp;
-  kaapi_frame_t           save_frame;
+  kaapi_frame_t           save_frame __attribute__((unused));
 #endif
 
   /* If pure DFG frame and empty return */
@@ -142,7 +142,7 @@ redo:
   kaapi_cpuset_copy(&thread->affinity, &save_affinity);
   
   if (err) /* but do not restore anyting */
-    return err;
+    goto returnvalue;
 
 #if defined(KAAPI_DEBUG)
   kaapi_assert_debug(save_fp == thread->stack.sfp);
@@ -151,6 +151,7 @@ redo:
   thread->stack.sfp->pc = thread->stack.sfp->sp = savepc;
   thread->stack.esfp = save_esfp;
 
+returnvalue:
   return err;
 }
 

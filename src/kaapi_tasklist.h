@@ -894,7 +894,7 @@ static inline int kaapi_thread_tasklist_commit_ready( kaapi_tasklist_t* tasklist
     //kaapi_atomic_lock( &tasklist->thread->stack.lock );
     while (!kaapi_bitmap_value_empty_32(&tasklist->rtl.task_pushed))
     {
-      int ith = kaapi_bitmap_first1_and_zero_32( &tasklist->rtl.task_pushed ) -1;
+      int ith = kaapi_bitmap_value_first1_and_zero_32( &tasklist->rtl.task_pushed ) -1;
 
 kaapi_processor_incr_workload(kaapi_get_current_processor(), 
     kaapi_workqueue_range_begin( &tasklist->rtl.prl[ith].wq ) - (1+tasklist->rtl.prl[ith].next)
@@ -928,7 +928,7 @@ static inline kaapi_taskdescr_t* kaapi_thread_tasklist_commit_ready_and_steal(
     /* ABA problem here if we suppress lock/unlock? seems to be true */
     while (!kaapi_bitmap_value_empty_32(&tasklist->rtl.task_pushed))
     {
-      int ith = kaapi_bitmap_first1_and_zero_32( &tasklist->rtl.task_pushed ) -1;
+      int ith = kaapi_bitmap_value_first1_and_zero_32( &tasklist->rtl.task_pushed ) -1;
       onertl = &tasklist->rtl.prl[ith];
       if (td_steal == 0)
       {

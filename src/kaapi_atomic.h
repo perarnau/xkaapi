@@ -83,10 +83,13 @@ typedef struct kaapi_atomic32_t {
 } kaapi_atomic32_t;
 typedef kaapi_atomic32_t kaapi_atomic_t;
 
-
 typedef struct kaapi_atomic64_t {
   volatile int64_t _counter;
 } kaapi_atomic64_t;
+
+typedef struct kaapi_atomicptr_t {
+  volatile intptr_t _counter;
+} kaapi_atomicptr_t;
 
 /* ========================= Low level memory barrier, inline for perf... so ============================= */
 /** Implementation note
@@ -391,6 +394,12 @@ typedef struct kaapi_lock_t {
 #endif
 } kaapi_lock_t;
 
+#if defined(KAAPI_DEBUG)  
+#  define KAAPI_LOCK_INITIALIZER { 1, 0, -1U, -1U, 123123123U }
+#else
+#  define KAAPI_LOCK_INITIALIZER { 0, 0 }
+#endif
+
 static inline int kaapi_atomic_initlock( kaapi_lock_t* lock )
 {
   kaapi_assert_debug( lock->_magic != 123123123U);
@@ -496,9 +505,15 @@ typedef struct kaapi_lock_t {
 #endif
 } kaapi_lock_t;
 
+#if defined(KAAPI_DEBUG)  
+#  define KAAPI_LOCK_INITIALIZER { 1, 0, -1U, -1U, 123123123U }
+#else
+#  define KAAPI_LOCK_INITIALIZER { 1, 0 }
+#endif
 
 static inline int kaapi_atomic_initlock( kaapi_lock_t* lock )
 {
+  kaapi_assert_debug( lock->_magic != 123123123U);
   KAAPI_DEBUG_INST(lock->_magic = 123123123U;)
   KAAPI_DEBUG_INST(lock->_owner = -1U;)
   KAAPI_DEBUG_INST(lock->_unlocker = -1U;)

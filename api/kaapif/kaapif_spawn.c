@@ -42,7 +42,6 @@
  ** 
  */
 
-/* #include "kaapi.h" */
 #include "kaapif.h"
 #include "kaapic_impl.h"
 #include "kaapic_dfg_switch.h"

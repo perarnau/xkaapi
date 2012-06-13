@@ -40,6 +40,7 @@
  ** terms.
  ** 
  */
+#include "kaapi_impl.h"
 #include "kaapic_impl.h"
 
 
@@ -66,7 +67,9 @@ int kaapic_init(int32_t flags)
   }
 
   if (err !=0) return err;
-  
+
+  kaapic_foreach_attr_init( &kaapic_default_attr );
+    
   if (getenv("KAAPI_SEQ_GRAIN") !=0)
     kaapic_default_attr.s_grain = atoi(getenv("KAAPI_SEQ_GRAIN"));
   else
@@ -83,7 +86,10 @@ int kaapic_init(int32_t flags)
 int kaapic_finalize(void)
 {
   if (KAAPI_ATOMIC_DECR(&kaapic_initcalled) == 0)
+  {
+    kaapic_foreach_attr_destroy(&kaapic_default_attr);
     return kaapi_finalize();
+  }
 
   return 0;
 }
@@ -108,17 +114,33 @@ void kaapic_sync(void)
   kaapi_sched_sync();
 }
 
-void kaapic_begin_parallel(void)
+
+int kaapic_begin_parallel(int flags)
 {
-  kaapi_begin_parallel(KAAPI_SCHEDFLAG_DEFAULT);
+  int schedflag = KAAPI_SCHEDFLAG_DEFAULT; /* for runtime */
+  if (flags & KAAPIC_FLAG_STATIC_SCHED)
+    schedflag |= KAAPI_SCHEDFLAG_STATIC;
+  if (flags & KAAPIC_FLAG_END_NOSYNC)
+    schedflag |= KAAPI_SCHEDFLAG_NOWAIT;
+
+  kaapi_push_frame(&kaapi_self_thread_context()->stack );
+  kaapi_begin_parallel(schedflag);
+
+  return 0;
 }
 
-void kaapic_end_parallel(int32_t flags)
+int kaapic_end_parallel(int flags)
 {
-  if (flags)
-    kaapi_end_parallel(KAAPI_SCHEDFLAG_NOWAIT);
-  else
-    kaapi_end_parallel(KAAPI_SCHEDFLAG_DEFAULT);
+  int schedflag = KAAPI_SCHEDFLAG_DEFAULT; /* for runtime */
+  if (flags & KAAPIC_FLAG_STATIC_SCHED)
+    schedflag |= KAAPI_SCHEDFLAG_STATIC;
+  if (flags & KAAPIC_FLAG_END_NOSYNC)
+    schedflag |= KAAPI_SCHEDFLAG_NOWAIT;
+
+  kaapi_end_parallel(schedflag);
+  kaapi_pop_frame(&kaapi_self_thread_context()->stack );
+  
+  return 0;
 }
 
 

@@ -43,6 +43,7 @@
 */
 #include "kaapi_impl.h"
 
+
 /**
 */
 int kaapi_thread_save_frame( kaapi_thread_t* thread, kaapi_frame_t* frame)
@@ -59,6 +60,7 @@ int kaapi_thread_restore_frame( kaapi_thread_t* thread, const kaapi_frame_t* fra
 {
   kaapi_assert_debug( (thread !=0) && (frame !=0) );
   *thread = *(kaapi_thread_t*)frame;
+  kaapi_synchronize_steal_thread( kaapi_self_thread_context() );
   return 0;  
 }
 

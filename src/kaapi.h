@@ -58,7 +58,7 @@
 #endif
 
 #define __KAAPI__ 1
-#define __KAAPI_MINOR__ 1
+#define __KAAPI_MINOR__ 2
 
 #if !defined(__SIZEOF_POINTER__)
 #  if defined(__LP64__) || defined(__x86_64__)
@@ -619,8 +619,9 @@ typedef struct kaapi_request_t {
   kaapi_atomic_t*               status;         /* request status */
   uintptr_t                     ident;          /* system wide id of the queue */
   kaapi_frame_t                 frame;          /* where to store theft tasks/data */
-#if defined(KAAPI_DEBUG)
-  volatile uintptr_t            version;
+#if defined(KAAPI_USE_PERFCOUNTER)
+  uintptr_t                     victim;         /* victim */
+  uintptr_t                     serial;         /* serial number */
 #endif
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_request_t;
 
@@ -1075,13 +1076,21 @@ void* kaapi_task_begin_adaptive(
 
 /** \ingroup ADAPTIVE
     Mark the end of the adaptive section of code.
-    After the call to this function, all thieves have finish to compute in parallel,
-    and memory location produced in concurrency may be read by the calling thread.
+    After the call to this function, the runtime pushed task to wait completion
+    of all thieves. This function is non blocking instruction.
+    The caller that want to wait for real completion must call kaapi_sched_sync
+    or derivative function.
+    Atfer sync, all memory location produced in concurrency may be read 
+    by the calling thread. Before synchronization, the runtime does not guarantee
+    anything.
     \param context [IN] should be the context returned by kaapi_task_begin_adaptive
     \retval EAGAIN iff at least one thief was not preempted.
     \retval 0 iff all the thieves haved finished.
 */
-extern int kaapi_task_end_adaptive( void* context );
+extern int kaapi_task_end_adaptive( 
+    kaapi_thread_t* thread,
+    void*           context 
+);
 
 /** \ingroup ADAPTIVE
     The function kaapi_request_taskarg() return the pointer to the thief task arguments.
@@ -1979,13 +1988,17 @@ int kaapi_splitter_default
 #define KAAPI_PERF_ID_USER(I) KAAPI_PERF_ID(1, I)
 #define KAAPI_PERF_ID_PRIV(I) KAAPI_PERF_ID(0, I)
 
+
 #define KAAPI_PERF_ID_TASKS         0  /* count number of executed tasks */
 #define KAAPI_PERF_ID_STEALREQOK    1  /* count number of successful steal requests */
-#define KAAPI_PERF_ID_STEALREQ      2  /* count number of steal requests */
+#define KAAPI_PERF_ID_STEALREQ      2  /* count number of steal requests emitted */
 #define KAAPI_PERF_ID_STEALOP       3  /* count number of steal operation to reply to requests */
-#define KAAPI_PERF_ID_SUSPEND       4  /* count number of suspended thread */
-#define KAAPI_PERF_ID_T1            5  /* nano second of compte time */
+#define KAAPI_PERF_ID_STEALIN       4  /* count number of receive steal requests */
+
+#define KAAPI_PERF_ID_SUSPEND       5  /* count number of suspended thread */
+#define KAAPI_PERF_ID_T1            6  /* nano second of compte time */
 /*#define KAAPI_PERF_ID_TIDLE         6  / * nano second of idle time */ 
+
 #define KAAPI_PERF_ID_TPREEMPT      7  /* nano second of preempt time */
 #define KAAPI_PERF_ID_ALLOCTHREAD   8  /* count number of allocated thread */
 #define KAAPI_PERF_ID_FREETHREAD    9  /* count number of free thread */

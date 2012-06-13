@@ -48,13 +48,7 @@
 kaapi_thread_t* kaapi_thread_push_frame( void )
 {
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
-  kaapi_frame_t* fp = (kaapi_frame_t*)thread->stack.sfp;
-  /* save the top frame */
-  fp[1].sp_data   = fp->sp_data;
-  fp[1].pc        = fp->sp;
-  fp[1].sp        = fp->sp;
-  /* push a new frame */
-  return (kaapi_thread_t*)++thread->stack.sfp;
+  return kaapi_thread_push_frame_(thread);
 }
 
 
@@ -63,7 +57,6 @@ kaapi_thread_t* kaapi_thread_push_frame( void )
 kaapi_thread_t*  kaapi_thread_pop_frame( void )
 {
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
-  return (kaapi_thread_t*)--thread->stack.sfp;
-  return 0;  
+  return kaapi_thread_pop_frame_(thread);
 }
 

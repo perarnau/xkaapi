@@ -52,6 +52,7 @@ int kaapi_request_pushtask(kaapi_request_t* request, kaapi_task_t* victim_task )
   kaapi_stealcontext_t* victim_sc;
   
   kaapi_assert_debug( request !=0 );
+
   /* this a reply to a steal request: do not allow to steal first again the task */
   kaapi_task_set_unstealable(request->frame.sp);
   
@@ -60,13 +61,18 @@ int kaapi_request_pushtask(kaapi_request_t* request, kaapi_task_t* victim_task )
     if (kaapi_task_is_withpreemption(victim_task))
     {
       /* push a non adaptive task, but with preemption = used general pushtask_adaptive */
-      return kaapi_request_pushtask_adaptive(request, victim_task, 0, KAAPI_REQUEST_REPLY_TAIL);
+      return kaapi_request_pushtask_adaptive(
+                  request, 
+                  victim_task, 
+                  0, 
+                  KAAPI_REQUEST_REPLY_TAIL);
     }
 
     toptask = kaapi_request_toptask(request);
     signaltask = kaapi_thread_nexttask(&request->frame, toptask);
     victim_sc = (kaapi_stealcontext_t*)kaapi_task_getargst(
           victim_task, kaapi_taskadaptive_arg_t)->shared_sc.data;
+
     kaapi_task_init_with_flag(
         signaltask, 
         kaapi_tasksignaladapt_body, 

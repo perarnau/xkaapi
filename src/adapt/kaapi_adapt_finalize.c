@@ -45,23 +45,21 @@
 #include "kaapi_impl.h"
 
 
-/**
+/** WARNING: non blocking call !!
 */
-int kaapi_task_end_adaptive( void* arg )
+int kaapi_task_end_adaptive( 
+    kaapi_thread_t* thread,
+    void* arg 
+)
 {
   kaapi_task_t* task_merge;
   kaapi_task_t* task_adapt;
   kaapi_taskbegendadaptive_arg_t* adap_arg;
   kaapi_taskmerge_arg_t* merge_arg;
-  kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
-  kaapi_thread_t* const thread = kaapi_threadcontext2thread(self_thread);
 
   task_adapt = (kaapi_task_t*)arg;
   adap_arg = kaapi_task_getargst(task_adapt, kaapi_taskbegendadaptive_arg_t);
 
-/* TODO: clear task stealable & splittable attribute first ? 
-*/
-  kaapi_task_set_unstealable( task_adapt );
   kaapi_task_unset_splittable( task_adapt ); 
   
   /* create the merge task : avoid to push the task_adapt in order
@@ -84,22 +82,6 @@ int kaapi_task_end_adaptive( void* arg )
 
   /* memory barrier done by kaapi_thread_pushtask */
   kaapi_thread_pushtask(thread);
-
-  /* force execution of all previously pushed task of the frame */
-  kaapi_sched_sync_(self_thread);
-
-  /* Synchronize with thief 
-  */
-#if 0
-  kaapi_synchronize_steal(self_thread->stack.proc);
-#else
-  kaapi_synchronize_steal_thread(self_thread);
-#endif
-
-#if defined(KAAPI_DEBUG)
-  kaapi_stealcontext_t* sc = (kaapi_stealcontext_t*)merge_arg->shared_sc.data;
-  kaapi_assert_debug( KAAPI_ATOMIC_READ( &sc->thieves.count ) == 0 );
-#endif
 
   return 0;
 }

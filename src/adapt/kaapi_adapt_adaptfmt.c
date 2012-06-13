@@ -122,8 +122,12 @@ _kaapi_adaptbody_get_view_param(const kaapi_format_t* fmt, unsigned int ith, con
 }
 
 static void 
-_kaapi_adaptbody_set_view_param
-  (const kaapi_format_t* fmt, unsigned int ith, void* sp, const kaapi_memory_view_t* view)
+_kaapi_adaptbody_set_view_param(
+    const kaapi_format_t* fmt, 
+    unsigned int ith, 
+    void* sp, 
+    const kaapi_memory_view_t* view
+)
 {
   if (ith >0)
     kaapi_format_set_view_param( __resolve_format(sp), ith-1, __get_usersp(sp), view );
@@ -131,7 +135,7 @@ _kaapi_adaptbody_set_view_param
 }
 
 /* good name ! 
-   Wrapper between the old splitter interface and the new one.
+   Wrapper between format function and the user splitter
 */
 static int kaapi_adaptivetask_wrapper_splitter( 
     kaapi_task_t*                 pc, /* this is the adaptive task on which splitter is called */
@@ -143,15 +147,18 @@ static int kaapi_adaptivetask_wrapper_splitter(
   /* - pc is kaapi_taskadapt_body 
   */
   kaapi_taskadaptive_arg_t* arg = (kaapi_taskadaptive_arg_t*)sp;
+  kaapi_adaptivetask_splitter_t splitter = arg->user_splitter;
   kaapi_assert_debug( pc !=0 );
 
   /* call the splitter */
-  return arg->user_splitter( 
-      pc,
-      arg->user_sp,
-      lrequests,
-      lrrange
-  );
+  if (splitter !=0)
+    return splitter( 
+        pc,
+        arg->user_sp,
+        lrequests,
+        lrrange
+    );
+  return EINVAL;
 }
 
 static kaapi_adaptivetask_splitter_t 

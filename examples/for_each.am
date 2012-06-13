@@ -9,7 +9,7 @@ FOREACH_PRGS=for_each_adapt_kaapi
 
 if KAAPI_API_KAAPIC
 FOREACH_PRGS+=\
-	for_each_kaapi
+	for_each_kaapic for_each_kaapic_regparallel
 endif
 if KAAPI_API_KAAPIXX
 FOREACH_PRGS+=\
@@ -25,7 +25,8 @@ all-for_each: $(FOREACH_PRGS)
 
 #For each variation
 for_each_adapt_kaapi_SOURCES=for_each/for_each_adapt_kaapi.c
-for_each_kaapi_SOURCES=for_each/for_each_kaapi.c
+for_each_kaapic_SOURCES=for_each/for_each_kaapic.c
+for_each_kaapic_regparallel_SOURCES=for_each/for_each_kaapic_regparallel.c
 for_each_rec_kaapi___SOURCES=for_each/for_each_rec_kaapi++.cpp
 for_each_kaapi___SOURCES=for_each/for_each_kaapi++.cpp for_each/for_each_work.h
 for_each_kastl_SOURCES=for_each/for_each_kastl.cpp
@@ -35,10 +36,15 @@ for_each_adapt_kaapi_CFLAGS  =$(AM_CFLAGS)   $(KAAPIPROGS_BUILD_CFLAGS)
 for_each_adapt_kaapi_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIPROGS_BUILD_LDFLAGS)
 for_each_adapt_kaapi_LDADD   =$(LIBS)        $(KAAPIPROGS_BUILD_LIBS) -lm
 
-for_each_kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
-for_each_kaapi_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
-for_each_kaapi_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
-for_each_kaapi_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm
+for_each_kaapic_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
+for_each_kaapic_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
+for_each_kaapic_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
+for_each_kaapic_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm
+
+for_each_kaapic_regparallel_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
+for_each_kaapic_regparallel_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
+for_each_kaapic_regparallel_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
+for_each_kaapic_regparallel_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm
 
 for_each_rec_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 for_each_rec_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)

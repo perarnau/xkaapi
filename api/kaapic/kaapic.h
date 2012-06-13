@@ -45,6 +45,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "kaapi.h"
+#include "kaapi_cpuset.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -56,6 +58,7 @@ enum kaapic_type
   KAAPIC_TYPE_CHAR = 0,
   KAAPIC_TYPE_INT,
   KAAPIC_TYPE_REAL,
+  KAAPIC_TYPE_FLOAT=KAAPIC_TYPE_REAL,
   KAAPIC_TYPE_DOUBLE,
   KAAPIC_TYPE_PTR,
   KAAPIC_TYPE_ID /* for FORTRAN only */
@@ -66,7 +69,13 @@ enum kaapic_mode
   KAAPIC_MODE_R = 0,
   KAAPIC_MODE_W,
   KAAPIC_MODE_RW,
+  KAAPIC_MODE_CW,
   KAAPIC_MODE_V
+};
+
+enum kaapic_init_flag {
+  KAAPIC_START_ALL = 0,
+  KAAPIC_START_ONLY_MAIN = 1
 };
 
 /** kaapic_init INIT initializes the runtime. 
@@ -103,9 +112,10 @@ extern int32_t kaapic_get_thread_num(void);
 /*
 */
 typedef struct kaapic_foreach_attr_t {
-  uint32_t s_grain;
-  uint32_t p_grain;  
-  int      policy;       /* choose the policy for splitting */
+  uint32_t             s_grain;
+  uint32_t             p_grain;  
+  int                  policy;       /* choose the policy for splitting */
+  kaapi_cpuset_t       cpuset;       /* cpuset used for initial distribution i = kid */
 } kaapic_foreach_attr_t;
   
 /*
@@ -148,6 +158,10 @@ extern void kaapic_foreach_with_format(
   ...
 );
 
+/* Allocate a data with the same scope as a task, ie. in the Kaapi'thread stack
+*/
+extern void* kaapic_alloca( size_t sz );
+
 /* Create a task that may be steal.
    See documentation for restriction on by value passing rule.
    \param body : the task body. 
@@ -161,13 +175,26 @@ extern int kaapic_spawn(int32_t nargs, ...);
 */
 extern void kaapic_sync(void);
 
-/*
-*/
-extern void kaapic_begin_parallel(void);
 
-/*
+/* Flag for parallel regions
 */
-extern void kaapic_end_parallel(int32_t flags);
+enum {
+  KAAPIC_FLAG_STATIC_SCHED = 0x1,
+  KAAPIC_FLAG_END_NOSYNC   = 0x2,  /* no implicit sync */
+  KAAPIC_FLAG_DEFAULT      = 0x0
+};
+
+/* Start parallel region with flag.
+   \retval 0 in case of success, else an error code
+*/
+extern int kaapic_begin_parallel(int flags);
+
+/* End parallel region with flag.
+   If last parallel_begin has STATIC_SCHED flag, then
+   the STATIC_SCHED_FLAG must also be passed to end_parallel.
+   \retval 0 in case of success, else an error code
+*/
+extern int kaapic_end_parallel(int flags);
 
 #if defined(__cplusplus)
 }

@@ -68,6 +68,10 @@ static int kaapi_adaptivetask_splitter_2_usersplitter(
   );
 }
 
+#if defined(KAAPI_DEBUG)
+static int volatile global_version = 0;
+#endif
+
 
 /* Ancienne interface basee sur la nouvelle api des taches adaptatives.
    - la creation d'une tache adaptative cree 2 taches
@@ -79,7 +83,7 @@ static int kaapi_adaptivetask_splitter_2_usersplitter(
 */
 void* kaapi_task_begin_adaptive
 (
-   kaapi_thread_t*              thread,
+  kaapi_thread_t*               thread,
   int                           flag,
   kaapi_adaptivetask_splitter_t splitter,
   void*                         argsplitter
@@ -90,14 +94,17 @@ void* kaapi_task_begin_adaptive
     
   /* */
   kaapi_taskbegendadaptive_arg_t* adap_arg;
-    
+
   /* allocated tasks' args */
   adap_arg = (kaapi_taskbegendadaptive_arg_t*)kaapi_thread_pushdata
     (thread, sizeof(kaapi_taskbegendadaptive_arg_t));
   kaapi_assert_debug(adap_arg != 0);
 
-  sc = (kaapi_stealcontext_t*)kaapi_thread_pushdata_align
-    (thread, sizeof(kaapi_stealcontext_t), sizeof(void*));
+  sc = (kaapi_stealcontext_t*)kaapi_thread_pushdata_align(
+            thread, 
+            sizeof(kaapi_stealcontext_t), 
+            sizeof(void*)
+  );
   kaapi_assert_debug(sc != 0);
 
   kaapi_access_init(&adap_arg->shared_sc, sc);
@@ -122,15 +129,21 @@ void* kaapi_task_begin_adaptive
     KAAPI_ATOMIC_WRITE(&sc->thieves.count, 0);
   }
 
-/*
-  ICI mettre le code de 'split before publishing the task'
-*/
+#if defined(KAAPI_DEBUG)
+  sc->version = ++global_version; // assume only main thread incr global_version
+  sc->state = 1;
+#endif
+
+#if 0
+  /* ICI mettre le code de 'split before publishing the task'
+  */
   if (flag & KAAPI_SC_INITIALSPLIT)
   {
     /* todo: levelid should be an argument */
 //    static const kaapi_hws_levelid_t levelid = KAAPI_HWS_LEVELID_NUMA;
 //    kaapi_hws_splitter(sc, splitter, argsplitter, levelid);
   }
+#endif
 
   /* create the adaptive task:
      - it is a dummy task that represents the current executing 

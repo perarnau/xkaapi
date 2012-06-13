@@ -1,0 +1,127 @@
+#!/bin/sh
+
+# PBS directives (also used by ga)
+#PBS -N uts-mediuminputgcc-bind-cset-omp-tasks-tied-+4
+#PBS -l ncpus=4
+#PBS -j oe
+#PBS -q cpuset8
+#PBS -o uts-mediuminput.4.gcc-bind-cset-omp-tasks-tied-.20100715101233.out
+#PBS -l walltime=3:00:00
+#PBS -V
+
+# MN directives
+# @ job_name = uts-mediuminputgcc-bind-cset-omp-tasks-tied-+4 
+# @ class = cpuset
+# @ initialdir = .
+# @ output = uts-mediuminput.4.gcc-bind-cset-omp-tasks-tied-.20100715101233.out
+# @ error = uts-mediuminput.4.gcc-bind-cset-omp-tasks-tied-.20100715101233.out
+# @ total_tasks = 1
+# @ cpus_per_task = 4
+# @ wall_clock_limit = 3:00:00
+
+CPUS=4
+
+function print_environment ()
+{
+echo "************ Environment ************"
+echo "Ulimit:"
+ulimit -a
+echo "Env vars:"
+env 
+echo "dplace:"
+dplace -q
+for f in /dev/cpuset/slurm/class_cpuset_job_*/*; do
+        echo =============
+        echo $f
+        echo =============
+        cat $f
+done
+echo "*************************************"
+}
+
+function loop 
+{
+	n=$1
+	shift
+	while [ "$n" -gt "0" ]; do
+		eval $*
+		n=$((n-1))
+	done
+}
+
+function mintaka_wrapper
+{
+	tfile=uts-mediuminput.4.gcc-bind-cset-omp-tasks-tied-.20100715101233
+	[ "" ] && tfile="$tfile.i"
+
+	rm ./../bin/uts.gcc-debug.omp-tasks-tied.1.* ./../bin/uts.gcc-debug.omp-tasks-tied.bin
+	mv ./../bin/uts.gcc-debug.omp-tasks-tied.prv $tfile.prv
+	mv ./../bin/uts.gcc-debug.omp-tasks-tied.index.pcf $tfile.pcf
+}
+
+if [ "" ]; then
+	loop=1	
+fi 
+
+extra=
+extra2=
+
+case "omp-gcc" in
+	omp)
+		export OMP_NUM_THREADS=4
+		;;
+        omp-gcc)
+                export OMP_NUM_THREADS=4
+                ;;
+
+	omp-icc)
+		skip_cpus=-x1
+		export OMP_NUM_THREADS=4
+		export KMP_ALL_THREADS=4
+		export OMP_NESTED=true
+		;;
+	omp-nanos)
+		export OMP_NUM_THREADS=4
+		extra2="-nth -s -statistics"
+		;;
+	omp-nanox)
+		extra2="--nth-pes 4"
+		;;
+        omp-pgi)
+                export OMP_NUM_THREADS=4
+                ;;
+        omp-sun)
+                export OMP_NUM_THREADS=4
+                ;;
+	smpss)
+		export CSS_NUM_CPUS=4
+		export LD_LIBRARY_PATH=/home/Computational/xteruel/local/wxparaver64:/home/Computational/xteruel/local/nanox/lib:/opt/intel/Compiler/11.1/059/mkl/lib/64:/opt/intel/Compiler/11.1/059/lib/intel64:/opt/intel/Compiler/11.1/059/lib/intel64:/home/Computacional/perez/smpss-new-compiler/lib
+		;;
+	cilk)
+		extra="-nproc 4"
+		;;
+	pthread)
+		export PTHREAD_NUM_THREADS=4
+		extra2="--threads 4"
+		;;
+esac
+
+echo Executing ./../bin/uts.gcc-debug.omp-tasks-tied $extra -f ./../inputs/uts/medium.input -c $extra2 3 times
+
+if [ "yes" ]; then
+if [ "" ]; then
+   fcpus=$(seq 56 60 | tr '\n' ,)
+else 
+   fcpus=$(dplace -q | tail -n +2 | awk '{if ($3==0) print $1}' | head -4 | tr '\n' ,)
+fi
+dplace="dplace $skip_cpus -e -c $fcpus"
+let total=$(dplace -q | wc -l)-1
+echo "$total cpus available - used : $fcpus"
+fi
+
+
+cd /home/Computational/xteruel/bots/run
+[ "" ] && print_environment
+loop 3 $dplace ./../bin/uts.gcc-debug.omp-tasks-tied $extra -f ./../inputs/uts/medium.input -c $extra2
+[ "" ] && mintaka_wrapper
+

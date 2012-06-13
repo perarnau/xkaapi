@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.60])
 
-AC_INIT([X-KAAPI],[1.0.1],[kaapi-dev-info@lists.gforge.inria.fr],[xkaapi])
+AC_INIT([X-KAAPI],[1.0.2],[kaapi-dev-info@lists.gforge.inria.fr],[xkaapi])
 dnl AC_CONFIG_AUX_DIR: not before, not after
 dnl http://www.mail-archive.com/autoconf@gnu.org/msg07824.html
 AC_CONFIG_AUX_DIR([build-aux])
@@ -141,6 +141,12 @@ if test $have_cxx = yes ; then
 fi
 AM_CONDITIONAL([KAAPI_CXX_HAS_LAMBDA],[test x"$ac_cv_cxx_lambda" = x"yes"])
 
+# TODO: better check for this feature
+AM_CONDITIONAL([HAVE_VERSION_SCRIPT],[test x"$with_gnu_ld" = xyes])
+if test x"$with_gnu_ld" = xyes; then
+	AC_DEFINE([HAVE_VERSION_SYMBOL], [1], [Define to 1 if symbols can be versionned.])
+fi
+
 # add warning flags to the C and C++ compilers
 AX_CFLAGS_WARN_ALL([AM_CFLAGS])
 if test $have_cxx = yes ; then
@@ -178,6 +184,8 @@ ACX_LIB_ADD_PUBLIC_FLAGS([KAAPICLIB], [-I\${includedir}])
 
 ACX_LIB_NEW_LIB([KAAPIFLIB], [-L\${libdir} -lkaapif], [kaapif])
 ACX_LIB_ADD_PUBLIC_FLAGS([KAAPIFLIB], [-I\${includedir}])
+
+ACX_LIB_NEW_LIB([LIBGOMP], [-L\${libdir} -lgomp], [])
 
 ACX_LIB_NEW_PRG([KAAPIPROGS])
 ACX_LIB_NEW_PRG([KAAPIXXPROGS])
@@ -323,6 +331,24 @@ KAAPI_FEATURE([api-kastl], [compile KaSTL API],
     fi
   ])
 
+dnl -----------------------------------------------------------------------
+dnl The "--enable-libgomp"
+dnl -----------------------------------------------------------------------
+KAAPI_FEATURE([libgomp], [compile OpenMP libgomp library],
+  [OpenMP libgomp compiled], [check],
+  [],
+  [],
+  [KAAPI_LIBGOMP],
+  [
+    if test "$enable_api_kaapic" != yes ; then
+      AC_MSG_NOTICE([KaapiC API is required for OpenMP libgomp])
+      FEATURE_DISABLE
+    else
+      FEATURE_ENABLE
+    fi
+  ])
+
+
 dnl ----------------------------------------------------------------
 dnl Compilation options
 dnl ----------------------------------------------------------------
@@ -369,8 +395,8 @@ AS_CASE([$enable_mode],
     AM_CPPFLAGS="$AM_CPPFLAGS"
     CFLAGS=""
     CXXFLAGS=""
-    AM_CFLAGS="$AM_CFLAGS -O4 -DNDEBUG"
-    AM_CXXFLAGS="$AM_CXXFLAGS -O4 -DNDEBUG"
+    AM_CFLAGS="$AM_CFLAGS -O3 -DNDEBUG"
+    AM_CXXFLAGS="$AM_CXXFLAGS -O3 -DNDEBUG"
   ], [dnl
     AC_MSG_ERROR([Unknown compilation mode '$enable_mode'. Aborting.])
   ])
@@ -536,6 +562,13 @@ dnl -----------------------------------------------------------------------
 dnl --with && --enable OPTIONS
 dnl -----------------------------------------------------------------------
 dnl -----------------------------------------------------------------------
+
+dnl -----------------------------------------------------------------------
+dnl The "--with-poti"
+dnl -----------------------------------------------------------------------
+KAAPI_PKGLIB_CHECK([POTI], [poti], [POTI], [no], [KAAPI_USE_EXTERNAL_POTI],
+  [use POTI library to produce Paje traces],
+  [poti], [], [poti.h], [pajeOpen])
 
 dnl -----------------------------------------------------------------------
 dnl The "--with-papi"
@@ -842,6 +875,8 @@ ACX_LIB_LINK([KAAPIFLIB], [PUBLIC], [KAAPICLIB])
 ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [CUDA])
 dnl ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [HWLOC])
 
+ACX_LIB_LINK([LIBGOMP], [PUBLIC], [KAAPILIB KAAPICLIB])
+
 ACX_LIB_LINK([KAAPIPROGS], [KAAPILIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIPROGS],
 	[-I\$(top_srcdir)/src],[],[],
@@ -891,12 +926,15 @@ dnl Then   alphabetic order of other files
 AC_CONFIG_FILES([
 	Makefile
 	api/Makefile
+	api/atha/Makefile
 	api/kaapixx/Makefile
 	api/kaapic/Makefile
 	api/kaapif/Makefile
-	api/quark/Makefile
 	api/kastl/Makefile
-	api/atha/Makefile
+	api/libgomp/Makefile
+	api/libgomp/tests/Makefile
+	api/libgomp/testsuite/Makefile
+	api/quark/Makefile
 	examples/Makefile
 	network/Makefile
 	network/gasnet/Makefile

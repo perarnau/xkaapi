@@ -3596,7 +3596,7 @@ namespace ka {
   { return (StealContext*)kaapi_task_begin_adaptive(kaapi_self_thread(), flag, 0, 0); }
 
   inline void TaskEndAdaptive( StealContext* sc )
-  { kaapi_task_end_adaptive((kaapi_task_t*)sc); }
+  { kaapi_task_end_adaptive(kaapi_self_thread(), (kaapi_task_t*)sc); }
 
 
   // --------------------------------------------------------------------

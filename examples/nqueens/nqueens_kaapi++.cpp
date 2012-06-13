@@ -12,7 +12,7 @@
  * globals
  */
 #if !defined(THRESHOLD)
-#define THRESHOLD 8
+#define THRESHOLD 5
 #endif
 
 #define MAXSIZE 24

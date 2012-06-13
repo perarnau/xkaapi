@@ -42,6 +42,7 @@
  */
 #include "kaapi_impl.h"
 
+
 /* Signal body task
    - used if the stolen task a non adaptive task and preemption flag was unset
    on the victim adaptive task
@@ -50,7 +51,7 @@
 void kaapi_tasksignaladapt_body(void* sp, kaapi_thread_t* thread)
 {
   kaapi_stealcontext_t* const msc  = (kaapi_stealcontext_t*)sp;
-
+//printf("TO TEST\n");
   kaapi_assert_debug( msc->flag != KAAPI_SC_PREEMPTION );
 
   /* Then flush memory & signal master context
@@ -62,4 +63,5 @@ void kaapi_tasksignaladapt_body(void* sp, kaapi_thread_t* thread)
   */
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&msc->thieves.count) > 0);
   KAAPI_ATOMIC_DECR(&msc->thieves.count);
+  kaapi_assert_debug( KAAPI_ATOMIC_READ(&msc->thieves.count) >= 0);
 }

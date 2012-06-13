@@ -63,7 +63,7 @@ int kaapi_numa_get_page_node(const void* addr)
     errno = EINVAL;
     return -1;
   }
-  return kaapi_bitmap_first1_and_zero(&nodemask)-1;
+  return kaapi_bitmap_value_first1_and_zero(&nodemask)-1;
 }
 
 

@@ -50,6 +50,7 @@
 void kaapi_abort(void)
 {
   /* here: try to flush / collect perf counters or other values */
+  kaapi_collect_trace();
   
   abort();
 }

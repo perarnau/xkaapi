@@ -64,7 +64,7 @@ extern "C" {
    If an assertion is thrown at runtime, and if this macro appears then
    it is necessary to increase the maximal number of frames in a stack.
 */
-#define KAAPI_MAX_RECCALL 256
+#define KAAPI_MAX_RECCALL 131072
 
 struct kaapi_listrequest_iterator_t;
 struct kaapi_listrequest_t;
@@ -169,6 +169,53 @@ typedef struct kaapi_stack_t {
 
 } __attribute__((aligned (KAAPI_CACHE_LINE))) kaapi_stack_t;
 
+
+/* experimental: to debug. Only call by libkomp */
+static inline void kaapi_push_frame( kaapi_stack_t* stack)
+{
+  kaapi_frame_t* fp = (kaapi_frame_t*)stack->sfp;
+  kaapi_task_t* sp = fp->sp;
+
+  /* init new frame for the next task to execute */
+  fp[1].pc        = sp;
+  fp[1].sp        = sp;
+  fp[1].sp_data   = fp->sp_data;
+
+  kaapi_writemem_barrier();
+  stack->sfp = ++fp;
+  kaapi_assert_debug_fmt( stack->sfp - stack->stackframe <KAAPI_MAX_RECCALL,
+       "reccall limit: %i\n", KAAPI_MAX_RECCALL);
+}
+
+/* experimental: to debug. Only call by libkomp */
+static inline void kaapi_pop_frame( kaapi_stack_t* stack )
+{
+  kaapi_frame_t* fp = (kaapi_frame_t*)stack->sfp;
+#if defined(KAAPI_USE_LOCKTOPOP_FRAME)
+  /* lock based pop */
+  int tolock = 0;
+
+  /* pop the frame */
+  --fp;
+  /* finish to execute child tasks, pop current task of the frame */
+  stack->sfp = fp;
+  tolock = (fp <= stack->thieffp);
+
+  if (tolock)
+    kaapi_atomic_lock(&stack->lock);
+
+
+  if (tolock)
+    kaapi_sched_unlock(&stack->lock);
+
+#else //---------#if defined(KAAPI_USE_LOCKTOPOP_FRAME)
+  /* THE based pop */
+  --fp;
+  stack->sfp = fp;
+  if (fp <= stack->thieffp)
+    kaapi_atomic_waitlock(&stack->lock);
+#endif
+}
 
 
 /* ===================== Initialization of adaptive part =============================== */
@@ -295,7 +342,7 @@ static inline void kaapi_task_set_splittable(kaapi_task_t* task)
 
 static inline void kaapi_task_unset_splittable(kaapi_task_t* task)
 { 
-  task->u.s.flag &= KAAPI_TASK_SPLITTABLE_MASK; 
+  task->u.s.flag &= ~KAAPI_TASK_SPLITTABLE_MASK; 
 }
 
 static inline int kaapi_task_is_withpreemption(kaapi_task_t* task)
@@ -480,8 +527,15 @@ static inline int kaapi_stack_reset(kaapi_stack_t* stack )
 static inline int kaapi_stack_clear(kaapi_stack_t* stack )
 {
   kaapi_stack_reset( stack );
-  kaapi_atomic_initlock( &stack->lock );
   stack->thieffp      = 0;
+  return 0;
+}
+
+/* more field are reset than in stack_reset 
+*/
+static inline int kaapi_stack_destroy(kaapi_stack_t* stack )
+{
+  kaapi_atomic_destroylock( &stack->lock );
   return 0;
 }
 
@@ -762,6 +816,10 @@ typedef struct kaapi_stealcontext_t {
       kaapi_thiefadaptcontext_t* tail __attribute__((aligned(sizeof(void*))));
     } list;
   } thieves;
+#if defined(KAAPI_DEBUG)
+  int version;
+  int volatile state;   /* 0 term */
+#endif
 
 } kaapi_stealcontext_t __attribute__((aligned(sizeof(intptr_t))));
 
