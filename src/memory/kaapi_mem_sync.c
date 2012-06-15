@@ -14,6 +14,15 @@
 
 #if !defined(KAAPI_CUDA_NO_D2H)
 
+int kaapi_mem_sync_data( kaapi_data_t* kdata, cudaStream_t stream )
+{
+    if( kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA ){
+       return kaapi_cuda_data_sync_device( kdata );
+    } else {
+       return kaapi_cuda_data_sync_host( kdata, stream );
+    }
+}
+
 static int
 kaapi_memory_host_synchronize( void )
 {
