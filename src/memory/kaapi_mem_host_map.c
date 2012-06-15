@@ -73,7 +73,7 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, void* sp )
 {
     size_t count_params = kaapi_format_get_count_params( fmt, sp );
     size_t i;
-#if defined(KAAPI_USE_CUDA)
+#if (defined(KAAPI_USE_CUDA) && !defined(KAAPI_CUDA_NO_D2H) && !defined(KAAPI_CUDA_NO_H2D) )
     cudaStream_t stream;
     cudaStreamCreate( &stream );
 #endif
@@ -86,7 +86,7 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, void* sp )
 
 	kaapi_access_t access = fmt->get_access_param( fmt, i, sp );
 	kaapi_data_t* kdata = kaapi_data( kaapi_data_t, &access );
-#if defined(KAAPI_USE_CUDA)
+#if (defined(KAAPI_USE_CUDA) && !defined(KAAPI_CUDA_NO_D2H) && !defined(KAAPI_CUDA_NO_H2D) )
 	kaapi_mem_sync_data( kdata, stream );
 #endif
 
@@ -102,7 +102,7 @@ kaapi_mem_host_map_sync( const kaapi_format_t* fmt, void* sp )
 		    host_asid );
 	}
     }
-#if defined(KAAPI_USE_CUDA)
+#if (defined(KAAPI_USE_CUDA) && !defined(KAAPI_CUDA_NO_D2H) && !defined(KAAPI_CUDA_NO_H2D) )
     KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
     cudaStreamSynchronize( stream );
     KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END );

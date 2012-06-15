@@ -69,7 +69,8 @@
 
 #define	KAAPI_USE_WINDOW	1
 
-//#define KAAPI_CUDA_DATA_WRITE_THROUGH 1
+/* Write-through memory cache in the GPU */
+//#define KAAPI_CUDA_DATA_CACHE_WT 1
 
 struct kaapi_cuda_stream_t;
 
