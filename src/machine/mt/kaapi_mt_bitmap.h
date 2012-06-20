@@ -264,8 +264,11 @@ static inline int kaapi_bitmap_first1_and_zero_32( kaapi_bitmap32_t* b )
 */
 static inline void kaapi_bitmap_value_set_low_bits_32( kaapi_bitmap_value32_t* b, unsigned int i)
 {
-  kaapi_assert_debug(i < 32);
-  b->proc32 = ((uint32_t)1 << i) - (uint32_t)1;
+  kaapi_assert_debug(i <= 32);
+  if (i == 32) 
+    b->proc32 = ~(uint32_t)0;
+  else
+    b->proc32 = ((uint32_t)1 << i) - (uint32_t)1;
 }
 
 /* set all the [0, i[ bits 
@@ -461,8 +464,11 @@ static inline int kaapi_bitmap_first1_64( const kaapi_bitmap64_t* b )
 
 static inline void kaapi_bitmap_value_set_low_bits_64( kaapi_bitmap_value64_t* b, unsigned int i)
 {
-  kaapi_assert_debug(i < 64);
-  b->proc64 = ((uint64_t)1 << i) - (uint64_t)1;
+  kaapi_assert_debug(i <= 64);
+  if (i == 64)
+    b->proc64 = ~(uint64_t)0;
+  else
+    b->proc64 = ((uint64_t)1 << i) - (uint64_t)1;
 }
 
 /* set all the [0, i[ bits 
@@ -702,16 +708,22 @@ static inline int kaapi_bitmap_first1_128( const kaapi_bitmap128_t* b )
 
 static inline void kaapi_bitmap_value_set_low_bits_128( kaapi_bitmap_value128_t* b, unsigned int i)
 {
-  if (i < 64)
+  if (i <= 64)
   {
-    b->proc128[0] = ((uint64_t)1 << i) - (uint64_t)1;
+    if (i==64) 
+      b->proc128[0] = ~(uint64_t)0;
+    else
+      b->proc128[0] = ((uint64_t)1 << i) - (uint64_t)1;
     return;
   }
 
   b->proc128[0] = ~(uint64_t)0;
 
-  kaapi_assert_debug(i < 128);
-  b->proc128[1] = ((uint64_t)1 << (i-64)) - (uint64_t)1;
+  kaapi_assert_debug(i <= 128);
+  if (i == 128)
+    b->proc128[1] = ~(uint64_t)0;
+  else 
+    b->proc128[1] = ((uint64_t)1 << (i-64)) - (uint64_t)1;
 }
 
 static inline void kaapi_bitmap_set_low_bits_128( kaapi_bitmap128_t* b, unsigned int i)
