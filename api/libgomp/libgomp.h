@@ -129,6 +129,7 @@ typedef struct komp_teaminfo_t {
   komp_barrier_t                   barrier;
   void*  volatile                  single_data;  /* 0 or the & of copy_end */
   unsigned int volatile            section_state;
+  unsigned int volatile            ordered_state;  
   int                              numthreads;
   komp_globalworkshare_t* volatile gwork;      /* last foreach loop context */
   unsigned long                    serial;      /* serial number of workshare */
@@ -194,7 +195,7 @@ static inline kompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc )
     first->ctxt.icv.thread_id           = 0;
     first->ctxt.icv.next_numthreads     = kaapi_getconcurrency();
     first->ctxt.icv.nested_level        = 0;
-    first->ctxt.icv.nested_parallel     = 1;
+    first->ctxt.icv.nested_parallel     = 0;
     first->ctxt.icv.dynamic_numthreads  = 0; /* Not sure of this initial value, next_numthreads may
                                      					  be more appropriate here... */
     first->ctxt.icv.run_sched           = omp_sched_dynamic;
@@ -204,6 +205,7 @@ static inline kompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc )
 #endif
     kaapi_atomic_initlock(&first->teaminfo.lock);
     komp_barrier_init (&first->teaminfo.barrier, 1);
+    first->teaminfo.ordered_state       = 0;
     first->teaminfo.single_data = 0;
     first->teaminfo.numthreads  = 1;
     first->teaminfo.gwork       = 0;
