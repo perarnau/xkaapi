@@ -73,6 +73,8 @@
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
 
+#define _GNU_SOURCE
+#include <sched.h>
 
 /* set to 0 to disable workload */
 #define CONFIG_USE_WORKLOAD 1
@@ -248,7 +250,7 @@ static int kaapic_global_work_steal
      - any try to pop a slice closed to the tid of the thread
      - only 0 can pop a non poped slice
   */
-#if 1
+#if defined(KAAPIC_ALLOWS_WORKER_STEAL_SLICE) //  Empeche le vol d'un slice 
   /* caller has already pop and finish its slice, if it is 0 then may pop
      the next non null entry
   */
@@ -393,6 +395,7 @@ static void _kaapic_foreach_initwa(
   range_size -= off;
   scale = range_size / finalsize;
   
+#if !defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION) || !defined(KAAPI_USE_HWLOC)
   /* init logical mapping from tid to [0, ..., n] such that localtid is attached to 0 if
      is in the set.
      Initialize also all the localwork to empty (but lock is initialized !)
@@ -412,6 +415,59 @@ static void _kaapic_foreach_initwa(
     else 
       wa->tid2pos[i] = (uint8_t)-1; /* not in the set */
   }
+#else
+  /* specific mapping in case of KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION + NUMA attribute 
+     - assumption 1: only numa nodes from 0 to M-1 are used.
+     - assumption 2: each numa node has the same number of threads = P/M.
+     - assumption 3: Kprocessor kid=0 is on numa node 0.
+     NUMA nodes and CPU ID attached to each numa node is available in
+     data structure kaapi_default_param.memory. More precisely, NUMA node
+     descriptions are at memory level 'kaapi_default_param.memory.numalevel',
+     i.e. memory.levels[memory.numalevel].
+     * NUMA ids are given by memory.levels[memory.numalevel].affinity[k].os_index
+     
+     The bloc distribution of Kaapi iteration space is ordered has the following:
+       [ numa node 0 | numa node 1 | ... | numa node M-1 )
+     The algorithm iterates through the numa node i and set up position of the cpu id k
+     in the who cpuset such that
+        tid2pos[ cpu2kid[k] ] = i *P/M + pos(k), 
+     where pos(k) is a local index in the cpuset affinity->who
+  */
+  int numalevelid = kaapi_default_param.memory.numalevel;
+  kaapi_hierarchy_one_level_t* numalevel = &kaapi_default_param.memory.levels[numalevelid];
+  int threadpernumanode = kaapi_getconcurrency()/numalevel->count;
+
+  for (i=0; i<numalevel->count; ++i)
+  {
+    int numanodeid = numalevel->affinity[i].os_index;
+
+    /* assumption 1 */
+    kaapi_assert_debug( (numanodeid >=0) && (numanodeid <=numalevel->count) );
+
+    /* assumption 2 */
+    kaapi_assert_debug( threadpernumanode == numalevel->affinity[i].ncpu );
+
+    /* assumption 3 */
+#if defined(KAAPI_DEBUG)
+    if (numalevel->affinity[i].os_index == 0)
+    {
+        kaapi_assert(
+          kaapi_cpuset_has(&numalevel->affinity[i].who, 
+                           kaapi_all_kprocessors[self_tid]->cpuid)
+        );
+    }
+#endif
+    kaapi_cpuset_t set_numanode;
+    kaapi_cpuset_copy(&set_numanode, &numalevel->affinity[i].who);
+    for (int k=0; k<numalevel->affinity[i].ncpu; ++k)
+    {
+      int cpuid = kaapi_cpuset_firstone_zero(&set_numanode);
+      kaapi_assert_debug(cpuid != -1);
+      int tid = kaapi_default_param.cpu2kid[cpuid];
+      wa->tid2pos[tid] = k + numanodeid * threadpernumanode;
+    }
+  }
+#endif
   
   /* fill the start indexes: here it should be important to
      allocate slices depending of the futur thread id... ?
@@ -422,6 +478,17 @@ static void _kaapic_foreach_initwa(
     wa->startindex[i+1] = wa->startindex[i]+scale;
   for (i=finalsize; i<concurrency; ++i)
     wa->startindex[i+1] = wa->startindex[finalsize];
+
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  for (i=0; i<concurrency; ++i)
+  {
+    int pos= wa->tid2pos[i];
+    if (pos != -1)
+      printf("Thread %i, cpuid: %i,  initial work: [%d, %d[\n", i, kaapi_all_kprocessors[i]->cpuid, wa->startindex[pos], wa->startindex[pos+1]);
+    else
+      printf("Thread %i empty initial work\n", i);
+  }
+#endif
 
   kaapi_assert_debug(wa->startindex[finalsize] == last);
 }
@@ -479,11 +546,11 @@ kaapic_global_work_t* kaapic_foreach_global_workinit
   _kaapic_foreach_initwa(
       &gwork->wa, 
       localtid, 
-      (kaapi_bitmap_value_t*)&attr->cpuset, 
+      (kaapi_bitmap_value_t*)&attr->threadset, 
       nthreads,
       first, last
   );
-
+  
   /* reset the work remain/wokerdone field */
   KAAPI_ATOMIC_WRITE(&gwork->workremain, last - first);
   KAAPI_ATOMIC_WRITE(&gwork->workerdone, 0);
@@ -517,6 +584,14 @@ kaapic_global_work_t* kaapic_foreach_global_workinit
   
   gwork->wi.rep.li.par_grain = attr->rep.li.p_grain;
   gwork->wi.rep.li.seq_grain = attr->rep.li.s_grain;
+
+  /* Initialize the information about distribution of iteration */
+  gwork->wi.nthreads  = nthreads;
+  gwork->wi.threadset = attr->threadset;
+  gwork->wi.itercount = last-first;
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  gwork->wi.dist   = attr->datadist;
+#endif
 
   gwork->body_f    = body_f;
   gwork->body_args = body_args;
@@ -641,7 +716,7 @@ static int _kaapic_split_task
         tw,
         KAAPI_TASK_UNSTEALABLE
       );
-#if 1 /* comment this line if you do not want thief to be thief by other */
+#if 0 /* comment this line if you do not want thief to be thief by other */
       kaapi_request_pushtask_adaptive_tail( 
         req, 
         victim_task,
@@ -773,9 +848,6 @@ static void _kaapic_thief_entrypoint(
   kaapic_local_work_t* const lwork = (kaapic_local_work_t*)arg;
   kaapic_global_work_t* const gwork = lwork->global;
 
-  /* work info */
-  const kaapic_work_info_t* const wi = &gwork->wi;
-  
   /* asserts */
   kaapi_assert_debug(lwork->workdone == 0);
   kaapi_assert_debug(kaapi_get_self_kid() == lwork->tid);
@@ -784,6 +856,10 @@ static void _kaapic_thief_entrypoint(
 #else
 #endif
   kaapi_assert_debug( kproc->kid == lwork->tid );
+  
+#if 0
+  /* work info */
+  const kaapic_work_info_t* const wi = &gwork->wi;
   
   /* while there is sequential work to do in local work */
   while (kaapi_workqueue_pop(&lwork->cr, &i, &j, wi->rep.li.seq_grain) ==0)
@@ -796,6 +872,18 @@ redo_local_work:
     gwork->body_f((int)i, (int)j, (int)lwork->tid, gwork->body_args);
   }
   lwork->init = 0;
+#endif
+
+  /* while there is sequential work to do in local work */
+  while (kaapic_foreach_worknext(lwork, &i, &j) !=0)
+  {
+redo_local_work:
+    kaapi_assert_debug( i < j );
+    /* apply w->f on [i, j[ */
+    gwork->body_f((int)i, (int)j, (int)lwork->tid, gwork->body_args);
+  }
+
+  kaapi_assert_debug( kaapi_workqueue_isempty(&lwork->cr) );
 
   /* */
   KAAPI_SET_SELF_WORKLOAD(0);
@@ -976,7 +1064,10 @@ int kaapic_foreach_workend
   Return !=0 iff first and last have been filled for the next piece
   of work to execute.
   The function try to steal from registered lwork in the global work.
-  The local workqueue is fill by poped range.
+  The workqueue is fill by poped range.
+  In case of data distribution attribut, the localworkqueue_t structure
+  if filled to the poped range and the returned first,last is the biggest
+  contiguous range of iteration.
 */
 static int kaapic_foreach_globalwork_next(
   kaapic_local_work_t*     lwork,
@@ -1020,6 +1111,11 @@ static int kaapic_foreach_globalwork_next(
 
 retval1:
   lwork->workdone += *last - *first;
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  long sgrain = gwork->wi.rep.li.seq_grain;
+  kaapic_local_workqueue_set( &lwork->local_cr, *first, *last );
+  kaapi_assert( kaapic_local_workqueue_pop_withdatadistribution( &lwork->local_cr, &gwork->wi, first, last, sgrain ) == 0 );
+#endif
   return 1;
 }
 
@@ -1047,6 +1143,26 @@ int kaapic_foreach_worknext(
   }
 
   KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), 0, KAAPI_EVT_SCHED_IDLE_BEG );
+  
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  if (kaapic_local_workqueue_isempty(&lwork->local_cr))
+  {
+    if (kaapi_workqueue_pop(&lwork->cr, first, last, sgrain) == 0)
+    {
+      KAAPI_SET_SELF_WORKLOAD(
+          kaapi_workqueue_size(&lwork->cr)
+      );
+      lwork->workdone += *last-*first; /* even if work is not yet performed, the poped range is considered to be sequentially executed */
+      kaapic_local_workqueue_set( &lwork->local_cr, *first, *last );
+    }
+    else
+      goto fail_pop;
+  }
+  kaapi_assert( kaapic_local_workqueue_pop_withdatadistribution( &lwork->local_cr, &gwork->wi, first, last, sgrain ) == 0 );
+  retval = 1;
+  goto return_value;
+
+#else
 
   if (kaapi_workqueue_pop(&lwork->cr, first, last, sgrain) == 0)
   {
@@ -1058,6 +1174,11 @@ int kaapic_foreach_worknext(
     retval = 1;
     goto return_value;
   }
+#endif
+
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+fail_pop:
+#endif
   kaapi_assert_debug( kaapi_workqueue_isempty(&lwork->cr) );
   lwork->init = 0;
 
@@ -1117,9 +1238,9 @@ int kaapic_foreach_common
 #endif
 
   gwork = lwork->global;
-  long seq_grain = gwork->wi.rep.li.seq_grain;
   
-  /* while there is sequential work to do in local work */
+#if 0 //OLD LOOP
+  long seq_grain = gwork->wi.rep.li.seq_grain;
   while (kaapi_workqueue_pop(&lwork->cr, &first, &last, seq_grain) ==0)
   {
     KAAPI_SET_SELF_WORKLOAD(kaapi_workqueue_size(&lwork->cr));
@@ -1130,6 +1251,17 @@ redo_local_work:
     body_f((int)first, (int)last, (int)tid, body_args);
   }
   lwork->init = 0;
+#endif
+
+
+  /* while there is sequential work to do in local work */
+  while (kaapic_foreach_worknext(lwork, &first, &last) !=0)
+  {
+redo_local_work:
+    kaapi_assert_debug( first < last );
+    /* apply w->f on [i, j[ */
+    body_f((int)first, (int)last, (int)tid, body_args);
+  }
   kaapi_assert_debug( kaapi_workqueue_isempty(&lwork->cr) );
 
   /* */

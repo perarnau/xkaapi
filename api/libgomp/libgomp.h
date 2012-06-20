@@ -106,6 +106,9 @@ typedef struct komp_icv_t {
                                              adjust the next parallel region to. */
   omp_sched_t        run_sched;
   int                chunk_size;
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  kaapic_foreach_attr_t attr;         /* attribut for the next foreach loop */
+#endif
 } komp_icv_t;
 
 /* Team information : common to all threads that shared a same parallel region.
@@ -196,7 +199,9 @@ static inline kompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc )
                                      					  be more appropriate here... */
     first->ctxt.icv.run_sched           = omp_sched_dynamic;
     first->ctxt.icv.chunk_size          = 0; /* default */
-
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+    kaapic_foreach_attr_init( &first->ctxt.icv.attr );
+#endif
     kaapi_atomic_initlock(&first->teaminfo.lock);
     komp_barrier_init (&first->teaminfo.barrier, 1);
     first->teaminfo.single_data = 0;
@@ -280,6 +285,16 @@ extern int  komp_test_nest_lock_25 (omp_nest_lock_25_t *) __GOMP_NOTHROW;
 # define komp_set_nest_lock_30 omp_set_nest_lock
 # define komp_unset_nest_lock_30 omp_unset_nest_lock
 # define komp_test_nest_lock_30 omp_test_nest_lock
+
+#define strong_alias(fn, al)
+#define komp_lock_symver30(fn)
+#define komp_lock_symver(fn)
+
 #endif
+
+
+__attribute__((weak))
+extern void komp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length );
+
 
 #endif // #ifndef _KAAPI_LIBGOMP_

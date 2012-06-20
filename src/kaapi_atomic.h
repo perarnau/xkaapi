@@ -222,7 +222,7 @@ static inline void kaapi_writemem_barrier()
 #  if defined(__x86_64) || defined(__i386__)
   /* not need sfence on X86 archi: write are ordered */
   __asm__ __volatile__ ("":::"memory");
-  __asm__ __volatile__ ("sfence":::"memory");
+  //__asm__ __volatile__ ("sfence":::"memory");
 #  else
   OSMemoryBarrier();
 #  endif

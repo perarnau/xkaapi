@@ -109,6 +109,26 @@ extern int32_t kaapic_get_concurrency(void);
 */
 extern int32_t kaapic_get_thread_num(void);
 
+
+/* Internal type, not documented to the user
+*/
+typedef enum {
+  KAAPIC_DATADIST_VOID       = 0,
+  KAAPIC_DATADIST_BLOCCYCLIC = 1
+} _kaapic_foreach_attr_datadist_type_t;
+
+/* Internal type, not documented to the user
+*/
+typedef struct _kaapic_foreach_attr_datadist_t {
+  _kaapic_foreach_attr_datadist_type_t type;      /* discriminant for the distribution */
+  union {
+    struct { /* information about bloc-cyclic distribution of data */
+      unsigned long long size;
+      unsigned int  length; 
+    } bloccyclic;
+  } dist;
+} _kaapic_foreach_attr_datadist_t;
+
 /*
 */
 typedef struct kaapic_foreach_attr_t {
@@ -117,14 +137,15 @@ typedef struct kaapic_foreach_attr_t {
       long                 s_grain;
       long                 p_grain;  
     } li;
-    struct {
+    struct { /* ull case */
       unsigned long long   s_grain;
       unsigned long long   p_grain;  
     } ull;
-  } rep;
-  unsigned int         nthreads;/* number of threads for initial splitting */
-  int                  policy;  /* choose the policy for splitting */
-  kaapi_cpuset_t       cpuset;  /* cpuset used for initial distribution i = kid */
+  }                    rep;
+  _kaapic_foreach_attr_datadist_t datadist;
+  unsigned int         nthreads;  /* number of threads for initial splitting */
+  int                  policy;    /* choose the policy for splitting */
+  kaapi_cpuset_t       threadset; /* thread set used for initial distribution i = kid */
 } kaapic_foreach_attr_t;
   
 /*
@@ -151,6 +172,15 @@ extern int kaapic_foreach_attr_set_threads(
   kaapic_foreach_attr_t* attr, 
   unsigned int nthreads
 );
+
+/* Specify the distribution of initial range [0,N) over the NUMA node
+*/
+extern int kaapic_foreach_attr_set_bloccyclic_datadistribution(
+  kaapic_foreach_attr_t* attr, 
+  unsigned long long blocsize,
+  unsigned int cyclelength
+);
+
 
 /*
 */

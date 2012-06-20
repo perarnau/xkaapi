@@ -708,21 +708,19 @@ static inline int kaapi_bitmap_first1_128( const kaapi_bitmap128_t* b )
 
 static inline void kaapi_bitmap_value_set_low_bits_128( kaapi_bitmap_value128_t* b, unsigned int i)
 {
-  if (i <= 64)
+  kaapi_assert_debug(i <= 128);
+  if (i < 64)
   {
-    if (i==64) 
-      b->proc128[0] = ~(uint64_t)0;
-    else
-      b->proc128[0] = ((uint64_t)1 << i) - (uint64_t)1;
+    b->proc128[0] = ((uint64_t)1 << i) - (uint64_t)1;
+    b->proc128[1] = 0;
     return;
   }
 
   b->proc128[0] = ~(uint64_t)0;
 
-  kaapi_assert_debug(i <= 128);
   if (i == 128)
     b->proc128[1] = ~(uint64_t)0;
-  else 
+  else
     b->proc128[1] = ((uint64_t)1 << (i-64)) - (uint64_t)1;
 }
 
