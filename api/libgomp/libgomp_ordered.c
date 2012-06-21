@@ -62,6 +62,6 @@ void GOMP_ordered_start (void)
 void GOMP_ordered_end (void)
 {
   kompctxt_t *ctxt = komp_get_ctxt ();
-  __sync_fetch_and_add (&ctxt->teaminfo->current_ordered_index, 1);
+  __sync_fetch_and_add (&ctxt->teaminfo->current_ordered_index, ctxt->workshare->rep.li.incr);
   kaapi_writemem_barrier ();
 }
