@@ -127,6 +127,7 @@ typedef struct komp_icv_t {
 typedef struct komp_teaminfo_t {
   kaapi_lock_t                     lock;
   komp_barrier_t                   barrier;
+  int volatile                     current_ordered_index;
   void*  volatile                  single_data;  /* 0 or the & of copy_end */
   unsigned int volatile            section_state;
   unsigned int volatile            ordered_state;  
@@ -155,6 +156,8 @@ typedef struct komp_workshare_t {
       bool                     up;     /* upward / downward count */
     } ull;
   } rep;
+  int                          cur_start;
+  int                          cur_end;
   unsigned long                serial; /* serial number of workshare construct */
 } komp_workshare_t;
 

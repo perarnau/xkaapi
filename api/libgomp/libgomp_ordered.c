@@ -43,12 +43,25 @@
 */
 #include "libgomp.h"
 
+static void
+komp_ordered_sync (kompctxt_t *ctxt, int it_min, int it_max)
+{
+  while (!((ctxt->teaminfo->current_ordered_index >= it_min) && (ctxt->teaminfo->current_ordered_index < it_max)))
+    kaapi_slowdown_cpu ();
+}
+
 void GOMP_ordered_start (void)
 {
+  kompctxt_t *ctxt = komp_get_ctxt ();
+  int it_min = ctxt->workshare->cur_start;
+  int it_max = ctxt->workshare->cur_end;
 
+  komp_ordered_sync (ctxt, it_min, it_max);
 }
 
 void GOMP_ordered_end (void)
 {
-
+  kompctxt_t *ctxt = komp_get_ctxt ();
+  __sync_fetch_and_add (&ctxt->teaminfo->current_ordered_index, 1);
+  kaapi_writemem_barrier ();
 }
