@@ -174,6 +174,18 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
     kaapi_thread_tasklist_print_dot( filedot, tasklist, 0 );
     fclose(filedot);
   }
+  if (getenv("KAAPI_DUMP_TASKLIST") !=0)
+  {
+    static uint32_t counter = 0;
+    char filename[128]; 
+    if (getenv("USER") !=0)
+      sprintf(filename,"/tmp/tasklist.%s.%i.log", getenv("USER"), counter++ );
+    else
+      sprintf(filename,"/tmp/tasklist.%i.log",counter++);
+    FILE* filetask = fopen(filename, "w");
+    kaapi_thread_tasklist_print( filetask, tasklist );
+    fclose(filetask);
+  }
 #endif
   
   /* restore state */

@@ -415,7 +415,7 @@ execute_first:
     if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0 )
 	  goto execute_first;
 #endif
-    kaapi_thread_tasklist_commit_ready( tasklist );
+    //kaapi_thread_tasklist_commit_ready( tasklist );
             
     KAAPI_DEBUG_INST(save_tasklist = *tasklist;)
 
