@@ -479,7 +479,7 @@ static void _kaapic_foreach_initwa(
   for (i=finalsize; i<concurrency; ++i)
     wa->startindex[i+1] = wa->startindex[finalsize];
 
-#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+#if 0
   for (i=0; i<concurrency; ++i)
   {
     int pos= wa->tid2pos[i];
