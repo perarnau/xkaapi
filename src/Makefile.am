@@ -68,7 +68,11 @@ libkaapi_la_SOURCES=\
   misc/kaapi_time_elapse.c \
   misc/kaapi_time_elapsedns.c \
   misc/kaapi_wq_init_ull.c \
+  misc/kaapi_wq_init_lock_ull.c \
+  misc/kaapi_wq_init_kproc_ull.c \
   misc/kaapi_wq_init.c \
+  misc/kaapi_wq_init_lock.c \
+  misc/kaapi_wq_init_kproc.c \
   misc/kaapi_wq_set.c \
   misc/kaapi_wq_slowpop.c \
   misc/kaapi_wq_slowpop_ull.c \
