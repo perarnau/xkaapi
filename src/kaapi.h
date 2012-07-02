@@ -1786,6 +1786,17 @@ extern int kaapi_workqueue_init_with_lock(
 
 /** Initialize the workqueue to be an empty (null) range workqueue.
     Do memory barrier before updating the queue.
+    Explicit specification of the kproc identifier to used to initialize the lock of the workqueue.
+*/
+extern int kaapi_workqueue_init_with_kproc( 
+    kaapi_workqueue_t* kwq, 
+    kaapi_workqueue_index_t b, 
+    kaapi_workqueue_index_t e, 
+    uintptr_t               ident 
+);
+
+/** Initialize the workqueue to be an empty (null) range workqueue.
+    Do memory barrier before updating the queue.
     Explicit specification of the lock to used to ensure consistent concurrent operations.
 */
 extern int kaapi_workqueue_init_with_lock_ull( 
@@ -1793,6 +1804,17 @@ extern int kaapi_workqueue_init_with_lock_ull(
     kaapi_workqueue_index_ull_t b, 
     kaapi_workqueue_index_ull_t e, 
     kaapi_lock_t* thelock 
+);
+
+/** Initialize the workqueue to be an empty (null) range workqueue.
+    Do memory barrier before updating the queue.
+    Explicit specification of the kproc identifier to used to initialize the lock of the workqueue.
+*/
+extern int kaapi_workqueue_init_with_kproc_ull( 
+    kaapi_workqueue_t* kwq, 
+    kaapi_workqueue_index_ull_t b, 
+    kaapi_workqueue_index_ull_t e, 
+    uintptr_t                   ident
 );
 
 /** destroy 
@@ -1883,7 +1905,7 @@ static inline kaapi_workqueue_index_t
 static inline kaapi_workqueue_index_ull_t 
   kaapi_workqueue_range_end_ull( kaapi_workqueue_t* kwq )
 {
-  return kwq->rep.li.end;
+  return kwq->rep.ull.end;
 }
 
 /**
@@ -1918,8 +1940,10 @@ static inline unsigned int kaapi_workqueue_isempty( const kaapi_workqueue_t* kwq
 */
 static inline unsigned int kaapi_workqueue_isempty_ull( const kaapi_workqueue_t* kwq )
 {
-  kaapi_workqueue_index_t size = kwq->rep.ull.end - kwq->rep.ull.beg;
-  return size <= 0;
+  kaapi_workqueue_index_ull_t b = kwq->rep.ull.beg;
+  kaapi_workqueue_index_ull_t e = kwq->rep.ull.end;
+  if (e <= b) return 1;
+  return 0;
 }
 
 /** This function should be called by the current kaapi thread that own the workqueue.
@@ -1974,7 +1998,7 @@ static inline int kaapi_workqueue_push_ull(
     Return ESRCH if the current thread is not a kaapi thread.
 */
 extern int kaapi_workqueue_slowpop(
-  kaapi_workqueue_t* kwq, 
+  kaapi_workqueue_t*       kwq, 
   kaapi_workqueue_index_t* beg,
   kaapi_workqueue_index_t* end,
   kaapi_workqueue_index_t  size
@@ -1986,7 +2010,7 @@ extern int kaapi_workqueue_slowpop(
     Return ESRCH if the current thread is not a kaapi thread.
 */
 extern int kaapi_workqueue_slowpop_ull(
-  kaapi_workqueue_t* kwq, 
+  kaapi_workqueue_t*           kwq, 
   kaapi_workqueue_index_ull_t* beg,
   kaapi_workqueue_index_ull_t* end,
   kaapi_workqueue_index_ull_t  size
@@ -2083,9 +2107,11 @@ static inline int kaapi_workqueue_steal(
   kaapi_assert_debug( 0 < size );
   kaapi_assert_debug( kaapi_atomic_assertlocked(kwq->lock) );
 
+#if 0
   /* disable gcc warning */
   *beg = 0;
   *end = 0;
+#endif
 
   loc_end  = kwq->rep.li.end;
   loc_init = loc_end;
@@ -2100,7 +2126,7 @@ static inline int kaapi_workqueue_steal(
   }
 
   *beg = loc_end;
-  *end = *beg + size;
+  *end = loc_end + size;
   
   return 0; /* true */
 }  
@@ -2123,9 +2149,11 @@ static inline int kaapi_workqueue_steal_ull(
 
   kaapi_assert_debug( kaapi_atomic_assertlocked(kwq->lock) );
 
+#if 0
   /* disable gcc warning */
   *beg = 0;
   *end = 0;
+#endif
 
   loc_end  = kwq->rep.ull.end;
   if (loc_end < size) 
@@ -2142,7 +2170,7 @@ static inline int kaapi_workqueue_steal_ull(
   }
 
   *beg = loc_end;
-  *end = *beg + size;
+  *end = loc_end + size;
   
   return 0; /* true */
 }  

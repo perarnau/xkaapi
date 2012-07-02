@@ -168,3 +168,8 @@ GOMP_2.0 {
 	GOMP_loop_ull_static_next;
 	GOMP_loop_ull_static_start;
 } GOMP_1.0;
+
+KOMP_1.0 {
+  global:
+	komp_set_datadistribution_bloccyclic;
+};

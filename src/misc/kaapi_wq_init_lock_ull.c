@@ -1,12 +1,13 @@
 /*
 ** xkaapi
 ** 
-**
-** Copyright 2009 INRIA.
+** 
+** Copyright 2010 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -43,82 +44,26 @@
 */
 #include "kaapi_impl.h"
 
-typedef struct kaapi_hier_arg {
-  short         init;     /* 0 iff not init  */
-  short         policy;  /* 1: local, 2: rand */
-  int           nfailed;
-  unsigned int  seed;
-} kaapi_hier_arg;
-
-
 /** 
 */
-int kaapi_sched_select_victim_hwsn( 
-    kaapi_processor_t* kproc, 
-    kaapi_victim_t* victim, 
-    kaapi_selecvictim_flag_t flag 
+int kaapi_workqueue_init_with_lock_ull( 
+    kaapi_workqueue_t*          kwq, 
+    kaapi_workqueue_index_ull_t b, 
+    kaapi_workqueue_index_ull_t e, 
+    kaapi_lock_t*               thelock 
 )
 {
-  int victimid;
-  int nbproc;
-  int rr;
-  kaapi_hier_arg* arg;
-  kaapi_onelevel_t* level;
-
-  kaapi_assert_debug( sizeof(kaapi_hier_arg) <= sizeof(kproc->fnc_selecarg) );
-
-  arg = (kaapi_hier_arg*)&kproc->fnc_selecarg;
-
-  if ((kproc->hlevel.depth ==0) || (arg->init ==-1))
-  { /* no hierarchy: like random flat selection */
-    return kaapi_sched_select_victim_rand(kproc, victim, flag );
-  }
-
-
-  if (flag == KAAPI_STEAL_FAILED)
-  {
-    ++arg->nfailed;
-    if (arg->nfailed > 3)
-      arg->policy = 2; /* random */
-    return 0;
-  }
-
-  if (flag == KAAPI_STEAL_SUCCESS)
-  {
-    if (arg->policy !=1) arg->policy =1; 
-
-    /* success: try next to time initial depth */
-    arg->nfailed  = 0;
-    return 0;
-  }
-
-  kaapi_assert_debug (flag == KAAPI_SELECT_VICTIM);
-  if (arg->init ==0)
-  {
-    arg->init     = 1;
-    arg->policy   = 2;
-    arg->nfailed  = 0;
-    arg->seed     = rand();
-  }
-
-  nbproc = kaapi_count_kprocessors;
-  if (nbproc <=1) 
-    return EINVAL;
-
-redo_select:
-  rr = rand_r(&arg->seed);
-  /* first: select in self set */
-  if (arg->policy ==1)
-  {
-    level = &kproc->hlevel.levels[0];
-    victimid = level->notself[ rr % level->nnotself];
-  }
-  else
-    victimid = rr % nbproc;
-
-  victim->kproc = kaapi_all_kprocessors[ victimid ];
-  if (victim->kproc ==0) 
-    goto redo_select;
-
+  kaapi_mem_barrier();
+#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)||defined(__ppc__)||defined(__arm__)
+  kaapi_assert_debug( (((unsigned long)&kwq->rep.ull.beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
+  kaapi_assert_debug( (((unsigned long)&kwq->rep.ull.end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
+#else
+#  error "May be alignment constraints exit to garantee atomic read write"
+#endif
+  kaapi_assert_debug( b <= e );
+  kaapi_assert_debug( thelock != 0 );
+  kwq->rep.ull.beg  = b;
+  kwq->rep.ull.end  = e;
+  kwq->lock = thelock;
   return 0;
 }

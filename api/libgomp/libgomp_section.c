@@ -43,11 +43,11 @@
 */
 #include "libgomp.h"
 
-unsigned GOMP_sections_start (unsigned maxsec)
+unsigned int GOMP_sections_start (unsigned maxsec)
 {
   long first, last;
   if (GOMP_loop_dynamic_start( 0, maxsec, 1, 1, &first, &last ))
-    return 1+first;
+    return (int)(1+first);
   return 0;
 }
 
@@ -55,7 +55,7 @@ unsigned GOMP_sections_next (void)
 {
   long first, last;
   if (GOMP_loop_dynamic_next( &first, &last ))
-    return 1+first;
+    return (int)(1+first);
   return 0;
 }
 

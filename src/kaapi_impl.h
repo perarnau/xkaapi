@@ -297,21 +297,20 @@ struct kaapi_taskdescr_t;
 /**
 */
 typedef struct kaapi_affinityset_t {
-    kaapi_cpuset_t                 who;       /* who is in this set */
-    size_t                         mem_size;
+    kaapi_cpuset_t                 who;       /* cpu id in this set */
+    size_t                         mem_size;  /* memory size of this set */
     int                            os_index;  /* numa node id or ??? */
-    int                            ncpu;
+    int                            ncpu;      /* number of cpu */
     short                          type;      /* see kaapi_memory_t */
-    struct kaapi_affinity_queue_t* queue;     /* yes ! */ 
 } kaapi_affinityset_t;
 
 /**
 */
 typedef struct kaapi_hierarchy_one_level_t {
-  unsigned short                count;           /* number of kaapi_affinityset_t at this level */
-  kaapi_affinityset_t*          affinity; 
-  kaapi_hws_levelid_t		levelid;
-  char*				name;
+  unsigned short           count;       /* number of kaapi_affinityset_t at this level */
+  kaapi_affinityset_t*     affinity; 
+  kaapi_hws_levelid_t      levelid;
+  char*	                   name;
 } kaapi_hierarchy_one_level_t;
 
 /** Memory hierarchy of the local machine
@@ -322,6 +321,7 @@ typedef struct kaapi_hierarchy_one_level_t {
 */
 typedef struct kaapi_hierarchy_t {
   unsigned short               depth;
+  unsigned short               numalevel;
   kaapi_hierarchy_one_level_t* levels;
 } kaapi_hierarchy_t;
 
