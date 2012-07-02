@@ -48,11 +48,8 @@
 
 extern void _kaapif_register_task_format(void);
 
-#if CONFIG_MAX_TID
-int xxx_max_tid;
-#endif
-int xxx_seq_grain;
-int xxx_par_grain;
+long xxx_seq_grain;
+long xxx_par_grain;
 
 #define FATAL()						\
 do {							\
@@ -78,8 +75,8 @@ int kaapif_init_(int32_t* flags)
   xxx_seq_grain = 16;
   xxx_par_grain = 2 * xxx_seq_grain;
 #else
-  xxx_seq_grain = kaapic_default_attr.s_grain;
-  xxx_par_grain = kaapic_default_attr.p_grain;
+  xxx_seq_grain = kaapic_default_attr.rep.li.s_grain;
+  xxx_par_grain = kaapic_default_attr.rep.li.p_grain;
 #endif
   return KAAPIF_SUCCESS;
 }
@@ -133,8 +130,8 @@ void kaapif_set_grains_(int32_t* par_grain, int32_t* seq_grain)
 
 void kaapif_set_default_grains_(void)
 {
-  xxx_par_grain = kaapic_default_attr.s_grain;
-  xxx_seq_grain = kaapic_default_attr.p_grain;
+  xxx_par_grain = kaapic_default_attr.rep.li.s_grain;
+  xxx_seq_grain = kaapic_default_attr.rep.li.p_grain;
 }
 
 
@@ -169,10 +166,6 @@ int kaapif_end_parallel_(int32_t* flags)
 
 
 /* tasklist parallel regions, temporary */
-
-extern void kaapic_save_frame(void);
-extern void kaapic_restore_frame(void);
-
 int kaapif_begin_parallel_tasklist_(void)
 {
   kaapic_save_frame();

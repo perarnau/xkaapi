@@ -1,0 +1,183 @@
+\documentclass{article}[12pt]
+\usepackage[utf8x]{inputenc}
+
+\usepackage{url} \urlstyle{sf}
+\usepackage[a4paper,margin=1.9cm]{geometry}
+\usepackage{xspace}
+%\usepackage[american]{babel}
+\usepackage{palatino}
+\usepackage{bibtopic}
+\usepackage{boxit}
+\usepackage{RR}
+
+%\usepackage{enumitem}
+%\usepackage{dot2texi}
+
+
+\newcommand{\refpage}[1]{\ref{#1} page~\pageref{#1}}
+
+\newcommand{\kaapi}{\textsc{X}-Kaapi\xspace}
+%%%\newcommand{\new}{\hspace*{10ex}\textbf{\textsc{New in \kaapi.}~\\}\xspace}
+%\newcommand{\new}{}
+%\newcommand{\inote}[1]{\textit{\textbf{  \center \hrule Implementation note\hrule}}\vspace*{1ex}\textit{#1}\vspace{1ex} \hrule
+%\vspace*{2ex}}
+
+%%\newcounter{subsubsection}[subsection]
+%\renewcommand{\subsubsection}[1]{~\\ \addtocounter{subsubsection}{1} \noindent\textit{
+%%\textbf{\thesubsection.
+%\thesubsubsection. #1\\}}
+
+%
+%\newcounter{subsubsubsection}[subsubsection]
+%\newcommand{\subsubsubsection}[1]{~\\ \addtocounter{subsubsubsection}{1} \noindent\textit{\textbf{\thesubsubsection.
+%\thesubsubsubsection. #1\\}}}
+%\newtheorem{proposition}{Proposition}
+
+%%\renewcommand{\subsubsection}[1]{~\\ \addtocounter{subsubsection}{1} \noindent\textit{\textbf{\thesubsubsection\hspec #1\\}}}
+
+\begin{document}
+
+\RRdate{November 2011}
+\RRauthor{
+Thierry Gautier
+}
+\RRtitle{\kaapi tracing tool}
+\RRabstract{}
+\RRresume{}
+\RRmotcle{}
+\RRkeyword{}
+\RRprojets{MOAIS}
+\RCGrenoble
+\RRNo{}
+
+\makeRT % cas d'un rapport technique.
+
+\newpage
+\tableofcontents
+\newpage
+
+\section*{Foreword}
+\kaapi is developed by the INRIA MOAIS team \url{http://moais.imag.fr}.
+ The \kaapi project is still under development.  We do our best to produce as good documentation and  software as possible.  
+ Please inform us of any bug, malfunction, question, or comment that may arrise. \\ 
+~\\
+~\\
+This documentation presents the \kaapi trace utilities. \kaapi is a library with several API. 
+The C interface is the lowest interface to program directly on top of the runtime. The C++ interface is an extension of Athapascan-1 interface with new features to avoid explicit declaration of shared variable. \kaapi may also be used with C++ through a parallel STL implementation.
+
+\newpage
+
+\section*{About \kaapi}
+
+\kaapi  is a \textbf{``high level''}  interface in the sense that no reference is made to the execution support.  
+The synchronization, communication, and scheduling of operations are fully controlled by the software. 
+   \kaapi is an  \textbf{explicit parallelism language}: the programmer indicates the parallelism of the algorithm through \kaapi's one, easy-to-learn  template functions, \texttt{Spawn} to create tasks.   The programming semantics are similar to those of a sequential 
+ execution in that each ``read'' executed in parallel returns the value it would have returned had the ``read'' been executed  sequentially. 
+ 
+The following documentations exist about \kaapi:
+\begin{itemize}
+\item \kaapi comes from Athapascan interface defined in 1998 and updated in the INRIA technical report RT-276. 
+\item The INRIA RT-417 presents the C API.
+\item The INRIA RT-418 presents the KaCC compiler that allows to write parallel program using code annotation with pragma.
+\end{itemize}
+\kaapi is composed by one runtime and several application programming interface (API).
+All these APIs are based on the runtime functions. With specific options it is possible to create a version of the library which is able to record events at runtime, and then to process them to display Gantt diagram or to have access to some statistics.
+
+
+% ---------------------------------------------------------------
+\newpage
+\section*{Reading this Document}
+% ---------------------------------------------------------------
+This document is a developer documentation designed to teach one how to use the \kaapi's trace utilities. If the reader cannot find its information into this document, please refers to the \kaapi web site at \url{http://kaapi.gforge.inria.fr}.
+
+This document is organized as following:
+\begin{itemize}
+\item the configuration options required to generate trace of execution is describe in section~\ref{sec:option};
+\item because events may easily generate GigaByte of data, the section~\ref{sec:selection} describes how to filter events;
+\item the format of events and their specific data fields are described in section~\ref{sec:trace format}.
+\item the section~\ref{sec:convert} presents how to convert internal binary representation of events to the Paj\'e representation, which can be display using ViTE program.
+\end{itemize}
+
+% ---------------------------------------------------------------
+\newpage
+\section{Configuring \kaapi library and generating trace files} \label{sec:option}
+% ---------------------------------------------------------------
+
+The build system uses GNU Autotools.
+In case you cloned the project repository, you first have to bootstrap the configuration process by running the following script:
+\begin{verbatim}
+$> ./bootstrap
+\end{verbatim}
+The \textit{configure} file should be present. 
+It is used to create the \textit{Makefile} accordingly to your system configuration. Command line
+options can be used to modify the default behavior. You can have a complete
+list of the available options by running:
+\begin{verbatim}
+$> ./configure --help
+\end{verbatim}
+
+\subsection{Configuration}
+\kaapi web site has detailed description of available options. 
+Below is a list of the important one for tracing utilities:
+\begin{itemize} %% option list
+\item \verb+--with-perfcounter+\newline
+Enable performance counters support.
+\item \verb+--with-papi+\newline
+Enable the PAPI library for low level performance counting.
+More information on PAPI can be found at http://icl.cs.utk.edu/papi/.
+\end{itemize} %% option list
+
+\subsection{Compilation and installation}
+On success, the configuration process generates a Makefile. the 2 following
+commands build and install the \kaapi runtime:
+\begin{verbatim}
+$> make
+$> make install
+\end{verbatim}
+
+
+
+\subsection{Activation of event' recording}
+Execution of \kaapi program is controlled by environment variables.
+For instance, \verb+KAAPI_CPUCOUNT+ and \verb+KAAPI_CPUSET+ are used
+to control the number and the location of cores on the machine.
+
+With the options presented in the previous configuration, \kaapi runtime is able to record events that corresponds to different activities at runtime. 
+
+The record of events is enable if the environment variable \verb+KAAPI_RECORD_TRACE+ is set. Once setting, the execution of any \kaapi program will record events such that:
+\begin{itemize} 
+\item one file \verb+/tmp/events.<username>.<coreid>.evt+ is created for each core of the  selected set (using \verb+KAAPI_CPUCOUNT+ or \verb+KAAPI_CPUSET+). 
+\item A file \verb+/tmp/events.<username>.<coreid>.evt+ contains the sequence of events generated by the core \verb+<coreid>+ during its execution. 
+\end{itemize} 
+
+\subsection{Selection of events}
+
+Each event has a unique identifier (integer). The \kaapi runtime only records events that have theirs identifiers defined into the event mask. 
+
+By default the event mask  contains all events. The user may change it  by setting the environment variable \verb+KAAPI_RECORD_MASK+. For instance:
+\begin{verbatim}
+> KAAPI_RECORD_MASK=2,4,10,12
+\end{verbatim}
+specifies the event mask to contains only the events with identifiers  $2,4,10$ and $12$.\\
+
+The set of all events are clustered into three main classes:
+\begin{itemize}
+\item \textbf{compute}: which contains all  events that are associated with computations,
+\item \textbf{idle}: which contains all events that are associated with idle state,
+\item \textbf{steal}: that defines all events involved during work stealing operation.
+\end{itemize}
+These names may be used in defined the event mask. For instance:
+\begin{verbatim}
+> KAAPI_RECORD_MASK=compute,idle,10,12
+\end{verbatim}
+specifies an event mask that contains all events from the compute set, the idle set and event number $10$ and $12$.
+
+% ---------------------------------------------------------------
+\section{Trace file format} \label{sec:selection}
+% ---------------------------------------------------------------
+
+\subsection{Event data structure}
+
+\subsection{Internal events}
+
+\end{document}

@@ -112,8 +112,8 @@ static inline komp_workshare_t*  komp_loop_dynamic_start_init(
     workshare = kaapi_thread_pushdata(thread, sizeof(komp_workshare_t) );
     ctxt->workshare = workshare;
   }
-  workshare->start  = start;
-  workshare->incr   = incr;
+  workshare->rep.li.start  = start;
+  workshare->rep.li.incr   = incr;
   workshare->serial = ++teaminfo->serial;
   return workshare;
 }
@@ -155,6 +155,10 @@ static inline void komp_loop_dynamic_start_master(
   kaapic_foreach_attr_set_grains( &attr, chunk_size, 1);
   //kaapic_foreach_attr_set_grains( &attr, 128, 256);
   kaapic_foreach_attr_set_threads( &attr, teaminfo->numthreads );
+
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  attr.datadist = ctxt->icv.attr.datadist;
+#endif
       
   /* initialize the master if not already done */
   workshare->lwork = kaapic_foreach_workinit(self_thread, 
@@ -248,8 +252,10 @@ bool GOMP_loop_dynamic_start (
         iend)
       )
   {
-    *istart = ctxt->workshare->start + *istart * ctxt->workshare->incr;
-    *iend   = ctxt->workshare->start + *iend   * ctxt->workshare->incr;
+    *istart = ctxt->workshare->rep.li.start + 
+               *istart * ctxt->workshare->rep.li.incr;
+    *iend   = ctxt->workshare->rep.li.start + 
+               *iend   * ctxt->workshare->rep.li.incr;
     return 1;
   }
   return 0;
@@ -269,8 +275,10 @@ bool GOMP_loop_dynamic_next (long *istart, long *iend)
         iend)
   )
   {
-    *istart = ctxt->workshare->start + *istart * ctxt->workshare->incr;
-    *iend   = ctxt->workshare->start + *iend   * ctxt->workshare->incr;
+    *istart = ctxt->workshare->rep.li.start + 
+               *istart * ctxt->workshare->rep.li.incr;
+    *iend   = ctxt->workshare->rep.li.start + 
+               *iend   * ctxt->workshare->rep.li.incr;
     return 1;
   }
   return 0;

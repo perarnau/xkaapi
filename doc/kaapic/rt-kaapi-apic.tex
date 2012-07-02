@@ -329,9 +329,25 @@ int kaapic_foreach(
   ...
  ) 
 
+int kaapic_foreach_ull( 
+  unsigned long long first, 
+  unsigned long long last,
+  const kaapic_foreach_attr_t* attr,
+  int32_t nparam,
+  ...
+ ) 
+
 int kaapic_foreach_withformat( 
   int first, 
   int last,
+  const kaapic_foreach_attr_t* attr,
+  int32_t nparam,
+  ...
+ ) 
+ 
+int kaapic_foreach_withformat_ull( 
+  unsigned long long first, 
+  unsigned long long last,
   const kaapic_foreach_attr_t* attr,
   int32_t nparam,
   ...
@@ -347,6 +363,12 @@ int kaapic_foreach_attr_set_grains(
   uint32_t p_grain
 )
 
+int kaapic_foreach_attr_set_grains_ull(
+  kaapic_foreach_attr_t* attr, 
+  unsigned long long s_grain,
+  unsigned long long p_grain
+)
+
 int kaapic_foreach_attr_destroy(
   kaapic_foreach_attr_t* attr
 )
@@ -355,9 +377,10 @@ int kaapic_foreach_attr_destroy(
 
   \begin{desc}
     Those routines run a parallel loop over the range [\textit{first},
-    \textit{last})\footnote{ This is an \textbf{exclusive} interval in
+    \textit{last})\footnote{This is an \textbf{exclusive} interval in
       the C interface and an \textbf{inclusive} interval in the
-      Fortran interface.}  The loop is given as function with its
+      Fortran interface.}, where \textit{first} $\leq$ \textit{last}.  
+    The loop is given as function with its
     parameters. The body function has \textit{nparam} parameters and
     it is passed in the \textit{...} optional effective parameter list
     of the foreach interface.

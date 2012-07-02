@@ -1,6 +1,7 @@
 /*
  ** xkaapi
  ** 
+ ** Created on Tue Mar 31 15:19:14 2009
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
@@ -43,10 +44,47 @@
 #include "kaapi_impl.h"
 #include "kaapic_impl.h"
 #include <stdarg.h>
-#include <string.h>
 
-
-void* kaapic_alloca( size_t sz )
+/*
+*/
+void kaapic_foreach_with_format_ull( 
+  unsigned long long first, 
+  unsigned long long last, 
+  const kaapic_foreach_attr_t* attr,
+  int32_t nargs, 
+  ...
+)
 {
-  return kaapi_alloca( kaapi_self_thread(), (uint32_t)sz );
+  int32_t k;
+  kaapic_body_arg_t* body_arg = (kaapic_body_arg_t*)alloca(
+    offsetof(kaapic_body_arg_t, args) + nargs * sizeof(void*)
+  ); 
+  va_list va_args;
+  va_start(va_args, nargs);
+  
+  /* format of each effective parameter is a list of tuple:
+       mode, @, count, type
+  */
+  body_arg->u.f_c_ull = va_arg(va_args, void (*)(unsigned long long, unsigned long long, int32_t, ...));
+  body_arg->nargs = nargs;
+  for (k = 0; k < nargs; ++k)
+  {
+    /* skip mode */
+    va_arg(va_args, uintptr_t);
+
+    body_arg->args[k] = va_arg(va_args, void*);
+
+    /* skip count, type */
+    va_arg(va_args, uintptr_t);
+    va_arg(va_args, uintptr_t);
+  }
+  va_end(va_args);
+  
+  kaapic_foreach_common_ull( 
+      first, 
+      last, 
+      attr, 
+      kaapic_foreach_body2user_ull, 
+      body_arg
+  );
 }

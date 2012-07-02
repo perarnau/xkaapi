@@ -1942,8 +1942,8 @@ static inline unsigned int kaapi_workqueue_isempty_ull( const kaapi_workqueue_t*
 {
   kaapi_workqueue_index_ull_t b = kwq->rep.ull.beg;
   kaapi_workqueue_index_ull_t e = kwq->rep.ull.end;
-  if (e <= b) return 0;
-  return 1;
+  if (e <= b) return 1;
+  return 0;
 }
 
 /** This function should be called by the current kaapi thread that own the workqueue.
