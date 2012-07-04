@@ -326,6 +326,14 @@ int kaapi_cuda_trace_thread_init( void )
     }
     kaapi_cuda_trace_add_buffer( ctx,  stream_id );
 
+    res = cuptiGetStreamId( ctx, (CUstream)kaapi_cuda_DtoH_stream(),
+	    &stream_id );
+    if( res != CUPTI_SUCCESS ) {
+	fprintf(stdout, "%s: cuptiGetStreamId ERROR %d\n", __FUNCTION__, res );
+	fflush(stdout); 
+    }
+    kaapi_cuda_trace_add_buffer( ctx,  stream_id );
+
     res = cuptiGetStreamId( ctx, (CUstream)kaapi_cuda_kernel_stream(),
 	    &stream_id );
     if( res != CUPTI_SUCCESS ) {
@@ -355,14 +363,7 @@ void kaapi_cuda_trace_thread_finalize( void )
 	fprintf(stdout, "%s: cuptiGetStreamId ERROR %d\n", __FUNCTION__, res );
 	fflush(stdout); 
     }
-    while( kaapi_cuda_trace_dump( ctx, stream_id ) != NULL ) ;
-
-    res = cuptiGetStreamId( ctx, (CUstream)kaapi_cuda_kernel_stream(),
-	    &stream_id );
-    if( res != CUPTI_SUCCESS ) {
-	fprintf(stdout, "%s: cuptiGetStreamId ERROR %d\n", __FUNCTION__, res );
-	fflush(stdout); 
-    }
+    cudaStreamSynchronize( kaapi_cuda_HtoD_stream() );
     while( kaapi_cuda_trace_dump( ctx, stream_id ) != NULL ) ;
 
     res = cuptiGetStreamId( ctx, (CUstream)kaapi_cuda_DtoH_stream(),
@@ -371,7 +372,18 @@ void kaapi_cuda_trace_thread_finalize( void )
 	fprintf(stdout, "%s: cuptiGetStreamId ERROR %d\n", __FUNCTION__, res );
 	fflush(stdout); 
     }
+    cudaStreamSynchronize( kaapi_cuda_DtoH_stream() );
     while( kaapi_cuda_trace_dump( ctx, stream_id ) != NULL ) ;
+
+    res = cuptiGetStreamId( ctx, (CUstream)kaapi_cuda_kernel_stream(),
+	    &stream_id );
+    if( res != CUPTI_SUCCESS ) {
+	fprintf(stdout, "%s: cuptiGetStreamId ERROR %d\n", __FUNCTION__, res );
+	fflush(stdout); 
+    }
+    cudaStreamSynchronize( kaapi_cuda_kernel_stream() );
+    while( kaapi_cuda_trace_dump( ctx, stream_id ) != NULL ) ;
+
 }
 
 #endif
