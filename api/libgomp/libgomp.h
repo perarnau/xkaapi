@@ -125,7 +125,6 @@ typedef struct komp_icv_t {
    of the runing Kaapi thread.
 */
 typedef struct komp_teaminfo_t {
-  kaapi_lock_t                     lock;
   komp_barrier_t                   barrier;
   int volatile                     current_ordered_index;
   void*  volatile                  single_data;  /* 0 or the & of copy_end */
@@ -206,7 +205,6 @@ static inline kompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc )
 #if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
     kaapic_foreach_attr_init( &first->ctxt.icv.attr );
 #endif
-    kaapi_atomic_initlock(&first->teaminfo.lock);
     komp_barrier_init (&first->teaminfo.barrier, 1);
     first->teaminfo.ordered_state       = 0;
     first->teaminfo.single_data = 0;

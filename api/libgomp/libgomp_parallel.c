@@ -181,8 +181,6 @@ komp_init_parallel_start (
         sizeof(komp_teaminfo_t), 
         8
   );
-  /* lock for ??? */
-  kaapi_atomic_initlock(&teaminfo->lock);
 
   /* barrier for the team */
   komp_barrier_init (&teaminfo->barrier, num_threads);
@@ -376,6 +374,5 @@ GOMP_parallel_end (void)
   kproc->libkomp_tls = old_ctxt;
 
   /* free shared resource */
-  kaapi_atomic_destroylock(&teaminfo->lock);
   komp_barrier_destroy(&teaminfo->barrier);
 }
