@@ -301,5 +301,27 @@ extern int  komp_test_nest_lock_25 (omp_nest_lock_25_t *) __GOMP_NOTHROW;
 __attribute__((weak))
 extern void komp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length );
 
+extern void omp_set_num_threads (int);
+extern int omp_get_num_threads (void);
+extern int omp_get_thread_num (void);
+extern int omp_get_max_threads (void);
+extern int omp_get_num_procs (void);
+extern int omp_in_parallel (void);
+extern void omp_set_dynamic (int);
+extern int omp_get_dynamic (void);
+extern void omp_set_nested (int);
+extern int omp_get_nested (void);
+extern void omp_set_schedule (omp_sched_t, int);
+extern void omp_get_schedule (omp_sched_t *, int *);
+extern int omp_get_thread_limit (void);
+extern void omp_set_max_active_levels (int);
+extern int omp_get_max_active_levels (void);
+extern int omp_get_level (void);
+extern int omp_get_ancestor_thread_num (int);
+extern int omp_get_team_size (int);
+extern int omp_get_active_level (void);
+extern int omp_in_final (void);
+extern double omp_get_wtime (void);
+extern double omp_get_wtick (void);
 
 #endif // #ifndef _KAAPI_LIBGOMP_
