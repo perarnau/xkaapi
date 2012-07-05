@@ -92,6 +92,7 @@ libkomp_la_SOURCES=\
 	$(libgomp_la_SOURCES)
 
 libomp_ext_la_SOURCES=\
+        omp_ext.h\
 	libomprt_ext.c
 
 check_PROGRAMS=check-headers

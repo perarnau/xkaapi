@@ -25,6 +25,7 @@ M4_SRCS=\
   kaapic_dfg_switch.m4 \
   kaapic_dfg_wh_switch.m4 \
   kaapic_adaptive_switch.m4 \
+  kaapic_adaptive_switch_ull.m4 \
   m4_generator \
   m4_macros
 
