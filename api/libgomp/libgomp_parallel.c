@@ -214,15 +214,14 @@ komp_init_parallel_start (
 }
 
 static void
-komp_push_task_to_specific_worker (kaapi_task_t *task, 
-                                   komp_parallel_task_arg_t *allarg,
-                                   kaapi_thread_t *thread,
-                                   void (*fn) (void *),
-                                   void *data,
-                                   komp_teaminfo_t *teaminfo,
-                                   kompctxt_t* ctxt,
-                                   int task_logical_id,
-                                   int worker_id_to_push_task_to)
+komp_task_prepare (kaapi_task_t *task, 
+                   komp_parallel_task_arg_t *allarg,
+                   kaapi_thread_t *thread,
+                   void (*fn) (void *),
+                   void *data,
+                   komp_teaminfo_t *teaminfo,
+                   kompctxt_t* ctxt,
+                   int task_logical_id)
 {
   komp_parallel_task_arg_t *arg = NULL;
   kaapi_task_init( 
@@ -239,8 +238,6 @@ komp_push_task_to_specific_worker (kaapi_task_t *task,
   arg->nextnumthreads = ctxt->icv.next_numthreads;
   arg->nestedlevel    = ctxt->icv.nested_level;
   arg->nestedparallel = ctxt->icv.nested_parallel;
-  
-  kaapi_thread_distribute_task( thread, worker_id_to_push_task_to);
 }
 
 void 
@@ -277,28 +274,14 @@ komp_parallel_start (
 
 
 //POUR BENJAMIN: force ou non a pousser une tache dans la queue d'un Kthread particulier
-#if 0  /* OLD CODE: push locally all tasks that may be steal by any thread */
+#if 0  
+  /* OLD CODE: push locally all tasks that may be steal by any thread */
   /* The master thread (id 0) calls fn (data) directly. That's why we
      start this loop from id = 1.*/
-  komp_parallel_task_arg_t* arg;
   task = kaapi_thread_toptask(thread);
   for (int i = 1; i < num_threads; i++)
   {
-    kaapi_task_init( 
-        task, 
-        komp_trampoline_task_parallel, 
-        allarg+i
-    );
-    arg = kaapi_task_getargst( task, komp_parallel_task_arg_t );
-    arg->threadid       = i;
-    arg->fn             = fn;
-    arg->data           = data;
-    arg->teaminfo       = teaminfo;
-    /* WARNING: see spec: nextnum threads is inherited ? */
-    arg->nextnumthreads = ctxt->icv.next_numthreads;
-    arg->nestedlevel    = ctxt->icv.nested_level;
-    arg->nestedparallel = ctxt->icv.nested_parallel;
-
+    komp_task_prepare (task, allarg, thread, fn, data, teaminfo, ctxt, i);
     task = kaapi_thread_nexttask(thread, task);
   }
   kaapi_thread_push_packedtasks(thread, num_threads-1);
@@ -313,33 +296,36 @@ komp_parallel_start (
   */
 
   int nb_worker_threads = kaapi_getconcurrency ();
-  int tasks_per_thread = num_threads / nb_worker_threads;
-  int remaining_tasks = num_threads - (nb_worker_threads * tasks_per_thread);
- 
+  int tasks_per_thread[nb_worker_threads];
+  int chunk_size = num_threads / nb_worker_threads;
+  int remaining_tasks = num_threads - (nb_worker_threads * chunk_size);
+
+  for (int i = 0; i < nb_worker_threads; i++)
+    tasks_per_thread[i] = chunk_size;
+  
+  int thread_id = 0;
+  while (remaining_tasks != 0)
+  {
+    tasks_per_thread[thread_id]++;
+    thread_id = (thread_id + 1) % nb_worker_threads;
+    remaining_tasks--;
+  }
+  
+  int task_id = 1;
   /* Distribute the num_threads tasks over the nb_worker_threads workers. */
   for (int i = 0; i < nb_worker_threads; i++)
   {
     int nb_pushed_tasks = (i == 0) ? 1 : 0; /* The master thread calls fn (data) directly. */
     
     task = kaapi_thread_toptask(thread);
-    while (nb_pushed_tasks < tasks_per_thread)
+    while (nb_pushed_tasks < tasks_per_thread[i])
     {
-      int task_logical_id = (i * tasks_per_thread) + nb_pushed_tasks;
-      
-      komp_push_task_to_specific_worker (task, allarg, thread, fn, data, teaminfo, ctxt, task_logical_id, i);
+      komp_task_prepare (task, allarg, thread, fn, data, teaminfo, ctxt, task_id++);
+      kaapi_thread_distribute_task (thread, i);
 
       task = kaapi_thread_nexttask(thread, task);      
       nb_pushed_tasks++;
     }
-  }
-  
-  int i = 0;
-  /* Distribute the remaining tasks over the workers in a round-robin fashion. */
-  for (int worker_id = 0; i < remaining_tasks; worker_id++, i++)
-  {
-      int task_logical_id = (nb_worker_threads * tasks_per_thread) + i;
-      komp_push_task_to_specific_worker (task, allarg, thread, fn, data, teaminfo, ctxt, task_logical_id, i);
-      task = kaapi_thread_nexttask(thread, task);
   }
 #endif  
 }
