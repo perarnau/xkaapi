@@ -162,7 +162,7 @@ komp_init_parallel_start (
     num_threads = 1;
   else {
     if (num_threads == 0)
-      num_threads = ctxt->icv.next_numthreads;
+      num_threads = (komp_env_nthreads != 0) ? komp_env_nthreads : ctxt->icv.next_numthreads;
   }
 
   thread = kaapi_threadcontext2thread(kproc->thread);

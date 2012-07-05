@@ -49,6 +49,8 @@
 #include <errno.h>
 #include "kaapic.h"
 
+unsigned long komp_env_nthreads = 0;
+
 /* Parse an unsigned long environment varible.  Return true if one was
    present and it was successfully parsed.  */
 
@@ -89,15 +91,15 @@ parse_unsigned_long (const char *name, unsigned long *pvalue)
 static void __attribute__ ((constructor))  
 initialize_lib (void) 
 {
-  unsigned long env_nthreads = 0;
-  
-  if (parse_unsigned_long ("OMP_NUM_THREADS", &env_nthreads))
+  if (parse_unsigned_long ("OMP_NUM_THREADS", &komp_env_nthreads))
   {
+#if 0 /* This may break programs that use more threads than cores. */ 
     /* Kaapi inherits OMP_NUM_THREADS */
     setenv ("KAAPI_CPUCOUNT", getenv ("OMP_NUM_THREADS"), 1);
+#endif
   }
   /* here to do: convert GOM_AFFINITY to KAAPI_CPUSET */
-
+  
   kaapic_init (KAAPIC_START_ONLY_MAIN);
 
   //kaapic_begin_parallel ();
