@@ -215,7 +215,6 @@ komp_init_parallel_start (
 
 static void
 komp_push_task_to_specific_worker (kaapi_task_t *task, 
-                                   komp_parallel_task_arg_t *arg,
                                    komp_parallel_task_arg_t *allarg,
                                    kaapi_thread_t *thread,
                                    void (*fn) (void *),
@@ -225,6 +224,7 @@ komp_push_task_to_specific_worker (kaapi_task_t *task,
                                    int task_logical_id,
                                    int worker_id_to_push_task_to)
 {
+  komp_parallel_task_arg_t *arg = NULL;
   kaapi_task_init( 
                   task, 
                   komp_trampoline_task_parallel, 
@@ -255,7 +255,6 @@ komp_parallel_start (
   kaapi_thread_t* thread;
   komp_teaminfo_t* teaminfo;
   kaapi_task_t* task;
-  komp_parallel_task_arg_t* arg;
   komp_parallel_task_arg_t* allarg;
     
   /* begin parallel region: also push a new frame that will be pop
@@ -281,6 +280,7 @@ komp_parallel_start (
 #if 0  /* OLD CODE: push locally all tasks that may be steal by any thread */
   /* The master thread (id 0) calls fn (data) directly. That's why we
      start this loop from id = 1.*/
+  komp_parallel_task_arg_t* arg;
   task = kaapi_thread_toptask(thread);
   for (int i = 1; i < num_threads; i++)
   {
@@ -326,7 +326,7 @@ komp_parallel_start (
     {
       int task_logical_id = (i * tasks_per_thread) + nb_pushed_tasks;
       
-      komp_push_task_to_specific_worker (task, arg, allarg, thread, fn, data, teaminfo, ctxt, task_logical_id, i);
+      komp_push_task_to_specific_worker (task, allarg, thread, fn, data, teaminfo, ctxt, task_logical_id, i);
 
       task = kaapi_thread_nexttask(thread, task);      
       nb_pushed_tasks++;
@@ -338,7 +338,7 @@ komp_parallel_start (
   for (int worker_id = 0; i < remaining_tasks; worker_id++, i++)
   {
       int task_logical_id = (nb_worker_threads * tasks_per_thread) + i;
-      komp_push_task_to_specific_worker (task, arg, allarg, thread, fn, data, teaminfo, ctxt, task_logical_id, i);
+      komp_push_task_to_specific_worker (task, allarg, thread, fn, data, teaminfo, ctxt, task_logical_id, i);
       task = kaapi_thread_nexttask(thread, task);
   }
 #endif  
