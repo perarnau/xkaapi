@@ -42,7 +42,5 @@ main (int argc, char **argv)
   
   outstring[nthreads] = '\0';
   
-  test_check ("ordered", (strcmp (outstring, magic) == 0));
-  
-  return 0;
+  return !(strcmp (outstring, magic) == 0);
 }

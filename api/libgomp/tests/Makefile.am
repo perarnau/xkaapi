@@ -1,13 +1,13 @@
 
-AM_CFLAGS=-fopenmp -fdump-tree-all
+AM_CFLAGS=-fopenmp
 AM_LDFLAGS=-lgomp
 
-PROGS= parallel shared critical nested barrier single fibo task-firstprivate loop loop2 loop3 ordered
-#loop4
+PROGS= parallel shared critical nested barrier single fibo task-firstprivate loop loop2 ordered
+#loop3 loop4
 
 check_PROGRAMS=$(PROGS)
 
-TESTS_ENVIRONMENT = $(builddir)/../kaapi-gomp-wrapper --time
+TESTS_ENVIRONMENT = $(builddir)/../kaapi-gomp-wrapper
 TESTS=$(PROGS)
 
 TOOLBOX_SRC=test-toolbox.c test-toolbox.h
