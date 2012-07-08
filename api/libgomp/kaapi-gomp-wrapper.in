@@ -4,6 +4,7 @@ usage() {
     echo "Usage: $(basename $0) [options] program [args...]"
     echo "  Execute an OpenMP program compiled with GNU (libgomp) with KAAPI runtime"
     echo "  Options:"
+    echo "    -d|--gdb: debug the program with gdb"
     echo "    -t|--time: time the program"
     echo "    -h|--help: display this help"
 }
@@ -15,34 +16,43 @@ if `getopt -T >/dev/null 2>&1` ; [ $? = 4 ] ; then
 fi
 
 if test $use_getopt = yes ; then
-  TEMP=`getopt -o +ht --long time,help \
+  TEMP=`getopt -o +hdt --long time,help,gdb \
         -n $(basename $0) -- "$@"`
   eval set -- "$TEMP"
 fi
 
 RUN_TIME=
+RUN_GDB=0
 while test $# -gt 0; do
     case "$1" in
-    -h|--help)
-	usage
-	exit 0 ;;
-    -t|--time)
-	RUN_TIME=time
-	;;
-    --)
-	shift
-	break ;;
-    *)
-	if test $use_getopt = no; then
-	    case "$1" in
-	    -*) 1>&2 "Invalid option $1. Aborting"
-		exit 1;
-	    esac
+	-h|--help)
+	    usage
+	    exit 0 
+	    ;;
+	-d|--gdb)
+	    RUN_GDB=1
+	    ;;
+	-t|--time)
+	    RUN_TIME=time
+	    ;;
+	-z|--zozo)
+	    RUN_TIME=gdb
+	    ;;
+	--)
+	    shift
+	    break 
+	    ;;
+	*)
+	    if test $use_getopt = no; then
+		case "$1" in
+		    -*) 1>&2 "Invalid option $1. Aborting"
+			exit 1;
+		esac
 	    # Assuming main program, no "--" used nor inserted by getopt
-	    break
-	fi
-	echo 1>&2 "Internal error, please report this bug ($1)"
-	exit 1 ;;
+		break
+	    fi
+	    echo 1>&2 "Internal error, please report this bug ($1)"
+	    exit 1 ;;
     esac
     shift
 done
@@ -75,8 +85,15 @@ then
     DYLD_LIBRARY_PATH="@abs_top_builddir@/src/.libs:$DYLD_LIBRARY_PATH" 
 # END REMOVE ONCE INSTALLED
     export DYLD_LIBRARY_PATH="$libgomp_libdir:$DYLD_LIBRARY_PATH"
+    echo "set environment DYLD_LIBRARY_PATH=$libgomp_libdir:$LD_LIBRARY_PATH" > $libgomp_libdir/gdbinit
 else
     export LD_LIBRARY_PATH="$libgomp_libdir:$LD_LIBRARY_PATH"
+    echo "set environment LD_LIBRARY_PATH=$libgomp_libdir:$LD_LIBRARY_PATH" > $libgomp_libdir/gdbinit
 fi
 
-exec $RUN_TIME "$@"
+if [ $RUN_GDB -eq 1 ]
+then
+    exec gdb -x $libgomp_libdir/gdbinit "$@"
+else
+    exec $RUN_TIME "$@"
+fi
