@@ -77,6 +77,7 @@ EXTRA_DIST=gen-Makefile.m4
 pkgconfigdir = $(libdir)/pkgconfig
 
 %/Makefile: gen-Makefile.m4 gen-%.am.m4
+	$(AM_V_at)mkdir -p $*
 	$(AM_V_GEN)m4 $^ \
 		| $(SED) -e "s|^PKGCONFIG=$$|PKG_CONFIG=env PKG_CONFIG_PATH=$(pkgconfigdir) pkg-config|" \
 		| $(SED) -e "s|^CC=$$|CC=$(CC)|" \
