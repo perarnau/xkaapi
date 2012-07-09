@@ -1,0 +1,34 @@
+FAIL: libgomp.c/collapse-2.c execution test
+      -> Assertion qui échoue en mode debug (tid < KAAPI_MAX_PROCESSOR)
+      -> Certainement lié au fait que le programme crée 8 threads (échoue sur mac dual-core)
+
+FAIL: libgomp.c/copyin-1.c execution test
+      -> Résultat faux
+      -> Utilise une variable déclarée comme threadprivate
+
+FAIL: libgomp.c/loop-8.c execution test
+      -> Assertion qui échoue en mode debug (newctxt->teaminfo->gwork != 0)
+
+FAIL: libgomp.c/nested-3.c execution test
+      -> Essentiellement des fonctions du runtime (omp_), pas/mal implémentées
+
+FAIL: libgomp.c/ordered-1.c execution test
+      -> Assertion qui échoue en mode debug (tid < KAAPI_MAX_PROCESSOR)
+      -> Certainement lié au fait que le programme crée 10 threads (échoue sur mac dual-core)
+
+FAIL: libgomp.c/pr29947-1.c execution test
+      -> Résultat faux: abort dans test2
+      -> parallel / reduction / dynamic / atomic
+
+FAIL: libgomp.c/pr35196.c execution test
+      -> Assertion qui échoue en mode debug (tid < KAAPI_MAX_PROCESSOR)
+      -> Certainement lié au fait que le programme crée 8 threads (échoue sur mac dual-core)
+
+FAIL: libgomp.c/pr42942.c execution test
+      -> Résultat faux.
+      -> Teste essentiellement des fonctions du runtime (omp_) + les réductions.
+
+FAIL: libgomp.c/sections-1.c execution test
+      -> Résultat faux (test data[i] != -1)
+      
+
