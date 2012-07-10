@@ -598,10 +598,7 @@ extern void kaapi_sched_idle ( kaapi_processor_t* proc );
     \retval EINTR in case of termination detection
     \TODO reprendre specs
 */
-extern int kaapi_sched_suspend ( kaapi_processor_t* kproc );
-#if 0 // TODO for suspend with general condition
 extern int kaapi_sched_suspend ( kaapi_processor_t* kproc, int (*fcondition)(void* ), void* arg_fcondition );
-#endif
 
 /** \ingroup WS
     Synchronize the current control flow until all the task in the current frame have been executed.
@@ -637,8 +634,11 @@ extern int kaapi_sched_stealprocessor (
 extern kaapi_thread_context_t* kaapi_sched_wakeup ( 
   kaapi_processor_t* kproc, 
   kaapi_processor_id_t kproc_thiefid, 
-  struct kaapi_thread_context_t* cond_thread,
-  kaapi_task_t* cond_task
+  kaapi_thread_context_t* cond_thread,
+  int (*fcondition)(void* ), 
+  void* arg_fcondition
+//  struct kaapi_thread_context_t* cond_thread,
+//  kaapi_task_t* cond_task
 );
 
 

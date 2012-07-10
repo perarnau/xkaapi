@@ -89,7 +89,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     /* try to wake up suspended thread first, inline test to avoid function call */
     if (!kaapi_wsqueuectxt_empty(kproc))
     {
-      thread = kaapi_sched_wakeup(kproc, kproc->kid, 0, 0); 
+      thread = kaapi_sched_wakeup(kproc, kproc->kid, 0, 0, 0); 
       
       if (thread !=0) /* push kproc->thread to freelist and set thread as the new ctxt */
       {

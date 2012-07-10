@@ -57,7 +57,7 @@
    The main reason of this function is because we have no yet reported
    context switch to scheduler code as in C++ Kaapi.   
 */
-int kaapi_sched_suspend ( kaapi_processor_t* kproc )
+int kaapi_sched_suspend ( kaapi_processor_t* kproc, int (*fcondition)(void* ), void* arg_fcondition )
 {
   int err;
   kaapi_request_status_t  ws_status;
@@ -71,6 +71,10 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   kaapi_assert_debug( kproc->thread !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
 
+  /* do not account suspension if condition if true */
+  if (fcondition(arg_fcondition) !=0) 
+    return 0;
+
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_SUSPEND);
@@ -82,6 +86,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
   thread_condition = kproc->thread;
   kaapi_assert_debug( kproc == thread_condition->stack.proc);
 
+#if 0
   /* first look if tasklist is built on this frame */
   tasklist = thread_condition->stack.sfp->tasklist;
   if (tasklist !=0) 
@@ -107,6 +112,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       return 0;
     }
   }
+#endif
 
   /* such threads are sticky: the control flow will return to this call 
      with the same thread as active thread on the kproc.
@@ -134,7 +140,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
     /* wakeup a context: either a ready thread (first) or a suspended thread.
        Precise the suspended thread 'thread_condition' in order to wakeup it first and task_condition.
     */
-    thread = kaapi_sched_wakeup(kproc, kproc->kid, thread_condition, task_condition);
+    thread = kaapi_sched_wakeup(kproc, kproc->kid, thread_condition, fcondition, arg_fcondition); // thread_condition, task_condition);
     if (thread !=0)
     {
       if (thread == thread_condition)
@@ -146,9 +152,10 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
         if (tmp !=0)
           kaapi_context_free( kproc, tmp );
 
-        
+#if 0
         /* ok suspended thread is ready for execution */
         kaapi_assert((tasklist !=0) || (thread->stack.sfp->pc == task_condition));
+#endif
 #if defined(KAAPI_USE_PERFCOUNTER)
         kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
         KAAPI_EVENT_PUSH0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
