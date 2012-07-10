@@ -242,7 +242,6 @@ bool GOMP_loop_dynamic_start (
       incr,
       chunk_size
     );
-    gwork = teaminfo->gwork;
   }
   else 
   {
