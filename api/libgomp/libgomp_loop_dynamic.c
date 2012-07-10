@@ -183,7 +183,7 @@ static inline void komp_loop_dynamic_start_master(
 /*
 */
 static inline void komp_loop_dynamic_start_slave(
-  kaapi_processor_t* kproc,
+  int tid,
   komp_workshare_t*  workshare,
   kaapic_global_work_t* gwork
 )
@@ -194,11 +194,11 @@ static inline void komp_loop_dynamic_start_slave(
   if (gwork ==0) return;
         
   /* get own slice */
-  if (!kaapic_global_work_pop( gwork, kproc->kid, &start, &end))
+  if (!kaapic_global_work_pop( gwork, tid, &start, &end))
     start = end = 0;
 
   workshare->lwork = kaapic_foreach_local_workinit( 
-                          &gwork->lwork[kproc->kid],
+                          &gwork->lwork[tid],
                           start, end );
 }
 
@@ -252,7 +252,7 @@ bool GOMP_loop_dynamic_start (
     kaapi_readmem_barrier();
 
     komp_loop_dynamic_start_slave(
-      kproc,
+      ctxt->icv.thread_id,
       workshare,
       gwork
     );
@@ -455,7 +455,7 @@ static void komp_trampoline_task_parallelfor
   kaapi_assert_debug(new_ctxt->teaminfo->gwork !=0);
 
   komp_loop_dynamic_start_slave(
-    kproc,
+    taskarg->threadid,
     workshare,
     new_ctxt->teaminfo->gwork
   );
