@@ -62,7 +62,7 @@ komp_barrier_destroy (struct komp_barrier *barrier)
 }
 
 void
-komp_barrier_wait (struct komp_barrier *barrier)
+komp_barrier_wait (kompctxt_t* ctxt, struct komp_barrier *barrier)
 {
   int current_cycle = KAAPI_ATOMIC_READ (&barrier->cycle);
   int next_cycle = (current_cycle + 1) % BAR_CYCLES;
@@ -71,7 +71,6 @@ komp_barrier_wait (struct komp_barrier *barrier)
   /* _barrier_ call generated from a _single_ construct: Only the
    thread performing the single body (creating OpenMP tasks) is
    waiting for completion of created tasks. */
-  kompctxt_t* ctxt = komp_get_ctxt();
   if (ctxt->inside_single)
   {
     if (ctxt->icv.thread_id == 0)
@@ -106,7 +105,7 @@ void GOMP_barrier (void)
   kompctxt_t* ctxt = komp_get_ctxt();
   if (ctxt->teaminfo ==0) /* not in parallel region */
     return;
-  komp_barrier_wait (&ctxt->teaminfo->barrier);
+  komp_barrier_wait (ctxt, &ctxt->teaminfo->barrier);
   
   /* barrier should reset single ? */  
 }

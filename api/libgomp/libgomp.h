@@ -83,17 +83,17 @@ typedef struct komp_barrier {
   char __attribute__ ((aligned (CACHE_LINE_SIZE))) count[BAR_CYCLES * CACHE_LINE_SIZE];
 } komp_barrier_t; 
 
+struct kompctxt_t;
+struct komp_workshare_t;
+typedef kaapic_global_work_t komp_globalworkshare_t;
+
 
 /* init.c */
 void komp_barrier_init (struct komp_barrier *barrier, unsigned int num);
 void komp_barrier_destroy (struct komp_barrier *barrier);
-void komp_barrier_wait (struct komp_barrier *barrier);
+void komp_barrier_wait (struct kompctxt_t* ctxt, struct komp_barrier *barrier);
 
 extern unsigned long komp_env_nthreads;
-
-struct kompctxt_t;
-struct komp_workshare_t;
-typedef kaapic_global_work_t komp_globalworkshare_t;
 
 /* each task owns its icv instance.
    The following fields are inherited at task creation time:
