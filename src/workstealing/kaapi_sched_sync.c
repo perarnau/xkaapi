@@ -110,9 +110,8 @@ int kaapi_sched_sync_(kaapi_thread_context_t* thread)
   if ((thread->stack.sfp->tasklist == 0) && kaapi_frame_isempty( thread->stack.sfp ) ) 
     return 0;
 
-  /* here affinity should be deleted (not scalable concept) 
-     - use localkid to enforce execution into one specific
-     kprocessor
+  /* here affinity should be replace because affinity bitmap is not scalable. 
+     - use localkid to enforce execution into one specific kprocessor ?
   */
   kaapi_cpuset_copy(&save_affinity, &thread->affinity);
   kaapi_cpuset_clear(&thread->affinity);
