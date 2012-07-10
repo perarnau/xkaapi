@@ -133,6 +133,8 @@ static inline void komp_loop_dynamic_start_master(
   kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
   komp_teaminfo_t* teaminfo = ctxt->teaminfo;
 
+  teaminfo->current_ordered_index = start;
+  
   long ka_start = 0;
   long ka_end   = (end-start+incr-1)/incr;
   
@@ -256,6 +258,8 @@ bool GOMP_loop_dynamic_start (
                *istart * ctxt->workshare->rep.li.incr;
     *iend   = ctxt->workshare->rep.li.start + 
                *iend   * ctxt->workshare->rep.li.incr;
+    ctxt->workshare->cur_start = *istart;
+    ctxt->workshare->cur_end = *iend;
     return 1;
   }
   return 0;
@@ -279,6 +283,8 @@ bool GOMP_loop_dynamic_next (long *istart, long *iend)
                *istart * ctxt->workshare->rep.li.incr;
     *iend   = ctxt->workshare->rep.li.start + 
                *iend   * ctxt->workshare->rep.li.incr;
+    ctxt->workshare->cur_start = *istart;
+    ctxt->workshare->cur_end = *iend;
     return 1;
   }
   return 0;
@@ -483,14 +489,12 @@ bool GOMP_loop_ordered_dynamic_start (
           long *iend
 )
 {
-  printf("%s:: \n", __FUNCTION__);
-  return 0;
+  return GOMP_loop_dynamic_start (start, end, incr, chunk_size, istart, iend);
 }
 
 bool GOMP_loop_ordered_dynamic_next (long *istart, long *iend)
-{
-  printf("%s:: \n", __FUNCTION__);
-  return 0;
+{  
+  return GOMP_loop_dynamic_next (istart, iend);
 }
 
 

@@ -108,19 +108,15 @@ void GOMP_parallel_loop_static_start(
           chunk_size );
 }
 
-/* LibGOMP's loop.c ABI functions declarations. */
-
 bool
 GOMP_loop_ordered_static_start (long start, long end, long incr,
                                 long chunk_size, long *istart, long *iend)
 {
-    printf ("Error: %s is not implemented yet!\n", __FUNCTION__);
-    abort ();
+  return GOMP_loop_ordered_dynamic_start (start, end, incr, chunk_size, istart, iend);
 }
 
 bool
 GOMP_loop_ordered_static_next (long *istart, long *iend)
 {
-    printf ("Error: %s is not implemented yet!\n", __FUNCTION__);
-    abort ();
+  return GOMP_loop_ordered_dynamic_next (istart, iend);
 }
