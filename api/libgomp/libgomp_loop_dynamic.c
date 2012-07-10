@@ -455,7 +455,7 @@ static void komp_trampoline_task_parallelfor
   kaapi_assert_debug(new_ctxt->teaminfo->gwork !=0);
 
   komp_loop_dynamic_start_slave(
-    kproc,
+    taskarg->threadid,
     workshare,
     new_ctxt->teaminfo->gwork
   );
