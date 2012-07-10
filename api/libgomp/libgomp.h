@@ -157,8 +157,8 @@ typedef struct komp_workshare_t {
       bool                     up;     /* upward / downward count */
     } ull;
   } rep;
-  int                          cur_start;
-  int                          cur_end;
+  long                         cur_start;
+  long                         cur_end;
   unsigned long                serial; /* serial number of workshare construct */
 } komp_workshare_t;
 

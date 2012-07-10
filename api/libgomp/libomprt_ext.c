@@ -51,7 +51,6 @@ __attribute__((weak)) void komp_set_datadistribution_bloccyclic( unsigned long l
 __attribute__((weak_import)) 
 void 
   komp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length );
-#warning "OK: on Mac!"
 #else
 #  warning "Unkown how to define weak symbol"
 #endif

@@ -44,7 +44,6 @@ libkaapi_la_SOURCES=\
   kaapi_event_recorder.h\
   kaapi_memory.h \
   kaapi_cpuset.h\
-  kaapi_ws_queue.h\
   kaapi_util.h\
   misc/kaapi_abort.c \
   misc/kaapi_allocator_allocate.c \
