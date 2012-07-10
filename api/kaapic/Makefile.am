@@ -18,7 +18,7 @@ libkaapic_la_LIBADD=../../src/libkaapi.la $(KAAPILIB_BUILD_LIBS)
 M4_BUILT_FILES=\
   kaapic_dfg_switch.h \
   kaapic_dfg_wh_switch.h \
-  kaapic_adaptive_switch.h\
+  kaapic_adaptive_switch.h \
   kaapic_adaptive_switch_ull.h
 
 M4_SRCS=\
