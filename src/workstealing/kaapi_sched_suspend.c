@@ -63,8 +63,6 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc, int (*fcondition)(void* ), v
   kaapi_request_status_t  ws_status;
   kaapi_thread_context_t* thread;
   kaapi_thread_context_t* thread_condition;
-  kaapi_task_t*           task_condition;
-  kaapi_tasklist_t*       tasklist;
   kaapi_thread_context_t* tmp;
 
   kaapi_assert_debug( kproc !=0 );
@@ -85,34 +83,6 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc, int (*fcondition)(void* ), v
   /* here is the reason of suspension */
   thread_condition = kproc->thread;
   kaapi_assert_debug( kproc == thread_condition->stack.proc);
-
-#if 0
-  /* first look if tasklist is built on this frame */
-  tasklist = thread_condition->stack.sfp->tasklist;
-  if (tasklist !=0) 
-  {
-    task_condition =0;
-    if (kaapi_thread_isready( thread_condition ) ) 
-    {
-#if defined(KAAPI_USE_PERFCOUNTER)
-      kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
-      KAAPI_EVENT_PUSH0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
-#endif
-      return 0;
-    }
-  } 
-  else {
-    task_condition = thread_condition->stack.sfp->pc;
-    if (kaapi_task_isready( task_condition )) 
-    {
-#if defined(KAAPI_USE_PERFCOUNTER)
-      kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
-      KAAPI_EVENT_PUSH0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
-#endif
-      return 0;
-    }
-  }
-#endif
 
   /* such threads are sticky: the control flow will return to this call 
      with the same thread as active thread on the kproc.
