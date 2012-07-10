@@ -25,7 +25,5 @@ main (int argc, char **argv)
     total += cpt;
   }
 
-  test_check ("barrier", (total == cpt * nthreads));
-
-  return 0;
+  return !(total == cpt * nthreads);
 }

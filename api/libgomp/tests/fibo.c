@@ -113,12 +113,7 @@ static long long par_res, seq_res;
 
 int main (int argc, char** argv)
 {
-  int n;
-  
-  if (argc >1)
-    n = atoi(argv[1]);
-  else 
-    n = 34;
+  int n = 25;
 
   #pragma omp parallel
   #pragma omp single
@@ -127,7 +122,6 @@ int main (int argc, char** argv)
 #else
   par_res = fib(n);
 #endif
-  printf("Fibonacci result for %d is %lld\n",n,par_res);
 
-  return 0;
+  return !(par_res == 75025);
 }

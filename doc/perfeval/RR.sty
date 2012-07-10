@@ -1,0 +1,57 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{RR}
+       [1977/01/01\space v0.0\space
+         Copyright 2011 Vincent Danjean + Thierry Gautier]
+%Licence: same as TeX
+
+\ProcessOptions\relax
+\RequirePackage{textcomp}
+\RequirePackage{graphicx}
+
+\newcommand{\RRdate}[1]{\date{#1}}
+\newcommand{\RRtitle}[1]{\def\@RRtitle{#1}} %\title{\vfill\textbf{\huge #1}}}
+\newcommand{\RRetitle}[1]{}
+\newcommand{\RRauthor}[1]{\def\@RRauthor{#1}}
+\newcommand{\RRabstract}[1]{\def\@RRabstract{#1}}
+\newcommand{\RRresume}[1]{\def\@RRresume{#1}}
+\newcommand{\RRmotcle}[1]{\def\@RRmotcle{#1}}
+\newcommand{\RRkeyword}[1]{\def\@RRkeyword{#1}}
+\newcommand{\RRprojets}[1]{\def\@RRprojets{#1}}
+\newcommand{\RRdomaine}[1]{\def\@RRdomaine{#1}}
+\newcommand{\RRthemeProj}[1]{\def\@RRthemeProj{#1}}
+\newcommand{\RRNo}[1]{}
+\newcommand{\RCGrenoble}[1]{\def\@RC{Grenoble}}
+
+\newcommand{\makeRT}{%
+  \renewcommand{\and}{---}
+\title{\hfill{\@RRtitle}
+%\hfill{\rule{0pt}{0pt}}\\%
+\rule{\textwidth}{1.5mm}\\[1mm]%
+%\hfill{\normalsize \aun\ Team}\\[-3mm]%
+\hfill{\normalsize \hfill \@RRauthor\\
+\hfill \@RRprojets
+} \\[-3mm]%
+\hfill{\normalsize \today}
+}
+\date{}
+
+  \maketitle%
+  \thispagestyle{empty}
+%%
+%%  \vfill
+%%  \begin{abstract}
+%%    \@RRabstract
+%%  \end{abstract}%
+%%  \vfill
+%%  \renewcommand{\abstractname}{Keywords}
+%%  \begin{abstract}
+%%    \@RRkeyword
+%%  \end{abstract}%
+%%  \vfill
+  \newpage
+}
+\newcommand{\authorhead}[1]{}
+\newcommand{\titlehead}[1]{}
+\endinput
+%%
+%% End of file `RR.sty'.

@@ -92,13 +92,11 @@ bool GOMP_loop_ordered_guided_start (
         long *iend
 )
 {
-  printf("%s:: \n", __FUNCTION__);
-  return 0;
+  return GOMP_loop_dynamic_start (start, end, incr, chunk_size, istart, iend);
 }
 
 bool GOMP_loop_ordered_guided_next (long *istart, long *iend)
 {
-  printf("%s:: \n", __FUNCTION__);
-  return 0;
+  return GOMP_loop_dynamic_next (istart, iend);
 }
 

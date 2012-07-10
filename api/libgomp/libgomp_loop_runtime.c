@@ -87,8 +87,7 @@ bool GOMP_loop_ordered_runtime_start (
   long *iend
 )
 {
-  printf("%s:: \n", __FUNCTION__);
-  return false;
+  return GOMP_loop_dynamic_start (start, end, incr, 1, istart, iend);
 }
 
 bool GOMP_loop_ordered_runtime_next (
@@ -96,7 +95,6 @@ bool GOMP_loop_ordered_runtime_next (
   long *iend
 )
 {
-  printf("%s:: \n", __FUNCTION__);
-  return false;
+  return GOMP_loop_dynamic_next (istart, iend);
 }
 

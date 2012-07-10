@@ -195,11 +195,35 @@ omp_get_level(void)
   return ctxt->icv.nested_level;
 }
 
+static int
+komp_get_current_max_level (void)
+{
+  int current_max_level = -1;
+  kompctxt_t *ctxt = komp_get_ctxt ();
+  
+  if (ctxt == NULL)
+    current_max_level = 0;
+  else
+    current_max_level = ctxt->icv.nested_level;
+  
+  return current_max_level;
+}
+
 /*
 */
 int 
 omp_get_ancestor_thread_num(int level)
 {
+  int current_max_level = komp_get_current_max_level ();
+  
+  if (level == 0)
+    return 0;
+  
+  if ((level < 0) || (level > current_max_level));
+    return -1;
+  
+  /* TODO: That's not right: this function has to 
+           return the id of the father of the calling thread. */
   return kaapi_getconcurrency();
 }
 
@@ -208,8 +232,19 @@ omp_get_ancestor_thread_num(int level)
 int 
 omp_get_team_size(int level)
 {
+  int current_max_level = komp_get_current_max_level ();
+
   kompctxt_t* ctxt = komp_get_ctxt();
-  if (ctxt->teaminfo ==0) return 1;
+  
+  if (ctxt == NULL)
+    return -1;
+  
+  if (ctxt->teaminfo == NULL) 
+    return 1;
+
+  if (level < 0 || level > current_max_level)
+    return -1;
+  
   return ctxt->teaminfo->numthreads;
 }
 
@@ -218,9 +253,15 @@ omp_get_team_size(int level)
 int 
 omp_get_active_level(void)
 {
-  kompctxt_t* ctxt = komp_get_ctxt();
-  if (ctxt->teaminfo ==0) return 0;
-  return 1;
+  kompctxt_t *ctxt = komp_get_ctxt ();
+  
+  if (ctxt == NULL)
+    return -1;
+  
+  if (ctxt->teaminfo == NULL) 
+    return -1;
+  
+  return ctxt->icv.nested_level;
 }
 
 /*

@@ -3,13 +3,16 @@
 int
 main (int argc, char **argv)
 {
-  int i;
+  int tab[123] = { 0 };
   
-#pragma omp parallel for schedule(dynamic)
-  for (i=0; i<123; ++i)
-  {
-    printf ("Hello world! %i\n", i);
-  }
+#pragma omp parallel for schedule(dynamic) shared (tab)
+  for (int i = 0; i < 123; ++i)
+    tab[i] = 1;
 
-  return 0;
+  int res = 0;
+  
+  for (int i = 0; i < 123; ++i)
+    res += tab[i];
+    
+  return !(res == 123);
 }
