@@ -61,6 +61,19 @@ komp_barrier_destroy (struct komp_barrier *barrier)
   memset (barrier->count, -1, BAR_CYCLES * CACHE_LINE_SIZE);
 }
 
+struct _komp_cond_barrier_t {
+  int                  next_cycle;
+  struct komp_barrier *barrier;
+} _komp_cond_barrier_t;
+
+static int _komp_condition_barrier_isready(void* thearg)
+{
+  struct _komp_cond_barrier_t* kompcond = (struct _komp_cond_barrier_t*)thearg;
+  if (KAAPI_ATOMIC_READ (&kompcond->barrier->cycle) == kompcond->next_cycle)
+    return 1;
+  return 0;
+}
+
 void
 komp_barrier_wait (kompctxt_t* ctxt, struct komp_barrier *barrier)
 {
@@ -92,10 +105,24 @@ komp_barrier_wait (kompctxt_t* ctxt, struct komp_barrier *barrier)
     }
     else
     {
+      struct _komp_cond_barrier_t kompcond = { next_cycle, barrier };
+      kaapi_processor_t* kproc = kaapi_get_current_processor();
+      kaapi_cpuset_t          save_affinity;
+      kaapi_cpuset_copy(&save_affinity, &kproc->thread->affinity);
+      kaapi_cpuset_clear(&kproc->thread->affinity);
+      
+      /* suspend until barrier is reached by anybody */
+      kaapi_sched_suspend( kproc, _komp_condition_barrier_isready, &kompcond);
+
+      /* reset affinity flag if save_stick != 1 */
+      kaapi_cpuset_copy(&kproc->thread->affinity, &save_affinity);
+
+#if 0
       while (KAAPI_ATOMIC_READ (&barrier->cycle) != next_cycle)
 	    {
 	      kaapi_slowdown_cpu ();
 	    }
+#endif
     }
   }
 }
