@@ -250,6 +250,10 @@ bool GOMP_loop_dynamic_start (
       kaapi_slowdown_cpu();
     kaapi_readmem_barrier();
 
+    /* WARNING: Here pop the first initial slice attached to the implicit task ctxt->icv.thread_id.
+       It may not correspond to a physical thread id and thus may broke implementation using
+       KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION.
+    */
     komp_loop_dynamic_start_slave(
       ctxt->icv.thread_id,
       workshare,
