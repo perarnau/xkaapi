@@ -131,7 +131,7 @@ typedef struct komp_teaminfo_t {
   int volatile                     current_ordered_index;
   void*  volatile                  single_data;  /* 0 or the & of copy_end */
   unsigned int volatile            section_state;
-  unsigned int volatile            ordered_state;  
+  unsigned long volatile           ordered_state;  
   int                              numthreads;
   komp_globalworkshare_t* volatile gwork;      /* last foreach loop context */
   unsigned long                    serial;      /* serial number of workshare */
