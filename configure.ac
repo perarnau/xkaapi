@@ -538,7 +538,11 @@ dnl -----------------------------------------------------------------------
 dnl -----------------------------------------------------------------------
 
 dnl -----------------------------------------------------------------------
+<<<<<<< HEAD
 dnl The "--enable-pthreadaffinity"
+=======
+dnl The "--with-pthreadaffinity"
+>>>>>>> fde88af... Add --with-threadaffinity to allow user to disable affinity support
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([pthreadaffinity], [build with Pthread affinity support (pthread_attr_setaffinity_np)], [], [check],
   [
@@ -556,6 +560,10 @@ KAAPI_FEATURE([pthreadaffinity], [build with Pthread affinity support (pthread_a
     LIBS="$saveLIBS"
   ])
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> fde88af... Add --with-threadaffinity to allow user to disable affinity support
 dnl -----------------------------------------------------------------------
 dnl The "--with-poti"
 dnl -----------------------------------------------------------------------
