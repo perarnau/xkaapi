@@ -37,6 +37,13 @@ main (int argc, char **argv)
     if (omp_get_active_level () != 2)
       ret = 4;
   }
+
+#pragma omp parallel if (0) num_threads (2) shared (ret)
+  {
+#pragma omp parallel num_threads (2) shared (ret)
+    if (omp_get_active_level () != 1)
+      ret = 5;
+  }
  
  return ret;
 }
