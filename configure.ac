@@ -548,20 +548,40 @@ ACX_LIB_CHECK_PLAIN([PTHREAD],[],[
 ACX_LIB_LINK([KAAPILIB],[PTHREAD])
 
 # search pthread_attr_setaffinity_np within libpthread
-saveCFLAGS="$CFLAGS"
-saveLIBS="$LIBS"
-CFLAGS="$CFLAGS $PTHREAD_CPPFLAGS $PTHREAD_CFLAGS"
-LIBS="$LIBS $PTHREAD_LDFLAGS $PTHREAD_LIBS"
-AC_CHECK_FUNCS([pthread_attr_setaffinity_np],
-  [AC_DEFINE([KAAPI_USE_SCHED_AFFINITY],1,[Use affinity interface])])
-CFLAGS="$saveCFLAGS"
-LIBS="$saveLIBS"
+#saveCFLAGS="$CFLAGS"
+#saveLIBS="$LIBS"
+#CFLAGS="$CFLAGS $PTHREAD_CPPFLAGS $PTHREAD_CFLAGS"
+#LIBS="$LIBS $PTHREAD_LDFLAGS $PTHREAD_LIBS"
+#AC_CHECK_FUNCS([pthread_attr_setaffinity_np],
+#  [AC_DEFINE([KAAPI_USE_SCHED_AFFINITY],1,[Use affinity interface])])
+#CFLAGS="$saveCFLAGS"
+#LIBS="$saveLIBS"
 
 dnl -----------------------------------------------------------------------
 dnl -----------------------------------------------------------------------
 dnl --with && --enable OPTIONS
 dnl -----------------------------------------------------------------------
 dnl -----------------------------------------------------------------------
+
+dnl -----------------------------------------------------------------------
+dnl The "--with-pthreadaffinity"
+dnl -----------------------------------------------------------------------
+KAAPI_FEATURE([pthreadaffinity], [build with Pthread affinity support (pthread_attr_setaffinity_np)], [], [check],
+  [
+    AC_DEFINE([KAAPI_USE_SCHED_AFFINITY],1,[Use affinity interface])
+  ], [], [],
+  [ 
+    # search pthread_attr_setaffinity_np within libpthread
+    saveCFLAGS="$CFLAGS"
+    saveLIBS="$LIBS"
+    CFLAGS="$CFLAGS $PTHREAD_CPPFLAGS $PTHREAD_CFLAGS"
+    LIBS="$LIBS $PTHREAD_LDFLAGS $PTHREAD_LIBS"
+    AC_CHECK_FUNCS([pthread_attr_setaffinity_np],
+      [AC_DEFINE([KAAPI_USE_SCHED_AFFINITY],1,[Use affinity interface])])
+    CFLAGS="$saveCFLAGS"
+    LIBS="$saveLIBS"
+  ])
+
 
 dnl -----------------------------------------------------------------------
 dnl The "--with-poti"
