@@ -2,7 +2,19 @@
 AM_CFLAGS=-fopenmp
 AM_LDFLAGS=-lgomp
 
-PROGS= parallel shared critical nested barrier single fibo task-firstprivate loop loop2 ordered get_level get_active_level
+PROGS= parallel \
+       shared   \
+       critical \
+       nested   \
+       barrier  \
+       single   \
+       fibo     \
+       task-firstprivate  \
+       loop     \
+       loop2    \
+       ordered get_level  \
+       get_active_level   \
+       get_ancestor_thread_num
 #loop3 loop4
 
 check_PROGRAMS=$(PROGS)
@@ -25,6 +37,7 @@ loop3_SOURCES=loop3.c $(TOOLBOX_SRC)
 ordered_SOURCES=ordered.c $(TOOLBOX_SRC)
 get_level_SOURCES=get_level.c $(TOOLBOX_SRC)
 get_active_level_SOURCES=get_active_level.c $(TOOLBOX_SRC)
+get_ancestor_thread_num_SOURCES=get_ancestor_thread_num.c $(TOOLBOX_SRC)
 
 loop4_SOURCES=loop4.c $(TOOLBOX_SRC)
 loop4_CPPFLAGS=-I$(top_srcdir)/api/libgomp
