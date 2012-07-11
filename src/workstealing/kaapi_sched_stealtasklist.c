@@ -246,6 +246,10 @@ kaapi_sched_stealtasklist_gpu(
 #else
     size_steal = count_req * size_ws / (count_req+1);
     if (size_steal ==0) size_steal = size_ws;
+    if( (i < KAAPI_TASKLIST_CPU_MIN_PRIORITY) &&
+	    (thread->stack.proc->proc_type == KAAPI_PROC_TYPE_CPU) )
+	size_steal = size_ws;
+
 #endif
     err = kaapi_workqueue_steal(&onertl->wq, &steal_beg, &steal_end, size_steal);
     if (err ==0) 

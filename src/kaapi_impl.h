@@ -69,7 +69,7 @@ extern "C" {
 #define KAAPI_USE_READYLIST 1
 #define KAAPI_TASKLIST_POINTER_TASK 1
 #define TASKLIST_ONEGLOBAL_MASTER   1
-#define TASKLIST_REPLY_ONETD        1
+//#define TASKLIST_REPLY_ONETD        1
 
 /* Task list priority: used reverse order between min max */
 #define KAAPI_TASKLIST_NUM_PRIORITY (KAAPI_TASK_MAX_PRIORITY+1)

@@ -518,7 +518,7 @@ kaapi_cuda_test_fifo_stream(
       return KAAPI_CUDA_STREAM_READY;
     } else if( err == cudaErrorNotReady )
 	break;
-#if defined(KAAPI_DEBUG)
+#if 0
     if( err != cudaErrorNotReady ) {
 	fprintf(stdout, "%s: cudaEventQuery ERROR %d\n",
 		__FUNCTION__, err );
@@ -526,7 +526,8 @@ kaapi_cuda_test_fifo_stream(
 	abort();
     }
 #endif
-    first = first->next;
+   // first = first->next;
+    first = kaapi_cuda_fifo_stream_first(fifostream);
   }
   return KAAPI_CUDA_STREAM_BUSY;
 }

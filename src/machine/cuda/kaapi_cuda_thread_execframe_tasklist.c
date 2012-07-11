@@ -355,6 +355,24 @@ execute_first:
     } else {
 	kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_H2D, 
 		kaapi_cuda_gpu_task_callback0_sync_gpu, tasklist, td );
+	kaapi_cuda_test_stream( kstream );
+#if defined(KAAPI_USE_WINDOW)
+    /* The slicing window is applied to all streams */
+    while( 
+	    (kaapi_default_param.cudawindowsize <=
+	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_input_fifo(kstream)))
+	||
+	    (kaapi_default_param.cudawindowsize <=
+	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_kernel_fifo(kstream)))
+	||
+	    (kaapi_default_param.cudawindowsize <=
+	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_output_fifo(kstream)))
+	 )
+    {
+	kaapi_cuda_test_stream( kstream );
+    }
+#endif
+	kaapi_cuda_test_stream( kstream );
     }
     KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_END );
     KAAPI_DEBUG_INST( td->u.acl.exec_date = kaapi_get_elapsedns() );
@@ -393,22 +411,6 @@ execute_first:
     {
     }
 
-#if defined(KAAPI_USE_WINDOW)
-    /* The slicing window is applied to all streams */
-    while( 
-	    (kaapi_default_param.cudawindowsize <=
-	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_input_fifo(kstream)))
-	||
-	    (kaapi_default_param.cudawindowsize <=
-	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_kernel_fifo(kstream)))
-	||
-	    (kaapi_default_param.cudawindowsize <=
-	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_output_fifo(kstream)))
-	 )
-    {
-	kaapi_cuda_test_stream( kstream );
-    }
-#endif
 
     /* ok, now push pushed task into the wq and restore the next td to execute */
 #if 0
