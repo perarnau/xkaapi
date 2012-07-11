@@ -648,6 +648,9 @@ int kaapi_cuda_mem_copy_htod_(
 			       	kaapi_memory_view_size( view_src ));
 		fflush(stdout);
 #endif
+#if defined(KAAPI_USE_PERFCOUNTER)
+	KAAPI_PERF_REG_SYS(kaapi_get_current_processor(), KAAPI_PERF_ID_COMM_OUT) += kaapi_memory_view_size( view_src );
+#endif 
 	switch (view_src->type) {
 	case KAAPI_MEMORY_VIEW_1D:
 	{
@@ -690,6 +693,9 @@ int kaapi_cuda_mem_copy_dtoh_(
 			       	kaapi_memory_view_size( view_src ));
 		fflush(stdout);
 #endif
+#if defined(KAAPI_USE_PERFCOUNTER)
+	KAAPI_PERF_REG_SYS(kaapi_get_current_processor(), KAAPI_PERF_ID_COMM_IN) += kaapi_memory_view_size( view_src );
+#endif 
 	switch (view_src->type) {
 	case KAAPI_MEMORY_VIEW_1D:
 	{

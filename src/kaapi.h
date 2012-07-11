@@ -2233,6 +2233,9 @@ int kaapi_splitter_default
 #define KAAPI_PERF_ID_QUEUETHREAD   10 /* count the maximal number of thread in queue */
 #define KAAPI_PERF_ID_TASKLISTCALC  11 /* tick to compute task lists in ns */
 
+#define KAAPI_PERF_ID_COMM_OUT	    12 /* host to device transfers */
+#define KAAPI_PERF_ID_COMM_IN	    13 /* device to host transfers */
+
 #define KAAPI_PERF_ID_ENDSOFTWARE   14 /* mark end of software counters */
 
 #define KAAPI_PERF_ID_PAPI_BASE    (KAAPI_PERF_ID_ENDSOFTWARE)
