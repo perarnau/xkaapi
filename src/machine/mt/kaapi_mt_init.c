@@ -271,7 +271,36 @@ int kaapi_mt_init(void)
   
   kaapi_default_param.startuptime = kaapi_get_elapsedns();
 
+#if defined(KAAPI_DEBUG)
+  /* set signal handler print callstack */
+  {
+    struct sigaction sa;
+    sa.sa_handler = _kaapi_signal_dump_backtrace;
+    sa.sa_flags = SA_RESTART;
+    sigemptyset (&sa.sa_mask);
+    sigaction(SIGABRT, &sa, NULL);
+    sigaction(SIGBUS,  &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
+    sigaction(SIGSEGV, &sa, NULL);
+    sigaction(SIGFPE, &sa, NULL);
+    sigaction(SIGILL, &sa, NULL);
+  }
 #if defined(KAAPI_USE_PERFCOUNTER)
+  if (getenv("KAAPI_RECORD_TRACE") !=0)
+  {
+    /* set signal handler to flush event */
+    struct sigaction sa;
+    sa.sa_handler = _kaapi_signal_dump_counters;
+    sa.sa_flags = SA_RESTART;
+    sigemptyset (&sa.sa_mask);
+    sigaction(SIGINT,  &sa, NULL);
+    sigaction(SIGQUIT, &sa, NULL);
+    sigaction(SIGTSTP, &sa, NULL);
+    /* other signals: SIGABRT, SIGBUS, SIGTERM, SIGSEGV are handled by backtrace_sighandler */
+  }
+#endif
+  
+#elif defined(KAAPI_USE_PERFCOUNTER)
   if (getenv("KAAPI_RECORD_TRACE") !=0)
   {
     /* set signal handler to flush event */
