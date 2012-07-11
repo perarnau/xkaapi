@@ -63,13 +63,9 @@
 #include "cublas.h"
 #endif
 
-#if CONFIG_USE_MAGMA
+#if 0
 #include "magma.h"
 #include "magmablas.h"
-#endif
-
-#if CONFIG_USE_VOLKOV
-#include "volkov_sgemm.cu"
 #endif
 
 #if (CONFIG_USE_CUBLAS) || (CONFIG_USE_MAGMA)
@@ -89,7 +85,8 @@ extern cublasHandle_t kaapi_cuda_cublas_handle( void );
 /* from cublas.h */
 
 /* Helper functions */
-static inline cublasOperation_t convertToOp( const enum CBLAS_TRANSPOSE trans ) 
+static inline cublasOperation_t convertToOp( int trans ) 
+//static inline cublasOperation_t convertToOp( const enum CBLAS_TRANSPOSE trans ) 
 {
     switch(trans) {
         case CblasNoTrans:
@@ -103,7 +100,9 @@ static inline cublasOperation_t convertToOp( const enum CBLAS_TRANSPOSE trans )
     }
 
 }
-static inline cublasFillMode_t convertToFillMode( const enum CBLAS_UPLO uplo ) 
+
+//static inline cublasFillMode_t convertToFillMode( const enum CBLAS_UPLO uplo ) 
+static inline cublasFillMode_t convertToFillMode( int uplo ) 
 {
     switch (uplo) {
         case CblasUpper:
@@ -114,7 +113,8 @@ static inline cublasFillMode_t convertToFillMode( const enum CBLAS_UPLO uplo )
     }        
 }
 
-static inline cublasDiagType_t convertToDiagType( const enum CBLAS_DIAG diag ) 
+//static inline cublasDiagType_t convertToDiagType( const enum CBLAS_DIAG diag ) 
+static inline cublasDiagType_t convertToDiagType( int diag ) 
 {
     switch (diag) {
 	case CblasUnit:
@@ -125,7 +125,8 @@ static inline cublasDiagType_t convertToDiagType( const enum CBLAS_DIAG diag )
     }        
 }
 
-static inline cublasSideMode_t convertToSideMode( const enum CBLAS_SIDE side ) 
+//static inline cublasSideMode_t convertToSideMode( const enum CBLAS_SIDE side ) 
+static inline cublasSideMode_t convertToSideMode( int side ) 
 {
     switch (side) {
 	case CblasRight:
@@ -136,12 +137,14 @@ static inline cublasSideMode_t convertToSideMode( const enum CBLAS_SIDE side )
     }        
 }
 
-/* CONFIG_USE_CUBLAS */
-#elif CONFIG_USE_MAGMA
+#endif /* CONFIG_USE_CUBLAS */
+
+#if 0
 
 /* Old CUBLAS API, returns char parameters */
 
-static inline char convertToOp( const enum CBLAS_TRANSPOSE trans ) 
+//static inline char convertToOp( const enum CBLAS_TRANSPOSE trans ) 
+static inline char convertToOp( int trans ) 
 {
     switch(trans) {
         case CblasNoTrans:
@@ -155,7 +158,9 @@ static inline char convertToOp( const enum CBLAS_TRANSPOSE trans )
     }
 
 }
-static inline char convertToFillMode( const enum CBLAS_UPLO uplo ) 
+
+//static inline char convertToFillMode( const enum CBLAS_UPLO uplo ) 
+static inline char convertToFillMode( int uplo ) 
 {
     switch (uplo) {
         case CblasUpper:
@@ -166,7 +171,8 @@ static inline char convertToFillMode( const enum CBLAS_UPLO uplo )
     }        
 }
 
-static inline char convertToDiagType( const enum CBLAS_DIAG diag ) 
+//static inline char convertToDiagType( const enum CBLAS_DIAG diag ) 
+static inline char convertToDiagType( int diag ) 
 {
     switch (diag) {
 	case CblasUnit:
@@ -177,7 +183,8 @@ static inline char convertToDiagType( const enum CBLAS_DIAG diag )
     }        
 }
 
-static inline char convertToSideMode( const enum CBLAS_SIDE side ) 
+//static inline char convertToSideMode( const enum CBLAS_SIDE side ) 
+static inline char convertToSideMode( int side ) 
 {
     switch (side) {
 	case CblasRight:
@@ -201,7 +208,6 @@ static inline char convertToSideMode( const enum CBLAS_SIDE side )
 #endif // CONFIG_USE_FLOAT
 
 #if CONFIG_USE_MAGMA
-
 typedef int magma_int_t;
 
 #if defined(__cplusplus)
@@ -258,6 +264,51 @@ void magmablas_dgemm(char tA, char tB,
 		     double beta,
 		     double *C, magma_int_t ldc);
 
+magma_int_t
+magma_dgessm_gpu( char storev, magma_int_t m, magma_int_t n, magma_int_t k, magma_int_t ib, 
+                  magma_int_t *ipiv, 
+                  double *dL1, magma_int_t lddl1, 
+                  double *dL,  magma_int_t lddl, 
+                  double *dA,  magma_int_t ldda, 
+                  magma_int_t *info);
+
+magma_int_t
+magma_dtstrf_gpu( char storev, magma_int_t m, magma_int_t n, magma_int_t ib, magma_int_t nb,
+                  double *hU, magma_int_t ldhu, double *dU, magma_int_t lddu, 
+                  double *hA, magma_int_t ldha, double *dA, magma_int_t ldda, 
+                  double *hL, magma_int_t ldhl, double *dL, magma_int_t lddl,
+                  magma_int_t *ipiv, 
+                  double *hwork, magma_int_t ldhwork, double *dwork, magma_int_t lddwork,
+                  magma_int_t *info);
+
+magma_int_t
+magma_dssssm_gpu(char storev, magma_int_t m1, magma_int_t n1, 
+                 magma_int_t m2, magma_int_t n2, magma_int_t k, magma_int_t ib, 
+                 double *dA1, magma_int_t ldda1, 
+                 double *dA2, magma_int_t ldda2, 
+                 double *dL1, magma_int_t lddl1, 
+                 double *dL2, magma_int_t lddl2,
+                 magma_int_t *IPIV, magma_int_t *info);
+
+
+void   magmablas_dlaswp( magma_int_t N, 
+             double *dAT, magma_int_t lda, 
+             magma_int_t i1,  magma_int_t i2, 
+             magma_int_t *ipiv, magma_int_t inci );
+
+
+magma_int_t magma_dgeqrf_gpu( magma_int_t m, magma_int_t n, 
+                              double *dA,  magma_int_t ldda, 
+                              double *tau, double *dT, 
+                              magma_int_t *info);
+
+magma_int_t magma_dormqr_gpu( char side, char trans, 
+                              magma_int_t m, magma_int_t n, magma_int_t k,
+                              double *a,    magma_int_t lda, double *tau, 
+                              double *c,    magma_int_t ldc,
+                              double *work, magma_int_t lwork, 
+                              double *td,   magma_int_t nb, magma_int_t *info);
+
 #if defined(__cplusplus)
 }
 #endif
@@ -280,7 +331,6 @@ void magmablas_dgemm(char tA, char tB,
 
 #endif // CONFIG_USE_MAGMA
 
-
 // task definitions
 
 template<> struct TaskBodyGPU<TaskDTRSM_left>
@@ -293,13 +343,13 @@ template<> struct TaskBodyGPU<TaskDTRSM_left>
   )
   {
 #if CONFIG_USE_CUBLAS
-    const double_type* const a = Akk.ptr();
-    const int lda = Akk.lda();
+    const double_type* const a = Akk->ptr();
+    const int lda = Akk->lda();
 
-    double_type* const b = Akj.ptr();
-    const int ldb   = Akj.lda();
-    const int n     = Akj.dim(0);
-    const int m     = Akj.dim(1);
+    double_type* const b = Akj->ptr();
+    const int ldb   = Akj->lda();
+    const int n     = Akj->dim(0);
+    const int m     = Akj->dim(1);
 
     static const double_type static_alpha = 1.;
 
@@ -331,13 +381,13 @@ template<> struct TaskBodyGPU<TaskDTRSM_right>
   {
 #if CONFIG_USE_CUBLAS
 
-    const double_type* const a = Akk.ptr();
-    const int lda = Akk.lda();
+    const double_type* const a = Akk->ptr();
+    const int lda = Akk->lda();
 
-    double_type* const b = Aik.ptr();
-    const int ldb = Aik.lda();
-    const int n = Aik.dim(0); // b.rows();
-    const int m = Aik.dim(1); // b.cols();
+    double_type* const b = Aik->ptr();
+    const int ldb = Aik->lda();
+    const int n = Aik->dim(0); // b.rows();
+    const int m = Aik->dim(1); // b.cols();
 
     static const double_type static_alpha = 1.;
 
@@ -374,27 +424,25 @@ template<> struct TaskBodyGPU<TaskDGEMM>
    ka::range2d_rw<double_type> Aij
   )
   {
-    const double_type* const a = Aik.ptr();
-    const double_type* const b = Akj.ptr();
-    double_type* const c       = Aij.ptr();
+    const double_type* const a = Aik->ptr();
+    const double_type* const b = Akj->ptr();
+    double_type* const c       = Aij->ptr();
 
-    const int m = Aik.dim(0); 
-    const int n = Aik.dim(1); // eq. to Akj.rows();
-    const int k = Akj.dim(1); 
+    const int m = Aik->dim(0); 
+    const int n = Aik->dim(1); // eq. to Akj->rows();
+    const int k = Akj->dim(1); 
 
 
-//    const int lda = Aik.dim(1); 
-//    const int ldb = Aik.dim(1);
-//    const int ldc = Akj.dim(1); 
-    const int lda = Aik.lda();
-    const int ldb = Akj.lda();
-    const int ldc = Aij.lda();
+    const int lda = Aik->lda();
+    const int ldb = Akj->lda();
+    const int ldc = Aij->lda();
 
 
 #if 0
     fprintf(stdout, "TaskGPU GEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", m, n, k, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
 #endif
 
+    KAAPI_TIMING_CUDA_BEGIN((cudaStream_t)stream.stream);
 #if CONFIG_USE_CUBLAS
 	cublasStatus_t status;
 	if( order == CblasColMajor ) 
@@ -453,18 +501,7 @@ template<> struct TaskBodyGPU<TaskDGEMM>
 			c, ldc
 		);
 #endif
-#if 0
-    volkov_sgemm
-    (
-     (CUstream)stream.stream,
-     c, a, b, lda, ldb, ldc
-    );
-    size_t mm = m * m;
-    const int mnk = m;
-    const size_t thread_count = mm < 512 ? mm : 512;
-    mulKernel<<<1, dim3(thread_count), 0, 0>>>
-      (a, b, c, m);
-#endif
+    KAAPI_TIMING_CUDA_END((cudaStream_t)stream.stream, "GPU DGEMM", n);
   }
 };
 
@@ -483,19 +520,20 @@ template<> struct TaskBodyGPU<TaskDSYRK>
    ka::range2d_rw<double_type> C 
   )
   {
-    const int n     = A.dim(0); 
-    const int k     = A.dim(1); // eq. to Akj.rows();
-    const int lda   = A.lda();
-    const double_type* const a = A.ptr();
+    const int n     = A->dim(0); 
+    const int k     = A->dim(1); // eq. to Akj->rows();
+    const int lda   = A->lda();
+    const double_type* const a = A->ptr();
 
-    const int ldc   = C.lda();
-    double_type* const c = C.ptr();
+    const int ldc   = C->lda();
+    double_type* const c = C->ptr();
 
 #if 0
     fprintf(stdout, "TaskGPU DSYRK n=%d k=%d lda=%d A=%p ldc=%d C=%p\n",
 		n, k, lda, (void*)a, ldc, c ); fflush(stdout);
 #endif
 
+    KAAPI_TIMING_CUDA_BEGIN((cudaStream_t)stream.stream);
 #if CONFIG_USE_CUBLAS
     const cublasStatus_t status = cublasSyrk
       (
@@ -510,22 +548,8 @@ template<> struct TaskBodyGPU<TaskDSYRK>
 
     if (status != CUBLAS_STATUS_SUCCESS)
       printf("%s::cublasSyrk() == %d\n", __FUNCTION__, status);
-#elif CONFIG_USE_MAGMA
-	/* MAGMA uses the old cublas interface */
-    cublasSyrk
-      (
-       convertToFillMode(uplo),
-       convertToOp(trans),
-       n, k,
-       alpha, a, lda,
-       beta,
-       c, ldc
-      );
-	const cublasStatus_t status = cublasGetError();
-
-    if (status != CUBLAS_STATUS_SUCCESS)
-      printf("%s::cublasSyrk() == %d\n", __FUNCTION__, status);
 #endif
+    KAAPI_TIMING_CUDA_END((cudaStream_t)stream.stream, "GPU DSYRK", n);
   }
 };
 
@@ -545,20 +569,21 @@ template<> struct TaskBodyGPU<TaskDTRSM>
    ka::range2d_rw<double_type> C
   )
   {
-    const double_type* const a = A.ptr();
-    const int lda = A.dim(1);
+    const double_type* const a = A->ptr();
+    const int lda = A->lda();
 
-    double_type* const c = C.ptr();
-    const int ldc = C.dim(1);
+    double_type* const c = C->ptr();
+    const int ldc = C->lda();
 
-    const int n = C.dim(0);
-    const int k = (transA == CblasNoTrans ? A.dim(1) : A.dim(0) );
+    const int n = C->dim(0);
+    const int k = (transA == CblasNoTrans ? A->dim(1) : A->dim(0) );
 
-#if KAAPI_VERBOSE
+#if 0
     fprintf(stdout, "TaskGPU DTRSM n=%d k=%d lda=%d A=%p ldc=%d C=%p\n",
 		n, k, lda, (void*)a, ldc, c ); fflush(stdout);
 #endif
 
+    KAAPI_TIMING_CUDA_BEGIN((cudaStream_t)stream.stream);
 #if CONFIG_USE_CUBLAS
     const cublasStatus_t status = cublasTrsm
       (
@@ -575,62 +600,48 @@ template<> struct TaskBodyGPU<TaskDTRSM>
     if (status != CUBLAS_STATUS_SUCCESS)
       printf("%s::cublasTrsm() == %d\n", __FUNCTION__, status);
 
-#elif CONFIG_USE_MAGMA
-	/* MAGMA uses the old cublas interface */
-    cublasTrsm
-      (
-       convertToSideMode(side),
-       convertToFillMode(uplo),
-       convertToOp(transA),
-       convertToDiagType(diag),
-       n, k,
-       alpha, a, lda,
-       c, ldc
-      );
-	const cublasStatus_t status = cublasGetError();
-
-    if (status != CUBLAS_STATUS_SUCCESS)
-      printf("%s::cublasTrsm() == %d\n", __FUNCTION__, status);
 #endif
+    KAAPI_TIMING_CUDA_END((cudaStream_t)stream.stream, "GPU DTRSM", n);
   }
 };
 
-
-template<> struct TaskBodyGPU<TaskDGETRF>
-{
-  void operator()
-  (
-   ka::gpuStream stream,
-   ka::range2d_rw<double_type> A, 
-   ka::range1d_w<int> piv
+#if defined(CONFIG_USE_MAGMA)
+template<>
+struct TaskBodyGPU<TaskDGETRF> {
+  void operator()( 
+    ka::gpuStream stream,
+    CBLAS_ORDER order, 
+    ka::range2d_rw<double_type> A, 
+    ka::range1d_w<int> piv
   )
   {
-#if CONFIG_USE_MAGMA
-    const int m        = A.dim(0); 
-    const int n        = A.dim(1); 
-//    const int lda      = A.lda();
-    const int lda      = A.dim(1);
-    double_type* const a    = A.ptr();
+    const int m        = A->dim(0); 
+    const int n        = A->dim(1); 
+    const int lda      = A->lda();
+    double_type* const a    = A->ptr();
+    int* const ipiv = piv->ptr();
 
-#if KAAPI_VERBOSE
-    int* const ipiv = piv.ptr();
+#if 1
     fprintf(stdout, "TaskGPU DGETRF m=%d n=%d lda=%d A=%p Piv=%p\n",
 		m, n, lda, (void*)a, ipiv ); fflush(stdout);
 #endif
 
-	/* TODO: MAGMA assumes that a(from A) is in GPU and ipiv is in CPU */
-    int* const h_ipiv = (int*) calloc( piv.size(), sizeof(int) );
+    int* const hipiv = (int*) calloc( piv->size(), sizeof(int) );
 
     magma_int_t info = 0;
-    magma_getrf( m, n, a, lda, h_ipiv, &info );
+    magma_dgetrf_gpu( m, n, a, lda, hipiv, &info );
     if (info){
 	fprintf( stdout, "TaskDGETRF::magma_getrf() ERROR %d\n", info );
 	fflush(stdout);
-	}
-#endif
+    }
+    /* TODO */
+    cudaMemcpyAsync( hipiv, ipiv, piv->size() * sizeof(int), 
+	    cudaMemcpyHostToDevice,
+	    (cudaStream_t)stream.stream
+     );
   }
-
 };
+#endif
 
 template<> struct TaskBodyGPU<TaskDGETRFNoPiv>
 {
@@ -641,11 +652,11 @@ template<> struct TaskBodyGPU<TaskDGETRFNoPiv>
    ka::range2d_rw<double_type> A
   )
   {
-    const int m        = A.dim(0); 
-    const int n        = A.dim(1); 
-//    const int lda      = A.lda();
-    const int lda      = A.dim(1);
-    double_type* const a    = A.ptr();
+    const int m        = A->dim(0); 
+    const int n        = A->dim(1); 
+//    const int lda      = A->lda();
+    const int lda      = A->dim(1);
+    double_type* const a    = A->ptr();
 
 #if KAAPI_VERBOSE
     fprintf(stdout, "TaskGPU DGETRF m=%d n=%d lda=%d A=%p\n",
@@ -678,7 +689,7 @@ template<> struct TaskBodyGPU<TaskDGETRFNoPiv>
   }
 };
 
-#if 0
+
 template<> struct TaskBodyGPU<TaskDPOTRF>
 {
   void operator()
@@ -689,9 +700,9 @@ template<> struct TaskBodyGPU<TaskDPOTRF>
    ka::range2d_rw<double_type> A
   )
   {
-    const int n     = A.dim(0); 
-    const int lda   = A.lda();
-    double_type* const a = A.ptr();
+    const int n     = A->dim(0); 
+    const int lda   = A->lda();
+    double_type* const a = A->ptr();
 
 #if 1
     fprintf(stdout, "TaskGPU DPOTRF m=%d A=%p lda=%d\n", n, (void*)a, lda ); fflush(stdout);
@@ -718,6 +729,310 @@ template<> struct TaskBodyGPU<TaskDPOTRF>
     free( work );
 #endif
 
+  }
+};
+
+#if defined(CONFIG_USE_DOUBLE)
+template<>
+struct TaskBodyGPU<TaskPlasmaDSSSSM> {
+  void operator()( 
+    ka::gpuStream stream,
+    CBLAS_ORDER order, 
+    ka::range2d_rw<double_type> A1, 
+    ka::range2d_rw<double_type> A2,
+    ka::range2d_r<double_type> L1,
+    ka::range2d_r<double_type> L2,
+    ka::range1d_r<int> piv
+  )
+  {
+    int m1 = A1->dim(0); 
+    int n1 = A1->dim(1);
+    int m2 = A2->dim(0); 
+    int n2 = A2->dim(1);
+    int k = L1->dim(0);
+    int lda1 = A1->lda();
+    int lda2 = A2->lda();
+    int ldl1 = L1->lda();
+    int ldl2 = L2->lda();
+    double_type* const a1 = A1->ptr();
+    double_type* const a2 = A2->ptr();
+    double_type* const l1 = (double_type*)L1->ptr();
+    double_type* const l2 = (double_type*)L2->ptr();
+    int* const ipiv = (int*)piv->ptr();
+    const int ib = IB; // from PLASMA
+
+#if 0
+    fprintf( stdout, "TaskGPU DSSSSM A1(%lu,%lu) a1=%p lda1=%d "
+	   "A2(%lu,%lu) a2=%p lda2=%d "
+	   "L1(%lu,%lu) l1=%p ldl1=%d "
+	   "L2(%lu,%lu) l2=%p ldl2=%d ipiv=%p\n",
+	   A1->dim(0), A1->dim(1), (void*)a1, lda1,
+	   A2->dim(0), A2->dim(1), (void*)a2, lda2,
+	   L1->dim(0), L1->dim(1), (void*)l1, ldl1,
+	   L2->dim(0), L2->dim(1), (void*)l2, ldl2,
+	   ipiv
+	);
+    fflush(stdout);
+#endif
+#if 0
+    int* hipiv = (int*)calloc( piv->size(), sizeof(int) );
+    cudaMemcpy( hipiv, ipiv, piv->size() * sizeof(int), 
+	    cudaMemcpyDeviceToHost );
+
+    magma_int_t info = 0;
+    magma_dssssm_gpu(
+	    'f',
+	    m1, n1, m2, n2, k, ib,
+	    a1, lda1,
+	    a2, lda2,
+	    l1, ldl1,
+	    l2, ldl2,
+	    hipiv,
+	    &info
+    );
+#endif
+
+#if 1
+    static double zone  = 1.0;
+    static double mzone =-1.0;
+    cublasStatus_t status;
+
+    int* h_ipiv = (int*)calloc( piv->size(), sizeof(int) );
+    cudaMemcpy( h_ipiv, ipiv, piv->size() * sizeof(int), 
+	    cudaMemcpyDeviceToHost );
+
+    int i, ii, sb;
+    int im, ip;
+    ip = 0;
+
+    for(ii = 0; ii < k; ii += ib) {
+        sb = std::min(k-ii, ib);
+
+        for(i = 0; i < sb; i++) {
+            im = h_ipiv[ip]-1;
+
+            if (im != (ii+i)) {
+                im = im - m1;
+		status = cublasDswap
+		  (
+		   kaapi_cuda_cublas_handle(),
+		   n1,
+		   &a1[ii+i], lda1,
+		   &a2[im], lda2
+		  );
+            }
+            ip = ip + 1;
+        }
+
+	status = cublasTrsm
+	  (
+	   kaapi_cuda_cublas_handle(),
+	   convertToSideMode(CblasLeft),
+	   convertToFillMode(CblasLower),
+	   convertToOp(CblasNoTrans),
+	   convertToDiagType(CblasUnit),
+	   sb, n1, &zone,
+           &l1[ldl1*ii], ldl1,
+           &a1[ii], lda1
+	  );
+	if (status != CUBLAS_STATUS_SUCCESS)
+	  printf("TaskPlasmaDSSSSM::cublasTrsm() == %d\n", status);
+
+	status = cublasGemm
+	(
+	    kaapi_cuda_cublas_handle(),
+	    convertToOp(CblasNoTrans),
+	    convertToOp(CblasNoTrans),
+	    m2, n2, sb,
+	    &mzone,
+	    &l2[ldl2*ii], ldl2,
+            &a1[ii], lda1,
+            &zone, a2, lda2
+	);
+	if (status != CUBLAS_STATUS_SUCCESS)
+	  printf("TaskPlasmaDSSSSM::cublasGemm() == %d\n", status);
+    }
+#endif
+  }
+};
+#endif
+
+#if defined(CONFIG_USE_MAGMA)
+template<>
+struct TaskBodyGPU<TaskPlasmaDGESSM> {
+  void operator()( 
+    ka::gpuStream stream,
+    CBLAS_ORDER order, 
+    ka::range1d_r<int> piv,
+    ka::range2d_r<double_type> L, 
+    ka::range2d_rw<double_type> A
+  )
+  {
+    int m = A->dim(0); 
+    int n = A->dim(1);
+    int k = A->dim(1);
+    int lda = A->lda();
+    int ldl = L->lda();
+    double_type* const a = A->ptr();
+    double_type* const l = (double_type*)L->ptr();
+    int* const ipiv = (int*)piv->ptr();
+    const int ib = IB; // from PLASMA
+
+#if 0
+    fprintf( stdout, "TaskGPU DGESSM A(%lu,%lu) a=%p lda=%d  L(%lu,%lu) l=%p ldl=%d\n",
+	    A->dim(0), A->dim(1), (void*)a, A->lda(),
+	    L->dim(0), L->dim(1), (void*)l, L->lda()
+	   );
+    fflush(stdout);
+#endif
+
+    int* hipiv = (int*)calloc( piv->size(), sizeof(int) );
+    cudaMemcpy( hipiv, ipiv, piv->size() * sizeof(int), 
+	    cudaMemcpyDeviceToHost );
+
+    magma_int_t info = 0;
+    magma_dgessm_gpu( 
+	'f',
+	m, n, k, ib,
+	hipiv,
+	l, ldl,
+	a, lda,
+	a, lda,
+	&info
+    );
+#if 0
+    int* h_ipiv = (int*)calloc( k, sizeof(int) );
+    cudaMemcpy( h_ipiv, ipiv, k * sizeof(int), 
+	    cudaMemcpyDeviceToHost );
+
+    static double zone  =  1.0;
+    static double mzone = -1.0;
+    static int                ione  =  1;
+    cublasStatus_t status;
+
+    int i, sb;
+    int tmp, tmp2;
+
+    for(i = 0; i < k; i += ib) {
+        sb = std::min(ib, k-i);
+        /*
+         * Apply interchanges to columns I*IB+1:IB*( I+1 )+1.
+         */
+        tmp  = i+1;
+        tmp2 = i+sb;
+	magmablas_dlaswp(
+	    n,
+	    a, lda,
+	    tmp, tmp2,
+	    h_ipiv, ione
+	);
+
+	/* magmablas_dlaswp */
+        /*
+         * Compute block row of U.
+         */
+	status = cublasDtrsm (
+	   kaapi_cuda_cublas_handle(),
+	   convertToSideMode(CblasLeft),
+	   convertToFillMode(CblasLower),
+	   convertToOp(CblasNoTrans),
+	   convertToDiagType(CblasUnit),
+	   sb, n,
+	   &zone,
+           &l[ldl*i+i], ldl,
+           &a[i], lda
+	  );
+	if (status != CUBLAS_STATUS_SUCCESS)
+	  printf("DGESSM::cublasDtrsm() == %d\n", status);
+
+        if (i+sb < m) {
+	    /*
+	    * Update trailing submatrix.
+	    */
+	    status = cublasDgemm (
+		kaapi_cuda_cublas_handle(),
+		convertToOp(CblasNoTrans), convertToOp(CblasNoTrans),
+		m-(i+sb), n, sb,
+		&mzone,
+		&l[ldl*i+(i+sb)], ldl,
+		&a[i], lda,
+		&zone, &a[i+sb], lda
+	    );
+	    if (status != CUBLAS_STATUS_SUCCESS)
+	      printf("DGESSM::cublasDgemm() == %d\n", status);
+	}
+    }
+#endif
+  }
+};
+#endif
+
+#if defined(CONFIG_USE_MAGMA)
+template<>
+struct TaskBodyGPU<TaskPlasmaDTSTRF> {
+  void operator()( 
+    ka::gpuStream stream,
+    CBLAS_ORDER order, 
+    int nb,
+    ka::range2d_rw<double_type> U, 
+    ka::range2d_rw<double_type> A,
+    ka::range2d_rw<double_type> L,
+    ka::range1d_w<int> piv,
+    ka::range2d_rw<double_type> WORK
+  )
+  {
+    int m = A->dim(0); 
+    int n = A->dim(1);
+    int lda = A->lda();
+    int ldl = L->lda();
+    int ldu = U->lda();
+    int ldw = WORK->lda();
+    double_type* const a = A->ptr();
+    double_type* const l = L->ptr();
+    double_type* const u = U->ptr();
+    double_type* const work = WORK->ptr();
+    int* const ipiv = piv->ptr();
+    const int ib = IB; // from PLASMA
+
+#if 0
+    fprintf( stdout, "TaskGPU DTSTRF A(%lu,%lu) a=%p lda=%d "
+	    "L(%lu,%lu) l=%p ldl=%d "
+	    "U(%lu,%lu) u=%p ldu=%d ipiv=%p\n",
+	    A->dim(0), A->dim(1), (void*)a, lda,
+	    L->dim(0), L->dim(1), (void*)l, ldl,
+	    U->dim(0), U->dim(1), (void*)u, ldu,
+	    (void*)ipiv 
+    );
+    fflush(stdout);
+#endif
+
+    double* ha = (double*)malloc( A->dim(0)*A->dim(1) * sizeof(double) );
+    double* hl = (double*)malloc( L->dim(0)*L->dim(1) * sizeof(double) );
+    double* hu = (double*)malloc( U->dim(0)*U->dim(1) * sizeof(double) );
+    double* hwork = (double*)malloc( WORK->dim(0)*WORK->dim(1) * sizeof(double) );
+    cublasGetMatrix( m, n, sizeof(double), u, ldu, hu, ldu );
+    cublasGetMatrix( m, ib, sizeof(double), a, lda, ha, lda );
+    memset( hl, 0, L->dim(0)*L->dim(1)*sizeof(double) );
+    int* hipiv = (int*)calloc( piv->size(), sizeof(int) );
+    cudaMemcpy( hipiv, ipiv, piv->size() * sizeof(int), 
+	    cudaMemcpyDeviceToHost );
+
+    magma_int_t info = 0;
+    magma_dtstrf_gpu( 
+	'f',
+	m, n, ib, L->dim(1),
+	hu, ldu, u, ldu,
+	ha, lda, a, lda,
+	hl, ldl, l, ldl,
+	hipiv,
+	hwork, ldw, work, lda,
+	&info
+    );
+    /* TODO */
+    cudaMemcpyAsync( hipiv, ipiv, piv->size() * sizeof(int), 
+	    cudaMemcpyHostToDevice,
+	    (cudaStream_t)stream.stream
+     );
   }
 };
 #endif

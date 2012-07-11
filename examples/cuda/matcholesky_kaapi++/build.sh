@@ -18,21 +18,21 @@ do_test "CBLAS_LDFLAGS" "No CBLAS_LDFLAGS found."
 #do_test "LAPACK_LDFLAGS" "No LAPACK_LDFLAGS found."
 do_test "LAPACKE_CFLAGS" "No LAPACKE_CFLAGS found."
 do_test "LAPACKE_LDFLAGS" "No LAPACKE_LDFLAGS found."
-do_test "CUDA_CFLAGS" "No CUDA_CFLAGS found."
-do_test "CUDA_LDFLAGS" "No CUDA_LDFLAGS found."
-do_test "MAGMA_CFLAGS" "No MAGMA_CFLAGS found."
-do_test "MAGMA_LDFLAGS" "No MAGMA_LDFLAGS found."
+#do_test "CUDA_CFLAGS" "No CUDA_CFLAGS found."
+#do_test "CUDA_LDFLAGS" "No CUDA_LDFLAGS found."
+#do_test "MAGMA_CFLAGS" "No MAGMA_CFLAGS found."
+#do_test "MAGMA_LDFLAGS" "No MAGMA_LDFLAGS found."
 
-CFLAGS="-DKAAPI_DEBUG=0 -DKAAPI_NDEBUG=1
--DCONFIG_USE_DOUBLE=1 -I$XKAAPIDIR/include"
+CFLAGS="-DCONFIG_USE_DOUBLE=1 -I$XKAAPIDIR/include"
+#-DKAAPI_DEBUG=0 -DKAAPI_NDEBUG=1"
 LDFLAGS="-L$XKAAPIDIR/lib -lkaapi -lkaapi++ -lgfortran"
 
-CUDA_CFLAGS="-DCONFIG_USE_CUDA=1 $CUDA_CFLAGS"
+#CUDA_CFLAGS="-DCONFIG_USE_CUDA=1 $CUDA_CFLAGS"
 
 #CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"
-CUBLAS_LDFLAGS="-lcublas"
+#CUBLAS_LDFLAGS="-lcublas"
 
-MAGMA_CFLAGS="-DCONFIG_USE_MAGMA=1 $MAGMA_CFLAGS"
+#MAGMA_CFLAGS="-DCONFIG_USE_MAGMA=1 $MAGMA_CFLAGS"
 
 g++ -g -Wall \
     $CFLAGS \
@@ -42,13 +42,17 @@ g++ -g -Wall \
     $LAPACK_CLAGS \
     $LAPACKE_CFLAGS \
     $MAGMA_CFLAGS \
+    -c matcholesky_kaapi++.cpp 
+
+
+gfortran -g \
     -o matcholesky_kaapi++ \
-    matcholesky_kaapi++.cpp \
+    matcholesky_kaapi++.o \
     $LDFLAGS \
     $MAGMA_LDFLAGS \
     $CUDA_LDFLAGS \
     $CUBLAS_LDFLAGS \
-    $CBLAS_LDFLAGS \
     $LAPACKE_LDFLAGS \
-    $LAPACK_LDFLAGS 
+    $LAPACK_LDFLAGS \
+    $CBLAS_LDFLAGS 
 

@@ -9,6 +9,7 @@
 **
 ** thierry.gautier@inrialpes.fr
 ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+** Joao.Lima@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -50,10 +51,13 @@
 #include <string>
 #include "kaapi++"
 
+#if 0
 extern "C" {
 #include <cblas.h>   // 
 #include <clapack.h> // assume MKL/ATLAS clapack version
+#include <lapacke.h>
 }
+#endif
 
 // specialize for double_type
 #if CONFIG_USE_FLOAT
@@ -89,6 +93,34 @@ extern "C" {
 
 #endif // CONFIG_USE_FLOAT
 
+#if defined(CONFIG_USE_PLASMA)
+static inline int
+convertToSidePlasma( int side ) 
+{
+    switch (side) {
+	case CblasRight:
+            return PlasmaRight;
+	case CblasLeft:
+        default:
+         return PlasmaLeft;
+    }        
+}
+
+static inline int
+convertToTransPlasma( int trans ) 
+{
+    switch(trans) {
+        case CblasNoTrans:
+            return PlasmaNoTrans;
+        case CblasTrans:
+            return PlasmaTrans;
+        case CblasConjTrans:
+            return PlasmaConjTrans;                        
+        default:
+            return PlasmaNoTrans;
+    }
+}
+#endif
 
 /* Note: this file defines 
     - tasks for some BLAS-3 over double/float 
@@ -108,8 +140,29 @@ template<>
 struct TaskBodyCPU<TaskPrintMatrix> {
   void operator() ( std::string msg, ka::range2d_r<double_type> A  )
   {
-    size_t d0 = A.dim(0);
-    size_t d1 = A.dim(1);
+    size_t d0 = A->dim(0);
+    size_t d1 = A->dim(1);
+    std::cerr << msg << " :=matrix(" << d0 << "," << d1 << ")( [" << std::endl;
+    for (size_t i=0; i < d0; ++i)
+    {
+      std::cerr << "[";
+      for (size_t j=0; j < d1; ++j)
+      {
+        //std::cout << std::setw(18) << std::setprecision(15) << std::scientific << A(i,j) << (j == d1-1 ? "" : ", ");
+	fprintf( stderr, " %4.2f", A(i, j));
+      }
+      std::cerr << "]" << (i == d0-1 ? ' ' : ',') << std::endl;
+    }
+    std::cerr << "]);" << std::endl;
+  }
+};
+
+template<>
+struct TaskBodyCPU<TaskPrintMatrixInt> {
+  void operator() ( std::string msg, ka::range2d_r<int> A  )
+  {
+    size_t d0 = A->dim(0);
+    size_t d1 = A->dim(1);
     std::cerr << msg << " :=matrix( [" << std::endl;
     for (size_t i=0; i < d0; ++i)
     {
@@ -117,7 +170,7 @@ struct TaskBodyCPU<TaskPrintMatrix> {
       for (size_t j=0; j < d1; ++j)
       {
         //std::cout << std::setw(18) << std::setprecision(15) << std::scientific << A(i,j) << (j == d1-1 ? "" : ", ");
-	fprintf( stderr, " %.2f", A(i, j));
+	fprintf( stderr, " %.2d", A(i, j));
       }
       std::cerr << "]" << (i == d0-1 ? ' ' : ',') << std::endl;
     }
@@ -135,13 +188,13 @@ template<>
 struct TaskBodyCPU<TaskDTRSM_left> {
   void operator()( ka::range2d_r<double_type> Akk, ka::range2d_rw<double_type> Akj )
   {
-    const double_type* const a = Akk.ptr();
-    const int lda = Akk.lda();
+    const double_type* const a = Akk->ptr();
+    const int lda = Akk->lda();
 
-    double_type* const b = Akj.ptr();
-    const int ldb   = Akj.lda();
-    const int n     = Akj.dim(0);
-    const int m     = Akj.dim(1);
+    double_type* const b = Akj->ptr();
+    const int ldb   = Akj->lda();
+    const int n     = Akj->dim(0);
+    const int m     = Akj->dim(1);
 
     cblas_trsm
     (
@@ -159,13 +212,13 @@ template<>
 struct TaskBodyCPU<TaskDTRSM_right> {
   void operator()( ka::range2d_r<double_type> Akk, ka::range2d_rw<double_type> Aik )
   {
-    const double_type* const a = Akk.ptr();
-    const int lda = Akk.lda();
+    const double_type* const a = Akk->ptr();
+    const int lda = Akk->lda();
 
-    double_type* const b = Aik.ptr();
-    const int ldb = Aik.lda();
-    const int n = Aik.dim(0); // b.rows();
-    const int m = Aik.dim(1); // b.cols();
+    double_type* const b = Aik->ptr();
+    const int ldb = Aik->lda();
+    const int n = Aik->dim(0); // b.rows();
+    const int m = Aik->dim(1); // b.cols();
 
     cblas_trsm
     (
@@ -193,27 +246,28 @@ struct TaskBodyCPU<TaskDGEMM> {
     ka::range2d_rw<double_type> Aij
   )
   {
-    const double_type* const a = Aik.ptr();
-    const double_type* const b = Akj.ptr();
-    double_type* const c       = Aij.ptr();
+    const double_type* const a = Aik->ptr();
+    const double_type* const b = Akj->ptr();
+    double_type* const c       = Aij->ptr();
 
-    const int m = Aik.dim(0); 
-    const int n = Aik.dim(1); // eq. to Akj.rows();
-    const int k = Akj.dim(1); 
+    const int m = Aik->dim(0); 
+    const int n = Aik->dim(1); // eq. to Akj->rows();
+    const int k = Akj->dim(1); 
 
-    const int lda = Aik.lda();
-    const int ldb = Akj.lda();
-    const int ldc = Aij.lda();
+    const int lda = Aik->lda();
+    const int ldb = Akj->lda();
+    const int ldc = Aij->lda();
 
 #if 0
     fprintf(stdout, "TaskCPU GEMM m=%d n=%d k=%d A=%p B=%p C=%p\n", m, n, k, (void*)a, (void*)b, (void*)c ); fflush(stdout);
 #endif
-
+    KAAPI_TIMING_BEGIN();
     cblas_gemm
     (
       order, transA, transB,
       m, n, k, alpha, a, lda, b, ldb, beta, c, ldc
     );
+    KAAPI_TIMING_END("CPU DGEMM", n);
   }
 };
 
@@ -233,19 +287,21 @@ struct TaskBodyCPU<TaskDSYRK> {
     ka::range2d_rw<double_type> C 
   )
   {
-    const int n     = A.dim(0); 
-    const int k     = A.dim(1); // eq. to Akj.rows();
-    const int lda   = A.lda();
-    const double_type* const a = A.ptr();
+    const int n     = C->dim(0); 
+    //const int k     = A->dim(1); // eq. to Akj->rows();
+    const int k = (trans == CblasNoTrans ? A->dim(0) : A->dim(1) );
+    const int lda   = A->lda();
+    const double_type* const a = A->ptr();
+    const int ldc   = C->lda();
+    double_type* const c = C->ptr();
 
-    const int ldc   = C.lda();
-    double_type* const c = C.ptr();
-
+    KAAPI_TIMING_BEGIN();
     cblas_syrk
     (
       order, uplo, trans,
       n, k, alpha, a, lda, beta, c, ldc
     );
+    KAAPI_TIMING_END("CPU DSYRK", n);
 
   }
 };
@@ -266,20 +322,28 @@ struct TaskBodyCPU<TaskDTRSM> {
     ka::range2d_rw<double_type> C
   )
   {
-    const double_type* const a = A.ptr();
-    const int lda = A.lda();
+    const double_type* const a = A->ptr();
+    const int lda = A->lda();
 
-    double_type* const c = C.ptr();
-    const int ldc = C.lda();
+    double_type* const c = C->ptr();
+    const int ldc = C->lda();
 
-    const int n = C.dim(0);
-    const int k = (transA == CblasNoTrans ? A.dim(1) : A.dim(0) );
+    const int n = C->dim(0);
+    //const int k = C->dim(1);
+    const int k = (transA == CblasNoTrans ? A->dim(1) : A->dim(0) );
 
+#if 0
+    fprintf(stdout, "TaskCPU DTRSM n=%d k=%d A=%p lda=%d C=%p ldc=%d\n",
+	    n, k, (void*)a, lda, (void*)c, ldc );
+    fflush(stdout);
+#endif
+    KAAPI_TIMING_BEGIN();
     cblas_trsm
     (
       order, side, uplo, transA, diag,
       n, k, alpha, a, lda, c, ldc
     );
+    KAAPI_TIMING_END("CPU DTRSM", n);
   }
 };
 
@@ -291,17 +355,29 @@ struct TaskBodyCPU<TaskDTRSM> {
 template<>
 struct TaskBodyCPU<TaskDGETRF> {
   void operator()( 
+    CBLAS_ORDER order, 
     ka::range2d_rw<double_type> A, 
     ka::range1d_w<int> piv
   )
   {
-    const int m        = A.dim(0); 
-    const int n        = A.dim(0); 
-    const int lda      = A.lda();
-    double_type* const a    = A.ptr();
-    int* const ipiv = piv.ptr();
+    const int m        = A->dim(0); 
+    const int n        = A->dim(1); 
+    const int lda      = A->lda();
+    double_type* const a    = A->ptr();
+    int* const ipiv = piv->ptr();
 
+#if defined(CONFIG_USE_PLASMA)
+    const int ib = IB; // from PLASMA
+    int info;
+    CORE_dgetrf_incpiv(
+	    m, n, ib, 
+	    a, lda,
+	    ipiv,
+	    &info
+	);
+#else
     clapack_getrf(CblasRowMajor, m, n, a, lda, ipiv);
+#endif
   }
 };
 
@@ -314,10 +390,10 @@ struct TaskBodyCPU<TaskDGETRFNoPiv> {
 	ka::range2d_rw<double_type> A
   )
   {
-    const int m        = A.dim(0); 
-    const int n        = A.dim(0); 
-    const int lda      = A.lda();
-    double_type* const a    = A.ptr();
+    const int m        = A->dim(0); 
+    const int n        = A->dim(0); 
+    const int lda      = A->lda();
+    double_type* const a    = A->ptr();
     const int ione   = 1;
     int* piv = (int*) calloc(m, sizeof(int));
 
@@ -337,13 +413,28 @@ struct TaskBodyCPU<TaskDPOTRF> {
     CBLAS_ORDER order, CBLAS_UPLO uplo, ka::range2d_rw<double_type> A 
   )
   {
-    const int n     = A.dim(0); 
-    const int lda   = A.lda();
-    double_type* const a = A.ptr();
+    const int n     = A->dim(0); 
+    const int lda   = A->lda();
+    double_type* const a = A->ptr();
+
+    KAAPI_TIMING_BEGIN();
+    /* TODO */
 #if 0
-    fprintf(stdout, "TaskCPU DPOTRF m=%d A=%p lda=%d\n", n, (void*)a, lda ); fflush(stdout);
+    fprintf( stdout, "TaskCPU DPOTRF A(%lux%lu)=%p\n",
+	    A->dim(0), A->dim(1), a );
+    fflush(stdout);
 #endif
+#if 1
     clapack_potrf( order, uplo, n, a, lda );
+#else
+    LAPACKE_dpotrf_work(
+//	    convertToOrderLapack(order),
+	    LAPACK_COL_MAJOR,
+//	    convertToFillModeLapack(uplo),
+	    'l',
+	    n, a, lda );
+#endif
+    KAAPI_TIMING_END("CPU DPOTRF", n);
   }
 };
 
@@ -356,12 +447,12 @@ struct TaskBodyCPU<TaskDLACPY> {
 	ka::range2d_rw<double_type> B
   )
   {
-    int m     = A.dim(0); 
-    int n = A.dim(1);
-    int lda   = A.lda();
-    int ldb = B.lda();
-    double_type* const a = A.ptr();
-    double_type* const b = B.ptr();
+    const int m     = A->dim(0); 
+    const int n = A->dim(1);
+    const int lda   = A->lda();
+    const int ldb = B->lda();
+    double_type* const a = A->ptr();
+    double_type* const b = B->ptr();
 
     LAPACKE_lacpy( order, uplo, m, n, a, lda, b, ldb );
   }
@@ -375,11 +466,303 @@ struct TaskBodyCPU<TaskDLARNV> {
 	{
 		const int IDIST = 1;
 		int ISEED[4] = {0,0,0,1};
- 		const int mn     = A.dim(0)*A.dim(1); 
-		double_type* const a = A.ptr();
+ 		const int mn     = A->dim(0)*A->dim(1); 
+		double_type* const a = A->ptr();
 
 		LAPACKE_larnv( IDIST, ISEED, mn, a );
 	}
 };
+
+template<>
+struct TaskBodyCPU<TaskPlasmaDGESSM> {
+  void operator()( 
+    CBLAS_ORDER order, 
+    ka::range1d_r<int> piv,
+    ka::range2d_r<double_type> L, 
+    ka::range2d_rw<double_type> A
+  )
+  {
+#if defined(CONFIG_USE_PLASMA)
+    const int m = A->dim(0); 
+    const int n = A->dim(1);
+    const int k = A->dim(1); /* TODO check */
+    const int lda = A->lda();
+    const int ldl = L->lda();
+    double_type* const a = A->ptr();
+    double_type* const l = (double_type*)L->ptr();
+    int* const ipiv = (int*)piv->ptr();
+
+    const int ib = IB; // from PLASMA
+    CORE_dgessm( 
+	    m, n, k, ib,
+	    ipiv,
+	    l, ldl,
+	    a, lda
+	);
+#else
+#endif
+  }
+};
+
+template<>
+struct TaskBodyCPU<TaskPlasmaDTSTRF> {
+  void operator()( 
+    CBLAS_ORDER order, 
+    int nb,
+    ka::range2d_rw<double_type> U, 
+    ka::range2d_rw<double_type> A,
+    ka::range2d_rw<double_type> L,
+    ka::range1d_w<int> piv,
+    ka::range2d_rw<double_type> WORK
+  )
+  {
+#if defined(CONFIG_USE_PLASMA)
+    const int m = A->dim(0); 
+    const int n = A->dim(1);
+    const int lda = A->lda();
+    const int ldl = L->lda();
+    const int ldu = U->lda();
+    const int ldw = WORK->lda();
+    double_type* const a = A->ptr();
+    double_type* const l = L->ptr();
+    double_type* const u = U->ptr();
+    double_type* const work = WORK->ptr();
+    int* const ipiv = piv->ptr();
+
+#if 0
+    fprintf( stdout, "TaskDTSTRF L(%lu,%lu,%d)\n", L->dim(0), L->dim(1), L->lda() );
+    fflush(stdout);
+#endif
+    const int ib = IB; // from PLASMA
+    int info;
+    /* TODO */
+    CORE_dtstrf(
+	m, n, ib, nb,
+	u, ldu,
+	a, lda,
+	l, ldl,
+	ipiv,
+	work, ldw,
+	&info
+    );
+#else
+#endif
+  }
+};
+
+template<>
+struct TaskBodyCPU<TaskPlasmaDSSSSM> {
+  void operator()( 
+    CBLAS_ORDER order, 
+    ka::range2d_rw<double_type> A1, 
+    ka::range2d_rw<double_type> A2,
+    ka::range2d_r<double_type> L1,
+    ka::range2d_r<double_type> L2,
+    ka::range1d_r<int> piv
+  )
+  {
+#if defined(CONFIG_USE_PLASMA)
+    const int m1 = A1->dim(0); 
+    const int n1 = A1->dim(1);
+    const int m2 = A2->dim(0); 
+    const int n2 = A2->dim(1);
+    const int k = L1->dim(0);
+    const int lda1 = A1->lda();
+    const int lda2 = A2->lda();
+    const int ldl1 = L1->lda();
+    const int ldl2 = L2->lda();
+    double_type* const a1 = A1->ptr();
+    double_type* const a2 = A2->ptr();
+    double_type* const l1 = (double_type*)L1->ptr();
+    double_type* const l2 = (double_type*)L2->ptr();
+    int* const ipiv = (int*)piv->ptr();
+
+#if 0
+    fprintf( stdout, "TaskDSSSSM L(%lu,%lu), k=%d\n",
+	    L1->dim(0), L1->dim(1), k );
+#endif
+    const int ib = IB; // from PLASMA
+    CORE_dssssm( 
+	m1, n1,
+	m2, n2,
+	k, ib,
+	a1, lda1,
+	a2, lda2,
+	l1, ldl1,
+	l2, ldl2,
+	ipiv
+    );
+#else
+#endif
+  }
+};
+
+#if defined(CONFIG_USE_DOUBLE)
+template<>
+struct TaskBodyCPU<TaskPlasmaDGEQRT> {
+  void operator()( 
+	CBLAS_ORDER order,
+	ka::range2d_rw<double_type> A,
+	ka::range2d_w<double_type>  T,
+	ka::range1d_w<double_type>  TAU,
+	ka::range1d_w<double_type>  WORK
+  )
+  {
+    const int m = A->dim(0); 
+    const int n = A->dim(1);
+    const int lda = A->lda();
+    const int ldt = T->lda();
+    double_type* const a = A->ptr();
+    double_type* const t = T->ptr();
+    double_type* const work = WORK->ptr();
+    const int ib = IB; // PLASMA(control/auxiliary.c)
+
+#if defined(CONFIG_USE_PLASMA)
+    double_type* const tau = TAU->ptr();
+    CORE_dgeqrt(
+	m, n, ib,
+	a, lda,
+	t, ldt,
+	tau, work
+    );
+#else
+    LAPACKE_dgeqrt_work( order, 
+	m, n, ib,
+	a, lda,
+	t, ldt,
+	work
+	);
+#endif
+  }
+};
+
+template<>
+struct TaskBodyCPU<TaskPlasmaDORMQR> {
+  void operator()( 
+	CBLAS_ORDER		order,
+	CBLAS_SIDE		side,
+	CBLAS_TRANSPOSE		trans,
+	ka::range2d_r<double_type>  A,
+	ka::range2d_w<double_type>  T,
+	ka::range2d_rw<double_type> C,
+	ka::range1d_rw<double_type> WORK
+  )
+  {
+    const int m = A->dim(0); 
+    const int n = A->dim(1);
+    const int lda = A->lda();
+    const int ldt = T->lda();
+    double_type* const a = A->ptr();
+    double_type* const t = T->ptr();
+    double_type* const work = WORK->ptr();
+    const int ib = IB; // PLASMA(control/auxiliary.c)
+
+#if defined(CONFIG_USE_PLASMA)
+    const int k = std::min(m, n);
+    const int ldc = C->lda();
+    const int ldwork = WORK->size();
+    double_type* const c = C->ptr();
+    CORE_dormqr(
+	    convertToSidePlasma(side),
+	    convertToTransPlasma(trans),
+	    m, n, k, ib,
+	    a, lda,
+	    t, ldt,
+	    c, ldc,
+	    work, ldwork
+    );
+#else
+    LAPACKE_dgeqrt_work( order, 
+	m, n, ib,
+	a, lda,
+	t, ldt,
+	work
+	);
+#endif
+  }
+};
+
+template<>
+struct TaskBodyCPU<TaskPlasmaDTSQRT> {
+  void operator()( 
+	CBLAS_ORDER order,
+	ka::range2d_rw<double_type> A1,
+	ka::range2d_rw<double_type> A2,
+	ka::range2d_w<double_type>  T,
+	ka::range1d_w<double_type>  TAU,
+	ka::range1d_w<double_type>  WORK
+  )
+  {
+#if defined(CONFIG_USE_PLASMA)
+    const int m = A2->dim(1); 
+    const int n = A1->dim(0);
+    const int lda1 = A1->lda();
+    const int lda2 = A2->lda();
+    const int ldt = T->lda();
+    double_type* const a1 = A1->ptr();
+    double_type* const a2 = A2->ptr();
+    double_type* const t = T->ptr();
+    double_type* const work = WORK->ptr();
+    double_type* const tau = TAU->ptr();
+    const int ib = IB; // PLASMA(control/auxiliary.c)
+
+    CORE_dtsqrt(
+	m, n, ib,
+	a1, lda1,
+	a2, lda2,
+	t, ldt,
+	tau, work
+    );
+#endif
+  }
+};
+
+template<>
+struct TaskBodyCPU<TaskPlasmaDTSMQR> {
+  void operator()( 
+	CBLAS_ORDER		order,
+	CBLAS_SIDE		side,
+	CBLAS_TRANSPOSE		trans,
+	ka::range2d_rw<double_type> A1,
+	ka::range2d_rw<double_type> A2,
+	ka::range2d_r<double_type>  V,
+	ka::range2d_w<double_type>  T,
+	ka::range1d_w<double_type>  WORK
+  )
+  {
+#if defined(CONFIG_USE_PLASMA)
+    const int m1 = A1->dim(0); 
+    const int n1 = A1->dim(1);
+    const int m2 = A2->dim(0); 
+    const int n2 = A2->dim(1);
+    const int lda1 = A1->lda();
+    const int lda2 = A2->lda();
+    const int ldv = V->lda();
+    const int ldt = T->lda();
+    double_type* const a1 = A1->ptr();
+    double_type* const a2 = A2->ptr();
+    double_type* const v = V->ptr();
+    double_type* const t = T->ptr();
+    double_type* const work = WORK->ptr();
+    const int ib = IB; // PLASMA(control/auxiliary.c)
+    const int k = A1->dim(1);
+    const int ldwork = WORK->size();
+
+    CORE_dtsmqr(
+	convertToSidePlasma(side),
+	convertToTransPlasma(trans),
+	m1, n1,
+	m2, n2,
+	k, ib,
+	a1, lda1,
+	a2, lda2,
+	v, ldv,
+	t, ldt,
+	work, ldwork
+    );
+#endif
+  }
+};
+#endif /* CONFIG_USE_DOUBLE */
 
 #endif /* ! MATRIX_CPU_INL_INCLUDED */

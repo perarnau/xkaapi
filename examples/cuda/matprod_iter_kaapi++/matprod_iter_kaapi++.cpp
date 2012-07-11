@@ -104,9 +104,9 @@ template<>
 struct TaskBodyCPU<TaskMatProduct> {
   void operator()( ka::range2d_r<double_type> A, ka::range2d_r<double_type> B, ka::range2d_rpwp<double_type> C )
   {
-    size_t M = A.dim(0);
-    size_t K = B.dim(0);
-    size_t N = B.dim(1);
+    size_t M = A->dim(0);
+    size_t K = B->dim(0);
+    size_t N = B->dim(1);
     int bloc = BLOCSIZE;
     
 //    for (size_t i=0; i<M; i += bloc)
@@ -127,8 +127,8 @@ struct TaskBodyCPU<TaskMatProduct> {
 		 );
 	  fflush(stdout);
 #endif
-//          ka::Spawn<TaskDGEMM>()(  CblasColMajor, CblasNoTrans, CblasNoTrans, 1.0, A(ri,rk), B(rk,rj), 1.0, C(ri,rj) );
-          ka::Spawn<TaskDGEMM>()(  CblasColMajor, CblasNoTrans, CblasNoTrans, 1.0, 
+          ka::Spawn<TaskDGEMM>()
+	      (  CblasColMajor, CblasNoTrans, CblasNoTrans, 1.0, 
 		   B(rk,rj), A(ri,rk), 1.0, C(ri,rj) );
         }
       }
@@ -180,9 +180,11 @@ struct doit {
     TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(C) );
 
     /* register memory to Xkaapi runtime */
+#if CONFIG_USE_CUDA
     ka::Memory::Register( A );
     ka::Memory::Register( B );
     ka::Memory::Register( C );
+#endif
 
 #if CONFIG_DO_CHECK
     if( verif ){
@@ -236,9 +238,11 @@ struct doit {
     }
 #endif
 
+#if CONFIG_USE_CUDA
     ka::Memory::Unregister( A );
     ka::Memory::Unregister( B );
     ka::Memory::Unregister( C );
+#endif
     free(dA);
     free(dB);
     free(dC);
