@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.60])
 
-AC_INIT([X-KAAPI],[1.0-rc6],[kaapi-dev-info@lists.gforge.inria.fr],[xkaapi])
+AC_INIT([X-KAAPI],[1.0.1],[kaapi-dev-info@lists.gforge.inria.fr],[xkaapi])
 dnl AC_CONFIG_AUX_DIR: not before, not after
 dnl http://www.mail-archive.com/autoconf@gnu.org/msg07824.html
 AC_CONFIG_AUX_DIR([build-aux])
@@ -58,8 +58,8 @@ AC_PROG_CC
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
 AC_PROG_INSTALL
-AC_PROG_LIBTOOL
-#ACX_PROG_CCACHE_CC
+LT_INIT
+ACX_PROG_CCACHE_CC
 AC_PROG_CXX
 ACX_PROG_CCACHE_CXX
 AC_PROG_F77
@@ -212,27 +212,19 @@ KAAPI_FEATURE([api-kaapic], [compile C API],
   [C API compiled], [yes],
   [],
   [],
-  [KAAPI_API_KAAPIC],
-  [
-    if test "$have_cc" = no; then
-      AC_MSG_WARN([a C and Fortrand compiler is required for Kaapi C API])
-      FEATURE_DISABLE
-    else
-      FEATURE_ENABLE
-    fi
-  ])
+  [KAAPI_API_KAAPIC])
 
 dnl -----------------------------------------------------------------------
 dnl The "--enable-api-kaapif"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([api-kaapif], [compile fortran API],
-  [Fortran API compiled], [yes],
+  [Fortran API compiled], [check],
   [],
   [],
   [KAAPI_API_KAAPIF],
   [
-    if test "$have_cc" = no -o x"$F77" = x; then
-      AC_MSG_WARN([a C compiler is required for Fortran API])
+    if test x"$F77" = x; then
+      AC_MSG_WARN([a Fortran compiler is required for Fortran API])
       FEATURE_DISABLE
     else
 dnl      ACX_LIB_CHECK_PLAIN([FORTRAN],[],[
@@ -272,7 +264,7 @@ dnl -----------------------------------------------------------------------
 dnl The "--enable-api-kaapixx"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([api-kaapixx], [compile Kaapi++ API],
-  [Kaapi++ API compiled], [yes],
+  [Kaapi++ API compiled], [check],
   [],
   [],
   [KAAPI_API_KAAPIXX],
@@ -293,10 +285,7 @@ KAAPI_FEATURE([api-quark], [compile Quark API used by PLASMA library],
   [Quark API compiled], [yes],
   [],
   [],
-  [KAAPI_API_QUARK],
-  [
-    FEATURE_ENABLE
-  ])
+  [KAAPI_API_QUARK])
 
 
 dnl -----------------------------------------------------------------------

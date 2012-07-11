@@ -181,6 +181,7 @@ int main(int argc, char** argv)
   print_arg_t* argp;
   kaapi_task_t* task;
   kaapi_thread_t* thread;
+  kaapi_frame_t frame;
   
   if (argc >1)
     n = atoi(argv[1]);
@@ -193,6 +194,7 @@ int main(int argc, char** argv)
 
   kaapi_init(1, &argc, &argv);
   thread = kaapi_self_thread();
+
   kaapi_thread_save_frame(thread, &frame);
   
   t0 = kaapi_get_elapsedtime();
@@ -207,8 +209,9 @@ int main(int argc, char** argv)
     argf->n      = n;
     kaapi_access_init( &argf->result, &value_result );
     kaapi_thread_pushtask(thread);
+    kaapi_sched_sync( );
+    kaapi_thread_restore_frame(thread, &frame);
   }
-  kaapi_sched_sync( );
   t1 = kaapi_get_elapsedtime();
 
   /* push print task */
