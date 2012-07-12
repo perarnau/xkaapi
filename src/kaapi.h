@@ -1786,6 +1786,17 @@ extern int kaapi_workqueue_init_with_lock(
 
 /** Initialize the workqueue to be an empty (null) range workqueue.
     Do memory barrier before updating the queue.
+    Explicit specification of the kproc identifier to used to initialize the lock of the workqueue.
+*/
+extern int kaapi_workqueue_init_with_kproc( 
+    kaapi_workqueue_t* kwq, 
+    kaapi_workqueue_index_t b, 
+    kaapi_workqueue_index_t e, 
+    uintptr_t               ident 
+);
+
+/** Initialize the workqueue to be an empty (null) range workqueue.
+    Do memory barrier before updating the queue.
     Explicit specification of the lock to used to ensure consistent concurrent operations.
 */
 extern int kaapi_workqueue_init_with_lock_ull( 
@@ -1793,6 +1804,17 @@ extern int kaapi_workqueue_init_with_lock_ull(
     kaapi_workqueue_index_ull_t b, 
     kaapi_workqueue_index_ull_t e, 
     kaapi_lock_t* thelock 
+);
+
+/** Initialize the workqueue to be an empty (null) range workqueue.
+    Do memory barrier before updating the queue.
+    Explicit specification of the kproc identifier to used to initialize the lock of the workqueue.
+*/
+extern int kaapi_workqueue_init_with_kproc_ull( 
+    kaapi_workqueue_t* kwq, 
+    kaapi_workqueue_index_ull_t b, 
+    kaapi_workqueue_index_ull_t e, 
+    uintptr_t                   ident
 );
 
 /** destroy 

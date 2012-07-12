@@ -43,30 +43,7 @@
  */
  
 /* Note on the implementation.
-   The work structure is decomposed in two parts that follows the two
-   scheduling level adopted here.
-   At the upper level, the work is a kaapic_global_work_t. It represents
-   the iteration space distributed among a set of participants.
-   At the lower lelve, the work is a kaapic_local_work_t which is
-   represented as a kaapi_workqueue_t.
-   Initialisation of the global work must be made by a unique caller thread.
-   Once created, the caller thread has initialized the global work and the
-   local work information. The adaptive task publishes the splitter that will
-   create new participant.
-   
-   Once a participant is enrolled to work on the global work instance, i.e. after
-   he begins to execute the _kaapic_thief_entrypoint, he never returns until the
-   global end of the work.
-   This optimization allows to bypass a return to the scheduler. Nevertheless, 
-   it can let work inactive until all the enrolled threads complete.
-   
-   The distribution is not an foreach_attribute, but it must be.
-   The current distribution data structure is handle by the wa field of the global
-   work data structure. A thread with given tid, correspond to initial slice 
-   [startindex[pos]..starindex[pos+1]) where pos = tid2pos[tid].
-   The table tid2pos is used to compact information at the begin of the array
-   startindex. Only thread with tid such that the tid-th bit is set in the
-   map field can steal the initial slice.
+   This file must be automatically generated from kaapi_work.c
    T.G.
 */
  

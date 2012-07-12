@@ -46,23 +46,24 @@
 
 /** 
 */
-int kaapi_workqueue_init_ull( 
-    kaapi_workqueue_t* kwq, 
-    kaapi_workqueue_index_ull_t b, 
-    kaapi_workqueue_index_ull_t e 
+int kaapi_workqueue_init_with_lock( 
+    kaapi_workqueue_t*      kwq, 
+    kaapi_workqueue_index_t b, 
+    kaapi_workqueue_index_t e, 
+    kaapi_lock_t*           thelock 
 )
 {
   kaapi_mem_barrier();
-  kaapi_processor_t* const kproc = kaapi_get_current_processor();
-#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)||defined(__ppc__) ||defined(__arm__)
-  kaapi_assert_debug( (((unsigned long)&kwq->rep.ull.beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
-  kaapi_assert_debug( (((unsigned long)&kwq->rep.ull.end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
+#if defined(__i386__)||defined(__x86_64)||defined(__powerpc64__)||defined(__powerpc__)||defined(__ppc__)||defined(__arm__)
+  kaapi_assert_debug( (((unsigned long)&kwq->rep.li.beg) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 ); 
+  kaapi_assert_debug( (((unsigned long)&kwq->rep.li.end) & (sizeof(kaapi_workqueue_index_t)-1)) == 0 );
 #else
 #  error "May be alignment constraints exit to garantee atomic read write"
 #endif
   kaapi_assert_debug( b <= e );
-  kwq->rep.ull.beg  = b;
-  kwq->rep.ull.end  = e;
-  kwq->lock = &kproc->lock;
+  kaapi_assert_debug( thelock != 0 );
+  kwq->rep.li.beg  = b;
+  kwq->rep.li.end  = e;
+  kwq->lock = thelock;
   return 0;
 }

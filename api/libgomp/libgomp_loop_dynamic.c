@@ -173,14 +173,17 @@ static inline void komp_loop_dynamic_start_master(
 
   /* publish the global work information */
   kaapi_writemem_barrier();
-  teaminfo->gwork = workshare->lwork->global;
+  if (workshare->lwork !=0)
+    teaminfo->gwork = workshare->lwork->global;
+  else
+    teaminfo->gwork = 0;
 }
 
 
 /*
 */
 static inline void komp_loop_dynamic_start_slave(
-  kaapi_processor_t* kproc,
+  int tid,
   komp_workshare_t*  workshare,
   kaapic_global_work_t* gwork
 )
@@ -188,14 +191,14 @@ static inline void komp_loop_dynamic_start_slave(
   long start, end;
 
   /* wait global work becomes ready */
-  kaapi_assert_debug(gwork !=0);
+  if (gwork ==0) return;
         
   /* get own slice */
-  if (!kaapic_global_work_pop( gwork, kproc->kid, &start, &end))
+  if (!kaapic_global_work_pop( gwork, tid, &start, &end))
     start = end = 0;
 
   workshare->lwork = kaapic_foreach_local_workinit( 
-                          &gwork->lwork[kproc->kid],
+                          &gwork->lwork[tid],
                           start, end );
 }
 
@@ -212,7 +215,7 @@ bool GOMP_loop_dynamic_start (
   long *istart, 
   long *iend
 )
-{  
+{
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
   komp_teaminfo_t* teaminfo = ctxt->teaminfo;
@@ -220,6 +223,14 @@ bool GOMP_loop_dynamic_start (
 
   komp_workshare_t* workshare = 
     komp_loop_dynamic_start_init( kproc, start, incr );
+
+  if (((incr >0) && (end <= start)) || ((incr <0) && (start <= end)))
+  {
+    *istart = *iend = 0;
+    ctxt->workshare->rep.li.start = 0;
+    ctxt->workshare->rep.li.incr  = 0;
+    return 0;
+  }
 
   if (ctxt->icv.thread_id ==0)
   {
@@ -231,7 +242,6 @@ bool GOMP_loop_dynamic_start (
       incr,
       chunk_size
     );
-    gwork = teaminfo->gwork;
   }
   else 
   {
@@ -240,8 +250,12 @@ bool GOMP_loop_dynamic_start (
       kaapi_slowdown_cpu();
     kaapi_readmem_barrier();
 
+    /* WARNING: Here pop the first initial slice attached to the implicit task ctxt->icv.thread_id.
+       It may not correspond to a physical thread id and thus may broke implementation using
+       KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION.
+    */
     komp_loop_dynamic_start_slave(
-      kproc,
+      ctxt->icv.thread_id,
       workshare,
       gwork
     );
@@ -273,6 +287,11 @@ bool GOMP_loop_dynamic_next (long *istart, long *iend)
   kaapi_processor_t*   kproc = kaapi_get_current_processor();
   kompctxt_t* ctxt  = komp_get_ctxtkproc( kproc );
 
+  if ((ctxt->workshare ==0) || (ctxt->workshare->rep.li.incr ==0))
+  {
+    *istart = *iend = 0;
+    return 0;
+  }
   if (kaapic_foreach_worknext(
         ctxt->workshare->lwork, 
         istart,
@@ -349,6 +368,14 @@ void GOMP_parallel_loop_dynamic_start (
 
   /* initialize master workshare construct */
   workshare = komp_loop_dynamic_start_init( kproc, start, incr );
+  
+  if (((incr >0) && (end <= start)) || ((incr <0) && (start <= end)))
+  {
+    workshare->rep.li.start = 0;
+    workshare->rep.li.incr  = 0;
+    return;
+  }
+
   komp_loop_dynamic_start_master(
     kproc,
     workshare,
@@ -431,7 +458,7 @@ static void komp_trampoline_task_parallelfor
   kaapi_assert_debug(new_ctxt->teaminfo->gwork !=0);
 
   komp_loop_dynamic_start_slave(
-    kproc,
+    taskarg->threadid,
     workshare,
     new_ctxt->teaminfo->gwork
   );

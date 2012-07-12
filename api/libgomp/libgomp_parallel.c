@@ -359,6 +359,7 @@ GOMP_parallel_end (void)
   ctxt->teaminfo->gwork = 0;
   ctxt->teaminfo = 0;
   old_ctxt = ctxt->save_ctxt;
+
   kaapic_end_parallel (KAAPI_SCHEDFLAG_DEFAULT);
   
   /* restore old context */

@@ -81,7 +81,6 @@ kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
   kaapi_assert_debug( kproc->thread !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
   
-  
   if (kproc->mailbox.head != 0 )
   {
     kaapi_task_withlink_t* taskwl;

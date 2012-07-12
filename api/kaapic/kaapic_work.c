@@ -479,7 +479,7 @@ static void _kaapic_foreach_initwa(
   for (i=finalsize; i<concurrency; ++i)
     wa->startindex[i+1] = wa->startindex[finalsize];
 
-#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+#if 0
   for (i=0; i<concurrency; ++i)
   {
     int pos= wa->tid2pos[i];
@@ -945,6 +945,9 @@ kaapic_local_work_t* kaapic_foreach_workinit
 {
   kaapic_global_work_t* gwork;
   kaapic_local_work_t*  lwork = 0;
+
+  if (last <= first) return 0;
+
   const int tid = self_thread->stack.proc->kid;
 
   gwork = kaapic_foreach_global_workinit(
@@ -956,7 +959,7 @@ kaapic_local_work_t* kaapic_foreach_workinit
       body_args
   );
   kaapi_assert_debug(gwork !=0);
-
+  
   /* initialize the local workqueue with the first poped state */
   if (kaapic_global_work_pop( gwork, tid, &first, &last))
   {    
@@ -1214,6 +1217,9 @@ int kaapic_foreach_common
 {
   kaapic_global_work_t* gwork;
   kaapic_local_work_t*  lwork;
+  
+  if (last <= first) 
+    return 0;
 
   /* is_format true if called from kaapif_foreach_with_format */
   kaapi_processor_t* const kproc = kaapi_get_current_processor();

@@ -57,7 +57,7 @@ void GOMP_loop_end (void)
   kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
   
   /* implicit barrier at the end ? It will deadlock if parallel region task is steal ...*/
-  komp_barrier_wait(&ctxt->teaminfo->barrier);
+  komp_barrier_wait(ctxt, &ctxt->teaminfo->barrier);
 
   ctxt->teaminfo->gwork = 0;
   if (ctxt->icv.thread_id == 0)
