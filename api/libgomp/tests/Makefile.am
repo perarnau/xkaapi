@@ -7,6 +7,7 @@ PROGS= parallel \
        critical \
        nested   \
        barrier  \
+       barrier2 \
        single   \
        fibo     \
        task-firstprivate  \
@@ -29,6 +30,7 @@ shared_SOURCES=shared.c $(TOOLBOX_SRC)
 critical_SOURCES=critical.c $(TOOLBOX_SRC)
 nested_SOURCES=nested.c $(TOOLBOX_SRC)
 barrier_SOURCES=barrier.c $(TOOLBOX_SRC)
+barrier2_SOURCES=barrier2.c $(TOOLBOX_SRC)
 single_SOURCES=single.c $(TOOLBOX_SRC)
 fibo_SOURCES=fibo.c $(TOOLBOX_SRC)
 loop_SOURCES=loop.c $(TOOLBOX_SRC)
