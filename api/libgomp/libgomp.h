@@ -92,6 +92,7 @@ typedef kaapic_global_work_t komp_globalworkshare_t;
 void komp_barrier_init (struct komp_barrier *barrier, unsigned int num);
 void komp_barrier_destroy (struct komp_barrier *barrier);
 void komp_barrier_wait (struct kompctxt_t* ctxt, struct komp_barrier *barrier);
+void komp_barrier_wait_start (struct komp_barrier *barrier);
 
 extern unsigned long komp_env_nthreads;
 
