@@ -48,9 +48,12 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include <errno.h>
-#include "kaapic.h"
+
+#include "kaapi_impl.h"
+#include "kaapic_impl.h"
 
 unsigned long komp_env_nthreads = 0;
+unsigned long omp_max_active_levels = 0;
 
 /* Parse an unsigned long environment varible.  Return true if one was
    present and it was successfully parsed.  */
@@ -149,7 +152,10 @@ initialize_lib (void)
   
   /* Turn GOMP_CPU_AFFINITY into KAAPI_CPUSET. */
   komp_parse_cpu_affinity ();
-  
+
+  if (!parse_unsigned_long ("OMP_MAX_ACTIVE_LEVELS", &omp_max_active_levels))
+    omp_max_active_levels = KAAPI_MAX_RECCALL;
+
   kaapic_init (KAAPIC_START_ONLY_MAIN);
 }
 

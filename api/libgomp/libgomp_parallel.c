@@ -53,6 +53,7 @@ typedef struct komp_parallel_task_arg {
   int                       nextnumthreads;
   int                       nestedlevel;
   int                       nestedparallel;
+  int                       active_level;
 } komp_parallel_task_arg_t;
 
 /*
@@ -67,7 +68,7 @@ static void komp_trampoline_task_parallel
   komp_parallel_task_arg_t* taskarg = (komp_parallel_task_arg_t*)voidp;
   kompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
   kompctxt_t* new_ctxt;
-  
+
   /* save context information: allocate new context in the caller stack */
   new_ctxt = 
     (kompctxt_t*)kaapi_thread_pushdata(
@@ -82,8 +83,9 @@ static void komp_trampoline_task_parallel
   /* initialize master context: nextnum thread is inherited */
   new_ctxt->icv.thread_id       = taskarg->threadid;
   new_ctxt->icv.next_numthreads = taskarg->nextnumthreads; /* WARNING: spec ?*/
-  new_ctxt->icv.nested_level    = 1+taskarg->nestedlevel;
+  new_ctxt->icv.nested_level    = taskarg->nestedlevel;
   new_ctxt->icv.nested_parallel = taskarg->nestedparallel;
+  new_ctxt->icv.active_level   = taskarg->active_level;
 
   new_ctxt->icv.run_sched           = omp_sched_dynamic;
   new_ctxt->icv.chunk_size          = 0; /* default */
@@ -109,9 +111,10 @@ KAAPI_REGISTER_TASKFORMAT( komp_parallel_task_format,
     "KOMP/Parallel Task",
     komp_trampoline_task_parallel,
     sizeof(komp_parallel_task_arg_t),
-    7,
+    8,
     (kaapi_access_mode_t[]){ 
         KAAPI_ACCESS_MODE_V, 
+        KAAPI_ACCESS_MODE_V,
         KAAPI_ACCESS_MODE_V,
         KAAPI_ACCESS_MODE_V,
         KAAPI_ACCESS_MODE_V,
@@ -126,9 +129,10 @@ KAAPI_REGISTER_TASKFORMAT( komp_parallel_task_format,
         offsetof(komp_parallel_task_arg_t, teaminfo),
         offsetof(komp_parallel_task_arg_t, nextnumthreads),
         offsetof(komp_parallel_task_arg_t, nestedlevel),
-        offsetof(komp_parallel_task_arg_t, nestedparallel)
+	offsetof(komp_parallel_task_arg_t, nestedparallel),
+        offsetof(komp_parallel_task_arg_t, active_level)
     },
-    (kaapi_offset_t[])     { 0, 0, 0, 0, 0, 0, 0 },
+    (kaapi_offset_t[])     { 0, 0, 0, 0, 0, 0, 0, 0 },
     (const struct kaapi_format_t*[]) { 
         kaapi_int_format, 
         kaapi_voidp_format,
@@ -136,7 +140,8 @@ KAAPI_REGISTER_TASKFORMAT( komp_parallel_task_format,
         kaapi_voidp_format,
         kaapi_int_format, 
         kaapi_int_format, 
-        kaapi_int_format
+	kaapi_int_format,
+	kaapi_int_format
       },
     0
 )
@@ -189,6 +194,8 @@ komp_init_parallel_start (
   teaminfo->numthreads         = num_threads;
   teaminfo->gwork              = 0;
   teaminfo->serial             = 0;
+  teaminfo->previous_team      = ctxt->teaminfo;
+  teaminfo->father_id          = ctxt->icv.thread_id;
 
   /* init workshared construct */
   new_ctxt->workshare          = 0;
@@ -199,7 +206,7 @@ komp_init_parallel_start (
   new_ctxt->icv.next_numthreads = ctxt->icv.next_numthreads; /* WARNING: spec ? */
   new_ctxt->icv.nested_level    = 1+ctxt->icv.nested_level; 
   new_ctxt->icv.nested_parallel = ctxt->icv.nested_parallel; /* WARNING: spec ? */
-  new_ctxt->icv.nested_parallel = ctxt->icv.nested_parallel; /* WARNING: spec ? */
+  new_ctxt->icv.active_level   = num_threads == 1 ? ctxt->icv.active_level : ctxt->icv.active_level + 1;
 #if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
   new_ctxt->icv.attr            = ctxt->icv.attr;            /* WARNING: spec ? */
 #endif
@@ -234,10 +241,10 @@ komp_task_prepare (kaapi_task_t *task,
   arg->fn             = fn;
   arg->data           = data;
   arg->teaminfo       = teaminfo;
-  /* WARNING: see spec: nextnum threads is inherited ? */
   arg->nextnumthreads = ctxt->icv.next_numthreads;
   arg->nestedlevel    = ctxt->icv.nested_level;
   arg->nestedparallel = ctxt->icv.nested_parallel;
+  arg->active_level   = ctxt->icv.active_level;
 }
 
 void 
@@ -253,7 +260,7 @@ komp_parallel_start (
   komp_teaminfo_t* teaminfo;
   kaapi_task_t* task;
   komp_parallel_task_arg_t* allarg;
-    
+
   /* begin parallel region: also push a new frame that will be pop
      during call to kaapic_end_parallel
   */
@@ -272,62 +279,60 @@ komp_parallel_start (
   /* allocate in the caller stack the tasks for the parallel region */
   allarg = kaapi_thread_pushdata(thread, num_threads * sizeof(komp_parallel_task_arg_t));
 
-
-//POUR BENJAMIN: force ou non a pousser une tache dans la queue d'un Kthread particulier
-#if 0  
-  /* OLD CODE: push locally all tasks that may be steal by any thread */
-  /* The master thread (id 0) calls fn (data) directly. That's why we
-     start this loop from id = 1.*/
-  task = kaapi_thread_toptask(thread);
-  for (int i = 1; i < num_threads; i++)
-  {
-    komp_task_prepare (task, allarg, thread, fn, data, teaminfo, ctxt, i);
-    task = kaapi_thread_nexttask(thread, task);
-  }
-  kaapi_thread_push_packedtasks(thread, num_threads-1);
-
-#else 
-  /* push the task for the i-th kprocessor queue... 
-     - work fine for 1rst level parallel region.
-     - else may introduce deadlock because threads are not reused (...)
-     If thread i (kprocessor i) is waiting on a barrier while and other
-     thread push a task into its mailbox, then thread-i is unable to execute
-     the task (...)
-  */
-
-  int nb_worker_threads = kaapi_getconcurrency ();
-  int tasks_per_thread[nb_worker_threads];
-  int chunk_size = num_threads / nb_worker_threads;
-  int remaining_tasks = num_threads - (nb_worker_threads * chunk_size);
-
-  for (int i = 0; i < nb_worker_threads; i++)
-    tasks_per_thread[i] = chunk_size;
-  
-  int thread_id = 0;
-  while (remaining_tasks != 0)
-  {
-    tasks_per_thread[thread_id]++;
-    thread_id = (thread_id + 1) % nb_worker_threads;
-    remaining_tasks--;
-  }
-  
-  int task_id = 1;
-  /* Distribute the num_threads tasks over the nb_worker_threads workers. */
-  for (int i = 0; i < nb_worker_threads; i++)
-  {
-    int nb_pushed_tasks = (i == 0) ? 1 : 0; /* The master thread calls fn (data) directly. */
-    
-    task = kaapi_thread_toptask(thread);
-    while (nb_pushed_tasks < tasks_per_thread[i])
+  if (!ctxt->icv.nested_parallel)
     {
-      komp_task_prepare (task, allarg, thread, fn, data, teaminfo, ctxt, task_id++);
-      kaapi_thread_distribute_task (thread, i);
-
-      task = kaapi_thread_nexttask(thread, task);      
-      nb_pushed_tasks++;
+      /* push the task for the i-th kprocessor queue... 
+	 - work fine for 1rst level parallel region.
+	 - else may introduce deadlock because threads are not reused (...)
+	 If thread i (kprocessor i) is waiting on a barrier while and other
+	 thread push a task into its mailbox, then thread-i is unable to execute
+	 the task (...)
+      */
+      
+      int nb_worker_threads = kaapi_getconcurrency ();
+      int tasks_per_thread[nb_worker_threads];
+      int chunk_size = num_threads / nb_worker_threads;
+      int remaining_tasks = num_threads - (nb_worker_threads * chunk_size);
+      
+      for (int i = 0; i < nb_worker_threads; i++)
+	tasks_per_thread[i] = chunk_size;
+      
+      int thread_id = 0;
+      while (remaining_tasks != 0)
+	{
+	  tasks_per_thread[thread_id]++;
+	  thread_id = (thread_id + 1) % nb_worker_threads;
+	  remaining_tasks--;
+	}
+      
+      int task_id = 1;
+      /* Distribute the num_threads tasks over the nb_worker_threads workers. */
+      for (int i = 0; i < nb_worker_threads; i++)
+	{
+	  int nb_pushed_tasks = (i == 0) ? 1 : 0; /* The master thread calls fn (data) directly. */
+	  
+	  task = kaapi_thread_toptask(thread);
+	  while (nb_pushed_tasks < tasks_per_thread[i])
+	    {
+	      komp_task_prepare (task, allarg, thread, fn, data, teaminfo, ctxt, task_id++);
+	      kaapi_thread_distribute_task (thread, i);
+	      
+	      task = kaapi_thread_nexttask(thread, task);      
+	      nb_pushed_tasks++;
+	    }
+	}
+    } 
+  else 
+    { 
+      /* Nested parallel region, push all nested tasks in the queue of the calling thread. */
+      task = kaapi_thread_toptask(thread);
+      for (int i = 1; i < num_threads; i++)
+	{
+	  komp_task_prepare (task, allarg, thread, fn, data, teaminfo, ctxt, i);
+	  task = kaapi_thread_nexttask(thread, task);
+	}
+      kaapi_thread_push_packedtasks(thread, num_threads-1);
     }
-  }
-#endif  
 }
 
 

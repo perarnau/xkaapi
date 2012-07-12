@@ -104,10 +104,12 @@ typedef struct komp_icv_t {
   int                next_numthreads; /* number of thread for the next // region */
   int                nested_level;    /* nested level of // region */
   int                nested_parallel; /* !=0 iff nest allowed */
+  int                active_level;   /* Number of active parallel regions enclosing the current task. */
   int                dynamic_numthreads;  /* number of threads the runtime can dynamically
                                              adjust the next parallel region to. */
   omp_sched_t        run_sched;
   int                chunk_size;
+  struct komp_icv_t *parent_icv;      /* ICV of the parent task. */
 #if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
   kaapic_foreach_attr_t attr;         /* attribut for the next foreach loop */
 #endif
@@ -127,6 +129,8 @@ typedef struct komp_icv_t {
    of the runing Kaapi thread.
 */
 typedef struct komp_teaminfo_t {
+  struct komp_teaminfo_t          *previous_team;
+  int                              father_id;
   komp_barrier_t                   barrier;
   int volatile                     current_ordered_index;
   void*  volatile                  single_data;  /* 0 or the & of copy_end */
@@ -179,7 +183,7 @@ typedef struct kompctxt_t {
    an explicit parallel region, the effect of this routine is 
    implementation defined."
  */
-extern int omp_max_active_levels;
+extern unsigned long omp_max_active_levels;
 
 
 /** Initial context with teaminformation */
@@ -200,6 +204,7 @@ static inline kompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc )
     first->ctxt.icv.next_numthreads     = kaapi_getconcurrency();
     first->ctxt.icv.nested_level        = 0;
     first->ctxt.icv.nested_parallel     = 0;
+    first->ctxt.icv.active_level       = 0;
     first->ctxt.icv.dynamic_numthreads  = 0; /* Not sure of this initial value, next_numthreads may
                                      					  be more appropriate here... */
     first->ctxt.icv.run_sched           = omp_sched_dynamic;
@@ -210,7 +215,7 @@ static inline kompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc )
     komp_barrier_init (&first->teaminfo.barrier, 1);
     first->teaminfo.ordered_state       = 0;
     first->teaminfo.single_data = 0;
-    first->teaminfo.numthreads  = 1;
+    first->teaminfo.numthreads  = -1; /* Indicates we didn't go parallel yet. */
     first->teaminfo.gwork       = 0;
     first->teaminfo.serial      = 0;
     kproc->libkomp_tls            = &first->ctxt;

@@ -17,7 +17,7 @@ main (int argc, char **argv)
 #pragma omp parallel num_threads (2) shared (ret)
   {
     int tid = omp_get_thread_num ();
-    
+        
     if (omp_get_ancestor_thread_num (0) != 0)
       ret = 3;    
 
@@ -27,12 +27,13 @@ main (int argc, char **argv)
 
   omp_set_nested (1);
 
-#pragma omp parallel num_threads (2) shared (ret)
+#pragma omp parallel num_threads (4) shared (ret)
   {
     int tid = omp_get_thread_num ();
-#pragma omp parallel num_threads (2) firstprivate (tid) shared (ret)
+#pragma omp parallel num_threads (3) firstprivate (tid) shared (ret)
     {
       int tid2 = omp_get_thread_num ();
+
       if (omp_get_ancestor_thread_num (1) != tid)
 	ret = 5;
 
