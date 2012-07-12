@@ -230,7 +230,6 @@ omp_get_team_size (int level)
 {
   kompctxt_t *ctxt = komp_get_ctxt();
   komp_teaminfo_t *teaminfo = ctxt->teaminfo;
-  int ancestor_team_size = -1, browsed_levels = 0; 
   int hops = omp_get_level () - level;
   int error = -1;
 
