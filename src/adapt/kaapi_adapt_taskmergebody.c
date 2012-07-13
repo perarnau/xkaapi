@@ -105,7 +105,6 @@ void kaapi_taskadaptmerge_body(void* sp, kaapi_thread_t* thread)
 #if defined(KAAPI_DEBUG)
     sc->state = 0;
 #endif
-
     return;
   }
     

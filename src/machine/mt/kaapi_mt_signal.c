@@ -42,10 +42,44 @@
 ** terms.
 ** 
 */
+
+#if defined(_WIN32)
+#    define KAAPI_NOT_USE_EXECINFO 1
+#elif defined(__APPLE__)
+#  if (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ > 1040)
+#    include <execinfo.h>
+#  else
+#    define KAAPI_NOT_USE_EXECINFO 1
+#  endif
+#else 
+#  include <execinfo.h>
+#endif
 #include "kaapi_impl.h"
 #include <signal.h>
 #include <unistd.h>
 
+
+// --------------------------------------------------------------------
+void _kaapi_signal_dump_backtrace(int sig)
+{
+#if defined(__APPLE__) || defined(__linux__)
+  const unsigned int MAX_DEPTH = 100;
+  void *trace[MAX_DEPTH];
+  unsigned int trace_size;
+  char **trace_strings;
+
+  trace_size = backtrace(trace, MAX_DEPTH);
+  trace_strings = backtrace_symbols(trace, trace_size);
+  for (unsigned int i=0; i<trace_size; ++i)
+  { 
+    printf("[%i]: %s\n", i,  trace_strings[i] );
+  }
+  free(trace_strings); // malloc()ed by backtrace_symbols
+#endif
+#if defined(KAAPI_USE_PERFCOUNTER)
+  _kaapi_signal_dump_counters(sig);  
+#endif
+}
 
 
 /* Kaapi signal handler to dump the state of the all the kprocessor

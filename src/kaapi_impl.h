@@ -863,6 +863,16 @@ extern void _kaapi_signal_dump_state(int);
 */
 extern void _kaapi_signal_dump_counters(int);
 
+/* Signal handler to print the backtrace
+   This signal handler is attached to:
+    - SIGABRT
+    - SIGTERM
+    - SIGSEGV
+    - SIGFPE 
+    - SIGILL
+    If the library is configured with --with-perfcounter, then the function call _kaapi_signal_dump_counters.
+*/
+extern void _kaapi_signal_dump_backtrace(int);
 
 #if defined(__cplusplus)
 }
