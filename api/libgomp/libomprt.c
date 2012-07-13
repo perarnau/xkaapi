@@ -55,8 +55,7 @@ omp_set_num_threads (int n)
 int
 omp_get_num_threads (void)
 {
-  kompctxt_t* ctxt = komp_get_ctxt();
-  return ctxt->teaminfo ? komp_get_ctxt()->teaminfo->numthreads : 1;
+  return omp_in_parallel () ? komp_get_ctxt()->teaminfo->numthreads : 1;
 }
 
 int
