@@ -1,3 +1,8 @@
-This is a minimal implementation of the libgomp OpenMP runtime system used by gcc.
+libKOMP is an implementation of the libgomp ABI on top of the XKaapi runtime system.
 
 Once created, libgomp.{a,so} can replace the original libgomp library provided by gcc.
+
+Here is a list of OpenMP constructs that may behave differently from the OpenMP 3.1 standard:
+  * num_threads: 
+    libKOMP's num_threads can't be set outside the [0, #cores] range. 
+    A value outside this range for num_threads will be ignored by the runtime system. 
