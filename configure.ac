@@ -564,7 +564,7 @@ dnl -----------------------------------------------------------------------
 dnl -----------------------------------------------------------------------
 
 dnl -----------------------------------------------------------------------
-dnl The "--with-pthreadaffinity"
+dnl The "--enable-pthreadaffinity"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([pthreadaffinity], [build with Pthread affinity support (pthread_attr_setaffinity_np)], [], [check],
   [
@@ -581,7 +581,6 @@ KAAPI_FEATURE([pthreadaffinity], [build with Pthread affinity support (pthread_a
     CFLAGS="$saveCFLAGS"
     LIBS="$saveLIBS"
   ])
-
 
 dnl -----------------------------------------------------------------------
 dnl The "--with-poti"
