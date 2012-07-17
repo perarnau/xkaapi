@@ -49,6 +49,13 @@
 # include "../../machine/cuda/kaapi_cuda_threadgroup_execframe.h"
 #endif
 
+#if 0 // TODO for suspend with general condition
+static int _kaapi_condition_task_isready(void* arg)
+{
+  kaapi_thread_context_t* thread = (kaapi_thread_context_t*)arg;
+  
+}
+#endif
 
 /** kaapi_sched_sync
     Here the stack frame is organised like this, task1 is the running task.
@@ -111,7 +118,7 @@ int kaapi_sched_sync_(kaapi_thread_context_t* thread)
   
 redo:
 #if defined(KAAPI_USE_CUDA)
-  if (thread->proc->proc_type == KAAPI_PROC_TYPE_CUDA)
+  if (thread->stack.proc->proc_type == KAAPI_PROC_TYPE_CUDA)
   {
     if (thread->sfp->tasklist == 0)
       err = kaapi_thread_execframe(thread);
@@ -132,7 +139,12 @@ redo:
 
   if (err == EWOULDBLOCK)
   {
-    kaapi_sched_suspend( kaapi_get_current_processor() );
+    /* add assert: before thaht call kaapi_sched_suspend with kaapi_get_current_processor, but should be thread->proc */
+    kaapi_assert_debug( kaapi_get_current_processor() == thread->stack.proc );
+#if 0 // TODO for suspend with general condition
+    kaapi_sched_suspend( thread->stack.proc, _kaapi_condition_task_isready, thread );
+#endif
+    kaapi_sched_suspend( thread->stack.proc );
     kaapi_assert_debug( kaapi_self_thread_context() == thread );
     kaapi_assert_debug( thread->stack.proc == kaapi_get_current_processor() );
     goto redo;

@@ -82,6 +82,7 @@ libgomp_la_SOURCES=\
     libgomp_section.c \
     libgomp_task.c \
     libgomp_init.c \
+    libgomp_fortran.c \
     libomprt.c\
     libgomp_g.h \
     libgomp.h \
