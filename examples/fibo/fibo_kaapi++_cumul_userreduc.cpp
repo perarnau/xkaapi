@@ -71,7 +71,6 @@ long fiboseq_On(const long n){
 struct MyReductionOperator {
   void operator()( long& result, const long& value)
   { 
-    std::cout << "In global reduction" << std::endl;
     result += value; 
   }
 };
