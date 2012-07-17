@@ -165,21 +165,16 @@ typedef struct kaapi_lfree
   kaapi_thread_context_t* _back;
 } kaapi_lfree_t;
 
+struct kaapi_taskdescr_t;
 
-/**
-*/
-typedef struct kaapi_task_withlink_t {
-  struct kaapi_task_withlink_t* volatile next;
-  kaapi_task_t                           task;
-} kaapi_task_withlink_t;
-
+#if 0
 /** Mail box queue: remote thead may push stealtask into this queue.
 */
 typedef  struct {
   kaapi_task_withlink_t*         volatile head;
   kaapi_task_withlink_t*         volatile tail;
 }   __attribute__((aligned(KAAPI_CACHE_LINE))) kaapi_mailbox_queue_t;
-
+#endif
 
 /** \ingroup WS
     Higher level context manipulation.
@@ -415,8 +410,9 @@ typedef struct kaapi_processor_t {
   kaapi_lock_t             lock                           /* all requests attached to each kprocessor ordered by increasing level */
     __attribute__((aligned(KAAPI_CACHE_LINE)));
 
+#if 0
   kaapi_mailbox_queue_t    mailbox;
-
+#endif
   int volatile             isidle;                        /* true if kproc is idle (active thread is empty) */
 
   kaapi_wsqueuectxt_t      lsuspend                       /* list of suspended context */

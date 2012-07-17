@@ -44,6 +44,7 @@
 ** 
 */
 #include "kaapi_impl.h"
+#include "kaapi_mt_ws_mailbox.h"
 #include "../common/kaapi_procinfo.h"
 #include "memory/kaapi_mem.h"
 #include "memory/kaapi_mem_host_map.h"
@@ -88,8 +89,10 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   
   kaapi_sched_initlock( &kproc->lock );
   
+#if 0
   kproc->mailbox.head   = 0;
   kproc->mailbox.tail   = 0;
+#endif
   
   kproc->isidle         = 1;
   kaapi_wsqueuectxt_init( &kproc->lsuspend );
