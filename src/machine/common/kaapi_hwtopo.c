@@ -123,15 +123,16 @@ static void kaapi_hw_standardinit(void)
   );
   kaapi_assert(kaapi_default_param.kproc_list);
 
+  /* allocate enough descriptor for CPU or GPU kprocessor */
   kaapi_default_param.kid2cpu=(unsigned int*)malloc(
-      kaapi_default_param.cpucount*sizeof(unsigned int)
+      KAAPI_MAX_PROCESSOR_LIMIT*sizeof(unsigned int)
   );
   kaapi_assert(kaapi_default_param.kid2cpu);
   kaapi_default_param.cpu2kid=(unsigned int*)malloc(
-      kaapi_default_param.cpucount*sizeof(unsigned int)
+      KAAPI_MAX_PROCESSOR_LIMIT*sizeof(unsigned int)
   );
   kaapi_assert(kaapi_default_param.cpu2kid);
-  for (size_t i=0; i<kaapi_default_param.cpucount; ++i)
+  for (size_t i=0; i<KAAPI_MAX_PROCESSOR_LIMIT; ++i)
   {
     kaapi_default_param.kid2cpu[i]= -1U;
     kaapi_default_param.cpu2kid[i]= -1U;
