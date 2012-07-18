@@ -107,8 +107,8 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
 #endif
 
   /* keep the first task to execute outside the workqueue */
-  tasklist->context.chkpt = 2;
-  tasklist->context.td    =  kaapi_thread_tasklist_commit_ready_and_steal( tasklist );
+  tasklist->context.chkpt = 0;
+  tasklist->context.td    =  NULL;
   
   kaapi_writemem_barrier();
   frame->tasklist = tasklist;

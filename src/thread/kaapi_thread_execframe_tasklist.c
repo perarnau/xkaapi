@@ -177,7 +177,8 @@ execute_first:
 		kaapi_mem_host_map_sync( td->fmt, pc->sp );
 #endif
 
-#if defined(KAAPI_VERBOSE)
+//#if defined(KAAPI_VERBOSE)
+#if 0
   if( td->fmt != 0 )
       fprintf(stdout, "[%s] kid=%lu td=%p name=%s (counter=%d,wc=%d)\n", 
 	      __FUNCTION__,
@@ -249,9 +250,8 @@ printf("EWOULDBLOCK case 1\n");
     {
     }
 
-#if defined(KAAPI_USE_CUDA)
-    kaapi_thread_tasklist_commit_ready( tasklist );
-#else
+//    kaapi_thread_tasklist_commit_ready( tasklist );
+#if 0
     /* ok, now push pushed task into the wq and restore the next td to execute */
     if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0)
       goto execute_first;

@@ -47,6 +47,7 @@
     Return 1 if at least one ready task has been pushed into ready queue.
     Else return 0.
 */
+#if 0
 int kaapi_tasklist_pushready_td( 
     kaapi_tasklist_t*       tasklist, 
     kaapi_taskdescr_t*      td,
@@ -106,6 +107,7 @@ int kaapi_tasklist_pushready_td(
   }
 #endif
   
+#if 0
   if (1) //(queue == 0)
   {
     /* I was not able to identify a queue for the task: push locally */
@@ -147,6 +149,7 @@ int kaapi_tasklist_pushready_td(
 #endif
     return 0;
   }
+#endif
 
 #if 0
   /* push remote queue:
@@ -187,3 +190,4 @@ int kaapi_tasklist_pushready_td(
 
   return 1;
 }
+#endif

@@ -44,7 +44,6 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include "kaapi_mt_ws_mailbox.h"
 #include "../common/kaapi_procinfo.h"
 #include "memory/kaapi_mem.h"
 #include "memory/kaapi_mem_host_map.h"

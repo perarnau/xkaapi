@@ -152,7 +152,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
 
   /* populate tasklist with initial ready tasks */
   kaapi_thread_tasklistready_push_init( tasklist, &tasklist->readylist );
-  kaapi_thread_tasklist_commit_ready( tasklist );
+//  kaapi_thread_tasklist_commit_ready( tasklist );
 
   /* keep the first task to execute outside the workqueue */
 //FALSE  tasklist->context.chkpt = 2;

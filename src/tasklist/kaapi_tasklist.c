@@ -47,157 +47,48 @@
 
 int kaapi_tasklist_init( kaapi_tasklist_t* tl, struct kaapi_thread_context_t* thread )
 {
-  int i;
-  
-  kaapi_atomic_initlock(&tl->lock);
-  KAAPI_ATOMIC_WRITE(&tl->count_thief, 0);
+    int i;
 
-  //kaapi_readytasklist_init( &tl->rtl, (kaapi_taskdescr_t**)thread->stack.sfp->sp, &thread->stack.lock );
-  kaapi_readytasklist_init( &tl->rtl, &thread->stack.proc->lock );
+    kaapi_atomic_initlock(&tl->lock);
+    KAAPI_ATOMIC_WRITE(&tl->count_thief, 0);
 
-  tl->master          = 0;
-  tl->thread          = thread;
-  tl->recv            = 0;
-  tl->context.chkpt   = 0;
+    kaapi_readytasklist_init( &tl->rtl, &thread->stack.proc->lock );
+
+    tl->master          = 0;
+    tl->thread          = thread;
+    tl->recv            = 0;
+    tl->context.chkpt   = 0;
 #if defined(KAAPI_DEBUG)  
-  tl->context.fp      = 0;
-  tl->context.td      = 0;
+    tl->context.fp      = 0;
+    tl->context.td      = 0;
 #endif  
-  tl->count_recv      = 0;
-  kaapi_activationlist_clear( &tl->readylist );
+    tl->count_recv      = 0;
+    kaapi_activationlist_clear( &tl->readylist );
 #if defined(KAAPI_DEBUG)
-  kaapi_activationlist_clear( &tl->allocated_td );
+    kaapi_activationlist_clear( &tl->allocated_td );
 #endif
-  kaapi_recvlist_clear(&tl->recvlist);
-  kaapi_allocator_init( &tl->td_allocator );
-  kaapi_allocator_init( &tl->allocator );
-  for (i =0; i<KAAPI_TASKLIST_NUM_PRIORITY; ++i)
-    tl->cnt_tasks[i]  = 0;
-  tl->t_infinity      = 0;
+    kaapi_recvlist_clear(&tl->recvlist);
+    kaapi_allocator_init( &tl->td_allocator );
+    kaapi_allocator_init( &tl->allocator );
+    for (i =0; i<KAAPI_TASKLIST_NUM_PRIORITY; ++i)
+	tl->cnt_tasks[i]  = 0;
+    tl->t_infinity      = 0;
 #if defined(TASKLIST_ONEGLOBAL_MASTER) && !defined(TASKLIST_REPLY_ONETD)
-  KAAPI_ATOMIC_WRITE(&tl->pending_stealop, 0);
+    KAAPI_ATOMIC_WRITE(&tl->pending_stealop, 0);
 #endif
-  KAAPI_ATOMIC_WRITE(&tl->cnt_exec, 0);
-  tl->total_tasks     = 0;
-  return 0;
+    KAAPI_ATOMIC_WRITE(&tl->cnt_exec, 0);
+    tl->total_tasks     = 0;
+    return 0;
 }
 
 
 /**/
-extern int kaapi_tasklist_destroy( kaapi_tasklist_t* tl )
+int kaapi_tasklist_destroy( kaapi_tasklist_t* tl )
 {
-  int i;
-  for (i =0; i<KAAPI_TASKLIST_NUM_PRIORITY; ++i)
-  {
-    kaapi_workqueue_destroy( &tl->rtl.prl[i].wq );
-    if (tl->rtl.prl[i].dynallocated)
-#if defined(KAAPI_USE_NUMA)
-      numa_free( tl->rtl.prl[i].base - tl->rtl.prl[i].size, tl->rtl.prl[i].size );
-#else
-      free( tl->rtl.prl[i].base - tl->rtl.prl[i].size );
-#endif
-    tl->rtl.prl[i].base        = 0;
-  }
+  kaapi_readytasklist_destroy( &tl->rtl );
   kaapi_allocator_destroy( &tl->td_allocator );
   kaapi_allocator_destroy( &tl->allocator );
   kaapi_atomic_destroylock(&tl->lock);
-  return 0;
-}
-
-
-/*
-*/
-int kaapi_readytasklist_reserve( 
-  kaapi_readytasklist_t* rtl,
-  uint64_t               cnt_tasks[KAAPI_TASKLIST_NUM_PRIORITY]
-)
-{
-  int i;  
-  size_t capacity = KAAPI_TASKLIST_NUM_PRIORITY*KAAPI_TASKLIST_INITIAL_CAPACITY;
-  kaapi_taskdescr_t** base = rtl->staticcontainer;
-
-  for (i =0; i<KAAPI_TASKLIST_NUM_PRIORITY; ++i)
-  {
-    if (capacity < cnt_tasks[i])
-    {
-#if defined(KAAPI_USE_NUMA)
-      rtl->prl[i].base         = (kaapi_taskdescr_t**)numa_alloc_local( sizeof(kaapi_taskdescr_t*)*cnt_tasks[i]);
-#else
-      rtl->prl[i].base         = (kaapi_taskdescr_t**)malloc( sizeof(kaapi_taskdescr_t*)*cnt_tasks[i]);
-#endif
-      rtl->prl[i].base         += cnt_tasks[i];
-      rtl->prl[i].dynallocated = 1;
-      rtl->prl[i].size         = (int)cnt_tasks[i];
-    }
-    else if (cnt_tasks[i] >0)
-    {
-      rtl->prl[i].base         = base+cnt_tasks[i]; /* because index are negative */
-      rtl->prl[i].size         = (int)cnt_tasks[i];
-      base += cnt_tasks[i];
-      capacity -= cnt_tasks[i];
-    }
-    else 
-      rtl->prl[i].base = 0;
-  }
-  return 0;
-}
-
-
-int _kaapi_readylist_extend_wq( kaapi_onereadytasklist_t* onertl )
-{
-  kaapi_taskdescr_t** oldbase;
-  kaapi_taskdescr_t** newbase;
-  int newsize;
-  
-  oldbase = onertl->base;
-  newsize = onertl->size;
-  if (newsize ==0) newsize = KAAPI_TASKLIST_INITIAL_CAPACITY;
-  else newsize = 2*onertl->size;
-  
-#if defined(KAAPI_USE_NUMA)
-  newbase = (kaapi_taskdescr_t**)numa_alloc_local( sizeof(kaapi_taskdescr_t*) * newsize);
-#else
-  newbase = (kaapi_taskdescr_t**)malloc( sizeof(kaapi_taskdescr_t*) * newsize);
-#endif
-  if (newbase ==0) return ENOMEM;
-  
-#if defined(KAAPI_DEBUG)
-  memset( newbase, 0, sizeof(kaapi_taskdescr_t*) * newsize );
-#endif
-
-  /* recopy old value */
-  if (onertl->size >0)
-    memcpy( newbase + onertl->size, 
-            oldbase - onertl->size, 
-            onertl->size*sizeof(kaapi_taskdescr_t*) 
-    );
-  newbase += newsize;
-
-#if defined(KAAPI_DEBUG)
-{
-  long i;
-  for (i= onertl->next+1; i<0; ++i)
-    kaapi_assert( newbase[i] == oldbase[i] );
-}
-#endif
-  
-  /* the only part that need to be linearizable with stealer */
-  //kaapi_atomic_lock( onertl->wq.lock );
-  onertl->base = newbase;
-  kaapi_mem_barrier();
-  //kaapi_atomic_unlock( onertl->wq.lock );  
-  
-  if (onertl->dynallocated)
-  {
-    kaapi_assert_debug(onertl->size >0);
-#if defined(KAAPI_USE_NUMA)
-    numa_free( oldbase-onertl->size, onertl->size );
-#else
-    free( oldbase - onertl->size);
-#endif
-  }
-  onertl->dynallocated = 1;
-  onertl->size = newsize;
   return 0;
 }
 

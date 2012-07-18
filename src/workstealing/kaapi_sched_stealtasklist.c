@@ -61,7 +61,7 @@ static int kaapi_task_splitter_readylist(
   kaapi_request_t*            request    = 0;
   kaapi_taskstealready_arg_t* argsteal;
 
-  kaapi_assert_debug( taskdescr_beg != taskdescr_end );
+//  kaapi_assert_debug( taskdescr_beg != taskdescr_end );
   /* new assert in this version: only one task steal */
 
 #if !defined(TASKLIST_REPLY_ONETD)
@@ -90,7 +90,8 @@ static int kaapi_task_splitter_readylist(
 
   KAAPI_DEBUG_INST(int cnt_reply __attribute__((unused)) = 0;)
   
-  while (taskdescr_beg != taskdescr_end)
+//  while (taskdescr_beg != taskdescr_end)
+  while ( *taskdescr_beg != NULL)
   {
     request = kaapi_listrequest_iterator_get( lrequests, lrrange );
     kaapi_assert(request !=0);
@@ -109,7 +110,7 @@ static int kaapi_task_splitter_readylist(
     argsteal->victim_tasklist       = (tasklist == master_tasklist ? 0 : tasklist);
 #if defined(TASKLIST_REPLY_ONETD)
     argsteal->td                    = *taskdescr_beg; /* recopy of the pointer, need synchro if range */
-    taskdescr_beg += 1;
+    taskdescr_beg = &((*taskdescr_beg)->next);
 #else
     argsteal->td_beg                = taskdescr_beg;
     taskdescr_beg += blocsize;
@@ -141,7 +142,46 @@ static int kaapi_task_splitter_readylist(
 }
 
 
-#if defined(KAAPI_USE_CUDA)
+
+/** Steal ready task in tasklist 
+ */
+void kaapi_sched_stealtasklist( 
+                           kaapi_thread_context_t*       thread, 
+                           kaapi_tasklist_t*             tasklist, 
+                           kaapi_listrequest_t*          lrequests, 
+                           kaapi_listrequest_iterator_t* lrrange
+)
+{
+    int                     err;
+    kaapi_readytasklist_t*  rtl;
+    kaapi_taskdescr_t*     td;
+
+    kaapi_workqueue_index_t count_req 
+	    = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
+
+    rtl = &tasklist->rtl;
+    while( count_req > 0 ){
+	err  = kaapi_readylist_steal( rtl, &td );
+	if( err == 0 ){
+	    kaapi_processor_decr_workload( thread->stack.proc, 1 );
+	    //kaapi_processor_decr_workload( thread->stack.proc, steal_end-steal_beg );
+	    kaapi_task_splitter_readylist( 
+		    thread,
+		    tasklist,
+		    &td,
+		    NULL,
+		    lrequests, 
+		    lrrange,
+		    count_req
+	    );
+	    count_req = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
+	} else
+	   break; 
+    }
+  
+}
+
+#if 0
 
 void
 kaapi_sched_stealtasklist_cpu( 
@@ -167,47 +207,7 @@ kaapi_sched_stealtasklist_cpu(
   //#warning "Only for debug here"
   for(i = KAAPI_TASKLIST_CPU_MAX_PRIORITY;
 	 (i >= 0) && (i >= KAAPI_TASKLIST_CPU_MIN_PRIORITY) && (count_req >0); i-- )
-  {
-    onertl = &rtl->prl[i];
-    size_steal = count_req;
-    if (onertl->next == -1) 
-      continue;
-    size_ws = kaapi_workqueue_size( &onertl->wq );
-    if (size_ws ==0) continue;
-#if defined(TASKLIST_REPLY_ONETD)
-    if ((size_ws>0) && (size_steal > size_ws)) size_steal = size_ws;
-#else
-    size_steal = count_req * size_ws / (count_req+1);
-    if (size_steal ==0) size_steal = size_ws;
-#endif
-    err = kaapi_workqueue_steal(&onertl->wq, &steal_beg, &steal_end, size_steal);
-    if (err ==0) 
-    {
-      kaapi_processor_decr_workload( thread->stack.proc, steal_end-steal_beg );
-      steal_td_beg = onertl->base + steal_beg;
-      steal_td_end = onertl->base + steal_end;
-      kaapi_task_splitter_readylist( 
-                                    thread,
-                                    tasklist,
-                                    steal_td_beg,
-                                    steal_td_end,
-                                    lrequests, 
-                                    lrrange,
-                                    count_req
-      );
-      count_req 
-         = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
-#if defined(KAAPI_VERBOSE)
-	fprintf( stdout,"[%s] kid=%lu prio=%d size_steal=%d\n",
-		__FUNCTION__,
-		(long unsigned int)kaapi_get_current_kid(),
-		i,
-		size_steal
-	    );
-	fflush(stdout);
-#endif
-    }
-  }
+  {}
 }
 
 void
@@ -234,111 +234,7 @@ kaapi_sched_stealtasklist_gpu(
   //#warning "Only for debug here"
   for ( i = KAAPI_TASKLIST_GPU_MAX_PRIORITY;
 	  (i <= KAAPI_TASKLIST_GPU_MIN_PRIORITY) && (count_req >0); i++)
-  {
-    onertl = &rtl->prl[i];
-    size_steal = count_req;
-    if (onertl->next == -1) 
-      continue;
-    size_ws = kaapi_workqueue_size( &onertl->wq );
-    if (size_ws ==0) continue;
-#if defined(TASKLIST_REPLY_ONETD)
-    if ((size_ws>0) && (size_steal > size_ws)) size_steal = size_ws;
-#else
-    size_steal = count_req * size_ws / (count_req+1);
-    if (size_steal ==0) size_steal = size_ws;
-    if( (i < KAAPI_TASKLIST_CPU_MIN_PRIORITY) &&
-	    (thread->stack.proc->proc_type == KAAPI_PROC_TYPE_CPU) )
-	size_steal = size_ws;
-
-#endif
-    err = kaapi_workqueue_steal(&onertl->wq, &steal_beg, &steal_end, size_steal);
-    if (err ==0) 
-    {
-      kaapi_processor_decr_workload( thread->stack.proc, steal_end-steal_beg );
-      steal_td_beg = onertl->base + steal_beg;
-      steal_td_end = onertl->base + steal_end;
-      kaapi_task_splitter_readylist( 
-                                    thread,
-                                    tasklist,
-                                    steal_td_beg,
-                                    steal_td_end,
-                                    lrequests, 
-                                    lrrange,
-                                    count_req
-      );
-      count_req 
-         = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
-#if defined(KAAPI_VERBOSE)
-	fprintf( stdout,"[%s] kid=%lu prio=%d size_steal=%d\n",
-		__FUNCTION__,
-		(long unsigned int)kaapi_get_current_kid(),
-		i,
-		size_steal
-	    );
-	fflush(stdout);
-#endif
-    }
-  }
+  {}
 }
 
 #endif /* KAAPI_USE_CUDA */
-
-/** Steal ready task in tasklist 
- */
-void kaapi_sched_stealtasklist( 
-                           kaapi_thread_context_t*       thread, 
-                           kaapi_tasklist_t*             tasklist, 
-                           kaapi_listrequest_t*          lrequests, 
-                           kaapi_listrequest_iterator_t* lrrange
-)
-{
-  int                     i, err;
-  kaapi_readytasklist_t*  rtl;
-  kaapi_onereadytasklist_t* onertl;
-  kaapi_taskdescr_t**     steal_td_beg;
-  kaapi_taskdescr_t**     steal_td_end;
-  kaapi_workqueue_index_t size_ws, size_steal;
-  kaapi_workqueue_index_t steal_beg, steal_end;
-  
-  kaapi_workqueue_index_t count_req 
-       = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
-  
-  rtl = &tasklist->rtl;
-  
-  //#warning "Only for debug here"
-  for (i =KAAPI_TASKLIST_MAX_PRIORITY; (i< KAAPI_TASKLIST_NUM_PRIORITY) && (count_req >0); ++i)
-  {
-    onertl = &rtl->prl[i];
-    size_steal = count_req;
-    if (onertl->next == -1) 
-      continue;
-    size_ws = kaapi_workqueue_size( &onertl->wq );
-    if (size_ws ==0) continue;
-#if defined(TASKLIST_REPLY_ONETD)
-    if ((size_ws>0) && (size_steal > size_ws)) size_steal = size_ws;
-#else
-    size_steal = count_req * size_ws / (count_req+1);
-    if (size_steal ==0) size_steal = size_ws;
-#endif
-    err = kaapi_workqueue_steal(&onertl->wq, &steal_beg, &steal_end, size_steal);
-    if (err ==0) 
-    {
-      kaapi_processor_decr_workload( thread->stack.proc, steal_end-steal_beg );
-      steal_td_beg = onertl->base + steal_beg;
-      steal_td_end = onertl->base + steal_end;
-      kaapi_task_splitter_readylist( 
-                                    thread,
-                                    tasklist,
-                                    steal_td_beg,
-                                    steal_td_end,
-                                    lrequests, 
-                                    lrrange,
-                                    count_req
-      );
-      count_req 
-         = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
-    }
-  }
-  return ;
-}
-
