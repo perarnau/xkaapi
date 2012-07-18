@@ -177,6 +177,11 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       kaapi_setcontext(kproc, thread);
     }
 
+#if 1
+    if( !kaapi_readytasklist_isempty( kproc->rtl) )
+        err = kaapi_thread_execframe_tasklist( kproc->thread );
+#endif
+
     /* steal request */
     ws_status = kproc->emitsteal(kproc);
     if (ws_status != KAAPI_REQUEST_S_OK)

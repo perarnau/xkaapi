@@ -72,6 +72,22 @@ static inline int kaapi_onereadytasklist_push(
     return 0;
 }
 
+static inline int kaapi_onereadytasklist_remote_push(
+	kaapi_onereadytasklist_t* ortl, kaapi_taskdescr_t* td )
+{
+    td->next = td->prev = NULL;
+    kaapi_atomic_lock( &ortl->lock );
+    td->prev = ortl->tail;
+    if( ortl->tail != NULL )
+	ortl->tail->next = td;
+    else
+	ortl->head = td;
+    ortl->tail = td;
+    ortl->size++;
+    kaapi_atomic_unlock( &ortl->lock );
+    return 0;
+}
+
 static inline int kaapi_onereadytasklist_steal(
 	kaapi_onereadytasklist_t* ortl, kaapi_taskdescr_t** td ) 
 {
@@ -99,6 +115,7 @@ static inline int kaapi_onereadytasklist_steal(
 */
 typedef struct kaapi_readytasklist_t {
   kaapi_onereadytasklist_t prl[KAAPI_TASKLIST_NUM_PRIORITY]; 
+  kaapi_atomic_t	    cnt_tasks;
 } kaapi_readytasklist_t;
 
 
@@ -113,6 +130,8 @@ static inline int kaapi_readytasklist_init(
 
     for (i =0; i<KAAPI_TASKLIST_NUM_PRIORITY; ++i) 
 	kaapi_onereadytasklist_init( &rtl->prl[i] );
+
+    KAAPI_ATOMIC_WRITE( &rtl->cnt_tasks, 0 );
     return 0;
 }
 
@@ -125,6 +144,10 @@ static inline int kaapi_readytasklist_destroy( kaapi_readytasklist_t* rtl )
     return 0;
 }
 
+static inline int kaapi_readytasklist_isempty( kaapi_readytasklist_t* rtl )
+{
+    return (KAAPI_ATOMIC_READ( &rtl->cnt_tasks ) == 0 );
+}
 
 /** Activate and push ready tasks of an activation link.
     Return 1 if at least one ready task has been pushed into ready queue.
@@ -137,6 +160,7 @@ static inline int kaapi_readylist_push( kaapi_readytasklist_t* rtl, kaapi_taskde
 
   ortl = &rtl->prl[priority];
   kaapi_onereadytasklist_push( ortl, td );
+  KAAPI_ATOMIC_ADD( &rtl->cnt_tasks, 1 );
 #if 0
   if( td->fmt != 0 )
       fprintf(stdout, "[%s] kid=%lu pushed td=%p prio=%d name=%s (counter=%d,wc=%d)\n", 
@@ -148,6 +172,37 @@ static inline int kaapi_readylist_push( kaapi_readytasklist_t* rtl, kaapi_taskde
 	      );
   else
       fprintf(stdout, "[%s] kid=%lu pushed td=%p prio=%d (counter=%d,wc=%d)\n", 
+	      __FUNCTION__,
+		(long unsigned int)kaapi_get_current_kid(),
+	      (void*)td, priority,
+	      KAAPI_ATOMIC_READ(&td->counter),
+	      td->wc
+	     );
+  fflush(stdout);
+#endif
+  return priority;
+}
+
+static inline int kaapi_readylist_remote_push(
+	kaapi_readytasklist_t* rtl, kaapi_taskdescr_t* td, int priority )
+{
+  kaapi_onereadytasklist_t* ortl;
+  kaapi_assert_debug( (priority >= KAAPI_TASKLIST_MAX_PRIORITY) && (priority <= KAAPI_TASKLIST_MIN_PRIORITY) );
+
+  ortl = &rtl->prl[priority];
+  kaapi_onereadytasklist_remote_push( ortl, td );
+  KAAPI_ATOMIC_ADD( &rtl->cnt_tasks, 1 );
+#if 0
+  if( td->fmt != 0 )
+      fprintf(stdout, "[%s] kid=%lu td=%p prio=%d name=%s (counter=%d,wc=%d)\n", 
+	      __FUNCTION__,
+		(long unsigned int)kaapi_get_current_kid(),
+	      (void*)td, priority, td->fmt->name,
+	      KAAPI_ATOMIC_READ(&td->counter),
+	      td->wc
+	      );
+  else
+      fprintf(stdout, "[%s] kid=%lu td=%p prio=%d (counter=%d,wc=%d)\n", 
 	      __FUNCTION__,
 		(long unsigned int)kaapi_get_current_kid(),
 	      (void*)td, priority,
@@ -181,10 +236,14 @@ static inline int kaapi_readylist_steal( kaapi_readytasklist_t* rtl, kaapi_taskd
     int err;
     int prio;
 
+    if( KAAPI_ATOMIC_READ( &rtl->cnt_tasks) == 0 )
+	return 1;
+
     for( prio= KAAPI_TASKLIST_MAX_PRIORITY; prio < (1+KAAPI_TASKLIST_MIN_PRIORITY); ++prio ){
 	onertl = &rtl->prl[prio];
 	err = kaapi_onereadytasklist_steal( onertl, td );
 	if( err == 0 ){
+	    KAAPI_ATOMIC_ADD( &rtl->cnt_tasks, -1 );
 #if 0
 	  if( (*td)->fmt != 0 )
 	      fprintf(stdout, "[%s] kid=%lu pushed td=%p prio=%d name=%s (counter=%d,wc=%d)\n", 
@@ -222,10 +281,14 @@ static inline int kaapi_readylist_pop( kaapi_readytasklist_t* rtl, kaapi_taskdes
   int prio;
   int err;
 
+    if( KAAPI_ATOMIC_READ( &rtl->cnt_tasks) == 0 )
+	return 1;
+
   for (prio =KAAPI_TASKLIST_MAX_PRIORITY; prio<(1+KAAPI_TASKLIST_MIN_PRIORITY); ++prio) {
     onertl = &rtl->prl[prio];
     err = kaapi_onereadytasklist_pop( onertl, td );
     if( err == 0 ){
+	KAAPI_ATOMIC_ADD( &rtl->cnt_tasks, -1 );
 #if 0
 	  if( (*td)->fmt != 0 )
 	      fprintf(stdout, "[%s] kid=%lu pushed td=%p prio=%d name=%s (counter=%d,wc=%d)\n", 

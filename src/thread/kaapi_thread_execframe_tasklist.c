@@ -87,12 +87,10 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   unsigned int               proc_type;
   int                        err =0;
   uint32_t                   cnt_exec; /* executed tasks during one call of execframe_tasklist */
-  uint32_t                   cnt_pushed;
 
   kaapi_assert_debug( stack->sfp >= stack->stackframe );
   kaapi_assert_debug( stack->sfp < stack->stackframe+KAAPI_MAX_RECCALL );
   tasklist = stack->sfp->tasklist;
-  kaapi_assert_debug( tasklist != 0 );
 
   /* here... begin execute frame tasklist*/
   KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_FRAME_TL_BEG );
@@ -103,9 +101,13 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   /* */
   cnt_exec = 0;
   
-  /* */
-  cnt_pushed = 0;
-  
+    if( kaapi_readylist_pop( kaapi_get_current_processor()->rtl, &td ) == 0 ) {
+	tasklist = td->tasklist;
+	goto execute_first;
+    }
+
+  kaapi_assert_debug( tasklist != 0 );
+
   /* jump to previous state if return from suspend 
      (if previous return from EWOULDBLOCK)
   */
@@ -226,20 +228,7 @@ printf("EWOULDBLOCK case 1\n");
         stack->sfp = --fp;
       }
 
-      /* push in the front the activated tasks */
-      if (!kaapi_activationlist_isempty(&td->u.acl.list))
-        cnt_pushed = kaapi_thread_tasklistready_pushactivated( tasklist, td->u.acl.list.front );
-      else 
-        cnt_pushed = 0;
-
-      /* do bcast after child execution (they can produce output data) */
-      if (td->u.acl.bcast !=0) 
-        cnt_pushed += kaapi_thread_tasklistready_pushactivated( tasklist, td->u.acl.bcast->front );
-      
-#if 0
-      if (cnt_pushed !=0)
-        kaapi_processor_incr_workload( stack->proc, cnt_pushed );
-#endif
+      kaapi_tasklist_pushactivated( tasklist, td );
     }
     
     /* recv incomming synchronisation 
@@ -265,16 +254,6 @@ printf("EWOULDBLOCK case 1\n");
   KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_FRAME_TL_END );
   
   KAAPI_ATOMIC_ADD(&tasklist->cnt_exec, cnt_exec);
-
-//KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist = *tasklist; )
-#if 0
-#if !defined(TASKLIST_ONEGLOBAL_MASTER)
-  if (!kaapi_tasklist_isempty(tasklist))
-  {
-    goto redo_while;
-  }
-#endif
-#endif
 
   kaapi_assert( kaapi_tasklist_isempty(tasklist) );
 

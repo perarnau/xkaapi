@@ -38,6 +38,7 @@ libkaapi_la_SOURCES=\
   kaapi_task.h \
   tasklist/kaapi_version.h \
   tasklist/kaapi_readytasklist.h \
+  kaapi_affinity.h \
   kaapi_tasklist.h \
   kaapi_network.h \
   kaapi_compiler.h \
@@ -99,6 +100,7 @@ libkaapi_la_SOURCES=\
   tasklist/kaapi_tasklist.c \
   tasklist/kaapi_tasklist_activate.c \
   tasklist/kaapi_tasklist_criticalpath.c \
+  affinity/kaapi_affinity.c \
   thread/kaapi_thread_checkdeps.c \
   thread/kaapi_thread_clear.c \
   thread/kaapi_thread_computeready_access.c \

@@ -70,8 +70,6 @@ int kaapi_tasklist_init( kaapi_tasklist_t* tl, struct kaapi_thread_context_t* th
     kaapi_recvlist_clear(&tl->recvlist);
     kaapi_allocator_init( &tl->td_allocator );
     kaapi_allocator_init( &tl->allocator );
-    for (i =0; i<KAAPI_TASKLIST_NUM_PRIORITY; ++i)
-	tl->cnt_tasks[i]  = 0;
     tl->t_infinity      = 0;
 #if defined(TASKLIST_ONEGLOBAL_MASTER) && !defined(TASKLIST_REPLY_ONETD)
     KAAPI_ATOMIC_WRITE(&tl->pending_stealop, 0);

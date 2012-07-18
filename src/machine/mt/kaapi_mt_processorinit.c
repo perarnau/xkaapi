@@ -45,6 +45,9 @@
 */
 #include "kaapi_impl.h"
 #include "../common/kaapi_procinfo.h"
+
+#include "tasklist/kaapi_readytasklist.h"
+
 #include "memory/kaapi_mem.h"
 #include "memory/kaapi_mem_host_map.h"
 
@@ -153,6 +156,9 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   kaapi_setcontext(kproc, ctxt);
   
   kproc->libkomp_tls = 0;
+
+  kproc->rtl = (kaapi_readytasklist_t*)malloc( sizeof (kaapi_readytasklist_t) );
+  kaapi_readytasklist_init( kproc->rtl, NULL );
 
 #if defined(KAAPI_USE_CUDA)
   /* initialize cuda processor */

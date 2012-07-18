@@ -365,6 +365,8 @@ typedef struct kaapi_rtparam_t {
   kaapi_hierarchy_t        memory;              /* memory hierarchy */
   unsigned int*	           kid2cpu;             /* mapping: kid->phys cpu  */
   unsigned int*  	         cpu2kid;             /* mapping: phys cpu -> kid */
+
+  int			    affinity;		/* use of affinity */
 } kaapi_rtparam_t;
 
 extern kaapi_rtparam_t kaapi_default_param;

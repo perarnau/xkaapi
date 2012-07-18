@@ -120,6 +120,9 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       kaapi_setcontext(kproc, thread);
     }
 
+    if( !kaapi_readytasklist_isempty( kproc->rtl) )
+        err = kaapi_thread_execframe_tasklist( kproc->thread );
+
     /* steal request */
     ws_status = kproc->emitsteal(kproc);
     if (ws_status != KAAPI_REQUEST_S_OK)
@@ -136,8 +139,7 @@ redo_execute:
 #endif
 
 #if defined(KAAPI_USE_CUDA)
-    if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
-    {
+    if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA) {
       if (kproc->thread->stack.sfp->tasklist ==0)
         err = kaapi_cuda_thread_stack_execframe( &kproc->thread->stack );
       else
@@ -145,7 +147,7 @@ redo_execute:
     }
     else
 #endif /* KAAPI_USE_CUDA */
-      if (kproc->thread->stack.sfp->tasklist ==0)
+      if( kproc->thread->stack.sfp->tasklist == 0 )
         err = kaapi_stack_execframe(&kproc->thread->stack);
       else
         err = kaapi_thread_execframe_tasklist( kproc->thread );

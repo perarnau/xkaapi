@@ -77,6 +77,7 @@
 /* ========================================================================== */
 struct kaapi_procinfo_t;
 struct kaapi_event_buffer_t;
+struct kaapi_readytasklist_t;
 
 /* ============================= Documentation ============================ */
 /* This is the multithreaded definition of machine type for X-Kaapi.
@@ -395,7 +396,6 @@ typedef struct kaapi_cpuhierarchy_t {
   kaapi_onelevel_t      levels[ENCORE_UNE_MACRO_DETAILLEE];
 } kaapi_cpuhierarchy_t;
 
-
 /** \ingroup WS
     This data structure defines a work stealer processor kernel thread.
     A kprocessor is a container of tasks stored by stack.
@@ -413,6 +413,7 @@ typedef struct kaapi_processor_t {
 #if 0
   kaapi_mailbox_queue_t    mailbox;
 #endif
+  struct kaapi_readytasklist_t*    rtl;
   int volatile             isidle;                        /* true if kproc is idle (active thread is empty) */
 
   kaapi_wsqueuectxt_t      lsuspend                       /* list of suspended context */

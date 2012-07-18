@@ -52,6 +52,8 @@ extern "C" {
 #include "config.h"
 #include "kaapi_atomic.h"
 
+#include "kaapi_affinity.h"
+
 /* .................................. Implementation notes ......................................*/
 
 /* fwd decl */
@@ -221,7 +223,6 @@ typedef struct kaapi_tasklist_t {
   kaapi_recv_list_t       recvlist;   /* put by pushsignal into ready list to signal incomming data */
   kaapi_allocator_t       td_allocator;  /* where to push task descriptor */
   kaapi_allocator_t       allocator;  /* where to push other data structure */
-  int64_t                 cnt_tasks[KAAPI_TASKLIST_NUM_PRIORITY];  /* number of tasks in the tasklist */
   uint64_t                t_infinity; /* length path in the graph of tasks */
 #if defined(TASKLIST_ONEGLOBAL_MASTER) && !defined(TASKLIST_REPLY_ONETD)
   kaapi_atomic_t          pending_stealop;
@@ -291,7 +292,6 @@ static inline int kaapi_recvlist_isempty( const kaapi_recv_list_t* al )
 static inline void kaapi_tasklist_newpriority_task( kaapi_tasklist_t* tasklist, int priority )
 {
   kaapi_assert_debug( (priority >= KAAPI_TASKLIST_MAX_PRIORITY) && (priority <= KAAPI_TASKLIST_MIN_PRIORITY) );
-  ++tasklist->cnt_tasks[priority];
 }
 
 /*
@@ -563,6 +563,34 @@ static inline int kaapi_tasklist_pushready_td(
     int priority 
 )
 {
+    if( kaapi_default_param.affinity ) {
+	kaapi_processor_t* kproc_remote = kaapi_affinity_get_by_data( 
+		kaapi_get_current_processor(), td );
+	if( kproc_remote != kaapi_get_current_processor() ) {
+#if 1
+  if( td->fmt != 0 )
+      fprintf(stdout, "[%s] kid=%lu kremote=%lu td=%p prio=%d name=%s (counter=%d,wc=%d)\n", 
+	      __FUNCTION__,
+		(long unsigned int)kaapi_get_current_kid(),
+		(long unsigned int)kproc_remote->kid,
+	      (void*)td, priority, td->fmt->name,
+	      KAAPI_ATOMIC_READ(&td->counter),
+	      td->wc
+	      );
+  else
+      fprintf(stdout, "[%s] kid=%lu kremote=%lu td=%p prio=%d (counter=%d,wc=%d)\n", 
+	      __FUNCTION__,
+		(long unsigned int)kaapi_get_current_kid(),
+		(long unsigned int)kproc_remote->kid,
+	      (void*)td, priority,
+	      KAAPI_ATOMIC_READ(&td->counter),
+	      td->wc
+	     );
+  fflush(stdout);
+#endif
+	    return kaapi_readylist_remote_push( kproc_remote->rtl, td, priority );
+	}
+    }
     return kaapi_readylist_push( &tasklist->rtl, td, priority );
 }
 
@@ -597,6 +625,27 @@ static inline int kaapi_thread_tasklistready_pushactivated(
     head = head->next;
   }
   return retval; //0 != kaapi_bitmap_value_empty_32(&rtl->task_pushed);
+}
+
+static inline uint32_t kaapi_tasklist_pushactivated(
+	kaapi_tasklist_t*	tasklist,
+	kaapi_taskdescr_t*	td 
+	)
+{
+    uint32_t cnt_pushed= 0;
+
+    /* push in the front the activated tasks */
+    if (!kaapi_activationlist_isempty(&td->u.acl.list))
+	cnt_pushed = kaapi_thread_tasklistready_pushactivated( tasklist, td->u.acl.list.front );
+    else 
+	cnt_pushed = 0;
+
+    /* do bcast after child execution (they can produce output data) */
+    if (td->u.acl.bcast !=0) 
+	cnt_pushed +=
+	    kaapi_thread_tasklistready_pushactivated( tasklist, td->u.acl.bcast->front );
+
+    return cnt_pushed;
 }
 
 
@@ -634,8 +683,6 @@ static inline int kaapi_thread_tasklistready_push_init(
 {
   kaapi_activationlink_t* head;
 //  kaapi_readytasklist_t* rtl = &tasklist->rtl;
-
-  //kaapi_readytasklist_reserve( &tasklist->rtl, tasklist->cnt_tasks );
 
   head = acl->front;
   while (head !=0)

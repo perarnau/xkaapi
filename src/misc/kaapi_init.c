@@ -78,6 +78,7 @@ kaapi_rtparam_t kaapi_default_param = {
    .kproc_list  = 0,
    .kid2cpu     = 0,
    .cpu2kid     = 0,
+   .affinity	= 0,
    .eventmask   = KAAPI_EVT_MASK_COMPUTE|KAAPI_EVT_MASK_IDLE
 };
 
@@ -188,6 +189,9 @@ static int kaapi_setup_param()
     }
   }
   
+  if( getenv("KAAPI_AFFINITY") !=0 )
+    kaapi_default_param.affinity = 1;
+
   /* event mask */
 #if defined(KAAPI_USE_PERFCOUNTER)
   if (getenv("KAAPI_RECORD_TRACE") !=0)
