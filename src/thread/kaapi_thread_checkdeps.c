@@ -200,7 +200,10 @@ int kaapi_thread_computedep_task(
      KAAPI_TASKLIST_MAX_PRIORITY=0
      KAAPI_TASKLIST_MIN_PRIORITY>0
   */
-  taskdescr->priority = KAAPI_TASKLIST_MIN_PRIORITY-kaapi_task_get_priority(task);
+  if( task_fmt != NULL )
+      taskdescr->priority = KAAPI_TASKLIST_MIN_PRIORITY-kaapi_task_get_priority(task);
+  else 
+      taskdescr->priority = KAAPI_TASKLIST_CPU_MIN_PRIORITY;
 
   kaapi_task_set_priority( task, taskdescr->priority );
   /* call to reserved memory before execution without several memory allocation */

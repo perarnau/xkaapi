@@ -87,6 +87,10 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     /* terminaison ? */
     if (kaapi_isterminated())
     {
+#if defined(KAAPI_USE_CUDA)
+    if( kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA )
+      kaapi_assert_debug( kaapi_cuda_proc_end_isvalid( kproc ) );
+#endif
       KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
       return;
     }

@@ -162,10 +162,25 @@ kaapi_cuda_get_proc_by_dev( unsigned int id )
 extern void
 kaapi_cuda_stream_poll( struct kaapi_processor_t* const );
 
+/* Seachs for valid blocs in this GPU and invalid on host, and transfer them.
+ * Each call it performs one transfer, if necessary. */
 extern int
 kaapi_cuda_memory_poll( struct kaapi_processor_t* const );
 
+/* Polls current operations on GPU cards using kstream from kproc */
 extern void 
 kaapi_cuda_proc_poll( struct kaapi_processor_t* const );
+
+/* Test if this kproc CUDA had finished its operations (kstream, etc) */
+extern int 
+kaapi_cuda_proc_end_isvalid( struct kaapi_processor_t* const kproc );
+
+/* Synchronizes all CUDA kprocs using cudaDeviceSynchronize() */
+extern int
+kaapi_cuda_proc_sync_all( void );
+
+/* Test if all kproc CUDA had finished their operations (kstream, etc) */
+extern int
+kaapi_cuda_proc_all_isvalid( void );
 
 #endif /* ! KAAPI_CUDA_PROC_H_INCLUDED */

@@ -1575,11 +1575,6 @@ extern int kaapi_memory_register( void* ptr, kaapi_memory_view_t view );
 /* Register memory for Xkaapi optimizations */
 extern void kaapi_memory_unregister( void* ptr );
 
-#if defined(KAAPI_USE_CUDA)
-extern int
-kaapi_cuda_proc_sync_all( void );
-#endif
-
 /** Create a thread group with size threads. 
     Mapping function should be set at creation step. 
     For each thread tid of the group, the function mapping is called with:

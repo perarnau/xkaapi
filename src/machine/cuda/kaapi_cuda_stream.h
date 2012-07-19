@@ -88,22 +88,6 @@ typedef struct kaapi_cuda_status_t {
 } kaapi_cuda_status_t;
 
 
-/* Cuda request
-   item contained by a fifo used to associate
-   cuda event and context.
-   . wait fifo
-   cuda stream notifications dont pass
-   data back to the user, so we need a
-   way to associate a stream event with
-   some app specific data.
-   a refn may be useful when not using
-   event since we may want to associate
-   a node with more than one cuda event
-   completion (see taskmove).
-   . wait port
-   a wait port consists of 3 wait fifos
-   for input, kernel and output streams.
- */
 typedef struct kaapi_cuda_request_t {
   kaapi_cuda_status_t              status;
   int                            (*u_fnc)( struct kaapi_cuda_stream_t*, void*, void* );
