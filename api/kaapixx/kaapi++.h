@@ -481,7 +481,25 @@ namespace ka {
   inline AttributSchedTask SetPartition( int s )
   { return AttributSchedTask(s); }
   
-  // --------------------------------------------------------------------
+ 
+   /* The only attribut that can be passed to task creation:
+  */
+  class AttributPriorityTask : protected DefaultAttribut {
+  public:
+    int   _priority;   // priority
+  public:
+    AttributPriorityTask( int p ) : _priority(p) {}
+    void operator()( kaapi_thread_t* thread ) const
+    { 
+      kaapi_task_set_priority(kaapi_thread_toptask(thread), _priority);
+      kaapi_thread_pushtask(thread); 
+    }
+  };
+
+  inline AttributPriorityTask SetPriority( int p )
+  { return AttributPriorityTask(p); }
+  
+ // --------------------------------------------------------------------
   // A task forked with SetStaticSched attribut may have first formal
   // parameter a StaticSchedInfo returned by the runtime
   class StaticSchedInfo : public kaapi_staticschedinfo_t {
@@ -553,7 +571,7 @@ namespace ka {
     SetStaticSchedAttribut( )
      : _nress(-1), _ncpu(-1), _ngpu(-1)
     {}
-    void* operator()( kaapi_thread_t* thread ) const
+    void operator()( kaapi_thread_t* thread ) const
     { 
       /* push a task that will encapsulated the execution of the top task */
       kaapi_task_t* task = kaapi_thread_toptask(thread);
@@ -566,7 +584,6 @@ namespace ka {
       arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU] = (uint32_t)_ngpu;
       kaapi_task_init(task, (kaapi_task_body_t)kaapi_staticschedtask_body, arg);
       kaapi_thread_pushtask(thread);
-      return 0;
     }
   };
   
@@ -2007,7 +2024,7 @@ __attribute__((deprecated))
   template<typename T, Storage2DClass S = RowMajor>
   struct range2d_rpwp : public pointer_rpwp<array<2,T,S> > 
   {
-    typedef pointer_rpwp<array<2,T,S> >        Self_t;
+    typedef pointer_rpwp<array<2,T,S> >      Self_t;
     typedef typename Self_t::value_type      value_type;
     typedef typename Self_t::difference_type difference_type;
     typedef typename Self_t::index_t         index_t;
@@ -3100,8 +3117,48 @@ namespace ka {
   /* Mapping of data into logical set of partitions
   */
   struct BlockCyclic {
+    BlockCyclic()
+     : np(0), bs(0), M(0)
+    {}
+    
+    /* P: number of ressources, B: block size */
+    BlockCyclic(int P, int B)
+     : np(P), bs(B), M(B*P) 
+    {}
+    
+    /* element maping */
+    struct rep {
+      int p;   /* ressource number */
+      int b;   /* block number on the ressource */
+      int i;   /* index in the block */
+    };
+
+    void map( rep& r, int index )
+    {
+      r.p = (index % M)/bs;
+      r.b = index / M;
+      r.i = index % bs;
+    }
+
+    void invmap( int& index, const rep& r)
+    {
+      index = r.p * bs + r.b * M + r.i;
+    }
+    
+    int np;  /* ressource number */
+    int bs;  /* = bloc size */
+    int M;   /* = np * bloc size */
   };
-  struct Block {
+  
+  /* specialization for Block distribution */
+  struct Block : public BlockCyclic {
+    Block() 
+      : BlockCyclic()
+    {}
+    /* P: number of ressources, L: size of the sequence */
+    Block(int P, int L)
+      : BlockCyclic(P, (P+L-1)/L )
+    {}
   };
 
   template<typename DIST, typename T, bool isaccess>
@@ -3221,6 +3278,29 @@ namespace ka {
 
 
   // --------------------------------------------------------------------
+  // Compile time specialization of the pusher
+  template<bool flag, class ATTR, class TASK>
+  struct KaapiPusher0;
+
+  template<class ATTR, class TASK>
+  struct KaapiPusher0<true,ATTR,TASK> 
+  { /* forget attr: not used if adaptive task is pushed */
+    static void push( const ATTR& attr, kaapi_thread_t* thread )
+    {
+      kaapi_thread_pushtask_adaptive( thread, KaapiWrapperSplitter0<TASK>::splitter);
+    }
+  };
+
+  template<class ATTR, class TASK>
+  struct KaapiPusher0<false, ATTR, TASK>
+  {
+    static void push( const ATTR& attr, kaapi_thread_t* thread )
+    {
+      attr( thread );
+    }
+  };
+
+  // --------------------------------------------------------------------
   /* New API: thread.Spawn<TASK>([ATTR])( args )
      Spawn<TASK>([ATTR])(args) with be implemented on top of 
      System::get_current_thread()->Spawn<TASK>([ATTR])( args ).
@@ -3257,14 +3337,7 @@ namespace ka {
         kaapi_task_t* clo = kaapi_thread_toptask( _thread );
         kaapi_task_init( clo, KaapiFormatTask_t::default_bodies.cpu_body, 0 );
         /* attribut is reponsible for pushing task into the thread */
-      if (TraitSplitter<TASK>::has_splitter)
-        kaapi_thread_pushtask_adaptive( _thread, 
-          KaapiWrapperSplitter0<TASK>::splitter
-        );
-      else
-        kaapi_thread_pushtask( _thread );
-
-//        _attr(_thread);
+        KaapiPusher0<TraitSplitter<TASK>::has_splitter,ATTR,TASK>::push( _attr, _thread );
       }
 
 #include "ka_api_spawn.h"
