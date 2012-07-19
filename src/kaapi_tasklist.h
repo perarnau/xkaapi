@@ -147,17 +147,11 @@ typedef struct kaapi_finalizer_arg_t {
 typedef struct kaapi_taskdescr_t {
   kaapi_atomic_t                counter;   /* concurrent decr to test if task is ready */
   uint32_t                      wc;        /* value of counter before task becomes ready */
-#if defined(KAAPI_TASKLIST_POINTER_TASK)
   kaapi_task_t*                 task;      /* the DFG task to execute */
-#else
-  kaapi_task_t                  task;      /* the DFG task to execute */
-#endif
   const kaapi_format_t*         fmt;       /* format of the task */
   int                           priority;
   float				alpha;	    /* alpha value */
   kaapi_bitmap_value32_t        ocr;       /* OCR flag for the task */  
-  kaapi_task_t                  tasksteal; /* used if task is pushed into remote queue */
-  kaapi_taskstealready_arg_t    tasksteal_arg; /* put it together with taskdescr to avoid dynamic alloc */
   int                           mark;      /* used by some graph algorithm, initial value=0 */
 
   struct kaapi_tasklist_t*	tasklist;   /* owner */
@@ -354,9 +348,7 @@ static inline kaapi_taskdescr_t* kaapi_allocator_allocate_td(
       (kaapi_taskdescr_t*)kaapi_allocator_allocate( kal, sizeof(kaapi_taskdescr_t) );
   KAAPI_ATOMIC_WRITE(&td->counter, 0);
   td->wc         = 0;
-#if defined(KAAPI_TASKLIST_POINTER_TASK)
   td->task       = task;
-#endif
   td->fmt 	     = task_fmt;
   /* TODO: here */
   td->priority   = KAAPI_TASKLIST_CPU_MIN_PRIORITY;

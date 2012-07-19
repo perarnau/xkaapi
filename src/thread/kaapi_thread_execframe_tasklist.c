@@ -132,11 +132,7 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
     {
       kaapi_processor_decr_workload( stack->proc, 1 );
 execute_first:
-#if defined(KAAPI_TASKLIST_POINTER_TASK)
       pc = td->task;
-#else
-      pc = &td->task;
-#endif
       if (pc !=0)
       {
         /* get the correct body for the proc type */

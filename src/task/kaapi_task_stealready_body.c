@@ -126,6 +126,7 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
 #endif
   
   /* report the number of executed task to the master tasklist */
+  /* TODO change it */
   KAAPI_ATOMIC_ADD( &tasklist->master->cnt_exec, KAAPI_ATOMIC_READ(&tasklist->cnt_exec) );
 
 #if !defined(TASKLIST_ONEGLOBAL_MASTER) 

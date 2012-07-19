@@ -20,11 +20,7 @@ kaapi_processor_t* kaapi_affinity_get_by_data(
     size_t i;
     kaapi_mem_data_t *kmd;
     void* sp;
-#if defined(KAAPI_TASKLIST_POINTER_TASK)
     sp = td->task->sp;
-#else
-    sp = td->task.sp;
-#endif
     if( td->fmt == NULL )
 	return kproc;
 
@@ -74,6 +70,7 @@ kaapi_processor_t* kaapi_affinity_get_by_data(
 //    return NULL;
 }
 
+/* TODO: if same function: merge kaapi_sched_stealtasklist.c */
 int kaapi_affinity_exec_readylist( 
 	kaapi_processor_t* kproc
     )
