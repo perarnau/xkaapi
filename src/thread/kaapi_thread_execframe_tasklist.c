@@ -101,11 +101,6 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   /* */
   cnt_exec = 0;
   
-    if( kaapi_readylist_pop( kaapi_get_current_processor()->rtl, &td ) == 0 ) {
-	tasklist = td->tasklist;
-	goto execute_first;
-    }
-
   kaapi_assert_debug( tasklist != 0 );
 
   /* jump to previous state if return from suspend 
@@ -127,19 +122,11 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   };
   
   /* force previous write before next write */
-  //kaapi_writemem_barrier();
-KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist __attribute__((unused)) = *tasklist; )
+    KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist __attribute__((unused)) = *tasklist; )
 
-#if 0
-redo_while:
-#endif
   while (!kaapi_tasklist_isempty( tasklist ))
   {
-#if defined(KAAPI_USE_CUDA)
-    err = kaapi_readylist_pop_cpu( &tasklist->rtl, &td );
-#else
     err = kaapi_readylist_pop( &tasklist->rtl, &td );
-#endif
 
     if (err ==0)
     {
@@ -152,7 +139,6 @@ execute_first:
 #endif
       if (pc !=0)
       {
-//printf("%i:: Exec td:%p, date:%lu\n", kaapi_get_self_kid(), td, td->u.acl.date );
         /* get the correct body for the proc type */
         if (td->fmt ==0)
         { /* currently some internal tasks do not have format */
@@ -162,14 +148,12 @@ execute_first:
         {
           body = td->fmt->entrypoint_wh[proc_type];          
         }
-//printf("Execute td:%p, name=%s\n", td, (td->fmt == 0 ? "<no name>" : td->fmt->name) );
         kaapi_assert_debug(body != 0);
 
         /* push the frame for the running task: pc/sp = one before td (which is in the stack)à */
         fp = (kaapi_frame_t*)stack->sfp;
         stack->sfp[1] = *fp;
 
-        /* kaapi_writemem_barrier(); */
         stack->sfp = ++fp;
         kaapi_assert_debug((char*)fp->sp > (char*)fp->sp_data);
         kaapi_assert_debug( stack->sfp - stack->stackframe <KAAPI_MAX_RECCALL);
@@ -231,21 +215,6 @@ printf("EWOULDBLOCK case 1\n");
       kaapi_tasklist_pushactivated( tasklist, td );
     }
     
-    /* recv incomming synchronisation 
-       - process it before the activation list of the executed
-       in order to force directly activated task to be executed first.
-    */
-    if (tasklist->recv !=0)
-    {
-    }
-
-//    kaapi_thread_tasklist_commit_ready( tasklist );
-#if 0
-    /* ok, now push pushed task into the wq and restore the next td to execute */
-    if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0)
-      goto execute_first;
-#endif
-            
     KAAPI_DEBUG_INST(save_tasklist = *tasklist;)
 
   } /* while */

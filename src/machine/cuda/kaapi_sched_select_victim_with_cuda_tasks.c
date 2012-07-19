@@ -49,6 +49,7 @@
 #include "kaapi_cuda.h"
 #include "../common/kaapi_procinfo.h"
 
+#if 0
 static inline int
 kaapi_cuda_sched_has_task(
 	    const kaapi_processor_t* kproc
@@ -102,6 +103,7 @@ kaapi_cuda_sched_has_task(
     }
     return 0;
 }
+#endif
 
 int kaapi_sched_select_victim_with_cuda_tasks
 (

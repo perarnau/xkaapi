@@ -86,18 +86,7 @@ kaapi_cuda_thread_tasklist_activate_deps(
 	kaapi_taskdescr_t*   td
 	)
 {
-    /* push in the front the activated tasks */
-    if( !kaapi_activationlist_isempty(&td->u.acl.list) )
-	kaapi_thread_tasklistready_pushactivated( tasklist,
-		td->u.acl.list.front );
-
-    /* do bcast after child execution (they can produce output data) */
-    if( td->u.acl.bcast !=0 ) 
-	kaapi_thread_tasklistready_pushactivated( tasklist,
-		td->u.acl.bcast->front );
-
-    kaapi_thread_tasklist_commit_ready( tasklist );
-    kaapi_thread_tasklist_commit_ready( tasklist->master );
+    kaapi_tasklist_pushactivated( tasklist, td );
 }
 
 #if defined(KAAPI_CUDA_DATA_CACHE_WT)
@@ -260,27 +249,21 @@ int kaapi_cuda_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   kaapi_frame_t*             fp;
   int                        err =0;
   uint32_t                   cnt_exec; /* executed tasks during one call of execframe_tasklist */
-//  uint32_t                   cnt_pushed;
   kaapi_cuda_stream_t*	    kstream;
 
   kaapi_assert_debug( stack->sfp >= stack->stackframe );
   kaapi_assert_debug( stack->sfp < stack->stackframe+KAAPI_MAX_RECCALL );
   tasklist = stack->sfp->tasklist;
-  kaapi_assert_debug( tasklist != 0 );
 
   /* here... begin execute frame tasklist*/
   KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_FRAME_TL_BEG );
 
-  /* get the processor type to select correct entry point */
-//  proc_type = stack->proc->proc_type;
-  
   /* */
   cnt_exec = 0;
-  
-  /* */
-//  cnt_pushed = 0;
-  
+
   kstream = stack->proc->cuda_proc.kstream;
+  
+  kaapi_assert_debug( tasklist != 0 );
 
   /* jump to previous state if return from suspend 
      (if previous return from EWOULDBLOCK)
@@ -301,12 +284,10 @@ int kaapi_cuda_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   };
   
   /* force previous write before next write */
-  //kaapi_writemem_barrier();
     KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist = *tasklist; )
 
   while (!kaapi_tasklist_isempty( tasklist )) {
-execute_pop:
-    err = kaapi_readylist_pop_gpu( &tasklist->rtl, &td );
+    err = kaapi_readylist_pop( &tasklist->rtl, &td );
 
     if (err == 0) {
       kaapi_processor_decr_workload( stack->proc, 1 );
@@ -322,7 +303,6 @@ execute_first:
     fp = (kaapi_frame_t*)stack->sfp;
     stack->sfp[1] = *fp;
 
-    /* kaapi_writemem_barrier(); */
     stack->sfp = ++fp;
     kaapi_assert_debug((char*)fp->sp > (char*)fp->sp_data);
     kaapi_assert_debug( stack->sfp - stack->stackframe <KAAPI_MAX_RECCALL);
@@ -403,30 +383,12 @@ execute_first:
 
     } /* err == 0 */
     
-    /* recv incomming synchronisation 
-       - process it before the activation list of the executed
-       in order to force directly activated task to be executed first.
-    */
-    if (tasklist->recv !=0)
-    {
-    }
-
-
-    /* ok, now push pushed task into the wq and restore the next td to execute */
-#if 0
-    if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0 )
-	  goto execute_first;
-#endif
-    //kaapi_thread_tasklist_commit_ready( tasklist );
-            
     KAAPI_DEBUG_INST(save_tasklist = *tasklist;)
-
   } /* while */
 
     /* finish all GPU CUDA operations */
     while( kaapi_cuda_waitfirst_stream( kstream ) != KAAPI_CUDA_STREAM_EMPTY ){
-///	if ( (td = kaapi_thread_tasklist_commit_ready_and_steal( tasklist )) !=0 )
-	err = kaapi_readylist_pop_gpu( &tasklist->rtl, &td );
+	err = kaapi_readylist_pop( &tasklist->rtl, &td );
 	if( err == 0 )
 	      goto execute_first;
     }
@@ -476,8 +438,6 @@ execute_first:
   /* lock thief under stealing before reading counter:
      - there is no work to steal, but need to synchronize with currentl thieves
   */
-//  kaapi_sched_lock(&stack->lock);
-//  kaapi_sched_unlock(&stack->lock);
   retval = KAAPI_ATOMIC_READ(&tasklist->count_thief);
 
   if (retval ==0) 
@@ -489,7 +449,6 @@ execute_first:
      the tasklist is not completed, 
      then return EWOULDBLOCK 
   */
-//printf("EWOULDBLOCK case 2: master:%i\n", tasklist->master ? 0 : 1);
   return EWOULDBLOCK;
 #endif // #if !defined(TASKLIST_ONEGLOBAL_MASTER)  
 

@@ -8,6 +8,8 @@
 #include <cuda_runtime_api.h>
 #endif
 
+kaapi_processor_id_t	kaapi_all_asid2kid[KAAPI_MEM_ASID_MAX];
+
 static inline kaapi_mem_data_t* 
 _kaapi_mem_data_alloc( void )
 {

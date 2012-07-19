@@ -120,8 +120,12 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       kaapi_setcontext(kproc, thread);
     }
 
-    if( !kaapi_readytasklist_isempty( kproc->rtl) )
-        err = kaapi_thread_execframe_tasklist( kproc->thread );
+    if( kaapi_default_param.affinity ) {
+	if( !kaapi_readytasklist_isempty( kproc->rtl) ) {
+	    kaapi_affinity_exec_readylist( kproc );
+	    goto redo_execute;
+	}
+    }
 
     /* steal request */
     ws_status = kproc->emitsteal(kproc);

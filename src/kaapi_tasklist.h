@@ -567,7 +567,7 @@ static inline int kaapi_tasklist_pushready_td(
 	kaapi_processor_t* kproc_remote = kaapi_affinity_get_by_data( 
 		kaapi_get_current_processor(), td );
 	if( kproc_remote != kaapi_get_current_processor() ) {
-#if 1
+#if 0
   if( td->fmt != 0 )
       fprintf(stdout, "[%s] kid=%lu kremote=%lu td=%p prio=%d name=%s (counter=%d,wc=%d)\n", 
 	      __FUNCTION__,

@@ -57,8 +57,8 @@ typedef uintptr_t kaapi_mem_addr_t;
  */
 typedef unsigned int kaapi_mem_asid_t;
 
-typedef struct kaapi_mem_data_t {
 #define KAAPI_MEM_ASID_MAX 32
+typedef struct kaapi_mem_data_t {
     kaapi_mem_addr_t addr[KAAPI_MEM_ASID_MAX];
 
     struct kaapi_mem_data_t* parent;

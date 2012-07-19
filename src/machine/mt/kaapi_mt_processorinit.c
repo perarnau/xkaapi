@@ -143,9 +143,9 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
 
   /* memory: as[0] for cpu, as[1 + gpuindex] for gpu */
   if ( kpi->proc_type == KAAPI_PROC_TYPE_CPU )
-    kaapi_mem_host_map_init( &kproc->mem_host_map, 0 );
+    kaapi_mem_host_map_init( &kproc->mem_host_map, kproc->kid, 0 );
   else
-    kaapi_mem_host_map_init( &kproc->mem_host_map, 1 + kpi->proc_index );
+    kaapi_mem_host_map_init( &kproc->mem_host_map, kproc->kid, 1 + kpi->proc_index );
   
   kaapi_processor_computetopo( kproc );  
 

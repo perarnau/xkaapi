@@ -854,6 +854,7 @@ static inline int kaapi_stack_isready( kaapi_stack_t* stack )
   {
     if (tl->master ==0) 
       return (KAAPI_ATOMIC_READ(&tl->cnt_exec) == tl->total_tasks);
+    return 1; /* TODO voir */
     kaapi_assert_debug(0); /* only master tasklist may suspend */
     return (KAAPI_ATOMIC_READ(&tl->count_thief) == 0) && kaapi_tasklist_isempty(tl);
   }

@@ -177,10 +177,16 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       kaapi_setcontext(kproc, thread);
     }
 
-#if 1
-    if( !kaapi_readytasklist_isempty( kproc->rtl) )
-        err = kaapi_thread_execframe_tasklist( kproc->thread );
+    if( kaapi_default_param.affinity ) {
+	if( !kaapi_readytasklist_isempty( kproc->rtl) ) {
+#if defined(KAAPI_USE_CUDA)
+	    if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
+		err = kaapi_cuda_thread_execframe_tasklist( kproc->thread );
+	    else
 #endif
+		err = kaapi_thread_execframe_tasklist( kproc->thread );
+	}
+    }
 
     /* steal request */
     ws_status = kproc->emitsteal(kproc);
