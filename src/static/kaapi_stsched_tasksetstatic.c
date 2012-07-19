@@ -137,7 +137,6 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
         + arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU];
   }
 
-
   /* the embedded task cannot be steal because it was not visible to thieves */
   arg->sub_body( arg->sub_sp, uthread, pc );
 
@@ -169,7 +168,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
     if (getenv("USER") !=0)
       sprintf(filename,"/tmp/graph.%s.%i.dot", getenv("USER"), counter++ );
     else
-      sprintf(filename,"/tmp/graph.%i.dot",counter++);
+      sprintf(filename,"/tmp/graph.%i.dot", counter++);
     FILE* filedot = fopen(filename, "w");
     kaapi_thread_tasklist_print_dot( filedot, tasklist, 0 );
     fclose(filedot);
