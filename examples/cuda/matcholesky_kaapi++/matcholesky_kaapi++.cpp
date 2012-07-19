@@ -158,25 +158,25 @@ struct TaskBodyCPU<TaskCholesky> {
     if( uplo == CblasLower ) {
       for (size_t k=0; k < N; k += blocsize) {
         ka::rangeindex rk(k, k+blocsize);
-        ka::Spawn<TaskDPOTRF>()
+        ka::Spawn<TaskDPOTRF>( ka::SetPriority(0) )
 	      ( CblasColMajor, CblasLower, A(rk,rk) );
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
           ka::rangeindex rm(m, m+blocsize);
-          ka::Spawn<TaskDTRSM>()
+          ka::Spawn<TaskDTRSM>( ka::SetPriority(12) )
           ( CblasColMajor, CblasRight, uplo,
            CblasTrans, CblasNonUnit, 1.0, A(rk,rk), A(rk,rm));
         }
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
           ka::rangeindex rm(m, m+blocsize);
-          ka::Spawn<TaskDSYRK>()
+          ka::Spawn<TaskDSYRK>( ka::SetPriority(12) )
           ( CblasColMajor, uplo,
            CblasNoTrans, -1.0, A(rk,rm), 1.0, A(rm,rm));
           
           for (size_t n=k+blocsize; n < m; n += blocsize) {
             ka::rangeindex rn(n, n+blocsize);
-            ka::Spawn<TaskDGEMM>()
+            ka::Spawn<TaskDGEMM>( ka::SetPriority(12) )
             (   CblasColMajor, CblasNoTrans, CblasTrans,
              -1.0, A(rk,rm), A(rk,rn), 1.0, A(rn,rm));
           }
@@ -185,7 +185,7 @@ struct TaskBodyCPU<TaskCholesky> {
     } else if( uplo == CblasUpper ) {
       for (size_t k=0; k < N; k += blocsize) {
         ka::rangeindex rk(k, k+blocsize);
-        ka::Spawn<TaskDPOTRF>()
+        ka::Spawn<TaskDPOTRF>( ka::SetPriority(0) )
 	      ( CblasColMajor, uplo, A(rk,rk) );
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
@@ -197,13 +197,13 @@ struct TaskBodyCPU<TaskCholesky> {
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
           ka::rangeindex rm(m, m+blocsize);
-          ka::Spawn<TaskDSYRK>()
+          ka::Spawn<TaskDSYRK>( ka::SetPriority(12) )
           ( CblasColMajor, uplo,
            CblasTrans, -1.0, A(rm,rk), 1.0, A(rm,rm) );
           
           for (size_t n=k+blocsize; n < m; n += blocsize) {
             ka::rangeindex rn(n, n+blocsize);
-            ka::Spawn<TaskDGEMM>()
+            ka::Spawn<TaskDGEMM>( ka::SetPriority(12) )
             ( CblasColMajor, CblasTrans, CblasNoTrans,
              -1.0, A(rn,rk),
              A(rm,rk),
