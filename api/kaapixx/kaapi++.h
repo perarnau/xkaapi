@@ -481,7 +481,25 @@ namespace ka {
   inline AttributSchedTask SetPartition( int s )
   { return AttributSchedTask(s); }
   
-  // --------------------------------------------------------------------
+ 
+   /* The only attribut that can be passed to task creation:
+  */
+  class AttributPriorityTask : protected DefaultAttribut {
+  public:
+    int   _priority;   // priority
+  public:
+    AttributPriorityTask( int p ) : _priority(p) {}
+    void operator()( kaapi_thread_t* thread ) const
+    { 
+      kaapi_task_set_priority(kaapi_thread_toptask(thread), _priority);
+      kaapi_thread_pushtask(thread); 
+    }
+  };
+
+  inline AttributPriorityTask SetPriority( int p )
+  { return AttributPriorityTask(p); }
+  
+ // --------------------------------------------------------------------
   // A task forked with SetStaticSched attribut may have first formal
   // parameter a StaticSchedInfo returned by the runtime
   class StaticSchedInfo : public kaapi_staticschedinfo_t {
@@ -553,7 +571,7 @@ namespace ka {
     SetStaticSchedAttribut( )
      : _nress(-1), _ncpu(-1), _ngpu(-1)
     {}
-    void* operator()( kaapi_thread_t* thread ) const
+    void operator()( kaapi_thread_t* thread ) const
     { 
       /* push a task that will encapsulated the execution of the top task */
       kaapi_task_t* task = kaapi_thread_toptask(thread);
@@ -566,7 +584,6 @@ namespace ka {
       arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU] = (uint32_t)_ngpu;
       kaapi_task_init(task, (kaapi_task_body_t)kaapi_staticschedtask_body, arg);
       kaapi_thread_pushtask(thread);
-      return 0;
     }
   };
   
