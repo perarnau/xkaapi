@@ -531,13 +531,6 @@ static inline void kaapi_task_set_priority(kaapi_task_t* task, uint8_t prio)
   task->u.s.priority = prio; 
 }
 
-static inline uint8_t
-kaapi_task_get_priority_by_alpha( kaapi_task_t* task, 
-	const float alpha )
-{
-    return  ( ((uint8_t)alpha)%(KAAPI_TASK_MAX_PRIORITY+1) );
-}
-
 /* ========================================================================= */
 /** Task splitter
     \ingroup TASK

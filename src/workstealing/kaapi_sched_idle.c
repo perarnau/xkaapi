@@ -77,9 +77,8 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     kaapi_network_poll();
 #endif
 #if defined(KAAPI_USE_CUDA)
-    if( (kproc->isidle) &&
-	    (kproc->proc_type == KAAPI_PROC_TYPE_CUDA) ) {
-	kaapi_cuda_memory_poll( kproc );
+    if( kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA ) {
+	kaapi_cuda_proc_poll( kproc );
     }
 #endif
     if (kaapi_suspendflag)
@@ -120,11 +119,9 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       kaapi_setcontext(kproc, thread);
     }
 
-    if( kaapi_default_param.affinity ) {
-	if( !kaapi_readytasklist_isempty( kproc->rtl) ) {
-	    kaapi_affinity_exec_readylist( kproc );
-	    goto redo_execute;
-	}
+    if( !kaapi_readytasklist_isempty( kproc->rtl) ) {
+	kaapi_affinity_exec_readylist( kproc );
+	goto redo_execute;
     }
 
     /* steal request */
@@ -143,7 +140,7 @@ redo_execute:
 #endif
 
 #if defined(KAAPI_USE_CUDA)
-    if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA) {
+    if( kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA ) {
       if (kproc->thread->stack.sfp->tasklist ==0)
         err = kaapi_cuda_thread_stack_execframe( &kproc->thread->stack );
       else

@@ -86,7 +86,8 @@ kaapi_cuda_thread_tasklist_activate_deps(
 	kaapi_taskdescr_t*   td
 	)
 {
-    kaapi_tasklist_pushactivated( tasklist, td );
+    kaapi_readylist_localpushactivated( kaapi_get_current_processor()->rtl, td );
+    //kaapi_tasklist_pushactivated( tasklist, td );
 }
 
 #if defined(KAAPI_CUDA_DATA_CACHE_WT)
@@ -335,24 +336,9 @@ execute_first:
     } else {
 	kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_H2D, 
 		kaapi_cuda_gpu_task_callback0_sync_gpu, tasklist, td );
-	kaapi_cuda_test_stream( kstream );
 #if defined(KAAPI_USE_WINDOW)
-    /* The slicing window is applied to all streams */
-    while( 
-	    (kaapi_default_param.cudawindowsize <=
-	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_input_fifo(kstream)))
-	||
-	    (kaapi_default_param.cudawindowsize <=
-	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_kernel_fifo(kstream)))
-	||
-	    (kaapi_default_param.cudawindowsize <=
-	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_output_fifo(kstream)))
-	 )
-    {
-	kaapi_cuda_test_stream( kstream );
-    }
+	kaapi_cuda_stream_window_test( kstream );
 #endif
-	kaapi_cuda_test_stream( kstream );
     }
     KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_END );
     KAAPI_DEBUG_INST( td->u.acl.exec_date = kaapi_get_elapsedns() );
@@ -385,13 +371,6 @@ execute_first:
     
     KAAPI_DEBUG_INST(save_tasklist = *tasklist;)
   } /* while */
-
-    /* finish all GPU CUDA operations */
-    while( kaapi_cuda_waitfirst_stream( kstream ) != KAAPI_CUDA_STREAM_EMPTY ){
-	err = kaapi_readylist_pop( &tasklist->rtl, &td );
-	if( err == 0 )
-	      goto execute_first;
-    }
 
   /* here... end execute frame tasklist*/
   KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_FRAME_TL_END );

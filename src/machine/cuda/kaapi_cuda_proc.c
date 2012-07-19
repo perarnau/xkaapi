@@ -222,32 +222,10 @@ kaapi_cuda_proc_sync_all( void )
     return 0;
 }
 
-#if 0
-void kaapi_cuda_event_record( void )
+void
+kaapi_cuda_proc_poll( kaapi_processor_t* const kproc )
 {
-    kaapi_processor_t* const self_proc =
-	kaapi_get_current_processor();
-    const cudaError_t res = cudaEventRecord( self_proc->cuda_proc.event, 
-	   kaapi_cuda_HtoD_stream() );
-    if( res != cudaSuccess ) {
-	    fprintf( stdout, "%s: cudaEventRecord ERROR %d\n", __FUNCTION__, res);
-	    fflush(stdout);
-    }
-    cudaStreamWaitEvent( kaapi_cuda_kernel_stream(), self_proc->cuda_proc.event,
-	    0 );
+    kaapi_cuda_stream_poll( kproc );
+    if( kproc->isidle )
+	kaapi_cuda_memory_poll( kproc );
 }
-
-void kaapi_cuda_event_record_( cudaStream_t stream )
-{
-    kaapi_processor_t* const self_proc =
-	kaapi_get_current_processor();
-    const cudaError_t res = cudaEventRecord( self_proc->cuda_proc.event, 
-	   stream );
-    if( res != cudaSuccess ) {
-	    fprintf( stdout, "%s: cudaEventRecord ERROR %d\n", __FUNCTION__, res);
-	    fflush(stdout);
-    }
-}
-
-#endif
-

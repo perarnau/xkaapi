@@ -165,4 +165,7 @@ kaapi_cuda_stream_poll( struct kaapi_processor_t* const );
 extern int
 kaapi_cuda_memory_poll( struct kaapi_processor_t* const );
 
+extern void 
+kaapi_cuda_proc_poll( struct kaapi_processor_t* const );
+
 #endif /* ! KAAPI_CUDA_PROC_H_INCLUDED */

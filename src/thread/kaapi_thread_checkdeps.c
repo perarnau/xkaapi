@@ -193,25 +193,14 @@ int kaapi_thread_computedep_task(
   /* store the format to avoid lookup */
   taskdescr->fmt = task_fmt;
 
-  /* Gets the alpha value for the task */
-  if( task_fmt->alpha_body != 0 ) {
-      float alpha= .0f;
-      kaapi_task_alpha_body_t alpha_body =
-	  (kaapi_task_alpha_body_t)task_fmt->alpha_body;
-      alpha_body( sp, &alpha );
-      taskdescr->alpha = alpha;
-      taskdescr->priority = KAAPI_TASKLIST_MIN_PRIORITY -
-	  kaapi_task_get_priority_by_alpha( task, taskdescr->alpha );
-  } else {
-      /* Convert TASK priority to internal management of priority:
-	 KAAPI_TASK_MAX_PRIORITY >0
-	 KAAPI_TASK_MIN_PRIORITY ==0 (default value)
-	 
-	 KAAPI_TASKLIST_MAX_PRIORITY=0
-	 KAAPI_TASKLIST_MIN_PRIORITY>0
-      */
-      taskdescr->priority = KAAPI_TASKLIST_MIN_PRIORITY-kaapi_task_get_priority(task);
-  }
+  /* Convert TASK priority to internal management of priority:
+     KAAPI_TASK_MAX_PRIORITY >0
+     KAAPI_TASK_MIN_PRIORITY ==0 (default value)
+     
+     KAAPI_TASKLIST_MAX_PRIORITY=0
+     KAAPI_TASKLIST_MIN_PRIORITY>0
+  */
+  taskdescr->priority = KAAPI_TASKLIST_MIN_PRIORITY-kaapi_task_get_priority(task);
 
   kaapi_task_set_priority( task, taskdescr->priority );
   /* call to reserved memory before execution without several memory allocation */
