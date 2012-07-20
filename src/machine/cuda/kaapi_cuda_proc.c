@@ -210,8 +210,7 @@ void
 kaapi_cuda_proc_poll( kaapi_processor_t* const kproc )
 {
     kaapi_cuda_stream_poll( kproc );
-    if( kproc->isidle )
-	kaapi_cuda_memory_poll( kproc );
+    kaapi_cuda_memory_poll( kproc );
 }
 
 int

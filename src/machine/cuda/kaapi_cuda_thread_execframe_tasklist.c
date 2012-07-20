@@ -371,6 +371,11 @@ execute_first:
     KAAPI_DEBUG_INST(save_tasklist = *tasklist;)
   } /* while */
 
+    if( !kaapi_readytasklist_isempty( stack->proc->rtl ) ){
+	if( kaapi_readylist_pop( stack->proc->rtl, &td ) == 0 )
+	    goto execute_first;
+    }
+
   /* here... end execute frame tasklist*/
   KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_FRAME_TL_END );
   

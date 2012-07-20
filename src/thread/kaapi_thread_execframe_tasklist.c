@@ -194,7 +194,6 @@ redo_frameexecution:
           err = kaapi_stack_execframe( &thread->stack );
           if (err == EWOULDBLOCK)
           {
-printf("EWOULDBLOCK case 1\n");
             tasklist->context.chkpt     = 1;
             tasklist->context.td        = td;
             tasklist->context.fp        = fp;
@@ -214,6 +213,11 @@ printf("EWOULDBLOCK case 1\n");
     KAAPI_DEBUG_INST(save_tasklist = *tasklist;)
 
   } /* while */
+
+    if( !kaapi_readytasklist_isempty( stack->proc->rtl ) ){
+	if( kaapi_readylist_pop( stack->proc->rtl, &td ) == 0 )
+	    goto execute_first;
+    }
 
   /* here... end execute frame tasklist*/
   KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_FRAME_TL_END );
