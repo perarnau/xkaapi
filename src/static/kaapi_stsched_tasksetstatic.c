@@ -194,7 +194,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   kaapi_sched_sync_(thread);
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&tasklist->count_thief) == 0);
 
-#if defined(KAAPI_USE_CUDA)
+#if 0
    kaapi_assert_debug( kaapi_cuda_proc_all_isvalid( ) );
 #endif
 #if 0//defined(KAAPI_USE_PERFCOUNTER)

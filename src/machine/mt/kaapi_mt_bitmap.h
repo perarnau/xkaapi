@@ -415,6 +415,11 @@ static inline int kaapi_bitmap_unset_64( kaapi_bitmap64_t* b, int i )
   return -1;
 }
 
+static inline void kaapi_bitmap_full_except_64( kaapi_bitmap64_t* b, int i )  
+{
+  KAAPI_ATOMIC_WRITE( &b->proc64, ~(((uint64_t)1)<<i) );
+}
+
 static inline int kaapi_bitmap_count_64( const kaapi_bitmap64_t* b ) 
 { return __builtin_popcountl(KAAPI_ATOMIC_READ(&b->proc64)); }
 
