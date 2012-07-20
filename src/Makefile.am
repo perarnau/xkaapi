@@ -171,6 +171,7 @@ libkaapi_la_SOURCES=\
   workstealing/kaapi_sched_stealtask.c \
   workstealing/kaapi_sched_splittask.c \
   workstealing/kaapi_sched_stealtasklist.c \
+  workstealing/kaapi_sched_stealreadytasklist.c \
   workstealing/kaapi_sched_idle.c \
   workstealing/kaapi_sched_wakeup.c \
   workstealing/kaapi_sched_suspend.c \

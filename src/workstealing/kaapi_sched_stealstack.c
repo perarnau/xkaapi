@@ -94,6 +94,10 @@ int kaapi_sched_stealstack
     } else 
 	kaapi_sched_stealtasklist( thread, top_frame->tasklist, lrequests, lrrange );
   }
+
+  if( !kaapi_readytasklist_isempty( thread->stack.proc->rtl ) )
+    kaapi_sched_stealreadytasklist( thread, thread->stack.proc->rtl, lrequests, lrrange );
+
   thread->stack.thieffp = 0;
 
   kaapi_atomic_unlock(&thread->stack.lock);

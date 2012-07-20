@@ -11,21 +11,14 @@ extern void kaapi_sched_stealtasklist(
                            kaapi_listrequest_iterator_t* lrrange
 );
 
-#if defined(KAAPI_USE_CUDA)
-extern void kaapi_sched_stealtasklist_cpu( 
+/** Used to steal a tasklist from local readylist of victim
+*/
+extern void kaapi_sched_stealreadytasklist( 
                            kaapi_thread_context_t*       thread, 
-                           kaapi_tasklist_t*             tasklist, 
+                           kaapi_readytasklist_t*        rtl, 
                            kaapi_listrequest_t*          lrequests, 
                            kaapi_listrequest_iterator_t* lrrange
 );
-
-extern void kaapi_sched_stealtasklist_gpu( 
-                           kaapi_thread_context_t*       thread, 
-                           kaapi_tasklist_t*             tasklist, 
-                           kaapi_listrequest_t*          lrequests, 
-                           kaapi_listrequest_iterator_t* lrrange
-);
-#endif
 
 
 /** How to execute task with readylist
