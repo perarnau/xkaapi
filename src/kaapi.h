@@ -509,8 +509,8 @@ typedef struct kaapi_task_t {
     struct {
       kaapi_atomic8_t           state;     /** state of the task */
       uint8_t                   priority;  /** of the task */
-      uint8_t                   ocr;       /** of the task */
-      uint8_t                   flag;      /** scheduling information */
+      uint8_t                   flag;      /** some flag as splittable, local... */
+      uint8_t                   ocr;       /** currently ocr */
       /* ... */                            /** some bits are available on 64bits LP machine */
     } s;
     uintptr_t                   dummy;     /* to clear previous fields in one write */
