@@ -118,6 +118,26 @@ typedef struct kaapi_readytasklist_t {
   kaapi_atomic_t	    cnt_tasks;
 } kaapi_readytasklist_t;
 
+/* 
+ * max_prio - maximum priority of a given kproc
+ * min_prio - minimum priority of a given kproc
+ * inc_prio - increment 
+ */
+static inline void
+kaapi_readylist_get_priority_range(
+	int* const min_prio, int* const max_prio, int* const inc_prio )
+{
+    if( kaapi_processor_get_type( kaapi_get_current_processor() ) ==
+	    KAAPI_PROC_TYPE_CUDA ){
+	*min_prio = (KAAPI_TASKLIST_GPU_MIN_PRIORITY+1);
+	*max_prio = KAAPI_TASKLIST_GPU_MAX_PRIORITY;
+	*inc_prio = 1;
+    } else {
+	*min_prio = (KAAPI_TASKLIST_CPU_MIN_PRIORITY-1);
+	*max_prio = KAAPI_TASKLIST_CPU_MAX_PRIORITY;
+	*inc_prio = -1;
+    }
+}
 
 /*
 */
@@ -149,10 +169,6 @@ static inline int kaapi_readytasklist_isempty( kaapi_readytasklist_t* rtl )
     return (KAAPI_ATOMIC_READ( &rtl->cnt_tasks ) == 0 );
 }
 
-/** Activate and push ready tasks of an activation link.
-    Return 1 if at least one ready task has been pushed into ready queue.
-    Else return 0.
-*/
 static inline int kaapi_readylist_push( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t* td, int priority )
 {
   kaapi_onereadytasklist_t* ortl;
@@ -161,25 +177,6 @@ static inline int kaapi_readylist_push( kaapi_readytasklist_t* rtl, kaapi_taskde
   ortl = &rtl->prl[priority];
   kaapi_onereadytasklist_push( ortl, td );
   KAAPI_ATOMIC_ADD( &rtl->cnt_tasks, 1 );
-#if 0
-  if( td->fmt != 0 )
-      fprintf(stdout, "[%s] kid=%lu pushed td=%p prio=%d name=%s (counter=%d,wc=%d)\n", 
-	      __FUNCTION__,
-		(long unsigned int)kaapi_get_current_kid(),
-	      (void*)td, priority, td->fmt->name,
-	      KAAPI_ATOMIC_READ(&td->counter),
-	      td->wc
-	      );
-  else
-      fprintf(stdout, "[%s] kid=%lu pushed td=%p prio=%d (counter=%d,wc=%d)\n", 
-	      __FUNCTION__,
-		(long unsigned int)kaapi_get_current_kid(),
-	      (void*)td, priority,
-	      KAAPI_ATOMIC_READ(&td->counter),
-	      td->wc
-	     );
-  fflush(stdout);
-#endif
   return priority;
 }
 
@@ -192,25 +189,6 @@ static inline int kaapi_readylist_remote_push(
   ortl = &rtl->prl[priority];
   kaapi_onereadytasklist_remote_push( ortl, td );
   KAAPI_ATOMIC_ADD( &rtl->cnt_tasks, 1 );
-#if 0
-  if( td->fmt != 0 )
-      fprintf(stdout, "[%s] kid=%lu td=%p prio=%d name=%s (counter=%d,wc=%d)\n", 
-	      __FUNCTION__,
-		(long unsigned int)kaapi_get_current_kid(),
-	      (void*)td, priority, td->fmt->name,
-	      KAAPI_ATOMIC_READ(&td->counter),
-	      td->wc
-	      );
-  else
-      fprintf(stdout, "[%s] kid=%lu td=%p prio=%d (counter=%d,wc=%d)\n", 
-	      __FUNCTION__,
-		(long unsigned int)kaapi_get_current_kid(),
-	      (void*)td, priority,
-	      KAAPI_ATOMIC_READ(&td->counter),
-	      td->wc
-	     );
-  fflush(stdout);
-#endif
   return priority;
 }
 
@@ -218,16 +196,7 @@ static inline int kaapi_readylist_remote_push(
 */
 static inline size_t kaapi_readylist_workload( kaapi_readytasklist_t* rtl )
 {
-  size_t size = 0;
-  kaapi_onereadytasklist_t* onertl;
-  int i;
-
-  for (i =KAAPI_TASKLIST_MAX_PRIORITY; i<(1+KAAPI_TASKLIST_MIN_PRIORITY); ++i)
-  {
-    onertl = &rtl->prl[i];
-    size = 100*size+kaapi_onereadytasklist_size( onertl );
-  }
-  return size;
+    return KAAPI_ATOMIC_READ( &rtl->cnt_tasks );
 }
 
 static inline int kaapi_readylist_steal( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t** td ) 
@@ -235,85 +204,45 @@ static inline int kaapi_readylist_steal( kaapi_readytasklist_t* rtl, kaapi_taskd
     kaapi_onereadytasklist_t* onertl;
     int err;
     int prio;
+    int max_prio= 0, min_prio= 0, inc_prio= 0;
 
     if( KAAPI_ATOMIC_READ( &rtl->cnt_tasks) == 0 )
 	return 1;
 
-    for( prio= KAAPI_TASKLIST_MAX_PRIORITY; prio < (1+KAAPI_TASKLIST_MIN_PRIORITY); ++prio ){
+    kaapi_readylist_get_priority_range( &min_prio, &max_prio, &inc_prio );
+    for( prio = max_prio; prio != min_prio; prio += inc_prio ) {
 	onertl = &rtl->prl[prio];
 	err = kaapi_onereadytasklist_steal( onertl, td );
 	if( err == 0 ){
 	    KAAPI_ATOMIC_ADD( &rtl->cnt_tasks, -1 );
-#if 0
-	  if( (*td)->fmt != 0 )
-	      fprintf(stdout, "[%s] kid=%lu pushed td=%p prio=%d name=%s (counter=%d,wc=%d)\n", 
-		      __FUNCTION__,
-			(long unsigned int)kaapi_get_current_kid(),
-		      (void*)*td, prio, (*td)->fmt->name,
-		      KAAPI_ATOMIC_READ(&(*td)->counter),
-		      (*td)->wc
-		      );
-	  else
-	      fprintf(stdout, "[%s] kid=%lu pushed td=%p prio=%d (counter=%d,wc=%d)\n", 
-		      __FUNCTION__,
-			(long unsigned int)kaapi_get_current_kid(),
-		      (void*)*td, prio,
-		      KAAPI_ATOMIC_READ(&(*td)->counter),
-		      (*td)->wc
-		     );
-	  fflush(stdout);
-#endif
 	    return 0;
 	}
     }
     return 1;
 }
 
-/** To pop the next ready tasks
-    Return the next task to execute if err ==0
-    Return 0 if case of success
-    Return EBUSY if the workqueue is empty
-    Else return an error code
-*/
 static inline int kaapi_readylist_pop( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t** td )
 {
-  kaapi_onereadytasklist_t* onertl;
-  int prio;
-  int err;
+    kaapi_onereadytasklist_t* onertl;
+    int prio;
+    int err;
+    int max_prio= 0, min_prio= 0, inc_prio= 0;
 
     if( KAAPI_ATOMIC_READ( &rtl->cnt_tasks) == 0 )
 	return 1;
 
-  for (prio =KAAPI_TASKLIST_MAX_PRIORITY; prio<(1+KAAPI_TASKLIST_MIN_PRIORITY); ++prio) {
-    onertl = &rtl->prl[prio];
-    err = kaapi_onereadytasklist_pop( onertl, td );
-    if( err == 0 ){
-	KAAPI_ATOMIC_ADD( &rtl->cnt_tasks, -1 );
-#if 0
-	  if( (*td)->fmt != 0 )
-	      fprintf(stdout, "[%s] kid=%lu pushed td=%p prio=%d name=%s (counter=%d,wc=%d)\n", 
-		      __FUNCTION__,
-			(long unsigned int)kaapi_get_current_kid(),
-		      (void*)*td, prio, (*td)->fmt->name,
-		      KAAPI_ATOMIC_READ(&(*td)->counter),
-		      (*td)->wc
-		      );
-	  else
-	      fprintf(stdout, "[%s] kid=%lu pushed td=%p prio=%d (counter=%d,wc=%d)\n", 
-		      __FUNCTION__,
-			(long unsigned int)kaapi_get_current_kid(),
-		      (void*)*td, prio,
-		      KAAPI_ATOMIC_READ(&(*td)->counter),
-		      (*td)->wc
-		     );
-	  fflush(stdout);
-#endif
-	return 0;
-    }else
-	if( err != EBUSY )
-	    return err;
-  }
-  return EBUSY;
+    kaapi_readylist_get_priority_range( &min_prio, &max_prio, &inc_prio );
+    for( prio = max_prio; prio != min_prio; prio += inc_prio ) {
+	onertl = &rtl->prl[prio];
+	err = kaapi_onereadytasklist_pop( onertl, td );
+	if( err == 0 ){
+	    KAAPI_ATOMIC_ADD( &rtl->cnt_tasks, -1 );
+	    return 0;
+	} else
+	    if( err != EBUSY )
+		return err;
+    }
+    return EBUSY;
 }
 
 

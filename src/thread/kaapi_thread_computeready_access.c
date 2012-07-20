@@ -77,11 +77,7 @@ kaapi_data_t* kaapi_thread_computeready_access(
   else if (KAAPI_ACCESS_IS_WRITE(m)) /* w or rw */
   {
     /* look if it is a WAR or WAW dependencies (do not consider initial access) */
-#if defined(KAAPI_TASKLIST_POINTER_TASK)
     if (kaapi_task_getbody(version->writer_task->task) == kaapi_taskalloc_body)
-#else
-    if (kaapi_task_getbody(&version->writer_task->task) == kaapi_taskalloc_body)
-#endif
     {
       kaapi_tasklist_push_successor( tl, version->writer_task, task );
       version->writer_task = task;

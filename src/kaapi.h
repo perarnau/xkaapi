@@ -531,13 +531,6 @@ static inline void kaapi_task_set_priority(kaapi_task_t* task, uint8_t prio)
   task->u.s.priority = prio; 
 }
 
-static inline uint8_t
-kaapi_task_get_priority_by_alpha( kaapi_task_t* task, 
-	const float alpha )
-{
-    return  ( ((uint8_t)alpha)%(KAAPI_TASK_MAX_PRIORITY+1) );
-}
-
 /* ========================================================================= */
 /** Task splitter
     \ingroup TASK
@@ -1581,11 +1574,6 @@ extern int kaapi_memory_register( void* ptr, kaapi_memory_view_t view );
 
 /* Register memory for Xkaapi optimizations */
 extern void kaapi_memory_unregister( void* ptr );
-
-#if defined(KAAPI_USE_CUDA)
-extern int
-kaapi_cuda_proc_sync_all( void );
-#endif
 
 /** Create a thread group with size threads. 
     Mapping function should be set at creation step. 

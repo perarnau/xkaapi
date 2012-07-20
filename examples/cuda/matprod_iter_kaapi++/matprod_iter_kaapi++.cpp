@@ -127,7 +127,7 @@ struct TaskBodyCPU<TaskMatProduct> {
 		 );
 	  fflush(stdout);
 #endif
-          ka::Spawn<TaskDGEMM>()
+          ka::Spawn<TaskDGEMM>( ka::SetPriority(12) )
 	      (  CblasColMajor, CblasNoTrans, CblasNoTrans, 1.0, 
 		   B(rk,rj), A(ri,rk), 1.0, C(ri,rj) );
         }

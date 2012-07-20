@@ -35,6 +35,7 @@ kaapi_memory_host_synchronize( void )
     uint32_t i;
     cudaStream_t stream;
 
+    kaapi_cuda_proc_sync_all();
     cudaStreamCreate( &stream );
     for (i = 0; i < map_size; ++i) {
 	for (entry = hmap->entries[i]; entry != NULL; entry = entry->next) {

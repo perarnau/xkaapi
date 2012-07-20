@@ -206,6 +206,20 @@ cudaStream_t kaapi_cuda_DtoD_stream(void)
 	    );
 }
 
+void
+kaapi_cuda_proc_poll( kaapi_processor_t* const kproc )
+{
+    kaapi_cuda_stream_poll( kproc );
+    if( kproc->isidle )
+	kaapi_cuda_memory_poll( kproc );
+}
+
+int
+kaapi_cuda_proc_end_isvalid( kaapi_processor_t* const kproc )
+{
+    return kaapi_cuda_stream_is_empty( kproc->cuda_proc.kstream );
+}
+
 int
 kaapi_cuda_proc_sync_all( void )
 {
@@ -219,35 +233,21 @@ kaapi_cuda_proc_sync_all( void )
 	    kaapi_cuda_sync();
 	    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
 	}
+
     return 0;
 }
 
-#if 0
-void kaapi_cuda_event_record( void )
+int
+kaapi_cuda_proc_all_isvalid( void )
 {
-    kaapi_processor_t* const self_proc =
-	kaapi_get_current_processor();
-    const cudaError_t res = cudaEventRecord( self_proc->cuda_proc.event, 
-	   kaapi_cuda_HtoD_stream() );
-    if( res != cudaSuccess ) {
-	    fprintf( stdout, "%s: cudaEventRecord ERROR %d\n", __FUNCTION__, res);
-	    fflush(stdout);
-    }
-    cudaStreamWaitEvent( kaapi_cuda_kernel_stream(), self_proc->cuda_proc.event,
-	    0 );
+    kaapi_processor_t** pos = kaapi_all_kprocessors;
+    size_t i;
+
+    for (i = 0; i < kaapi_count_kprocessors; ++i, ++pos)
+	if ((*pos)->proc_type == KAAPI_PROC_TYPE_CUDA) {
+	    if( !kaapi_cuda_proc_end_isvalid(*pos) )
+		return 0;
+	}
+
+    return 1;
 }
-
-void kaapi_cuda_event_record_( cudaStream_t stream )
-{
-    kaapi_processor_t* const self_proc =
-	kaapi_get_current_processor();
-    const cudaError_t res = cudaEventRecord( self_proc->cuda_proc.event, 
-	   stream );
-    if( res != cudaSuccess ) {
-	    fprintf( stdout, "%s: cudaEventRecord ERROR %d\n", __FUNCTION__, res);
-	    fflush(stdout);
-    }
-}
-
-#endif
-

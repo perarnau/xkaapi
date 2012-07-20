@@ -151,10 +151,8 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
 
   /* populate tasklist with initial ready tasks */
   kaapi_thread_tasklistready_push_init( tasklist, &tasklist->readylist );
-//  kaapi_thread_tasklist_commit_ready( tasklist );
 
   /* keep the first task to execute outside the workqueue */
-//FALSE  tasklist->context.chkpt = 2;
   tasklist->context.chkpt = 0;
 
   KAAPI_EVENT_PUSH0(thread->stack.proc, thread, KAAPI_EVT_STATIC_END );
@@ -195,6 +193,9 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   kaapi_sched_sync_(thread);
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&tasklist->count_thief) == 0);
 
+#if defined(KAAPI_USE_CUDA)
+   kaapi_assert_debug( kaapi_cuda_proc_all_isvalid( ) );
+#endif
 #if 0//defined(KAAPI_USE_PERFCOUNTER)
   printf("[tasklist] T1                      : %" PRIu64 "\n", tasklist->cnt_tasks);
   printf("[tasklist] Tinf                    : %" PRIu64 "\n", tasklist->t_infinity);
@@ -202,10 +203,11 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   printf("[tasklist] exec time               : %e (s)\n",t1_exec-t0_exec);
 #endif
 
-#if 0
-  printf("%i::[tasklist] exec tasks: %llu\n", 
+#if 1
+  fprintf(stdout, "%i::[tasklist] tasks: %llu total: %llu\n", 
     kaapi_get_self_kid(),
-    tasklist->cnt_exectasks 
+    KAAPI_ATOMIC_READ(&tasklist->cnt_exec),
+    tasklist->total_tasks
   );
   fflush(stdout);
 #endif

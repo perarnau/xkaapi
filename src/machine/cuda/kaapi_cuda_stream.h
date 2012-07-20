@@ -88,22 +88,6 @@ typedef struct kaapi_cuda_status_t {
 } kaapi_cuda_status_t;
 
 
-/* Cuda request
-   item contained by a fifo used to associate
-   cuda event and context.
-   . wait fifo
-   cuda stream notifications dont pass
-   data back to the user, so we need a
-   way to associate a stream event with
-   some app specific data.
-   a refn may be useful when not using
-   event since we may want to associate
-   a node with more than one cuda event
-   completion (see taskmove).
-   . wait port
-   a wait port consists of 3 wait fifos
-   for input, kernel and output streams.
- */
 typedef struct kaapi_cuda_request_t {
   kaapi_cuda_status_t              status;
   int                            (*u_fnc)( struct kaapi_cuda_stream_t*, void*, void* );
@@ -289,7 +273,7 @@ kaapi_cuda_get_cudastream(kaapi_cuda_fifo_stream_t* stream)
   return stream->stream;
 }
 
-static inline int64_t
+static inline uint64_t
 kaapi_cuda_get_active_count_fifo( kaapi_cuda_fifo_stream_t* stream )
 {
     return stream->cnt;
@@ -314,5 +298,33 @@ kaapi_cuda_stream_is_empty( kaapi_cuda_stream_t* kstream )
 
 void
 kaapi_cuda_stream_poll( kaapi_processor_t* const );
+
+static inline void
+kaapi_cuda_stream_window_test( kaapi_cuda_stream_t* kstream )
+{
+    kaapi_cuda_test_stream( kstream );
+    /* The slicing window is applied to all streams */
+    while( 
+	    (kaapi_default_param.cudawindowsize <=
+	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_input_fifo(kstream)))
+	    ||
+	    (kaapi_default_param.cudawindowsize <=
+	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_kernel_fifo(kstream)))
+	    ||
+	    (kaapi_default_param.cudawindowsize <=
+	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_output_fifo(kstream)))
+	)
+    {
+	kaapi_cuda_test_stream( kstream );
+    }
+    kaapi_cuda_test_stream( kstream );
+}
+
+static inline void
+kaapi_cuda_stream_waitall( kaapi_cuda_stream_t *kstream )
+{
+    while( !kaapi_cuda_stream_is_empty( kstream ) )
+	kaapi_cuda_test_stream( kstream );
+}
 
 #endif

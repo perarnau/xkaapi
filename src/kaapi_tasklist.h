@@ -147,17 +147,10 @@ typedef struct kaapi_finalizer_arg_t {
 typedef struct kaapi_taskdescr_t {
   kaapi_atomic_t                counter;   /* concurrent decr to test if task is ready */
   uint32_t                      wc;        /* value of counter before task becomes ready */
-#if defined(KAAPI_TASKLIST_POINTER_TASK)
   kaapi_task_t*                 task;      /* the DFG task to execute */
-#else
-  kaapi_task_t                  task;      /* the DFG task to execute */
-#endif
   const kaapi_format_t*         fmt;       /* format of the task */
   int                           priority;
-  float				alpha;	    /* alpha value */
   kaapi_bitmap_value32_t        ocr;       /* OCR flag for the task */  
-  kaapi_task_t                  tasksteal; /* used if task is pushed into remote queue */
-  kaapi_taskstealready_arg_t    tasksteal_arg; /* put it together with taskdescr to avoid dynamic alloc */
   int                           mark;      /* used by some graph algorithm, initial value=0 */
 
   struct kaapi_tasklist_t*	tasklist;   /* owner */
@@ -354,9 +347,7 @@ static inline kaapi_taskdescr_t* kaapi_allocator_allocate_td(
       (kaapi_taskdescr_t*)kaapi_allocator_allocate( kal, sizeof(kaapi_taskdescr_t) );
   KAAPI_ATOMIC_WRITE(&td->counter, 0);
   td->wc         = 0;
-#if defined(KAAPI_TASKLIST_POINTER_TASK)
   td->task       = task;
-#endif
   td->fmt 	     = task_fmt;
   /* TODO: here */
   td->priority   = KAAPI_TASKLIST_CPU_MIN_PRIORITY;
@@ -630,7 +621,7 @@ static inline int kaapi_thread_tasklistready_pushactivated(
 static inline uint32_t kaapi_tasklist_pushactivated(
 	kaapi_tasklist_t*	tasklist,
 	kaapi_taskdescr_t*	td 
-	)
+    )
 {
     uint32_t cnt_pushed= 0;
 
@@ -644,6 +635,46 @@ static inline uint32_t kaapi_tasklist_pushactivated(
     if (td->u.acl.bcast !=0) 
 	cnt_pushed +=
 	    kaapi_thread_tasklistready_pushactivated( tasklist, td->u.acl.bcast->front );
+
+    return cnt_pushed;
+}
+
+static inline int kaapi_readytasklist_pushactivated( 
+    kaapi_readytasklist_t*       rtl, 
+    kaapi_activationlink_t*	head 
+)
+{
+    kaapi_taskdescr_t* td;
+    int retval =0;
+
+    while (head !=0) {
+	td = head->td;
+	if (kaapi_taskdescr_activated(td)) {
+	  ++retval;
+	  kaapi_readylist_push( rtl, td, td->priority );
+	}
+	head = head->next;
+    }
+    return retval;
+}
+
+static inline uint32_t kaapi_readylist_localpushactivated(
+	kaapi_readytasklist_t*	rtl,
+	kaapi_taskdescr_t*	td 
+    )
+{
+    uint32_t cnt_pushed= 0;
+
+    /* push in the front the activated tasks */
+    if (!kaapi_activationlist_isempty(&td->u.acl.list))
+	cnt_pushed = kaapi_readytasklist_pushactivated( rtl, td->u.acl.list.front );
+    else 
+	cnt_pushed = 0;
+
+    /* do bcast after child execution (they can produce output data) */
+    if (td->u.acl.bcast !=0) 
+	cnt_pushed +=
+	    kaapi_readytasklist_pushactivated( rtl, td->u.acl.bcast->front );
 
     return cnt_pushed;
 }

@@ -79,11 +79,7 @@ static inline void _kaapi_print_activation_link(
 )
 {
   fprintf(file,"%lu -> %lu [arrowhead=halfopen, style=filled, color=black];\n", 
-#if defined(KAAPI_TASKLIST_POINTER_TASK)
     (uintptr_t)td_src->task, (uintptr_t)td_dest->task
-#else
-    (uintptr_t)&td_src->task, (uintptr_t)&td_dest->task
-#endif
   );
 }
 
@@ -467,11 +463,7 @@ static void _kaapi_print_task_executor( kaapi_taskdescr_t* td, void* arg )
   _kaapi_print_task( 
     ctxt->file, 
     &ctxt->data_khm, 
-#if defined(KAAPI_TASKLIST_POINTER_TASK)
     td->task, 
-#else
-    &td->task, 
-#endif
     td, 
     ctxt->sec_name 
   );
