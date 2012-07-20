@@ -132,7 +132,6 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     ws_status = kproc->emitsteal(kproc);
     if (ws_status != KAAPI_REQUEST_S_OK)
       continue;
-    /* TODO: point to test idle */
 
 redo_execute:    
     kproc->isidle = 0;
@@ -152,10 +151,12 @@ redo_execute:
     }
     else
 #endif /* KAAPI_USE_CUDA */
+    {
       if( kproc->thread->stack.sfp->tasklist == 0 )
         err = kaapi_stack_execframe(&kproc->thread->stack);
       else
         err = kaapi_thread_execframe_tasklist( kproc->thread );
+    }
     
 #if defined(KAAPI_USE_PERFCOUNTER)
     KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_TASK_END );  

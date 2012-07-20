@@ -47,8 +47,6 @@
 
 int kaapi_tasklist_init( kaapi_tasklist_t* tl, struct kaapi_thread_context_t* thread )
 {
-    int i;
-
     kaapi_atomic_initlock(&tl->lock);
     KAAPI_ATOMIC_WRITE(&tl->count_thief, 0);
 

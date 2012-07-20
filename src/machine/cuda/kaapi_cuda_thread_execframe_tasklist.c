@@ -87,6 +87,7 @@ kaapi_cuda_thread_tasklist_activate_deps(
 	)
 {
     kaapi_readytasklist_push( kaapi_get_current_processor()->rtl, td );
+    KAAPI_ATOMIC_ADD(&td->tasklist->cnt_exec, 1);
 }
 
 #if defined(KAAPI_CUDA_DATA_CACHE_WT)
@@ -135,7 +136,7 @@ kaapi_cuda_gpu_task_callback2_after_kernel(
 #else /* !KAAPI_CUDA_NO_H2D */
     kaapi_cuda_thread_tasklist_activate_deps( tasklist, td );  
 #endif /* !KAAPI_CUDA_NO_H2D */
-    return 0;
+  return 0;
 }
 
 static int
@@ -328,6 +329,7 @@ execute_first:
 	kaapi_task_body_t body = kaapi_task_getbody( pc );
         kaapi_assert_debug(body != 0);
 	body( kaapi_task_getargs(pc), (kaapi_thread_t*)stack->sfp );
+	++cnt_exec;
     } else if( kaapi_format_get_task_body_by_arch( td->fmt, KAAPI_PROC_TYPE_CUDA ) == 0 ) {
 	/* execute a CPU task in the GPU thread */
 	kaapi_cuda_stream_push2( kstream, KAAPI_CUDA_OP_D2H, 
@@ -341,7 +343,7 @@ execute_first:
     }
     KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_END );
     KAAPI_DEBUG_INST( td->u.acl.exec_date = kaapi_get_elapsedns() );
-    ++cnt_exec;
+//    ++cnt_exec;
 
     /* new tasks created ? */
     if (unlikely(fp->sp > stack->sfp->sp)) {
