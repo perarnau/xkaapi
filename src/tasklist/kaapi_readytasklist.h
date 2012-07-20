@@ -15,14 +15,14 @@ static inline void kaapi_onereadytasklist_init( kaapi_onereadytasklist_t* ortl )
 {
     ortl->size = 0;
     ortl->head = ortl->tail = NULL;
-    kaapi_atomic_initlock( &ortl->lock ); /* TODO: use same lock from kproc ? */
+    kaapi_atomic_initlock( &ortl->lock );
 }
 
 static inline void kaapi_onereadytasklist_destroy( kaapi_onereadytasklist_t* ortl )
 {
     ortl->size = 0;
     ortl->head = ortl->tail = NULL;
-    kaapi_atomic_destroylock( &ortl->lock ); /* TODO: use same lock from kproc ? */
+    kaapi_atomic_destroylock( &ortl->lock ); 
 }
 
 /**/
