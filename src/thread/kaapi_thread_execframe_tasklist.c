@@ -208,7 +208,7 @@ printf("EWOULDBLOCK case 1\n");
         stack->sfp = --fp;
       }
 
-      kaapi_tasklist_pushactivated( tasklist, td );
+      kaapi_tasklist_push( tasklist, td );
     }
     
     KAAPI_DEBUG_INST(save_tasklist = *tasklist;)

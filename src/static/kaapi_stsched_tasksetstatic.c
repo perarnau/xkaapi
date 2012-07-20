@@ -204,7 +204,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   printf("[tasklist] exec time               : %e (s)\n",t1_exec-t0_exec);
 #endif
 
-#if 1
+#if 0
   fprintf(stdout, "%i::[tasklist] tasks: %llu total: %llu\n", 
     kaapi_get_self_kid(),
     KAAPI_ATOMIC_READ(&tasklist->cnt_exec),

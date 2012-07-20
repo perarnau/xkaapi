@@ -86,7 +86,7 @@ kaapi_cuda_thread_tasklist_activate_deps(
 	kaapi_taskdescr_t*   td
 	)
 {
-    kaapi_readylist_localpushactivated( kaapi_get_current_processor()->rtl, td );
+    kaapi_readytasklist_push( kaapi_get_current_processor()->rtl, td );
 }
 
 #if defined(KAAPI_CUDA_DATA_CACHE_WT)

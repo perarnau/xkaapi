@@ -153,7 +153,7 @@ typedef struct kaapi_taskdescr_t {
   kaapi_bitmap_value32_t        ocr;       /* OCR flag for the task */  
   int                           mark;      /* used by some graph algorithm, initial value=0 */
 
-  struct kaapi_tasklist_t*	tasklist;   /* owner */
+  struct kaapi_tasklist_t*	tasklist;   /* owner - master tasklist */
   struct kaapi_taskdescr_t*	prev;
   struct kaapi_taskdescr_t*	next;
 
@@ -541,102 +541,32 @@ extern int kaapi_thread_initialize_first_access(
     void*               srcdata    
 );
 
-/** Push ready task in the correct queue
-    \retval: 0 if local push into the tasklist
-    \retval: 1 iff remote push into remote queue
+/** Push one ready task to the correct queue.
+ * 1) it tests the task priority and
+ * 2) affinity (if enabled)
+ * 3) them pushes in the readylist rtl 
 */
-static inline int kaapi_tasklist_pushready_td( 
-    kaapi_tasklist_t*       tasklist, 
+static inline int kaapi_readytasklist_pushready_td( 
+    kaapi_readytasklist_t*       rtl, 
     kaapi_taskdescr_t*      td,
-#if !defined(TASKLIST_ONEGLOBAL_MASTER)  
-    kaapi_taskdescr_t**     tdref,
-#endif
     int priority 
 )
 {
+    if( kaapi_processor_get_type(kaapi_get_current_processor()) ==
+	    KAAPI_PROC_TYPE_CUDA )
+	if( td->priority > KAAPI_TASKLIST_GPU_MIN_PRIORITY ) {
+	    kaapi_assert_debug( td->tasklist != NULL );
+	    return kaapi_readylist_push( &td->tasklist->rtl, td, priority );
+	}
+
     if( kaapi_default_param.affinity ) {
 	kaapi_processor_t* kproc_remote = kaapi_affinity_get_by_data( 
 		kaapi_get_current_processor(), td );
 	if( kproc_remote != kaapi_get_current_processor() ) {
-#if 0
-  if( td->fmt != 0 )
-      fprintf(stdout, "[%s] kid=%lu kremote=%lu td=%p prio=%d name=%s (counter=%d,wc=%d)\n", 
-	      __FUNCTION__,
-		(long unsigned int)kaapi_get_current_kid(),
-		(long unsigned int)kproc_remote->kid,
-	      (void*)td, priority, td->fmt->name,
-	      KAAPI_ATOMIC_READ(&td->counter),
-	      td->wc
-	      );
-  else
-      fprintf(stdout, "[%s] kid=%lu kremote=%lu td=%p prio=%d (counter=%d,wc=%d)\n", 
-	      __FUNCTION__,
-		(long unsigned int)kaapi_get_current_kid(),
-		(long unsigned int)kproc_remote->kid,
-	      (void*)td, priority,
-	      KAAPI_ATOMIC_READ(&td->counter),
-	      td->wc
-	     );
-  fflush(stdout);
-#endif
 	    return kaapi_readylist_remote_push( kproc_remote->rtl, td, priority );
 	}
     }
-    return kaapi_readylist_push( &tasklist->rtl, td, priority );
-}
-
-/** Activate and push ready tasks of an activation link.
-    Return the number of ready tasks that have been activated. into local ready queue.
-    Else return 0.
-*/
-static inline int kaapi_thread_tasklistready_pushactivated( 
-    kaapi_tasklist_t*       tasklist, 
-    kaapi_activationlink_t* head 
-)
-{
-//  kaapi_readytasklist_t*  rtl = &tasklist->rtl;
-  kaapi_taskdescr_t* td;
-  int retval =0;
-  
-  while (head !=0)
-  {
-    td = head->td;
-    if (kaapi_taskdescr_activated(td))
-    {
-      ++retval;
-      kaapi_tasklist_pushready_td( 
-              tasklist, 
-              td, 
-#if !defined(TASKLIST_ONEGLOBAL_MASTER)  
-              &head->td,
-#endif
-              td->priority 
-      );
-    }
-    head = head->next;
-  }
-  return retval; //0 != kaapi_bitmap_value_empty_32(&rtl->task_pushed);
-}
-
-static inline uint32_t kaapi_tasklist_pushactivated(
-	kaapi_tasklist_t*	tasklist,
-	kaapi_taskdescr_t*	td 
-    )
-{
-    uint32_t cnt_pushed= 0;
-
-    /* push in the front the activated tasks */
-    if (!kaapi_activationlist_isempty(&td->u.acl.list))
-	cnt_pushed = kaapi_thread_tasklistready_pushactivated( tasklist, td->u.acl.list.front );
-    else 
-	cnt_pushed = 0;
-
-    /* do bcast after child execution (they can produce output data) */
-    if (td->u.acl.bcast !=0) 
-	cnt_pushed +=
-	    kaapi_thread_tasklistready_pushactivated( tasklist, td->u.acl.bcast->front );
-
-    return cnt_pushed;
+    return kaapi_readylist_push( rtl, td, priority );
 }
 
 static inline int kaapi_readytasklist_pushactivated( 
@@ -651,15 +581,19 @@ static inline int kaapi_readytasklist_pushactivated(
 	td = head->td;
 	if (kaapi_taskdescr_activated(td)) {
 	  ++retval;
-	  kaapi_readylist_push( rtl, td, td->priority );
+	  kaapi_readytasklist_pushready_td( 
+		  rtl, 
+		  td, 
+		  td->priority 
+	  );
 	}
 	head = head->next;
     }
     return retval;
 }
 
-static inline uint32_t kaapi_readylist_localpushactivated(
-	kaapi_readytasklist_t*	rtl,
+static inline uint32_t kaapi_readytasklist_push(
+	kaapi_readytasklist_t*       rtl, 
 	kaapi_taskdescr_t*	td 
     )
 {
@@ -679,6 +613,14 @@ static inline uint32_t kaapi_readylist_localpushactivated(
     return cnt_pushed;
 }
 
+/* Push all activated tasks from td */
+static inline uint32_t kaapi_tasklist_push(
+	kaapi_tasklist_t*	tasklist,
+	kaapi_taskdescr_t*	td 
+    )
+{
+    return kaapi_readytasklist_push( &tasklist->rtl, td );
+}
 
 /** Initialize the tasklist with a set of stolen task descriptors
 */
@@ -691,8 +633,8 @@ static inline int kaapi_thread_tasklistready_push_init_fromsteal(
 //  kaapi_readytasklist_t* rtl = &tasklist->rtl;
   while (begin != end)
   {
-    kaapi_tasklist_pushready_td(
-        tasklist, 
+    kaapi_readytasklist_pushready_td(
+        &tasklist->rtl, 
         *begin, 
 #if !defined(TASKLIST_ONEGLOBAL_MASTER)  
         begin,
@@ -718,8 +660,8 @@ static inline int kaapi_thread_tasklistready_push_init(
   head = acl->front;
   while (head !=0)
   {
-    kaapi_tasklist_pushready_td(
-        tasklist, 
+    kaapi_readytasklist_pushready_td(
+        &tasklist->rtl, 
         head->td, 
 #if !defined(TASKLIST_ONEGLOBAL_MASTER)  
         &head->td,
