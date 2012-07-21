@@ -26,30 +26,13 @@ int kaapi_mem_sync_data( kaapi_data_t* kdata, cudaStream_t stream )
 static int
 kaapi_memory_host_synchronize( void )
 {
-    kaapi_mem_host_map_t* host_map = 
-	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
-    const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
-    static const uint32_t map_size = KAAPI_HASHMAP_BIG_SIZE;
-    kaapi_big_hashmap_t* hmap = &host_map->hmap;
-    kaapi_hashentries_t* entry;
-    uint32_t i;
-    cudaStream_t stream;
-
-    kaapi_cuda_proc_sync_all();
-    cudaStreamCreate( &stream );
-    for (i = 0; i < map_size; ++i) {
-	for (entry = hmap->entries[i]; entry != NULL; entry = entry->next) {
-	    const kaapi_mem_data_t *kmd = entry->u.kmd;
-	    if ( kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
-		kaapi_data_t *kdata = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd,
-			host_asid );
-		kaapi_mem_sync_data( kdata, stream );
-	    }
-	}
-    }
     KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
-    cudaStreamSynchronize( stream );
+    kaapi_cuda_proc_sync_all();
     KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END );
+
+#if defined(KAAPI_USE_CUDA)
+   kaapi_assert_debug( kaapi_cuda_proc_all_isvalid( ) );
+#endif
 
     return 0;
 }

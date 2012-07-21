@@ -86,7 +86,7 @@ kaapi_cuda_thread_tasklist_activate_deps(
 	kaapi_taskdescr_t*   td
 	)
 {
-    kaapi_readytasklist_push( kaapi_get_current_processor()->rtl, td );
+    kaapi_readytasklist_pushactivated( kaapi_get_current_processor()->rtl, td );
     KAAPI_ATOMIC_ADD(&td->tasklist->cnt_exec, 1);
 }
 
@@ -173,7 +173,7 @@ kaapi_cuda_gpu_task_callback1_exec_task(
     body( kaapi_task_getargs(pc), kaapi_cuda_kernel_stream() );
 #ifndef	    KAAPI_CUDA_ASYNC /* Synchronous execution */
     KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread_context(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
-	kaapi_cuda_sync();
+	kaapi_cuda_device_sync();
     KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread_context(), KAAPI_EVT_CUDA_CPU_SYNC_END );
 #endif
     kaapi_cuda_ctx_pop( );
@@ -381,7 +381,7 @@ execute_first:
   /* here... end execute frame tasklist*/
   KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_FRAME_TL_END );
   
-  KAAPI_ATOMIC_ADD(&tasklist->cnt_exec, cnt_exec);
+//  KAAPI_ATOMIC_ADD(&tasklist->cnt_exec, cnt_exec);
 
   kaapi_assert( kaapi_tasklist_isempty(tasklist) );
 

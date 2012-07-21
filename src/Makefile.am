@@ -236,6 +236,7 @@ libkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda_register_procs.c \
   machine/cuda/kaapi_cuda_proc.c \
   machine/cuda/kaapi_cuda_proc.h \
+  machine/cuda/kaapi_cuda_sync.c \
   machine/cuda/kaapi_cuda_func.h \
   machine/cuda/kaapi_cuda_func.c \
   machine/cuda/kaapi_cuda_execframe.h \

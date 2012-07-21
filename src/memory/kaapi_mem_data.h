@@ -23,13 +23,11 @@ static inline void
 kaapi_mem_data_set_all_dirty_except( kaapi_mem_data_t* m, kaapi_mem_asid_t asid )
 {
   kaapi_bitmap_full_except_64( &m->dirty_bits, asid );
-//  m->dirty_bits = ~(1 << asid);
 }
 
 static inline void
 kaapi_mem_data_clear_dirty( kaapi_mem_data_t* m, kaapi_mem_asid_t asid )
 {
-//  m->dirty_bits &= ~(1 << asid);
   kaapi_bitmap_unset_64( &m->dirty_bits, asid );
 }
 
@@ -43,7 +41,6 @@ static inline unsigned int
 kaapi_mem_data_is_dirty( const kaapi_mem_data_t* m, kaapi_mem_asid_t asid )
 {
   return kaapi_bitmap_get_64( &m->dirty_bits, asid );
-//  return m->dirty_bits & (1 << asid);
 }
 
 static inline void
@@ -65,7 +62,6 @@ kaapi_mem_data_set_addr(kaapi_mem_data_t* m,
 {
   m->addr[asid] = addr;
   kaapi_bitmap_set_64( &m->addr_bits, asid );
-//  m->addr_bits |= 1 << asid;
 }
 
 static inline kaapi_mem_addr_t
@@ -78,14 +74,12 @@ static inline unsigned int
 kaapi_mem_data_has_addr( const kaapi_mem_data_t* m, const kaapi_mem_asid_t asid )
 {
   return kaapi_bitmap_get_64( &m->addr_bits, asid );
-//  return m->addr_bits & (1 << asid);
 }
 
 static inline void
 kaapi_mem_data_clear_addr( kaapi_mem_data_t* m, kaapi_mem_asid_t asid )
 {
   kaapi_bitmap_unset_64( &m->addr_bits, asid );
-//  m->addr_bits &= ~(1 << asid);
 }
 
 /* It returns the first asid non-dirty of kmd data */

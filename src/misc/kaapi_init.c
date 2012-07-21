@@ -257,6 +257,10 @@ int kaapi_init(int flag, int* argc, char*** argv)
   kaapi_memory_init(); /* TODO: not necessary */
   int err = kaapi_mt_init();
 
+#if defined(KAAPI_USE_CUDA)
+  kaapi_cuda_init();
+#endif
+
   if (flag)
     kaapi_begin_parallel(KAAPI_SCHEDFLAG_DEFAULT);
   return err;

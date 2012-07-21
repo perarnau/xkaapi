@@ -61,8 +61,6 @@
 #define KAAPI_CUDA_MEM_FREE_FACTOR	1
 //#define	KAAPI_CUDA_MODE_BASIC	1
 
-//#define KAAPI_CUDA_USE_POOL	1
-
 #define KAAPI_CUDA_MAX_STREAMS	4
 
 #define KAAPI_CUDA_KSTREAM	1
@@ -71,6 +69,12 @@
 
 /* Write-through memory cache in the GPU */
 //#define KAAPI_CUDA_DATA_CACHE_WT 1
+
+/* all CUDA kprocs indexed by device Id */
+extern struct kaapi_processor_t*  kaapi_cuda_all_kprocessors[KAAPI_CUDA_MAX_DEV];
+
+/* barrier to synchronize all CUDA proc devices */
+extern kaapi_atomic_t kaapi_cuda_synchronize_barrier;
 
 struct kaapi_cuda_stream_t;
 
@@ -115,6 +119,8 @@ typedef struct kaapi_cuda_proc
     kaapi_cuda_ctx_t ctx;
     kaapi_cuda_mem_t memory;
 
+    kaapi_atomic_t synchronize_flag; /* synchronization flag */
+
     int is_initialized;
 
     /* cached attribtues */
@@ -123,7 +129,7 @@ typedef struct kaapi_cuda_proc
 
 } kaapi_cuda_proc_t;
 
-extern struct kaapi_processor_t*  kaapi_cuda_all_kprocessors[KAAPI_CUDA_MAX_DEV];
+void kaapi_cuda_init( void );
 
 int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t*, unsigned int);
 
@@ -140,7 +146,7 @@ cudaStream_t kaapi_cuda_DtoH_stream(void);
 cudaStream_t kaapi_cuda_DtoD_stream(void);
 
 static inline int
-kaapi_cuda_sync( void )
+kaapi_cuda_device_sync( void )
 {
     const cudaError_t res = cudaDeviceSynchronize( );
     if( res != cudaSuccess ) {
@@ -175,9 +181,13 @@ kaapi_cuda_proc_poll( struct kaapi_processor_t* const );
 extern int 
 kaapi_cuda_proc_end_isvalid( struct kaapi_processor_t* const kproc );
 
-/* Synchronizes all CUDA kprocs using cudaDeviceSynchronize() */
+/* Synchronizes all CUDA kprocs */
 extern int
 kaapi_cuda_proc_sync_all( void );
+
+/* Synchronize CUDA kproc operations and memory */
+extern int
+kaapi_cuda_sync( struct kaapi_processor_t* const );
 
 /* Test if all kproc CUDA had finished their operations (kstream, etc) */
 extern int

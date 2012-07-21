@@ -569,7 +569,7 @@ static inline int kaapi_readytasklist_pushready_td(
     return kaapi_readylist_push( rtl, td, priority );
 }
 
-static inline int kaapi_readytasklist_pushactivated( 
+static inline int kaapi_readytasklist_push_from_activationlist( 
     kaapi_readytasklist_t*       rtl, 
     kaapi_activationlink_t*	head 
 )
@@ -592,7 +592,7 @@ static inline int kaapi_readytasklist_pushactivated(
     return retval;
 }
 
-static inline uint32_t kaapi_readytasklist_push(
+static inline uint32_t kaapi_readytasklist_pushactivated(
 	kaapi_readytasklist_t*       rtl, 
 	kaapi_taskdescr_t*	td 
     )
@@ -601,25 +601,26 @@ static inline uint32_t kaapi_readytasklist_push(
 
     /* push in the front the activated tasks */
     if (!kaapi_activationlist_isempty(&td->u.acl.list))
-	cnt_pushed = kaapi_readytasklist_pushactivated( rtl, td->u.acl.list.front );
+	cnt_pushed =
+	  kaapi_readytasklist_push_from_activationlist( rtl, td->u.acl.list.front );
     else 
 	cnt_pushed = 0;
 
     /* do bcast after child execution (they can produce output data) */
     if (td->u.acl.bcast !=0) 
 	cnt_pushed +=
-	    kaapi_readytasklist_pushactivated( rtl, td->u.acl.bcast->front );
+	    kaapi_readytasklist_push_from_activationlist( rtl, td->u.acl.bcast->front );
 
     return cnt_pushed;
 }
 
 /* Push all activated tasks from td */
-static inline uint32_t kaapi_tasklist_push(
+static inline uint32_t kaapi_tasklist_pushactivated(
 	kaapi_tasklist_t*	tasklist,
 	kaapi_taskdescr_t*	td 
     )
 {
-    return kaapi_readytasklist_push( &tasklist->rtl, td );
+    return kaapi_readytasklist_pushactivated( &tasklist->rtl, td );
 }
 
 /** Initialize the tasklist with a set of stolen task descriptors

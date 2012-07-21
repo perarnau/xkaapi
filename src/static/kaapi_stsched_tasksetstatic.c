@@ -204,9 +204,6 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   fflush(stdout);
 #endif
 
-#if defined(KAAPI_USE_CUDA)
-   kaapi_assert_debug( kaapi_cuda_proc_all_isvalid( ) );
-#endif
 #if 0//defined(KAAPI_USE_PERFCOUNTER)
   printf("[tasklist] T1                      : %" PRIu64 "\n", tasklist->cnt_tasks);
   printf("[tasklist] Tinf                    : %" PRIu64 "\n", tasklist->t_infinity);
