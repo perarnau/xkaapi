@@ -85,3 +85,37 @@ kaapi_cuda_get_proc_by_asid( kaapi_address_space_id_t asid )
 
 	return NULL;
 }
+
+int
+kaapi_cuda_dev_enable_peer_access( kaapi_cuda_proc_t* const proc )
+{
+  int dev_count;
+  cudaError_t res;
+  int dev;
+  int canAccessPeer;
+
+  memset( proc->peers, 0, sizeof(unsigned int)*KAAPI_CUDA_MAX_DEV );
+
+  cudaGetDeviceCount( &dev_count );
+  for( dev = 0; dev < dev_count; dev++ ){
+    if( dev == proc->index )
+      continue;
+
+    cudaDeviceCanAccessPeer( &canAccessPeer,
+	proc->index, dev );
+    if( canAccessPeer ) {
+      res = cudaDeviceEnablePeerAccess( dev, 0 );
+      if( res == cudaSuccess )
+	proc->peers[dev] = 1;
+      else {
+	  fprintf(stdout, "[%s]: ERROR %d from %d -> %d\n",
+	      __FUNCTION__, res,
+	      proc->index, dev 
+	  );
+	  fflush(stdout);
+      }
+    }
+  }
+
+  return 0;
+}

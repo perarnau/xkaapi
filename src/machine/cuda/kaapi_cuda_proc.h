@@ -72,6 +72,7 @@
 
 /* all CUDA kprocs indexed by device Id */
 extern struct kaapi_processor_t*  kaapi_cuda_all_kprocessors[KAAPI_CUDA_MAX_DEV];
+extern uint32_t kaapi_cuda_count_kprocessors;
 
 /* barrier to synchronize all CUDA proc devices */
 extern kaapi_atomic_t kaapi_cuda_synchronize_barrier;
@@ -126,6 +127,8 @@ typedef struct kaapi_cuda_proc
     /* cached attribtues */
     unsigned int kasid_user;
     kaapi_address_space_id_t asid;
+    
+    unsigned int peers[KAAPI_CUDA_MAX_DEV]; /* enabled access peer */
 
 } kaapi_cuda_proc_t;
 
@@ -159,10 +162,8 @@ kaapi_cuda_device_sync( void )
 static inline struct kaapi_processor_t*
 kaapi_cuda_get_proc_by_dev( unsigned int id )
 {
-    if( KAAPI_CUDA_MAX_DEV > id )
-	return kaapi_cuda_all_kprocessors[id];
-
-    return NULL;
+  kaapi_assert_debug( (id >= 0) && (id < KAAPI_CUDA_MAX_DEV) );
+  return kaapi_cuda_all_kprocessors[id];
 }
 
 extern void

@@ -7,6 +7,7 @@
 #include "memory/kaapi_mem_data.h"
 #include "memory/kaapi_mem_host_map.h"
 #include "kaapi_cuda_proc.h"
+#include "kaapi_cuda_dev.h"
 #include "kaapi_cuda_mem.h"
 #include "kaapi_cuda_ctx.h"
 #include "kaapi_cuda_data_async.h"
@@ -322,85 +323,81 @@ kaapi_cuda_data_async_check( void )
 }
 #endif
 
+static inline int
+kaapi_cuda_async_sync_device_transfer_to_device(
+    kaapi_mem_data_t* const kmd,
+    kaapi_data_t* const dest, const kaapi_mem_asid_t dest_asid, const int dest_dev,
+    kaapi_data_t* const src,  const kaapi_mem_asid_t src_asid, const int src_dev
+  )
+{
+  kaapi_mem_host_map_t* const host_map = 
+      kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
+  const kaapi_mem_asid_t host_asid =
+      kaapi_mem_host_map_get_asid(host_map);
+  kaapi_data_t* const host_data =
+      (kaapi_data_t*) kaapi_mem_data_get_addr( kmd, host_asid );
+#if 0
+  fprintf(stdout, "[%s] kid=%lu %d -> %d\n",
+	 __FUNCTION__,
+	  (unsigned long)kaapi_get_current_kid(),
+	  src_dev,
+	  dest_dev );
+  fflush(stdout);
+#endif
+  /* host version is already valid ? */
+  if ( !kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
+      return kaapi_cuda_mem_copy_htod(
+	      dest->ptr, &dest->view,
+	      host_data->ptr, &host_data->view
+	  );
+  } 
+
+  /* try Peer-to-Peer GPU-GPU transfer */
+  if( kaapi_default_param.cudapeertopeer ) {
+    if( kaapi_cuda_dev_has_peer_access( src_dev ) ) {
+	return kaapi_cuda_mem_copy_dtod_peer( 
+	  dest->ptr, &dest->view, dest_dev,
+	  src->ptr, &src->view, src_dev
+	);
+    }
+  }
+
+  /* GPU-CPU-GPU copy by buffer */
+  const int res= kaapi_cuda_mem_copy_dtod_buffer(
+      dest->ptr, &dest->view,	dest_dev,
+      src->ptr, &src->view, src_dev,
+      host_data->ptr, &host_data->view
+     );
+  /* Since we use the host version as buffer, validate it */
+  kaapi_mem_data_clear_dirty( kmd, host_asid );
+
+  return res;
+}
+
 /* Function verifies the asid destination and switch between CPU-to-GPU or
  * GPU-to-GPU transfer */
 static inline int
 kaapi_cuda_data_async_sync_device_transfer(
-	kaapi_mem_data_t *kmd,
-	kaapi_data_t* dest, const kaapi_mem_asid_t dest_asid,
-	kaapi_data_t* src,  const kaapi_mem_asid_t src_asid
-       	)
+    kaapi_mem_data_t* const kmd,
+    kaapi_data_t* const dest, const kaapi_mem_asid_t dest_asid,
+    kaapi_data_t* const src,  const kaapi_mem_asid_t src_asid
+  )
 {
-    const int dest_dev = dest_asid - 1;
-    const int src_dev = src_asid - 1;
+  const int dest_dev = dest_asid - 1;
+  const int src_dev = src_asid - 1;
 
-    if( src_asid == 0 ) {
-	kaapi_cuda_mem_copy_htod( dest->ptr, &dest->view,
-		src->ptr, &src->view );
-    } else {
-	    kaapi_mem_host_map_t* const host_map = 
-		kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
-	    const kaapi_mem_asid_t host_asid =
-		kaapi_mem_host_map_get_asid(host_map);
-	    kaapi_data_t* const host_data =
-		(kaapi_data_t*) kaapi_mem_data_get_addr( kmd, host_asid );
+  if( src_asid == 0 ) {
+    kaapi_cuda_mem_copy_htod( dest->ptr, &dest->view,
+	    src->ptr, &src->view );
+  } else {
+    kaapi_cuda_async_sync_device_transfer_to_device(
+	kmd, 
+	dest, dest_asid, dest_dev,
+	src, src_asid, src_dev
+      );
+  }
 
-#if KAAPI_VERBOSE
-	    fprintf(stdout, "[%s] kid=%lu %d -> %d\n",
-		   __FUNCTION__,
-		    (unsigned long)kaapi_get_current_kid(),
-		    src_dev,
-		    dest_dev );
-	    fflush(stdout);
-#endif
-	    /* host version is already valid ? */
-	    if ( !kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
-		kaapi_cuda_mem_copy_htod(
-			dest->ptr, &dest->view,
-			host_data->ptr, &host_data->view
-		    );
-	    } else {
-		kaapi_cuda_mem_copy_dtod_buffer(
-		    dest->ptr, &dest->view,	dest_dev,
-		    src->ptr, &src->view, src_dev,
-		    host_data->ptr, &host_data->view
-		   );
-		/* Since we use the host version as buffer, validate it */
-		kaapi_mem_data_clear_dirty( kmd, host_asid );
-	    }
-#if 0
-	int canAccessPeer;
-	cudaDeviceCanAccessPeer( &canAccessPeer,
-		dest_dev, src_dev );
-	if( canAccessPeer ) {
-	    fprintf(stdout, "OK %d -> %d\n", src_dev,
-		    dest_dev );
-	    fflush(stdout);
-	    kaapi_cuda_mem_copy_dtod_peer( 
-		dest->ptr, &dest->view,	dest_dev,
-		src->ptr, &src->view, src_dev,
-		src->evt_kernel
-		);
-	} else {
-	    fprintf(stdout, "NO %d -> %d\n", src_dev,
-		    dest_dev );
-	    fflush(stdout);
-	    const kaapi_mem_host_map_t* host_map = 
-		kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
-	    const kaapi_mem_asid_t host_asid =
-		kaapi_mem_host_map_get_asid(host_map);
-	    kaapi_data_t* host_data =
-		(kaapi_data_t*) kaapi_mem_data_get_addr( kmd, host_asid );
-	    kaapi_cuda_mem_copy_dtod_buffer(
-		dest->ptr, &dest->view,	dest_dev,
-		host_data->ptr, &host_data->view, src_dev,
-		src->event
-		);
-	}
-#endif
-    }
-
-    return 0;
+  return 0;
 }
 
 int

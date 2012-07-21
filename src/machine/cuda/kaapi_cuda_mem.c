@@ -963,20 +963,11 @@ kaapi_cuda_mem_copy_dtod_peer(
 	kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
 	const int dest_dev,
 	const kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
-	const int src_dev,
-	cudaEvent_t event
+	const int src_dev
        	)
 {
     cudaError_t res;
 
-    res = cudaDeviceEnablePeerAccess( src_dev, 0 );
-    if( (res != cudaSuccess) && (res !=  cudaErrorPeerAccessAlreadyEnabled) ) {
-	fprintf(stdout, "%s: cudaDeviceEnablePeerAccess ERROR %d\n", __FUNCTION__, res );
-	fflush(stdout);
-	abort();
-    }
-
-    cudaStreamWaitEvent( kaapi_cuda_HtoD_stream(), event, 0 );
     res = cudaMemcpyPeerAsync(
 	    kaapi_pointer2void(dest), dest_dev,
 	    kaapi_pointer2void(src), src_dev,

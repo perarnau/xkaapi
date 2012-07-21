@@ -105,6 +105,9 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
   kaapi_cuda_cublas_init( proc );
   kaapi_cuda_cublas_set_stream( );
 
+  if( kaapi_default_param.cudapeertopeer )
+    kaapi_cuda_dev_enable_peer_access( proc );
+
 #if defined(KAAPI_USE_CUPTI)
   if (getenv("KAAPI_RECORD_TRACE") !=0) {
       kaapi_cuda_trace_thread_init();
