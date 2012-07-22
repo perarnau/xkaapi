@@ -65,6 +65,7 @@ typedef struct kaapi_mem_data_t {
     kaapi_mem_addr_t addr[KAAPI_MEM_ASID_MAX];
 
     struct kaapi_mem_data_t* parent;
+    kaapi_bitmap64_t  valid_bits;
     kaapi_bitmap64_t  dirty_bits;
     kaapi_bitmap64_t  addr_bits;
 } kaapi_mem_data_t;

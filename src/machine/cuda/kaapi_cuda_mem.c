@@ -137,14 +137,6 @@ kaapi_cuda_mem_blk_remove_ro(
 	    if( mem_free >= (size * KAAPI_CUDA_MEM_FREE_FACTOR) )
 		    break;
     }
-#if KAAPI_VERBOSE
-    fprintf(stdout, "[%s] kid=%lu lid=%d size=%lu(%lu) used=%lu total=%lu\n",
-		    __FUNCTION__,
-		    (long unsigned int)kaapi_get_current_kid(),
-		    cuda_asid, size, mem_free, cuda_mem->used,
-		    cuda_mem->total );
-    fflush(stdout);
-#endif
     if( cuda_mem->used < mem_free )
 	cuda_mem->used = 0;
     else
@@ -158,41 +150,37 @@ kaapi_cuda_mem_blk_check_host(
         kaapi_pointer_t ptr
     )
 {
-    kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
-    const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
-    kaapi_mem_data_t *kmd;
+  const kaapi_mem_host_map_t* host_map = 
+      kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
+  const kaapi_mem_asid_t host_asid =
+      kaapi_mem_host_map_get_asid(host_map);
+  kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
+  const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
+  kaapi_mem_data_t *kmd;
 
-    kaapi_mem_host_map_find_or_insert( cuda_map,
-	    (kaapi_mem_addr_t)__kaapi_pointer2void(ptr), &kmd );
-    if( kaapi_mem_data_has_addr( kmd, cuda_asid ) ) {
-	if ( !kaapi_mem_data_is_dirty( kmd, cuda_asid ) ) {
-	    const kaapi_mem_host_map_t* host_map = 
-		kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
-	    const kaapi_mem_asid_t host_asid =
-		kaapi_mem_host_map_get_asid(host_map);
-	    kaapi_mem_asid_t valid_asid =
-		kaapi_mem_data_get_nondirty_asid_( kmd, cuda_asid );
+  kaapi_mem_host_map_find_or_insert( cuda_map,
+	  (kaapi_mem_addr_t)__kaapi_pointer2void(ptr), &kmd );
 
-	    /* copy memory to host and deallocate */
-	    if( valid_asid == KAAPI_MEM_ASID_MAX ) {
-		kaapi_data_t* src =
-		    (kaapi_data_t*)kaapi_mem_data_get_addr( kmd,
-			    cuda_asid );
-		kaapi_data_t* dest = 
-		    (kaapi_data_t*)kaapi_mem_data_get_addr( kmd,
-			    host_asid );
-		/* TODO: optimize cudaSynchronize here */
-		kaapi_cuda_mem_copy_dtoh( dest->ptr, &dest->view, 
-			src->ptr, &src->view );
-		cudaStreamSynchronize( kaapi_cuda_DtoH_stream() );
-		kaapi_mem_data_clear_dirty( kmd, host_asid );
-	    }
-
-	}
-	/* TODO: see dirty/valid addresses and use */
-	kaapi_mem_data_clear_addr( kmd, cuda_asid );
-	kaapi_mem_data_clear_dirty( kmd, cuda_asid );
-    }
+  /* valid on host ? */
+  if( kaapi_mem_data_has_addr( kmd, host_asid ) &&
+	kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
+    /* valid on this GPU */
+    if( kaapi_mem_data_has_addr( kmd, cuda_asid ) &&
+	    !kaapi_mem_data_is_dirty( kmd, cuda_asid ) ) {
+	  kaapi_data_t* src =
+	      (kaapi_data_t*)kaapi_mem_data_get_addr( kmd,
+		      cuda_asid );
+	  kaapi_data_t* dest = 
+	      (kaapi_data_t*)kaapi_mem_data_get_addr( kmd,
+		      host_asid );
+	  /* TODO: optimize cudaSynchronize here */
+	  kaapi_cuda_mem_copy_dtoh( dest->ptr, &dest->view, 
+		  src->ptr, &src->view );
+	  cudaStreamSynchronize( kaapi_cuda_DtoH_stream() );
+	  kaapi_mem_data_clear_dirty( kmd, host_asid );
+      }
+  }
+  kaapi_mem_data_clear_addr( kmd, cuda_asid );
 }
 
 static inline void*
@@ -250,14 +238,6 @@ kaapi_cuda_mem_blk_remove_rw(
 	    if( mem_free >= (size * KAAPI_CUDA_MEM_FREE_FACTOR) )
 		    break;
     }
-#if KAAPI_VERBOSE
-    fprintf(stdout, "[%s] kid=%lu lid=%d size=%lu(%lu) used=%lu total=%lu\n",
-	    __FUNCTION__,
-	    (long unsigned int)kaapi_get_current_kid(),
-	    cuda_asid, size, mem_free, cuda_mem->used,
-	    cuda_mem->total );
-    fflush(stdout);
-#endif
     if( cuda_mem->used < mem_free )
 	cuda_mem->used = 0;
     else

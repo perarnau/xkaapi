@@ -112,9 +112,11 @@ int kaapi_cuda_data_async_input_alloc(
 			&kmd );
 		kaapi_assert_debug( kmd !=0 );
 
-		if( !kaapi_mem_data_has_addr( kmd, host_asid ) )
+		if( !kaapi_mem_data_has_addr( kmd, host_asid ) ) {
 		    kaapi_mem_data_set_addr( kmd, host_asid,
 			    (kaapi_mem_addr_t)src );
+		    kaapi_mem_data_clear_dirty( kmd, host_asid );
+		}
 
 		kaapi_data_t* dest=
 		    xxx_kaapi_cuda_data_async_allocate( cuda_map, kmd, src, m );
@@ -413,6 +415,7 @@ kaapi_cuda_data_async_sync_device( kaapi_data_t* kdata )
 	    &kmd );
     if ( kaapi_mem_data_is_dirty( kmd, cuda_asid ) ) {
 	valid_asid = kaapi_mem_data_get_nondirty_asid( kmd );
+	kaapi_assert_debug( valid_asid < KAAPI_MEM_ASID_MAX );
 	kaapi_data_t* valid_data = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd, valid_asid );
 	kaapi_cuda_data_async_sync_device_transfer(
 		kmd,
