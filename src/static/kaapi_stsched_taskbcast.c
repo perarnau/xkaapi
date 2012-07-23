@@ -47,6 +47,7 @@
 /* */
 void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
 {
+#if 0
   kaapi_bcast_arg_t* arg = (kaapi_bcast_arg_t*)sp;
 
   kaapi_bcast_onedest_t* curr = &arg->front;
@@ -69,7 +70,8 @@ void kaapi_taskbcast_body( void* sp, kaapi_thread_t* thread )
     */
     curr = curr->next;
   }
-  
+#endif
+  kaapi_assert_m(0, "not implemented");  
 }
 
 

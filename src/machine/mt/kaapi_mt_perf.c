@@ -74,8 +74,12 @@ int kaapi_mt_perf_thread_state(kaapi_processor_t* kproc)
 
 static inline int get_event_code(char* name, int* code)
 {
-  if (PAPI_event_name_to_code(name, code) != PAPI_OK)
+  int err = PAPI_event_name_to_code(name, code);
+  if (err != PAPI_OK)
+  {
+    fprintf(stderr, "PAPI error code:%i\n", err);
     return -1;
+  }
   return 0;
 }
 
@@ -192,8 +196,16 @@ void kaapi_mt_perf_thread_init( kaapi_processor_t* kproc, int isuser )
     err = PAPI_set_opt(PAPI_DOMAIN, &opt);
     kaapi_assert_m(PAPI_OK == err, "PAPI_set_opt_dom()");
 
+#if 0
     err = PAPI_add_events
       (kproc->papi_event_set, papi_event_codes, papi_event_count);
+#else
+    papi_event_count = 1;
+    papi_event_codes[0] = 0x40000079;
+    err = PAPI_add_events
+      (kproc->papi_event_set, papi_event_codes, papi_event_count);
+#endif
+if (err != PAPI_OK) fprintf(stderr,"PAPI error code:%i\n",err);
     kaapi_assert_m(PAPI_OK == err, "PAPI_add_events()\n");
 
     kproc->papi_event_count = papi_event_count;

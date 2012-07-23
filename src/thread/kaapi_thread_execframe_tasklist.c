@@ -43,8 +43,6 @@
 */
 #include "kaapi_impl.h"
 #include "kaapi_tasklist.h"
-#include "memory/kaapi_mem.h"
-#include "memory/kaapi_mem_host_map.h"
 
 #if defined(KAAPI_NO_CPU)
 
@@ -102,27 +100,9 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   cnt_exec = 0;
   
   kaapi_assert_debug( tasklist != 0 );
-
-  /* jump to previous state if return from suspend 
-     (if previous return from EWOULDBLOCK)
-  */
-  switch (tasklist->context.chkpt) {
-    case 1:
-      td = tasklist->context.td;
-      fp = tasklist->context.fp;
-      goto redo_frameexecution;
-
-    case 2:
-      /* set up the td to start from previously select task */
-      td = tasklist->context.td;
-      goto execute_first;
-
-    default:
-      break;
-  };
   
   /* force previous write before next write */
-    KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist __attribute__((unused)) = *tasklist; )
+  KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist __attribute__((unused)) = *tasklist; )
 
   while (!kaapi_tasklist_isempty( tasklist ))
   {
@@ -194,9 +174,6 @@ redo_frameexecution:
           err = kaapi_stack_execframe( &thread->stack );
           if (err == EWOULDBLOCK)
           {
-            tasklist->context.chkpt     = 1;
-            tasklist->context.td        = td;
-            tasklist->context.fp        = fp;
             KAAPI_ATOMIC_ADD(&tasklist->cnt_exec, cnt_exec);
             return EWOULDBLOCK;
           }
@@ -207,7 +184,7 @@ redo_frameexecution:
         stack->sfp = --fp;
       }
 
-      kaapi_tasklist_pushactivated( tasklist, td );
+      kaapi_readytasklist_pushactivated( &tasklist->rtl, td );
     }
     
     KAAPI_DEBUG_INST(save_tasklist = *tasklist;)
@@ -226,60 +203,7 @@ redo_frameexecution:
 
   kaapi_assert( kaapi_tasklist_isempty(tasklist) );
 
-  /* signal the end of the step for the thread
-     - if no more recv (and then no ready task activated)
-  */
-#if defined(TASKLIST_ONEGLOBAL_MASTER)  
-  if (tasklist->master ==0)
-  {
-    /* this is the master thread */
-    for (int i=0; (KAAPI_ATOMIC_READ(&tasklist->cnt_exec) != tasklist->total_tasks) && (i<100); ++i)
-      kaapi_slowdown_cpu();
-      
-    int isterm = KAAPI_ATOMIC_READ(&tasklist->cnt_exec) == tasklist->total_tasks;
-    if (isterm) return 0;
-
-    tasklist->context.chkpt = 0;
-#if defined(KAAPI_DEBUG)
-    tasklist->context.td = 0;
-    tasklist->context.fp = 0;
-#endif 
-    return EWOULDBLOCK;
-  }
   return 0;
-
-#else // #if defined(TASKLIST_ONEGLOBAL_MASTER)  
-  
-  int retval;
-  tasklist->context.chkpt = 0;
-#if defined(KAAPI_DEBUG)
-  tasklist->context.td = 0;
-  tasklist->context.fp = 0;
-#endif 
-
-  /* else: wait a little until count_thief becomes 0 */
-  for (int i=0; (KAAPI_ATOMIC_READ(&tasklist->count_thief) != 0) && (i<100); ++i)
-    kaapi_slowdown_cpu();
-
-  /* lock thief under stealing before reading counter:
-     - there is no work to steal, but need to synchronize with currentl thieves
-  */
-//  kaapi_sched_lock(&stack->lock);
-//  kaapi_sched_unlock(&stack->lock);
-  retval = KAAPI_ATOMIC_READ(&tasklist->count_thief);
-
-  if (retval ==0) 
-  {
-    return 0;
-  }
-  
-  /* they are no more ready task, 
-     the tasklist is not completed, 
-     then return EWOULDBLOCK 
-  */
-//printf("EWOULDBLOCK case 2: master:%i\n", tasklist->master ? 0 : 1);
-  return EWOULDBLOCK;
-#endif // #if !defined(TASKLIST_ONEGLOBAL_MASTER)  
 
 }
 #endif

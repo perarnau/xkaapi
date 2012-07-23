@@ -87,7 +87,7 @@ static void kaapi_explore_successor(
 
 /* compute the critical path of each task : length to the final execution execution
 */
-int kaapi_tasklist_critical_path( kaapi_tasklist_t* tasklist )
+int kaapi_tasklist_critical_path( kaapi_frame_tasklist_t* tasklist )
 {
   kaapi_taskdescr_t*         td;         
 

@@ -42,38 +42,18 @@
  ** 
  */
 #include "kaapi_impl.h"
-#include "memory/kaapi_mem.h"
-#include "memory/kaapi_mem_data.h"
-#include "memory/kaapi_mem_host_map.h"
 
 typedef void (*kaapi_task_alpha_body_t)( void*, float * const );
 
 static inline uint64_t _kaapi_max(uint64_t d1, uint64_t d2)
 { return (d1 < d2 ? d2 : d1); }
 
-/** Call by attribut ka::SetPartition of the user level C++ or directly
-    by the compiler
-*/
-int kaapi_thread_pushtask_withpartitionid(kaapi_thread_t* frame, int pid)
-{
-  int err;
-  kaapi_thread_context_t* thread = kaapi_self_thread_context();
-  if (thread ==0) return EINVAL;
-  /* here: if pid is not the current thread->tasklist
-      - allocate a new tasklist entry in thread->tasklist->group
-      that stores information about all others tasklist.
-      - then allocate the task into the choosen tasklist
-  */
-  err = kaapi_thread_computedep_task( thread, frame->tasklist, frame->sp );
-  return err;
-}
-
 
 /**
 */
 int kaapi_thread_computedep_task(
     kaapi_thread_context_t* thread, 
-    kaapi_tasklist_t* tasklist, 
+    kaapi_frame_tasklist_t* tasklist, 
     kaapi_task_t* task
 )
 {
@@ -206,11 +186,11 @@ int kaapi_thread_computedep_task(
 
   kaapi_task_set_priority( task, taskdescr->priority );
   /* call to reserved memory before execution without several memory allocation */
-  kaapi_tasklist_newpriority_task( tasklist, taskdescr->priority );
+  kaapi_tasklist_newpriority_task( taskdescr->priority );
   
   /* if wc ==0, push the task into the ready list */
   if (taskdescr->wc == 0)
-    kaapi_tasklist_pushback_ready(tasklist, taskdescr);
+    kaapi_readytasklist_pushactivated(tasklist->rtl, taskdescr);
 
 #if 0
     uint64_t t1 = kaapi_get_elapsedns();

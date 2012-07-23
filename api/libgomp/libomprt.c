@@ -71,9 +71,11 @@ int
 omp_get_max_threads (void)
 {
   kompctxt_t* ctxt = komp_get_ctxt();
+  return ctxt->icv.next_numthreads;
+#if 0 /* should be an upper bound */
   if (ctxt->icv.next_numthreads < kaapi_getconcurrency())
-    return ctxt->icv.next_numthreads;
   return kaapi_getconcurrency();
+#endif
 }
 
 int omp_get_num_procs (void)
@@ -87,7 +89,7 @@ int
 omp_in_parallel(void)
 {
   kompctxt_t* ctxt = komp_get_ctxt();
-  return ctxt->teaminfo !=0;
+  return (ctxt->teaminfo !=0) && (ctxt->teaminfo->numthreads >1);
 }
 
 /*
@@ -129,8 +131,17 @@ omp_get_nested(void)
 /*
 */
 void 
-omp_set_schedule(omp_sched_t kind __attribute__((unused)), int modifier __attribute__((unused)))
+omp_set_schedule(omp_sched_t kind, int modifier )
 {
+  kompctxt_t* ctxt = komp_get_ctxt();
+  kaapi_assert( (kind == omp_sched_dynamic)
+             || (kind == omp_sched_static)
+             || (kind == omp_sched_guided)
+             || (kind == omp_sched_auto)
+  );
+  if (kind == omp_sched_auto) modifier = 0;
+  ctxt->icv.run_sched  = kind;
+  ctxt->icv.chunk_size = modifier;
 }
 
 /*
@@ -138,8 +149,9 @@ omp_set_schedule(omp_sched_t kind __attribute__((unused)), int modifier __attrib
 void 
 omp_get_schedule(omp_sched_t * kind, int * modifier )
 {
-  *kind = omp_sched_dynamic;
-  *modifier = -1;
+  kompctxt_t* ctxt = komp_get_ctxt();
+  *kind = ctxt->icv.run_sched;
+  *modifier = ctxt->icv.chunk_size;
 }
 
 /*
@@ -150,11 +162,20 @@ omp_get_thread_limit(void)
   return kaapi_getconcurrency();
 }
 
+
+/* TODO: 
+   1/ parse OMP_MAX_ACTIVE_LEVELS
+   2/ do not add thread is nested level > omp_max_active_levels
+*/
+int omp_max_active_levels = KAAPI_MAX_RECCALL;
+
 /*
 */
 void 
-omp_set_max_active_levels (int max_levels __attribute__((unused)))
+omp_set_max_active_levels (int max_levels )
 {
+  if (max_levels >=0)
+    omp_max_active_levels = max_levels;
 }
 
 /*
@@ -162,7 +183,7 @@ omp_set_max_active_levels (int max_levels __attribute__((unused)))
 int 
 omp_get_max_active_levels(void)
 {
-  return 256;
+  return omp_max_active_levels;
 }
 
 /*
@@ -220,3 +241,13 @@ double omp_get_wtick(void)
   return 1e-6; /* elapsed time is assumed to be in micro second ?? */
 }
 
+
+void 
+komp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length )
+{
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  printf("In komp_set_datadistribution_bloccyclic\n");
+  kompctxt_t* ctxt = komp_get_ctxt();
+  kaapic_foreach_attr_set_bloccyclic_datadistribution( &ctxt->icv.attr, size, length );
+#endif
+}

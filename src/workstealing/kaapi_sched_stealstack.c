@@ -45,7 +45,7 @@
 
 
 /*
-*/
+ */
 void kaapi_synchronize_steal( kaapi_processor_t* kproc )
 {
   kaapi_atomic_waitlock(&kproc->lock);
@@ -58,14 +58,14 @@ void kaapi_synchronize_steal_thread( kaapi_thread_context_t* thread )
 
 
 /** Steal task in the stack from the bottom to the top.
-     This signature MUST BE the same as a splitter function.
+ This signature MUST BE the same as a splitter function.
  */
 int kaapi_sched_stealstack  
 ( 
-  kaapi_thread_context_t*       thread, 
-  kaapi_listrequest_t*          lrequests, 
-  kaapi_listrequest_iterator_t* lrrange
-)
+ kaapi_thread_context_t*       thread, 
+ kaapi_listrequest_t*          lrequests, 
+ kaapi_listrequest_iterator_t* lrrange
+ )
 {
   kaapi_frame_t*           top_frame;  
   kaapi_hashmap_t          access_to_gd;
@@ -92,16 +92,13 @@ int kaapi_sched_stealstack
       if (top_frame->pc == top_frame->sp) continue;
       kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );
     } else 
-	kaapi_sched_stealtasklist( thread, top_frame->tasklist, lrequests, lrrange );
+      kaapi_sched_stealtasklist( thread, top_frame->tasklist, lrequests, lrrange );
   }
-
-  if( !kaapi_readytasklist_isempty( thread->stack.proc->rtl ) )
-    kaapi_sched_stealreadytasklist( thread, thread->stack.proc->rtl, lrequests, lrrange );
-
+  
   thread->stack.thieffp = 0;
-
+  
   kaapi_atomic_unlock(&thread->stack.lock);
-
+  
   kaapi_hashmap_destroy( &access_to_gd );
   
   return 0;

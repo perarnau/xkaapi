@@ -52,17 +52,22 @@
 /*
 */
 static void kaapi_hwcpuset2affinity( 
-  kaapi_cpuset_t* affinity, 
-  int             nproc, 
-  hwloc_cpuset_t  cpuset 
+  kaapi_affinityset_t* affinityset, 
+  int                  nproc, 
+  hwloc_cpuset_t       cpuset 
 )
 {
-  kaapi_cpuset_clear( affinity );
+  kaapi_cpuset_clear( &affinityset->who );
+  int count = 0;
   for (int i=0; i<nproc; ++i)
   {
     if (hwloc_bitmap_isset( cpuset, i) && kaapi_cpuset_has( &kaapi_default_param.usedcpu, i))
-      kaapi_cpuset_set( affinity, i);
+    {
+      kaapi_cpuset_set( &affinityset->who, i);
+      ++count;
+    }
   }
+  affinityset->ncpu = count;
 }
 
 /*
@@ -113,20 +118,24 @@ static void kaapi_hw_standardinit(void)
   kaapi_cpuset_clear(&kaapi_default_param.usedcpu);
 
   /* build the procinfo list */
-  kaapi_default_param.kproc_list = (kaapi_procinfo_list_t*)malloc(
+  kaapi_default_param.kproc_list = (kaapi_procinfo_list_t*)calloc(
+      1, 
       sizeof(kaapi_procinfo_list_t) 
   );
   kaapi_assert(kaapi_default_param.kproc_list);
 
+  /* WARNING: here should allocate at lest cpucount+gpucount descriptor 
+     Currently allocate maximal number of Kprocessor
+  */
   kaapi_default_param.kid2cpu=(unsigned int*)malloc(
-      kaapi_default_param.cpucount*sizeof(unsigned int)
+      KAAPI_MAX_PROCESSOR_LIMIT*sizeof(unsigned int)
   );
   kaapi_assert(kaapi_default_param.kid2cpu);
   kaapi_default_param.cpu2kid=(unsigned int*)malloc(
-      kaapi_default_param.cpucount*sizeof(unsigned int)
+      KAAPI_MAX_PROCESSOR_LIMIT*sizeof(unsigned int)
   );
   kaapi_assert(kaapi_default_param.cpu2kid);
-  for (size_t i=0; i<kaapi_default_param.cpucount; ++i)
+  for (size_t i=0; i<KAAPI_MAX_PROCESSOR_LIMIT; ++i)
   {
     kaapi_default_param.kid2cpu[i]= -1U;
     kaapi_default_param.cpu2kid[i]= -1U;
@@ -134,9 +143,16 @@ static void kaapi_hw_standardinit(void)
 
   kaapi_procinfo_list_init(kaapi_default_param.kproc_list);
   kaapi_mt_register_procs(kaapi_default_param.kproc_list);
+  kaapi_assert_m(kaapi_default_param.cpucount <KAAPI_MAX_PROCESSOR_LIMIT,
+    "[kaapi] to many required processor for this configuration. See definition of KAAPI_MAX_PROCESSOR_LIMIT" 
+  );
 
 #if defined(KAAPI_USE_CUDA)
   kaapi_cuda_register_procs(kaapi_default_param.kproc_list);
+  kaapi_assert_m( (kaapi_default_param.cpucount+kaapi_default_param.gpucount) 
+    < KAAPI_MAX_PROCESSOR_LIMIT,
+    "[kaapi] to many required CPU and GPU for this configuration. See definition of KAAPI_MAX_PROCESSOR_LIMIT" 
+  );
 #endif /* KAAPI_USE_CUDA */
 }
 
@@ -207,7 +223,8 @@ int kaapi_hw_init(void)
     }
   }
 
-  kaapi_default_param.memory.depth  = memdepth;
+  kaapi_default_param.memory.numalevel = (unsigned short)-1;
+  kaapi_default_param.memory.depth     = memdepth;
   kaapi_default_param.memory.levels 
     = (kaapi_hierarchy_one_level_t*)calloc( memdepth, sizeof(kaapi_hierarchy_one_level_t) );
   for (depth = 0; depth < topodepth; depth++) 
@@ -230,7 +247,7 @@ int kaapi_hw_init(void)
         kaapi_default_param.memory.levels[memdepth].affinity[0].type     
             = KAAPI_MEM_MACHINE;
         kaapi_hwcpuset2affinity(
-            &kaapi_default_param.memory.levels[memdepth].affinity[0].who,
+            &kaapi_default_param.memory.levels[memdepth].affinity[0],
             ncpu,
             obj->cpuset 
         );
@@ -252,17 +269,20 @@ int kaapi_hw_init(void)
       kaapi_default_param.memory.levels[memdepth].affinity 
           = (kaapi_affinityset_t*)calloc(ncousin, sizeof(kaapi_affinityset_t) );
       if (obj->type == HWLOC_OBJ_NODE)
+      {
         kaapi_default_param.memory.levels[memdepth].levelid 
             = KAAPI_HWS_LEVELID_NUMA;
+        kaapi_default_param.memory.numalevel = memdepth;
+      }
       else if (obj->type == HWLOC_OBJ_SOCKET)
         kaapi_default_param.memory.levels[memdepth].levelid 
             = KAAPI_HWS_LEVELID_SOCKET;
       else if (obj->type == HWLOC_OBJ_CACHE)
       {
-	if (obj->attr && (obj->attr->cache.depth == 3))
-	  kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_L3;
-	else
-	  kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_MAX;
+        if (obj->attr && (obj->attr->cache.depth == 3))
+          kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_L3;
+        else
+          kaapi_default_param.memory.levels[memdepth].levelid = KAAPI_HWS_LEVELID_MAX;
       }
 
       /* iterator over all cousins */
@@ -288,21 +308,24 @@ int kaapi_hw_init(void)
               = obj->os_index;
         }
 
-        ncpu = hwloc_bitmap_weight( obj->cpuset );
-        kaapi_default_param.memory.levels[memdepth].affinity[idx].ncpu = ncpu;
         kaapi_hwcpuset2affinity(
-            &kaapi_default_param.memory.levels[memdepth].affinity[idx].who,
+            &kaapi_default_param.memory.levels[memdepth].affinity[idx],
             KAAPI_MAX_PROCESSOR, 
             obj->cpuset 
         );
+        ncpu = kaapi_default_param.memory.levels[memdepth].affinity[idx].ncpu;
 
-        ++idx;
+        if (ncpu !=0)
+          ++idx;
+
         if (obj->next_sibling !=0) 
            obj = obj->next_sibling;
         else {
           obj = obj->next_cousin;
         }
       }
+      /* update correct number of cousins with at least one cpu */
+      kaapi_default_param.memory.levels[memdepth].count = idx;
     }
   }
   /* end of detection of memory hierarchy */
@@ -312,7 +335,10 @@ int kaapi_hw_init(void)
 {
   unsigned int i;
   /* display result... */
-  printf("Memory hierarchy levels:%i\n", kaapi_default_param.memory.depth);
+  printf("Memory hierarchy levels:%i, numa level: %i\n", 
+           kaapi_default_param.memory.depth, 
+           kaapi_default_param.memory.numalevel
+  );
   printf("System cpu:%i\n", kaapi_default_param.syscpucount);
   printf("Used cpu  :%i\n", kaapi_default_param.cpucount);
   printf("Whole CPU SET:'%s'\n",
@@ -321,9 +347,10 @@ int kaapi_hw_init(void)
   );
   for (depth=0; depth < kaapi_default_param.memory.depth; ++depth)
   {
-    printf("level[%i]: \n\t#memory:%i\n\t", 
+    printf("level[%i]: \n\t#memory:%i, levelid: %i\n\t", 
         depth, 
-        (int)kaapi_default_param.memory.levels[depth].count 
+        (int)kaapi_default_param.memory.levels[depth].count,
+        (int)kaapi_default_param.memory.levels[depth].levelid 
     );
     for (i=0; i< kaapi_default_param.memory.levels[depth].count; ++i)
     {
@@ -334,10 +361,12 @@ int kaapi_hw_init(void)
         const char* str = kaapi_cpuset2string(
             kaapi_default_param.syscpucount, 
             &kaapi_default_param.memory.levels[depth].affinity[i].who);
-        printf("[size:%lu, cpuset:'%s', type:%u]\n\t", 
+        printf("[size:%lu, cpuset:'%s', ncpu:%u, type:%u, os idx:%u]\n\t", 
           (unsigned long)kaapi_default_param.memory.levels[depth].affinity[i].mem_size,
           str, 
-          (unsigned int)kaapi_default_param.memory.levels[depth].affinity[i].type
+          (unsigned int)kaapi_default_param.memory.levels[depth].affinity[i].ncpu,
+          (unsigned int)kaapi_default_param.memory.levels[depth].affinity[i].type,
+          (unsigned int)kaapi_default_param.memory.levels[depth].affinity[i].os_index
         );
       }
     }

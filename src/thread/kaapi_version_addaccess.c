@@ -47,7 +47,7 @@
 */
 int kaapi_version_add_initialaccess( 
     kaapi_version_t*           version, 
-    kaapi_tasklist_t*          tl,
+    kaapi_frame_tasklist_t*    tl,
     kaapi_access_mode_t        m,
     void*                      data, 
     const kaapi_memory_view_t* view 
@@ -73,7 +73,7 @@ int kaapi_version_add_initialaccess(
 //    td_move                  = kaapi_tasklist_allocate_td_withbody( tl, 0, kaapi_taskmove_body, argmove);
     version->writer_task     = td_move;
 
-    kaapi_tasklist_pushback_ready( tl, td_move);
+    kaapi_frame_tasklist_pushback_ready( tl, td_move);
   }
   else if (KAAPI_ACCESS_IS_WRITE(m))
   {
@@ -87,7 +87,7 @@ int kaapi_version_add_initialaccess(
     td_alloc                 = kaapi_tasklist_allocate_td( tl, task_alloc, 0);
 //    td_alloc                 = kaapi_tasklist_allocate_td_withbody( tl, 0, kaapi_taskalloc_body, argalloc );
     version->writer_task     = td_alloc;
-    kaapi_tasklist_pushback_ready( tl, td_alloc);
+    kaapi_frame_tasklist_pushback_ready( tl, td_alloc);
   } else {
     /* not yet implemented || KAAPI_ACCESS_IS_CUMULWRITE(m)) */
     kaapi_assert(0);

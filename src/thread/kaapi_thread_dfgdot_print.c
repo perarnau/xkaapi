@@ -472,7 +472,7 @@ static void _kaapi_print_task_executor( kaapi_taskdescr_t* td, void* arg )
 
 /** 
 */
-int kaapi_thread_tasklist_print_dot  ( FILE* file, const kaapi_tasklist_t* tasklist, int clusterflags )
+int kaapi_frame_tasklist_print_dot  ( FILE* file, const kaapi_frame_tasklist_t* tasklist, int clusterflags )
 {
   _kaapi_print_context the_hash_map;
   char sec_name[128];
@@ -550,7 +550,7 @@ static int kaapi_frame_print_dot_notasklist  ( FILE* file, const kaapi_frame_t* 
 int kaapi_frame_print_dot  ( FILE* file, const kaapi_frame_t* frame, int flag )
 {
   if ((file ==0) || (frame ==0)) return EINVAL;
-  if (frame->tasklist !=0) 
-    return kaapi_thread_tasklist_print_dot(file, frame->tasklist, flag);
+  if ((frame->tasklist !=0) && (frame->tasklist->master !=0))
+    return kaapi_frame_tasklist_print_dot(file, frame->tasklist->master, flag);
   return kaapi_frame_print_dot_notasklist(file, frame);
 }

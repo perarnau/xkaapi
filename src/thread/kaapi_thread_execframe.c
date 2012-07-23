@@ -42,7 +42,6 @@
 ** 
 */
 #include "kaapi_impl.h"
-#include "memory/kaapi_mem.h"
 
 static int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc );
 

@@ -44,73 +44,6 @@
  */
 #include "kaapi_impl.h"
 
-/* Form a reply to the request.
-   Each reply contains only one TD
-*/
-static int kaapi_task_splitter_readylist( 
-  kaapi_thread_context_t*       thread, 
-  kaapi_readytasklist_t*         rtl, 
-  kaapi_taskdescr_t*           td,
-  kaapi_listrequest_t*          lrequests, 
-  kaapi_listrequest_iterator_t* lrrange,
-  size_t                        countreq
-)
-{
-  kaapi_task_t*               tasksteal;
-  kaapi_tasklist_t*           master_tasklist;
-  kaapi_request_t*            request    = 0;
-  kaapi_taskstealready_arg_t* argsteal;
-
-  /* decrement with the number of thief: one single increment in place of several */
-#if defined(TASKLIST_ONEGLOBAL_MASTER) 
-  if (td->tasklist->master ==0)
-    master_tasklist = td->tasklist;
-  else
-    master_tasklist = td->tasklist->master;
-#else
-  master_tasklist = td->tasklist;
-  /* explicit synchronization= implicit at the end of each tasklist */
-  KAAPI_ATOMIC_ADD(&master_tasklist->count_thief, 1);
-#endif
-
-  KAAPI_DEBUG_INST(int cnt_reply __attribute__((unused)) = 0;)
-  
-  request = kaapi_listrequest_iterator_get( lrequests, lrrange );
-  kaapi_assert(request !=0);
-
-  /* - create the task steal that will execute the stolen task
-    The task stealtask stores:
-       - the original thread
-       - the original task pointer
-       - the pointer to shared data with R / RW access data
-       - and at the end it reserve enough space to store original task arguments
-    The original body is saved as the extra body of the original task data structure.
-  */
-  argsteal
-    = (kaapi_taskstealready_arg_t*)kaapi_request_pushdata(request, sizeof(kaapi_taskstealready_arg_t));
-  argsteal->master_tasklist       = master_tasklist;
-  argsteal->victim_tasklist       = (td->tasklist == master_tasklist ? 0 : td->tasklist);
-#if defined(TASKLIST_REPLY_ONETD)
-  argsteal->td                    = td; /* recopy of the pointer, need synchro if range */
-#endif
-  tasksteal = kaapi_request_toptask(request);
-  kaapi_task_init( 
-    tasksteal,
-    kaapi_taskstealready_body,
-    argsteal
-  );
-  kaapi_request_pushtask(request, 0);
-
-  kaapi_request_replytask( request, KAAPI_REQUEST_S_OK); /* success of steal */
-  KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( lrrange ) );
-
-  /* update next request to process */
-  kaapi_listrequest_iterator_next( lrequests, lrrange );    
-
-  return 1;
-}
-
-
 
 /** Steal ready task in tasklist 
  */
@@ -121,29 +54,44 @@ void kaapi_sched_stealreadytasklist(
                            kaapi_listrequest_iterator_t* lrrange
 )
 {
-    int                     err;
-    kaapi_taskdescr_t*     td;
+  int                         err;
+  kaapi_taskdescr_t*          td;
+  kaapi_task_t*               tasksteal;
+  kaapi_request_t*            request;
+  kaapi_taskstealready_arg_t* argsteal;
+    
+  request = kaapi_listrequest_iterator_get( lrequests, lrrange );
+  while( request !=0 )
+  {
+    err  = kaapi_readylist_steal( rtl, &td );
+    if( err == 0 )
+    {
+      /* - create the task steal that will execute the stolen task
+        The task stealtask stores:
+           - the original thread
+           - the original task pointer
+           - the pointer to shared data with R / RW access data
+           - and at the end it reserve enough space to store original task arguments
+        The original body is saved as the extra body of the original task data structure.
+      */
+      argsteal
+        = (kaapi_taskstealready_arg_t*)kaapi_request_pushdata(request, sizeof(kaapi_taskstealready_arg_t));
 
-    kaapi_workqueue_index_t count_req 
-	    = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
+      argsteal->master_frame_tasklist = td->tasklist;
+      argsteal->td                    = td; /* recopy of the pointer, need synchro if range */
 
-    while( count_req > 0 ){
-	err  = kaapi_readylist_steal( rtl, &td );
-	if( err == 0 ){
-	    kaapi_processor_decr_workload( thread->stack.proc, 1 );
-	    //kaapi_processor_decr_workload( thread->stack.proc, steal_end-steal_beg );
-	    kaapi_task_splitter_readylist( 
-		    thread,
-		    rtl,
-		    td,
-		    lrequests, 
-		    lrrange,
-		    count_req
-	    );
-	    count_req = (kaapi_workqueue_index_t)kaapi_listrequest_iterator_count( lrrange );
-	} else
-	   break; 
-    }
-  
+      tasksteal = kaapi_request_toptask(request);
+      kaapi_task_init(  tasksteal, kaapi_taskstealready_body, argsteal );
+      kaapi_request_pushtask(request, 0);
+
+      kaapi_request_replytask( request, KAAPI_REQUEST_S_OK); /* success of steal */
+      KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( lrrange ) );
+
+      /* update next request to process */
+      kaapi_listrequest_iterator_next( lrequests, lrrange );    
+      request = kaapi_listrequest_iterator_get( lrequests, lrrange );
+    } else
+      break; 
+  }
 }
 

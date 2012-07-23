@@ -106,8 +106,8 @@ int kaapi_sched_sync_(kaapi_thread_context_t* thread)
   save_frame = *save_fp;
 #endif
 
-  /* write barrier in order to commit update */
-  kaapi_mem_barrier();
+  ///* write barrier in order to commit update */
+  //kaapi_mem_barrier();
   
 redo:
 #if defined(KAAPI_USE_CUDA)

@@ -45,21 +45,11 @@
 */
 #include "kaapi_impl.h"
 
-int kaapi_tasklist_init( kaapi_tasklist_t* tl, struct kaapi_thread_context_t* thread )
+int kaapi_frame_tasklist_init( kaapi_frame_tasklist_t* tl, struct kaapi_thread_context_t* thread )
 {
-    kaapi_atomic_initlock(&tl->lock);
-    KAAPI_ATOMIC_WRITE(&tl->count_thief, 0);
-
-    kaapi_readytasklist_init( &tl->rtl, &thread->stack.proc->lock );
-
-    tl->master          = 0;
+    tl->rtl             = 0;
     tl->thread          = thread;
     tl->recv            = 0;
-    tl->context.chkpt   = 0;
-#if defined(KAAPI_DEBUG)  
-    tl->context.fp      = 0;
-    tl->context.td      = 0;
-#endif  
     tl->count_recv      = 0;
     kaapi_activationlist_clear( &tl->readylist );
 #if defined(KAAPI_DEBUG)
@@ -79,29 +69,10 @@ int kaapi_tasklist_init( kaapi_tasklist_t* tl, struct kaapi_thread_context_t* th
 
 
 /**/
-int kaapi_tasklist_destroy( kaapi_tasklist_t* tl )
+int kaapi_frame_tasklist_destroy( kaapi_frame_tasklist_t* tl )
 {
-  kaapi_readytasklist_destroy( &tl->rtl );
   kaapi_allocator_destroy( &tl->td_allocator );
   kaapi_allocator_destroy( &tl->allocator );
-  kaapi_atomic_destroylock(&tl->lock);
-  return 0;
-}
-
-/* activate and push all ready tasks in the activation list to their allocated queue
-*/
-int kaapi_tasklist_doactivationlist( kaapi_activationlist_t* al )
-{
-  kaapi_activationlink_t* curr = al->front;
-  while (curr !=0)
-  {
-    if (KAAPI_ATOMIC_INCR(&curr->td->counter) % curr->td->wc == 0)
-    {
-      kaapi_assert (0); //curr->queue != 0)
-    }
-    curr = curr->next;
-  }
-
   return 0;
 }
 
@@ -109,10 +80,10 @@ int kaapi_tasklist_doactivationlist( kaapi_activationlist_t* al )
 
 /** Push a broadcast task attached to a writer task
 */
-void kaapi_tasklist_push_broadcasttask( 
-    kaapi_tasklist_t*  tl, 
-    kaapi_taskdescr_t* td_writer,
-    kaapi_taskdescr_t* td_bcast
+void kaapi_frame_tasklist_push_broadcasttask( 
+    kaapi_frame_tasklist_t*  tl, 
+    kaapi_taskdescr_t*       td_writer,
+    kaapi_taskdescr_t*       td_bcast
 )
 {
   kaapi_activationlink_t* al = kaapi_tasklist_allocate_al(tl);
@@ -134,7 +105,7 @@ void kaapi_tasklist_push_broadcasttask(
 
 
 #if defined(KAAPI_DEBUG)
-void kaapi_print_state_tasklist( kaapi_tasklist_t* tl )
+void kaapi_print_state_tasklist( kaapi_frame_tasklist_t* tl )
 {
   kaapi_activationlink_t* curr_activated = tl->allocated_td.front;
   const char* str;

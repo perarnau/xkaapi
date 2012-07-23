@@ -49,8 +49,7 @@
 #include <sys/types.h>
 #include <stdint.h>
 
-#include "kaapi_impl.h"
-#include "machine/mt/kaapi_mt_bitmap.h"
+/* do not include it directly. Must be included by kaapi_impl.h or kaapi_machine.h */
 
 /* kaapi_mem_addr_t is a type large enough to
    contain all the addresses of all memory spaces.  */

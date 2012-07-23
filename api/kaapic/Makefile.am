@@ -18,12 +18,14 @@ libkaapic_la_LIBADD=../../src/libkaapi.la $(KAAPILIB_BUILD_LIBS)
 M4_BUILT_FILES=\
   kaapic_dfg_switch.h \
   kaapic_dfg_wh_switch.h \
-  kaapic_adaptive_switch.h
+  kaapic_adaptive_switch.h \
+  kaapic_adaptive_switch_ull.h
 
 M4_SRCS=\
   kaapic_dfg_switch.m4 \
   kaapic_dfg_wh_switch.m4 \
   kaapic_adaptive_switch.m4 \
+  kaapic_adaptive_switch_ull.m4 \
   m4_generator \
   m4_macros
 
@@ -50,10 +52,14 @@ libkaapic_la_SOURCES=\
 	kaapic_spawn_attr.c \
 	kaapic_alloca.c \
 	kaapic_work.c \
+	kaapic_work_ull.c \
 	kaapic_foreach_docall.c \
+	kaapic_foreach_docall_ull.c \
 	kaapic_foreach_attr.c \
 	kaapic_foreach.c \
+	kaapic_foreach_ull.c \
 	kaapic_foreach_withformat.c \
+	kaapic_foreach_withformat_ull.c \
 	$(include_HEADERS)\
 	kaapic_impl.h \
 	$(M4_BUILT_FILES)

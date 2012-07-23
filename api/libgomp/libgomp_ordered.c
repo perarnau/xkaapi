@@ -45,10 +45,20 @@
 
 void GOMP_ordered_start (void)
 {
-  printf("%s:: \n", __FUNCTION__);
+    kompctxt_t *ctxt = komp_get_ctxt();
+    unsigned int me = ctxt->icv.thread_id;
+    
+    while (ctxt->teaminfo->ordered_state != me)
+        kaapi_slowdown_cpu ();
 }
 
 void GOMP_ordered_end (void)
 {
-  printf("%s:: \n", __FUNCTION__);
+    kompctxt_t *ctxt = komp_get_ctxt();
+    if (ctxt->teaminfo->ordered_state == ctxt->teaminfo->numthreads - 1)
+        ctxt->teaminfo->ordered_state = 0;
+    else
+        ctxt->teaminfo->ordered_state++;
+    
+    GOMP_barrier ();
 }

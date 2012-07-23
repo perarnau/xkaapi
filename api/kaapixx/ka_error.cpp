@@ -45,6 +45,7 @@
 */
 #include "ka_error.h"
 #include "ka_debug.h"
+#include "kaapi_impl.h"
 #include <iostream>
 #include <iomanip> // setfill
 #include <signal.h>
@@ -178,6 +179,10 @@ void backtrace_sighandler(int sig, void *info, void *secret)
       break;    
   }
   print_backtrace_cpp();
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+  _kaapi_signal_dump_counters(sig);  
+#endif
   raise( sig );
 }
   

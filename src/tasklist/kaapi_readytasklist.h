@@ -173,8 +173,8 @@ static inline void
 kaapi_readylist_get_priority_range(
                                    int* const min_prio, int* const max_prio, int* const inc_prio )
 {
-  if( kaapi_processor_get_type( kaapi_get_current_processor() ) ==
-     KAAPI_PROC_TYPE_CUDA ){
+  if( kaapi_processor_get_type( kaapi_get_current_processor() ) == KAAPI_PROC_TYPE_CUDA )
+  {
     *min_prio = (KAAPI_TASKLIST_GPU_MIN_PRIORITY+1);
     *max_prio = KAAPI_TASKLIST_GPU_MAX_PRIORITY;
     *inc_prio = 1;
@@ -188,9 +188,9 @@ kaapi_readylist_get_priority_range(
 /*
  */
 static inline int kaapi_readytasklist_init( 
-                                           kaapi_readytasklist_t* rtl,
-                                           kaapi_lock_t*          lock
-                                           )
+                                           kaapi_readytasklist_t* rtl
+/* unused                                           kaapi_lock_t*          lock */
+)
 {
   int i;
   
@@ -222,7 +222,7 @@ static inline int kaapi_readylist_push( kaapi_readytasklist_t* rtl, kaapi_taskde
   
   ortl = &rtl->prl[priority];
   kaapi_onereadytasklist_push( ortl, td );
-  KAAPI_ATOMIC_ADD( &rtl->cnt_tasks, 1 );
+  KAAPI_ATOMIC_INCR( &rtl->cnt_tasks );
   return priority;
 }
 
@@ -233,7 +233,7 @@ static inline int kaapi_readylist_remote_push( kaapi_readytasklist_t* rtl, kaapi
   
   ortl = &rtl->prl[priority];
   kaapi_onereadytasklist_remote_push( ortl, td );
-  KAAPI_ATOMIC_ADD( &rtl->cnt_tasks, 1 );
+  KAAPI_ATOMIC_INCR( &rtl->cnt_tasks );
   return priority;
 }
 
@@ -255,11 +255,13 @@ static inline int kaapi_readylist_steal( kaapi_readytasklist_t* rtl, kaapi_taskd
     return 1;
   
   kaapi_readylist_get_priority_range( &min_prio, &max_prio, &inc_prio );
-  for( prio = max_prio; prio != min_prio; prio += inc_prio ) {
+  for( prio = max_prio; prio != min_prio; prio += inc_prio ) 
+  {
     onertl = &rtl->prl[prio];
     err = kaapi_onereadytasklist_steal( onertl, td );
-    if( err == 0 ){
-	    KAAPI_ATOMIC_ADD( &rtl->cnt_tasks, -1 );
+    if( err == 0 )
+    {
+	    KAAPI_ATOMIC_DECR( &rtl->cnt_tasks );
 	    return 0;
     }
   }
@@ -277,11 +279,12 @@ static inline int kaapi_readylist_pop( kaapi_readytasklist_t* rtl, kaapi_taskdes
     return 1;
   
   kaapi_readylist_get_priority_range( &min_prio, &max_prio, &inc_prio );
-  for( prio = max_prio; prio != min_prio; prio += inc_prio ) {
+  for( prio = max_prio; prio != min_prio; prio += inc_prio ) 
+  {
     onertl = &rtl->prl[prio];
     err = kaapi_onereadytasklist_pop( onertl, td );
     if( err == 0 ){
-	    KAAPI_ATOMIC_ADD( &rtl->cnt_tasks, -1 );
+	    KAAPI_ATOMIC_DECR( &rtl->cnt_tasks );
 	    return 0;
     } else
 	    if( err != EBUSY )

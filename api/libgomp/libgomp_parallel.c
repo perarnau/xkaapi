@@ -84,6 +84,12 @@ static void komp_trampoline_task_parallel
   new_ctxt->icv.next_numthreads = taskarg->nextnumthreads; /* WARNING: spec ?*/
   new_ctxt->icv.nested_level    = 1+taskarg->nestedlevel;
   new_ctxt->icv.nested_parallel = taskarg->nestedparallel;
+
+  new_ctxt->icv.run_sched           = omp_sched_dynamic;
+  new_ctxt->icv.chunk_size          = 0; /* default */
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  kaapic_foreach_attr_init( &new_ctxt->icv.attr );
+#endif
   
   new_ctxt->inside_single      = 0;
   new_ctxt->save_ctxt          = ctxt;
@@ -150,7 +156,9 @@ komp_init_parallel_start (
   kompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
 
   /* pseudo OpenMP spec algorithm to compute the number of threads */
-  if ( !ctxt->icv.nested_parallel && (ctxt->icv.nested_level >0))
+  if ( (!ctxt->icv.nested_parallel && (ctxt->icv.nested_level >0)) 
+    ||  (ctxt->icv.nested_level >= omp_max_active_levels)
+  )
     num_threads = 1;
   else {
     if (num_threads == 0)
@@ -195,6 +203,10 @@ komp_init_parallel_start (
   new_ctxt->icv.next_numthreads = ctxt->icv.next_numthreads; /* WARNING: spec ? */
   new_ctxt->icv.nested_level    = 1+ctxt->icv.nested_level; 
   new_ctxt->icv.nested_parallel = ctxt->icv.nested_parallel; /* WARNING: spec ? */
+  new_ctxt->icv.nested_parallel = ctxt->icv.nested_parallel; /* WARNING: spec ? */
+#if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
+  new_ctxt->icv.attr            = ctxt->icv.attr;            /* WARNING: spec ? */
+#endif
   
   new_ctxt->inside_single       = 0;
   new_ctxt->save_ctxt           = ctxt;
@@ -240,7 +252,8 @@ komp_parallel_start (
   allarg = kaapi_thread_pushdata(thread, num_threads * sizeof(komp_parallel_task_arg_t));
 
 
-#if 1  /* OLD CODE: push locally all tasks that may be steal by any thread */
+//POUR BENJAMIN: force ou non a pousser une tache dans la queue d'un Kthread particulier
+#if 0  /* OLD CODE: push locally all tasks that may be steal by any thread */
   /* The master thread (id 0) calls fn (data) directly. That's why we
      start this loop from id = 1.*/
   task = kaapi_thread_toptask(thread);
@@ -323,6 +336,7 @@ GOMP_parallel_end (void)
   ctxt->teaminfo->gwork = 0;
   ctxt->teaminfo = 0;
   old_ctxt = ctxt->save_ctxt;
+
   kaapic_end_parallel (KAAPI_SCHEDFLAG_DEFAULT);
   
   /* restore old context */

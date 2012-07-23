@@ -58,6 +58,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   kaapi_request_status_t  ws_status;
   kaapi_thread_context_t* thread;
   kaapi_thread_context_t* tmp;
+  kaapi_taskdescr_t* td;
   int err;
   
   kaapi_assert_debug( kproc !=0 );
@@ -70,7 +71,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
   KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
 #endif
-
+  
   do 
   {
 #if defined(KAAPI_USE_NETWORK)
@@ -78,7 +79,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
 #endif
 #if defined(KAAPI_USE_CUDA)
     if( kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA ) {
-	kaapi_cuda_proc_poll( kproc );
+      kaapi_cuda_proc_poll( kproc );
     }
 #endif
     if (kaapi_suspendflag)
@@ -88,8 +89,8 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     if (kaapi_isterminated())
     {
 #if defined(KAAPI_USE_CUDA)
-    if( kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA )
-      kaapi_assert_debug( kaapi_cuda_proc_end_isvalid( kproc ) );
+      if( kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA )
+        kaapi_assert_debug( kaapi_cuda_proc_end_isvalid( kproc ) );
 #endif
       KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
       return;
@@ -105,7 +106,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
         tmp = kproc->thread;
         /* set new context to the kprocessor */
         kaapi_setcontext(kproc, thread);
-
+        
         /* push kproc context into free list */
         if (tmp) 
           kaapi_context_free( kproc, tmp );
@@ -113,7 +114,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
         goto redo_execute;
       }
     }
-
+    
     /* always allocate a thread before emitting a steal request */
     if (kproc->thread ==0)
     {
@@ -123,17 +124,18 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       kaapi_setcontext(kproc, thread);
     }
 
-    if( !kaapi_readytasklist_isempty( kproc->rtl) ) {
-	kaapi_affinity_exec_readylist( kproc );
-	goto redo_execute;
+    if( 0 == kaapi_readylist_pop( kproc->rtl, &td ))
+    {
+      kaapi_thread_startexecwithtd( kproc, td );
+      goto redo_execute;
     }
-
+    
     /* steal request */
     ws_status = kproc->emitsteal(kproc);
     if (ws_status != KAAPI_REQUEST_S_OK)
       continue;
-
-redo_execute:    
+    
+  redo_execute:    
     kproc->isidle = 0;
     
 #if defined(KAAPI_USE_PERFCOUNTER)
@@ -141,7 +143,7 @@ redo_execute:
     KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
     KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_TASK_BEG );
 #endif
-
+    
 #if defined(KAAPI_USE_CUDA)
     if( kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA ) {
       if (kproc->thread->stack.sfp->tasklist ==0)
@@ -170,7 +172,7 @@ redo_execute:
       thread = kproc->thread;
       kaapi_setcontext(kproc, 0);
       kaapi_wsqueuectxt_push( kproc, thread );
-
+      
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_SUSPEND);
 #endif      
@@ -199,7 +201,7 @@ redo_execute:
 #endif
     }
 #endif
-
+    
     kproc->isidle = 1;
   } while (1);
   
