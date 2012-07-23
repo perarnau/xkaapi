@@ -210,6 +210,7 @@ kaapi_cuda_proc_poll( kaapi_processor_t* const kproc )
     KAAPI_ATOMIC_WRITE( &kproc->cuda_proc.synchronize_flag, 0 );
   } else {
     kaapi_cuda_stream_poll( kproc );
+//    kaapi_cuda_memory_poll( kproc );
   }
 }
 

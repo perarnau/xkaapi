@@ -56,6 +56,7 @@ xxx_kaapi_cuda_data_async_allocate(
 	    	kaapi_cuda_data_async_view_convert( &dest->view, &src->view );
 		kaapi_mem_data_set_addr( kmd, asid, (kaapi_mem_addr_t)dest );
 		kaapi_mem_data_set_dirty( kmd, asid );
+		dest->kmd = kmd;
 		kaapi_mem_host_map_find_or_insert_(  cuda_map,
 		    (kaapi_mem_addr_t)kaapi_pointer2void(dest->ptr),
 		    &kmd );
@@ -107,9 +108,7 @@ int kaapi_cuda_data_async_input_alloc(
 		kaapi_access_t access = kaapi_format_get_access_param(
 			td->fmt, i, sp );
 		kaapi_data_t* src = kaapi_data( kaapi_data_t, &access );
-		kaapi_mem_host_map_find_or_insert( host_map,
-			(kaapi_mem_addr_t)kaapi_pointer2void(src->ptr),
-			&kmd );
+		kmd = src->kmd;
 		kaapi_assert_debug( kmd !=0 );
 
 		if( !kaapi_mem_data_has_addr( kmd, host_asid ) ) {
@@ -173,9 +172,7 @@ int kaapi_cuda_data_async_input_dev_sync(
 	    kaapi_cuda_data_async_sync_device( dev_data );
 
 	    if( KAAPI_ACCESS_IS_WRITE(m) ) {
-		kaapi_mem_host_map_find_or_insert( cuda_map,
-			(kaapi_mem_addr_t)kaapi_pointer2void(dev_data->ptr),
-			&kmd );
+		kmd = dev_data->kmd;
 		kaapi_assert_debug( kmd !=0 );
 		kaapi_mem_data_set_all_dirty_except( kmd, cuda_asid );
 	    }
@@ -218,10 +215,7 @@ int kaapi_cuda_data_async_input_host_sync(
 		    kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
 		const kaapi_mem_asid_t host_asid =
 		    kaapi_mem_host_map_get_asid(host_map);
-		kaapi_mem_data_t *kmd;
-		kaapi_mem_host_map_find_or_insert( host_map,
-			(kaapi_mem_addr_t)kaapi_pointer2void(host_data->ptr),
-			&kmd );
+		kaapi_mem_data_t *kmd = host_data->kmd;
 		kaapi_assert_debug( kmd !=0 );
 		kaapi_mem_data_set_all_dirty_except( kmd, host_asid );
 	    }
@@ -237,7 +231,6 @@ int kaapi_cuda_data_async_recv(
 )
 {
     size_t i;
-    kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
     kaapi_mem_host_map_t* host_map = 
 	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
     const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
@@ -269,9 +262,7 @@ int kaapi_cuda_data_async_recv(
 	    kaapi_data_t* dev_data = kaapi_data( kaapi_data_t, &access );
 
 	    if( KAAPI_ACCESS_IS_WRITE(m) ) {
-		kaapi_mem_host_map_find_or_insert( cuda_map,
-			(kaapi_mem_addr_t)kaapi_pointer2void(dev_data->ptr),
-			&kmd );
+		kmd = dev_data->kmd;
 		kaapi_assert_debug( kmd !=0 );
 		kaapi_data_t* host_data=
 		    (kaapi_data_t*) kaapi_mem_data_get_addr( kmd, host_asid );
@@ -407,12 +398,10 @@ kaapi_cuda_data_async_sync_device( kaapi_data_t* kdata )
 {
     kaapi_mem_host_map_t* cuda_map = kaapi_get_current_mem_host_map();
     const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
-    kaapi_mem_data_t *kmd;
+    kaapi_mem_data_t *kmd = kdata->kmd;
     kaapi_mem_asid_t valid_asid;
 
-    kaapi_mem_host_map_find_or_insert( cuda_map,
-	    (kaapi_mem_addr_t)kaapi_pointer2void(kdata->ptr),
-	    &kmd );
+    kaapi_assert_debug( kmd !=0 );
     if ( kaapi_mem_data_is_dirty( kmd, cuda_asid ) ) {
 	valid_asid = kaapi_mem_data_get_nondirty_asid( kmd );
 	kaapi_assert_debug( valid_asid < KAAPI_MEM_ASID_MAX );
@@ -444,10 +433,6 @@ kaapi_cuda_data_async_sync_host_transfer(
 	    );
     cudaEventRecord( event, stream );
     cudaStreamWaitEvent( stream, event, 0 );
-#if 0
-    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
-    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END );
-#endif
     return 0;
 }
 
@@ -457,12 +442,10 @@ kaapi_cuda_data_async_sync_host( kaapi_data_t* kdata, cudaStream_t stream )
     kaapi_mem_host_map_t* host_map = 
 	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
     const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
-    kaapi_mem_data_t *kmd;
+    kaapi_mem_data_t *kmd = kdata->kmd;
     kaapi_mem_asid_t valid_asid;
 
-    kaapi_mem_host_map_find_or_insert( host_map,
-	    (kaapi_mem_addr_t)kaapi_pointer2void(kdata->ptr),
-	    &kmd );
+    kaapi_assert_debug( kmd !=0 );
     if ( kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
 	valid_asid = kaapi_mem_data_get_nondirty_asid( kmd );
 	kaapi_data_t* valid_data = (kaapi_data_t*) kaapi_mem_data_get_addr( kmd, valid_asid );
@@ -520,11 +503,9 @@ kaapi_cuda_data_async_sync_host2( kaapi_data_t* kdata )
     kaapi_mem_host_map_t* host_map = 
 	kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
     const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
-    kaapi_mem_data_t *kmd;
+    kaapi_mem_data_t *kmd = kdata->kmd;
 
-    kaapi_mem_host_map_find_or_insert( host_map,
-	    (kaapi_mem_addr_t)kaapi_pointer2void(kdata->ptr),
-	    &kmd );
+    kaapi_assert_debug( kmd !=0 );
     if ( kaapi_mem_data_is_dirty( kmd, host_asid ) ) {
 	kaapi_mem_host_map_t* const cuda_map = kaapi_get_current_mem_host_map();
 	const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);

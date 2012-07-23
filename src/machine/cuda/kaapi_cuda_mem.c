@@ -1017,6 +1017,7 @@ kaapi_cuda_memory_pool_validate_host(
 		    cuda_asid-1, host_asid );
 	    fflush(stdout);
 #endif
+	    kaapi_mem_data_clear_dirty( kmd, host_asid );
 	    kaapi_data_t* src =
 		(kaapi_data_t*)kaapi_mem_data_get_addr( kmd, cuda_asid );
 	    kaapi_data_t* dest = 
@@ -1027,7 +1028,6 @@ kaapi_cuda_memory_pool_validate_host(
 		    src->ptr, &src->view );
 	    cudaEventRecord( cuda_mem->event, kaapi_cuda_DtoH_stream() );
 	    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END );
-	    kaapi_mem_data_clear_dirty( kmd, host_asid );
 	    return 0;
 	}
     }

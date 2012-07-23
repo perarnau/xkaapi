@@ -44,12 +44,9 @@ kaapi_processor_t* kaapi_affinity_get_by_data(
     kaapi_access_t access = kaapi_format_get_access_param(
 	    td->fmt, i, sp );
     kaapi_data_t* data = kaapi_data( kaapi_data_t, &access );
-    kaapi_mem_host_map_find_or_insert( host_map,
-      (kaapi_mem_addr_t)kaapi_pointer2void(data->ptr),
-      &kmd );
+    kmd = data->kmd;
     kaapi_assert_debug( kmd !=0 );
     kaapi_bitmap_copy_64( &dev_bitmap, &kmd->valid_bits );
-//    kaapi_bitmap_value_set_64( &dev_bitmap, 0 );
     while( (dev= kaapi_bitmap_value_first1_and_zero_64(&dev_bitmap)) != 0 ){
       dev--;
       kaapi_data_t* const dev_data =
