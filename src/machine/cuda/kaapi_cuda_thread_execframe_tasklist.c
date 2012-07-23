@@ -264,8 +264,11 @@ int kaapi_cuda_thread_execframe_tasklist(kaapi_thread_context_t * thread)
   /* force previous write before next write */
   KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist = *tasklist;)
 
-      while (!kaapi_tasklist_isempty(tasklist)) {
-    err = kaapi_readylist_pop(&tasklist->rtl, &td);
+  while ( !kaapi_tasklist_isempty(tasklist) ||
+        !kaapi_readytasklist_isempty(stack->proc->rtl)) {
+    err = kaapi_readylist_pop(stack->proc->rtl, &td);
+    if( err != 0 )
+      err = kaapi_readylist_pop(&tasklist->rtl, &td);
 
     if (err == 0) {
       kaapi_processor_decr_workload(stack->proc, 1);

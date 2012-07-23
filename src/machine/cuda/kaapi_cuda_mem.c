@@ -868,9 +868,7 @@ kaapi_cuda_mem_copy_dtod_buffer(kaapi_pointer_t dest,
   }
   cudaSetDevice(dest_dev);
   cudaStreamWaitEvent(kaapi_cuda_HtoD_stream(), event, 0);
-  kaapi_cuda_mem_copy_htod(dest, view_dest, host, view_host);
-
-  return 0;
+  return kaapi_cuda_mem_copy_htod(dest, view_dest, host, view_host);
 }
 
 int

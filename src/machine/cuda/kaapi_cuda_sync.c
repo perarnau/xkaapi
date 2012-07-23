@@ -65,7 +65,7 @@ static inline void kaapi_cuda_sync_memory(kaapi_processor_t * const kproc)
   kaapi_mem_host_map_t *cuda_map = kaapi_get_current_mem_host_map();
   const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
   static const uint32_t map_size = KAAPI_HASHMAP_BIG_SIZE;
-  kaapi_big_hashmap_t *const hmap = &cuda_map->hmap;
+  kaapi_big_hashmap_t *const hmap = &host_map->hmap;
   kaapi_hashentries_t *entry;
   uint32_t i;
 
