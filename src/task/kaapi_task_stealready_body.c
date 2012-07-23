@@ -69,7 +69,8 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
 
   /* create a new tasklist on the stack of the running thread
   */
-  tasklist = (kaapi_tasklist_t*)kaapi_thread_pushdata(uthread, sizeof(kaapi_tasklist_t));
+//  tasklist = (kaapi_tasklist_t*)kaapi_thread_pushdata(uthread, sizeof(kaapi_tasklist_t));
+  tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
   kaapi_tasklist_init( tasklist, arg->master_tasklist );
 
   /* Execute the orinal body function with the original args */
@@ -130,5 +131,6 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
 #endif
   
   /* do not destroy tasklist: no usefull data */
-
+  kaapi_tasklist_destroy(tasklist);
+  free(tasklist);
 }
