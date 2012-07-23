@@ -47,37 +47,28 @@
 #ifndef KAAPI_CUDA_DATA_ASYNC_H_INCLUDED
 #define KAAPI_CUDA_DATA_ASYNC_H_INCLUDED
 
-int kaapi_cuda_data_async_input_alloc( 
-	kaapi_cuda_stream_t* kstream,
-	kaapi_tasklist_t*   tasklist,
-	kaapi_taskdescr_t*  td
-);
+int kaapi_cuda_data_async_input_alloc(kaapi_cuda_stream_t * kstream,
+				      kaapi_tasklist_t * tasklist,
+				      kaapi_taskdescr_t * td);
 
-int kaapi_cuda_data_async_input_dev_sync( 
-	kaapi_cuda_stream_t* kstream,
-	kaapi_tasklist_t*   tasklist,
-	kaapi_taskdescr_t*  td
-);
+int kaapi_cuda_data_async_input_dev_sync(kaapi_cuda_stream_t * kstream,
+					 kaapi_tasklist_t * tasklist,
+					 kaapi_taskdescr_t * td);
 
 /** 
  * \brief synchronize host memory from a GPU thread.
  * Method called from a GPU thread and synchronizes host memory.
  */
-int kaapi_cuda_data_async_input_host_sync( 
-	kaapi_cuda_stream_t* kstream,
-	kaapi_tasklist_t*   tasklist,
-	kaapi_taskdescr_t*  td
-);
+int kaapi_cuda_data_async_input_host_sync(kaapi_cuda_stream_t * kstream,
+					  kaapi_tasklist_t * tasklist,
+					  kaapi_taskdescr_t * td);
 
-int kaapi_cuda_data_async_recv( 
-	kaapi_cuda_stream_t* kstream,
-	kaapi_tasklist_t*   tasklist,
-	kaapi_taskdescr_t*  td
-);
+int kaapi_cuda_data_async_recv(kaapi_cuda_stream_t * kstream,
+			       kaapi_tasklist_t * tasklist,
+			       kaapi_taskdescr_t * td);
 
 #if	KAAPI_CUDA_MEM_ALLOC_MANAGER
-int 
-kaapi_cuda_data_async_check( void );
+int kaapi_cuda_data_async_check(void);
 #endif
 
 /* ** Memory system **
@@ -85,8 +76,7 @@ kaapi_cuda_data_async_check( void );
 It checks if the data is valid on the current kproc, otherwise searches for a
 valid copy on the asids of the system.
 */
-int
-kaapi_cuda_data_async_sync_device( kaapi_data_t* kdata );
+int kaapi_cuda_data_async_sync_device(kaapi_data_t * kdata);
 
 /* ** Memory system **
    This method is called from a host thread to synchronize the kdata parameter.
@@ -94,18 +84,15 @@ It checks if the data is valid on the current kproc, otherwise search for a
 valid copy on the GPUs.
 */
 int
-kaapi_cuda_data_async_sync_host( kaapi_data_t* kdata, cudaStream_t stream );
+kaapi_cuda_data_async_sync_host(kaapi_data_t * kdata, cudaStream_t stream);
 
 /**
  * Synchronize host pointers from a GPU thread.
  */
-int
-kaapi_cuda_data_async_sync_host2( kaapi_data_t* kdata );
+int kaapi_cuda_data_async_sync_host2(kaapi_data_t * kdata);
 
-int kaapi_cuda_data_async_output_dev_dec_use( 
-	kaapi_cuda_stream_t* ,
-	kaapi_tasklist_t*   ,
-	kaapi_taskdescr_t*  
-);
+int kaapi_cuda_data_async_output_dev_dec_use(kaapi_cuda_stream_t *,
+					     kaapi_tasklist_t *,
+					     kaapi_taskdescr_t *);
 
-#endif /* KAAPI_CUDA_DATA_ASYNC_H_INCLUDED */
+#endif				/* KAAPI_CUDA_DATA_ASYNC_H_INCLUDED */

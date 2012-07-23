@@ -51,4 +51,4 @@
 #include "kaapi_cuda_stream.h"
 #include "kaapi_cuda_proc.h"
 
-#endif /* ! KAAPI_CUDA_H_INCLUDED */
+#endif				/* ! KAAPI_CUDA_H_INCLUDED */

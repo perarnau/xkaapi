@@ -51,9 +51,9 @@
 #include "kaapi_cuda_data.h"
 
 /* cuda task body */
-typedef void (*cuda_task_body_t)(void*, cudaStream_t);
+typedef void (*cuda_task_body_t) (void *, cudaStream_t);
 
-static int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc );
+static int __kaapi_try_preempt(kaapi_stack_t * stack, kaapi_task_t * pc);
 
 /** 
     Here the stack of task is organised like this, task1 is pointed by pc and
@@ -102,130 +102,126 @@ thread->pc=stack->sp | xxxxx  |< thread->sfp->pc = thread->sfp->sp
 
 /*
 */
-int kaapi_cuda_thread_stack_execframe( kaapi_stack_t* stack )
+int kaapi_cuda_thread_stack_execframe(kaapi_stack_t * stack)
 {
-  kaapi_task_t*              sp; /* cache */
-  kaapi_task_t*              pc; /* cache */
-  kaapi_frame_t*             fp; /* cache for stack->sfp */
+  kaapi_task_t *sp;		/* cache */
+  kaapi_task_t *pc;		/* cache */
+  kaapi_frame_t *fp;		/* cache for stack->sfp */
 
-  uintptr_t                  state;
-  kaapi_frame_t*             eframe = stack->esfp;
-  
+  uintptr_t state;
+  kaapi_frame_t *eframe = stack->esfp;
+
 #if defined(KAAPI_USE_PERFCOUNTER)
-  uint32_t                   cnt_tasks = 0;
+  uint32_t cnt_tasks = 0;
 #endif
 
   kaapi_assert_debug(stack->sfp >= stack->stackframe);
-  kaapi_assert_debug(stack->sfp < stack->stackframe+KAAPI_MAX_RECCALL);
-  
-  fp = (kaapi_frame_t*)stack->sfp;
+  kaapi_assert_debug(stack->sfp < stack->stackframe + KAAPI_MAX_RECCALL);
+
+  fp = (kaapi_frame_t *) stack->sfp;
 
 #if KAAPI_VERBOSE
-    fprintf(stdout, "[%s] kid=%lu\n", __FUNCTION__,
-	    (unsigned long)kaapi_get_current_kid() );
-    fflush( stdout );
+  fprintf(stdout, "[%s] kid=%lu\n", __FUNCTION__,
+	  (unsigned long) kaapi_get_current_kid());
+  fflush(stdout);
 #endif
-push_frame: /* here assume fp current frame where to execute task */
+push_frame:			/* here assume fp current frame where to execute task */
 
   sp = fp->sp;
   pc = fp->pc;
 
   /* init new frame for the next task to execute */
-  fp[1].pc        = sp;
-  fp[1].sp        = sp;
-  fp[1].sp_data   = fp->sp_data;
-  
+  fp[1].pc = sp;
+  fp[1].sp = sp;
+  fp[1].sp_data = fp->sp_data;
+
   /* force previous write before next write */
   kaapi_writemem_barrier();
 
   /* push and update the current frame */
   stack->sfp = ++fp;
-  kaapi_assert_debug( stack->sfp - stack->stackframe <KAAPI_MAX_RECCALL);
-  
+  kaapi_assert_debug(stack->sfp - stack->stackframe < KAAPI_MAX_RECCALL);
+
   /* stack of task growth down ! */
-  for (; pc != sp; --pc)
-  {
-    kaapi_assert_debug( pc > sp );
+  for (; pc != sp; --pc) {
+    kaapi_assert_debug(pc > sp);
 
 #if KAAPI_VERBOSE
     fprintf(stdout, "[%s] pc=%p kid=%lu\n", __FUNCTION__,
-	    (void*)pc, 
-	    (unsigned long)kaapi_get_current_kid() );
-    fflush( stdout );
+	    (void *) pc, (unsigned long) kaapi_get_current_kid());
+    fflush(stdout);
 #endif
-redo_exec:
-    state = kaapi_task_markexec( pc );
-    if (likely(state ==0)) {
-	kaapi_format_t* fmt = kaapi_format_resolvebybody( pc->body );
-	if( (fmt == 0) ||
-		(fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0)) {
-	    ((kaapi_task_body_internal_t)pc->body)( pc->sp, fp, pc );
-	}
+  redo_exec:
+    state = kaapi_task_markexec(pc);
+    if (likely(state == 0)) {
+      kaapi_format_t *fmt = kaapi_format_resolvebybody(pc->body);
+      if ((fmt == 0) || (fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0)) {
+	((kaapi_task_body_internal_t) pc->body) (pc->sp, fp, pc);
+      }
 #if 1
-	else {
-	    fprintf( stdout, "[%s] stack=%p task=%s kid=%lu\n", __FUNCTION__, stack,
-		fmt->name,
-		(unsigned long)kaapi_get_current_kid() );
-	    fflush(stdout);
+      else {
+	fprintf(stdout, "[%s] stack=%p task=%s kid=%lu\n",
+		__FUNCTION__, stack, fmt->name,
+		(unsigned long) kaapi_get_current_kid());
+	fflush(stdout);
 #if 0
-	    cudaError_t res;
-	    cuda_task_body_t body =
-		    (cuda_task_body_t)fmt->entrypoint_wh[KAAPI_PROC_TYPE_CUDA];
-	    /* Enter CUDA context */
-	    kaapi_cuda_ctx_push( );
+	cudaError_t res;
+	cuda_task_body_t body =
+	    (cuda_task_body_t) fmt->entrypoint_wh[KAAPI_PROC_TYPE_CUDA];
+	/* Enter CUDA context */
+	kaapi_cuda_ctx_push();
 
-	    kaapi_cuda_data_send( fmt, pc->sp );
-	    res = cuCtxSynchronize( );
-		if( res != cudaSuccess ) {
-		fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
-		fflush(stdout);
-	    }
-	    body( pc->sp, kaapi_cuda_kernel_stream() );
-	    res = cuCtxSynchronize( );
-		if( res != cudaSuccess ) {
-		fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
-		fflush(stdout);
-		}
-	    kaapi_cuda_data_recv( fmt, pc->sp );
-	    res = cuCtxSynchronize( );
-	    cuStreamSynchronize( kaapi_cuda_DtoH_stream() );
-	    //const cudaError_t res = cuStreamSynchronize( kaapi_cuda_DtoH_stream() );
-	    if( res != cudaSuccess ) {
-		fprintf( stdout, "[%s] CUDA kernel ERROR: %d\n", __FUNCTION__, res);
-		fflush(stdout);
-	    }
-	    /* Exit CUDA context */
-	    kaapi_cuda_ctx_pop( );
-#endif
+	kaapi_cuda_data_send(fmt, pc->sp);
+	res = cuCtxSynchronize();
+	if (res != cudaSuccess) {
+	  fprintf(stdout, "[%s] CUDA kernel ERROR: %d\n",
+		  __FUNCTION__, res);
+	  fflush(stdout);
 	}
+	body(pc->sp, kaapi_cuda_kernel_stream());
+	res = cuCtxSynchronize();
+	if (res != cudaSuccess) {
+	  fprintf(stdout, "[%s] CUDA kernel ERROR: %d\n",
+		  __FUNCTION__, res);
+	  fflush(stdout);
+	}
+	kaapi_cuda_data_recv(fmt, pc->sp);
+	res = cuCtxSynchronize();
+	cuStreamSynchronize(kaapi_cuda_DtoH_stream());
+	//const cudaError_t res = cuStreamSynchronize( kaapi_cuda_DtoH_stream() );
+	if (res != cudaSuccess) {
+	  fprintf(stdout, "[%s] CUDA kernel ERROR: %d\n",
+		  __FUNCTION__, res);
+	  fflush(stdout);
+	}
+	/* Exit CUDA context */
+	kaapi_cuda_ctx_pop();
+#endif
+      }
 #endif
     } else {
-      if (state & KAAPI_TASK_STATE_TERM)
-      {
-      }
-      else if (state & KAAPI_TASK_STATE_MERGE)
-        kaapi_aftersteal_body(pc->sp, fp, pc);
-      else if (state & KAAPI_TASK_STATE_STEAL)
-      {
-        /* try to preempted the task 0:do nothing, EINTR: the victim get it back... */
-        int retval = __kaapi_try_preempt(stack,pc);
-        if (retval == EWOULDBLOCK) 
-        {
-          fp[-1].pc = pc;  
-          stack->sfp = fp-1;
-          return EWOULDBLOCK;
-        }
-        if (retval == EINTR) 
-          goto redo_exec;
-        if (retval == ENOEXEC)
-          kaapi_aftersteal_body(pc->sp, fp, pc);
-        /* else: terminated, to nothing */
+      if (state & KAAPI_TASK_STATE_TERM) {
+      } else if (state & KAAPI_TASK_STATE_MERGE)
+	kaapi_aftersteal_body(pc->sp, fp, pc);
+      else if (state & KAAPI_TASK_STATE_STEAL) {
+	/* try to preempted the task 0:do nothing, EINTR: the victim get it back... */
+	int retval = __kaapi_try_preempt(stack, pc);
+	if (retval == EWOULDBLOCK) {
+	  fp[-1].pc = pc;
+	  stack->sfp = fp - 1;
+	  return EWOULDBLOCK;
+	}
+	if (retval == EINTR)
+	  goto redo_exec;
+	if (retval == ENOEXEC)
+	  kaapi_aftersteal_body(pc->sp, fp, pc);
+	/* else: terminated, to nothing */
       }
       /* if I have been preempted, then continue to the next task */
-      if (state & KAAPI_TASK_STATE_SIGNALED)
-      {
-        printf("I was preempted\n"); fflush(stdout);
-        continue;
+      if (state & KAAPI_TASK_STATE_SIGNALED) {
+	printf("I was preempted\n");
+	fflush(stdout);
+	continue;
       }
     }
 
@@ -234,78 +230,70 @@ redo_exec:
 #endif
 
     /* post execution: new tasks created ??? */
-    if (unlikely(sp > fp->sp))
-    {
+    if (unlikely(sp > fp->sp)) {
       /* same pc in fp */
       fp[-1].pc = pc;
       goto push_frame;
-    }
-    else {
+    } else {
       /* else task has been executed: delete it from the queue in order
          stealer may detected ready tasks
-      */
+       */
       fp[-1].pc = pc;
     }
 
-  } /* end of the loop */
-  kaapi_assert_debug( pc == sp );
+  }				/* end of the loop */
+  kaapi_assert_debug(pc == sp);
 
   --fp;
   fp->pc = pc;
 
-  kaapi_assert_debug( fp >= eframe);
+  kaapi_assert_debug(fp >= eframe);
 
   /* pop frame */
 
 #if defined(KAAPI_USE_LOCKTOPOP_FRAME)
   /* lock based pop */
   int tolock = 0;
-  if (fp > eframe)
-  {
+  if (fp > eframe) {
     /* here it's a pop of frame: we lock the thread */
-    while (fp > eframe) 
-    {
+    while (fp > eframe) {
       /* pop the frame */
       --fp;
 
       tolock = tolock || (fp <= stack->thieffp);
       if (tolock)
-        kaapi_atomic_lock(&stack->lock);
+	kaapi_atomic_lock(&stack->lock);
 
       /* finish to execute child tasks, pop current task of the frame */
-      if (--fp->pc > fp->sp)
-      {
-        stack->sfp = fp;
-        if (tolock)
-          kaapi_sched_unlock(&stack->lock);
-        goto push_frame; /* remains work do do */
+      if (--fp->pc > fp->sp) {
+	stack->sfp = fp;
+	if (tolock)
+	  kaapi_sched_unlock(&stack->lock);
+	goto push_frame;	/* remains work do do */
       }
-    } 
+    }
     fp->sp = fp->pc;
   }
   stack->sfp = fp;
   if (tolock)
     kaapi_sched_unlock(&stack->lock);
 
-#else //---------#if defined(KAAPI_USE_LOCKTOPOP_FRAME)
+#else				//---------#if defined(KAAPI_USE_LOCKTOPOP_FRAME)
   /* THE based pop */
-  if (fp > eframe)
-  {
+  if (fp > eframe) {
     /* here it's a pop of frame: we lock the thread */
-    while (fp > eframe) 
-    {
+    while (fp > eframe) {
       /* pop the frame */
       --fp;
 
       /* finish to execute child tasks, pop current task of the frame */
-      if (--fp->pc > fp->sp)
-      {
-        stack->sfp = fp;
-        if (fp <= stack->thieffp)
-          kaapi_atomic_waitlock(&stack->lock);
-        goto push_frame; /* remains work do do */
+      if (--fp->pc > fp->sp) {
+	stack->sfp = fp;
+	if (fp <= stack->thieffp)
+	  kaapi_atomic_waitlock(&stack->lock);
+	goto push_frame;	/* remains work do do */
       }
-    } 
+    }
     fp->sp = fp->pc;
   }
   stack->sfp = fp;
@@ -315,8 +303,8 @@ redo_exec:
 //----------
 
   /* end of the pop: we have finish to execute all the tasks */
-  kaapi_assert_debug( fp->pc == fp->sp );
-  kaapi_assert_debug( stack->sfp == eframe );
+  kaapi_assert_debug(fp->pc == fp->sp);
+  kaapi_assert_debug(stack->sfp == eframe);
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_PERF_REG(stack->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
@@ -330,39 +318,37 @@ redo_exec:
    - lock the current state: add LOCKED flag to the state, if old value is not yet STEAL
     then the thief task has been terminated
 */
-int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc )
+int __kaapi_try_preempt(kaapi_stack_t * stack, kaapi_task_t * pc)
 {
   /* lock the state of the task. Used at terminaison to synchronize it with preemption */
-  while (!kaapi_task_trylock( pc ))
-  {
+  while (!kaapi_task_trylock(pc)) {
     uintptr_t state = kaapi_task_getstate(pc);
-    if ((state & KAAPI_TASK_STATE_TERM) != 0) 
+    if ((state & KAAPI_TASK_STATE_TERM) != 0)
       return 0;
     /* if marked merge, do merge code: return ENOEXEC. */
-    if ((state & KAAPI_TASK_STATE_MERGE) != 0) 
+    if ((state & KAAPI_TASK_STATE_MERGE) != 0)
       return ENOEXEC;
     kaapi_slowdown_cpu();
   }
-  
+
   /* Lock on pc is set and state & STEAL => wait to see reserved field.
      Here number of cycles = number of cycles of the thief requires between marksteal 
      and set reserved to the thief task.
-  */
-  while (pc->reserved ==0)
-  {
+   */
+  while (pc->reserved == 0) {
     kaapi_slowdown_cpu();
   }
 
   /* Uncomment these lines in order to activate preemption between DFG task
-  */
+   */
 #if 1
   /* try to preempt it: mark the thief task' state with SIGNALED bit */
-  uintptr_t oldstate = kaapi_task_orstate(pc->reserved, KAAPI_TASK_STATE_SIGNALED);
-  if (oldstate == KAAPI_TASK_STATE_EXEC)
-  {
+  uintptr_t oldstate =
+      kaapi_task_orstate(pc->reserved, KAAPI_TASK_STATE_SIGNALED);
+  if (oldstate == KAAPI_TASK_STATE_EXEC) {
     kaapi_task_unlock(pc);
     /* pc was already set to STATE_EXEC, execute it by the current thread */
-    return EINTR;  
+    return EINTR;
   }
 #endif
 

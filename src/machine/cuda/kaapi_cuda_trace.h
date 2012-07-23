@@ -56,29 +56,38 @@
 #include "kaapi_event.h"
 
 /* Init globally CUDA traces */
-int kaapi_cuda_trace_init( void );
+int kaapi_cuda_trace_init(void);
 
 /* Init traces by CUDA thread */
-int kaapi_cuda_trace_thread_init( void );
+int kaapi_cuda_trace_thread_init(void);
 
 /* Finalize globally CUDA traces */
-void kaapi_cuda_trace_finalize( void );
+void kaapi_cuda_trace_finalize(void);
 
 /* Finalize traces by CUDA thread */
-void kaapi_cuda_trace_thread_finalize( void );
+void kaapi_cuda_trace_thread_finalize(void);
 
 #else
 
-static inline int kaapi_cuda_trace_init( void ) {return 0;}
+static inline int kaapi_cuda_trace_init(void)
+{
+  return 0;
+}
 
-static inline int kaapi_cuda_trace_thread_init( void ) {return 0;}
+static inline int kaapi_cuda_trace_thread_init(void)
+{
+  return 0;
+}
 
-static inline void kaapi_cuda_trace_finalize( void ) {}
+static inline void kaapi_cuda_trace_finalize(void)
+{
+}
 
-static inline void kaapi_cuda_trace_thread_finalize( void )
-{}
+static inline void kaapi_cuda_trace_thread_finalize(void)
+{
+}
 
 #endif
 
 
-#endif /* KAAPI_CUDA_TRACE_H_INCLUDED */
+#endif				/* KAAPI_CUDA_TRACE_H_INCLUDED */

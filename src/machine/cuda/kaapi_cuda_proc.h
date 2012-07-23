@@ -45,7 +45,7 @@
 ** 
 */
 #ifndef KAAPI_CUDA_PROC_H_INCLUDED
-# define KAAPI_CUDA_PROC_H_INCLUDED
+#define KAAPI_CUDA_PROC_H_INCLUDED
 
 
 #include <pthread.h>
@@ -59,7 +59,7 @@
 #define KAAPI_CUDA_ASYNC	1
 #define KAAPI_CUDA_MEM_ALLOC_MANAGER	1
 #define KAAPI_CUDA_MEM_FREE_FACTOR	1
-//#define	KAAPI_CUDA_MODE_BASIC	1
+//#define       KAAPI_CUDA_MODE_BASIC   1
 
 #define KAAPI_CUDA_MAX_STREAMS	4
 
@@ -71,7 +71,8 @@
 //#define KAAPI_CUDA_DATA_CACHE_WT 1
 
 /* all CUDA kprocs indexed by device Id */
-extern struct kaapi_processor_t*  kaapi_cuda_all_kprocessors[KAAPI_CUDA_MAX_DEV];
+extern struct kaapi_processor_t
+*kaapi_cuda_all_kprocessors[KAAPI_CUDA_MAX_DEV];
 extern uint32_t kaapi_cuda_count_kprocessors;
 
 /* barrier to synchronize all CUDA proc devices */
@@ -80,63 +81,60 @@ extern kaapi_atomic_t kaapi_cuda_synchronize_barrier;
 struct kaapi_cuda_stream_t;
 
 enum {
-    KAAPI_CUDA_STREAM_HTOD,
-    KAAPI_CUDA_STREAM_KERNEL,
-    KAAPI_CUDA_STREAM_DTOH,
-    KAAPI_CUDA_STREAM_DTOD
+  KAAPI_CUDA_STREAM_HTOD,
+  KAAPI_CUDA_STREAM_KERNEL,
+  KAAPI_CUDA_STREAM_DTOH,
+  KAAPI_CUDA_STREAM_DTOD
 };
 
-typedef struct kaapi_cuda_ctx
-{
-	cublasHandle_t handle;
+typedef struct kaapi_cuda_ctx {
+  cublasHandle_t handle;
 } kaapi_cuda_ctx_t;
 
 struct kaapi_cuda_mem_blk_t;
 
-typedef struct kaapi_cuda_mem
-{
-	size_t total;
-	size_t used;
-	struct {
-	    struct kaapi_cuda_mem_blk_t* beg;
-	    struct kaapi_cuda_mem_blk_t* end;
-	} ro;
-	struct {
-	    struct kaapi_cuda_mem_blk_t* beg;
-	    struct kaapi_cuda_mem_blk_t* end;
-	} rw;
+typedef struct kaapi_cuda_mem {
+  size_t total;
+  size_t used;
+  struct {
+    struct kaapi_cuda_mem_blk_t *beg;
+    struct kaapi_cuda_mem_blk_t *end;
+  } ro;
+  struct {
+    struct kaapi_cuda_mem_blk_t *beg;
+    struct kaapi_cuda_mem_blk_t *end;
+  } rw;
 
-	/* all GPU allocated pointers */
-	kaapi_big_hashmap_t kmem;
+  /* all GPU allocated pointers */
+  kaapi_big_hashmap_t kmem;
 
-	cudaEvent_t event; /* used to H2D events */
+  cudaEvent_t event;		/* used to H2D events */
 } kaapi_cuda_mem_t;
 
-typedef struct kaapi_cuda_proc
-{
-    unsigned int index;
-    struct cudaDeviceProp  deviceProp;
-    struct kaapi_cuda_stream_t* kstream;
-    kaapi_cuda_ctx_t ctx;
-    kaapi_cuda_mem_t memory;
+typedef struct kaapi_cuda_proc {
+  unsigned int index;
+  struct cudaDeviceProp deviceProp;
+  struct kaapi_cuda_stream_t *kstream;
+  kaapi_cuda_ctx_t ctx;
+  kaapi_cuda_mem_t memory;
 
-    kaapi_atomic_t synchronize_flag; /* synchronization flag */
+  kaapi_atomic_t synchronize_flag;	/* synchronization flag */
 
-    int is_initialized;
+  int is_initialized;
 
-    /* cached attribtues */
-    unsigned int kasid_user;
-    kaapi_address_space_id_t asid;
-    
-    unsigned int peers[KAAPI_CUDA_MAX_DEV]; /* enabled access peer */
+  /* cached attribtues */
+  unsigned int kasid_user;
+  kaapi_address_space_id_t asid;
+
+  unsigned int peers[KAAPI_CUDA_MAX_DEV];	/* enabled access peer */
 
 } kaapi_cuda_proc_t;
 
-void kaapi_cuda_init( void );
+void kaapi_cuda_init(void);
 
-int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t*, unsigned int);
+int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t *, unsigned int);
 
-int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t*);
+int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t *);
 
 size_t kaapi_cuda_get_proc_count(void);
 
@@ -148,50 +146,44 @@ cudaStream_t kaapi_cuda_DtoH_stream(void);
 
 cudaStream_t kaapi_cuda_DtoD_stream(void);
 
-static inline int
-kaapi_cuda_device_sync( void )
+static inline int kaapi_cuda_device_sync(void)
 {
-    const cudaError_t res = cudaDeviceSynchronize( );
-    if( res != cudaSuccess ) {
-	    fprintf( stdout, "%s: cudaDeviceSynchronize ERROR %d\n", __FUNCTION__, res);
-	    fflush(stdout);
-    }
-    return (int)res;
+  const cudaError_t res = cudaDeviceSynchronize();
+  if (res != cudaSuccess) {
+    fprintf(stdout, "%s: cudaDeviceSynchronize ERROR %d\n", __FUNCTION__,
+	    res);
+    fflush(stdout);
+  }
+  return (int) res;
 }
 
-static inline struct kaapi_processor_t*
-kaapi_cuda_get_proc_by_dev( unsigned int id )
+static inline struct kaapi_processor_t *kaapi_cuda_get_proc_by_dev(unsigned
+								   int id)
 {
-  kaapi_assert_debug( (id >= 0) && (id < KAAPI_CUDA_MAX_DEV) );
+  kaapi_assert_debug((id >= 0) && (id < KAAPI_CUDA_MAX_DEV));
   return kaapi_cuda_all_kprocessors[id];
 }
 
-extern void
-kaapi_cuda_stream_poll( struct kaapi_processor_t* const );
+extern void kaapi_cuda_stream_poll(struct kaapi_processor_t *const);
 
 /* Seachs for valid blocs in this GPU and invalid on host, and transfer them.
  * Each call it performs one transfer, if necessary. */
-extern int
-kaapi_cuda_memory_poll( struct kaapi_processor_t* const );
+extern int kaapi_cuda_memory_poll(struct kaapi_processor_t *const);
 
 /* Polls current operations on GPU cards using kstream from kproc */
-extern void 
-kaapi_cuda_proc_poll( struct kaapi_processor_t* const );
+extern void kaapi_cuda_proc_poll(struct kaapi_processor_t *const);
 
 /* Test if this kproc CUDA had finished its operations (kstream, etc) */
-extern int 
-kaapi_cuda_proc_end_isvalid( struct kaapi_processor_t* const kproc );
+extern int
+kaapi_cuda_proc_end_isvalid(struct kaapi_processor_t *const kproc);
 
 /* Synchronizes all CUDA kprocs */
-extern int
-kaapi_cuda_proc_sync_all( void );
+extern int kaapi_cuda_proc_sync_all(void);
 
 /* Synchronize CUDA kproc operations and memory */
-extern int
-kaapi_cuda_sync( struct kaapi_processor_t* const );
+extern int kaapi_cuda_sync(struct kaapi_processor_t *const);
 
 /* Test if all kproc CUDA had finished their operations (kstream, etc) */
-extern int
-kaapi_cuda_proc_all_isvalid( void );
+extern int kaapi_cuda_proc_all_isvalid(void);
 
-#endif /* ! KAAPI_CUDA_PROC_H_INCLUDED */
+#endif				/* ! KAAPI_CUDA_PROC_H_INCLUDED */

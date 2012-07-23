@@ -55,22 +55,23 @@ unsigned int kaapi_cuda_get_kasid_user(size_t i)
   return KAAPI_CUDA_KASID_USER_BASE + i;
 }
 
-kaapi_cuda_proc_t* kaapi_cuda_get_proc_by_kasid
-(kaapi_address_space_id_t kasid)
-{
-#if 0 /* not_implemented */
+kaapi_cuda_proc_t *kaapi_cuda_get_proc_by_kasid
+    (kaapi_address_space_id_t kasid) {
+#if 0				/* not_implemented */
 
   /* the kasid user we are looking for */
   const unsigned int kasid_user = (unsigned int)
-    kaapi_memory_address_space_getuser(kasid);
+      kaapi_memory_address_space_getuser(kasid);
 
   size_t kid;
-  for (kid = 0; kid < kaapi_count_kprocessors; ++kid)
-  {
-    kaapi_processor_t* const kproc = kaapi_all_kprocessors[kid];
-    if (kproc == NULL) continue;
-    if (kproc->proc_type != KAAPI_PROC_TYPE_CUDA) continue;
-    if (kproc->cuda_proc.kasid_user == kasid_user) return &kproc->cuda_proc;
+  for (kid = 0; kid < kaapi_count_kprocessors; ++kid) {
+    kaapi_processor_t *const kproc = kaapi_all_kprocessors[kid];
+    if (kproc == NULL)
+      continue;
+    if (kproc->proc_type != KAAPI_PROC_TYPE_CUDA)
+      continue;
+    if (kproc->cuda_proc.kasid_user == kasid_user)
+      return &kproc->cuda_proc;
   }
 
 #endif

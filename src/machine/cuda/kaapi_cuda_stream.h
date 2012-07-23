@@ -83,19 +83,19 @@ typedef enum {
 /*
 */
 typedef struct kaapi_cuda_status_t {
-  int       state;
-  int       error;
+  int state;
+  int error;
 } kaapi_cuda_status_t;
 
 
 typedef struct kaapi_cuda_request_t {
-  kaapi_cuda_status_t              status;
-  int                            (*u_fnc)( struct kaapi_cuda_stream_t*, void*, void* );
-  void*                            u_arg[2];
+  kaapi_cuda_status_t status;
+  int (*u_fnc) (struct kaapi_cuda_stream_t *, void *, void *);
+  void *u_arg[2];
 #if CONFIG_USE_EVENT
-  cudaEvent_t                      event;
+  cudaEvent_t event;
 #endif
-  struct kaapi_cuda_request_t*     next;        /* next following fifo order */
+  struct kaapi_cuda_request_t *next;	/* next following fifo order */
 } kaapi_cuda_request_t;
 
 
@@ -103,12 +103,11 @@ typedef struct kaapi_cuda_request_t {
    A Kaapi Cuda stream allows the user to insert asynchronous
    operations that complete in a Fifo order.
 */
-typedef struct kaapi_cuda_fifo_stream_t
-{
-  cudaStream_t          stream;
-  uint64_t		cnt;	/* number of requests */
-  kaapi_cuda_request_t* head;  /* first in the fifo order (insertion in tail)*/
-  kaapi_cuda_request_t* tail;  /* last pushed in the fifo order */
+typedef struct kaapi_cuda_fifo_stream_t {
+  cudaStream_t stream;
+  uint64_t cnt;			/* number of requests */
+  kaapi_cuda_request_t *head;	/* first in the fifo order (insertion in tail) */
+  kaapi_cuda_request_t *tail;	/* last pushed in the fifo order */
 } kaapi_cuda_fifo_stream_t;
 
 
@@ -118,13 +117,12 @@ typedef struct kaapi_cuda_fifo_stream_t
    memory operation (H2D or D2H) and asynchronous
    kernel invocation.
 */
-typedef struct kaapi_cuda_stream_t
-{
+typedef struct kaapi_cuda_stream_t {
 //  struct kaapi_cuda_proc_t* context;
-  kaapi_cuda_proc_t* context;
+  kaapi_cuda_proc_t *context;
 
-  kaapi_cuda_fifo_stream_t  input_fifo;
-  kaapi_cuda_fifo_stream_t  output_fifo;
+  kaapi_cuda_fifo_stream_t input_fifo;
+  kaapi_cuda_fifo_stream_t output_fifo;
 
 #if CONFIG_USE_CONCURRENT_KERNELS
   /* round robin allocator */
@@ -136,8 +134,8 @@ typedef struct kaapi_cuda_stream_t
 #endif
 
   /* request allocator */
-  kaapi_cuda_request_t* lfree;
-  kaapi_cuda_request_t* nodes;
+  kaapi_cuda_request_t *lfree;
+  kaapi_cuda_request_t *nodes;
 
 } kaapi_cuda_stream_t;
 
@@ -153,18 +151,14 @@ typedef struct kaapi_cuda_stream_t
    the stream will do not accept new asynchronous operation
    until a previously pushed operation completes.
 */
-extern int kaapi_cuda_stream_init(
-	unsigned int capacity, 
-	kaapi_cuda_proc_t* proc
-);
+extern int kaapi_cuda_stream_init(unsigned int capacity,
+				  kaapi_cuda_proc_t * proc);
 
 
 /* Destroy a Kaapi cuda stream previously allocated by
    a call to wait_port_create.
 */
-extern void kaapi_cuda_stream_destroy(
-  kaapi_cuda_stream_t* stream
-);
+extern void kaapi_cuda_stream_destroy(kaapi_cuda_stream_t * stream);
 
 
 /* Must be equal to :
@@ -173,9 +167,9 @@ extern void kaapi_cuda_stream_destroy(
   KAAPI_TD_TYPE_OTHER= 2
 */
 typedef enum {
-  KAAPI_CUDA_OP_KER = 0,    /* kernel launch */
-  KAAPI_CUDA_OP_H2D = 1,    /* host 2 device operation */
-  KAAPI_CUDA_OP_D2H = 2     /* device 2 host operation */
+  KAAPI_CUDA_OP_KER = 0,	/* kernel launch */
+  KAAPI_CUDA_OP_H2D = 1,	/* host 2 device operation */
+  KAAPI_CUDA_OP_D2H = 2		/* device 2 host operation */
 } kaapi_cuda_stream_op_t;
 
 
@@ -195,32 +189,29 @@ typedef enum {
    in a fifo maner and they complet in order: the runtime invokes 
    the callback in the same order as the requests were pushed.
 */
-extern struct kaapi_cuda_request_t* kaapi_cuda_stream_push1(
-  kaapi_cuda_stream_t*    stream,
-  kaapi_cuda_stream_op_t  op,
-  ...
-  /* here format is:
-     - callback of kind:int (*cbk)( struct stream*, void* )
-     - one pointer for the callback
-  */
-);
+extern struct kaapi_cuda_request_t
+*kaapi_cuda_stream_push1(kaapi_cuda_stream_t * stream,
+			 kaapi_cuda_stream_op_t op, ...
+			 /* here format is:
+			    - callback of kind:int (*cbk)( struct stream*, void* )
+			    - one pointer for the callback
+			  */
+    );
 
-extern struct kaapi_cuda_request_t* kaapi_cuda_stream_push2(
-  kaapi_cuda_stream_t*    stream,
-  kaapi_cuda_stream_op_t  op,
-  ...
-  /* here format is:
-     - callback of kind:int (*cbk)( struct stream*, void*, void* )
-     - two pointers for the callback
-  */
-);
+extern struct kaapi_cuda_request_t
+*kaapi_cuda_stream_push2(kaapi_cuda_stream_t * stream,
+			 kaapi_cuda_stream_op_t op, ...
+			 /* here format is:
+			    - callback of kind:int (*cbk)( struct stream*, void*, void* )
+			    - two pointers for the callback
+			  */
+    );
 
 
 /** Blocking operation
 */
-extern kaapi_cuda_stream_state_t kaapi_cuda_wait_stream(
-  kaapi_cuda_stream_t*    stream
-);
+extern kaapi_cuda_stream_state_t kaapi_cuda_wait_stream(kaapi_cuda_stream_t
+							* stream);
 
 /** Wait the completion of the first requests in the fifo stream.
     Priority:
@@ -233,98 +224,92 @@ extern kaapi_cuda_stream_state_t kaapi_cuda_wait_stream(
     \retval ENOENT if all streams are empty
 */
 extern kaapi_cuda_stream_state_t
-kaapi_cuda_waitfirst_stream(
-  kaapi_cuda_stream_t*    stream
-);
+kaapi_cuda_waitfirst_stream(kaapi_cuda_stream_t * stream);
 
 /** Non blocking operation
 */
 extern kaapi_cuda_stream_state_t
-kaapi_cuda_test_stream(
-  kaapi_cuda_stream_t*    stream
-);
+kaapi_cuda_test_stream(kaapi_cuda_stream_t * stream);
 
 /**
 */
-extern kaapi_cuda_fifo_stream_t*
-kaapi_cuda_get_kernel_fifo(kaapi_cuda_stream_t* stream);
+extern kaapi_cuda_fifo_stream_t
+    * kaapi_cuda_get_kernel_fifo(kaapi_cuda_stream_t * stream);
 
 /**
 */
-static inline kaapi_cuda_fifo_stream_t*
-kaapi_cuda_get_input_fifo(kaapi_cuda_stream_t* stream)
-{ 
+static inline kaapi_cuda_fifo_stream_t
+    *kaapi_cuda_get_input_fifo(kaapi_cuda_stream_t * stream)
+{
   return &stream->input_fifo;
 }
 
 /**
 */
-static inline kaapi_cuda_fifo_stream_t*
-kaapi_cuda_get_output_fifo(kaapi_cuda_stream_t* stream)
-{ 
+static inline kaapi_cuda_fifo_stream_t
+    *kaapi_cuda_get_output_fifo(kaapi_cuda_stream_t * stream)
+{
   return &stream->output_fifo;
 }
 
 /**
 */
 static inline cudaStream_t
-kaapi_cuda_get_cudastream(kaapi_cuda_fifo_stream_t* stream)
-{ 
+kaapi_cuda_get_cudastream(kaapi_cuda_fifo_stream_t * stream)
+{
   return stream->stream;
 }
 
 static inline uint64_t
-kaapi_cuda_get_active_count_fifo( kaapi_cuda_fifo_stream_t* stream )
+kaapi_cuda_get_active_count_fifo(kaapi_cuda_fifo_stream_t * stream)
 {
-    return stream->cnt;
+  return stream->cnt;
 }
 
 kaapi_cuda_stream_state_t
-kaapi_cuda_waitfirst_input( kaapi_cuda_stream_t*      stream );
+kaapi_cuda_waitfirst_input(kaapi_cuda_stream_t * stream);
 
 
 kaapi_cuda_stream_state_t
-kaapi_cuda_waitfirst_kernel( kaapi_cuda_stream_t*      stream );
+kaapi_cuda_waitfirst_kernel(kaapi_cuda_stream_t * stream);
 
-static inline int 
-kaapi_cuda_stream_is_empty( kaapi_cuda_stream_t* kstream )
+static inline int kaapi_cuda_stream_is_empty(kaapi_cuda_stream_t * kstream)
 {
-    return (
-	(kaapi_cuda_get_active_count_fifo(kaapi_cuda_get_input_fifo(kstream)) == 0) &&
-	(kaapi_cuda_get_active_count_fifo(kaapi_cuda_get_output_fifo(kstream)) == 0) &&
-	(kaapi_cuda_get_active_count_fifo(kaapi_cuda_get_kernel_fifo(kstream)) == 0) 
-	    );
+  return ((kaapi_cuda_get_active_count_fifo
+	   (kaapi_cuda_get_input_fifo(kstream)) == 0)
+	  &&
+	  (kaapi_cuda_get_active_count_fifo
+	   (kaapi_cuda_get_output_fifo(kstream)) == 0)
+	  &&
+	  (kaapi_cuda_get_active_count_fifo
+	   (kaapi_cuda_get_kernel_fifo(kstream)) == 0));
 }
 
-void
-kaapi_cuda_stream_poll( kaapi_processor_t* const );
+void kaapi_cuda_stream_poll(kaapi_processor_t * const);
 
 static inline void
-kaapi_cuda_stream_window_test( kaapi_cuda_stream_t* kstream )
+kaapi_cuda_stream_window_test(kaapi_cuda_stream_t * kstream)
 {
-    kaapi_cuda_test_stream( kstream );
-    /* The slicing window is applied to all streams */
-    while( 
-	    (kaapi_default_param.cudawindowsize <=
-	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_input_fifo(kstream)))
-	    ||
-	    (kaapi_default_param.cudawindowsize <=
-	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_kernel_fifo(kstream)))
-	    ||
-	    (kaapi_default_param.cudawindowsize <=
-	    kaapi_cuda_get_active_count_fifo( kaapi_cuda_get_output_fifo(kstream)))
-	)
-    {
-	kaapi_cuda_test_stream( kstream );
-    }
-    kaapi_cuda_test_stream( kstream );
+  kaapi_cuda_test_stream(kstream);
+  /* The slicing window is applied to all streams */
+  while ((kaapi_default_param.cudawindowsize <=
+	  kaapi_cuda_get_active_count_fifo(kaapi_cuda_get_input_fifo
+					   (kstream)))
+	 || (kaapi_default_param.cudawindowsize <=
+	     kaapi_cuda_get_active_count_fifo(kaapi_cuda_get_kernel_fifo
+					      (kstream)))
+	 || (kaapi_default_param.cudawindowsize <=
+	     kaapi_cuda_get_active_count_fifo(kaapi_cuda_get_output_fifo
+					      (kstream)))) {
+    kaapi_cuda_test_stream(kstream);
+  }
+  kaapi_cuda_test_stream(kstream);
 }
 
-static inline void
-kaapi_cuda_stream_waitall( kaapi_cuda_stream_t *kstream )
+static inline void kaapi_cuda_stream_waitall(kaapi_cuda_stream_t * kstream)
 {
-    while( !kaapi_cuda_stream_is_empty( kstream ) )
-	kaapi_cuda_test_stream( kstream );
+  while (!kaapi_cuda_stream_is_empty(kstream))
+    kaapi_cuda_test_stream(kstream);
 }
 
 #endif
