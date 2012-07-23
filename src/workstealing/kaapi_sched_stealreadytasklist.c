@@ -77,8 +77,8 @@ void kaapi_sched_stealreadytasklist(
       argsteal
         = (kaapi_taskstealready_arg_t*)kaapi_request_pushdata(request, sizeof(kaapi_taskstealready_arg_t));
 
-      argsteal->master_frame_tasklist = td->tasklist;
-      argsteal->td                    = td; /* recopy of the pointer, need synchro if range */
+      argsteal->master_tasklist = td->tasklist;
+      argsteal->td              = td; /* recopy of the pointer, need synchro if range */
 
       tasksteal = kaapi_request_toptask(request);
       kaapi_task_init(  tasksteal, kaapi_taskstealready_body, argsteal );

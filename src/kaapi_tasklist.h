@@ -153,7 +153,7 @@ typedef struct kaapi_taskdescr_t {
   kaapi_bitmap_value32_t        ocr;       /* OCR flag for the task */  
   int                           mark;      /* used by some graph algorithm, initial value=0 */
 
-  struct kaapi_frame_tasklist_t*tasklist;  /* owner - master tasklist */
+  struct kaapi_tasklist_t*  tasklist;      /* the owner, initial master tasklist */
   struct kaapi_taskdescr_t*	prev;
   struct kaapi_taskdescr_t*	next;
 
@@ -172,6 +172,28 @@ typedef struct kaapi_taskdescr_t {
 
 #include "tasklist/kaapi_readytasklist.h"
 
+/** TaskList
+    This data structure is used to execute a list of task descriptors computed into 
+    a frame_tasklist_t data structure.
+
+    At runntime, the list is managed as a LIFO queue of task descriptors: the most 
+    recent pushed task descriptor is poped first. When the completion of a task 
+    activate another tasks, they are
+    pushed into the ready list.
+    All data (task descriptors or activationlinks) are stores in allocator and 
+    are deallocated in group at the end.
+    
+    The tasklist_t has an workqueue interface: push/pop and steal.
+*/
+typedef struct kaapi_tasklist_t {
+  kaapi_readytasklist_t          rtl;            /* the workqueue of ready tasks */
+  struct kaapi_tasklist_t*       master;         /* the initial tasklist or 0 */
+  struct kaapi_frame_tasklist_t* frame_tasklist; /* if master ==0, then the initial frame_tasklist, or 0 */
+  kaapi_atomic_t                 cnt_exec;
+  intptr_t                       total_tasks;/* total number of tasks in the frame */
+} kaapi_tasklist_t;
+
+
 /** frame TaskList
     This data structure is attached to a frame and must be considered as 
     an acceleratrice data structure in place of the standard FIFO queue of 
@@ -187,10 +209,8 @@ typedef struct kaapi_taskdescr_t {
     The frame_tasklist cannot be directly steal, but the list of ready tasks can.
 */
 typedef struct kaapi_frame_tasklist_t {
-  kaapi_readytasklist_t*  rtl;       /* initial task list where ready tasks are initially pushed */
-  struct kaapi_thread_context_t* thread; /* thread that execute the task list */
-  
-  kaapi_recvactlink_t*    recv;       /* next entry to receive */
+  kaapi_tasklist_t        tasklist;   /* initial task list where ready tasks are initially pushed */  
+  kaapi_recvactlink_t*    recv;       /* next entry to receive. NOT USED YET */
 
   /* constant data fields (after creation) */
   kaapi_activationlist_t  readylist;   /* readylist of task descriptor */
@@ -202,34 +222,11 @@ typedef struct kaapi_frame_tasklist_t {
   kaapi_allocator_t       td_allocator;  /* where to push task descriptor */
   kaapi_allocator_t       allocator;  /* where to push other data structure */
   uint64_t                t_infinity; /* length path in the graph of tasks */
-#if defined(TASKLIST_ONEGLOBAL_MASTER) && !defined(TASKLIST_REPLY_ONETD)
+#if !defined(TASKLIST_REPLY_ONETD)
   kaapi_atomic_t          pending_stealop;
 #endif
-  kaapi_atomic_t          cnt_exec;
-  intptr_t                total_tasks;/* total number of tasks in the frame */
 } kaapi_frame_tasklist_t;
 
-
-
-/** TaskList
-    This data structure is used to execute a list of task descriptors computed into 
-    a frame_tasklist_t data structure.
-
-    At runntime, the list is managed as a LIFO queue of task descriptors: the most 
-    recent pushed task descriptor is poped first. When the completion of a task 
-    activate another tasks, they are
-    pushed into the ready list.
-    All data (task descriptors or activationlinks) are stores in allocator and 
-    are deallocated in group at the end.
-    
-    The tasklist_t has an workqueue interface: push/pop and steal.
-*/
-typedef struct kaapi_tasklist_t {
-  kaapi_readytasklist_t          rtl;        /* the workqueue of ready tasks */
-  struct kaapi_frame_tasklist_t* master;    /* the initial frame tasklist or 0 */
-  kaapi_atomic_t                 cnt_exec;
-  intptr_t                       total_tasks;/* total number of tasks in the frame */
-} kaapi_tasklist_t;
 
 
 #include "tasklist/kaapi_version.h"
@@ -311,27 +308,25 @@ static inline int kaapi_taskdescr_activated( kaapi_taskdescr_t* td)
 */
 extern int kaapi_frame_tasklist_init( kaapi_frame_tasklist_t* tl, struct kaapi_thread_context_t* thread );
 
-
-/* Here thread is only used to get a pointer in the stack where to store
-   pointers to taskdescr during execution.
-   It should be remove for partitionnig
+/* Initialize a worker tasklist given the master task list in parameter
 */
-static inline int kaapi_tasklist_init( kaapi_tasklist_t* tl, kaapi_frame_tasklist_t* ftl )
+static inline int kaapi_tasklist_init( kaapi_tasklist_t* tl, kaapi_tasklist_t* mtl )
 {
   kaapi_readytasklist_init(&tl->rtl);
+  
+  tl->master         = mtl;
+  tl->frame_tasklist = 0;
+  tl->total_tasks    = 0;
 
   KAAPI_ATOMIC_WRITE(&tl->cnt_exec, 0);
+
+  return 0;
+}
+
+static inline int kaapi_tasklist_destroy( kaapi_tasklist_t* tl )
+{
+  kaapi_readytasklist_destroy(&tl->rtl);
   
-  if (ftl !=0)
-  {
-    tl->master      = ftl;
-    tl->total_tasks = ftl->total_tasks;
-    ftl->rtl = &tl->rtl;
-  }
-  else {
-    tl->master      = 0;
-    tl->total_tasks = 0;
-  }
   return 0;
 }
 
@@ -371,7 +366,7 @@ static inline kaapi_taskdescr_t* kaapi_allocator_allocate_td(
   kaapi_taskdescr_t* td = 
       (kaapi_taskdescr_t*)kaapi_allocator_allocate( kal, sizeof(kaapi_taskdescr_t) );
   KAAPI_ATOMIC_WRITE(&td->counter, 0);
-  td->wc         = 0;
+  td->wc         = 0;  
   td->task       = task;
   td->fmt 	     = task_fmt;
   /* TODO: here */
@@ -401,8 +396,8 @@ static inline kaapi_taskdescr_t* kaapi_tasklist_allocate_td(
 {
   kaapi_taskdescr_t* td;
   td = kaapi_allocator_allocate_td( &tl->td_allocator, task, task_fmt );
-  td->tasklist = tl;
-  ++tl->total_tasks;
+  td->tasklist = &tl->tasklist;
+  ++tl->tasklist.total_tasks;
   return td;
 }
 
@@ -583,7 +578,7 @@ static inline int kaapi_readytasklist_pushready_td(
     if( td->priority > KAAPI_TASKLIST_GPU_MIN_PRIORITY ) 
     {
 	    kaapi_assert_debug( td->tasklist != NULL );
-	    return kaapi_readylist_push( td->tasklist->rtl, td, priority );
+	    return kaapi_readylist_push( &td->tasklist->rtl, td, priority );
     }
   
   if( kaapi_default_param.affinity ) {
@@ -665,9 +660,6 @@ static inline int kaapi_tasklistready_push_init_fromsteal(
     kaapi_readytasklist_pushready_td(
         &tasklist->rtl, 
         *begin, 
-#if !defined(TASKLIST_ONEGLOBAL_MASTER)  
-        begin,
-#endif
         (*begin)->priority 
     );
     ++begin;
@@ -681,23 +673,20 @@ static inline int kaapi_tasklistready_push_init_fromsteal(
     Else return 0.
     DEPRECTATED: use kaapi_readytasklist_push_from_activationlist
 */
-__attribute__((deprecated))
 static inline int kaapi_thread_tasklistready_push_init(
-	kaapi_tasklist_t* tasklist, kaapi_activationlist_t* acl
+	kaapi_tasklist_t* tasklist, 
+  kaapi_activationlist_t* acl
 )
 {
   kaapi_activationlink_t* head;
-//  kaapi_readytasklist_t* rtl = &tasklist->rtl;
+  kaapi_readytasklist_t* rtl = &tasklist->rtl;
 
   head = acl->front;
   while (head !=0)
   {
     kaapi_readytasklist_pushready_td(
-        &tasklist->rtl, 
+        rtl, 
         head->td, 
-#if !defined(TASKLIST_ONEGLOBAL_MASTER)  
-        &head->td,
-#endif
         head->td->priority 
     );
     head = head->next;

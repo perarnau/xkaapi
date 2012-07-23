@@ -52,7 +52,7 @@ void kaapi_sched_stealtasklist(
                                kaapi_tasklist_t*             tasklist, 
                                kaapi_listrequest_t*          lrequests, 
                                kaapi_listrequest_iterator_t* lrrange
-                               )
+)
 {
   int                     err;
   kaapi_readytasklist_t*  rtl;
@@ -77,8 +77,8 @@ void kaapi_sched_stealtasklist(
        The original body is saved as the extra body of the original task data structure.
        */
       kaapi_taskstealready_arg_t* argsteal = (kaapi_taskstealready_arg_t*)kaapi_request_pushdata(request, sizeof(kaapi_taskstealready_arg_t));
-      argsteal->master_frame_tasklist = tasklist->master;
-      argsteal->td                    = td;      /* recopy of the pointer, need synchro if range */
+      argsteal->master_tasklist = tasklist->master;
+      argsteal->td              = td;      /* recopy of the pointer, need synchro if range */
       tasksteal = kaapi_request_toptask(request);
       kaapi_task_init(  tasksteal, kaapi_taskstealready_body, argsteal );
       kaapi_request_pushtask(request, 0);

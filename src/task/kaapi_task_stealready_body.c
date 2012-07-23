@@ -70,7 +70,7 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
   /* create a new tasklist on the stack of the running thread
   */
   tasklist = (kaapi_tasklist_t*)kaapi_thread_pushdata(uthread, sizeof(kaapi_tasklist_t));
-  kaapi_tasklist_init( tasklist, 0 );
+  kaapi_tasklist_init( tasklist, arg->master_tasklist );
 
   /* Execute the orinal body function with the original args */
   frame = (kaapi_frame_t*)uthread;
@@ -97,7 +97,7 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
   kaapi_processor_incr_workload(kaapi_get_current_processor(), arg->td_end-arg->td_beg);
 #endif
   
-#if defined(TASKLIST_ONEGLOBAL_MASTER) && !defined(TASKLIST_REPLY_ONETD)
+#if !defined(TASKLIST_REPLY_ONETD)
   /* to synchronize steal operation and the recopy of TD on the non master tasklist */
   if (arg->victim_tasklist != 0)
     KAAPI_ATOMIC_DECR( &arg->victim_tasklist->pending_stealop );
@@ -119,7 +119,7 @@ void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
   
   /* report the number of executed task to the master tasklist */
   /* TODO change it */
-  KAAPI_ATOMIC_ADD( &arg->master_frame_tasklist->cnt_exec, KAAPI_ATOMIC_READ(&tasklist->cnt_exec) );
+  KAAPI_ATOMIC_ADD( &arg->master_tasklist->cnt_exec, KAAPI_ATOMIC_READ(&tasklist->cnt_exec) );
 
   kaapi_sched_unlock( &thread->stack.lock );
 

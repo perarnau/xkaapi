@@ -732,12 +732,12 @@ typedef struct kaapi_tasksteal_arg_t {
 /** Args for taskstealready
 */
 typedef struct kaapi_taskstealready_arg_t {
-  struct kaapi_frame_tasklist_t*  master_frame_tasklist; /* the original task list to signal */
+  struct kaapi_tasklist_t*  master_tasklist;   /* the original task list to signal */
 #if defined(TASKLIST_REPLY_ONETD)
-  struct kaapi_taskdescr_t*  td;                    /* the stolen td */
+  struct kaapi_taskdescr_t*  td;               /* the stolen td */
 #else
-  struct kaapi_taskdescr_t** td_beg;                /* range of stolen task into origin_tasklist */
-  struct kaapi_taskdescr_t** td_end;                /* range of stolen task into origin_tasklist */
+  struct kaapi_taskdescr_t** td_beg;           /* range of stolen task into origin_tasklist */
+  struct kaapi_taskdescr_t** td_end;           /* range of stolen task into origin_tasklist */
 #endif
 } kaapi_taskstealready_arg_t;
 

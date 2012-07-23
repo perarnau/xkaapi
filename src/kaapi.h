@@ -480,7 +480,7 @@ typedef struct kaapi_task_binding
 /* ========================================================================= */
 /** Task priority
 */
-#define KAAPI_TASK_MAX_PRIORITY     12
+#define KAAPI_TASK_MAX_PRIORITY     1
 #define KAAPI_TASK_MIN_PRIORITY     0
 
 #define KAAPI_TASK_STATE_SIGNALED   0x20   /* mask: extra flag to set the task as signaled for preemption */

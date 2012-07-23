@@ -190,7 +190,7 @@ int kaapi_thread_computedep_task(
   
   /* if wc ==0, push the task into the ready list */
   if (taskdescr->wc == 0)
-    kaapi_readytasklist_pushactivated(tasklist->rtl, taskdescr);
+    kaapi_readytasklist_pushactivated(&tasklist->tasklist.rtl, taskdescr);
 
 #if 0
     uint64_t t1 = kaapi_get_elapsedns();

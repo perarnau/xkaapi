@@ -49,20 +49,17 @@
 int kaapi_sched_computereadylist( void )
 {
   kaapi_frame_tasklist_t* frame_tasklist;
-  kaapi_tasklist_t* tasklist;
   int err;
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
   if (thread ==0) return EINVAL;
   if (kaapi_frame_isempty(thread->stack.sfp)) return ENOENT;
   frame_tasklist = (kaapi_frame_tasklist_t*)malloc(sizeof(kaapi_frame_tasklist_t));
-  tasklist = (kaapi_tasklist_t*) kaapi_thread_pushdata( kaapi_threadcontext2thread(thread), sizeof(kaapi_tasklist_t));
   kaapi_frame_tasklist_init( frame_tasklist, thread );
-  kaapi_tasklist_init( tasklist, frame_tasklist );
   
   err= kaapi_thread_computereadylist( thread, frame_tasklist  );
-  kaapi_readytasklist_push_from_activationlist( &tasklist->rtl, frame_tasklist->readylist.front );
+  kaapi_readytasklist_push_from_activationlist( &frame_tasklist->tasklist.rtl, frame_tasklist->readylist.front );
 
-  thread->stack.sfp->tasklist = tasklist;
+  thread->stack.sfp->tasklist = &frame_tasklist->tasklist;
   return err;
 }
 

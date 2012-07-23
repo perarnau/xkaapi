@@ -47,8 +47,6 @@
 
 int kaapi_frame_tasklist_init( kaapi_frame_tasklist_t* tl, struct kaapi_thread_context_t* thread )
 {
-    tl->rtl             = 0;
-    tl->thread          = thread;
     tl->recv            = 0;
     tl->count_recv      = 0;
     kaapi_activationlist_clear( &tl->readylist );
@@ -59,11 +57,12 @@ int kaapi_frame_tasklist_init( kaapi_frame_tasklist_t* tl, struct kaapi_thread_c
     kaapi_allocator_init( &tl->td_allocator );
     kaapi_allocator_init( &tl->allocator );
     tl->t_infinity      = 0;
-#if defined(TASKLIST_ONEGLOBAL_MASTER) && !defined(TASKLIST_REPLY_ONETD)
+#if !defined(TASKLIST_REPLY_ONETD)
     KAAPI_ATOMIC_WRITE(&tl->pending_stealop, 0);
 #endif
-    KAAPI_ATOMIC_WRITE(&tl->cnt_exec, 0);
-    tl->total_tasks     = 0;
+
+    kaapi_tasklist_init(&tl->tasklist, 0);
+    tl->tasklist.frame_tasklist = tl;
     return 0;
 }
 
@@ -73,6 +72,7 @@ int kaapi_frame_tasklist_destroy( kaapi_frame_tasklist_t* tl )
 {
   kaapi_allocator_destroy( &tl->td_allocator );
   kaapi_allocator_destroy( &tl->allocator );
+  kaapi_tasklist_destroy(&tl->tasklist);
   return 0;
 }
 

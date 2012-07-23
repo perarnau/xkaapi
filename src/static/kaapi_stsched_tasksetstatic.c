@@ -56,7 +56,6 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   int save_state;
   kaapi_frame_t* fp;
   kaapi_frame_t save_fp;
-  kaapi_tasklist_t* tasklist;
   kaapi_frame_tasklist_t* frame_tasklist;
   int16_t ngpu = 0;
   int16_t ncpu = 0;
@@ -150,7 +149,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   kaapi_thread_computereadylist(thread, frame_tasklist);
 
   /* populate tasklist with initial ready tasks */
-  kaapi_readytasklist_push_from_activationlist( &tasklist->rtl, frame_tasklist->readylist.front );
+  kaapi_thread_tasklistready_push_init( &frame_tasklist->tasklist, &frame_tasklist->readylist );
 
   KAAPI_EVENT_PUSH0(thread->stack.proc, thread, KAAPI_EVT_STATIC_END );
 
@@ -184,7 +183,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   
   /* restore state */
   kaapi_thread_set_unstealable(save_state);
-  thread->stack.sfp->tasklist = tasklist;
+  thread->stack.sfp->tasklist = &frame_tasklist->tasklist;
 
   /* exec the spawned subtasks */
   kaapi_sched_sync_(thread);

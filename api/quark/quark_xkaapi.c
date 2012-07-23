@@ -91,7 +91,6 @@ typedef struct Quark_sequence_s {
   int                     save_state;  /* */
   kaapi_frame_t           save_fp;     /* saved fp of the current stack before sequence creation */
   kaapi_frame_tasklist_t  frame_tasklist;    /* */
-  kaapi_tasklist_t        tasklist;    /* */
 } kaapi_quark_sequence_t;
 
 
@@ -824,13 +823,13 @@ printf("IN %s\n", __PRETTY_FUNCTION__);  fflush(stdout);
   if ((sequence->state_init & QUARK_SEQUENCE_TASKLIST_INIT) == 0)
   {
     kaapi_frame_tasklist_init( &sequence->frame_tasklist, thread );
-    kaapi_tasklist_init( &sequence->tasklist, &sequence->frame_tasklist );
   }
   kaapi_thread_computereadylist( thread, &sequence->frame_tasklist );
   /* populate tasklist with initial ready tasks */
-  kaapi_readytasklist_push_from_activationlist( &sequence->tasklist.rtl, sequence->frame_tasklist.readylist.front );
+  kaapi_readytasklist_push_from_activationlist( &sequence->frame_tasklist.tasklist.rtl, sequence->frame_tasklist.readylist.front );
 
-  thread->stack.sfp->tasklist = &sequence->tasklist;
+  thread->stack.sfp->tasklist = &sequence->frame_tasklist.tasklist;
+  
 
   if (quark_dump_dot)
   {

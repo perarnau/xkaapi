@@ -57,8 +57,8 @@ int kaapi_thread_startexecwithtd(
   thread = kaapi_threadcontext2thread(kproc->thread);
 
   argsteal= (kaapi_taskstealready_arg_t*)kaapi_thread_pushdata(thread, sizeof(kaapi_taskstealready_arg_t));
-  argsteal->master_frame_tasklist = td->tasklist;
-  argsteal->td                    = td;      /* recopy of the pointer, need synchro if range */
+  argsteal->master_tasklist = td->tasklist;
+  argsteal->td              = td;      /* recopy of the pointer, need synchro if range */
   tasksteal = kaapi_thread_toptask( thread );
   kaapi_task_init( tasksteal, kaapi_taskstealready_body, argsteal );
   kaapi_thread_pushtask( thread );

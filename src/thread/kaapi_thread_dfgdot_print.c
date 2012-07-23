@@ -550,7 +550,7 @@ static int kaapi_frame_print_dot_notasklist  ( FILE* file, const kaapi_frame_t* 
 int kaapi_frame_print_dot  ( FILE* file, const kaapi_frame_t* frame, int flag )
 {
   if ((file ==0) || (frame ==0)) return EINVAL;
-  if ((frame->tasklist !=0) && (frame->tasklist->master !=0))
-    return kaapi_frame_tasklist_print_dot(file, frame->tasklist->master, flag);
+  if ((frame->tasklist !=0) && (frame->tasklist->frame_tasklist !=0))
+    return kaapi_frame_tasklist_print_dot(file, frame->tasklist->frame_tasklist, flag);
   return kaapi_frame_print_dot_notasklist(file, frame);
 }
