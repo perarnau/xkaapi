@@ -53,19 +53,8 @@
 
 struct kaapi_cuda_fifo_stream_t;
 struct kaapi_cuda_stream_t;
-//struct kaapi_cuda_proc_t;
 
-/* notes on using event:
-   if we dont use events, we use refcount.
-   Querying refcount is faster than querying
-   event BUT querying streams is much slower
-   than querying events (at least with cuda4.0).
-   If we use events, we dont need query streams.
-   An additionnal reason for using event is if
-   the user code queues more than one stuff.
- */
 #define CONFIG_USE_EVENT 1
-
 
 typedef enum {
   KAAPI_CUDA_REQUEST_INIT,
@@ -87,17 +76,18 @@ typedef struct kaapi_cuda_status_t {
   int error;
 } kaapi_cuda_status_t;
 
+typedef int (*kaapi_cuda_stream_callback_t) (struct kaapi_cuda_stream_t *,
+					     void *);
 
 typedef struct kaapi_cuda_request_t {
   kaapi_cuda_status_t status;
-  int (*u_fnc) (struct kaapi_cuda_stream_t *, void *, void *);
-  void *u_arg[2];
+  kaapi_cuda_stream_callback_t fnc;
+  void *arg;
 #if CONFIG_USE_EVENT
   cudaEvent_t event;
 #endif
   struct kaapi_cuda_request_t *next;	/* next following fifo order */
 } kaapi_cuda_request_t;
-
 
 /* This is the Kaapi view of a Cuda stream.
    A Kaapi Cuda stream allows the user to insert asynchronous
@@ -154,18 +144,8 @@ typedef struct kaapi_cuda_stream_t {
 extern int kaapi_cuda_stream_init(unsigned int capacity,
 				  kaapi_cuda_proc_t * proc);
 
-
-/* Destroy a Kaapi cuda stream previously allocated by
-   a call to wait_port_create.
-*/
 extern void kaapi_cuda_stream_destroy(kaapi_cuda_stream_t * stream);
 
-
-/* Must be equal to :
-  KAAPI_TD_TYPE_CAL  = 0,
-  KAAPI_TD_TYPE_COM  = 1,
-  KAAPI_TD_TYPE_OTHER= 2
-*/
 typedef enum {
   KAAPI_CUDA_OP_KER = 0,	/* kernel launch */
   KAAPI_CUDA_OP_H2D = 1,	/* host 2 device operation */
@@ -190,23 +170,10 @@ typedef enum {
    the callback in the same order as the requests were pushed.
 */
 extern struct kaapi_cuda_request_t
-*kaapi_cuda_stream_push1(kaapi_cuda_stream_t * stream,
-			 kaapi_cuda_stream_op_t op, ...
-			 /* here format is:
-			    - callback of kind:int (*cbk)( struct stream*, void* )
-			    - one pointer for the callback
-			  */
-    );
-
-extern struct kaapi_cuda_request_t
-*kaapi_cuda_stream_push2(kaapi_cuda_stream_t * stream,
-			 kaapi_cuda_stream_op_t op, ...
-			 /* here format is:
-			    - callback of kind:int (*cbk)( struct stream*, void*, void* )
-			    - two pointers for the callback
-			  */
-    );
-
+*kaapi_cuda_stream_push(kaapi_cuda_stream_t * const stream,
+			const kaapi_cuda_stream_op_t op,
+			kaapi_cuda_stream_callback_t fnc,
+			void *const arg);
 
 /** Blocking operation
 */
@@ -239,7 +206,7 @@ extern kaapi_cuda_fifo_stream_t
 /**
 */
 static inline kaapi_cuda_fifo_stream_t
-    *kaapi_cuda_get_input_fifo(kaapi_cuda_stream_t * stream)
+    * kaapi_cuda_get_input_fifo(kaapi_cuda_stream_t * stream)
 {
   return &stream->input_fifo;
 }
@@ -247,7 +214,7 @@ static inline kaapi_cuda_fifo_stream_t
 /**
 */
 static inline kaapi_cuda_fifo_stream_t
-    *kaapi_cuda_get_output_fifo(kaapi_cuda_stream_t * stream)
+    * kaapi_cuda_get_output_fifo(kaapi_cuda_stream_t * stream)
 {
   return &stream->output_fifo;
 }

@@ -8,6 +8,7 @@
 **
 ** thierry.gautier@inrialpes.fr
 ** fabien.lementec@imag.fr
+** Joao.Lima@imag.fr / joao.lima@inf.ufrgs.br
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -48,7 +49,6 @@
 #include <cuda.h>
 #include <sys/types.h>
 #include <errno.h>
-#include <stdarg.h>
 
 #include <cuda_runtime_api.h>
 
@@ -111,7 +111,7 @@ kaapi_cuda_fifo_stream_destroy(kaapi_cuda_fifo_stream_t * fifo)
 }
 
 static inline kaapi_cuda_request_t
-    *kaapi_cuda_fifo_stream_first(kaapi_cuda_fifo_stream_t * fifo)
+    * kaapi_cuda_fifo_stream_first(kaapi_cuda_fifo_stream_t * fifo)
 {				/* first in fifo order: tail, because head insertion */
   return fifo->head;
 }
@@ -119,7 +119,7 @@ static inline kaapi_cuda_request_t
 /* Pop the top request return it
 */
 static kaapi_cuda_request_t
-    *kaapi_cuda_fifo_stream_pop(kaapi_cuda_fifo_stream_t * fifo)
+    * kaapi_cuda_fifo_stream_pop(kaapi_cuda_fifo_stream_t * fifo)
 {
   kaapi_cuda_request_t *retval = fifo->head;
   if (retval == NULL)
@@ -144,21 +144,17 @@ static kaapi_cuda_request_t
 /* Here stream and current device must match
 */
 static kaapi_cuda_request_t
-    *kaapi_cuda_stream_request_create(kaapi_cuda_stream_t * stream,
-				      int (*cbk) (), void *arg1,
-				      void *arg2)
+    * kaapi_cuda_stream_request_create(kaapi_cuda_stream_t * const stream,
+				       kaapi_cuda_stream_callback_t
+				       fnc, void *const arg)
 {
 #if CONFIG_USE_EVENT
   cudaError_t res;
 #endif
 
-  /* todo: dynamic allocation of bloc of requests and put them into
-     the free list
-   */
   kaapi_cuda_request_t *req = stream->lfree;
   if (req == 0)
     return 0;
-
 
 #if CONFIG_USE_EVENT
   res = cudaEventCreateWithFlags(&req->event, cudaEventDisableTiming);
@@ -176,9 +172,8 @@ static kaapi_cuda_request_t
   /* init */
   req->status.state = KAAPI_CUDA_REQUEST_INIT;
   req->status.error = 0;
-  req->u_fnc = cbk;
-  req->u_arg[0] = arg1;
-  req->u_arg[1] = arg2;
+  req->fnc = fnc;
+  req->arg = arg;
   req->next = 0;
 
   return req;
@@ -270,8 +265,8 @@ kaapi_cuda_fifo_stream_t *kaapi_cuda_get_kernel_fifo(kaapi_cuda_stream_t *
 /*
 */
 static kaapi_cuda_request_t
-    *kaapi_cuda_fifo_stream_enqueue(kaapi_cuda_fifo_stream_t * fifostream,
-				    kaapi_cuda_request_t * req)
+    * kaapi_cuda_fifo_stream_enqueue(kaapi_cuda_fifo_stream_t * fifostream,
+				     kaapi_cuda_request_t * req)
 {
   cudaError_t err;
 
@@ -301,16 +296,14 @@ static kaapi_cuda_request_t
 
 /* exported function
 */
-kaapi_cuda_request_t *kaapi_cuda_stream_push1(kaapi_cuda_stream_t * stream,
-					      kaapi_cuda_stream_op_t op,
-					      ...)
+kaapi_cuda_request_t *kaapi_cuda_stream_push(kaapi_cuda_stream_t *
+					     const stream,
+					     const kaapi_cuda_stream_op_t op,
+					     kaapi_cuda_stream_callback_t 
+					     fnc, void *const arg)
 {
   kaapi_cuda_fifo_stream_t *fifostream;
   kaapi_cuda_request_t *req;
-  int (*cbk) ();
-  void *arg;
-  va_list va_args;
-  va_start(va_args, op);
 
   switch (op) {
   case KAAPI_CUDA_OP_H2D:
@@ -325,13 +318,9 @@ kaapi_cuda_request_t *kaapi_cuda_stream_push1(kaapi_cuda_stream_t * stream,
   default:
     return 0;
   }
-  cbk = va_arg(va_args, int (*)());
-  arg = va_arg(va_args, void *);
-  va_end(va_args);
-
 
   /* cread and push */
-  req = kaapi_cuda_stream_request_create(stream, cbk, arg, 0);
+  req = kaapi_cuda_stream_request_create(stream, fnc, arg);
   if (req == 0) {
     kaapi_assert_debug(req != 0);
     return 0;
@@ -342,55 +331,6 @@ kaapi_cuda_request_t *kaapi_cuda_stream_push1(kaapi_cuda_stream_t * stream,
   kaapi_assert_debug(req != 0);
   return 0;
 }
-
-
-
-/* exported function
-*/
-kaapi_cuda_request_t *kaapi_cuda_stream_push2(kaapi_cuda_stream_t * stream,
-					      kaapi_cuda_stream_op_t op,
-					      ...)
-{
-  kaapi_cuda_fifo_stream_t *fifostream;
-  kaapi_cuda_request_t *req;
-  int (*cbk) ();
-  void *arg1;
-  void *arg2;
-  va_list va_args;
-  va_start(va_args, op);
-
-  switch (op) {
-  case KAAPI_CUDA_OP_H2D:
-    fifostream = &stream->input_fifo;
-    break;
-  case KAAPI_CUDA_OP_D2H:
-    fifostream = &stream->output_fifo;
-    break;
-  case KAAPI_CUDA_OP_KER:
-    fifostream = get_kernel_fifo(stream);
-    break;
-  default:
-    return 0;
-  }
-  cbk = va_arg(va_args, int (*)());
-  arg1 = va_arg(va_args, void *);
-  arg2 = va_arg(va_args, void *);
-  va_end(va_args);
-
-
-  /* cread and push */
-  req = kaapi_cuda_stream_request_create(stream, cbk, arg1, arg2);
-  if (req == 0) {
-    kaapi_assert_debug(req != 0);
-    return 0;
-  }
-
-  req = kaapi_cuda_fifo_stream_enqueue(fifostream, req);
-
-  kaapi_assert_debug(req != 0);
-  return 0;
-}
-
 
 /* Req is the request which success cuEventQuery or cuStreamQuery.
    Signal all request between the first request and the request last
@@ -406,8 +346,8 @@ kaapi_cuda_fifo_stream_signalall(kaapi_cuda_stream_t * stream,
 
   /* because stream are fifo -> all previous requests are ready */
   while ((req = kaapi_cuda_fifo_stream_pop(fifostream)) != 0) {
-    if (req->u_fnc != 0)
-      req->status.error = req->u_fnc(stream, req->u_arg[0], req->u_arg[1]);
+    if (req->fnc != 0)
+      req->status.error = req->fnc(stream, req->arg);
     kaapi_cuda_stream_request_free(stream, req);
     if (req == last)
       break;

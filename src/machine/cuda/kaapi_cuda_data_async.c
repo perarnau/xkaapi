@@ -39,10 +39,10 @@ kaapi_cuda_data_async_view_convert(kaapi_memory_view_t * dest_view, const
  * Context: it executes right before a CUDA task (kernel).
  */
 static inline kaapi_data_t
-    *xxx_kaapi_cuda_data_async_allocate(kaapi_mem_host_map_t * cuda_map,
-					kaapi_mem_data_t * kmd,
-					kaapi_data_t * src,
-					kaapi_access_mode_t m)
+    * xxx_kaapi_cuda_data_async_allocate(kaapi_mem_host_map_t * cuda_map,
+					 kaapi_mem_data_t * kmd,
+					 kaapi_data_t * src,
+					 kaapi_access_mode_t m)
 {
   const kaapi_mem_asid_t asid = kaapi_mem_host_map_get_asid(cuda_map);
 
@@ -70,7 +70,6 @@ static inline kaapi_data_t
 
 int
 kaapi_cuda_data_async_input_alloc(kaapi_cuda_stream_t * kstream,
-				  kaapi_tasklist_t * tasklist,
 				  kaapi_taskdescr_t * td)
 {
   size_t i;
@@ -130,7 +129,6 @@ kaapi_cuda_data_async_input_alloc(kaapi_cuda_stream_t * kstream,
  */
 int
 kaapi_cuda_data_async_input_dev_sync(kaapi_cuda_stream_t * kstream,
-				     kaapi_tasklist_t * tasklist,
 				     kaapi_taskdescr_t * td)
 {
   size_t i;
@@ -177,7 +175,6 @@ kaapi_cuda_data_async_input_dev_sync(kaapi_cuda_stream_t * kstream,
 
 int
 kaapi_cuda_data_async_input_host_sync(kaapi_cuda_stream_t * kstream,
-				      kaapi_tasklist_t * tasklist,
 				      kaapi_taskdescr_t * td)
 {
   size_t i;
@@ -215,7 +212,6 @@ kaapi_cuda_data_async_input_host_sync(kaapi_cuda_stream_t * kstream,
 
 int
 kaapi_cuda_data_async_recv(kaapi_cuda_stream_t * kstream,
-			   kaapi_tasklist_t * tasklist,
 			   kaapi_taskdescr_t * td)
 {
   size_t i;
@@ -264,7 +260,6 @@ kaapi_cuda_data_async_recv(kaapi_cuda_stream_t * kstream,
 
 int
 kaapi_cuda_data_async_output_dev_dec_use(kaapi_cuda_stream_t * kstream,
-					 kaapi_tasklist_t * tasklist,
 					 kaapi_taskdescr_t * td)
 {
   size_t i;

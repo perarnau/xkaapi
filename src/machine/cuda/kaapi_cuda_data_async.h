@@ -48,11 +48,9 @@
 #define KAAPI_CUDA_DATA_ASYNC_H_INCLUDED
 
 int kaapi_cuda_data_async_input_alloc(kaapi_cuda_stream_t * kstream,
-				      kaapi_tasklist_t * tasklist,
 				      kaapi_taskdescr_t * td);
 
 int kaapi_cuda_data_async_input_dev_sync(kaapi_cuda_stream_t * kstream,
-					 kaapi_tasklist_t * tasklist,
 					 kaapi_taskdescr_t * td);
 
 /** 
@@ -60,11 +58,9 @@ int kaapi_cuda_data_async_input_dev_sync(kaapi_cuda_stream_t * kstream,
  * Method called from a GPU thread and synchronizes host memory.
  */
 int kaapi_cuda_data_async_input_host_sync(kaapi_cuda_stream_t * kstream,
-					  kaapi_tasklist_t * tasklist,
 					  kaapi_taskdescr_t * td);
 
 int kaapi_cuda_data_async_recv(kaapi_cuda_stream_t * kstream,
-			       kaapi_tasklist_t * tasklist,
 			       kaapi_taskdescr_t * td);
 
 #if	KAAPI_CUDA_MEM_ALLOC_MANAGER
@@ -92,7 +88,6 @@ kaapi_cuda_data_async_sync_host(kaapi_data_t * kdata, cudaStream_t stream);
 int kaapi_cuda_data_async_sync_host2(kaapi_data_t * kdata);
 
 int kaapi_cuda_data_async_output_dev_dec_use(kaapi_cuda_stream_t *,
-					     kaapi_tasklist_t *,
 					     kaapi_taskdescr_t *);
 
 #endif				/* KAAPI_CUDA_DATA_ASYNC_H_INCLUDED */

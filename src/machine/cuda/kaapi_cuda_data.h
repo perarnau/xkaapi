@@ -60,41 +60,36 @@
 
 static inline int
 kaapi_cuda_data_input_alloc(kaapi_cuda_stream_t * kstream,
-			    kaapi_tasklist_t * tasklist,
 			    kaapi_taskdescr_t * td)
 {
-  return kaapi_cuda_data_async_input_alloc(kstream, tasklist, td);
+  return kaapi_cuda_data_async_input_alloc(kstream, td);
 }
 
 static inline int
 kaapi_cuda_data_input_dev_sync(kaapi_cuda_stream_t * kstream,
-			       kaapi_tasklist_t * tasklist,
 			       kaapi_taskdescr_t * td)
 {
-  return kaapi_cuda_data_async_input_dev_sync(kstream, tasklist, td);
+  return kaapi_cuda_data_async_input_dev_sync(kstream, td);
 }
 
 static inline int
 kaapi_cuda_data_input_host_sync(kaapi_cuda_stream_t * kstream,
-				kaapi_tasklist_t * tasklist,
 				kaapi_taskdescr_t * td)
 {
-  return kaapi_cuda_data_async_input_host_sync(kstream, tasklist, td);
+  return kaapi_cuda_data_async_input_host_sync(kstream, td);
 }
 
 static inline int
-kaapi_cuda_data_recv(kaapi_cuda_stream_t * kstream,
-		     kaapi_tasklist_t * tasklist, kaapi_taskdescr_t * td)
+kaapi_cuda_data_recv(kaapi_cuda_stream_t * kstream, kaapi_taskdescr_t * td)
 {
-  return kaapi_cuda_data_async_recv(kstream, tasklist, td);
+  return kaapi_cuda_data_async_recv(kstream, td);
 }
 
 static inline int
 kaapi_cuda_data_output_dev_dec_use(kaapi_cuda_stream_t * kstream,
-				   kaapi_tasklist_t * tasklist,
 				   kaapi_taskdescr_t * td)
 {
-  return kaapi_cuda_data_async_output_dev_dec_use(kstream, tasklist, td);
+  return kaapi_cuda_data_async_output_dev_dec_use(kstream, td);
 }
 
 /* ** Memory system **
