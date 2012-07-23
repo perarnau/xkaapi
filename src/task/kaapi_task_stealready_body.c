@@ -46,7 +46,9 @@
 #include <stdio.h> // debug 
 #include <inttypes.h>
 
-/**
+/** New version.
+    - the task kaapi_taskstealready_body is the first pushed task on a steal operation on a tasklist (i.e. when a taskdescr_t was stolen).
+    - the task
 */
 void kaapi_taskstealready_body( void* taskarg, kaapi_thread_t* uthread  )
 {

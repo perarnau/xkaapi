@@ -51,98 +51,86 @@
 
 #if 0
 static inline int
-kaapi_cuda_sched_has_task(
-	    const kaapi_processor_t* kproc
-	)
+kaapi_cuda_sched_has_task(const kaapi_processor_t * kproc)
 {
-    kaapi_thread_context_t* const thread = kproc->thread;
-    kaapi_frame_t*           top_frame;  
-    kaapi_tasklist_t*             tasklist;
-    kaapi_readytasklist_t*  rtl;
-    kaapi_onereadytasklist_t* onertl;
-    kaapi_taskdescr_t* td;
+  kaapi_thread_context_t *const thread = kproc->thread;
+  kaapi_frame_t *top_frame;
+  kaapi_tasklist_t *tasklist;
+  kaapi_readytasklist_t *rtl;
+  kaapi_onereadytasklist_t *onertl;
+  kaapi_taskdescr_t *td;
 
-    if( NULL == thread )
-	return 0;
-
-    for (  top_frame = thread->stack.stackframe; (top_frame <= thread->stack.sfp);
-	    ++top_frame) {
-	tasklist= top_frame->tasklist;
-	if( tasklist == 0 )
-	    continue;
-	rtl = &tasklist->rtl;
-	onertl = &rtl->prl[KAAPI_TASKLIST_MAX_PRIORITY];
-	if (onertl->next == -1) 
-	  continue;
-	td = onertl->base[1+onertl->next];
-	if( 0 != td->fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] ) {
-#if 0
-	    fprintf( stdout, "%s: OK frame %p td=%p(counter=%d,wc=%d,name=%s)\n",
-		    __FUNCTION__, top_frame,
-		    td,
-		    td->counter,
-		    td->wc,
-		    td->fmt->name
-		    );
-	    fflush(stdout);
-#endif
-	    return 1;
-	} 
-#if 0
-	else {
-	    fprintf( stdout, "%s: NOGPU frame %p td=%p(counter=%d,wc=%d,name=%s)\n",
-		    __FUNCTION__, top_frame,
-		    td,
-		    td->counter,
-		    td->wc,
-		    td->fmt->name
-		    );
-	    fflush(stdout);
-	}
-#endif
-    }
+  if (NULL == thread)
     return 0;
+
+  for (top_frame = thread->stack.stackframe;
+       (top_frame <= thread->stack.sfp); ++top_frame) {
+    tasklist = top_frame->tasklist;
+    if (tasklist == 0)
+      continue;
+    rtl = &tasklist->rtl;
+    onertl = &rtl->prl[KAAPI_TASKLIST_MAX_PRIORITY];
+    if (onertl->next == -1)
+      continue;
+    td = onertl->base[1 + onertl->next];
+    if (0 != td->fmt->entrypoint[KAAPI_PROC_TYPE_CUDA]) {
+#if 0
+      fprintf(stdout,
+	      "%s: OK frame %p td=%p(counter=%d,wc=%d,name=%s)\n",
+	      __FUNCTION__, top_frame, td, td->counter, td->wc,
+	      td->fmt->name);
+      fflush(stdout);
+#endif
+      return 1;
+    }
+#if 0
+    else {
+      fprintf(stdout,
+	      "%s: NOGPU frame %p td=%p(counter=%d,wc=%d,name=%s)\n",
+	      __FUNCTION__, top_frame, td, td->counter, td->wc,
+	      td->fmt->name);
+      fflush(stdout);
+    }
+#endif
+  }
+  return 0;
 }
 #endif
 
 int kaapi_sched_select_victim_with_cuda_tasks
-(
-    kaapi_processor_t* kproc,
-    kaapi_victim_t* victim,
-    kaapi_selecvictim_flag_t flag
-)
-#if 1 /* disable worksealing */
+    (kaapi_processor_t * kproc,
+     kaapi_victim_t * victim, kaapi_selecvictim_flag_t flag)
+#if 1				/* disable worksealing */
 {
-    return kaapi_sched_select_victim_rand(kproc, victim, flag);
+  return kaapi_sched_select_victim_rand(kproc, victim, flag);
 }
 #else
 {
-  switch (flag)
-  {
-    case KAAPI_SELECT_VICTIM:
+  switch (flag) {
+  case KAAPI_SELECT_VICTIM:
     {
       int nbproc, victimid;
 
       /* select a victim */
-      if (kproc->fnc_selecarg[0] == 0) 
-      kproc->fnc_selecarg[0] = (uintptr_t)(long)rand();
+      if (kproc->fnc_selecarg[0] == 0)
+	kproc->fnc_selecarg[0] = (uintptr_t) (long) rand();
 
     redo_select:
       nbproc = kaapi_count_kprocessors;
-      if (nbproc <=1) 
-        return EINVAL;
-      victimid = rand_r( (unsigned int*)&kproc->fnc_selecarg ) % nbproc;
+      if (nbproc <= 1)
+	return EINVAL;
+      victimid = rand_r((unsigned int *) &kproc->fnc_selecarg) % nbproc;
 
-      /* Get the k-processor */    
-      victim->kproc = kaapi_all_kprocessors[ victimid ];
-      if ( victim->kproc == 0 ) 
-        goto redo_select;
-      if( !kaapi_cuda_sched_has_task( victim->kproc ) )
-	  return EINVAL;
-      break ;
+      /* Get the k-processor */
+      victim->kproc = kaapi_all_kprocessors[victimid];
+      if (victim->kproc == 0)
+	goto redo_select;
+      if (!kaapi_cuda_sched_has_task(victim->kproc))
+	return EINVAL;
+      break;
     }
 
-    default:
+  default:
     {
       break;
     }

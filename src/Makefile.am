@@ -171,6 +171,7 @@ libkaapi_la_SOURCES=\
   workstealing/kaapi_sched_stealtask.c \
   workstealing/kaapi_sched_splittask.c \
   workstealing/kaapi_sched_stealtasklist.c \
+  workstealing/kaapi_sched_stealreadytasklist.c \
   workstealing/kaapi_sched_idle.c \
   workstealing/kaapi_sched_wakeup.c \
   workstealing/kaapi_sched_suspend.c \
@@ -235,6 +236,7 @@ libkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda_register_procs.c \
   machine/cuda/kaapi_cuda_proc.c \
   machine/cuda/kaapi_cuda_proc.h \
+  machine/cuda/kaapi_cuda_sync.c \
   machine/cuda/kaapi_cuda_func.h \
   machine/cuda/kaapi_cuda_func.c \
   machine/cuda/kaapi_cuda_execframe.h \

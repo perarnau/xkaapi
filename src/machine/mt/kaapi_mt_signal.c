@@ -1,5 +1,4 @@
 /*
-** kaapi_init.c
 ** xkaapi
 ** 
 **

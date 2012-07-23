@@ -7,5 +7,3 @@
 #include "../../kaapi_impl.h"
 #include "kaapi_cuda_proc.h"
 #include "kaapi_cuda_ctx.h"
-
-

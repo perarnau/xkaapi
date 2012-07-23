@@ -54,42 +54,39 @@
 
 #if defined(KAAPI_USE_PERFCOUNTER)
 
-static inline kaapi_event_buffer_t*
-kaapi_cuda_event_push0(
-    kaapi_event_buffer_t*   evb, 
-    uint64_t                tclock,
-    uint8_t                 eventno
-)
+static inline kaapi_event_buffer_t
+    *kaapi_cuda_event_push0(kaapi_event_buffer_t * evb, uint64_t tclock,
+			    uint8_t eventno)
 {
 #if defined(KAAPI_USE_CUPTI)
   tclock -= kaapi_default_param.cudastartuptime;
 #else
   tclock -= kaapi_default_param.startuptime;
 #endif
-  kaapi_event_t* evt = &evb->buffer[evb->pos++];
-  evt->evtno   = eventno;
+  kaapi_event_t *evt = &evb->buffer[evb->pos++];
+  evt->evtno = eventno;
 #if defined(KAAPI_USE_CUDA)
-  evt->type    = kaapi_processor_get_type(kaapi_get_current_processor());
+  evt->type = kaapi_processor_get_type(kaapi_get_current_processor());
 #else
-  evt->type    = 0;
+  evt->type = 0;
 #endif
-  evt->kid     = evb->kid;
-  evt->gid     = 0;
-  evt->date    = tclock;
+  evt->kid = evb->kid;
+  evt->gid = 0;
+  evt->date = tclock;
 
   if (evb->pos == KAAPI_EVENT_BUFFER_SIZE)
     return kaapi_event_flushbuffer(evb);
   return evb;
 }
 
-#  define KAAPI_CUDA_EVENT_PUSH0(kproc, kthread, eventno ) \
+#define KAAPI_CUDA_EVENT_PUSH0(kproc, kthread, eventno ) \
     if ((kproc->eventbuffer) )\
     {\
       kaapi_event_buffer_t* evb = kaapi_cuda_event_push0(kproc->eventbuffer, kaapi_event_date(), eventno ); \
       if (evb != kproc->eventbuffer) kproc->eventbuffer = evb;\
     }
 
-#  define KAAPI_CUDA_EVENT_PUSH0_(kproc, tclock, eventno ) \
+#define KAAPI_CUDA_EVENT_PUSH0_(kproc, tclock, eventno ) \
     if ((kproc->eventbuffer) )\
     {\
       kaapi_event_buffer_t* evb = kaapi_cuda_event_push0(kproc->eventbuffer, tclock, eventno ); \
@@ -100,8 +97,8 @@ kaapi_cuda_event_push0(
 
 #define KAAPI_CUDA_EVENT_PUSH0(kproc, kthread, eventno)
 
-#define KAAPI_CUDA_EVENT_PUSH0_(kproc, tclock, eventno) 
+#define KAAPI_CUDA_EVENT_PUSH0_(kproc, tclock, eventno)
 
 #endif
 
-#endif /* KAAPI_CUDA_EVENT_H_INCLUDED */
+#endif				/* KAAPI_CUDA_EVENT_H_INCLUDED */

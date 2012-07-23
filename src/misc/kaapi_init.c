@@ -71,6 +71,7 @@ kaapi_rtparam_t kaapi_default_param = {
 #if defined(KAAPI_USE_CUDA)
    .cudawindowsize = 1,
    .gpucount	= 0,
+   .cudapeertopeer = 0,
 #endif
    .stacksize   = 64*4096, /**/
    .stacksize_master = 64*4096, /**/
@@ -189,9 +190,6 @@ static int kaapi_setup_param()
     }
   }
   
-  if( getenv("KAAPI_AFFINITY") !=0 )
-    kaapi_default_param.affinity = 1;
-
   /* event mask */
 #if defined(KAAPI_USE_PERFCOUNTER)
   if (getenv("KAAPI_RECORD_TRACE") !=0)
@@ -225,10 +223,16 @@ static int kaapi_setup_param()
   }
 #endif  
 
+  if( getenv("KAAPI_AFFINITY") !=0 )
+    kaapi_default_param.affinity = 1;
+
 #if defined(KAAPI_USE_CUDA)
   if (getenv("KAAPI_WINDOW_SIZE") !=0 ) {
 	kaapi_default_param.cudawindowsize =
 	    atoll(getenv("KAAPI_WINDOW_SIZE"));
+  }
+  if (getenv("KAAPI_CUDA_PEER") !=0 ) {
+	kaapi_default_param.cudapeertopeer = 1;
   }
 #endif
   
@@ -256,6 +260,10 @@ int kaapi_init(int flag, int* argc, char*** argv)
 
   kaapi_memory_init(); /* TODO: not necessary */
   int err = kaapi_mt_init();
+
+#if defined(KAAPI_USE_CUDA)
+  kaapi_cuda_init();
+#endif
 
   if (flag)
     kaapi_begin_parallel(KAAPI_SCHEDFLAG_DEFAULT);

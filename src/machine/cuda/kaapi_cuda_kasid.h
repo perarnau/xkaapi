@@ -45,7 +45,7 @@
 */
 
 #ifndef KAAPI_CUDA_KASID_H_INCLUDED
-# define KAAPI_CUDA_KASID_H_INCLUDED
+#define KAAPI_CUDA_KASID_H_INCLUDED
 
 
 #include <sys/types.h>
@@ -56,10 +56,10 @@
 
 struct kaapi_cuda_proc;
 
-struct kaapi_cuda_proc* kaapi_cuda_get_proc_by_kasid
-(kaapi_address_space_id_t);
+struct kaapi_cuda_proc *kaapi_cuda_get_proc_by_kasid
+    (kaapi_address_space_id_t);
 
 unsigned int kaapi_cuda_get_kasid_user(size_t);
 
 
-#endif /* ! KAAPI_CUDA_KASID_H_INCLUDED */
+#endif				/* ! KAAPI_CUDA_KASID_H_INCLUDED */

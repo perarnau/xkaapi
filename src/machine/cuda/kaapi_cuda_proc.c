@@ -63,63 +63,65 @@
 #include "kaapi_cuda_trace.h"
 #endif
 
-#ifdef KAAPI_CUDA_USE_POOL
-#include "kaapi_cuda_pool.h"
-#endif
-
 /* number of CUDA devices */
 uint32_t kaapi_cuda_count_kprocessors = 0;
 
 /* index of kprocessors by CUDA devid */
-kaapi_processor_t*  kaapi_cuda_all_kprocessors[KAAPI_CUDA_MAX_DEV];
+kaapi_processor_t *kaapi_cuda_all_kprocessors[KAAPI_CUDA_MAX_DEV];
 /* exported */
 
-int
-kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
+void kaapi_cuda_init(void)
+{
+  KAAPI_ATOMIC_WRITE(&kaapi_cuda_synchronize_barrier, 0);
+}
+
+int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t * proc, unsigned int idev)
 {
   cudaError_t res;
 
   proc->is_initialized = 0;
 
-  if ( (res = kaapi_cuda_dev_open( proc, idev)) != cudaSuccess )
+  if ((res = kaapi_cuda_dev_open(proc, idev)) != cudaSuccess)
     return res;
 
-  kaapi_cuda_sync();
+  kaapi_cuda_device_sync();
 
 #if defined(KAAPI_USE_WINDOW)
-  if( kaapi_default_param.cudawindowsize > 0 )
-      kaapi_cuda_stream_init(
-	      kaapi_default_param.cudawindowsize * 3,
-	      proc 
-	      );
+  if (kaapi_default_param.cudawindowsize > 0)
+    kaapi_cuda_stream_init(kaapi_default_param.cudawindowsize * 3, proc);
   else
 #endif
-      kaapi_cuda_stream_init( 512, proc );
+    kaapi_cuda_stream_init(512, proc);
 
   /* pop the context to make it floating. doing
      so allow another thread to use it, such
      as the main one with kaapi_mem_synchronize2
-  */
-  kaapi_cuda_cublas_init( proc );
-  kaapi_cuda_cublas_set_stream( );
+   */
+  kaapi_cuda_cublas_init(proc);
+  kaapi_cuda_cublas_set_stream();
+
+  if (kaapi_default_param.cudapeertopeer)
+    kaapi_cuda_dev_enable_peer_access(proc);
 
 #if defined(KAAPI_USE_CUPTI)
-  if (getenv("KAAPI_RECORD_TRACE") !=0) {
-      kaapi_cuda_trace_thread_init();
+  if (getenv("KAAPI_RECORD_TRACE") != 0) {
+    kaapi_cuda_trace_thread_init();
   }
 #endif
 
-  kaapi_cuda_sync();
+  kaapi_cuda_device_sync();
 
 #if KAAPI_VERBOSE
-	fprintf(stdout, "%s: dev=%lu kid=%lu\n", __FUNCTION__,
-			idev, kaapi_get_current_kid() );
-	fflush( stdout );
+  fprintf(stdout, "%s: dev=%lu kid=%lu\n", __FUNCTION__,
+	  idev, kaapi_get_current_kid());
+  fflush(stdout);
 #endif
+
+  KAAPI_ATOMIC_WRITE(&proc->synchronize_flag, 0);
   proc->kasid_user = KAAPI_CUDA_KASID_USER_BASE + idev;
   proc->is_initialized = 1;
   proc->asid = kaapi_memory_address_space_create
-    ( idev, KAAPI_MEM_TYPE_CUDA, 0x100000000UL );
+      (idev, KAAPI_MEM_TYPE_CUDA, 0x100000000UL);
 
   kaapi_cuda_all_kprocessors[idev] = kaapi_get_current_processor();
   kaapi_cuda_count_kprocessors++;
@@ -128,24 +130,23 @@ kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
 }
 
 
-int kaapi_cuda_proc_cleanup( kaapi_cuda_proc_t* proc )
+int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t * proc)
 {
   if (proc->is_initialized == 0)
     return -1;
 
 #if 0
-    fprintf(stdout, "[%s] kid=%lu\n", __FUNCTION__, 
-	  proc->index );
-    fflush( stdout );
-  kaapi_cuda_cublas_finalize( proc );
+  fprintf(stdout, "[%s] kid=%lu\n", __FUNCTION__, proc->index);
+  fflush(stdout);
+  kaapi_cuda_cublas_finalize(proc);
 #ifdef KAAPI_CUDA_ASYNC
-   cudaStreamDestroy( proc->stream );
+  cudaStreamDestroy(proc->stream);
 #endif
 
 //  kaapi_cuda_ctx_pop( );
-   kaapi_cuda_stream_destroy( proc->kstream );
-  kaapi_cuda_dev_close( proc );
-  kaapi_cuda_mem_destroy( proc );
+  kaapi_cuda_stream_destroy(proc->kstream);
+  kaapi_cuda_dev_close(proc);
+  kaapi_cuda_mem_destroy(proc);
   /* TODO MAGMA is breaking Free codes */
 #endif
   proc->is_initialized = 0;
@@ -156,98 +157,67 @@ int kaapi_cuda_proc_cleanup( kaapi_cuda_proc_t* proc )
 
 size_t kaapi_cuda_get_proc_count(void)
 {
-    return kaapi_cuda_count_kprocessors;
-#if 0
-  /* returns the number of kproc being of cuda type */
-  /* todo: dont walk the kproc list every time, ok for now */
-  kaapi_processor_t** pos = kaapi_all_kprocessors;
-  size_t count = 0;
-  size_t i;
-  for (i = 0; i < kaapi_count_kprocessors; ++i, ++pos)
-    if ((*pos)->proc_type == KAAPI_PROC_TYPE_CUDA)
-      ++count;
-  return count;
-#endif
+  return kaapi_cuda_count_kprocessors;
 }
 
 cudaStream_t kaapi_cuda_kernel_stream(void)
 {
-    kaapi_processor_t* const self_proc =
-	kaapi_get_current_processor();
-    return kaapi_cuda_get_cudastream(
-		kaapi_cuda_get_kernel_fifo(self_proc->cuda_proc.kstream)
-	    );
+  kaapi_processor_t *const self_proc = kaapi_get_current_processor();
+  return
+      kaapi_cuda_get_cudastream(kaapi_cuda_get_kernel_fifo
+				(self_proc->cuda_proc.kstream));
 }
 
 cudaStream_t kaapi_cuda_HtoD_stream(void)
 {
-    kaapi_processor_t* const self_proc =
-	kaapi_get_current_processor();
-    return kaapi_cuda_get_cudastream(
-		kaapi_cuda_get_input_fifo(self_proc->cuda_proc.kstream)
-	    );
+  kaapi_processor_t *const self_proc = kaapi_get_current_processor();
+  return
+      kaapi_cuda_get_cudastream(kaapi_cuda_get_input_fifo
+				(self_proc->cuda_proc.kstream));
 }
 
 cudaStream_t kaapi_cuda_DtoH_stream(void)
 {
-    kaapi_processor_t* const self_proc =
-	kaapi_get_current_processor();
-    return kaapi_cuda_get_cudastream(
-		kaapi_cuda_get_output_fifo(self_proc->cuda_proc.kstream)
-	    );
+  kaapi_processor_t *const self_proc = kaapi_get_current_processor();
+  return
+      kaapi_cuda_get_cudastream(kaapi_cuda_get_output_fifo
+				(self_proc->cuda_proc.kstream));
 }
 
 cudaStream_t kaapi_cuda_DtoD_stream(void)
 {
-    kaapi_processor_t* const self_proc =
-	kaapi_get_current_processor();
-    return kaapi_cuda_get_cudastream(
-		kaapi_cuda_get_output_fifo(self_proc->cuda_proc.kstream)
-	    );
+  kaapi_processor_t *const self_proc = kaapi_get_current_processor();
+  return
+      kaapi_cuda_get_cudastream(kaapi_cuda_get_output_fifo
+				(self_proc->cuda_proc.kstream));
 }
 
-void
-kaapi_cuda_proc_poll( kaapi_processor_t* const kproc )
+void kaapi_cuda_proc_poll(kaapi_processor_t * const kproc)
 {
-    kaapi_cuda_stream_poll( kproc );
-    if( kproc->isidle )
-	kaapi_cuda_memory_poll( kproc );
+  if (KAAPI_ATOMIC_READ(&kproc->cuda_proc.synchronize_flag) == 1) {
+    kaapi_cuda_sync(kproc);
+    KAAPI_ATOMIC_WRITE(&kproc->cuda_proc.synchronize_flag, 0);
+  } else {
+    kaapi_cuda_stream_poll(kproc);
+//    kaapi_cuda_memory_poll( kproc );
+  }
 }
 
-int
-kaapi_cuda_proc_end_isvalid( kaapi_processor_t* const kproc )
+int kaapi_cuda_proc_end_isvalid(kaapi_processor_t * const kproc)
 {
-    return kaapi_cuda_stream_is_empty( kproc->cuda_proc.kstream );
+  return kaapi_cuda_stream_is_empty(kproc->cuda_proc.kstream);
 }
 
-int
-kaapi_cuda_proc_sync_all( void )
+int kaapi_cuda_proc_all_isvalid(void)
 {
-    kaapi_processor_t** pos = kaapi_all_kprocessors;
-    size_t i;
+  kaapi_processor_t **pos = kaapi_all_kprocessors;
+  size_t i;
 
-    for (i = 0; i < kaapi_count_kprocessors; ++i, ++pos)
-	if ((*pos)->proc_type == KAAPI_PROC_TYPE_CUDA) {
-	    kaapi_cuda_ctx_set( (*pos)->cuda_proc.index );
-	    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
-	    kaapi_cuda_sync();
-	    KAAPI_EVENT_PUSH0( kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG );
-	}
+  for (i = 0; i < kaapi_count_kprocessors; ++i, ++pos)
+    if ((*pos)->proc_type == KAAPI_PROC_TYPE_CUDA) {
+      if (!kaapi_cuda_proc_end_isvalid(*pos))
+	return 0;
+    }
 
-    return 0;
-}
-
-int
-kaapi_cuda_proc_all_isvalid( void )
-{
-    kaapi_processor_t** pos = kaapi_all_kprocessors;
-    size_t i;
-
-    for (i = 0; i < kaapi_count_kprocessors; ++i, ++pos)
-	if ((*pos)->proc_type == KAAPI_PROC_TYPE_CUDA) {
-	    if( !kaapi_cuda_proc_end_isvalid(*pos) )
-		return 0;
-	}
-
-    return 1;
+  return 1;
 }

@@ -59,53 +59,42 @@
 #include "kaapi_cuda_data_async.h"
 
 static inline int
-kaapi_cuda_data_input_alloc( 
-	kaapi_cuda_stream_t* kstream,
-	kaapi_tasklist_t*   tasklist,
-	kaapi_taskdescr_t*  td
-)
+kaapi_cuda_data_input_alloc(kaapi_cuda_stream_t * kstream,
+			    kaapi_tasklist_t * tasklist,
+			    kaapi_taskdescr_t * td)
 {
-    return kaapi_cuda_data_async_input_alloc( kstream, tasklist, td );
+  return kaapi_cuda_data_async_input_alloc(kstream, tasklist, td);
 }
 
 static inline int
-kaapi_cuda_data_input_dev_sync( 
-	kaapi_cuda_stream_t* kstream,
-	kaapi_tasklist_t*   tasklist,
-	kaapi_taskdescr_t*  td
-)
+kaapi_cuda_data_input_dev_sync(kaapi_cuda_stream_t * kstream,
+			       kaapi_tasklist_t * tasklist,
+			       kaapi_taskdescr_t * td)
 {
-    return kaapi_cuda_data_async_input_dev_sync( kstream, tasklist, td );
+  return kaapi_cuda_data_async_input_dev_sync(kstream, tasklist, td);
 }
 
 static inline int
-kaapi_cuda_data_input_host_sync( 
-	kaapi_cuda_stream_t* kstream,
-	kaapi_tasklist_t*   tasklist,
-	kaapi_taskdescr_t*  td
-)
+kaapi_cuda_data_input_host_sync(kaapi_cuda_stream_t * kstream,
+				kaapi_tasklist_t * tasklist,
+				kaapi_taskdescr_t * td)
 {
-    return kaapi_cuda_data_async_input_host_sync( kstream, tasklist, td );
+  return kaapi_cuda_data_async_input_host_sync(kstream, tasklist, td);
 }
 
 static inline int
-kaapi_cuda_data_recv( 
-	kaapi_cuda_stream_t* kstream,
-	kaapi_tasklist_t*   tasklist,
-	kaapi_taskdescr_t*  td
-)
+kaapi_cuda_data_recv(kaapi_cuda_stream_t * kstream,
+		     kaapi_tasklist_t * tasklist, kaapi_taskdescr_t * td)
 {
-    return kaapi_cuda_data_async_recv( kstream, tasklist, td );
+  return kaapi_cuda_data_async_recv(kstream, tasklist, td);
 }
 
 static inline int
-kaapi_cuda_data_output_dev_dec_use( 
-	kaapi_cuda_stream_t* kstream,
-	kaapi_tasklist_t*   tasklist,
-	kaapi_taskdescr_t*  td
-)
+kaapi_cuda_data_output_dev_dec_use(kaapi_cuda_stream_t * kstream,
+				   kaapi_tasklist_t * tasklist,
+				   kaapi_taskdescr_t * td)
 {
-    return kaapi_cuda_data_async_output_dev_dec_use( kstream, tasklist, td );
+  return kaapi_cuda_data_async_output_dev_dec_use(kstream, tasklist, td);
 }
 
 /* ** Memory system **
@@ -113,10 +102,9 @@ kaapi_cuda_data_output_dev_dec_use(
 It checks if the data is valid on the current kproc, otherwise searches for a
 valid copy on the asids of the system.
 */
-static inline int
-kaapi_cuda_data_sync_device( kaapi_data_t* kdata )
+static inline int kaapi_cuda_data_sync_device(kaapi_data_t * kdata)
 {
-    return kaapi_cuda_data_async_sync_device( kdata );
+  return kaapi_cuda_data_async_sync_device(kdata);
 }
 
 /* ** Memory system **
@@ -125,9 +113,9 @@ It checks if the data is valid on the current kproc, otherwise search for a
 valid copy on the GPUs.
 */
 static inline int
-kaapi_cuda_data_sync_host( kaapi_data_t* kdata, cudaStream_t stream )
+kaapi_cuda_data_sync_host(kaapi_data_t * kdata, cudaStream_t stream)
 {
-    return kaapi_cuda_data_async_sync_host( kdata, stream );
+  return kaapi_cuda_data_async_sync_host(kdata, stream);
 }
 
 #endif
@@ -135,45 +123,33 @@ kaapi_cuda_data_sync_host( kaapi_data_t* kdata, cudaStream_t stream )
 #if 0
 #include "kaapi_cuda_data_basic.h"
 
-static inline int
-kaapi_cuda_data_allocate( 
-	kaapi_format_t*		   fmt,
-	void*			sp
-)
+static inline int kaapi_cuda_data_allocate(kaapi_format_t * fmt, void *sp)
 {
-    return kaapi_cuda_data_basic_allocate( fmt, sp );
+  return kaapi_cuda_data_basic_allocate(fmt, sp);
+}
+
+static inline int kaapi_cuda_data_send(kaapi_format_t * fmt, void *sp)
+{
+  return kaapi_cuda_data_basic_send(fmt, sp);
+}
+
+static inline int kaapi_cuda_data_recv(kaapi_format_t * fmt, void *sp)
+{
+  return kaapi_cuda_data_basic_recv(fmt, sp);
 }
 
 static inline int
-kaapi_cuda_data_send( 
-	kaapi_format_t*		   fmt,
-	void*			sp
-)
+kaapi_cuda_data_sync_device(kaapi_data_t * kdata, cudaStream_t stream)
 {
-    return kaapi_cuda_data_basic_send( fmt, sp );
+  return 0;
 }
 
 static inline int
-kaapi_cuda_data_recv( 
-	kaapi_format_t*		   fmt,
-	void*			sp
-)
+kaapi_cuda_data_sync_host(kaapi_data_t * kdata, cudaStream_t stream)
 {
-    return kaapi_cuda_data_basic_recv( fmt, sp );
+  return 0;
 }
 
-static inline int
-kaapi_cuda_data_sync_device( kaapi_data_t* kdata, cudaStream_t stream )
-{
-    return 0;
-}
+#endif				/* KAAPI_CUDA_ASYNC */
 
-static inline int
-kaapi_cuda_data_sync_host( kaapi_data_t* kdata, cudaStream_t stream )
-{
-    return 0;
-}
-
-#endif /* KAAPI_CUDA_ASYNC */
-
-#endif /* KAAPI_CUDA_DATA_H_INCLUDED */
+#endif				/* KAAPI_CUDA_DATA_H_INCLUDED */

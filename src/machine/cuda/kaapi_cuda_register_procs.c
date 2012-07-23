@@ -50,11 +50,11 @@
 #include "../common/kaapi_procinfo.h"
 
 /* exported */
-int kaapi_cuda_register_procs(kaapi_procinfo_list_t* kpl)
+int kaapi_cuda_register_procs(kaapi_procinfo_list_t * kpl)
 {
-  const char* const gpuset_str = getenv("KAAPI_GPUSET");
-  const char* const gpucount_str = getenv("KAAPI_GPUCOUNT");
-  kaapi_procinfo_t* pos = kpl->tail;
+  const char *const gpuset_str = getenv("KAAPI_GPUSET");
+  const char *const gpucount_str = getenv("KAAPI_GPUCOUNT");
+  kaapi_procinfo_t *pos = kpl->tail;
   unsigned int kid = kpl->count;
   int devcount;
   int err;
@@ -70,14 +70,14 @@ int kaapi_cuda_register_procs(kaapi_procinfo_list_t* kpl)
     fflush( stdout );
     abort();
   }
-  
+
   if (devcount == 0)
     return 0;
  
   if (gpucount_str != NULL) 
   {
     kaapi_default_param.gpucount = atoi(getenv("KAAPI_GPUCOUNT"));
-    if( kaapi_default_param.gpucount > devcount )
+    if (kaapi_default_param.gpucount > devcount)
       kaapi_default_param.gpucount = devcount;
   } else {
     kaapi_default_param.gpucount = devcount;
@@ -87,13 +87,17 @@ int kaapi_cuda_register_procs(kaapi_procinfo_list_t* kpl)
 	  kpl, gpuset_str, KAAPI_PROC_TYPE_CUDA,
 	  kaapi_default_param.gpucount
   );
-  if (err) return -1;
+  if (err)
+    return -1;
 
-  if (kpl->tail == NULL) return 0;
+  if (kpl->tail == NULL)
+    return 0;
 
   /* affect kids */
-  if (pos == NULL) pos = kpl->tail;
-  else pos = pos->next;
+  if (pos == NULL)
+    pos = kpl->tail;
+  else
+    pos = pos->next;
   for (; pos; pos = pos->next, ++kid)
     pos->kid = kid;
 
@@ -101,8 +105,7 @@ int kaapi_cuda_register_procs(kaapi_procinfo_list_t* kpl)
 }
 
 
-void kaapi_exec_cuda_task
-(kaapi_task_t* task, kaapi_thread_t* thread)
+void kaapi_exec_cuda_task(kaapi_task_t * task, kaapi_thread_t * thread)
 {
-  kaapi_task_getbody(task)(task->sp, thread);
+  kaapi_task_getbody(task) (task->sp, thread);
 }

@@ -203,7 +203,7 @@ struct kaapi_taskdescr_t;
 struct kaapi_big_hashmap_t;
 struct kaapi_version_t;
 struct kaapi_metadata_info_t;
-
+struct kaapi_mem_data_t;
 
 /* ============================= Processor list ============================ */
 
@@ -355,6 +355,7 @@ typedef struct kaapi_rtparam_t {
 #endif
 #if defined(KAAPI_USE_CUDA)
    uint64_t		    cudawindowsize;
+   unsigned int		    cudapeertopeer;
 #endif
   uint64_t                 startuptime;         /* time at the end of kaapi_init */
   int                      alarmperiod;         /* period for alarm */

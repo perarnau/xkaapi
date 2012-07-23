@@ -49,6 +49,9 @@
 #include <sys/types.h>
 #include <stdint.h>
 
+#include "kaapi_impl.h"
+#include "machine/mt/kaapi_mt_bitmap.h"
+
 /* kaapi_mem_addr_t is a type large enough to
    contain all the addresses of all memory spaces.  */
 typedef uintptr_t kaapi_mem_addr_t;
@@ -62,8 +65,9 @@ typedef struct kaapi_mem_data_t {
     kaapi_mem_addr_t addr[KAAPI_MEM_ASID_MAX];
 
     struct kaapi_mem_data_t* parent;
-    unsigned int dirty_bits;
-    unsigned int addr_bits;
+    kaapi_bitmap64_t  valid_bits;
+    kaapi_bitmap64_t  dirty_bits;
+    kaapi_bitmap64_t  addr_bits;
 } kaapi_mem_data_t;
 
 typedef struct kaapi_mem_host_map_t {
@@ -76,6 +80,7 @@ void kaapi_mem_init( void );
 void kaapi_mem_destroy( void );
 
 #if defined(KAAPI_USE_CUDA)
+#include <cuda_runtime_api.h>
 int kaapi_mem_sync_data( kaapi_data_t*, cudaStream_t );
 #endif
 

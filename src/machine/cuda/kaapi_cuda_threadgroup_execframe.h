@@ -44,11 +44,11 @@
 ** 
 */
 #ifndef KAAPI_CUDA_THREADGROUP_EXECFRAME_H_INCLUDED
-# define KAAPI_CUDA_THREADGROUP_EXECFRAME_H_INCLUDED
+#define KAAPI_CUDA_THREADGROUP_EXECFRAME_H_INCLUDED
 
 
 struct kaapi_thread_context_t;
-int kaapi_cuda_threadgroup_execframe(struct kaapi_thread_context_t*);
+int kaapi_cuda_threadgroup_execframe(struct kaapi_thread_context_t *);
 
 
-#endif /* ! KAAPI_CUDA_THREADGROUP_EXECFRAME_H_INCLUDED */
+#endif				/* ! KAAPI_CUDA_THREADGROUP_EXECFRAME_H_INCLUDED */

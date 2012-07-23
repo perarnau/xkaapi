@@ -42,12 +42,9 @@
  ** 
  */
 #include "kaapi_impl.h"
-#if 0
-#include "kaapi_memory.h"
 #include "memory/kaapi_mem.h"
 #include "memory/kaapi_mem_data.h"
 #include "memory/kaapi_mem_host_map.h"
-#endif
 
 typedef void (*kaapi_task_alpha_body_t)( void*, float * const );
 
@@ -86,6 +83,11 @@ int kaapi_thread_computedep_task(
   kaapi_handle_t          handle;
   kaapi_version_t*        version;
   int                     islocal;
+
+  kaapi_mem_host_map_t* host_map = 
+      kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
+  const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
+  kaapi_mem_data_t *kmd;
 
 #if 0
     uint64_t t0 = kaapi_get_elapsedns();
@@ -167,15 +169,12 @@ int kaapi_thread_computedep_task(
     */
     handle = kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
 
-#if 0
-    kaapi_mem_host_map_find_or_insert( host_map,
-	    (kaapi_mem_addr_t)access.data,
-	    &kmd );
+    /* register to host memory mapping */
+    kaapi_mem_host_map_find_or_insert( host_map, 
+	(kaapi_mem_addr_t)access.data, &kmd );
     kaapi_mem_data_set_addr( kmd, host_asid, (kaapi_mem_addr_t)handle );
-    kaapi_mem_data_t *host_kmd = kaapi_memory_register_find(
-	    (kaapi_mem_addr_t)access.data );
-    kaapi_mem_data_set_parent( kmd, host_kmd );
-#endif
+    kaapi_mem_data_clear_dirty( kmd, host_asid );
+    handle->kmd = kmd;
 
     /* replace the pointer to the data in the task argument by the pointer to the global data */
     access.data = handle;

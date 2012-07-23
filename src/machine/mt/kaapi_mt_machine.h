@@ -410,10 +410,8 @@ typedef struct kaapi_processor_t {
   kaapi_lock_t             lock                           /* all requests attached to each kprocessor ordered by increasing level */
     __attribute__((aligned(KAAPI_CACHE_LINE)));
 
-#if 0
-  kaapi_mailbox_queue_t    mailbox;
-#endif
-  struct kaapi_readytasklist_t*    rtl;
+  struct kaapi_readytasklist_t* rtl;                      /* readylist of task descriptors */
+  
   int volatile             isidle;                        /* true if kproc is idle (active thread is empty) */
 
   kaapi_wsqueuectxt_t      lsuspend                       /* list of suspended context */

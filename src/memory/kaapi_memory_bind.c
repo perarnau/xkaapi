@@ -140,7 +140,7 @@ kaapi_version_t** _kaapi_metadata_info_bind_data(
   kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
   kmdi->data[lid].ptr  = kaapi_make_pointer(kasid, ptr);
   kmdi->data[lid].view = *view;
-  kmdi->data[lid].mdi = kmdi;
+  kmdi->data[lid].mdi = kmdi; 
   kmdi->validbits |= (1UL << lid);
   return &kmdi->version[lid];
 }

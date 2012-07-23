@@ -193,23 +193,21 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   kaapi_sched_sync_(thread);
   kaapi_assert_debug( KAAPI_ATOMIC_READ(&tasklist->count_thief) == 0);
 
-#if defined(KAAPI_USE_CUDA)
-   kaapi_assert_debug( kaapi_cuda_proc_all_isvalid( ) );
-#endif
-#if 0//defined(KAAPI_USE_PERFCOUNTER)
-  printf("[tasklist] T1                      : %" PRIu64 "\n", tasklist->cnt_tasks);
-  printf("[tasklist] Tinf                    : %" PRIu64 "\n", tasklist->t_infinity);
-  printf("[tasklist] dependency analysis time: %e (s)\n",t1-t0);
-  printf("[tasklist] exec time               : %e (s)\n",t1_exec-t0_exec);
-#endif
-
-#if 1
-  fprintf(stdout, "%i::[tasklist] tasks: %llu total: %llu\n", 
+#if 0
+  fprintf(stdout, "[%s] kid=%i tasklist tasks: %llu total: %llu\n", 
+    __FUNCTION__,
     kaapi_get_self_kid(),
     KAAPI_ATOMIC_READ(&tasklist->cnt_exec),
     tasklist->total_tasks
   );
   fflush(stdout);
+#endif
+
+#if 0//defined(KAAPI_USE_PERFCOUNTER)
+  printf("[tasklist] T1                      : %" PRIu64 "\n", tasklist->cnt_tasks);
+  printf("[tasklist] Tinf                    : %" PRIu64 "\n", tasklist->t_infinity);
+  printf("[tasklist] dependency analysis time: %e (s)\n",t1-t0);
+  printf("[tasklist] exec time               : %e (s)\n",t1_exec-t0_exec);
 #endif
 
   /* Pop & restore the frame */
