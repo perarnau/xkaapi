@@ -3134,7 +3134,7 @@ namespace ka {
     };
 
     /* map global index to full representation */
-    void map( rep& r, int index )
+    void map( rep& r, int index ) const
     {
       r.p = (index % M)/bs;
       r.b = index / M;
@@ -3142,16 +3142,20 @@ namespace ka {
     }
 
     /* specialized: map global index to ressource id */
-    void map_ressource( int& rid, int index )
+    int map_ressource( int index ) const
     {
-      rid = (index % M)/bs;
+      return (index % M)/bs;
     }
 
     /* inverse mapping */
-    void invmap( int& index, const rep& r)
+    void invmap( int& index, const rep& r) const
     {
       index = r.p * bs + r.b * M + r.i;
     }
+    
+    /* return the number of ressources */
+    int size() const
+    { return np; }
     
     int np;  /* ressource number */
     int bs;  /* = bloc size */
@@ -3176,25 +3180,31 @@ namespace ka {
     };
 
     /* map global index to full representation */
-    void map( rep& r, int index1, int index2 )
+    void map( rep& r, int index1, int index2 ) const
     {
       d1.map(r.d1, index1);
       d2.map(r.d2, index2);
     }
 
-    /* specialized: map global index to ressource (rid1,rid2) */
-    void map_ressource( int& rid1, int& rid2, int index1, int index2 )
+    /* specialized: map global index to ressource k */
+    int map_ressource( int index1, int index2 ) const
     {
-      d1.map_ressource(rid1, index1);
-      d2.map_ressource(rid2, index2);
+      int r1, r2;
+      r1 = d1.map_ressource(index1);
+      r2 = d2.map_ressource(index2);
+      return r1 * d1.size() + r2;
     }
 
     /* inverse mapping */
-    void invmap( int& index1, int& index2, const rep& r)
+    void invmap( int& index1, int& index2, const rep& r) const
     {
       d1.invmap( index1, r.d1 );
       d2.invmap( index2, r.d2 );
     }
+
+    /* return the number of ressources */
+    int size() const
+    { return d1.size()*d2.size(); }
     
     BlockCyclic1D d1;
     BlockCyclic1D d2;
@@ -3231,14 +3241,42 @@ namespace ka {
     }
   };
 
+  /* 2D distribution.
+     Given the set of ressources (cpu,gpu), this class returns the kid of 
+     the ressource where global index (index1,index2) is distributed.
+     The kid is computed using a linearization of the grid of ressources 
+     of the distribution dd. The set of ressources may be either mapped to 
+     ncpu (may be =0) and ngpu (may be =0).
+     More precisely, the final set of ressources is between 0 and K-1.
+     The first ncpu ones correspond to CPU, followed by ngpu kid for GPUs.
+     
+     If the size of ressources in the distribution DD does not correspond to the
+     size of the set, then the kid is returned modulo the number of specified 
+     ressources.
+     
+     Implementation note:
+     - DD is assumed to have the following interface/fields:
+        * 
+     
+  */
   template<class DD>
   struct Distribution2D {
-    static int map( const DD& d, int index1, int index2 )
-    { 
-      int r1, r2;
-      d.map_ressource( r1, r2, index1, index2 );
-      return r1 * d.d2.np;
+    Distribution2D( _KaapiCPUGPU_Encode set, const DD& d )
+     : _set(set), _dist(d)
+    {}
+    
+    /* Return the kid where global index (index1,index2) is mapped
+    */
+    int map_ressource( int index1, int index2 )
+    {
+      int k = _dist.map_ressource( index1, index2 );
+      if (k < _set.ncpu) 
+        return k;
+      else 
+        return kaapi_getconcurrency_cpu() + (k - _set.ncpu);
     }
+    _KaapiCPUGPU_Encode _set;
+    const DD& _dist;
   };
 
   // --------------------------------------------------------------------

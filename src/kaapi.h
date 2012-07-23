@@ -277,6 +277,14 @@ typedef enum kaapi_hws_levelmask
  */
 extern int kaapi_getconcurrency (void);
 
+/* \ingroup WS
+*/
+extern int kaapi_getconcurrency_cpu(void);
+
+/* \ingroup WS
+*/
+extern int kaapi_getconcurrency_gpu(void);
+
 /** \ingroup WS
     Set the workstealing conccurency by instanciating kprocs according
     to the registration of each subsystem (ie. mt, cuda...)
