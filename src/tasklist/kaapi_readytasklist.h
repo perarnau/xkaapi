@@ -45,30 +45,35 @@
 #ifndef _KAAPI_READYTASKLIST_H_
 #define _KAAPI_READYTASKLIST_H_
 
-#define KAAPI_ALLOCATED_TDBLOCSIZE 1024 /* such that kaapi_bloctd_t == 1 pagesize */
-
-static inline int kaapi_onereadytasklist_getindex(long value)
-{
-  if (value <0)
-    return (value % KAAPI_ALLOCATED_TDBLOCSIZE) + KAAPI_ALLOCATED_TDBLOCSIZE;
-  if (value > KAAPI_ALLOCATED_TDBLOCSIZE)
-    return (value % KAAPI_ALLOCATED_TDBLOCSIZE);
-  return value;
-}
+#define KAAPI_ALLOCATED_TDBLOCSIZE 32 /* such that kaapi_bloctd_t == 1 pagesize */
 
 /** List of pointers, managed by circular buffer.
     First implementation: assume no overflow.
     Assumption: beg <= end   
 */
 typedef struct kaapi_onereadytasklist_t {
-  kaapi_taskdescr_t*     data[KAAPI_ALLOCATED_TDBLOCSIZE];
+  long                   size;  /* size of the allocated bloc data or 0 is not allocated */
+  kaapi_taskdescr_t**    data;
+  kaapi_taskdescr_t*     block[KAAPI_ALLOCATED_TDBLOCSIZE];
   kaapi_workqueue_t      wq;
   kaapi_lock_t           lock;
 } kaapi_onereadytasklist_t;
 
+
+static inline long kaapi_onereadytasklist_getindex(const kaapi_onereadytasklist_t* ortl, long value)
+{
+  long size = ortl->size;
+  if (value <0)
+    return (value % size) + size;
+  if (value > size)
+    return (value % size);
+  return value;
+}
+
 static inline void kaapi_onereadytasklist_init( kaapi_onereadytasklist_t* ortl )
 {
-  memset( ortl, 0, sizeof(kaapi_onereadytasklist_t) );
+  ortl->data = ortl->block;
+  ortl->size = KAAPI_ALLOCATED_TDBLOCSIZE;
   kaapi_atomic_initlock(&ortl->lock);
   kaapi_workqueue_init_with_lock(&ortl->wq, 0, 0, &ortl->lock);
 }
@@ -77,6 +82,7 @@ static inline void kaapi_onereadytasklist_destroy( kaapi_onereadytasklist_t* ort
 {
   kaapi_workqueue_destroy(&ortl->wq);
   kaapi_atomic_destroylock(&ortl->lock);
+  if (ortl->data != ortl->block) free(ortl->data);
 }
 
 static inline int kaapi_onereadytasklist_isempty( const kaapi_onereadytasklist_t* ortl )
@@ -100,17 +106,40 @@ static inline int kaapi_onereadytasklist_pop( kaapi_onereadytasklist_t* ortl, ka
   int retval = kaapi_workqueue_pop(&ortl->wq, &beg, &end, 1);
   if (retval == 0)
   {
-    *td = ortl->data[ kaapi_onereadytasklist_getindex(beg) ];
-    ortl->data[ kaapi_onereadytasklist_getindex(beg) ] = 0;
+    long index = kaapi_onereadytasklist_getindex(ortl, beg);
+    *td = ortl->data[ index ];
+    ortl->data[ index ] = 0;
     if (*td ==0) retval = EBUSY;
   }
   return retval;  
 }
 
+
+static inline int kaapi_onereadytasklist_realloc( kaapi_onereadytasklist_t* ortl )
+{
+  /* realloc */
+  size_t newsize = 2*ortl->size;
+  kaapi_taskdescr_t** olddata = ortl->data;
+  kaapi_taskdescr_t** newdata = (kaapi_taskdescr_t**)malloc(newsize*sizeof(kaapi_taskdescr_t*));
+  memcpy(newdata, ortl->data, ortl->size*sizeof(kaapi_taskdescr_t*));
+  /* change original */
+  kaapi_atomic_lock(&ortl->lock);
+  ortl->data = newdata;
+  ortl->size = newsize;
+  kaapi_atomic_unlock(&ortl->lock);
+  if (olddata != ortl->block) free(olddata);
+  return 0;
+}
+
 static inline int kaapi_onereadytasklist_push( kaapi_onereadytasklist_t* ortl, kaapi_taskdescr_t* td )
 {
   kaapi_workqueue_index_t beg = kaapi_workqueue_range_begin(&ortl->wq) -1;
-  ortl->data[ kaapi_onereadytasklist_getindex(beg) ] = td;
+  kaapi_workqueue_index_t end = kaapi_workqueue_range_end(&ortl->wq);
+  
+  if (end-beg >= ortl->size)
+    kaapi_onereadytasklist_realloc(ortl);
+  
+  ortl->data[ kaapi_onereadytasklist_getindex(ortl,beg) ] = td;
   kaapi_workqueue_push(&ortl->wq, beg );
   return 0;
 }
@@ -119,7 +148,12 @@ static inline int kaapi_onereadytasklist_remote_push( kaapi_onereadytasklist_t* 
 {
   kaapi_atomic_lock( &ortl->lock );
   kaapi_workqueue_index_t end = kaapi_workqueue_range_end(&ortl->wq);
-  ortl->data[ kaapi_onereadytasklist_getindex(end) ] = td;
+  kaapi_workqueue_index_t beg = kaapi_workqueue_range_begin(&ortl->wq);
+
+  if (end-beg >= ortl->size)
+    kaapi_onereadytasklist_realloc(ortl);
+
+  ortl->data[ kaapi_onereadytasklist_getindex(ortl,end) ] = td;
   kaapi_workqueue_rpush( &ortl->wq, end+1 );
   kaapi_atomic_unlock( &ortl->lock );
   return 0;
@@ -140,8 +174,9 @@ static inline int kaapi_onereadytasklist_steal( kaapi_onereadytasklist_t* ortl, 
   retval = kaapi_workqueue_steal(&ortl->wq, &beg, &end, 1);
   if (retval ==0)
   {
-    *td = ortl->data[ kaapi_onereadytasklist_getindex(beg) ];
-    ortl->data[ kaapi_onereadytasklist_getindex(beg) ] = 0;
+    long index = kaapi_onereadytasklist_getindex(ortl, beg);
+    *td = ortl->data[ index ];
+    ortl->data[ index ] = 0;
     if (*td ==0) retval = EBUSY;
   }
   kaapi_atomic_unlock( &ortl->lock );
