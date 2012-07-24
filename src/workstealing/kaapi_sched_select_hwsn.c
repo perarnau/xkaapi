@@ -45,13 +45,13 @@
 
 typedef struct kaapi_hier_arg {
   short         init;     /* 0 iff not init  */
-  short         priority;  /* 1: local, 2: last victim ok, rand */
+  short         policy;  /* 1: local, 2: rand */
   int           nfailed;
   unsigned int  seed;
 } kaapi_hier_arg;
 
 
-/** Do rand selection 
+/** 
 */
 int kaapi_sched_select_victim_hwsn( 
     kaapi_processor_t* kproc, 
@@ -61,6 +61,7 @@ int kaapi_sched_select_victim_hwsn(
 {
   int victimid;
   int nbproc;
+  int rr;
   kaapi_hier_arg* arg;
   kaapi_onelevel_t* level;
 
@@ -76,20 +77,15 @@ int kaapi_sched_select_victim_hwsn(
 
   if (flag == KAAPI_STEAL_FAILED)
   {
-    if (arg->priority == 1)
-    {
-      if (++arg->nfailed == 4)
-      {
-        arg->priority = 10;
-        arg->nfailed  = 0;
-      }
-    }
+    ++arg->nfailed;
+    if (arg->nfailed > 3)
+      arg->policy = 2; /* random */
     return 0;
   }
 
   if (flag == KAAPI_STEAL_SUCCESS)
   {
-    if (arg->priority !=1) arg->priority =1; 
+    if (arg->policy !=1) arg->policy =1; 
 
     /* success: try next to time initial depth */
     arg->nfailed  = 0;
@@ -100,7 +96,7 @@ int kaapi_sched_select_victim_hwsn(
   if (arg->init ==0)
   {
     arg->init     = 1;
-    arg->priority = 10;
+    arg->policy   = 2;
     arg->nfailed  = 0;
     arg->seed     = rand();
   }
@@ -110,18 +106,15 @@ int kaapi_sched_select_victim_hwsn(
     return EINVAL;
 
 redo_select:
+  rr = rand_r(&arg->seed);
   /* first: select in self set */
-  if (arg->priority ==1)
+  if (arg->policy ==1)
   {
     level = &kproc->hlevel.levels[0];
-    victimid = level->notself[ rand_r(&arg->seed) % level->nnotself];
+    victimid = level->notself[ rr % level->nnotself];
   }
-#if 0
-  else if (arg->priority == 2)
-    victimid = arg->lastsok;
-#endif
   else
-    victimid = rand_r( (unsigned int*)&arg->seed ) % nbproc;
+    victimid = rr % nbproc;
 
   victim->kproc = kaapi_all_kprocessors[ victimid ];
   if (victim->kproc ==0) 

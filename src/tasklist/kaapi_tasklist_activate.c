@@ -51,9 +51,6 @@
 int kaapi_tasklist_pushready_td( 
     kaapi_tasklist_t*       tasklist, 
     kaapi_taskdescr_t*      td,
-#if !defined(TASKLIST_ONEGLOBAL_MASTER)  
-    kaapi_taskdescr_t**     tdref,
-#endif
     int                     priority
 )
 {
@@ -154,18 +151,11 @@ int kaapi_tasklist_pushready_td(
 #if 0
   /* push remote queue:
      - same code as kaapi_task_splitter_readylist except state ALLOCATED */
-#if defined(TASKLIST_ONEGLOBAL_MASTER)  
   if (tasklist->master == 0)
     td->tasksteal_arg.master_tasklist     = tasklist;
   else
     td->tasksteal_arg.master_tasklist     = tasklist->master;
   td->tasksteal_arg.td                    = td;
-#else
-  td->tasksteal_arg.master_tasklist       = tasklist;
-  td->tasksteal_arg.td_beg                = &td;
-  td->tasksteal_arg.td_beg                = tdref;
-  td->tasksteal_arg.td_end                = tdref+1;
-#endif
 
   kaapi_task_init(
       &td->tasksteal, 
@@ -173,14 +163,10 @@ int kaapi_tasklist_pushready_td(
       &td->tasksteal_arg
   );
 
-#if defined(TASKLIST_ONEGLOBAL_MASTER)  
   if (tasklist->master == 0)
     KAAPI_ATOMIC_INCR(&tasklist->count_thief);
   else
     KAAPI_ATOMIC_INCR(&tasklist->master->count_thief);
-#else
-  KAAPI_ATOMIC_INCR(&tasklist->count_thief);
-#endif
 
   /* push the task in the remote queue */
   //kaapi_thread_pushtask_atlevel(task, KAAPI_HWS_LEVELID_NUMA);

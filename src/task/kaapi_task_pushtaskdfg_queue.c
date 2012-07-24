@@ -49,12 +49,12 @@
 
 /* push the task thread->pc on a given processor
  */
-#if 0
 int kaapi_thread_distribute_task (
   kaapi_thread_t*      thread,
   kaapi_processor_id_t kid
 )
 {
+#if 0
   kaapi_processor_t* kproc;
   if (kid >= kaapi_getconcurrency())
     kid %= kaapi_getconcurrency();
@@ -116,7 +116,7 @@ int kaapi_thread_distribute_task (
     kproc->mailbox.tail = remote_task;
   }
   kaapi_atomic_unlock(&kproc->lock);
+#endif
     
   return 0;
 }
-#endif

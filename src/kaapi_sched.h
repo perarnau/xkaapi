@@ -21,9 +21,14 @@ extern void kaapi_sched_stealreadytasklist(
 );
 
 
-/** How to execute task with readylist
-    It is assumed that top frame is a frame with a ready list.
+/** Start execution with a TD.
+    Initialize the stack of the current thread and then, the caller shoud calls kaapi_thread_execframe_tasklist.
 */
-extern int kaapi_thread_execframe_tasklist( struct kaapi_thread_context_t* thread );
+extern int kaapi_thread_startexecwithtd( 
+      kaapi_processor_t* kproc,
+      kaapi_taskdescr_t* td
+);
+
+int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread );
 
 #endif /* _KAAPI_SCHED_H_ */

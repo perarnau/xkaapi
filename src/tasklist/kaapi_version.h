@@ -9,7 +9,7 @@ struct kaapi_version_t;
 typedef struct kaapi_link_version_t {
   struct kaapi_version_t*       version;        /* the version */
   struct kaapi_link_version_t*  next;           /* the next replicat version */
-  kaapi_tasklist_t*             tl;             /* the container of task that acceed the version */
+  kaapi_frame_tasklist_t*       tl;             /* the container of task that acceed the version */
 } kaapi_link_version_t;
 
 
@@ -34,8 +34,8 @@ typedef struct kaapi_version_t {
 extern kaapi_version_t* kaapi_version_findinsert( 
     int* islocal,
     struct kaapi_thread_context_t* thread,
-    kaapi_tasklist_t*       tl,
-    const void*             addr 
+    kaapi_frame_tasklist_t*        ftl,
+    const void*                    addr 
 );
 
 /** Set the initial access of a version.
@@ -47,7 +47,7 @@ extern kaapi_version_t* kaapi_version_findinsert(
 */
 extern int kaapi_version_add_initialaccess( 
     kaapi_version_t*           ver, 
-    kaapi_tasklist_t*          tl,
+    kaapi_frame_tasklist_t*    ftl,
     kaapi_access_mode_t        m,
     void*                      data, 
     const kaapi_memory_view_t* view 
@@ -57,7 +57,7 @@ extern int kaapi_version_add_initialaccess(
 /**
 */
 extern kaapi_version_t* kaapi_version_createreplicat( 
-    kaapi_tasklist_t*       tl,
+    kaapi_frame_tasklist_t* ftl,
     kaapi_version_t*        master_version
 );
 
@@ -65,9 +65,9 @@ extern kaapi_version_t* kaapi_version_createreplicat(
 /** Insert a synchronization points between the version and the master version
 */
 extern int kaapi_thread_insert_synchro( 
-    kaapi_tasklist_t*    tl,
-    kaapi_version_t*     version, 
-    kaapi_access_mode_t  m
+    kaapi_frame_tasklist_t* ftl,
+    kaapi_version_t*        version, 
+    kaapi_access_mode_t     m
 );
 
 

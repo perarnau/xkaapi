@@ -148,12 +148,16 @@ static size_t global_blocsize = 2;
 template<>
 struct TaskBodyCPU<TaskCholesky> {
   void operator()(
-                  ka::range2d_rpwp<double_type> A,
-                  const enum CBLAS_UPLO uplo
-                  )
+      const ka::StaticSchedInfo* info, 
+      ka::range2d_rpwp<double_type> A,
+      const enum CBLAS_UPLO uplo
+  )
   {
     size_t N = A->dim(0);
     size_t blocsize = global_blocsize;
+    
+    /* Distribute matrix A to bloc cyclic 1D (grid = ncpu x 1) over GPU set */
+    ka::Distribute( A, ka::BlockCyclic2D(info->count_gpu(), blocsize, 1, blocsize) );
     
     if( uplo == CblasLower ) {
       for (size_t k=0; k < N; k += blocsize) {

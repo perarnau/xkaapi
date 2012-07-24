@@ -56,7 +56,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   int save_state;
   kaapi_frame_t* fp;
   kaapi_frame_t save_fp;
-  kaapi_tasklist_t* tasklist;
+  kaapi_frame_tasklist_t* frame_tasklist;
   int16_t ngpu = 0;
   int16_t ncpu = 0;
   
@@ -137,24 +137,19 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
         + arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU];
   }
 
-
   /* the embedded task cannot be steal because it was not visible to thieves */
   arg->sub_body( arg->sub_sp, uthread, pc );
 
   /* allocate the tasklist for this task
   */
-  tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
-  kaapi_tasklist_init( tasklist, thread );
+  frame_tasklist = (kaapi_frame_tasklist_t*)malloc(sizeof(kaapi_frame_tasklist_t));
+  kaapi_frame_tasklist_init( frame_tasklist, thread );
 
   /* currently: that all, do not compute other things */
-  kaapi_thread_computereadylist(thread, tasklist);
-  KAAPI_ATOMIC_WRITE(&tasklist->count_thief, 0);
+  kaapi_thread_computereadylist(thread, frame_tasklist);
 
   /* populate tasklist with initial ready tasks */
-  kaapi_thread_tasklistready_push_init( tasklist, &tasklist->readylist );
-
-  /* keep the first task to execute outside the workqueue */
-  tasklist->context.chkpt = 0;
+  kaapi_thread_tasklistready_push_init( &frame_tasklist->tasklist, &frame_tasklist->readylist );
 
   KAAPI_EVENT_PUSH0(thread->stack.proc, thread, KAAPI_EVT_STATIC_END );
 
@@ -167,9 +162,9 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
     if (getenv("USER") !=0)
       sprintf(filename,"/tmp/graph.%s.%i.dot", getenv("USER"), counter++ );
     else
-      sprintf(filename,"/tmp/graph.%i.dot",counter++);
+      sprintf(filename,"/tmp/graph.%i.dot", counter++);
     FILE* filedot = fopen(filename, "w");
-    kaapi_thread_tasklist_print_dot( filedot, tasklist, 0 );
+    kaapi_frame_tasklist_print_dot( filedot, frame_tasklist, 0 );
     fclose(filedot);
   }
   if (getenv("KAAPI_DUMP_TASKLIST") !=0)
@@ -181,18 +176,17 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
     else
       sprintf(filename,"/tmp/tasklist.%i.log",counter++);
     FILE* filetask = fopen(filename, "w");
-    kaapi_thread_tasklist_print( filetask, tasklist );
+    kaapi_frame_tasklist_print( filetask, frame_tasklist );
     fclose(filetask);
   }
 #endif
   
   /* restore state */
   kaapi_thread_set_unstealable(save_state);
-  thread->stack.sfp->tasklist = tasklist;
+  thread->stack.sfp->tasklist = &frame_tasklist->tasklist;
 
   /* exec the spawned subtasks */
   kaapi_sched_sync_(thread);
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&tasklist->count_thief) == 0);
 
 #if 0
   fprintf(stdout, "[%s] kid=%i tasklist tasks: %llu total: %llu\n", 
@@ -219,8 +213,8 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   kaapi_sched_unlock(&thread->stack.proc->lock);
 
 #if 1 /* TODO: do not allocate if multiple uses of tasklist */
-  kaapi_tasklist_destroy( tasklist );
-  free(tasklist);
+  kaapi_frame_tasklist_destroy( frame_tasklist );
+  free(frame_tasklist);
 
 //HERE: hack to do loop over SetStaticSched because memory state
 // is leaved in inconsistant state.

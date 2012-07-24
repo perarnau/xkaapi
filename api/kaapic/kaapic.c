@@ -71,13 +71,13 @@ int kaapic_init(int32_t flags)
   kaapic_foreach_attr_init( &kaapic_default_attr );
     
   if (getenv("KAAPI_SEQ_GRAIN") !=0)
-    kaapic_default_attr.s_grain = atoi(getenv("KAAPI_SEQ_GRAIN"));
+    kaapic_default_attr.rep.li.s_grain = atoi(getenv("KAAPI_SEQ_GRAIN"));
   else
-    kaapic_default_attr.s_grain = 1;
+    kaapic_default_attr.rep.li.s_grain = 1;
   if (getenv("KAAPI_PAR_GRAIN") !=0)
-    kaapic_default_attr.p_grain = atoi(getenv("KAAPI_PAR_GRAIN"));
+    kaapic_default_attr.rep.li.p_grain = atoi(getenv("KAAPI_PAR_GRAIN"));
   else
-    kaapic_default_attr.p_grain = 1;
+    kaapic_default_attr.rep.li.p_grain = 1;
 
   _kaapic_register_task_format();
   return 0;

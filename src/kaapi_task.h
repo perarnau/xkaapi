@@ -545,7 +545,7 @@ static inline int kaapi_stack_destroy(kaapi_stack_t* stack )
 extern int kaapi_task_print( FILE* file, kaapi_task_t* task, kaapi_task_body_t body );
 
 /** \ingroup TASK
-    The function kaapi_thread_execframe() execute all the tasks in the thread' stack following
+    The function kaapi_stack_execframe() execute all the tasks in the thread' stack following
     the RFO order in the closures of the frame [frame_sp,..,sp[
     If successful, the kaapi_thread_execframe() function will return zero and the stack is empty.
     Otherwise, an error number will be returned to indicate the error.
@@ -557,7 +557,7 @@ extern int kaapi_task_print( FILE* file, kaapi_task_t* task, kaapi_task_body_t b
 extern int kaapi_stack_execframe( kaapi_stack_t* thread );
 
 /** \ingroup TASK
-    The function kaapi_threadgroup_execframe() execute all the tasks in the thread' stack following
+    The function kaapi_thread_execframe_tasklist() execute all the tasks in the thread' stack following
     using the list of ready tasks.
     If successful, the kaapi_threadgroup_execframe() function will return zero and the stack is empty.
     Otherwise, an error number will be returned to indicate the error.
@@ -566,7 +566,7 @@ extern int kaapi_stack_execframe( kaapi_stack_t* thread );
     \retval EWOULDBLOCK the execution of the stack will block the control flow.
     \retval EINTR the execution of the stack is interupt and the thread is detached to the kprocessor.
 */
-extern int kaapi_threadgroup_execframe( struct kaapi_thread_context_t* thread );
+extern int kaapi_thread_execframe_tasklist( struct kaapi_thread_context_t* thread );
 
 /** \ingroup WS
     This method tries to steal work from the tasks of a stack passed in argument.
@@ -732,13 +732,12 @@ typedef struct kaapi_tasksteal_arg_t {
 /** Args for taskstealready
 */
 typedef struct kaapi_taskstealready_arg_t {
-  struct kaapi_tasklist_t*   master_tasklist; /* the original task list */
-  struct kaapi_tasklist_t*   victim_tasklist; /* the victim task list or 0 if steal from the master */
+  struct kaapi_tasklist_t*  master_tasklist;   /* the original task list to signal */
 #if defined(TASKLIST_REPLY_ONETD)
-  struct kaapi_taskdescr_t*  td;              /* the stolen td */
+  struct kaapi_taskdescr_t*  td;               /* the stolen td */
 #else
-  struct kaapi_taskdescr_t** td_beg;          /* range of stolen task into origin_tasklist */
-  struct kaapi_taskdescr_t** td_end;          /* range of stolen task into origin_tasklist */
+  struct kaapi_taskdescr_t** td_beg;           /* range of stolen task into origin_tasklist */
+  struct kaapi_taskdescr_t** td_end;           /* range of stolen task into origin_tasklist */
 #endif
 } kaapi_taskstealready_arg_t;
 

@@ -46,10 +46,10 @@
 /** 
 */
 kaapi_data_t* kaapi_thread_computeready_access( 
-    kaapi_tasklist_t*   tl, 
-    kaapi_version_t*    version, 
-    kaapi_taskdescr_t*  task,
-    kaapi_access_mode_t m 
+    kaapi_frame_tasklist_t* tl, 
+    kaapi_version_t*        version, 
+    kaapi_taskdescr_t*      task,
+    kaapi_access_mode_t     m 
 )
 {
   kaapi_assert_debug( version->last_mode != KAAPI_ACCESS_MODE_VOID);

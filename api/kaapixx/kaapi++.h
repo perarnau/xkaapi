@@ -3116,13 +3116,13 @@ namespace ka {
   // --------------------------------------------------------------------
   /* Mapping of data into logical set of partitions
   */
-  struct BlockCyclic {
-    BlockCyclic()
+  struct BlockCyclic1D {
+    BlockCyclic1D()
      : np(0), bs(0), M(0)
     {}
     
     /* P: number of ressources, B: block size */
-    BlockCyclic(int P, int B)
+    BlockCyclic1D(int P, int B)
      : np(P), bs(B), M(B*P) 
     {}
     
@@ -3133,88 +3133,151 @@ namespace ka {
       int i;   /* index in the block */
     };
 
-    void map( rep& r, int index )
+    /* map global index to full representation */
+    void map( rep& r, int index ) const
     {
       r.p = (index % M)/bs;
       r.b = index / M;
       r.i = index % bs;
     }
 
-    void invmap( int& index, const rep& r)
+    /* specialized: map global index to ressource id */
+    int map_ressource( int index ) const
+    {
+      return (index % M)/bs;
+    }
+
+    /* inverse mapping */
+    void invmap( int& index, const rep& r) const
     {
       index = r.p * bs + r.b * M + r.i;
     }
+    
+    /* return the number of ressources */
+    int size() const
+    { return np; }
     
     int np;  /* ressource number */
     int bs;  /* = bloc size */
     int M;   /* = np * bloc size */
   };
+
+  /* 2D version */
+  struct BlockCyclic2D {
+    BlockCyclic2D()
+     : d1(), d2()
+    {}
+    
+    /* P: number of ressources, B: block size */
+    BlockCyclic2D(int P1, int B1, int P2, int B2)
+     : d1(P1,B1), d2(P2,B2)
+    {}
+    
+    /* element maping */
+    struct rep {
+      BlockCyclic1D::rep d1;
+      BlockCyclic1D::rep d2;
+    };
+
+    /* map global index to full representation */
+    void map( rep& r, int index1, int index2 ) const
+    {
+      d1.map(r.d1, index1);
+      d2.map(r.d2, index2);
+    }
+
+    /* specialized: map global index to ressource k */
+    int map_ressource( int index1, int index2 ) const
+    {
+      int r1, r2;
+      r1 = d1.map_ressource(index1);
+      r2 = d2.map_ressource(index2);
+      return r1 * d1.size() + r2;
+    }
+
+    /* inverse mapping */
+    void invmap( int& index1, int& index2, const rep& r) const
+    {
+      d1.invmap( index1, r.d1 );
+      d2.invmap( index2, r.d2 );
+    }
+
+    /* return the number of ressources */
+    int size() const
+    { return d1.size()*d2.size(); }
+    
+    BlockCyclic1D d1;
+    BlockCyclic1D d2;
+  };
   
   /* specialization for Block distribution */
-  struct Block : public BlockCyclic {
-    Block() 
-      : BlockCyclic()
+  struct Block1D : public BlockCyclic1D {
+    Block1D() 
+      : BlockCyclic1D()
     {}
     /* P: number of ressources, L: size of the sequence */
-    Block(int P, int L)
-      : BlockCyclic(P, (P+L-1)/L )
+    Block1D(int P, int L)
+      : BlockCyclic1D(P, L/P )
     {}
   };
 
-  template<typename DIST, typename T, bool isaccess>
-  struct Mapping2DHelper {
+  struct Block2D : public BlockCyclic2D {
+    Block2D() 
+      : BlockCyclic2D()
+    {}
+    /* P: number of ressources, L: size of the sequence */
+    Block2D(int P1, int L1, int P2, int L2)
+      : BlockCyclic2D(P1, L1/P1, P2, L2/P2 )
+    {}
   };
 
-  template<typename T>
-  struct Mapping2DHelper<Block,T,true> 
-  {
-    /* assume that T implements the range2D interface */
-    static void map( const T& C, size_t n_bloc_i, size_t n_bloc_j )
-    {
-      std::cout << __PRETTY_FUNCTION__ << " TODO" << std::endl;
-      int dim0 __attribute__((unused))= C.dim(0);
-      int dim1 __attribute__((unused))= C.dim(1);
+  template<class DD>
+  struct Distribution1D {
+    static int map( const DD& d, int index )
+    { 
+      int retval;
+      d.map_ressource( retval, index );
+      return retval;
     }
   };
 
-  template<typename T>
-  struct Mapping2DHelper<BlockCyclic,T,true> 
-  {
-    /* assume that T implements the range2D interface */
-    static void map( const T& C, size_t sz_bloc_i, size_t sz_bloc_j )
+  /* 2D distribution.
+     Given the set of ressources (cpu,gpu), this class returns the kid of 
+     the ressource where global index (index1,index2) is distributed.
+     The kid is computed using a linearization of the grid of ressources 
+     of the distribution dd. The set of ressources may be either mapped to 
+     ncpu (may be =0) and ngpu (may be =0).
+     More precisely, the final set of ressources is between 0 and K-1.
+     The first ncpu ones correspond to CPU, followed by ngpu kid for GPUs.
+     
+     If the size of ressources in the distribution DD does not correspond to the
+     size of the set, then the kid is returned modulo the number of specified 
+     ressources.
+     
+     Implementation note:
+     - DD is assumed to have the following interface/fields:
+        * 
+     
+  */
+  template<class DD>
+  struct Distribution2D {
+    Distribution2D( _KaapiCPUGPU_Encode set, const DD& d )
+     : _set(set), _dist(d)
+    {}
+    
+    /* Return the kid where global index (index1,index2) is mapped
+    */
+    int map_ressource( int index1, int index2 )
     {
-      std::cout << __PRETTY_FUNCTION__ << " TODO" << std::endl;
-      int dim0 __attribute__((unused))= C.dim(0);
-      int dim1 __attribute__((unused))= C.dim(1);
+      int k = _dist.map_ressource( index1, index2 );
+      if (k < _set.ncpu) 
+        return k;
+      else 
+        return kaapi_getconcurrency_cpu() + (k - _set.ncpu);
     }
+    _KaapiCPUGPU_Encode _set;
+    const DD& _dist;
   };
-
-  template<typename DIST>
-  struct Mapping2D {
-  };
-
-  template<>
-  struct Mapping2D<Block> 
-  {
-    /* assume that T implements the range2D interface */
-    template<class T>
-    static void map( const T& C, size_t n_bloc_i, size_t n_bloc_j )
-    {
-      Mapping2DHelper<Block,T,IsAccessMode<typename TraitFormalParam<T>::mode_t>::value>::map( C, n_bloc_i, n_bloc_j );
-    }
-  };
-
-  template<>
-  struct Mapping2D<BlockCyclic> 
-  {
-    /* assume that T implements the range2D interface */
-    template<class T>
-    static void map( const T& C, size_t sz_bloc_i, size_t sz_bloc_j )
-    {
-      Mapping2DHelper<BlockCyclic,T,IsAccessMode<typename TraitFormalParam<T>::mode_t>::value>::map( C, sz_bloc_i, sz_bloc_j );
-    }
-  };
-
 
   // --------------------------------------------------------------------
   /* OwnerComputeRule attribut: specify, during fork that a task should

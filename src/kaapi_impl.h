@@ -68,7 +68,6 @@ extern "C" {
 */
 #define KAAPI_USE_READYLIST 1
 #define KAAPI_TASKLIST_POINTER_TASK 1
-#define TASKLIST_ONEGLOBAL_MASTER   1
 #define TASKLIST_REPLY_ONETD        1
 
 /* Task list priority: used reverse order between min max */
@@ -96,8 +95,6 @@ extern "C" {
 #include "kaapi_task.h"
 #include "kaapi_format.h"
 #include "kaapi_event.h"
-
-#include "memory/kaapi_mem.h"
 
 #include <string.h>
 
@@ -306,21 +303,20 @@ struct kaapi_taskdescr_t;
 /**
 */
 typedef struct kaapi_affinityset_t {
-    kaapi_cpuset_t                 who;       /* who is in this set */
-    size_t                         mem_size;
+    kaapi_cpuset_t                 who;       /* cpu id in this set */
+    size_t                         mem_size;  /* memory size of this set */
     int                            os_index;  /* numa node id or ??? */
-    int                            ncpu;
+    int                            ncpu;      /* number of cpu */
     short                          type;      /* see kaapi_memory_t */
-    struct kaapi_affinity_queue_t* queue;     /* yes ! */ 
 } kaapi_affinityset_t;
 
 /**
 */
 typedef struct kaapi_hierarchy_one_level_t {
-  unsigned short                count;           /* number of kaapi_affinityset_t at this level */
-  kaapi_affinityset_t*          affinity; 
-  kaapi_hws_levelid_t		levelid;
-  char*				name;
+  unsigned short           count;       /* number of kaapi_affinityset_t at this level */
+  kaapi_affinityset_t*     affinity; 
+  kaapi_hws_levelid_t      levelid;
+  char*	                   name;
 } kaapi_hierarchy_one_level_t;
 
 /** Memory hierarchy of the local machine
@@ -331,6 +327,7 @@ typedef struct kaapi_hierarchy_one_level_t {
 */
 typedef struct kaapi_hierarchy_t {
   unsigned short               depth;
+  unsigned short               numalevel;
   kaapi_hierarchy_one_level_t* levels;
 } kaapi_hierarchy_t;
 
@@ -471,6 +468,7 @@ extern uint64_t kaapi_perf_thread_delayinstate(struct kaapi_processor_t* kproc);
 
 #include "kaapi_tasklist.h"
 #include "kaapi_sched.h"
+
 
 /**
 */
@@ -856,8 +854,6 @@ static inline int kaapi_stack_isready( kaapi_stack_t* stack )
     if (tl->master ==0) 
       return (KAAPI_ATOMIC_READ(&tl->cnt_exec) == tl->total_tasks);
     return 1; /* TODO voir */
-    kaapi_assert_debug(0); /* only master tasklist may suspend */
-    return (KAAPI_ATOMIC_READ(&tl->count_thief) == 0) && kaapi_tasklist_isempty(tl);
   }
 
   return kaapi_task_isready(fp->pc);
@@ -887,6 +883,16 @@ extern void _kaapi_signal_dump_state(int);
 */
 extern void _kaapi_signal_dump_counters(int);
 
+/* Signal handler to print the backtrace
+   This signal handler is attached to:
+    - SIGABRT
+    - SIGTERM
+    - SIGSEGV
+    - SIGFPE 
+    - SIGILL
+    If the library is configured with --with-perfcounter, then the function call _kaapi_signal_dump_counters.
+*/
+extern void _kaapi_signal_dump_backtrace(int);
 
 #if defined(__cplusplus)
 }

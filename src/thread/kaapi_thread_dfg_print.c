@@ -280,8 +280,8 @@ int kaapi_thread_print  ( FILE* file, kaapi_thread_context_t* thread )
       --task_bot;
     }
     task_bot = task_top;
-    if (frame->tasklist !=0)
-      kaapi_thread_tasklist_print( file, frame->tasklist );
+    if ((frame->tasklist !=0) && (frame->tasklist->frame_tasklist !=0))
+      kaapi_frame_tasklist_print( file, frame->tasklist->frame_tasklist );
 
     ++frame;
     ++iframe;
