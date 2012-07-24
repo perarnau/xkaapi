@@ -99,7 +99,11 @@ static inline int kaapi_onereadytasklist_pop( kaapi_onereadytasklist_t* ortl, ka
 
   int retval = kaapi_workqueue_pop(&ortl->wq, &beg, &end, 1);
   if (retval == 0)
+  {
     *td = ortl->data[ kaapi_onereadytasklist_getindex(beg) ];
+    ortl->data[ kaapi_onereadytasklist_getindex(beg) ] = 0;
+    if (*td ==0) retval = EBUSY;
+  }
   return retval;  
 }
 
@@ -137,6 +141,8 @@ static inline int kaapi_onereadytasklist_steal( kaapi_onereadytasklist_t* ortl, 
   if (retval ==0)
   {
     *td = ortl->data[ kaapi_onereadytasklist_getindex(beg) ];
+    ortl->data[ kaapi_onereadytasklist_getindex(beg) ] = 0;
+    if (*td ==0) retval = EBUSY;
   }
   kaapi_atomic_unlock( &ortl->lock );
   return retval;
