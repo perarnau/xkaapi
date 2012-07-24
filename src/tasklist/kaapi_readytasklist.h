@@ -45,7 +45,7 @@
 #ifndef _KAAPI_READYTASKLIST_H_
 #define _KAAPI_READYTASKLIST_H_
 
-#define KAAPI_ALLOCATED_TDBLOCSIZE 128 /* such that kaapi_bloctd_t == 1 pagesize */
+#define KAAPI_ALLOCATED_TDBLOCSIZE 1024 /* such that kaapi_bloctd_t == 1 pagesize */
 
 static inline int kaapi_onereadytasklist_getindex(long value)
 {
@@ -62,8 +62,8 @@ static inline int kaapi_onereadytasklist_getindex(long value)
 */
 typedef struct kaapi_onereadytasklist_t {
   kaapi_taskdescr_t*     data[KAAPI_ALLOCATED_TDBLOCSIZE];
-  kaapi_lock_t           lock;
   kaapi_workqueue_t      wq;
+  kaapi_lock_t           lock;
 } kaapi_onereadytasklist_t;
 
 static inline void kaapi_onereadytasklist_init( kaapi_onereadytasklist_t* ortl )
