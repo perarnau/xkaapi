@@ -349,13 +349,9 @@ static inline kaapi_taskdescr_t* kaapi_allocator_allocate_td(
   td->wc         = 0;
   td->task       = task;
   td->fmt 	     = task_fmt;
-  /* TODO: here */
   td->priority   = KAAPI_TASKLIST_CPU_MIN_PRIORITY;
-//  td->priority   = KAAPI_TASKLIST_MIN_PRIORITY;
-#if 0 // DEPRECATED_ATTRIBUTE
   td->next       = 0;
   td->prev       = 0;
-#endif
   kaapi_bitmap_value_clear_32(&td->ocr);       /* means no OCR */
   td->mark             = 0;
   td->u.acl.date       = 0;
@@ -553,11 +549,17 @@ static inline int kaapi_readytasklist_pushready_td(
 )
 {
     if( kaapi_processor_get_type(kaapi_get_current_processor()) ==
-	    KAAPI_PROC_TYPE_CUDA )
+	    KAAPI_PROC_TYPE_CUDA ) {
 	if( td->priority > KAAPI_TASKLIST_GPU_MIN_PRIORITY ) {
 	    kaapi_assert_debug( td->tasklist != NULL );
 	    return kaapi_readylist_push( &td->tasklist->rtl, td, priority );
 	}
+    } else {
+	if( td->priority > KAAPI_TASKLIST_GPU_MIN_PRIORITY ) {
+	  return kaapi_readylist_push( rtl, td, priority );
+	}
+    }
+
 
     if( kaapi_default_param.affinity ) {
 	kaapi_processor_t* kproc_remote = kaapi_affinity_get_by_data( 

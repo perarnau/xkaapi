@@ -169,6 +169,11 @@ static inline int kaapi_readytasklist_isempty( kaapi_readytasklist_t* rtl )
     return (KAAPI_ATOMIC_READ( &rtl->cnt_tasks ) == 0 );
 }
 
+static inline int kaapi_readytasklist_count( kaapi_readytasklist_t* rtl )
+{
+    return KAAPI_ATOMIC_READ( &rtl->cnt_tasks );
+}
+
 static inline int kaapi_readylist_push( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t* td, int priority )
 {
   kaapi_onereadytasklist_t* ortl;

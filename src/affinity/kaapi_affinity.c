@@ -60,7 +60,7 @@ kaapi_processor_t* kaapi_affinity_get_by_data(
   }
 
   if( (current_dev != 0) && (current_dev != local_asid) ) {
-#if 1
+#if 0
     fprintf( stdout, "[%s] kid=%lu td=%p(name=%s) "
 	    "src_asid=%lu (kid=%lu) to dest_asid=%lu (kid=%lu) size=%lu\n",
 	    __FUNCTION__,
