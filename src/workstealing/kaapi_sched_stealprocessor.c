@@ -83,7 +83,6 @@ int kaapi_sched_stealprocessor(
 
   if( !kaapi_readytasklist_isempty( kproc->rtl ) )
     kaapi_sched_stealreadytasklist( thread, kproc->rtl, lrequests, lrrange );
-  
 
   return 0;
 }

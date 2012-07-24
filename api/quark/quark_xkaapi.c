@@ -826,7 +826,7 @@ printf("IN %s\n", __PRETTY_FUNCTION__);  fflush(stdout);
   }
   kaapi_thread_computereadylist( thread, &sequence->frame_tasklist );
   /* populate tasklist with initial ready tasks */
-  kaapi_readytasklist_push_from_activationlist( &sequence->frame_tasklist.tasklist.rtl, sequence->frame_tasklist.readylist.front );
+  kaapi_thread_tasklistready_push_init( &sequence->frame_tasklist.tasklist, &sequence->frame_tasklist.readylist);
 
   thread->stack.sfp->tasklist = &sequence->frame_tasklist.tasklist;
   

@@ -45,116 +45,142 @@
 #ifndef _KAAPI_READYTASKLIST_H_
 #define _KAAPI_READYTASKLIST_H_
 
-/** One workqueue of ready tasks 
- */
+#define KAAPI_ALLOCATED_TDBLOCSIZE 32 /* such that kaapi_bloctd_t == 1 pagesize */
+
+/** List of pointers, managed by circular buffer.
+    First implementation: assume no overflow.
+    Assumption: beg <= end   
+*/
 typedef struct kaapi_onereadytasklist_t {
-  kaapi_lock_t	     lock;
-  kaapi_taskdescr_t* head;
-  kaapi_taskdescr_t* tail;
-  int		             size;
+  long                   size;  /* size of the allocated bloc data or 0 is not allocated */
+  kaapi_taskdescr_t**    data;
+  kaapi_taskdescr_t*     block[KAAPI_ALLOCATED_TDBLOCSIZE];
+  kaapi_workqueue_t      wq;
+  kaapi_lock_t           lock;
 } kaapi_onereadytasklist_t;
+
+
+static inline long kaapi_onereadytasklist_getindex(const kaapi_onereadytasklist_t* ortl, long value)
+{
+  long size = ortl->size;
+  if (value <0)
+    return (value % size) + size;
+  if (value > size)
+    return (value % size);
+  return value;
+}
 
 static inline void kaapi_onereadytasklist_init( kaapi_onereadytasklist_t* ortl )
 {
-  ortl->size = 0;
-  ortl->head = ortl->tail = NULL;
-  kaapi_atomic_initlock( &ortl->lock );
+  ortl->data = ortl->block;
+  ortl->size = KAAPI_ALLOCATED_TDBLOCSIZE;
+  kaapi_atomic_initlock(&ortl->lock);
+  kaapi_workqueue_init_with_lock(&ortl->wq, 0, 0, &ortl->lock);
 }
 
 static inline void kaapi_onereadytasklist_destroy( kaapi_onereadytasklist_t* ortl )
 {
-  ortl->size = 0;
-  ortl->head = ortl->tail = NULL;
-  kaapi_atomic_destroylock( &ortl->lock ); 
+  kaapi_workqueue_destroy(&ortl->wq);
+  kaapi_atomic_destroylock(&ortl->lock);
+  if (ortl->data != ortl->block) free(ortl->data);
 }
 
-/**/
 static inline int kaapi_onereadytasklist_isempty( const kaapi_onereadytasklist_t* ortl )
 {
-  return ( ortl->size == 0 );
+  return kaapi_workqueue_isempty(&ortl->wq);
 }
 
 static inline int kaapi_onereadytasklist_size( const kaapi_onereadytasklist_t* ortl )
 {
-  return ortl->size;
+  return (int)kaapi_workqueue_size(&ortl->wq);
 }
 
-
-static inline int kaapi_onereadytasklist_pop(
-                                             kaapi_onereadytasklist_t* ortl, kaapi_taskdescr_t** td )
+static inline int kaapi_onereadytasklist_pop( kaapi_onereadytasklist_t* ortl, kaapi_taskdescr_t** td )
 {
+  kaapi_workqueue_index_t beg,end;
+  
   /* fast check, without lock */
   if( kaapi_onereadytasklist_isempty( ortl ) )
     return EBUSY;
-  kaapi_atomic_lock( &ortl->lock );
-  if( kaapi_onereadytasklist_isempty( ortl ) ){
-    kaapi_atomic_unlock( &ortl->lock );
-    return EBUSY;
+
+  int retval = kaapi_workqueue_pop(&ortl->wq, &beg, &end, 1);
+  if (retval == 0)
+  {
+    long index = kaapi_onereadytasklist_getindex(ortl, beg);
+    *td = ortl->data[ index ];
+    ortl->data[ index ] = 0;
+    if (*td ==0) retval = EBUSY;
   }
-  *td = ortl->head;
-  ortl->head = (*td)->next;
-  if( ortl->head != NULL )
-    ortl->head->prev = 0;
-  else
-    ortl->tail = NULL; /* empty */
-  ortl->size--;
-  kaapi_atomic_unlock( &ortl->lock );
-  return 0;
+  return retval;  
 }
 
-static inline int kaapi_onereadytasklist_push(
-                                              kaapi_onereadytasklist_t* ortl, kaapi_taskdescr_t* td )
+
+static inline int kaapi_onereadytasklist_realloc( kaapi_onereadytasklist_t* ortl )
 {
-  td->next = td->prev = NULL;
-  kaapi_atomic_lock( &ortl->lock );
-  td->next = ortl->head;
-  if( ortl->head != NULL )
-    ortl->head->prev = td;
-  else
-    ortl->tail = td;
-  ortl->head = td;
-  ortl->size++;
-  kaapi_atomic_unlock( &ortl->lock );
+  /* realloc */
+  size_t newsize = 2*ortl->size;
+  kaapi_taskdescr_t** olddata = ortl->data;
+  kaapi_taskdescr_t** newdata = (kaapi_taskdescr_t**)malloc(newsize*sizeof(kaapi_taskdescr_t*));
+  memcpy(newdata, ortl->data, ortl->size*sizeof(kaapi_taskdescr_t*));
+  /* change original */
+  kaapi_atomic_lock(&ortl->lock);
+  ortl->data = newdata;
+  ortl->size = newsize;
+  kaapi_atomic_unlock(&ortl->lock);
+  if (olddata != ortl->block) free(olddata);
   return 0;
 }
 
-static inline int kaapi_onereadytasklist_remote_push(
-                                                     kaapi_onereadytasklist_t* ortl, kaapi_taskdescr_t* td )
+static inline int kaapi_onereadytasklist_push( kaapi_onereadytasklist_t* ortl, kaapi_taskdescr_t* td )
 {
-  td->next = td->prev = NULL;
+  kaapi_workqueue_index_t beg = kaapi_workqueue_range_begin(&ortl->wq) -1;
+  kaapi_workqueue_index_t end = kaapi_workqueue_range_end(&ortl->wq);
+  
+  if (end-beg >= ortl->size)
+    kaapi_onereadytasklist_realloc(ortl);
+  
+  ortl->data[ kaapi_onereadytasklist_getindex(ortl,beg) ] = td;
+  kaapi_workqueue_push(&ortl->wq, beg );
+  return 0;
+}
+
+static inline int kaapi_onereadytasklist_remote_push( kaapi_onereadytasklist_t* ortl, kaapi_taskdescr_t* td )
+{
   kaapi_atomic_lock( &ortl->lock );
-  td->prev = ortl->tail;
-  if( ortl->tail != NULL )
-    ortl->tail->next = td;
-  else
-    ortl->head = td;
-  ortl->tail = td;
-  ortl->size++;
+  kaapi_workqueue_index_t end = kaapi_workqueue_range_end(&ortl->wq);
+  kaapi_workqueue_index_t beg = kaapi_workqueue_range_begin(&ortl->wq);
+
+  if (end-beg >= ortl->size)
+    kaapi_onereadytasklist_realloc(ortl);
+
+  ortl->data[ kaapi_onereadytasklist_getindex(ortl,end) ] = td;
+  kaapi_workqueue_rpush( &ortl->wq, end+1 );
   kaapi_atomic_unlock( &ortl->lock );
   return 0;
 }
 
-static inline int kaapi_onereadytasklist_steal(
-                                               kaapi_onereadytasklist_t* ortl, kaapi_taskdescr_t** td ) 
+static inline int kaapi_onereadytasklist_steal( kaapi_onereadytasklist_t* ortl, kaapi_taskdescr_t** td ) 
 {
   int size_ws;
+  kaapi_workqueue_index_t beg,end;
+  int retval;
   
-  kaapi_atomic_lock( &ortl->lock );
   size_ws = kaapi_onereadytasklist_size( ortl );
-  if( size_ws == 0 ) {
-    kaapi_atomic_unlock( &ortl->lock );
-    return 1;
+  if (size_ws ==0) 
+    return ERANGE;
+
+  /* */
+  kaapi_atomic_lock( &ortl->lock );
+  retval = kaapi_workqueue_steal(&ortl->wq, &beg, &end, 1);
+  if (retval ==0)
+  {
+    long index = kaapi_onereadytasklist_getindex(ortl, beg);
+    *td = ortl->data[ index ];
+    ortl->data[ index ] = 0;
+    if (*td ==0) retval = EBUSY;
   }
-  *td = ortl->tail;
-  if( (*td)->prev != NULL )
-    (*td)->prev->next = NULL;
-  else
-    ortl->head = NULL;
-  ortl->tail = (*td)->prev;
-  ortl->size--;
   kaapi_atomic_unlock( &ortl->lock );
-  (*td)->prev = (*td)->next = NULL;
-  return 0;
+  return retval;
 }
 
 /** The workqueue of ready tasks with priorities

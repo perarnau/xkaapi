@@ -1926,7 +1926,7 @@ static inline kaapi_workqueue_index_ull_t
 /**
 */
 static inline kaapi_workqueue_index_t 
-  kaapi_workqueue_size( kaapi_workqueue_t* kwq )
+  kaapi_workqueue_size( const kaapi_workqueue_t* kwq )
 {
   kaapi_workqueue_index_t size = kwq->rep.li.end - kwq->rep.li.beg;
   return (size <0 ? 0 : size);
@@ -1935,7 +1935,7 @@ static inline kaapi_workqueue_index_t
 /**
 */
 static inline kaapi_workqueue_index_ull_t 
-  kaapi_workqueue_size_ull( kaapi_workqueue_t* kwq )
+  kaapi_workqueue_size_ull( const kaapi_workqueue_t* kwq )
 {
   kaapi_workqueue_index_ull_t b = kwq->rep.ull.beg;
   kaapi_workqueue_index_ull_t e = kwq->rep.ull.end;
@@ -2006,6 +2006,53 @@ static inline int kaapi_workqueue_push_ull(
   }
   return EINVAL;
 }
+
+/** This function should be called by the current kaapi thread that own the workqueue.
+    The function pushes work into the workqueue.
+    Assuming that before the call, the workqueue is [beg,end).
+    After the successful call to the function the workqueu becomes [beg,newend).
+    newend is assumed to be greather than end.
+    In case of concurrency, the lock on the queue must be taken.
+    Return 0 in case of success 
+    Return EINVAL if invalid arguments
+*/
+static inline int kaapi_workqueue_rpush(
+  kaapi_workqueue_t*      kwq, 
+  kaapi_workqueue_index_t newend
+)
+{
+  if ( newend > kwq->rep.li.end  )
+  {
+    kaapi_mem_barrier();
+    kwq->rep.li.end = newend;
+    return 0;
+  }
+  return EINVAL;
+}
+
+/** This function should be called by the current kaapi thread that own the workqueue.
+    The function pushes work into the workqueue.
+    Assuming that before the call, the workqueue is [beg,end).
+    After the successful call to the function the workqueu becomes [beg,newend).
+    newend is assumed to be greather than end.
+    In case of concurrency, the lock on the queue must be taken.
+    Return 0 in case of success 
+    Return EINVAL if invalid arguments
+*/
+static inline int kaapi_workqueue_rpush_ull(
+  kaapi_workqueue_t*          kwq, 
+  kaapi_workqueue_index_ull_t newend
+)
+{
+  if ( newend > kwq->rep.ull.end  )
+  {
+    kaapi_mem_barrier();
+    kwq->rep.li.end = newend;
+    return 0;
+  }
+  return EINVAL;
+}
+
 
 /** Helper function called in case of conflict.
     Return EBUSY is the queue is empty.
