@@ -275,7 +275,8 @@ int kaapi_cuda_thread_execframe_tasklist(kaapi_thread_context_t * thread)
   kaapi_assert_debug(tasklist != 0);
 
   /* force previous write before next write */
-  KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist __attribute__ ((unused)) = *tasklist);
+  KAAPI_DEBUG_INST(kaapi_tasklist_t save_tasklist
+		   __attribute__ ((unused)) = *tasklist);
 
   while (!kaapi_tasklist_isempty(tasklist)) {
     err = kaapi_readylist_pop(&tasklist->rtl, &td);
@@ -295,28 +296,22 @@ int kaapi_cuda_thread_execframe_tasklist(kaapi_thread_context_t * thread)
 			   KAAPI_MAX_RECCALL);
 
 #if 0
-        if( td->fmt != 0 )
-          fprintf(stdout, "[%s] kid=%lu td=%p name=%s (counter=%d,wc=%d)\n", 
-                  __FUNCTION__,
-                  (long unsigned int)kaapi_get_current_kid(),
-                  (void*)td, td->fmt->name,
-                  KAAPI_ATOMIC_READ(&td->counter),
-                  td->wc
-                  );
-        else
-          fprintf(stdout, "[%s] kid=%lu td=%p (counter=%d,wc=%d)\n", 
-                  __FUNCTION__,
-                  (long unsigned int)kaapi_get_current_kid(),
-                  (void*)td,
-                  KAAPI_ATOMIC_READ(&td->counter),
-                  td->wc
-                  );
-        fflush(stdout);
+	if (td->fmt != 0)
+	  fprintf(stdout,
+		  "[%s] kid=%lu td=%p name=%s (counter=%d,wc=%d)\n",
+		  __FUNCTION__,
+		  (long unsigned int) kaapi_get_current_kid(), (void *) td,
+		  td->fmt->name, KAAPI_ATOMIC_READ(&td->counter), td->wc);
+	else
+	  fprintf(stdout, "[%s] kid=%lu td=%p (counter=%d,wc=%d)\n",
+		  __FUNCTION__,
+		  (long unsigned int) kaapi_get_current_kid(),
+		  (void *) td, KAAPI_ATOMIC_READ(&td->counter), td->wc);
+	fflush(stdout);
 #endif
 	/* start execution of the user body of the task */
 	KAAPI_DEBUG_INST(kaapi_assert(td->u.acl.exec_date == 0));
 	KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_BEG);
-///        body( pc->sp, (kaapi_thread_t*)stack->sfp );
 	kaapi_cuda_thread_exec_task(kstream, stack, td);
 	KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_END);
 	KAAPI_DEBUG_INST(td->u.acl.exec_date = kaapi_get_elapsedns());
