@@ -519,6 +519,7 @@ typedef struct kaapi_task_t {
       uint8_t                   priority;  /** of the task */
       uint8_t                   flag;      /** some flag as splittable, local... */
       uint8_t                   ocr;       /** currently ocr */
+      uint32_t                  site;      /** currently 1+site, if 0 no site */
       /* ... */                            /** some bits are available on 64bits LP machine */
     } s;
     uintptr_t                   dummy;     /* to clear previous fields in one write */
@@ -537,6 +538,12 @@ static inline void kaapi_task_set_priority(kaapi_task_t* task, uint8_t prio)
 { 
   kaapi_assert_debug( prio <= KAAPI_TASK_MAX_PRIORITY );
   task->u.s.priority = prio; 
+}
+
+static inline void kaapi_task_set_site(kaapi_task_t* task, uint32_t site)
+{ 
+  kaapi_assert_debug((site >=0) && (site < (uint32_t)kaapi_getconcurrency()));
+  task->u.s.site = 1U+site; 
 }
 
 /* ========================================================================= */

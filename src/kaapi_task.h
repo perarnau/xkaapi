@@ -315,6 +315,12 @@ static inline int kaapi_task_get_priority(const kaapi_task_t* task)
   return task->u.s.priority; 
 }
 
+/* return the site or -1 if no site */
+static inline int kaapi_task_get_site(const kaapi_task_t* task)
+{ 
+  return ((int)task->u.s.site)-1; 
+}
+
 static inline int kaapi_task_is_unstealable(kaapi_task_t* task)
 { 
   return (task->u.s.flag & KAAPI_TASK_UNSTEALABLE_MASK) !=0; 

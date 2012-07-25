@@ -339,20 +339,18 @@ typedef struct kaapi_rtparam_t {
   size_t                   stacksize_master;    /* stack size for the master thread */
   unsigned int             syscpucount;         /* number of physical cpus of the system */
   unsigned int             cpucount;            /* number of physical cpu used for execution */
-#if defined(KAAPI_USE_CUDA)
   unsigned int             gpucount;            /* number of physical gpu used for execution */
-#endif
   kaapi_selectvictim_fnc_t wsselect;            /* default method to select a victim */
   kaapi_emitsteal_fnc_t	   emitsteal;
   kaapi_emitsteal_init_t   emitsteal_initctxt;  /* call to initialize the emitsteal ctxt */
   unsigned int		         use_affinity;        /* use cpu affinity */
   int                      display_perfcounter; /* set to 1 iff KAAPI_DISPLAY_PERF */
 #if defined(KAAPI_USE_CUPTI)
-   uint64_t		    cudastartuptime;
+   uint64_t		             cudastartuptime;
 #endif
 #if defined(KAAPI_USE_CUDA)
-   uint64_t		    cudawindowsize;
-   unsigned int		    cudapeertopeer;
+   uint64_t		             cudawindowsize;
+   unsigned int		         cudapeertopeer;
 #endif
   uint64_t                 startuptime;         /* time at the end of kaapi_init */
   int                      alarmperiod;         /* period for alarm */

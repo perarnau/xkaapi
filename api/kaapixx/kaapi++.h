@@ -481,6 +481,25 @@ namespace ka {
   inline AttributSchedTask SetPartition( int s )
   { return AttributSchedTask(s); }
   
+
+  /* This attribut is currently supported to make experiment.
+     It would be deleted in the future when the right API will be designed
+  */
+  class AttributSchedSiteTask : protected DefaultAttribut {
+  public:
+    int   _kid;   // a physical ressource id
+  public:
+    AttributSchedSiteTask( int k ) : _kid(k) {}
+    void operator()( kaapi_thread_t* thread ) const
+    { 
+      kaapi_task_set_site(kaapi_thread_toptask(thread), _kid);
+      DefaultAttribut::operator()(thread);
+    }
+  };
+
+  inline AttributSchedSiteTask SetSite( int s )
+  { return AttributSchedSiteTask(s); }
+  
  
    /* The only attribut that can be passed to task creation:
   */
@@ -515,10 +534,10 @@ namespace ka {
     }
     
     /* return the number of cpu */
-    size_t count_cpu() const { return nkproc[KAAPI_PROC_TYPE_CPU-1]; }
+    size_t count_cpu() const { return nkproc[KAAPI_PROC_TYPE_CPU]; }
     
     /* return the number of gpu */
-    size_t count_gpu() const { return nkproc[KAAPI_PROC_TYPE_GPU-1]; }
+    size_t count_gpu() const { return nkproc[KAAPI_PROC_TYPE_GPU]; }
   };
 
   // --------------------------------------------------------------------
@@ -580,7 +599,7 @@ namespace ka {
       arg->sub_sp   = task->sp;
       arg->sub_body = (kaapi_task_vararg_body_t)task->body;
       arg->schedinfo.nkproc[0]                   = (uint32_t)_nress;
-      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU] = (uint32_t)_ngpu;
+      arg->schedinfo.nkproc[KAAPI_PROC_TYPE_CPU] = (uint32_t)_ncpu;
       arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU] = (uint32_t)_ngpu;
       kaapi_task_init(task, (kaapi_task_body_t)kaapi_staticschedtask_body, arg);
       kaapi_thread_pushtask(thread);
@@ -3256,7 +3275,12 @@ namespace ka {
      
      Implementation note:
      - DD is assumed to have the following interface/fields:
-        * 
+        * int map_ressource( int index1, int index2 )
+        that return the global index of the ressource in range [0:N).
+     - the Encode set is assume to be consistent with the real used hardware,
+     if the number of GPU is greather than the number of GPUs rely available,
+     then it was not detected and will certainely generate and error.
+
      
   */
   template<class DD>
@@ -3267,7 +3291,7 @@ namespace ka {
     
     /* Return the kid where global index (index1,index2) is mapped
     */
-    int map_ressource( int index1, int index2 )
+    int map_ressource( int index1, int index2 ) const
     {
       int k = _dist.map_ressource( index1, index2 );
       if (k < _set.ncpu) 
@@ -3275,6 +3299,9 @@ namespace ka {
       else 
         return kaapi_getconcurrency_cpu() + (k - _set.ncpu);
     }
+    int operator()(int index1, int index2) const
+    { return map_ressource(index1, index2); }
+    
     _KaapiCPUGPU_Encode _set;
     const DD& _dist;
   };

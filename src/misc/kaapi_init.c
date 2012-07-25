@@ -76,6 +76,7 @@ kaapi_rtparam_t kaapi_default_param = {
    .stacksize   = 64*4096, /**/
    .stacksize_master = 64*4096, /**/
    .cpucount    = 0,
+   .gpucount    = 0,
    .kproc_list  = 0,
    .kid2cpu     = 0,
    .cpu2kid     = 0,

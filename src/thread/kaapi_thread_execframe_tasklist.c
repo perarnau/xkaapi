@@ -139,26 +139,6 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
           kaapi_mem_host_map_sync( td->fmt, pc->sp );
 #endif
         
-        //#if defined(KAAPI_VERBOSE)
-#if 0
-        if( td->fmt != 0 )
-          fprintf(stdout, "[%s] kid=%lu td=%p name=%s (counter=%d,wc=%d)\n", 
-                  __FUNCTION__,
-                  (long unsigned int)kaapi_get_current_kid(),
-                  (void*)td, td->fmt->name,
-                  KAAPI_ATOMIC_READ(&td->counter),
-                  td->wc
-                  );
-        else
-          fprintf(stdout, "[%s] kid=%lu td=%p (counter=%d,wc=%d)\n", 
-                  __FUNCTION__,
-                  (long unsigned int)kaapi_get_current_kid(),
-                  (void*)td,
-                  KAAPI_ATOMIC_READ(&td->counter),
-                  td->wc
-                  );
-        fflush(stdout);
-#endif
         /* start execution of the user body of the task */
         KAAPI_DEBUG_INST(kaapi_assert( td->u.acl.exec_date == 0 ));
         KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
