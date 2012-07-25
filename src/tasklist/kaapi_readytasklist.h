@@ -64,7 +64,8 @@ static inline long kaapi_onereadytasklist_getindex(const kaapi_onereadytasklist_
 {
   long size = ortl->size;
   if (value <0)
-    return (value % size) + size;
+    return -(value % size);
+//    return (value % size) + size;
   if (value > size)
     return (value % size);
   return value;
@@ -120,7 +121,8 @@ static inline int kaapi_onereadytasklist_realloc( kaapi_onereadytasklist_t* ortl
   /* realloc */
   size_t newsize = 2*ortl->size;
   kaapi_taskdescr_t** olddata = ortl->data;
-  kaapi_taskdescr_t** newdata = (kaapi_taskdescr_t**)malloc(newsize*sizeof(kaapi_taskdescr_t*));
+  kaapi_taskdescr_t** newdata =
+    (kaapi_taskdescr_t**)calloc(newsize,sizeof(kaapi_taskdescr_t*));
   memcpy(newdata, ortl->data, ortl->size*sizeof(kaapi_taskdescr_t*));
   /* change original */
   kaapi_atomic_lock(&ortl->lock);
