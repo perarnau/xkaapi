@@ -49,7 +49,7 @@
 #include "kaapi_tasklist.h"
 
 
-kaapi_processor_t *kaapi_affinity_get_by_data(kaapi_processor_t * kproc,
+kaapi_processor_t *kaapi_affinity_datawizard(kaapi_processor_t * kproc,
 					      kaapi_taskdescr_t * td)
 {
   int i;

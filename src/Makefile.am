@@ -104,7 +104,9 @@ libkaapi_la_SOURCES=\
   tasklist/kaapi_tasklist.c \
   tasklist/kaapi_tasklist_activate.c \
   tasklist/kaapi_tasklist_criticalpath.c \
-  affinity/kaapi_affinity.c \
+  affinity/kaapi_affinity_default.c \
+  affinity/kaapi_affinity_rand.c \
+  affinity/kaapi_affinity_datawizard.c \
   thread/kaapi_thread_checkdeps.c \
   thread/kaapi_thread_clear.c \
   thread/kaapi_thread_computeready_access.c \

@@ -97,6 +97,7 @@ static int kaapi_setup_param()
 {
   const char* wsselect;
   const char* emitsteal;
+  const char* affinity;
     
   /* compute the number of cpu of the system */
 #if defined(__linux__)
@@ -224,8 +225,14 @@ static int kaapi_setup_param()
   }
 #endif  
 
-  if( getenv("KAAPI_AFFINITY") !=0 )
-    kaapi_default_param.affinity = 1;
+  affinity = getenv("KAAPI_AFFINITY");
+  kaapi_default_param.affinity = &kaapi_affinity_default;
+  if( affinity != NULL ) {
+    if (strcmp(affinity, "rand") ==0)
+      kaapi_default_param.affinity = &kaapi_affinity_rand;
+    else if (strcmp(affinity, "dw") ==0)
+      kaapi_default_param.affinity = &kaapi_affinity_datawizard;
+  }
 
 #if defined(KAAPI_USE_CUDA)
   if (getenv("KAAPI_WINDOW_SIZE") !=0 ) {

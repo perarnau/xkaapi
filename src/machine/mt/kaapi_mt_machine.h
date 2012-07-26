@@ -431,6 +431,7 @@ typedef struct kaapi_processor_t {
   kaapi_emitsteal_fnc_t	   emitsteal;                     /* virtualization of the WS algorithm */
   void*                    emitsteal_ctxt;                /* specific to the WS algorithm */
 
+  kaapi_affinity_fnc_t	  affinity;			  /* affinity function */
 #if defined(KAAPI_DEBUG)
   volatile uintptr_t       req_version;
   volatile uintptr_t       reply_version;

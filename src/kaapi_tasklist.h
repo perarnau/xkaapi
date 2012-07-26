@@ -372,7 +372,7 @@ static inline kaapi_taskdescr_t* kaapi_allocator_allocate_td(
   td->fmt 	     = task_fmt;
   td->priority   = KAAPI_TASKLIST_CPU_MIN_PRIORITY;
   kaapi_bitmap_value_clear_32(&td->ocr); /* means no ocr */
-  td->site       = 0; /* means not site */
+  td->site       = -1; /* means not site */
   td->next       = 0;
   td->prev       = 0;
   kaapi_bitmap_value_clear_32(&td->ocr);       /* means no OCR */
@@ -592,21 +592,10 @@ static inline int kaapi_readytasklist_pushready_td(
 	    kaapi_assert_debug( td->tasklist != NULL );
 	    return kaapi_readylist_push( &td->tasklist->rtl, td, priority );
     }
-  } 
-  else 
-  {
-    if( td->priority > KAAPI_TASKLIST_GPU_MIN_PRIORITY ) 
-    {
-      return kaapi_readylist_push( rtl, td, priority );
-    }
-  }
-  
-  if( kaapi_default_param.affinity ) 
-  {
-    kaapi_processor_t* kproc_remote = kaapi_affinity_get_by_data( kaapi_get_current_processor(), td );
+    kaapi_processor_t* kproc_remote = kaapi_get_current_processor()->affinity( kaapi_get_current_processor(), td );
     if( kproc_remote != kaapi_get_current_processor() ) 
     {
-	    return kaapi_readylist_remote_push( kproc_remote->rtl, td, priority );
+      return kaapi_readylist_remote_push( kproc_remote->rtl, td, priority );
     }
   }
   return kaapi_readylist_push( rtl, td, priority );
