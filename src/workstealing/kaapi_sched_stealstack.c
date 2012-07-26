@@ -89,8 +89,11 @@ int kaapi_sched_stealstack
       thread->stack.thieffp = top_frame;
       if (top_frame->pc == top_frame->sp) continue;
       kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );
-    } else 
+    } 
+#if 1 // To disable steal in ready list, in order to let only remote push
+    else if (thread->stack.proc->kid ==0)
       kaapi_sched_stealtasklist( thread, top_frame->tasklist, lrequests, lrrange );
+#endif
   }
   
   thread->stack.thieffp = 0;
