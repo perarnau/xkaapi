@@ -177,7 +177,8 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
       kaapi_setcontext(kproc, thread);
     }
 
-    if( kaapi_default_param.affinity ) {
+    if( kaapi_default_param.affinity ) 
+    {
 	if( !kaapi_readytasklist_isempty( kproc->rtl) ) {
 #if defined(KAAPI_USE_CUDA)
 	    if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)

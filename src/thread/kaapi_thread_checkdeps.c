@@ -184,8 +184,10 @@ int kaapi_thread_computedep_task(
     taskdescr->priority = KAAPI_TASKLIST_MIN_PRIORITY-kaapi_task_get_priority(task);
     taskdescr->site = kaapi_task_get_site(task);
   }
-  else 
+  else  {
     taskdescr->priority = KAAPI_TASKLIST_CPU_MIN_PRIORITY;
+    taskdescr->site = -1;
+  }
   
   kaapi_task_set_priority( task, taskdescr->priority );
   /* call to reserved memory before execution without several memory allocation */

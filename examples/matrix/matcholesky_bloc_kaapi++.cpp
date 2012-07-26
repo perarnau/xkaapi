@@ -276,7 +276,7 @@ struct TaskBodyCPU<TaskCholesky> {
 #endif
 
 
-#if 0
+#if 1
     std::cout << std::endl << "Distribution: " << std::endl;
     for (int i=0; i < N; ++i)
     {
