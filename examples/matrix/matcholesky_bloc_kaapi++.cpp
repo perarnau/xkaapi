@@ -1,5 +1,4 @@
 /*
-** kaapi_impl.h
 ** xkaapi
 ** 
 **
@@ -259,24 +258,33 @@ struct TaskBodyCPU<TaskCholesky> {
     typedef double* TYPE[DIM][DIM]; 
     TYPE* A = (TYPE*)ptr;
 #define USE_DIST 1
-#if defined(USE_DIST)    
+#if (USE_DIST ==1)    
     /* assume a square grid of ressources composed by CPU and GPU */
-    int sqrtnressource = sqrt(schedinfo->count_cpu()+schedinfo->count_gpu());
+    int nressources = (schedinfo->count_cpu()+schedinfo->count_gpu());
+    int sqrtnressources = sqrt(nressources);
     
+#if 1
     /* for the block version of Cholesky, the matrix is a NxN matrix of blocks of size NBxNB,
        thus we assume to distribute the block using a blocksize of =1 in each direction
     */
     ka::Distribution2D<ka::BlockCyclic2D> dist( 
           ka::SetnCPU(schedinfo->count_cpu()) | ka::SetnGPU(schedinfo->count_gpu()), 
-          ka::BlockCyclic2D(sqrtnressource, 1, sqrtnressource, 1 )
+          ka::BlockCyclic2D(sqrtnressources, 1, sqrtnressources, 1 )
     );
+#else
+    ka::Distribution2D<ka::BlockCyclic2D> dist( 
+          ka::SetnCPU(schedinfo->count_cpu()) | ka::SetnGPU(schedinfo->count_gpu()), 
+          ka::BlockCyclic2D(1, 8, nressources, 1 )
+    );
+#endif
+
 #  define SITE(x) ka::SetSite(x)
 #else
 #  define SITE(x) 
 #endif
 
 
-#if 1
+#if 0 //(USE_DIST ==1)
     std::cout << std::endl << "Distribution: " << std::endl;
     for (int i=0; i < N; ++i)
     {
@@ -295,14 +303,17 @@ struct TaskBodyCPU<TaskCholesky> {
       for (int m=k+1; m < N; ++m)
       {
         ka::Spawn<TaskDTRSM>(SITE(dist(m,k)))(CblasRight, CblasLower, CblasTrans, CblasNonUnit, 1.0, (*A)[k][k], (*A)[m][k], NB);
+        //ka::Spawn<TaskDTRSM>()(CblasRight, CblasLower, CblasTrans, CblasNonUnit, 1.0, (*A)[k][k], (*A)[m][k], NB);
       }
 
       for (int m=k+1; m < N; ++m)
       {
-        ka::Spawn<TaskDSYRK>(SITE(dist(m,m)))( CblasLower, CblasNoTrans, -1.0, (*A)[m][k], 1.0, (*A)[m][m], NB);
+        //ka::Spawn<TaskDSYRK>(SITE(dist(m,m)))( CblasLower, CblasNoTrans, -1.0, (*A)[m][k], 1.0, (*A)[m][m], NB);
+        ka::Spawn<TaskDSYRK>()( CblasLower, CblasNoTrans, -1.0, (*A)[m][k], 1.0, (*A)[m][m], NB);
         for (int n=k+1; n < m; ++n)
         {
-          ka::Spawn<TaskDGEMM>(SITE(dist(m,n)))(CblasNoTrans, CblasTrans, -1.0, (*A)[m][k], (*A)[n][k], 1.0, (*A)[m][n], NB);
+          //ka::Spawn<TaskDGEMM>(SITE(dist(m,n)))(CblasNoTrans, CblasTrans, -1.0, (*A)[m][k], (*A)[n][k], 1.0, (*A)[m][n], NB);
+          ka::Spawn<TaskDGEMM>()(CblasNoTrans, CblasTrans, -1.0, (*A)[m][k], (*A)[n][k], 1.0, (*A)[m][n], NB);
         }
       }
     }
