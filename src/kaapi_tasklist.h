@@ -574,26 +574,28 @@ static inline int kaapi_readytasklist_pushready_td(
     int priority 
 )
 {
+  kaapi_processor_t* curr_kproc = kaapi_get_current_processor();
+
   if (td->site !=-1)
   {
     kaapi_assert_debug( (td->site >=0) && (td->site < (int32_t)kaapi_count_kprocessors) );
     kaapi_processor_t* kproc_remote = kaapi_all_kprocessors[td->site];
-    if( kproc_remote != kaapi_get_current_processor() ) 
+    if( kproc_remote != curr_kproc ) 
     {
 	    return kaapi_readylist_remote_push( kproc_remote->rtl, td, priority );
     }
     return kaapi_readylist_push( rtl, td, priority );
   }
 
-  if( kaapi_processor_get_type(kaapi_get_current_processor()) == KAAPI_PROC_TYPE_CUDA ) 
+  if( kaapi_processor_get_type(curr_kproc) == KAAPI_PROC_TYPE_CUDA ) 
   {
     if( td->priority > KAAPI_TASKLIST_GPU_MIN_PRIORITY ) 
     {
 	    kaapi_assert_debug( td->tasklist != NULL );
 	    return kaapi_readylist_push( &td->tasklist->rtl, td, priority );
     }
-    kaapi_processor_t* kproc_remote = kaapi_get_current_processor()->affinity( kaapi_get_current_processor(), td );
-    if( kproc_remote != kaapi_get_current_processor() ) 
+    kaapi_processor_t* kproc_remote = curr_kproc->affinity( curr_kproc, td );
+    if( kproc_remote != curr_kproc ) 
     {
       return kaapi_readylist_remote_push( kproc_remote->rtl, td, priority );
     }
