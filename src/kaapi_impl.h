@@ -281,6 +281,10 @@ typedef kaapi_request_status_t (*kaapi_emitsteal_fnc_t)(struct kaapi_processor_t
 */
 typedef int (*kaapi_emitsteal_init_t)(struct kaapi_processor_t*);
 
+/* \ingroup AFF
+ * Return a processor with more affinity to a task.
+ */
+typedef struct kaapi_processor_t* (*kaapi_affinity_fnc_t)(struct kaapi_processor_t*,struct kaapi_taskdescr_t*);
 
 /* =======vvvvvvvvvvvvvvvvvv===================== Memory type ============================ */
 
@@ -345,6 +349,7 @@ typedef struct kaapi_rtparam_t {
   kaapi_selectvictim_fnc_t wsselect;            /* default method to select a victim */
   kaapi_emitsteal_fnc_t	   emitsteal;
   kaapi_emitsteal_init_t   emitsteal_initctxt;  /* call to initialize the emitsteal ctxt */
+  kaapi_affinity_fnc_t	   affinity;		/* call to pick a processor */
   unsigned int		         use_affinity;        /* use cpu affinity */
   int                      display_perfcounter; /* set to 1 iff KAAPI_DISPLAY_PERF */
 #if defined(KAAPI_USE_CUPTI)
@@ -363,8 +368,6 @@ typedef struct kaapi_rtparam_t {
   kaapi_hierarchy_t        memory;              /* memory hierarchy */
   unsigned int*	           kid2cpu;             /* mapping: kid->phys cpu  */
   unsigned int*  	         cpu2kid;             /* mapping: phys cpu -> kid */
-
-  int			    affinity;		/* use of affinity */
 } kaapi_rtparam_t;
 
 extern kaapi_rtparam_t kaapi_default_param;

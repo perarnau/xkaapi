@@ -582,13 +582,10 @@ static inline int kaapi_readytasklist_pushready_td(
 	}
     }
 
-
-    if( kaapi_default_param.affinity ) {
-	kaapi_processor_t* kproc_remote = kaapi_affinity_get_by_data( 
-		kaapi_get_current_processor(), td );
-	if( kproc_remote != kaapi_get_current_processor() ) {
-	    return kaapi_readylist_remote_push( kproc_remote->rtl, td, priority );
-    }
+  kaapi_processor_t* kproc_remote =
+    kaapi_get_current_processor()->affinity( kaapi_get_current_processor(), td );
+  if( kproc_remote != kaapi_get_current_processor() ) {
+      return kaapi_readylist_remote_push( kproc_remote->rtl, td, priority );
   }
   return kaapi_readylist_push( rtl, td, priority );
 }
