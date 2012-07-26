@@ -150,8 +150,7 @@ int kaapi_thread_computedep_task(
     handle = kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
 
     /* register to host memory mapping */
-    kaapi_mem_host_map_find_or_insert( host_map, 
-	(kaapi_mem_addr_t)access.data, &kmd );
+    kaapi_mem_host_map_find_or_insert( host_map, (kaapi_mem_addr_t)access.data, &kmd );
     kaapi_mem_data_set_addr( kmd, host_asid, (kaapi_mem_addr_t)handle );
     kaapi_mem_data_clear_dirty( kmd, host_asid );
     handle->kmd = kmd;

@@ -176,10 +176,10 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
 	    goto execute_first;
   }
   
+  KAAPI_ATOMIC_ADD(&tasklist->cnt_exec, cnt_exec);
+
   /* here... end execute frame tasklist*/
   KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_FRAME_TL_END );
-  
-  KAAPI_ATOMIC_ADD(&tasklist->cnt_exec, cnt_exec);
   
   kaapi_assert( kaapi_tasklist_isempty(tasklist) );
   
