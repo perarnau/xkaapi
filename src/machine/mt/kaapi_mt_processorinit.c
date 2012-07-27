@@ -155,6 +155,8 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
 
   kproc->rtl = (kaapi_readytasklist_t*)malloc( sizeof (kaapi_readytasklist_t) );
   kaapi_readytasklist_init( kproc->rtl );
+  kproc->rtl_remote = (kaapi_readytasklist_t*)malloc( sizeof (kaapi_readytasklist_t) );
+  kaapi_readytasklist_init( kproc->rtl_remote );
 
 #if defined(KAAPI_USE_CUDA)
   /* initialize cuda processor */

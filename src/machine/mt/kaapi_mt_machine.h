@@ -414,6 +414,7 @@ typedef struct kaapi_processor_t {
     __attribute__((aligned(KAAPI_CACHE_LINE)));
 
   struct kaapi_readytasklist_t* rtl;                      /* readylist of task descriptors */
+  struct kaapi_readytasklist_t* rtl_remote;                      /* readylist of task descriptors (remote push) */
   
   int volatile             isidle;                        /* true if kproc is idle (active thread is empty) */
 

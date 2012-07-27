@@ -597,7 +597,7 @@ static inline int kaapi_readytasklist_pushready_td(
     kaapi_processor_t* kproc_remote = curr_kproc->affinity( curr_kproc, td );
     if( kproc_remote != curr_kproc ) 
     {
-      return kaapi_readylist_remote_push( kproc_remote->rtl, td, priority );
+      return kaapi_readylist_remote_push( kproc_remote->rtl_remote, td, priority );
     }
   }
   return kaapi_readylist_push( rtl, td, priority );
