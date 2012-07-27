@@ -81,11 +81,14 @@ static inline int kaapi_onereadytasklist_size( const kaapi_onereadytasklist_t* o
 
 
 static inline int kaapi_onereadytasklist_pop(
-                                             kaapi_onereadytasklist_t* ortl, kaapi_taskdescr_t** td )
+  kaapi_onereadytasklist_t* ortl, 
+  kaapi_taskdescr_t** td 
+)
 {
   /* fast check, without lock */
   if( kaapi_onereadytasklist_isempty( ortl ) )
     return EBUSY;
+
   kaapi_atomic_lock( &ortl->lock );
   if( kaapi_onereadytasklist_isempty( ortl ) ){
     kaapi_atomic_unlock( &ortl->lock );
@@ -103,7 +106,9 @@ static inline int kaapi_onereadytasklist_pop(
 }
 
 static inline int kaapi_onereadytasklist_push(
-                                              kaapi_onereadytasklist_t* ortl, kaapi_taskdescr_t* td )
+  kaapi_onereadytasklist_t* ortl, 
+  kaapi_taskdescr_t* td 
+)
 {
   td->next = td->prev = NULL;
   kaapi_atomic_lock( &ortl->lock );
@@ -119,7 +124,9 @@ static inline int kaapi_onereadytasklist_push(
 }
 
 static inline int kaapi_onereadytasklist_remote_push(
-                                                     kaapi_onereadytasklist_t* ortl, kaapi_taskdescr_t* td )
+    kaapi_onereadytasklist_t* ortl, 
+    kaapi_taskdescr_t* td 
+)
 {
   td->next = td->prev = NULL;
   kaapi_atomic_lock( &ortl->lock );
@@ -135,10 +142,15 @@ static inline int kaapi_onereadytasklist_remote_push(
 }
 
 static inline int kaapi_onereadytasklist_steal(
-                                               kaapi_onereadytasklist_t* ortl, kaapi_taskdescr_t** td ) 
+    kaapi_onereadytasklist_t* ortl,
+    kaapi_taskdescr_t** td 
+) 
 {
   int size_ws;
   
+  if( kaapi_onereadytasklist_isempty( ortl ) )
+    return EBUSY;
+
   kaapi_atomic_lock( &ortl->lock );
   size_ws = kaapi_onereadytasklist_size( ortl );
   if( size_ws == 0 ) {
@@ -171,7 +183,10 @@ typedef struct kaapi_readytasklist_t {
  */
 static inline void
 kaapi_readylist_get_priority_range(
-                                   int* const min_prio, int* const max_prio, int* const inc_prio )
+  int* const min_prio, 
+  int* const max_prio, 
+  int* const inc_prio 
+)
 {
   if( kaapi_processor_get_type( kaapi_get_current_processor() ) == KAAPI_PROC_TYPE_CUDA )
   {
@@ -188,7 +203,7 @@ kaapi_readylist_get_priority_range(
 /*
  */
 static inline int kaapi_readytasklist_init( 
-                                           kaapi_readytasklist_t* rtl
+    kaapi_readytasklist_t* rtl
 /* unused                                           kaapi_lock_t*          lock */
 )
 {

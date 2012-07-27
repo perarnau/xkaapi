@@ -284,7 +284,7 @@ struct TaskBodyCPU<TaskCholesky> {
 #endif
 
 
-#if 0 //(USE_DIST ==1)
+#if (USE_DIST ==1)
     std::cout << std::endl << "Distribution: " << std::endl;
     for (int i=0; i < N; ++i)
     {
@@ -308,12 +308,12 @@ struct TaskBodyCPU<TaskCholesky> {
 
       for (int m=k+1; m < N; ++m)
       {
-        //ka::Spawn<TaskDSYRK>(SITE(dist(m,m)))( CblasLower, CblasNoTrans, -1.0, (*A)[m][k], 1.0, (*A)[m][m], NB);
-        ka::Spawn<TaskDSYRK>()( CblasLower, CblasNoTrans, -1.0, (*A)[m][k], 1.0, (*A)[m][m], NB);
+        ka::Spawn<TaskDSYRK>(SITE(dist(m,m)))( CblasLower, CblasNoTrans, -1.0, (*A)[m][k], 1.0, (*A)[m][m], NB);
+        //ka::Spawn<TaskDSYRK>()( CblasLower, CblasNoTrans, -1.0, (*A)[m][k], 1.0, (*A)[m][m], NB);
         for (int n=k+1; n < m; ++n)
         {
-          //ka::Spawn<TaskDGEMM>(SITE(dist(m,n)))(CblasNoTrans, CblasTrans, -1.0, (*A)[m][k], (*A)[n][k], 1.0, (*A)[m][n], NB);
-          ka::Spawn<TaskDGEMM>()(CblasNoTrans, CblasTrans, -1.0, (*A)[m][k], (*A)[n][k], 1.0, (*A)[m][n], NB);
+          ka::Spawn<TaskDGEMM>(SITE(dist(m,n)))(CblasNoTrans, CblasTrans, -1.0, (*A)[m][k], (*A)[n][k], 1.0, (*A)[m][n], NB);
+          //ka::Spawn<TaskDGEMM>()(CblasNoTrans, CblasTrans, -1.0, (*A)[m][k], (*A)[n][k], 1.0, (*A)[m][n], NB);
         }
       }
     }
