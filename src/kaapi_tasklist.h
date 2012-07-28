@@ -570,8 +570,7 @@ extern int kaapi_thread_initialize_first_access(
 */
 static inline int kaapi_readytasklist_pushready_td( 
     kaapi_readytasklist_t*  rtl, 
-    kaapi_taskdescr_t*      td,
-    int priority 
+    kaapi_taskdescr_t*      td
 )
 {
   kaapi_processor_t* curr_kproc = kaapi_get_current_processor();
@@ -582,9 +581,9 @@ static inline int kaapi_readytasklist_pushready_td(
     kaapi_processor_t* kproc_remote = kaapi_all_kprocessors[td->site];
     if( kproc_remote != curr_kproc ) 
     {
-	    return kaapi_readylist_remote_push( kproc_remote->rtl, td, priority );
+	    return kaapi_readylist_remote_push( kproc_remote->rtl, td, td->priority );
     }
-    return kaapi_readylist_push( rtl, td, priority );
+    return kaapi_readylist_push( rtl, td, td->priority );
   }
 
   if( kaapi_processor_get_type(curr_kproc) == KAAPI_PROC_TYPE_CUDA ) 
@@ -592,15 +591,15 @@ static inline int kaapi_readytasklist_pushready_td(
     if( td->priority > KAAPI_TASKLIST_GPU_MIN_PRIORITY ) 
     {
 	    kaapi_assert_debug( td->tasklist != NULL );
-	    return kaapi_readylist_push( &td->tasklist->rtl, td, priority );
+	    return kaapi_readylist_push( &td->tasklist->rtl, td, td->priority );
     }
     kaapi_processor_t* kproc_remote = curr_kproc->affinity( curr_kproc, td );
     if( kproc_remote != curr_kproc ) 
     {
-      return kaapi_readylist_remote_push( kproc_remote->rtl_remote, td, priority );
+      return kaapi_readylist_remote_push( kproc_remote->rtl_remote, td, td->priority );
     }
   }
-  return kaapi_readylist_push( rtl, td, priority );
+  return kaapi_readylist_push( rtl, td, td->priority );
 }
 
 static inline int kaapi_readytasklist_push_from_activationlist( 
@@ -617,8 +616,7 @@ static inline int kaapi_readytasklist_push_from_activationlist(
       ++retval;
       kaapi_readytasklist_pushready_td( 
                                        rtl, 
-                                       td, 
-                                       td->priority 
+                                       td
       );
     }
     head = head->next;
@@ -670,8 +668,7 @@ static inline int kaapi_tasklistready_push_init_fromsteal(
   {
     kaapi_readytasklist_pushready_td(
         &tasklist->rtl, 
-        *begin, 
-        (*begin)->priority 
+        *begin
     );
     ++begin;
   }
@@ -697,8 +694,7 @@ static inline int kaapi_thread_tasklistready_push_init(
   {
     kaapi_readytasklist_pushready_td(
         rtl, 
-        head->td, 
-        head->td->priority 
+        head->td
     );
     head = head->next;
   }
