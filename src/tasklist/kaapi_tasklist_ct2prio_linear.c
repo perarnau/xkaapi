@@ -43,71 +43,15 @@
 */
 #include "kaapi_impl.h"
 
-static inline uint64_t _kaapi_max(uint64_t d1, uint64_t d2)
-{ return (d1 < d2 ? d2 : d1); }
-
-
-
-/* explore successor in recursive maner 
+/* Currently design to work on CPU
+   where task with highest priority have value between KAAPI_TASKLIST_CPU_MIN_PRIORITY
+   and KAAPI_TASKLIST_CPU_MAX_PRIORITY.
+   Not that KAAPI_TASKLIST_CPU_MIN_PRIORITY >= KAAPI_TASKLIST_CPU_MAX_PRIORITY for CPU.
 */
-static void kaapi_explore_successor( 
-  kaapi_taskdescr_t*      td
-)
+uint8_t kaapi_ctpath2prio_linear( uint64_t tinfinity, struct kaapi_taskdescr_t* td)
 {
-  uint64_t                maxdatesucc = 0;
-  kaapi_activationlink_t* curr;
-
-  /* if already visited, return */
-  if (td->mark) 
-    return;
-    
-  curr = td->u.acl.list.front;
-  if (curr == 0) 
-  {
-    /* terminal case: */
-    td->mark = 1;
-    td->u.acl.date = 0;
-    return ;
-  }
-
-  /* iterate of all successor and get the maximum value */
-  while (curr !=0)
-  {
-    if (curr->td->mark ==0) 
-      kaapi_explore_successor(curr->td);
-    maxdatesucc = _kaapi_max(maxdatesucc, curr->td->u.acl.date);
-
-    curr = curr->next;
-  }
-  td->mark = 1;
-  td->u.acl.date = maxdatesucc+1;
-}
-
-
-/* compute the critical path of each task : length to the final execution execution
-*/
-int kaapi_tasklist_critical_path( kaapi_frame_tasklist_t* frame_tasklist )
-{
-  kaapi_taskdescr_t*         td;         
-
-  if (frame_tasklist == 0)
-    return EINVAL;
-
-  /* iterate over all tasks and:
-     - associated a td in task2task_khm were list points to the list of predecessors
-     - populate initial tasks with no sucessor 
-  */
-  kaapi_activationlink_t* curr = frame_tasklist->readylist.front;
-  while (curr !=0)
-  {
-    td = curr->td;
-    /* mark and explore all successors of td: on return td->date was computed */
-    kaapi_explore_successor( td );
-    
-    /* */
-    frame_tasklist->tasklist.t_infinity = _kaapi_max( frame_tasklist->tasklist.t_infinity, td->u.acl.date);
-    curr = curr->next;
-  }
-
-  return 0;  
+  double prio = (double)KAAPI_TASKLIST_CPU_MIN_PRIORITY - (double)KAAPI_TASKLIST_CPU_MAX_PRIORITY;
+  prio = prio * (double)td->u.acl.date / (double)tinfinity;
+  prio = (double)KAAPI_TASKLIST_CPU_MIN_PRIORITY - prio;
+  return (uint8_t)prio;
 }

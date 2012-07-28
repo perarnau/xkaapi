@@ -191,7 +191,8 @@ typedef struct kaapi_tasklist_t {
   struct kaapi_tasklist_t*       master;         /* the initial tasklist or 0 */
   struct kaapi_frame_tasklist_t* frame_tasklist; /* if master ==0, then the initial frame_tasklist, or 0 */
   kaapi_atomic_t                 cnt_exec;
-  intptr_t                       total_tasks;/* total number of tasks in the frame */
+  intptr_t                       total_tasks;    /* total number of tasks in the frame */
+  uint64_t                       t_infinity;     /* length path in the graph of tasks, used if kaapi_default.param.ctpriority !=0 */
 } kaapi_tasklist_t;
 
 
@@ -222,7 +223,6 @@ typedef struct kaapi_frame_tasklist_t {
   kaapi_recv_list_t       recvlist;   /* put by pushsignal into ready list to signal incomming data */
   kaapi_allocator_t       td_allocator;  /* where to push task descriptor */
   kaapi_allocator_t       allocator;  /* where to push other data structure */
-  uint64_t                t_infinity; /* length path in the graph of tasks */
 #if !defined(TASKLIST_REPLY_ONETD)
   kaapi_atomic_t          pending_stealop;
 #endif
@@ -318,6 +318,7 @@ static inline int kaapi_tasklist_init( kaapi_tasklist_t* tl, kaapi_tasklist_t* m
   tl->master         = mtl;
   tl->frame_tasklist = 0;
   tl->total_tasks    = 0;
+  tl->t_infinity      = (mtl == 0 ? 0 : mtl->t_infinity);
 
   KAAPI_ATOMIC_WRITE(&tl->cnt_exec, 0);
 
@@ -570,11 +571,14 @@ extern int kaapi_thread_initialize_first_access(
 */
 static inline int kaapi_readytasklist_pushready_td( 
     kaapi_readytasklist_t*  rtl, 
-    kaapi_taskdescr_t*      td,
-    int priority 
+    kaapi_taskdescr_t*      td
 )
 {
   kaapi_processor_t* curr_kproc = kaapi_get_current_processor();
+
+  /* change priority if based on critical path */
+  if (kaapi_default_param.ctpriority !=0)
+    td->priority = (*kaapi_default_param.ctpriority)(td->tasklist->t_infinity, td);    
 
   if (td->site !=-1)
   {
@@ -582,9 +586,9 @@ static inline int kaapi_readytasklist_pushready_td(
     kaapi_processor_t* kproc_remote = kaapi_all_kprocessors[td->site];
     if( kproc_remote != curr_kproc ) 
     {
-	    return kaapi_readylist_remote_push( kproc_remote->rtl, td, priority );
+	    return kaapi_readylist_remote_push( kproc_remote->rtl, td, td->priority );
     }
-    return kaapi_readylist_push( rtl, td, priority );
+    return kaapi_readylist_push( rtl, td, td->priority );
   }
 
   if( kaapi_processor_get_type(curr_kproc) == KAAPI_PROC_TYPE_CUDA ) 
@@ -592,15 +596,15 @@ static inline int kaapi_readytasklist_pushready_td(
     if( td->priority > KAAPI_TASKLIST_GPU_MIN_PRIORITY ) 
     {
 	    kaapi_assert_debug( td->tasklist != NULL );
-	    return kaapi_readylist_push( &td->tasklist->rtl, td, priority );
+	    return kaapi_readylist_push( &td->tasklist->rtl, td, td->priority );
     }
     kaapi_processor_t* kproc_remote = curr_kproc->affinity( curr_kproc, td );
     if( kproc_remote != curr_kproc ) 
     {
-      return kaapi_readylist_remote_push( kproc_remote->rtl_remote, td, priority );
+      return kaapi_readylist_remote_push( kproc_remote->rtl_remote, td, td->priority );
     }
   }
-  return kaapi_readylist_push( rtl, td, priority );
+  return kaapi_readylist_push( rtl, td, td->priority );
 }
 
 static inline int kaapi_readytasklist_push_from_activationlist( 
@@ -617,8 +621,7 @@ static inline int kaapi_readytasklist_push_from_activationlist(
       ++retval;
       kaapi_readytasklist_pushready_td( 
                                        rtl, 
-                                       td, 
-                                       td->priority 
+                                       td
       );
     }
     head = head->next;
@@ -670,8 +673,7 @@ static inline int kaapi_tasklistready_push_init_fromsteal(
   {
     kaapi_readytasklist_pushready_td(
         &tasklist->rtl, 
-        *begin, 
-        (*begin)->priority 
+        *begin
     );
     ++begin;
   }
@@ -697,8 +699,7 @@ static inline int kaapi_thread_tasklistready_push_init(
   {
     kaapi_readytasklist_pushready_td(
         rtl, 
-        head->td, 
-        head->td->priority 
+        head->td
     );
     head = head->next;
   }

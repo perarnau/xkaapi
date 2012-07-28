@@ -4,8 +4,8 @@
  **
  ** Copyright 2009 INRIA.
  **
- ** Contributor :
- **
+ ** Contributors :
+ ** joao.lima@imag.fr
  ** thierry.gautier@inrialpes.fr
  ** 
  ** This software is a computer program whose purpose is to execute
@@ -41,66 +41,55 @@
  ** terms.
  ** 
  */
+
 #include "kaapi_impl.h"
 
-
-/*
-*/
-void kaapi_synchronize_steal(kaapi_processor_t * kproc)
+static inline int kaapi_onereadytasklist_pop(
+  kaapi_onereadytasklist_t* ortl, 
+  kaapi_taskdescr_t** td 
+)
 {
-  kaapi_atomic_waitlock(&kproc->lock);
-}
+  /* fast check, without lock */
+  if( kaapi_onereadytasklist_isempty( ortl ) )
+    return EBUSY;
 
-void kaapi_synchronize_steal_thread(kaapi_thread_context_t * thread)
-{
-  kaapi_atomic_waitlock(&thread->stack.lock);
-}
-
-
-/** Steal task in the stack from the bottom to the top.
- This signature MUST BE the same as a splitter function.
- */
-int kaapi_sched_stealstack  
-( 
- kaapi_thread_context_t*       thread, 
- kaapi_listrequest_t*          lrequests, 
- kaapi_listrequest_iterator_t* lrrange
- )
-{
-  kaapi_frame_t*           top_frame;  
-  kaapi_hashmap_t          access_to_gd;
-  kaapi_hashentries_bloc_t stackbloc;
-
-  if ((thread == 0) || (thread->unstealable != 0))
-    return 0;
-
-  /* be carrefull, the map should be clear before used */
-  kaapi_hashmap_init(&access_to_gd, &stackbloc);
-
-  /* may be done by atomic write, see kaapi_thread_execframe */
-  kaapi_atomic_lock(&thread->stack.lock);
-
-  /* try to steal in each frame */
-  for (top_frame = thread->stack.stackframe;
-       (top_frame <= thread->stack.sfp)
-       && !kaapi_listrequest_iterator_empty(lrrange); ++top_frame) {
-    /* TODO here: virtualization of the frame properties ? */
-    if (top_frame->tasklist == 0) {
-      thread->stack.thieffp = top_frame;
-      if (top_frame->pc == top_frame->sp) continue;
-      kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );
-    } 
-#if 1 // To disable steal in ready list, in order to let only remote push
-    else /* if (thread->stack.proc->kid ==0)  */
-      kaapi_sched_stealtasklist( thread, top_frame->tasklist, lrequests, lrrange );
-#endif
+  kaapi_atomic_lock( &ortl->lock );
+  if( kaapi_onereadytasklist_isempty( ortl ) ){
+    kaapi_atomic_unlock( &ortl->lock );
+    return EBUSY;
   }
-  
-  thread->stack.thieffp = 0;
-  
-  kaapi_atomic_unlock(&thread->stack.lock);
-  
-  kaapi_hashmap_destroy( &access_to_gd );
-  
+  *td = ortl->head;
+  ortl->head = (*td)->next;
+  if( ortl->head != NULL )
+    ortl->head->prev = 0;
+  else
+    ortl->tail = NULL; /* empty */
+  ortl->size--;
+  kaapi_atomic_unlock( &ortl->lock );
   return 0;
+}
+
+int kaapi_readylist_pop( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t** td )
+{
+  kaapi_onereadytasklist_t* onertl;
+  int prio;
+  int err;
+  int max_prio= 0, min_prio= 0, inc_prio= 0;
+  
+  if( KAAPI_ATOMIC_READ( &rtl->cnt_tasks) == 0 )
+    return 1;
+  
+  kaapi_readylist_get_priority_range( &min_prio, &max_prio, &inc_prio );
+  for( prio = max_prio; prio != min_prio; prio += inc_prio ) 
+  {
+    onertl = &rtl->prl[prio];
+    err = kaapi_onereadytasklist_pop( onertl, td );
+    if( err == 0 ){
+	    KAAPI_ATOMIC_DECR( &rtl->cnt_tasks );
+	    return 0;
+    } else
+	    if( err != EBUSY )
+        return err;
+  }
+  return EBUSY;
 }

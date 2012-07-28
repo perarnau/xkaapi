@@ -70,7 +70,6 @@ kaapi_rtparam_t kaapi_default_param = {
 #endif
 #if defined(KAAPI_USE_CUDA)
    .cudawindowsize = 1,
-   .gpucount	= 0,
    .cudapeertopeer = 0,
 #endif
    .stacksize   = 64*4096, /**/
@@ -80,7 +79,8 @@ kaapi_rtparam_t kaapi_default_param = {
    .kproc_list  = 0,
    .kid2cpu     = 0,
    .cpu2kid     = 0,
-   .affinity	= 0,
+   .affinity	  = 0,
+   .ctpriority = 0,
    .eventmask   = KAAPI_EVT_MASK_COMPUTE|KAAPI_EVT_MASK_IDLE
 };
 
@@ -98,6 +98,7 @@ static int kaapi_setup_param()
   const char* wsselect;
   const char* emitsteal;
   const char* affinity;
+  const char* use_ctpath;
     
   /* compute the number of cpu of the system */
 #if defined(__linux__)
@@ -227,13 +228,35 @@ static int kaapi_setup_param()
 
   affinity = getenv("KAAPI_AFFINITY");
   kaapi_default_param.affinity = &kaapi_affinity_default;
-  if( affinity != NULL ) {
+  if( affinity != 0 ) 
+  {
     if (strcmp(affinity, "rand") ==0)
       kaapi_default_param.affinity = &kaapi_affinity_rand;
     else if (strcmp(affinity, "dw") ==0)
       kaapi_default_param.affinity = &kaapi_affinity_datawizard;
     else if (strcmp(affinity, "wrmode") ==0)
       kaapi_default_param.affinity = &kaapi_affinity_wrmode;
+    else {
+      fprintf(stderr, "***Kaapi: bad value for 'KAAPI_AFFINITY': '%s'\n",
+        getenv("KAAPI_AFFINITY")
+      );
+      return EINVAL;
+    }
+  }
+
+  use_ctpath = getenv("KAAPI_CTPATH_PRIO");
+  if( use_ctpath != 0 ) 
+  {
+    if (strcmp(use_ctpath, "max") ==0)
+      kaapi_default_param.ctpriority = &kaapi_ctpath2prio_max;
+    else if ((strcmp(use_ctpath, "linear") ==0) || (use_ctpath[0] == '1'))
+      kaapi_default_param.ctpriority = &kaapi_ctpath2prio_linear;
+    else {
+      fprintf(stderr, "***Kaapi: bad value for 'KAAPI_CTPATH_PRIO': '%s'\n",
+        getenv("KAAPI_CTPATH_PRIO")
+      );
+      return EINVAL;
+    }
   }
 
 #if defined(KAAPI_USE_CUDA)

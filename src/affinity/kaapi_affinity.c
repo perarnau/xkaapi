@@ -46,11 +46,8 @@
 
 #include "kaapi_affinity.h"
 
-#include "kaapi_tasklist.h"
 
-
-kaapi_processor_t *kaapi_affinity_get_by_data(kaapi_processor_t * kproc,
-					      kaapi_taskdescr_t * td)
+kaapi_processor_t *kaapi_affinity_get_by_data(kaapi_processor_t * kproc, kaapi_taskdescr_t * td)
 {
   int i;
   kaapi_mem_data_t *kmd;

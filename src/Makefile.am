@@ -102,8 +102,16 @@ libkaapi_la_SOURCES=\
   task/kaapi_task_steal_body.c \
   task/kaapi_task_stealready_body.c \
   tasklist/kaapi_tasklist.c \
+  tasklist/kaapi_readytasklist_init.c\
+  tasklist/kaapi_readytasklist_destroy.c\
+  tasklist/kaapi_readytasklist_push.c\
+  tasklist/kaapi_readytasklist_pop.c\
+  tasklist/kaapi_readytasklist_rpush.c\
+  tasklist/kaapi_readytasklist_steal.c\
   tasklist/kaapi_tasklist_activate.c \
   tasklist/kaapi_tasklist_criticalpath.c \
+  tasklist/kaapi_tasklist_ct2prio_max.c \
+  tasklist/kaapi_tasklist_ct2prio_linear.c \
   affinity/kaapi_affinity_default.c \
   affinity/kaapi_affinity_rand.c \
   affinity/kaapi_affinity_datawizard.c \

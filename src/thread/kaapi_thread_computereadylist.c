@@ -42,7 +42,7 @@
  ** 
  */
 #include "kaapi_impl.h"
-
+#include <inttypes.h>
 
 /**
 */
@@ -69,7 +69,7 @@ int kaapi_sched_computereadylist( void )
     This function is called is after all task has been pushed into a specific frame.
  */
 double _kaapi_time_tasklist;
-int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_frame_tasklist_t* tasklist )
+int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_frame_tasklist_t* frame_tasklist )
 {
   kaapi_frame_t*          frame;
   kaapi_task_t*           task_top;
@@ -96,21 +96,20 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_frame_t
   task_bottom = frame->sp;
   while (task_top > task_bottom)
   {
-    kaapi_thread_computedep_task( thread, tasklist, task_top );
+    kaapi_thread_computedep_task( thread, frame_tasklist, task_top );
     --task_top;
   } /* end while task */
 
-  /* */
-//  kaapi_thread_tasklist_print( stdout, tasklist );
-
   /* Here compute the apriori minimal date of execution */
-//TEST WITH USER DEFINED PRIORITY  
-{
-  //double t0 = kaapi_get_elapsedtime();
-  //kaapi_tasklist_critical_path( tasklist );  
-  //double t1 = kaapi_get_elapsedtime();
-  //printf("Time criticalpath:%f\n", t1-t0);
-}
+  if (kaapi_default_param.ctpriority)
+  {
+    
+    KAAPI_DEBUG_INST(double t0 =) kaapi_get_elapsedtime();
+    kaapi_tasklist_critical_path( frame_tasklist );  
+    KAAPI_DEBUG_INST(double t1 =) kaapi_get_elapsedtime();
+//    kaapi_frame_tasklist_print( stdout, frame_tasklist );
+    KAAPI_DEBUG_INST(printf("Criticalpath = %" PRIu64 "\n Time criticalpath:%f\n", frame_tasklist->tasklist.t_infinity, t1-t0);)
+  }
   
   kaapi_big_hashmap_destroy( thread->kversion_hm );
   free( thread->kversion_hm );

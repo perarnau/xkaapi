@@ -286,6 +286,11 @@ typedef int (*kaapi_emitsteal_init_t)(struct kaapi_processor_t*);
  */
 typedef struct kaapi_processor_t* (*kaapi_affinity_fnc_t)(struct kaapi_processor_t*,struct kaapi_taskdescr_t*);
 
+/* \ingroup SCHED
+ * Return a priority from ct path value
+ */
+typedef uint8_t (*kaapi_ct2prio_fnc_t)(uint64_t, struct kaapi_taskdescr_t*);
+
 /* =======vvvvvvvvvvvvvvvvvv===================== Memory type ============================ */
 
 /**
@@ -347,8 +352,9 @@ typedef struct kaapi_rtparam_t {
   kaapi_selectvictim_fnc_t wsselect;            /* default method to select a victim */
   kaapi_emitsteal_fnc_t	   emitsteal;
   kaapi_emitsteal_init_t   emitsteal_initctxt;  /* call to initialize the emitsteal ctxt */
-  kaapi_affinity_fnc_t	   affinity;		/* call to pick a processor */
+  kaapi_affinity_fnc_t	   affinity;	         	/* call to pick a processor */
   unsigned int		         use_affinity;        /* use cpu affinity */
+  kaapi_ct2prio_fnc_t		   ctpriority;          /* use critical path priorities, if 0 no */
   int                      display_perfcounter; /* set to 1 iff KAAPI_DISPLAY_PERF */
 #if defined(KAAPI_USE_CUPTI)
    uint64_t		             cudastartuptime;
@@ -703,6 +709,13 @@ static inline void kaapi_steal_disable_sync(kaapi_stealcontext_t* stc)
 #endif
 }
 
+/** \ingroup WS
+*/
+extern uint8_t kaapi_ctpath2prio_max( uint64_t tinfinity, struct kaapi_taskdescr_t* td);
+
+/** \ingroup WS
+*/
+extern uint8_t kaapi_ctpath2prio_linear( uint64_t tinfinity, struct kaapi_taskdescr_t* td);
 
 
 static inline int _kaapi_workqueue_lock( 
