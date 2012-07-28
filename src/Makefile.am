@@ -110,6 +110,8 @@ libkaapi_la_SOURCES=\
   tasklist/kaapi_readytasklist_steal.c\
   tasklist/kaapi_tasklist_activate.c \
   tasklist/kaapi_tasklist_criticalpath.c \
+  tasklist/kaapi_tasklist_ct2prio_max.c \
+  tasklist/kaapi_tasklist_ct2prio_linear.c \
   affinity/kaapi_affinity_default.c \
   affinity/kaapi_affinity_rand.c \
   affinity/kaapi_affinity_datawizard.c \
