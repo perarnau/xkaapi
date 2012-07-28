@@ -89,7 +89,9 @@ kaapi_readylist_get_priority_range(
     *min_prio = (KAAPI_TASKLIST_GPU_MIN_PRIORITY+1);
     *max_prio = KAAPI_TASKLIST_GPU_MAX_PRIORITY;
     *inc_prio = 1;
-  } else {
+  } 
+  else 
+  {
     *min_prio = (KAAPI_TASKLIST_CPU_MIN_PRIORITY-1);
     *max_prio = KAAPI_TASKLIST_CPU_MAX_PRIORITY;
     *inc_prio = -1;
