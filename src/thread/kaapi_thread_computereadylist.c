@@ -103,11 +103,12 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_frame_t
   /* Here compute the apriori minimal date of execution */
   if (kaapi_default_param.ctpriority)
   {
-    double t0 = kaapi_get_elapsedtime();
+    
+    KAAPI_DEBUG_INST(double t0 =) kaapi_get_elapsedtime();
     kaapi_tasklist_critical_path( frame_tasklist );  
-    double t1 = kaapi_get_elapsedtime();
-    kaapi_frame_tasklist_print( stdout, frame_tasklist );
-    printf("Criticalpath = %" PRIu64 "\n Time criticalpath:%f\n", frame_tasklist->t_infinity, t1-t0);
+    KAAPI_DEBUG_INST(double t1 =) kaapi_get_elapsedtime();
+//    kaapi_frame_tasklist_print( stdout, frame_tasklist );
+    KAAPI_DEBUG_INST(printf("Criticalpath = %" PRIu64 "\n Time criticalpath:%f\n", frame_tasklist->tasklist.t_infinity, t1-t0);)
   }
   
   kaapi_big_hashmap_destroy( thread->kversion_hm );

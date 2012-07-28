@@ -86,18 +86,18 @@ static void kaapi_explore_successor(
 
 /* compute the critical path of each task : length to the final execution execution
 */
-int kaapi_tasklist_critical_path( kaapi_frame_tasklist_t* tasklist )
+int kaapi_tasklist_critical_path( kaapi_frame_tasklist_t* frame_tasklist )
 {
   kaapi_taskdescr_t*         td;         
 
-  if (tasklist == 0)
+  if (frame_tasklist == 0)
     return EINVAL;
 
   /* iterate over all tasks and:
      - associated a td in task2task_khm were list points to the list of predecessors
      - populate initial tasks with no sucessor 
   */
-  kaapi_activationlink_t* curr = tasklist->readylist.front;
+  kaapi_activationlink_t* curr = frame_tasklist->readylist.front;
   while (curr !=0)
   {
     td = curr->td;
@@ -105,7 +105,7 @@ int kaapi_tasklist_critical_path( kaapi_frame_tasklist_t* tasklist )
     kaapi_explore_successor( td );
     
     /* */
-    tasklist->t_infinity = _kaapi_max( tasklist->t_infinity, td->u.acl.date);
+    frame_tasklist->tasklist.t_infinity = _kaapi_max( frame_tasklist->tasklist.t_infinity, td->u.acl.date);
     curr = curr->next;
   }
 

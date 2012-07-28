@@ -56,7 +56,6 @@ int kaapi_frame_tasklist_init( kaapi_frame_tasklist_t* tl, struct kaapi_thread_c
     kaapi_recvlist_clear(&tl->recvlist);
     kaapi_allocator_init( &tl->td_allocator );
     kaapi_allocator_init( &tl->allocator );
-    tl->t_infinity      = 0;
 #if !defined(TASKLIST_REPLY_ONETD)
     KAAPI_ATOMIC_WRITE(&tl->pending_stealop, 0);
 #endif
