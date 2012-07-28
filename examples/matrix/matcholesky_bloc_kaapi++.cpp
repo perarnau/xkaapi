@@ -257,7 +257,7 @@ struct TaskBodyCPU<TaskCholesky> {
   {
     typedef double* TYPE[DIM][DIM]; 
     TYPE* A = (TYPE*)ptr;
-#define USE_DIST 1
+#define USE_DIST 0
 #if (USE_DIST ==1)    
     /* assume a square grid of ressources composed by CPU and GPU */
     int nressources = (schedinfo->count_cpu()+schedinfo->count_gpu());
