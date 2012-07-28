@@ -1,5 +1,4 @@
 /*
- ** kaapi_impl.h
  ** xkaapi
  ** 
  ** Created on Tue Mar 31 15:19:09 2009
@@ -167,44 +166,48 @@ struct TaskBodyCPU<TaskCholesky> {
           ka::SetnCPU(schedinfo->count_cpu()) | ka::SetnGPU(schedinfo->count_gpu()), 
           ka::BlockCyclic2D( 1, blocsize, schedinfo->count_gpu(), blocsize )
     );
-    if( uplo == CblasLower ) {
-      for (size_t k=0; k < N; k += blocsize) {
+    if( uplo == CblasLower ) 
+    {
+      for (size_t k=0; k < N; k += blocsize) 
+      {
         ka::rangeindex rk(k, k+blocsize);
-        ka::Spawn<TaskDPOTRF>( ka::SetSite(0) )
-	      ( CblasColMajor, CblasLower, A(rk,rk) );
+        ka::Spawn<TaskDPOTRF>( ka::SetSite(0) )( CblasColMajor, CblasLower, A(rk,rk) );
         
 //	std::cout << "TRSM ";
-        for (size_t m=k+blocsize; m < N; m += blocsize) {
+        for (size_t m=k+blocsize; m < N; m += blocsize) 
+        {
           ka::rangeindex rm(m, m+blocsize);
 //	  std::cout << "(" << k << "," << m << ")" << dist(k,m) << " ";
           ka::Spawn<TaskDTRSM>( ka::SetSite(dist(k,m)+1) )
-          ( CblasColMajor, CblasRight, uplo,
-           CblasTrans, CblasNonUnit, 1.0, A(rk,rk), A(rk,rm));
+          ( CblasColMajor, CblasRight, uplo, CblasTrans, CblasNonUnit, 1.0, A(rk,rk), A(rk,rm));
         }
 //	std::cout << std::endl;
         
 //	std::cout << "SYRK ";
-        for (size_t m=k+blocsize; m < N; m += blocsize) {
+        for (size_t m=k+blocsize; m < N; m += blocsize) 
+        {
           ka::rangeindex rm(m, m+blocsize);
 //	  std::cout << "(" << k << "," << m << ")" << dist(k,m) << " ";
           ka::Spawn<TaskDSYRK>( ka::SetSite(dist(k,m)+1))
-          ( CblasColMajor, uplo,
-           CblasNoTrans, -1.0, A(rk,rm), 1.0, A(rm,rm));
+          ( CblasColMajor, uplo, CblasNoTrans, -1.0, A(rk,rm), 1.0, A(rm,rm));
           
 //	  std::cout << "[";
-          for (size_t n=k+blocsize; n < m; n += blocsize) {
+          for (size_t n=k+blocsize; n < m; n += blocsize) 
+          {
             ka::rangeindex rn(n, n+blocsize);
 //	    std::cout << "(" << n << "," << m << ")" << dist(n,m) << " ";
             ka::Spawn<TaskDGEMM>( ka::SetSite(dist(n,m)+1) )
-            (   CblasColMajor, CblasNoTrans, CblasTrans,
-             -1.0, A(rk,rm), A(rk,rn), 1.0, A(rn,rm));
+            ( CblasColMajor, CblasNoTrans, CblasTrans, -1.0, A(rk,rm), A(rk,rn), 1.0, A(rn,rm));
           }
 //	  std::cout << "] ";
         }
 //	std::cout << std::endl;
       }
-    } else if( uplo == CblasUpper ) {
-      for (size_t k=0; k < N; k += blocsize) {
+    } 
+    else if( uplo == CblasUpper ) 
+    {
+      for (size_t k=0; k < N; k += blocsize) 
+      {
         ka::rangeindex rk(k, k+blocsize);
         ka::Spawn<TaskDPOTRF>( ka::SetPriority(0) )
 	      ( CblasColMajor, uplo, A(rk,rk) );
