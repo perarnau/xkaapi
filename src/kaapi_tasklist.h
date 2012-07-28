@@ -576,9 +576,11 @@ static inline int kaapi_readytasklist_pushready_td(
 {
   kaapi_processor_t* curr_kproc = kaapi_get_current_processor();
 
+#if 0 /* do it on steal */
   /* change priority if based on critical path */
   if (kaapi_default_param.ctpriority !=0)
     td->priority = (*kaapi_default_param.ctpriority)(td->tasklist->t_infinity, td);    
+#endif
 
   if (td->site !=-1)
   {
