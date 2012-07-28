@@ -67,7 +67,6 @@ extern "C" {
    The threads in ready list may be stolen by other processors.
 */
 #define KAAPI_USE_READYLIST 1
-#define KAAPI_TASKLIST_POINTER_TASK 1
 #define TASKLIST_REPLY_ONETD        1
 
 /* Task list priority: used reverse order between min max */
