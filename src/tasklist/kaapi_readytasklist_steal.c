@@ -65,7 +65,7 @@ static inline int kaapi_onereadytasklist_steal(
 
   curr = ortl->tail;
 
-#if 0
+#if 1
   /* only steal for the righ processor arch or if fmt ==0 (means internal task) */
   while ((curr != 0) && ((curr->fmt !=0) && (kaapi_format_get_task_body_by_arch(curr->fmt, arch) ==0)))
   {
@@ -76,7 +76,7 @@ static inline int kaapi_onereadytasklist_steal(
   /* only steal for the righ processor arch or if fmt ==0 (means internal task) */
   while (curr != 0)
   {
-    if (curr->u.acl.date < curr_max_date->u.acl.date)
+    if (curr->u.acl.date > curr_max_date->u.acl.date)
       curr_max_date = curr;
     curr = curr->prev;
   }
