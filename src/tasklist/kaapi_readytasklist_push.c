@@ -65,7 +65,7 @@ static inline int kaapi_onereadytasklist_push(
 int kaapi_readylist_push( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t* td, int priority )
 {
   kaapi_onereadytasklist_t* ortl;
-  kaapi_assert_debug( (priority >= KAAPI_TASKLIST_MAX_PRIORITY) && (priority <= KAAPI_TASKLIST_MIN_PRIORITY) );
+  kaapi_assert_debug( (priority >= KAAPI_TASKLIST_MIN_PRIORITY) && (priority <= KAAPI_TASKLIST_MAX_PRIORITY) );
   
   ortl = &rtl->prl[priority];
   kaapi_onereadytasklist_push( ortl, td );

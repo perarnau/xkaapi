@@ -273,6 +273,28 @@ kaapi_adaptivetask_splitter_t kaapi_format_get_splitter(const struct kaapi_forma
   return (*fmt->get_splitter)(fmt, sp);
 }
 
+static inline 
+kaapi_task_body_t kaapi_format_get_task_bodywh_by_arch
+(
+  const kaapi_format_t*	const	fmt, 
+  unsigned int arch
+)
+{
+  return fmt->entrypoint_wh[arch];
+}
+
+static inline 
+kaapi_task_body_t kaapi_format_get_task_body_by_arch
+(
+  const kaapi_format_t*	const	fmt, 
+  unsigned int arch
+)
+{
+  return fmt->entrypoint[arch];
+}
+
+
+
 /** Initialise default formats
 */
 extern void kaapi_init_basicformat(void);

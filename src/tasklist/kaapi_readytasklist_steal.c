@@ -45,11 +45,13 @@
 #include "kaapi_impl.h"
 
 static inline int kaapi_onereadytasklist_steal(
+    int arch,
     kaapi_onereadytasklist_t* ortl,
     kaapi_taskdescr_t** td 
 ) 
 {
   int size_ws;
+  kaapi_taskdescr_t* curr;
   
   if( kaapi_onereadytasklist_isempty( ortl ) )
     return EBUSY;
@@ -60,19 +62,38 @@ static inline int kaapi_onereadytasklist_steal(
     kaapi_atomic_unlock( &ortl->lock );
     return 1;
   }
-  *td = ortl->tail;
-  if( (*td)->prev != NULL )
-    (*td)->prev->next = NULL;
+
+  curr = ortl->tail;
+
+  /* only steal for the righ processor arch or if fmt ==0 (means internal task) */
+  while ((curr != 0) && ((curr->fmt !=0) && (kaapi_format_get_task_body_by_arch(curr->fmt, arch) ==0)))
+  {
+    curr = curr->prev;
+  }
+
+  if (curr ==0) 
+  {
+    kaapi_atomic_unlock( &ortl->lock );
+    return EBUSY;
+  }
+  
+  /* unlink curr */
+  if( curr->prev != 0 )
+    curr->prev->next = curr->next;
   else
-    ortl->head = NULL;
-  ortl->tail = (*td)->prev;
+    ortl->head = curr->next;
+  if (curr ->next !=0)
+    curr->next->prev = curr->prev;
+  else
+    ortl->tail = curr->prev;
   ortl->size--;
   kaapi_atomic_unlock( &ortl->lock );
-  (*td)->prev = (*td)->next = NULL;
+  curr->prev = curr->next = 0;
+  *td = curr;
   return 0;
 }
 
-int kaapi_readylist_steal( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t** td ) 
+int kaapi_readylist_steal( int arch, kaapi_readytasklist_t* rtl, kaapi_taskdescr_t** td ) 
 {
   kaapi_onereadytasklist_t* onertl;
   int err;
@@ -81,12 +102,11 @@ int kaapi_readylist_steal( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t** td )
   
   if( KAAPI_ATOMIC_READ( &rtl->cnt_tasks) == 0 )
     return 1;
-  
   kaapi_readylist_get_priority_range( &min_prio, &max_prio, &inc_prio );
   for( prio = max_prio; prio != min_prio; prio += inc_prio ) 
   {
     onertl = &rtl->prl[prio];
-    err = kaapi_onereadytasklist_steal( onertl, td );
+    err = kaapi_onereadytasklist_steal( arch, onertl, td );
     if( err == 0 )
     {
 	    KAAPI_ATOMIC_DECR( &rtl->cnt_tasks );

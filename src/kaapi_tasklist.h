@@ -290,7 +290,7 @@ static inline int kaapi_recvlist_isempty( const kaapi_recv_list_t* al )
 */
 static inline void kaapi_tasklist_newpriority_task( int priority )
 {
-  kaapi_assert_debug( (priority >= KAAPI_TASKLIST_MAX_PRIORITY) && (priority <= KAAPI_TASKLIST_MIN_PRIORITY) );
+  kaapi_assert_debug( (priority >= min_prio) && (priority <= max_prio) );
 }
 
 /*
@@ -371,7 +371,7 @@ static inline kaapi_taskdescr_t* kaapi_allocator_allocate_td(
   td->wc         = 0;  
   td->task       = task;
   td->fmt 	     = task_fmt;
-  td->priority   = KAAPI_TASKLIST_CPU_MIN_PRIORITY;
+  td->priority   = KAAPI_TASKLIST_MIN_PRIORITY;
   kaapi_bitmap_value_clear_32(&td->ocr); /* means no ocr */
   td->site       = -1; /* means not site */
   td->next       = 0;
@@ -584,22 +584,23 @@ static inline int kaapi_readytasklist_pushready_td(
   {
     kaapi_assert_debug( (td->site >=0) && (td->site < (int32_t)kaapi_count_kprocessors) );
     kaapi_processor_t* kproc_remote = kaapi_all_kprocessors[td->site];
-    if( kproc_remote != curr_kproc ) 
+    if ( kproc_remote != curr_kproc ) 
     {
 	    return kaapi_readylist_remote_push( kproc_remote->rtl, td, td->priority );
     }
     return kaapi_readylist_push( rtl, td, td->priority );
   }
 
-  if( kaapi_processor_get_type(curr_kproc) == KAAPI_PROC_TYPE_CUDA ) 
+  if ( kaapi_processor_get_type(curr_kproc) == KAAPI_PROC_TYPE_CUDA ) 
   {
-    if( td->priority > KAAPI_TASKLIST_GPU_MIN_PRIORITY ) 
+    /* if td does not have GPU implementation, push it on master tasklist */
+    if ( kaapi_format_get_task_bodywh_by_arch( td->fmt, KAAPI_PROC_TYPE_CUDA ) == 0) //(td->priority == KAAPI_TASKLIST_MIN_PRIORITY ) 
     {
-	    kaapi_assert_debug( td->tasklist != NULL );
+	    kaapi_assert_debug( td->tasklist != 0 );
 	    return kaapi_readylist_push( &td->tasklist->rtl, td, td->priority );
     }
     kaapi_processor_t* kproc_remote = curr_kproc->affinity( curr_kproc, td );
-    if( kproc_remote != curr_kproc ) 
+    if ( kproc_remote != curr_kproc ) 
     {
       return kaapi_readylist_remote_push( kproc_remote->rtl_remote, td, td->priority );
     }

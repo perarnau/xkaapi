@@ -480,8 +480,8 @@ typedef struct kaapi_task_binding
 /* ========================================================================= */
 /** Task priority
 */
-#define KAAPI_TASK_MAX_PRIORITY     3
-#define KAAPI_TASK_MIN_PRIORITY     0
+#define KAAPI_TASK_MAX_PRIORITY     7
+#define KAAPI_TASK_MIN_PRIORITY     0    /* must be 0 because it is the default initialisation == Defaul Prio */
 
 #define KAAPI_TASK_HIGH_PRIORITY    KAAPI_TASK_MAX_PRIORITY
 #define KAAPI_TASK_DEFAULT_PRIORITY KAAPI_TASK_MIN_PRIORITY
