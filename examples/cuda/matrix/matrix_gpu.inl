@@ -962,7 +962,7 @@ struct TaskBodyGPU<TaskPlasmaDSSSSM> {
             ip = ip + 1;
         }
 
-	status = cublasTrsm
+	status = CUBLAS<double>::trsm
 	  (
 	   kaapi_cuda_cublas_handle(),
 	   convertToSideMode(CblasLeft),
@@ -976,7 +976,7 @@ struct TaskBodyGPU<TaskPlasmaDSSSSM> {
 	if (status != CUBLAS_STATUS_SUCCESS)
 	  printf("TaskPlasmaDSSSSM::cublasTrsm() == %d\n", status);
 
-	status = cublasGemm
+	status = CUBLAS<double>::gemm
 	(
 	    kaapi_cuda_cublas_handle(),
 	    convertToOp(CblasNoTrans),
