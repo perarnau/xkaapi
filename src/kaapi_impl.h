@@ -714,6 +714,9 @@ extern uint8_t kaapi_ctpath2prio_max( uint64_t tinfinity, struct kaapi_taskdescr
 */
 extern uint8_t kaapi_ctpath2prio_linear( uint64_t tinfinity, struct kaapi_taskdescr_t* td);
 
+/** \ingroup WS
+*/
+extern uint8_t kaapi_ctpath2prio_identity( uint64_t tinfinity, struct kaapi_taskdescr_t* td);
 
 static inline int _kaapi_workqueue_lock( 
     kaapi_workqueue_t* kwq

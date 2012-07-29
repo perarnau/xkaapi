@@ -45,6 +45,10 @@
 #include "kaapi_impl.h"
 #include "kaapi_tasklist.h"
 
+
+//#undef KAAPI_DEBUG_INST
+//#define KAAPI_DEBUG_INST(x) x
+
 /* return the first td that can be executed on arch 
 */
 kaapi_taskdescr_t* kaapi_steal_by_affinity_first( const kaapi_processor_t* thief, kaapi_taskdescr_t* td )
@@ -144,7 +148,9 @@ KAAPI_DEBUG_INST(
 
 KAAPI_DEBUG_INST(
   if ((tdhitmax !=0) && (hitmax > hitfirst))
-    printf("Arch: %s  Hit Max: %lu, default hit:%lu\n", (arch == KAAPI_PROC_TYPE_CPU ? "CPU" : "GPU"), hitmax, hitfirst);
+    printf("Arch: %s  Hit Max: %lu, default hit:%lu\n", (arch == KAAPI_PROC_TYPE_CPU ? "CPU" : "GPU"), 
+        (unsigned long)hitmax, (unsigned long)hitfirst
+    );
 )
 
   return tdhitmax;

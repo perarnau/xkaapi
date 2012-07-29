@@ -265,6 +265,8 @@ static int kaapi_setup_param()
   use_ctpath = getenv("KAAPI_CTPATH_PRIO");
   if( use_ctpath != 0 ) 
   {
+    if ((strcmp(use_ctpath, "identity") ==0) || (strcmp(use_ctpath, "1") ==0))
+      kaapi_default_param.ctpriority = &kaapi_ctpath2prio_identity;
     if (strcmp(use_ctpath, "max") ==0)
       kaapi_default_param.ctpriority = &kaapi_ctpath2prio_max;
     else if ((strcmp(use_ctpath, "linear") ==0) || (use_ctpath[0] == '1'))
