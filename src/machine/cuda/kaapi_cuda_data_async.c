@@ -79,11 +79,7 @@ kaapi_cuda_data_async_input_alloc(kaapi_cuda_stream_t * kstream,
   const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
   kaapi_mem_data_t *kmd;
   void *sp;
-#if defined(KAAPI_TASKLIST_POINTER_TASK)
   sp = td->task->sp;
-#else
-  sp = td->task.sp;
-#endif
   const size_t count_params = kaapi_format_get_count_params(td->fmt, sp);
 
 #if KAAPI_VERBOSE
@@ -136,11 +132,7 @@ kaapi_cuda_data_async_input_dev_sync(kaapi_cuda_stream_t * kstream,
   kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
   kaapi_mem_data_t *kmd;
   void *sp;
-#if defined(KAAPI_TASKLIST_POINTER_TASK)
   sp = td->task->sp;
-#else
-  sp = td->task.sp;
-#endif
   const size_t count_params = kaapi_format_get_count_params(td->fmt, sp);
 
 #if KAAPI_VERBOSE
@@ -179,11 +171,7 @@ kaapi_cuda_data_async_input_host_sync(kaapi_cuda_stream_t * kstream,
 {
   size_t i;
   void *sp;
-#if defined(KAAPI_TASKLIST_POINTER_TASK)
   sp = td->task->sp;
-#else
-  sp = td->task.sp;
-#endif
   const size_t count_params = kaapi_format_get_count_params(td->fmt, sp);
 
   for (i = 0; i < count_params; i++) {
@@ -220,11 +208,7 @@ kaapi_cuda_data_async_recv(kaapi_cuda_stream_t * kstream,
   const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
   kaapi_mem_data_t *kmd;
   void *sp;
-#if defined(KAAPI_TASKLIST_POINTER_TASK)
   sp = td->task->sp;
-#else
-  sp = td->task.sp;
-#endif
   const size_t count_params = kaapi_format_get_count_params(td->fmt, sp);
 
 #if KAAPI_VERBOSE
@@ -264,11 +248,7 @@ kaapi_cuda_data_async_output_dev_dec_use(kaapi_cuda_stream_t * kstream,
 {
   size_t i;
   void *sp;
-#if defined(KAAPI_TASKLIST_POINTER_TASK)
   sp = td->task->sp;
-#else
-  sp = td->task.sp;
-#endif
   const size_t count_params = kaapi_format_get_count_params(td->fmt, sp);
 
   for (i = 0; i < count_params; i++) {

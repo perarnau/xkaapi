@@ -62,16 +62,6 @@
 
 #include "kaapi_cuda_stream.h"
 
-/** \ingroup TASK
- Register a task format 
- */
-static inline kaapi_task_body_t
-kaapi_format_get_task_body_by_arch(const kaapi_format_t * const fmt,
-				   unsigned int arch)
-{
-  return fmt->entrypoint_wh[arch];
-}
-
 /* cuda task body */
 typedef void (*kaapi_cuda_task_body_t) (void *, cudaStream_t);
 
@@ -133,14 +123,10 @@ kaapi_cuda_gpu_task_callback1_exec_task(kaapi_cuda_stream_t * kstream,
   kaapi_taskdescr_t *const td = (kaapi_taskdescr_t *) arg;
   kaapi_task_t *pc;		/* cache */
   kaapi_cuda_task_body_t body = (kaapi_cuda_task_body_t)
-      kaapi_format_get_task_body_by_arch(td->fmt,
+      kaapi_format_get_task_bodywh_by_arch(td->fmt,
 					 KAAPI_PROC_TYPE_CUDA);
   kaapi_assert_debug(body != 0);
-#if defined(KAAPI_TASKLIST_POINTER_TASK)
   pc = td->task;
-#else
-  pc = &td->task;
-#endif
 #if defined(KAAPI_VERBOSE)
   fprintf(stdout, "[%s] INIT kid=%lu td=%p name=%s (counter=%d,wc=%d)\n",
 	  __FUNCTION__,
@@ -189,13 +175,9 @@ kaapi_cuda_host_task_callback1_exec_task(kaapi_cuda_stream_t * kstream,
 {
   kaapi_taskdescr_t *const td = (kaapi_taskdescr_t *) arg;
   kaapi_task_t *pc;
-#if defined(KAAPI_TASKLIST_POINTER_TASK)
   pc = td->task;
-#else
-  pc = &td->task;
-#endif
   kaapi_assert_debug(pc != 0);
-  kaapi_task_body_t body = kaapi_format_get_task_body_by_arch(td->fmt,
+  kaapi_task_body_t body = kaapi_format_get_task_bodywh_by_arch(td->fmt,
 							      KAAPI_PROC_TYPE_HOST);
   kaapi_assert_debug(body != 0);
   body(kaapi_task_getargs(pc), 0);
@@ -231,7 +213,7 @@ kaapi_cuda_thread_exec_task(kaapi_cuda_stream_t * const kstream,
     body(kaapi_task_getargs(td->task), (kaapi_thread_t *) stack->sfp);
     kaapi_cuda_thread_tasklist_activate_deps(td);
   } else
-      if (kaapi_format_get_task_body_by_arch(td->fmt, KAAPI_PROC_TYPE_CUDA)
+      if (kaapi_format_get_task_bodywh_by_arch(td->fmt, KAAPI_PROC_TYPE_CUDA)
 	  == 0) {
     /* execute a CPU task in the GPU thread */
     kaapi_cuda_stream_push(kstream, KAAPI_CUDA_OP_D2H,

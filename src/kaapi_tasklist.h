@@ -287,7 +287,7 @@ static inline int kaapi_recvlist_isempty( const kaapi_recv_list_t* al )
 */
 static inline void kaapi_tasklist_newpriority_task( int priority )
 {
-  kaapi_assert_debug( (priority >= min_prio) && (priority <= max_prio) );
+  kaapi_assert_debug( (priority >= KAAPI_TASKLIST_MIN_PRIORITY) && (priority <= KAAPI_TASKLIST_MAX_PRIORITY) );
 }
 
 /*
