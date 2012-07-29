@@ -60,8 +60,7 @@ include_HEADERS=\
 	ka_api_spawn.h \
 	ka_api_reqspawn.h \
 	ka_api_execgraph.h\
-	ka_api_execforeach.h \
-	ka_api_dot.h
+	ka_api_execforeach.h
 
 libkaapi___la_SOURCES=\
 	ka_init.cpp \
