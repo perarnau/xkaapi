@@ -73,10 +73,16 @@ kaapi_cuda_data_input_dev_sync(kaapi_cuda_stream_t * kstream,
 }
 
 static inline int
-kaapi_cuda_data_input_host_sync(kaapi_cuda_stream_t * kstream,
+kaapi_cuda_data_input_host_sync_from_dev(kaapi_cuda_stream_t * kstream,
 				kaapi_taskdescr_t * td)
 {
-  return kaapi_cuda_data_async_input_host_sync(kstream, td);
+  return kaapi_cuda_data_async_input_host_sync_from_dev(kstream, td);
+}
+
+static inline int
+kaapi_cuda_data_input_host_sync(kaapi_taskdescr_t * td)
+{
+  return kaapi_cuda_data_async_input_host_sync(td);
 }
 
 static inline int
@@ -100,17 +106,6 @@ valid copy on the asids of the system.
 static inline int kaapi_cuda_data_sync_device(kaapi_data_t * kdata)
 {
   return kaapi_cuda_data_async_sync_device(kdata);
-}
-
-/* ** Memory system **
-   This method is called from a host thread to synchronize the kdata parameter.
-It checks if the data is valid on the current kproc, otherwise search for a
-valid copy on the GPUs.
-*/
-static inline int
-kaapi_cuda_data_sync_host(kaapi_data_t * kdata, cudaStream_t stream)
-{
-  return kaapi_cuda_data_async_sync_host(kdata, stream);
 }
 
 #endif

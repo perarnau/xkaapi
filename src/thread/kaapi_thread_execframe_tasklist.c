@@ -136,7 +136,7 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
         
 #if defined(KAAPI_USE_CUDA) && !defined(KAAPI_CUDA_NO_D2H)
         if ( td->fmt != 0 )
-          kaapi_mem_host_map_sync( td->fmt, pc->sp );
+          kaapi_mem_host_map_sync( td );
 #endif
         
         /* start execution of the user body of the task */

@@ -174,8 +174,9 @@ kaapi_cuda_data_async_input_dev_sync(kaapi_cuda_stream_t * kstream,
 }
 
 int
-kaapi_cuda_data_async_input_host_sync(kaapi_cuda_stream_t * kstream,
-				      kaapi_taskdescr_t * td)
+kaapi_cuda_data_async_input_host_sync_from_dev(kaapi_cuda_stream_t *
+					       kstream,
+					       kaapi_taskdescr_t * td)
 {
   size_t i;
   void *sp;
@@ -388,45 +389,6 @@ int kaapi_cuda_data_async_sync_device(kaapi_data_t * kdata)
   return 0;
 }
 
-static inline int
-kaapi_cuda_data_async_sync_host_transfer(kaapi_data_t * dest,
-					 const kaapi_mem_asid_t dest_asid,
-					 kaapi_data_t * src,
-					 const kaapi_mem_asid_t src_asid,
-					 cudaStream_t stream)
-{
-  kaapi_cuda_ctx_set(src_asid - 1);
-  cudaEvent_t event;
-  cudaEventCreateWithFlags(&event, cudaEventDisableTiming);
-  kaapi_cuda_mem_copy_dtoh_(dest->ptr, &dest->view,
-			    src->ptr, &src->view, stream);
-  cudaEventRecord(event, stream);
-  cudaStreamWaitEvent(stream, event, 0);
-  return 0;
-}
-
-int
-kaapi_cuda_data_async_sync_host(kaapi_data_t * kdata, cudaStream_t stream)
-{
-  kaapi_mem_host_map_t *host_map =
-      kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
-  const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
-  kaapi_mem_data_t *kmd = kdata->kmd;
-  kaapi_mem_asid_t valid_asid;
-
-  kaapi_assert_debug(kmd != 0);
-  if (kaapi_mem_data_is_dirty(kmd, host_asid)) {
-    valid_asid = kaapi_mem_data_get_nondirty_asid(kmd);
-    kaapi_data_t *valid_data =
-	(kaapi_data_t *) kaapi_mem_data_get_addr(kmd, valid_asid);
-    kaapi_cuda_data_async_sync_host_transfer(kdata, host_asid, valid_data,
-					     valid_asid, stream);
-    kaapi_mem_data_clear_dirty(kmd, host_asid);
-  }
-
-  return 0;
-}
-
 /* It transfers from the current GPU to the host memory in order to execute a
  * TaskCPU body */
 static inline int
@@ -492,6 +454,108 @@ int kaapi_cuda_data_async_sync_host2(kaapi_data_t * kdata)
 
     kaapi_mem_data_clear_dirty(kmd, host_asid);
   }
+
+  return 0;
+}
+
+static inline int
+kaapi_cuda_data_async_sync_host_transfer(kaapi_data_t * dest,
+					 const kaapi_mem_asid_t dest_asid,
+					 kaapi_data_t * src,
+					 const kaapi_mem_asid_t src_asid,
+					 cudaStream_t stream)
+{
+  cudaEvent_t event;
+  cudaError_t res;
+  const int src_dev = src_asid - 1;
+
+  kaapi_cuda_ctx_set(src_dev);
+  res = cudaEventCreateWithFlags(&event, cudaEventDisableTiming);
+  if (res != cudaSuccess) {
+    fprintf(stdout, "%s: ERROR cudaEventCreateWithFlags %d\n",
+	    __FUNCTION__, res);
+    fflush(stdout);
+    abort();
+  }
+
+  kaapi_processor_t *const kproc = kaapi_cuda_get_proc_by_dev(src_dev);
+  kaapi_cuda_mem_copy_dtoh_(dest->ptr, &dest->view,
+			    src->ptr, &src->view,
+			    kaapi_cuda_get_cudastream
+			    (kaapi_cuda_get_output_fifo
+			     (kproc->cuda_proc.kstream))
+      );
+  res =
+      cudaEventRecord(event,
+		      kaapi_cuda_get_cudastream(kaapi_cuda_get_output_fifo
+						(kproc->
+						 cuda_proc.kstream)));
+  if (res != cudaSuccess) {
+    fprintf(stdout, "%s: ERROR cudaEventRecord %d\n", __FUNCTION__, res);
+    fflush(stdout);
+    abort();
+  }
+  cudaStreamWaitEvent(stream, event, 0);
+
+  return 0;
+}
+
+static inline int
+kaapi_cuda_data_async_sync_host(kaapi_data_t * kdata, cudaStream_t stream)
+{
+  kaapi_mem_host_map_t *host_map =
+      kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
+  const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
+  kaapi_mem_data_t *kmd = kdata->kmd;
+  kaapi_mem_asid_t valid_asid;
+
+  kaapi_assert_debug(kmd != 0);
+  if (kaapi_mem_data_is_dirty(kmd, host_asid)) {
+    valid_asid = kaapi_mem_data_get_nondirty_asid(kmd);
+    kaapi_data_t *valid_data =
+	(kaapi_data_t *) kaapi_mem_data_get_addr(kmd, valid_asid);
+    kaapi_cuda_data_async_sync_host_transfer(kdata, host_asid, valid_data,
+					     valid_asid, stream);
+    kaapi_mem_data_clear_dirty(kmd, host_asid);
+  }
+
+  return 0;
+}
+
+int kaapi_cuda_data_async_input_host_sync(kaapi_taskdescr_t * const td)
+{
+  void *sp = td->task->sp;
+  const size_t count_params = kaapi_format_get_count_params(td->fmt, sp);
+  kaapi_mem_host_map_t *host_map =
+      kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
+  const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
+  size_t i;
+  cudaStream_t stream;
+  cudaStreamCreate(&stream);
+
+  for (i = 0; i < count_params; i++) {
+    kaapi_access_mode_t m =
+	KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(td->fmt, i, sp));
+
+    if (m == KAAPI_ACCESS_MODE_V)
+      continue;
+
+    kaapi_access_t access = kaapi_format_get_access_param(td->fmt, i, sp);
+    kaapi_data_t *kdata = kaapi_data(kaapi_data_t, &access);
+    kaapi_cuda_data_async_sync_host(kdata, stream);
+
+    if (KAAPI_ACCESS_IS_WRITE(m)) {
+      kaapi_mem_data_t *const kmd = kdata->kmd;
+      kaapi_mem_data_set_all_dirty_except(kmd, host_asid);
+    }
+  }
+
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), kaapi_self_thread(),
+		    KAAPI_EVT_CUDA_CPU_SYNC_BEG);
+  cudaStreamSynchronize(stream);
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), kaapi_self_thread(),
+		    KAAPI_EVT_CUDA_CPU_SYNC_END);
+  cudaStreamDestroy(stream);
 
   return 0;
 }
