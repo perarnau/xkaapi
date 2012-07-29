@@ -395,10 +395,10 @@ kaapi_cuda_data_async_sync_host(kaapi_data_t * kdata, cudaStream_t stream)
   kaapi_mem_asid_t valid_asid;
 
   kaapi_assert_debug(kmd != 0);
-  if (kaapi_mem_data_is_dirty(kmd, host_asid)) {
+  if (kaapi_mem_data_is_dirty(kmd, host_asid)) 
+  {
     valid_asid = kaapi_mem_data_get_nondirty_asid(kmd);
-    kaapi_data_t *valid_data =
-	(kaapi_data_t *) kaapi_mem_data_get_addr(kmd, valid_asid);
+    kaapi_data_t *valid_data = (kaapi_data_t *) kaapi_mem_data_get_addr(kmd, valid_asid);
     kaapi_cuda_data_async_sync_host_transfer(kdata, host_asid, valid_data,
 					     valid_asid, stream);
     kaapi_mem_data_clear_dirty(kmd, host_asid);

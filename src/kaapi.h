@@ -1564,7 +1564,7 @@ typedef struct kaapi_data_t {
   kaapi_pointer_t               ptr;                /* address of data */
   kaapi_memory_view_t           view;               /* view of data */
   struct kaapi_metadata_info_t* mdi;                /* if not null, pointer to the meta data */
-  struct kaapi_mem_data_t*	kmd;		    /* TODO review */
+  struct kaapi_mem_data_t*	kmd;		                /* TODO review */
 } kaapi_data_t;
 
 
