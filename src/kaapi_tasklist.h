@@ -566,13 +566,13 @@ static inline int kaapi_readytasklist_pushready_td(
 )
 {
   kaapi_processor_t* curr_kproc = kaapi_get_current_processor();
-
+  
 #if 0 /* 0: comment, move steal with biggest CT on steal.  do it on steal */
   /* change priority if based on critical path */
   if (kaapi_default_param.ctpriority !=0)
     td->priority = (*kaapi_default_param.ctpriority)(td->tasklist->t_infinity, td);    
 #endif
-
+  
   if (td->site !=-1)
   {
     kaapi_assert_debug( (td->site >=0) && (td->site < (int32_t)kaapi_count_kprocessors) );
@@ -583,14 +583,14 @@ static inline int kaapi_readytasklist_pushready_td(
     }
     return kaapi_readylist_push( rtl, td, td->priority );
   }
-
+  
   if ( kaapi_processor_get_type(curr_kproc) == KAAPI_PROC_TYPE_CUDA ) 
   {
     /* if td does not have GPU implementation, push it on master tasklist */
-    if ( kaapi_format_get_task_bodywh_by_arch( td->fmt, KAAPI_PROC_TYPE_CUDA ) == 0) //(td->priority == KAAPI_TASKLIST_MIN_PRIORITY ) 
+    if ( (td->fmt !=0) && (kaapi_format_get_task_bodywh_by_arch( td->fmt, KAAPI_PROC_TYPE_CUDA ) == 0)) //(td->priority == KAAPI_TASKLIST_MIN_PRIORITY ) 
     {
-	kaapi_assert_debug( td->tasklist != 0 );
-	return kaapi_readylist_push( &td->tasklist->rtl, td, td->priority );
+      kaapi_assert_debug( td->tasklist != 0 );
+      return kaapi_readylist_push( &td->tasklist->rtl, td, td->priority );
     }
     kaapi_processor_t* kproc_remote = curr_kproc->affinity( curr_kproc, td );
     if ( kproc_remote != curr_kproc ) 
