@@ -197,15 +197,145 @@ static inline char convertToSideMode( int side )
 
 #endif /* CONFIG_USE_MAGMA */
 
-#if CONFIG_USE_FLOAT
-# define cublasTrsm cublasStrsm
-# define cublasGemm cublasSgemm
-# define cublasSyrk cublasSsyrk
-#else
-# define cublasTrsm cublasDtrsm
-# define cublasGemm cublasDgemm
-# define cublasSyrk cublasDsyrk
-#endif // CONFIG_USE_FLOAT
+
+/* for cublas v2 */
+template<class T>
+struct CUBLAS {
+  typedef T value_type;
+  static cublasStatus_t trsm(cublasHandle_t handle,
+                     cublasSideMode_t side,
+                     cublasFillMode_t uplo,
+                     cublasOperation_t trans,
+                     cublasDiagType_t diag,
+                     int m,
+                     int n,
+                     const value_type *alpha, /* host or device pointer */
+                     const value_type *A,
+                     int lda,
+                     value_type *B,
+                     int ldb);
+                                         
+  static cublasStatus_t gemm( cublasHandle_t handle,
+                    cublasOperation_t transa,
+                    cublasOperation_t transb,
+                    int m,
+                    int n,
+                    int k,
+                    const value_type *alpha, /* host or device pointer */
+                    const value_type *A,
+                    int lda,
+                    const value_type *B,
+                    int ldb,
+                    const value_type *beta, /* host or device pointer */
+                    value_type *C,
+                    int ldc);
+  static cublasStatus_t syrk(cublasHandle_t handle,
+                     cublasFillMode_t uplo,
+                     cublasOperation_t trans,
+                     int n,
+                     int k,
+                     const value_type *alpha,  /* host or device pointer */
+                     const value_type *A,
+                     int lda,
+                     const value_type *beta,  /* host or device pointer */
+                     value_type *C,
+                     int ldc);
+};
+
+template<>
+struct CUBLAS<double> {
+  typedef double value_type;
+  static cublasStatus_t trsm(cublasHandle_t handle,
+                   cublasSideMode_t side,
+                   cublasFillMode_t uplo,
+                   cublasOperation_t trans,
+                   cublasDiagType_t diag,
+                   int m,
+                   int n,
+                   const value_type *alpha, /* host or device pointer */
+                   const value_type *A,
+                   int lda,
+                   value_type *B,
+                   int ldb)
+  { return cublasDtrsm_v2(handle, side, uplo, trans, diag, m, n, alpha, A, lda, B, ldb); }
+
+  static cublasStatus_t gemm( cublasHandle_t handle,
+                    cublasOperation_t transa,
+                    cublasOperation_t transb,
+                    int m,
+                    int n,
+                    int k,
+                    const value_type *alpha, /* host or device pointer */
+                    const value_type *A,
+                    int lda,
+                    const value_type *B,
+                    int ldb,
+                    const value_type *beta, /* host or device pointer */
+                    value_type *C,
+                    int ldc)
+  { return cublasDgemm_v2(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc); }
+
+  static cublasStatus_t syrk(cublasHandle_t handle,
+                     cublasFillMode_t uplo,
+                     cublasOperation_t trans,
+                     int n,
+                     int k,
+                     const value_type *alpha,  /* host or device pointer */
+                     const value_type *A,
+                     int lda,
+                     const value_type *beta,  /* host or device pointer */
+                     value_type *C,
+                     int ldc)
+  { return cublasDsyrk_v2(handle, uplo, trans, n, k, alpha, A, lda, beta, C, ldc); }
+};
+
+template<>
+struct CUBLAS<float> {
+  typedef float value_type;
+  static cublasStatus_t trsm(cublasHandle_t handle,
+                   cublasSideMode_t side,
+                   cublasFillMode_t uplo,
+                   cublasOperation_t trans,
+                   cublasDiagType_t diag,
+                   int m,
+                   int n,
+                   const value_type *alpha, /* host or device pointer */
+                   const value_type *A,
+                   int lda,
+                   value_type *B,
+                   int ldb)
+  { return cublasStrsm_v2(handle, side, uplo, trans, diag, m, n, alpha, A, lda, B, ldb); }
+
+  static cublasStatus_t gemm( cublasHandle_t handle,
+                    cublasOperation_t transa,
+                    cublasOperation_t transb,
+                    int m,
+                    int n,
+                    int k,
+                    const value_type *alpha, /* host or device pointer */
+                    const value_type *A,
+                    int lda,
+                    const value_type *B,
+                    int ldb,
+                    const value_type *beta, /* host or device pointer */
+                    value_type *C,
+                    int ldc)
+  { return cublasSgemm_v2(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc); }
+
+  static cublasStatus_t syrk(cublasHandle_t handle,
+                     cublasFillMode_t uplo,
+                     cublasOperation_t trans,
+                     int n,
+                     int k,
+                     const value_type *alpha,  /* host or device pointer */
+                     const value_type *A,
+                     int lda,
+                     const value_type *beta,  /* host or device pointer */
+                     value_type *C,
+                     int ldc)
+  { return cublasSsyrk_v2(handle, uplo, trans, n, k, alpha, A, lda, beta, C, ldc); }
+};
+
 
 #if CONFIG_USE_MAGMA
 typedef int magma_int_t;
@@ -333,27 +463,28 @@ magma_int_t magma_dormqr_gpu( char side, char trans,
 
 // task definitions
 
-template<> struct TaskBodyGPU<TaskDTRSM_left>
+template<typename T> 
+struct TaskBodyGPU<TaskTRSM_left<T> >
 {
   void operator()
   (
-   ka::gpuStream stream,
-   ka::range2d_r<double_type> Akk,
-   ka::range2d_rw<double_type> Akj
+    ka::gpuStream     stream,
+    ka::range2d_r<T>  Akk,
+    ka::range2d_rw<T> Akj
   )
   {
 #if CONFIG_USE_CUBLAS
-    const double_type* const a = Akk->ptr();
+    const T* const a = Akk->ptr();
     const int lda = Akk->lda();
 
-    double_type* const b = Akj->ptr();
+    T* const b = Akj->ptr();
     const int ldb   = Akj->lda();
     const int n     = Akj->dim(0);
     const int m     = Akj->dim(1);
 
-    static const double_type static_alpha = 1.;
+    static const T static_alpha = 1.;
 
-    const cublasStatus_t status = cublasTrsm
+    const cublasStatus_t status = CUBLAS<T>::trsm
       (
        kaapi_cuda_cublas_handle(),
        convertToSideMode(CblasLeft),
@@ -370,28 +501,28 @@ template<> struct TaskBodyGPU<TaskDTRSM_left>
 };
 
 
-template<> struct TaskBodyGPU<TaskDTRSM_right>
+template<typename T> 
+struct TaskBodyGPU<TaskTRSM_right<T> >
 {
   void operator()
   (
-   ka::gpuStream stream,
-   ka::range2d_r<double_type> Akk,
-   ka::range2d_rw<double_type> Aik
+    ka::gpuStream stream,
+    ka::range2d_r<T> Akk,
+    ka::range2d_rw<T> Aik
   )
   {
 #if CONFIG_USE_CUBLAS
-
-    const double_type* const a = Akk->ptr();
+    const T* const a = Akk->ptr();
     const int lda = Akk->lda();
 
-    double_type* const b = Aik->ptr();
+    T* const b = Aik->ptr();
     const int ldb = Aik->lda();
     const int n = Aik->dim(0); // b.rows();
     const int m = Aik->dim(1); // b.cols();
 
-    static const double_type static_alpha = 1.;
+    static const T static_alpha = 1.;
 
-    const cublasStatus_t status = cublasTrsm
+    const cublasStatus_t status = CUBLAS<T>::trsm
       (
        kaapi_cuda_cublas_handle(),
        convertToSideMode(CblasRight),
@@ -409,7 +540,8 @@ template<> struct TaskBodyGPU<TaskDTRSM_right>
   }
 };
 
-template<> struct TaskBodyGPU<TaskDGEMM>
+template<typename T> 
+struct TaskBodyGPU<TaskGEMM<T> >
 {
   void operator()
   (
@@ -417,16 +549,16 @@ template<> struct TaskBodyGPU<TaskDGEMM>
    CBLAS_ORDER		   order, 
    CBLAS_TRANSPOSE transA,
    CBLAS_TRANSPOSE transB,
-   double_type alpha,
-   ka::range2d_r<double_type> Aik,
-   ka::range2d_r<double_type> Akj,
-   double_type beta,
-   ka::range2d_rw<double_type> Aij
+   T alpha,
+   ka::range2d_r<T> Aik,
+   ka::range2d_r<T> Akj,
+   T beta,
+   ka::range2d_rw<T> Aij
   )
   {
-    const double_type* const a = Aik->ptr();
-    const double_type* const b = Akj->ptr();
-    double_type* const c       = Aij->ptr();
+    const T* const a = Aik->ptr();
+    const T* const b = Akj->ptr();
+    T* const c       = Aij->ptr();
 
     const int m = Aik->dim(0); 
     const int n = Aik->dim(1); // eq. to Akj->rows();
@@ -446,8 +578,7 @@ template<> struct TaskBodyGPU<TaskDGEMM>
 #if CONFIG_USE_CUBLAS
 	cublasStatus_t status;
 	if( order == CblasColMajor ) 
-		status = cublasGemm
-		      (
+		status = CUBLAS<T>::gemm (
 		       kaapi_cuda_cublas_handle(),
 		       convertToOp(transA),
 		       convertToOp(transB),
@@ -456,10 +587,9 @@ template<> struct TaskBodyGPU<TaskDGEMM>
 		       a, lda,
 		       b, ldb, 
 		       &beta, c, ldc
-		      );
+    );
 	else if( order == CblasRowMajor )
-		status = cublasGemm
-		      (
+		status = CUBLAS<T>::gemm(
 		       kaapi_cuda_cublas_handle(),
 		       convertToOp(transB),
 		       convertToOp(transA),
@@ -468,7 +598,7 @@ template<> struct TaskBodyGPU<TaskDGEMM>
 		       b, ldb, 
 		       a, lda,
 		       &beta, c, ldc
-		      );
+    );
 	
     if (status != CUBLAS_STATUS_SUCCESS)
       printf("%s::cublasGemm() == %d\n", __FUNCTION__, status);
@@ -506,27 +636,28 @@ template<> struct TaskBodyGPU<TaskDGEMM>
 };
 
 
-template<> struct TaskBodyGPU<TaskDSYRK>
+template<typename T> 
+struct TaskBodyGPU<TaskSYRK<T> >
 {
   void operator()
   (
-   ka::gpuStream stream,
-   CBLAS_ORDER		   order, 
-   CBLAS_UPLO uplo,
-   CBLAS_TRANSPOSE trans,
-   double_type alpha,
-   ka::range2d_r <double_type>  A, 
-   double_type beta,
-   ka::range2d_rw<double_type> C 
+    ka::gpuStream stream,
+    CBLAS_ORDER		   order, 
+    CBLAS_UPLO uplo,
+    CBLAS_TRANSPOSE trans,
+    T alpha,
+    ka::range2d_r <T>  A, 
+    T beta,
+    ka::range2d_rw<T> C 
   )
   {
     const int n     = A->dim(0); 
     const int k     = A->dim(1); // eq. to Akj->rows();
     const int lda   = A->lda();
-    const double_type* const a = A->ptr();
+    const T* const a = A->ptr();
 
     const int ldc   = C->lda();
-    double_type* const c = C->ptr();
+    T* const c = C->ptr();
 
 #if 0
     fprintf(stdout, "TaskGPU DSYRK n=%d k=%d lda=%d A=%p ldc=%d C=%p\n",
@@ -535,7 +666,7 @@ template<> struct TaskBodyGPU<TaskDSYRK>
 
     KAAPI_TIMING_CUDA_BEGIN((cudaStream_t)stream.stream);
 #if CONFIG_USE_CUBLAS
-    const cublasStatus_t status = cublasSyrk
+    const cublasStatus_t status = CUBLAS<T>::syrk
       (
        kaapi_cuda_cublas_handle(),
        convertToFillMode(uplo),
@@ -554,25 +685,26 @@ template<> struct TaskBodyGPU<TaskDSYRK>
 };
 
 
-template<> struct TaskBodyGPU<TaskDTRSM>
+template<typename T> 
+struct TaskBodyGPU<TaskTRSM<T> >
 {
   void operator()
   (
-   ka::gpuStream	  stream,
-   CBLAS_ORDER		   order, 
-   CBLAS_SIDE             side,
-   CBLAS_UPLO             uplo,
-   CBLAS_TRANSPOSE        transA,
-   CBLAS_DIAG             diag,
-   double_type                 alpha,
-   ka::range2d_r <double_type> A, 
-   ka::range2d_rw<double_type> C
+    ka::gpuStream	  stream,
+    CBLAS_ORDER		   order, 
+    CBLAS_SIDE             side,
+    CBLAS_UPLO             uplo,
+    CBLAS_TRANSPOSE        transA,
+    CBLAS_DIAG             diag,
+    T                 alpha,
+    ka::range2d_r <T> A, 
+    ka::range2d_rw<T> C
   )
   {
-    const double_type* const a = A->ptr();
+    const T* const a = A->ptr();
     const int lda = A->lda();
 
-    double_type* const c = C->ptr();
+    T* const c = C->ptr();
     const int ldc = C->lda();
 
     const int n = C->dim(0);
@@ -585,7 +717,7 @@ template<> struct TaskBodyGPU<TaskDTRSM>
 
     KAAPI_TIMING_CUDA_BEGIN((cudaStream_t)stream.stream);
 #if CONFIG_USE_CUBLAS
-    const cublasStatus_t status = cublasTrsm
+    const cublasStatus_t status = CUBLAS<T>::trsm
       (
        kaapi_cuda_cublas_handle(),
        convertToSideMode(side),
@@ -611,14 +743,14 @@ struct TaskBodyGPU<TaskDGETRF> {
   void operator()( 
     ka::gpuStream stream,
     CBLAS_ORDER order, 
-    ka::range2d_rw<double_type> A, 
+    ka::range2d_rw<double> A, 
     ka::range1d_w<int> piv
   )
   {
     const int m        = A->dim(0); 
     const int n        = A->dim(1); 
     const int lda      = A->lda();
-    double_type* const a    = A->ptr();
+    double* const a    = A->ptr();
     int* const ipiv = piv->ptr();
 
 #if 1
@@ -643,20 +775,21 @@ struct TaskBodyGPU<TaskDGETRF> {
 };
 #endif
 
-template<> struct TaskBodyGPU<TaskDGETRFNoPiv>
+template<typename T> 
+struct TaskBodyGPU<TaskGETRFNoPiv<T> >
 {
   void operator()
   (
    ka::gpuStream stream,
    CBLAS_ORDER		   order, 
-   ka::range2d_rw<double_type> A
+   ka::range2d_rw<T> A
   )
   {
     const int m        = A->dim(0); 
     const int n        = A->dim(1); 
 //    const int lda      = A->lda();
     const int lda      = A->dim(1);
-    double_type* const a    = A->ptr();
+    T* const a    = A->ptr();
 
 #if KAAPI_VERBOSE
     fprintf(stdout, "TaskGPU DGETRF m=%d n=%d lda=%d A=%p\n",
@@ -673,15 +806,15 @@ template<> struct TaskBodyGPU<TaskDGETRFNoPiv>
 #else
     const int ione   = 1;
     int* piv = (int*) calloc(m, sizeof(int));
-    double_type* work = (double_type*) calloc( n*lda, sizeof(double_type));
+    T* work = (T*) calloc( n*lda, sizeof(T));
 
-    cudaMemcpy2D( work, lda*sizeof(double_type), a,
-	    lda*sizeof(double_type), n, lda, 
+    cudaMemcpy2D( work, lda*sizeof(T), a,
+	    lda*sizeof(T), n, lda, 
 	    cudaMemcpyDeviceToHost );
-    clapack_getrf( order, m, n, work, lda, piv );
-    LAPACKE_laswp( order, m, work, lda, ione, n, piv, ione);
-    cudaMemcpy2D( a, lda*sizeof(double_type), work,
-	    lda*sizeof(double_type), n, lda,
+    CLAPACK<T>::getrf( order, m, n, work, lda, piv );
+    LAPACKE<T>::laswp( order, m, work, lda, ione, n, piv, ione);
+    cudaMemcpy2D( a, lda*sizeof(T), work,
+	    lda*sizeof(T), n, lda,
 	    cudaMemcpyHostToDevice );
     free( piv );
     free( work );
@@ -690,19 +823,20 @@ template<> struct TaskBodyGPU<TaskDGETRFNoPiv>
 };
 
 
-template<> struct TaskBodyGPU<TaskDPOTRF>
+template<typename T> 
+struct TaskBodyGPU<TaskPOTRF<T> >
 {
   void operator()
   (
    ka::gpuStream stream,
    CBLAS_ORDER		   order, 
    CBLAS_UPLO uplo,
-   ka::range2d_rw<double_type> A
+   ka::range2d_rw<T> A
   )
   {
     const int n     = A->dim(0); 
     const int lda   = A->lda();
-    double_type* const a = A->ptr();
+    T* const a = A->ptr();
 
 #if 1
     fprintf(stdout, "TaskGPU DPOTRF m=%d A=%p lda=%d\n", n, (void*)a, lda ); fflush(stdout);
@@ -716,15 +850,15 @@ template<> struct TaskBodyGPU<TaskDPOTRF>
 	fflush(stdout);
 	}
 #else
-    double_type* work = (double_type*) calloc( n*lda, sizeof(double_type));
-    cudaMemcpy2D( work, lda*sizeof(double_type),
-	    a, lda*sizeof(double_type),
-	    lda*sizeof(double_type), n, 
+    T* work = (T*) calloc( n*lda, sizeof(T));
+    cudaMemcpy2D( work, lda*sizeof(T),
+	    a, lda*sizeof(T),
+	    lda*sizeof(T), n, 
 	    cudaMemcpyDeviceToHost );
-    clapack_potrf( order,  uplo, n, work, lda );
-    cudaMemcpy2D( a, lda*sizeof(double_type),
-	    work, lda*sizeof(double_type),
-	    lda*sizeof(double_type), n,
+    CLAPACK<T>::potrf( order,  uplo, n, work, lda );
+    cudaMemcpy2D( a, lda*sizeof(T),
+	    work, lda*sizeof(T),
+	    lda*sizeof(T), n,
 	    cudaMemcpyHostToDevice );
     free( work );
 #endif
@@ -738,10 +872,10 @@ struct TaskBodyGPU<TaskPlasmaDSSSSM> {
   void operator()( 
     ka::gpuStream stream,
     CBLAS_ORDER order, 
-    ka::range2d_rw<double_type> A1, 
-    ka::range2d_rw<double_type> A2,
-    ka::range2d_r<double_type> L1,
-    ka::range2d_r<double_type> L2,
+    ka::range2d_rw<double> A1, 
+    ka::range2d_rw<double> A2,
+    ka::range2d_r<double> L1,
+    ka::range2d_r<double> L2,
     ka::range1d_r<int> piv
   )
   {
@@ -754,10 +888,10 @@ struct TaskBodyGPU<TaskPlasmaDSSSSM> {
     int lda2 = A2->lda();
     int ldl1 = L1->lda();
     int ldl2 = L2->lda();
-    double_type* const a1 = A1->ptr();
-    double_type* const a2 = A2->ptr();
-    double_type* const l1 = (double_type*)L1->ptr();
-    double_type* const l2 = (double_type*)L2->ptr();
+    double* const a1 = A1->ptr();
+    double* const a2 = A2->ptr();
+    double* const l1 = (double*)L1->ptr();
+    double* const l2 = (double*)L2->ptr();
     int* const ipiv = (int*)piv->ptr();
     const int ib = IB; // from PLASMA
 
@@ -864,8 +998,8 @@ struct TaskBodyGPU<TaskPlasmaDGESSM> {
     ka::gpuStream stream,
     CBLAS_ORDER order, 
     ka::range1d_r<int> piv,
-    ka::range2d_r<double_type> L, 
-    ka::range2d_rw<double_type> A
+    ka::range2d_r<double> L, 
+    ka::range2d_rw<double> A
   )
   {
     int m = A->dim(0); 
@@ -873,8 +1007,8 @@ struct TaskBodyGPU<TaskPlasmaDGESSM> {
     int k = A->dim(1);
     int lda = A->lda();
     int ldl = L->lda();
-    double_type* const a = A->ptr();
-    double_type* const l = (double_type*)L->ptr();
+    double* const a = A->ptr();
+    double* const l = (double*)L->ptr();
     int* const ipiv = (int*)piv->ptr();
     const int ib = IB; // from PLASMA
 
@@ -974,11 +1108,11 @@ struct TaskBodyGPU<TaskPlasmaDTSTRF> {
     ka::gpuStream stream,
     CBLAS_ORDER order, 
     int nb,
-    ka::range2d_rw<double_type> U, 
-    ka::range2d_rw<double_type> A,
-    ka::range2d_rw<double_type> L,
+    ka::range2d_rw<double> U, 
+    ka::range2d_rw<double> A,
+    ka::range2d_rw<double> L,
     ka::range1d_w<int> piv,
-    ka::range2d_rw<double_type> WORK
+    ka::range2d_rw<double> WORK
   )
   {
     int m = A->dim(0); 
@@ -987,10 +1121,10 @@ struct TaskBodyGPU<TaskPlasmaDTSTRF> {
     int ldl = L->lda();
     int ldu = U->lda();
     int ldw = WORK->lda();
-    double_type* const a = A->ptr();
-    double_type* const l = L->ptr();
-    double_type* const u = U->ptr();
-    double_type* const work = WORK->ptr();
+    double* const a = A->ptr();
+    double* const l = L->ptr();
+    double* const u = U->ptr();
+    double* const work = WORK->ptr();
     int* const ipiv = piv->ptr();
     const int ib = IB; // from PLASMA
 
