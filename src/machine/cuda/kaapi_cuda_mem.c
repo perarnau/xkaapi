@@ -497,7 +497,7 @@ kaapi_cuda_mem_dec_use_rw(kaapi_cuda_mem_t * mem,
     fprintf(stdout, "[%s] kid=%lu ERROR double free ptr=%p (wc=%lu)\n",
             __FUNCTION__,
             (long unsigned int) kaapi_get_current_kid(),
-            __kaapi_pointer2void(blk->ptr), 0);
+            __kaapi_pointer2void(blk->ptr), (unsigned long int)0);
     fflush(stdout);
     abort();
   }
@@ -506,7 +506,7 @@ kaapi_cuda_mem_dec_use_rw(kaapi_cuda_mem_t * mem,
     fprintf(stdout, "[%s] kid=%lu ptr=%p (wc=%lu)\n",
             __FUNCTION__,
             (long unsigned int) kaapi_get_current_kid(),
-            __kaapi_pointer2void(blk->ptr), blk->u.wc - 1);
+            __kaapi_pointer2void(blk->ptr), (unsigned long int)(blk->u.wc - 1));
     fflush(stdout);
   }
 #endif				/* KAAPI_VERBOSE */
@@ -523,7 +523,7 @@ kaapi_cuda_mem_dec_use_ro(kaapi_cuda_mem_t * mem,
     fprintf(stdout, "[%s] kid=%lu ERROR double free ptr=%p (rc=%lu)\n",
             __FUNCTION__,
             (long unsigned int) kaapi_get_current_kid(),
-            __kaapi_pointer2void(blk->ptr), 0);
+            __kaapi_pointer2void(blk->ptr), (unsigned long int)0);
     fflush(stdout);
     abort();
   }
@@ -532,7 +532,7 @@ kaapi_cuda_mem_dec_use_ro(kaapi_cuda_mem_t * mem,
     fprintf(stdout, "[%s] kid=%lu ptr=%p (rc=%lu)\n",
             __FUNCTION__,
             (long unsigned int) kaapi_get_current_kid(),
-            __kaapi_pointer2void(blk->ptr), blk->u.rc - 1);
+            __kaapi_pointer2void(blk->ptr), (unsigned long int)(blk->u.rc - 1));
     fflush(stdout);
   }
 #endif
