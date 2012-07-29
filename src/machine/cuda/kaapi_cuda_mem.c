@@ -841,33 +841,23 @@ kaapi_cuda_mem_copy_dtod_buffer(kaapi_pointer_t dest,
 				const kaapi_pointer_t host,
 				const kaapi_memory_view_t * view_host)
 {
-  cudaEvent_t event;
   cudaError_t res;
-  cudaSetDevice(src_dev);
-  res = cudaEventCreateWithFlags(&event, cudaEventDisableTiming);
-  if (res != cudaSuccess) {
-    fprintf(stdout, "%s: ERROR cudaEventCreateWithFlags %d\n",
-	    __FUNCTION__, res);
-    fflush(stdout);
-    abort();
-  }
-  kaapi_processor_t *kproc = kaapi_cuda_get_proc_by_dev(src_dev);
-  kaapi_cuda_mem_copy_dtoh_(host, view_host, src, view_src,
-			    kaapi_cuda_get_cudastream
-			    (kaapi_cuda_get_output_fifo
-			     (kproc->cuda_proc.kstream)));
-  res =
-      cudaEventRecord(event,
-		      kaapi_cuda_get_cudastream(kaapi_cuda_get_output_fifo
-						(kproc->cuda_proc.
-						 kstream)));
-  if (res != cudaSuccess) {
-    fprintf(stdout, "%s: ERROR cudaEventRecord %d\n", __FUNCTION__, res);
-    fflush(stdout);
-    abort();
-  }
-  cudaSetDevice(dest_dev);
-  cudaStreamWaitEvent(kaapi_cuda_HtoD_stream(), event, 0);
+  cudaStream_t stream;
+
+  kaapi_cuda_ctx_set(src_dev);
+  res = cudaStreamCreate(&stream);
+  kaapi_assert_debug( res == cudaSuccess );
+  res = kaapi_cuda_mem_copy_dtoh_(host, view_host, src, view_src, stream );
+  kaapi_assert_debug( res == cudaSuccess );
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(),
+		    kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG);
+  res = cudaStreamSynchronize(stream);
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(),
+		    kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END);
+  kaapi_assert_debug( res == cudaSuccess );
+  cudaStreamDestroy(stream);
+  kaapi_cuda_ctx_set(dest_dev);
+
   return kaapi_cuda_mem_copy_htod(dest, view_dest, host, view_host);
 }
 

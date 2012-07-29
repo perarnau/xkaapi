@@ -417,9 +417,9 @@ kaapi_cuda_data_async_sync_host_transfer3(kaapi_data_t * dest,
 	  curr_asid, src_asid - 1, dest_asid);
   fflush(stdout);
 #endif
-  cudaSetDevice(src_asid - 1);
+  kaapi_cuda_ctx_set(src_asid - 1);
   kaapi_cuda_mem_copy_dtoh(dest->ptr, &dest->view, src->ptr, &src->view);
-  cudaSetDevice(curr_asid - 1);
+  kaapi_cuda_ctx_set(curr_asid - 1);
   return 0;
 }
 
