@@ -96,5 +96,9 @@ extern struct kaapi_taskdescr_t* kaapi_steal_by_affinity_maxctpath( const kaapi_
 */
 extern struct kaapi_taskdescr_t* kaapi_steal_by_affinity_maxhit( const kaapi_processor_t* thief, struct kaapi_taskdescr_t* tail );
 
+/*
+*/
+extern kaapi_processor_t *kaapi_affinity_wrmode(kaapi_processor_t * kproc,
+					      struct kaapi_taskdescr_t * td);
 
 #endif /* _KAAPI_AFFINITY_H_ */

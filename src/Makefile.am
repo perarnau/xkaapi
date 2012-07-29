@@ -118,6 +118,7 @@ libkaapi_la_SOURCES=\
   affinity/kaapi_affinity_datawizard.c \
   affinity/kaapi_affinity_hit.c\
   affinity/kaapi_affinity_steal.c\
+  affinity/kaapi_affinity_wrmode.c \
   thread/kaapi_thread_checkdeps.c \
   thread/kaapi_thread_clear.c \
   thread/kaapi_thread_computeready_access.c \
