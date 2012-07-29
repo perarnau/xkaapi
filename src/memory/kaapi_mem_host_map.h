@@ -44,7 +44,9 @@ int
 kaapi_mem_host_map_find_or_insert_( kaapi_mem_host_map_t*, 
 	kaapi_mem_addr_t, kaapi_mem_data_t**);
 
+struct kaapi_taskdescr_t;
+
 int
-kaapi_mem_host_map_sync( const kaapi_format_t* , void* );
+kaapi_mem_host_map_sync( struct kaapi_taskdescr_t* const );
 
 #endif /* KAAPI_MEM_HOST_MAP_H_INCLUDED */

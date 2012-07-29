@@ -57,8 +57,12 @@ int kaapi_cuda_data_async_input_dev_sync(kaapi_cuda_stream_t * kstream,
  * \brief synchronize host memory from a GPU thread.
  * Method called from a GPU thread and synchronizes host memory.
  */
-int kaapi_cuda_data_async_input_host_sync(kaapi_cuda_stream_t * kstream,
+int kaapi_cuda_data_async_input_host_sync_from_dev(kaapi_cuda_stream_t * kstream,
 					  kaapi_taskdescr_t * td);
+
+/* \brief synchrinize host memory from a CPU thread.
+ * */
+int kaapi_cuda_data_async_input_host_sync(kaapi_taskdescr_t* const td);
 
 int kaapi_cuda_data_async_recv(kaapi_cuda_stream_t * kstream,
 			       kaapi_taskdescr_t * td);
@@ -73,14 +77,6 @@ It checks if the data is valid on the current kproc, otherwise searches for a
 valid copy on the asids of the system.
 */
 int kaapi_cuda_data_async_sync_device(kaapi_data_t * kdata);
-
-/* ** Memory system **
-   This method is called from a host thread to synchronize the kdata parameter.
-It checks if the data is valid on the current kproc, otherwise search for a
-valid copy on the GPUs.
-*/
-int
-kaapi_cuda_data_async_sync_host(kaapi_data_t * kdata, cudaStream_t stream);
 
 /**
  * Synchronize host pointers from a GPU thread.

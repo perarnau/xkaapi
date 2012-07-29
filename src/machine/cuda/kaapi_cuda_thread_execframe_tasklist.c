@@ -193,7 +193,7 @@ kaapi_cuda_host_task_callback0_sync_host(kaapi_cuda_stream_t * kstream, void *ar
   kaapi_taskdescr_t *const td = (kaapi_taskdescr_t *) arg;
 #if !defined(KAAPI_CUDA_NO_D2H)
   kaapi_cuda_ctx_push();
-  kaapi_cuda_data_input_host_sync(kstream, td);
+  kaapi_cuda_data_input_host_sync_from_dev(kstream, td);
   kaapi_cuda_ctx_pop();
 #endif
   kaapi_cuda_stream_push( kstream, KAAPI_CUDA_OP_D2H,
