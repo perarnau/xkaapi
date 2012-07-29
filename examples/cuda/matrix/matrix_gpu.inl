@@ -588,7 +588,8 @@ struct TaskBodyGPU<TaskGEMM<T> >
 		       b, ldb, 
 		       &beta, c, ldc
     );
-	else if( order == CblasRowMajor )
+	else {
+    kaapi_assert_debug( order == CblasRowMajor )
 		status = CUBLAS<T>::gemm(
 		       kaapi_cuda_cublas_handle(),
 		       convertToOp(transB),
@@ -599,9 +600,10 @@ struct TaskBodyGPU<TaskGEMM<T> >
 		       a, lda,
 		       &beta, c, ldc
     );
+  }
 	
-    if (status != CUBLAS_STATUS_SUCCESS)
-      printf("%s::cublasGemm() == %d\n", __FUNCTION__, status);
+  if (status != CUBLAS_STATUS_SUCCESS)
+    printf("%s::cublasGemm() == %d\n", __FUNCTION__, status);
 
 #elif CONFIG_USE_MAGMA
 	if( order == CblasColMajor ) 
