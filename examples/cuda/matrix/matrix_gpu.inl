@@ -823,6 +823,7 @@ struct TaskBodyGPU<TaskGETRFNoPiv<T> >
 };
 
 
+#if 0 /* DO NOT USE GPU FOR POTRF */
 template<typename T> 
 struct TaskBodyGPU<TaskPOTRF<T> >
 {
@@ -865,6 +866,7 @@ struct TaskBodyGPU<TaskPOTRF<T> >
 
   }
 };
+#endif
 
 #if defined(CONFIG_USE_DOUBLE)
 template<>

@@ -55,7 +55,7 @@
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
 
-typedef double double_type;
+typedef float double_type;
 
 
 /* Generate a random matrix symetric definite positive matrix of size m x m 
@@ -173,56 +173,48 @@ struct TaskBodyCPU<TaskCholesky<T> > {
     {
       for (size_t k=0; k < N; k += blocsize) {
         ka::rangeindex rk(k, k+blocsize);
-        ka::Spawn<TaskPOTRF<T> >( ka::SetPriority(0) )
+        ka::Spawn<TaskPOTRF<T> >( )
 	      ( CblasColMajor, CblasLower, A(rk,rk) );
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
           ka::rangeindex rm(m, m+blocsize);
-          ka::Spawn<TaskTRSM<T> >( ka::SetPriority(12) )
-          ( CblasColMajor, CblasRight, uplo,
-           CblasTrans, CblasNonUnit, 1.0, A(rk,rk), A(rk,rm));
+          ka::Spawn<TaskTRSM<T> >( )
+          ( CblasColMajor, CblasRight, uplo, CblasTrans, CblasNonUnit, (T)1.0, A(rk,rk), A(rk,rm));
         }
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
           ka::rangeindex rm(m, m+blocsize);
-          ka::Spawn<TaskSYRK<T> >( ka::SetPriority(12) )
-          ( CblasColMajor, uplo,
-           CblasNoTrans, -1.0, A(rk,rm), 1.0, A(rm,rm));
+          ka::Spawn<TaskSYRK<T> >( )
+          ( CblasColMajor, uplo, CblasNoTrans, (T)-1.0, A(rk,rm), (T)1.0, A(rm,rm));
           
           for (size_t n=k+blocsize; n < m; n += blocsize) {
             ka::rangeindex rn(n, n+blocsize);
-            ka::Spawn<TaskGEMM<T> >( ka::SetPriority(12) )
-            (   CblasColMajor, CblasNoTrans, CblasTrans,
-             -1.0, A(rk,rm), A(rk,rn), 1.0, A(rn,rm));
+            ka::Spawn<TaskGEMM<T> >( )
+            ( CblasColMajor, CblasNoTrans, CblasTrans, (T)-1.0, A(rk,rm), A(rk,rn), (T)1.0, A(rn,rm));
           }
         }
       }
     } else if( uplo == CblasUpper ) {
       for (size_t k=0; k < N; k += blocsize) {
         ka::rangeindex rk(k, k+blocsize);
-        ka::Spawn<TaskPOTRF<T> >( ka::SetPriority(0) )
+        ka::Spawn<TaskPOTRF<T> >( )
 	      ( CblasColMajor, uplo, A(rk,rk) );
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
           ka::rangeindex rm(m, m+blocsize);
           ka::Spawn<TaskTRSM<T> >()
-          ( CblasColMajor, CblasLeft, uplo,
-           CblasTrans, CblasNonUnit, 1.0, A(rk,rk), A(rm,rk) );
+          ( CblasColMajor, CblasLeft, uplo, CblasTrans, CblasNonUnit, (T)1.0, A(rk,rk), A(rm,rk) );
         }
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
           ka::rangeindex rm(m, m+blocsize);
-          ka::Spawn<TaskSYRK<T> >( ka::SetPriority(12) )
-          ( CblasColMajor, uplo,
-           CblasTrans, -1.0, A(rm,rk), 1.0, A(rm,rm) );
+          ka::Spawn<TaskSYRK<T> >( )
+          ( CblasColMajor, uplo, CblasTrans, (T)-1.0, A(rm,rk), (T)1.0, A(rm,rm) );
           
           for (size_t n=k+blocsize; n < m; n += blocsize) {
             ka::rangeindex rn(n, n+blocsize);
-            ka::Spawn<TaskGEMM<T> >( ka::SetPriority(12) )
-            ( CblasColMajor, CblasTrans, CblasNoTrans,
-             -1.0, A(rn,rk),
-             A(rm,rk),
-             1.0, A(rm,rn));
+            ka::Spawn<TaskGEMM<T> >( )
+            ( CblasColMajor, CblasTrans, CblasNoTrans, (T)-1.0, A(rn,rk), A(rm,rk), (T)1.0, A(rm,rn));
           }
         }
       }
