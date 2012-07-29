@@ -119,6 +119,6 @@ extern int kaapi_readylist_remote_push( kaapi_readytasklist_t* rtl, kaapi_taskde
 
 /*
  */
-extern int kaapi_readylist_steal( int arch, kaapi_readytasklist_t* rtl, kaapi_taskdescr_t** td );
+extern int kaapi_readylist_steal( const kaapi_processor_t* thiefprocessor, kaapi_readytasklist_t* rtl, kaapi_taskdescr_t** td );
 
 #endif /* _KAAPI_READYTASKLIST_H_ */ 

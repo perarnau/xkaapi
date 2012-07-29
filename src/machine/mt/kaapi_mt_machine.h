@@ -477,7 +477,7 @@ typedef struct kaapi_processor_t {
   unsigned int              seed_data;
   
   /* memory map */
-  kaapi_mem_host_map_t mem_host_map;
+  kaapi_mem_host_map_t      mem_host_map;
 
   struct kaapi_processor_t* victim_kproc;
 

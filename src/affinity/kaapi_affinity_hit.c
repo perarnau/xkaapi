@@ -5,8 +5,8 @@
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
+ **
  ** joao.lima@imag.fr
- ** thierry.gautier@inrialpes.fr
  ** 
  ** This software is a computer program whose purpose is to execute
  ** multithreaded computation with data flow synchronization between
@@ -44,70 +44,54 @@
 
 #include "kaapi_impl.h"
 
-static inline int kaapi_onereadytasklist_steal(
-    const kaapi_processor_t* thiefprocessor,
-    kaapi_onereadytasklist_t* ortl,
-    kaapi_taskdescr_t** td 
-) 
+#include "kaapi_affinity.h"
+
+#include "kaapi_tasklist.h"
+
+
+/* return the sum of data valid in the kproc asid */
+uint64_t kaapi_data_get_affinity_hit_size(
+       const kaapi_processor_t * kproc,
+       kaapi_taskdescr_t * td
+)
 {
-  int size_ws;
-  kaapi_taskdescr_t* curr;
+  int i;
+  kaapi_mem_data_t *kmd;
+  uint64_t hit = 0;
+  void *sp = td->task->sp;
+
+  if (td->fmt == NULL)
+    return 0;
   
-  if( kaapi_onereadytasklist_isempty( ortl ) )
-    return EBUSY;
+  const kaapi_mem_host_map_t* kproc_map = &kproc->mem_host_map;
+  kaapi_mem_asid_t kproc_asid = kaapi_mem_host_map_get_asid(kproc_map);
+  const size_t count_params = kaapi_format_get_count_params(td->fmt, sp);
 
-  kaapi_atomic_lock( &ortl->lock );
-  size_ws = kaapi_onereadytasklist_size( ortl );
-  if( size_ws == 0 ) {
-    kaapi_atomic_unlock( &ortl->lock );
-    return 1;
-  }
-
-  curr = ortl->tail;
-
-  curr = kaapi_default_param.steal_by_affinity( thiefprocessor, curr );
-
-  if (curr ==0) 
+  
+  for (i = 0; i < count_params; i++) 
   {
-    kaapi_atomic_unlock( &ortl->lock );
-    return EBUSY;
-  }
-  
-  /* unlink curr */
-  if( curr->prev != 0 )
-    curr->prev->next = curr->next;
-  else
-    ortl->head = curr->next;
-  if (curr ->next !=0)
-    curr->next->prev = curr->prev;
-  else
-    ortl->tail = curr->prev;
-  ortl->size--;
-  kaapi_atomic_unlock( &ortl->lock );
-  curr->prev = curr->next = 0;
-  *td = curr;
-  return 0;
-}
-
-int kaapi_readylist_steal( const kaapi_processor_t* thiefprocessor, kaapi_readytasklist_t* rtl, kaapi_taskdescr_t** td ) 
-{
-  kaapi_onereadytasklist_t* onertl;
-  int err;
-  int prio;
-  int max_prio= 0, min_prio= 0, inc_prio= 0;
-  
-  if( KAAPI_ATOMIC_READ( &rtl->cnt_tasks) == 0 )
-    return 1;
-  kaapi_readylist_get_priority_range( &min_prio, &max_prio, &inc_prio );
-  for( prio = max_prio; prio != min_prio; prio += inc_prio ) 
-  {
-    onertl = &rtl->prl[prio];
-    err = kaapi_onereadytasklist_steal( thiefprocessor, onertl, td );
-    if( err == 0 )
+    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(td->fmt, i, sp));
+    if (m == KAAPI_ACCESS_MODE_V)
+      continue;
+    
+    if (m == KAAPI_ACCESS_MODE_W)
     {
-	    KAAPI_ATOMIC_DECR( &rtl->cnt_tasks );
-	    return 0;
+      kaapi_memory_view_t view = kaapi_format_get_view_param(td->fmt, i, sp);
+      hit += kaapi_memory_view_size(&view);
+    }
+    else 
+    {
+      kaapi_access_t access = kaapi_format_get_access_param(td->fmt, i, sp);
+      kaapi_data_t* data = kaapi_data(kaapi_data_t, &access);
+      kmd = data->kmd;
+      kaapi_assert_debug(kmd != 0);
+      if (kaapi_bitmap_get_64(&kmd->valid_bits, kproc_asid))
+      {
+        kaapi_memory_view_t view = kaapi_format_get_view_param(td->fmt, i, sp);
+        hit += kaapi_memory_view_size(&view);
+      } 
     }
   }
-  return 1;
+  
+  return hit;
 }
