@@ -3,7 +3,7 @@
  *
  * An implementation of matrix multiply based on Cilk parallelization (matrix_multiply.cilk) 
  * but using Kaapi C++ construction
-
+ 
  * First of five matrix multiply examples to compare dense matrix multiplication 
  * algorithms using Cilk parallelization.
  *   Example 1: Straightforward loop parallelization of matrix multiplication.
@@ -35,9 +35,6 @@
 
 #include "../matrix/matrix.h"
 
-#include <cuda_runtime_api.h>
-#include "cublas_v2.h"
-
 static int BLOCSIZE = 0;
 
 // check results
@@ -46,36 +43,38 @@ static int BLOCSIZE = 0;
 
 # include <stdlib.h>
 
+typedef float double_type;
+
 static int do_check
 (const double_type* a, const double_type* b, double_type* c, double_type* c_old, unsigned int n)
 {
-//  double_type* const tmp = (double_type*) malloc(n * n * sizeof(double_type));
-//  if (tmp == NULL) return -1;
+  //  double_type* const tmp = (double_type*) malloc(n * n * sizeof(double_type));
+  //  if (tmp == NULL) return -1;
   unsigned int i, j, k;
   double_type* const tmp = c_old;
-
-    cblas_gemm
-    (
-	CblasColMajor, CblasNoTrans, CblasNoTrans,
-	n, n, n, 1.0, a, n, b, n, 1.0, tmp, n
-    );
-
+  
+  CBLAS<double_type>::gemm
+  (
+   CblasColMajor, CblasNoTrans, CblasNoTrans,
+   n, n, n, 1.0, a, n, b, n, 1.0, tmp, n
+  );
+  
   int res = -1;
-
+  
   for (i = 0; i < n; ++i) {
     for (j = 0; j < n; ++j) {
       k = i * n + j;
       if (fabsf(c[k] - tmp[k]) >= 0.01)
       {
-	printf("ERROR invalid @%lx,%u,%u %f != %f\n", (uintptr_t)c, i, j, c[k], tmp[k]);
-	goto on_error;
+        printf("ERROR invalid @%lx,%u,%u %f != %f\n", (uintptr_t)c, i, j, c[k], tmp[k]);
+        goto on_error;
       }
     }
   }
-
+  
   res = 0;
-
- on_error:
+  
+on_error:
   return res;
 }
 
@@ -84,7 +83,7 @@ static int do_check
 
 // fetching task
 struct TaskMatFetch : public ka::Task<1>::Signature<
-  ka::RW<ka::range2d<double_type> > // C
+ka::RW<ka::range2d<double_type> > // C
 >{};
 
 template<>
@@ -98,25 +97,25 @@ struct TaskBodyGPU<TaskMatFetch> {
 };
 
 struct TaskMatProduct: public ka::Task<3>::Signature<
-      ka::R<ka::range2d<double_type> >, /* A */
-      ka::R<ka::range2d<double_type> >,  /* B */
-      ka::RPWP<ka::range2d<double_type> >   /* C */
+  ka::R<ka::range2d<double_type> >, /* A */
+  ka::R<ka::range2d<double_type> >,  /* B */
+  ka::RPWP<ka::range2d<double_type> >   /* C */
 >{};
 
 template<>
 struct TaskBodyCPU<TaskMatProduct> {
   void operator()( ka::range2d_r<double_type> A, ka::range2d_r<double_type> B, ka::range2d_rpwp<double_type> C )
   {
-    size_t M = A.dim(0);
-    size_t K = B.dim(0);
-    size_t N = B.dim(1);
+    size_t M = A->dim(0);
+    size_t K = B->dim(0);
+    size_t N = B->dim(1);
     int bloc = BLOCSIZE;
     
-//    for (size_t i=0; i<M; i += bloc)
+    //    for (size_t i=0; i<M; i += bloc)
     for (size_t j=0; j<M; j += bloc)
     {
       ka::rangeindex rj(j, j+bloc);
-//      for (size_t j=0; j<N; j += bloc)
+      //      for (size_t j=0; j<N; j += bloc)
       for (size_t i=0; i<N; i += bloc)
       {
         ka::rangeindex ri(i, i+bloc);
@@ -124,15 +123,15 @@ struct TaskBodyCPU<TaskMatProduct> {
         {
           ka::rangeindex rk(k, k+bloc);
 #if 0
-	  fprintf(stdout, "TaskMatProduct A([%lu:%lu] [%lu:%lu]) x B([%lu:%lu] [%lu:%lu]) = C([%lu:%lu] [%lu:%lu])\n",
-			i, i+bloc, k, k+bloc, k, k+bloc, j, j+bloc, i, i+bloc,
-			j, j+bloc
-		 );
-	  fflush(stdout);
+          fprintf(stdout, "TaskMatProduct A([%lu:%lu] [%lu:%lu]) x B([%lu:%lu] [%lu:%lu]) = C([%lu:%lu] [%lu:%lu])\n",
+                  i, i+bloc, k, k+bloc, k, k+bloc, j, j+bloc, i, i+bloc,
+                  j, j+bloc
+                  );
+          fflush(stdout);
 #endif
-//          ka::Spawn<TaskDGEMM>()(  CblasColMajor, CblasNoTrans, CblasNoTrans, 1.0, A(ri,rk), B(rk,rj), 1.0, C(ri,rj) );
-          ka::Spawn<TaskDGEMM>()(  CblasColMajor, CblasNoTrans, CblasNoTrans, 1.0, 
-		   B(rk,rj), A(ri,rk), 1.0, C(ri,rj) );
+          //          ka::Spawn<TaskDGEMM>()(  CblasColMajor, CblasNoTrans, CblasNoTrans, 1.0, A(ri,rk), B(rk,rj), 1.0, C(ri,rj) );
+          ka::Spawn<TaskGEMM<double_type> >()(  CblasColMajor, CblasNoTrans, CblasNoTrans, 1.0, 
+                                   B(rk,rj), A(ri,rk), 1.0, C(ri,rj) );
         }
       }
     }
@@ -140,7 +139,7 @@ struct TaskBodyCPU<TaskMatProduct> {
 };
 
 /* Main of the program
-*/
+ */
 struct doit {
   void operator()(int argc, char** argv)
   {
@@ -149,18 +148,18 @@ struct doit {
     int matrix_size = 512;
     int block_size = 1;
     int verif = 0;
-
+    
     if( argc > 1 )
 	    matrix_size= atoi(argv[1]);
     if( argc > 2 )
 	    block_size= atoi(argv[2]);
     if( argc > 3 )
 	    verif = 1; // check results ON
-
+    
     BLOCSIZE = block_size;
-
+    
     const int n = matrix_size;
-
+    
     double_type* dA = (double_type*) malloc(n * n * sizeof(double_type));
     double_type* dB = (double_type*) malloc(n * n * sizeof(double_type));
     double_type* dC = (double_type*) malloc(n * n * sizeof(double_type));
@@ -169,22 +168,22 @@ struct doit {
 #endif
     if (0 == dA || 0 == dB || 0 == dC) 
     {
-        std::cout << "Fatal Error. Cannot allocate matrices A, B, and C."
-            << std::endl;
-        return;
+      std::cout << "Fatal Error. Cannot allocate matrices A, B, and C."
+      << std::endl;
+      return;
     }
-
+    
     ka::array<2,double_type> At( dA, n, n, n);
     ka::array<2,double_type> Bt( dB, n, n, n);
     ka::array<2,double_type> Ct( dC, n, n, n);
-
-    TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(At) );
-    TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(Bt) );
-    TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(Ct) );
-
+    
+    TaskBodyCPU<TaskLARNV<double_type> >()( ka::range2d_w<double_type>(At) );
+    TaskBodyCPU<TaskLARNV<double_type> >()( ka::range2d_w<double_type>(Bt) );
+    TaskBodyCPU<TaskLARNV<double_type> >()( ka::range2d_w<double_type>(Ct) );
+    
     cudaSetDevice(0);
     double_type *devA, *devB, *devC;
-
+    
     cudaMalloc( (void**)&devA, n*n*sizeof(double_type) );
     cudaMalloc( (void**)&devB, n*n*sizeof(double_type) );
     cudaMalloc( (void**)&devC, n*n*sizeof(double_type) );
@@ -194,29 +193,29 @@ struct doit {
     ka::array<2,double_type> A( devA, n, n, n);
     ka::array<2,double_type> B( devB, n, n, n);
     ka::array<2,double_type> C( devC, n, n, n);
-
+    
     /* register memory to Xkaapi runtime */
-//    ka::Memory::Register( A );
- //   ka::Memory::Register( B );
- //   ka::Memory::Register( C );
-
-
-
+    //    ka::Memory::Register( A );
+    //   ka::Memory::Register( B );
+    //   ka::Memory::Register( C );
+    
+    
+    
 #if CONFIG_DO_CHECK
     if( verif ){
-	dC_old= (double_type*) calloc(n* n, sizeof(double_type));
-	if( dC_old == 0){
+      dC_old= (double_type*) calloc(n* n, sizeof(double_type));
+      if( dC_old == 0){
         std::cout << "Fatal Error. Cannot allocate auxiliary matrix C."
-            << std::endl;
+        << std::endl;
         return;
-	}
-	memcpy( dC_old, dC, n*n*sizeof(double_type) );
+      }
+      memcpy( dC_old, dC, n*n*sizeof(double_type) );
     }
 #endif
-
+    
 #if 0
-    ka::Spawn<TaskPrintMatrix>()( std::string("A"), A );
-    ka::Spawn<TaskPrintMatrix>()( std::string("B"), B );
+    ka::Spawn<TaskPrintMatrix<double_type> >()( std::string("A"), A );
+    ka::Spawn<TaskPrintMatrix<double_type> >()( std::string("B"), B );
     ka::Sync();
 #endif
     // Multiply to get C = A*B 
@@ -224,27 +223,27 @@ struct doit {
     //ka::Spawn<TaskMatProduct>()( A, B, C );
     ka::Spawn<TaskMatProduct>(ka::SetStaticSched())( A, B, C );
     ka::Sync();
-//    cudaDeviceSynchronize();
+    //    cudaDeviceSynchronize();
     ka::MemorySync();
-
+    
     // dont time memory sync for the benchmarks since
     // it does not reflect the execution pipeline
     double t1 = kaapi_get_elapsedtime();
     double tdelta = t1 - t0;
-
+    
     double gflops = 1.0e-9 * ((2.0 * n * n * n)/(t1-t0));
-
+    
     fprintf( stdout, "# size bloc threads time GFlop/s\n" );
     fprintf( stdout, "GEMM %d %d %d %.10f %.6f\n", matrix_size, block_size,
-		    kaapi_getconcurrency(), tdelta, gflops );
+            kaapi_getconcurrency(), tdelta, gflops );
     fflush(stdout);
-
+    
     cublasGetMatrix( n, n, sizeof(double_type), devC, n, dC, n );
 #if 0
-    ka::Spawn<TaskPrintMatrix>()( std::string("C"), C );
+    ka::Spawn<TaskPrintMatrix<double_type> >()( std::string("C"), C );
     ka::Sync();
 #endif
-
+    
 #if CONFIG_DO_CHECK
     if( verif ){
 	    if( do_check(dA, dB, dC, dC_old, n) == -1 )
@@ -255,7 +254,7 @@ struct doit {
 	    free(dC_old);
     }
 #endif
-
+    
     cudaFree( devA );
     cudaFree( devB );
     cudaFree( devC );
@@ -267,23 +266,23 @@ struct doit {
 
 
 /* main entry point : Kaapi initialization
-*/
+ */
 int main(int argc, char** argv)
 {
   try {
     /* Join the initial group of computation : it is defining
-       when launching the program by a1run.
-    */
+     when launching the program by a1run.
+     */
     ka::Community com = ka::System::join_community( argc, argv );
     
     /* Start computation by forking the main task */
     ka::SpawnMain<doit>()(argc, argv); 
     
     /* Leave the community: at return to this call no more athapascan
-       tasks or shared could be created.
-    */
+     tasks or shared could be created.
+     */
     com.leave();
-
+    
     /* */
     ka::System::terminate();
   }
@@ -293,7 +292,7 @@ int main(int argc, char** argv)
   catch (...) {
     ka::logfile() << "Catch unknown exception: " << std::endl;
   }
-
+  
   return 0;
 }
 
