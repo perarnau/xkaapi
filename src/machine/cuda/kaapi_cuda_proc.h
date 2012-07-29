@@ -111,7 +111,7 @@ typedef struct kaapi_cuda_mem {
   cudaEvent_t event;		/* used to H2D events */
 } kaapi_cuda_mem_t;
 
-typedef struct kaapi_cuda_proc {
+typedef struct kaapi_cuda_proc_t {
   unsigned int index;
   struct cudaDeviceProp deviceProp;
   struct kaapi_cuda_stream_t *kstream;

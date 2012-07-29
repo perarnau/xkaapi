@@ -54,9 +54,9 @@
 /* should be randomized but runtime limitations */
 #define KAAPI_CUDA_KASID_USER_BASE 0x1
 
-struct kaapi_cuda_proc;
+struct kaapi_cuda_proc_t;
 
-struct kaapi_cuda_proc *kaapi_cuda_get_proc_by_kasid
+struct kaapi_cuda_proc_t *kaapi_cuda_get_proc_by_kasid
     (kaapi_address_space_id_t);
 
 unsigned int kaapi_cuda_get_kasid_user(size_t);

@@ -53,6 +53,7 @@
 
 struct kaapi_cuda_fifo_stream_t;
 struct kaapi_cuda_stream_t;
+struct kaapi_cuda_proc_t;
 
 #define CONFIG_USE_EVENT 1
 
@@ -108,8 +109,7 @@ typedef struct kaapi_cuda_fifo_stream_t {
    kernel invocation.
 */
 typedef struct kaapi_cuda_stream_t {
-//  struct kaapi_cuda_proc_t* context;
-  kaapi_cuda_proc_t *context;
+  struct kaapi_cuda_proc_t* context;
 
   kaapi_cuda_fifo_stream_t input_fifo;
   kaapi_cuda_fifo_stream_t output_fifo;
@@ -141,8 +141,7 @@ typedef struct kaapi_cuda_stream_t {
    the stream will do not accept new asynchronous operation
    until a previously pushed operation completes.
 */
-extern int kaapi_cuda_stream_init(unsigned int capacity,
-				  kaapi_cuda_proc_t * proc);
+extern int kaapi_cuda_stream_init(unsigned int capacity, struct kaapi_cuda_proc_t * proc);
 
 extern void kaapi_cuda_stream_destroy(kaapi_cuda_stream_t * stream);
 
