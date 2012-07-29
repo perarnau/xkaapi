@@ -293,16 +293,15 @@ struct doit {
       gflops = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / (t1-t0);
       if (gflops > gflops_max) gflops_max = gflops;
       
-      sumt += double(t1-t0);
-      sumgf += gflops;
+      sumt   += double(t1-t0);
+      sumgf  += gflops;
       sumgf2 += gflops*gflops;
       
-#if 0
-      if (verif) {
+      if (verif) 
+      {
         check_factorization<double_type>( n, dAcopy, dA, n, CblasLower );
         free( dAcopy );
       }
-#endif
     }
     
     gflops = sumgf/niter;

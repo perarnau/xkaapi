@@ -111,6 +111,10 @@ struct LAPACKE {
   static lapack_int laswp_work( int matrix_order, lapack_int n, value_type* a,
                                   lapack_int lda, lapack_int k1, lapack_int k2,
                                   const lapack_int* ipiv, lapack_int incx );
+
+  static lapack_int lacpy_work( int matrix_order, char uplo, lapack_int m,
+                                lapack_int n, const value_type* a, lapack_int lda,
+                                value_type* b, lapack_int ldb );
 };
 
 
@@ -188,6 +192,11 @@ struct LAPACKE<double> {
                                   lapack_int lda, lapack_int k1, lapack_int k2,
                                   const lapack_int* ipiv, lapack_int incx )
   { return LAPACKE_dlaswp_work( matrix_order, n, a, lda, k1, k2, ipiv, incx ); }
+
+  static lapack_int lacpy_work( int matrix_order, char uplo, lapack_int m,
+                                lapack_int n, const value_type* a, lapack_int lda,
+                                value_type* b, lapack_int ldb )
+  { return LAPACKE_dlacpy_work( matrix_order, uplo, m, n, a, lda, b, ldb ); }
 };
 
 
@@ -265,6 +274,11 @@ struct LAPACKE<float> {
                                   lapack_int lda, lapack_int k1, lapack_int k2,
                                   const lapack_int* ipiv, lapack_int incx )
   { return LAPACKE_slaswp_work( matrix_order, n, a, lda, k1, k2, ipiv, incx ); }
+
+  static lapack_int lacpy_work( int matrix_order, char uplo, lapack_int m,
+                                lapack_int n, const value_type* a, lapack_int lda,
+                                value_type* b, lapack_int ldb )
+  { return LAPACKE_slacpy_work( matrix_order, uplo, m, n, a, lda, b, ldb ); }
 };
 
 
