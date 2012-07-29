@@ -33,6 +33,8 @@
 #include <math.h>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
+typedef double double_type;
+
 #include "../matrix/matrix.h"
 
 static int BLOCSIZE = 0;
@@ -43,15 +45,13 @@ static int BLOCSIZE = 0;
 
 # include <stdlib.h>
 
-static int do_check
-(const double_type* a, const double_type* b, double_type* c, double_type* c_old, unsigned int n)
+template<typename T>
+static int do_check(const T* a, const T* b, T* c, T* c_old, unsigned int n)
 {
-//  double_type* const tmp = (double_type*) malloc(n * n * sizeof(double_type));
-//  if (tmp == NULL) return -1;
   unsigned int i, j, k;
-  double_type* const tmp = c_old;
+  T* const tmp = c_old;
 
-    cblas_gemm
+    CBLAS<T>::gemm
     (
 	CblasColMajor, CblasNoTrans, CblasNoTrans,
 	n, n, n, 1.0, a, n, b, n, 1.0, tmp, n
@@ -78,58 +78,34 @@ static int do_check
 
 #endif // CONFIG_DO_CHECK
 
-
-// fetching task
-struct TaskMatFetch : public ka::Task<1>::Signature<
-  ka::RW<ka::range2d<double_type> > // C
->{};
-
-template<>
-struct TaskBodyCPU<TaskMatFetch> {
-  void operator()( ka::range2d_rw<double_type>) {}
-};
-
-template<>
-struct TaskBodyGPU<TaskMatFetch> {
-  void operator()( ka::range2d_rw<double_type>) {}
-};
-
+template<typename T>
 struct TaskMatProduct: public ka::Task<3>::Signature<
-      ka::R<ka::range2d<double_type> >, /* A */
-      ka::R<ka::range2d<double_type> >,  /* B */
-      ka::RPWP<ka::range2d<double_type> >   /* C */
+      ka::R<ka::range2d<T> >, /* A */
+      ka::R<ka::range2d<T> >,  /* B */
+      ka::RPWP<ka::range2d<T> >   /* C */
 >{};
 
-template<>
-struct TaskBodyCPU<TaskMatProduct> {
-  void operator()( ka::range2d_r<double_type> A, ka::range2d_r<double_type> B, ka::range2d_rpwp<double_type> C )
+template<typename T>
+struct TaskBodyCPU<TaskMatProduct<T> > {
+  void operator()( ka::range2d_r<T> A, ka::range2d_r<T> B, ka::range2d_rpwp<T> C )
   {
     size_t M = A->dim(0);
     size_t K = B->dim(0);
     size_t N = B->dim(1);
     int bloc = BLOCSIZE;
     
-//    for (size_t i=0; i<M; i += bloc)
     for (size_t j=0; j<M; j += bloc)
     {
       ka::rangeindex rj(j, j+bloc);
-//      for (size_t j=0; j<N; j += bloc)
       for (size_t i=0; i<N; i += bloc)
       {
         ka::rangeindex ri(i, i+bloc);
         for (size_t k=0; k<K; k += bloc)
         {
           ka::rangeindex rk(k, k+bloc);
-#if 0
-	  fprintf(stdout, "TaskMatProduct A([%lu:%lu] [%lu:%lu]) x B([%lu:%lu] [%lu:%lu]) = C([%lu:%lu] [%lu:%lu])\n",
-			i, i+bloc, k, k+bloc, k, k+bloc, j, j+bloc, i, i+bloc,
-			j, j+bloc
-		 );
-	  fflush(stdout);
-#endif
-          ka::Spawn<TaskDGEMM>( ka::SetPriority(12) )
-	      (  CblasColMajor, CblasNoTrans, CblasNoTrans, 1.0, 
-		   B(rk,rj), A(ri,rk), 1.0, C(ri,rj) );
+            ka::Spawn<TaskGEMM<T> >( )
+	      (  CblasColMajor, CblasNoTrans, CblasNoTrans, (T)1.0, 
+		   B(rk,rj), A(ri,rk), (T)1.0, C(ri,rj) );
         }
       }
     }
@@ -175,9 +151,9 @@ struct doit {
     ka::array<2,double_type> B( dB, n, n, n);
     ka::array<2,double_type> C( dC, n, n, n);
 
-    TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(A) );
-    TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(B) );
-    TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(C) );
+    TaskBodyCPU<TaskLARNV<double_type> >()( ka::range2d_w<double_type>(A) );
+    TaskBodyCPU<TaskLARNV<double_type> >()( ka::range2d_w<double_type>(B) );
+    TaskBodyCPU<TaskLARNV<double_type> >()( ka::range2d_w<double_type>(C) );
 
     /* register memory to Xkaapi runtime */
 #if CONFIG_USE_CUDA
@@ -198,17 +174,12 @@ struct doit {
     }
 #endif
 
-#if 0
-    ka::Spawn<TaskPrintMatrix>()( std::string("A"), A );
-    ka::Spawn<TaskPrintMatrix>()( std::string("B"), B );
-    ka::Sync();
-#endif
-    // Multiply to get C = A*B 
     double t0 = kaapi_get_elapsedtime();
-    //ka::Spawn<TaskMatProduct>()( A, B, C );
-    ka::Spawn<TaskMatProduct>(ka::SetStaticSched())( A, B, C );
+    ka::Spawn<TaskMatProduct<double_type> >(ka::SetStaticSched())( A, B, C );
     ka::Sync();
+#if CONFIG_USE_CUDA
     ka::MemorySync();
+#endif
 
     // dont time memory sync for the benchmarks since
     // it does not reflect the execution pipeline
@@ -221,11 +192,6 @@ struct doit {
     fprintf( stdout, "GEMM %d %d %d %.10f %.6f\n", matrix_size, block_size,
 		    kaapi_getconcurrency(), tdelta, gflops );
     fflush(stdout);
-
-#if 0
-    ka::Spawn<TaskPrintMatrix>()( std::string("C"), C );
-    ka::Sync();
-#endif
 
 #if CONFIG_DO_CHECK
     if( verif ){

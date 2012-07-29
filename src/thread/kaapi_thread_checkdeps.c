@@ -180,11 +180,11 @@ int kaapi_thread_computedep_task(
   */
   if( task_fmt != NULL )
   {
-    taskdescr->priority = KAAPI_TASKLIST_MIN_PRIORITY-kaapi_task_get_priority(task);
+    taskdescr->priority = kaapi_task_get_priority(task);
     taskdescr->site = kaapi_task_get_site(task);
   }
   else  {
-    taskdescr->priority = KAAPI_TASKLIST_CPU_MIN_PRIORITY;
+    taskdescr->priority = KAAPI_TASKLIST_MIN_PRIORITY;
     taskdescr->site = -1;
   }
   

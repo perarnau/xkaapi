@@ -70,9 +70,6 @@ typedef uint64_t kaapi_comtag_t;
 */
 typedef struct kaapi_activationlink_t {
   struct kaapi_taskdescr_t*      td;     /* the task descriptor to activate */
-#if 0
-  struct kaapi_tasklist_t*       queue;  /* where to push the task if activated, 0 == local task list */
-#endif
   struct kaapi_activationlink_t* next;   /* next task  in the activation list */
 } kaapi_activationlink_t;
 
@@ -290,7 +287,7 @@ static inline int kaapi_recvlist_isempty( const kaapi_recv_list_t* al )
 */
 static inline void kaapi_tasklist_newpriority_task( int priority )
 {
-  kaapi_assert_debug( (priority >= KAAPI_TASKLIST_MAX_PRIORITY) && (priority <= KAAPI_TASKLIST_MIN_PRIORITY) );
+  kaapi_assert_debug( (priority >= KAAPI_TASKLIST_MIN_PRIORITY) && (priority <= KAAPI_TASKLIST_MAX_PRIORITY) );
 }
 
 /*
@@ -371,7 +368,7 @@ static inline kaapi_taskdescr_t* kaapi_allocator_allocate_td(
   td->wc         = 0;  
   td->task       = task;
   td->fmt 	     = task_fmt;
-  td->priority   = KAAPI_TASKLIST_CPU_MIN_PRIORITY;
+  td->priority   = KAAPI_TASKLIST_MIN_PRIORITY;
   kaapi_bitmap_value_clear_32(&td->ocr); /* means no ocr */
   td->site       = -1; /* means not site */
   td->next       = 0;
@@ -422,9 +419,6 @@ static inline void kaapi_frame_tasklist_pushback_ready( kaapi_frame_tasklist_t* 
   kaapi_activationlink_t* al =
       (kaapi_activationlink_t*)kaapi_allocator_allocate( &tl->allocator, sizeof(kaapi_activationlink_t) );
   al->td    = td;
-#if 0
-  al->queue = 0;
-#endif
   if (tl->readylist.front ==0)
   {
     al->next  = 0;
@@ -468,9 +462,6 @@ static inline void kaapi_tasklist_push_successor(
   kaapi_activationlink_t* al = kaapi_tasklist_allocate_al(tl);
 
   al->td    = td_successor;
-#if 0
-  al->queue = tl;
-#endif
   al->next  = 0;
   if (td->u.acl.list.back ==0)
     td->u.acl.list.front = td->u.acl.list.back = al;
@@ -575,35 +566,41 @@ static inline int kaapi_readytasklist_pushready_td(
 )
 {
   kaapi_processor_t* curr_kproc = kaapi_get_current_processor();
-
+  
+#if 0 /* 0: comment, move steal with biggest CT on steal.  do it on steal */
   /* change priority if based on critical path */
   if (kaapi_default_param.ctpriority !=0)
     td->priority = (*kaapi_default_param.ctpriority)(td->tasklist->t_infinity, td);    
-
+#endif
+  
   if (td->site !=-1)
   {
     kaapi_assert_debug( (td->site >=0) && (td->site < (int32_t)kaapi_count_kprocessors) );
     kaapi_processor_t* kproc_remote = kaapi_all_kprocessors[td->site];
-    if( kproc_remote != curr_kproc ) 
+    if ( kproc_remote != curr_kproc ) 
     {
 	    return kaapi_readylist_remote_push( kproc_remote->rtl, td, td->priority );
     }
     return kaapi_readylist_push( rtl, td, td->priority );
   }
-
-  if( kaapi_processor_get_type(curr_kproc) == KAAPI_PROC_TYPE_CUDA ) 
+  
+  if ( kaapi_processor_get_type(curr_kproc) == KAAPI_PROC_TYPE_CUDA ) 
   {
-    if( td->priority > KAAPI_TASKLIST_GPU_MIN_PRIORITY ) 
+    /* if td does not have GPU implementation, push it on master tasklist */
+    if ( (td->fmt !=0) && (kaapi_format_get_task_bodywh_by_arch( td->fmt, KAAPI_PROC_TYPE_CUDA ) == 0)) //(td->priority == KAAPI_TASKLIST_MIN_PRIORITY ) 
     {
-	    kaapi_assert_debug( td->tasklist != NULL );
-	    return kaapi_readylist_push( &td->tasklist->rtl, td, td->priority );
+      kaapi_assert_debug( td->tasklist != 0 );
+      return kaapi_readylist_push( &td->tasklist->rtl, td, td->priority );
     }
     kaapi_processor_t* kproc_remote = curr_kproc->affinity( curr_kproc, td );
-    if( kproc_remote != curr_kproc ) 
+    if ( kproc_remote != curr_kproc ) 
     {
       return kaapi_readylist_remote_push( kproc_remote->rtl_remote, td, td->priority );
     }
   }
+  /* for test only: push on master list task with highest priority */
+  if ((td->priority == KAAPI_TASKLIST_MAX_PRIORITY) && (curr_kproc->kid != 0))
+    return kaapi_readylist_remote_push( rtl, td, td->priority );
   return kaapi_readylist_push( rtl, td, td->priority );
 }
 

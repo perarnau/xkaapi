@@ -3,14 +3,6 @@
 
 #include "kaapi++"
 
-#if CONFIG_USE_FLOAT
-typedef float double_type;
-#elif CONFIG_USE_DOUBLE
-typedef double double_type;
-#else
-typedef float double_type;
-#endif
-
 // required by some signatures
 extern "C" {
 #include "cblas.h"
@@ -133,11 +125,11 @@ convertToSideModeLapack( const enum CBLAS_SIDE side )
 #endif /* KAAPI_USE_TIMING */
 
 // task signatures
-//template<typename T>
+template<typename T>
 struct TaskPrintMatrix : public ka::Task<2>::Signature
 <
   std::string,
-  ka::R<ka::range2d<double_type> >
+  ka::R<ka::range2d<T> >
 >{};
 
 struct TaskPrintMatrixInt : public ka::Task<2>::Signature
@@ -146,107 +138,110 @@ struct TaskPrintMatrixInt : public ka::Task<2>::Signature
   ka::R<ka::range2d<int> >
 >{};
 
-struct TaskDTRSM_left: public ka::Task<2>::Signature
+template<typename T>
+struct TaskTRSM_left: public ka::Task<2>::Signature
 <
-  ka::R<ka::range2d<double_type> >, /* Akk */
-  ka::RW<ka::range2d<double_type> > /* Akj */
+  ka::R<ka::range2d<T> >, /* Akk */
+  ka::RW<ka::range2d<T> > /* Akj */
 >{};
 
-struct TaskDTRSM_right: public ka::Task<2>::Signature
+template<typename T>
+struct TaskTRSM_right: public ka::Task<2>::Signature
 <
-  ka::R<ka::range2d<double_type> >, /* Akk */
-  ka::RW<ka::range2d<double_type> > /* Aik */
+  ka::R<ka::range2d<T> >, /* Akk */
+  ka::RW<ka::range2d<T> > /* Aik */
 >{};
 
-struct TaskDGEMM: public ka::Task<8>::Signature
+
+template<typename T>
+struct TaskGEMM: public ka::Task<8>::Signature
 <
-  CBLAS_ORDER,			/* row / col */
-  CBLAS_TRANSPOSE,             /* NoTrans/Trans for A */
-  CBLAS_TRANSPOSE,             /* NoTrans/Trans for B */
-  double_type,                      /* alpha */
-  ka::R<ka::range2d<double_type> >, /* Aik   */
-  ka::R<ka::range2d<double_type> >, /* Akj   */
-  double_type,                      /* beta */
-  ka::RW<ka::range2d<double_type> > /* Aij   */
+  CBLAS_ORDER,			      /* row / col */
+  CBLAS_TRANSPOSE,        /* NoTrans/Trans for A */
+  CBLAS_TRANSPOSE,        /* NoTrans/Trans for B */
+  T,                      /* alpha */
+  ka::R<ka::range2d<T> >, /* Aik   */
+  ka::R<ka::range2d<T> >, /* Akj   */
+  T,                      /* beta */
+  ka::RW<ka::range2d<T> > /* Aij   */
 >{};
 
-struct TaskSGEMM: public ka::Task<8>::Signature
+
+template<typename T>
+struct TaskSYRK: public ka::Task<7>::Signature
 <
-  CBLAS_ORDER,			/* row / col */
-  CBLAS_TRANSPOSE,             /* NoTrans/Trans for A */
-  CBLAS_TRANSPOSE,             /* NoTrans/Trans for B */
-  double_type,                      /* alpha */
-  ka::R<ka::range2d<double_type> >, /* Aik   */
-  ka::R<ka::range2d<double_type> >, /* Akj   */
-  double_type,                      /* beta */
-  ka::RW<ka::range2d<double_type> > /* Aij   */
+  CBLAS_ORDER,			      /* row / col */
+  CBLAS_UPLO,             /* CBLAS Upper / Lower */
+  CBLAS_TRANSPOSE,        /* transpose flag */
+  T,                      /* alpha */
+  ka::R<ka::range2d<T> >, /* A */
+  T,                      /* beta */
+  ka::RW<ka::range2d<T> > /* C */
 >{};
 
-struct TaskDSYRK: public ka::Task<7>::Signature
+
+template<typename T>
+struct TaskTRSM: public ka::Task<8>::Signature
 <
-  CBLAS_ORDER,			/* row / col */
-  CBLAS_UPLO,                  /* CBLAS Upper / Lower */
-  CBLAS_TRANSPOSE,             /* transpose flag */
-  double_type,                      /* alpha */
-  ka::R<ka::range2d<double_type> >, /* A */
-  double_type,                      /* beta */
-  ka::RW<ka::range2d<double_type> > /* C */
+  CBLAS_ORDER,            /* row / col */
+  CBLAS_SIDE,             /* side */
+  CBLAS_UPLO,             /* uplo */
+  CBLAS_TRANSPOSE,        /* transA */
+  CBLAS_DIAG,             /* diag */
+  T,                      /* alpha */
+  ka::R<ka::range2d<T> >, /* A */
+  ka::RW<ka::range2d<T> > /* B */
 >{};
 
-struct TaskDTRSM: public ka::Task<8>::Signature
-<
-  CBLAS_ORDER,			/* row / col */
-  CBLAS_SIDE,                  /* side */
-  CBLAS_UPLO,                  /* uplo */
-  CBLAS_TRANSPOSE,             /* transA */
-  CBLAS_DIAG,                  /* diag */
-  double_type,                      /* alpha */
-  ka::R<ka::range2d<double_type> >, /* A */
-  ka::RW<ka::range2d<double_type> > /* B */
->{};
 
-struct TaskDGETRF: public ka::Task<3>::Signature
+template<typename T>
+struct TaskGETRF: public ka::Task<3>::Signature
 <
-  CBLAS_ORDER,			/* row / col */
-  ka::RW<ka::range2d<double_type> >, /* A */
+  CBLAS_ORDER,               /* row / col */
+  ka::RW<ka::range2d<T> >,   /* A */
   ka::W<ka::range1d <int> >  /* pivot */
 >{};
 
-struct TaskDGETRFNoPiv: public ka::Task<2>::Signature
+template<typename T>
+struct TaskGETRFNoPiv: public ka::Task<2>::Signature
 <
-  CBLAS_ORDER,			/* row / col */
-  ka::RW<ka::range2d<double_type> > /* A */
+  CBLAS_ORDER,            /* row / col */
+  ka::RW<ka::range2d<T> > /* A */
 >{};
 
-struct TaskDPOTRF: public ka::Task<3>::Signature
+template<typename T>
+struct TaskPOTRF: public ka::Task<3>::Signature
 <
-  CBLAS_ORDER,			/* row / col */
-  CBLAS_UPLO,                  /* upper / lower */
-  ka::RW<ka::range2d<double_type> > /* A */
+  CBLAS_ORDER,			      /* row / col */
+  CBLAS_UPLO,             /* upper / lower */
+  ka::RW<ka::range2d<T> > /* A */
 >{};
+
 
 struct TaskDPOTRF_cpu: public ka::Task<3>::Signature
 <
   CBLAS_ORDER,			/* row / col */
   CBLAS_UPLO,                  /* upper / lower */
-  ka::RW<ka::range2d<double_type> > /* A */
+  ka::RW<ka::range2d<double> > /* A */
 >{};
 
 /* LAPACK auxiliary routine 
 DLACPY copies all or part of a two-dimensional matrix A to another
 matrix B.
  */
-struct TaskDLACPY: public ka::Task<4>::Signature
+template<typename T>
+struct TaskLACPY: public ka::Task<4>::Signature
 <
-  CBLAS_ORDER,			/* row / col */
-  CBLAS_UPLO,                  /* upper / lower */
-  ka::RW<ka::range2d<double_type> >, /* A */
-  ka::RW<ka::range2d<double_type> > /* B */
+  CBLAS_ORDER,			       /* row / col */
+  CBLAS_UPLO,              /* upper / lower */
+  ka::RW<ka::range2d<T> >, /* A */
+  ka::RW<ka::range2d<T> >  /* B */
 >{};
 
-struct TaskDLARNV: public ka::Task<1>::Signature
+template<typename T>
+struct TaskLARNV: public ka::Task<1>::Signature
 <
-	ka::W<ka::range2d<double_type> > /* A */
+	ka::W<ka::range2d<T> > /* A */
 >{};
 
 /*
@@ -255,10 +250,10 @@ struct TaskDLARNV: public ka::Task<1>::Signature
 struct TaskPlasmaDGEQRT: public ka::Task<5>::Signature
 <
     CBLAS_ORDER,			/* row / col */
-    ka::RW<ka::range2d<double_type> >,	/* A */
-    ka::W<ka::range2d<double_type> >,	/* T */
-    ka::W<ka::range1d<double_type> >,	/* TAU */
-    ka::W<ka::range1d<double_type> >	/* WORK */
+    ka::RW<ka::range2d<double> >,	/* A */
+    ka::W<ka::range2d<double> >,	/* T */
+    ka::W<ka::range1d<double> >,	/* TAU */
+    ka::W<ka::range1d<double> >	/* WORK */
 >{};
 
 /*  */
@@ -267,20 +262,20 @@ struct TaskPlasmaDORMQR: public ka::Task<7>::Signature
     CBLAS_ORDER,			/* row / col */
     CBLAS_SIDE,			/* CBLAS left / right */
     CBLAS_TRANSPOSE,             /* transpose flag */
-    ka::R<ka::range2d<double_type> >,	/* A */
-    ka::W<ka::range2d<double_type> >,	/* T */
-    ka::RW<ka::range2d<double_type> >,	/* C */
-    ka::RW<ka::range1d<double_type> >	/* WORK */
+    ka::R<ka::range2d<double> >,	/* A */
+    ka::W<ka::range2d<double> >,	/* T */
+    ka::RW<ka::range2d<double> >,	/* C */
+    ka::RW<ka::range1d<double> >	/* WORK */
 >{};
 
 struct TaskPlasmaDTSQRT: public ka::Task<6>::Signature
 <
     CBLAS_ORDER,		/* row / col */
-    ka::RW<ka::range2d<double_type> >,	/* A1 */
-    ka::RW<ka::range2d<double_type> >,	/* A2 */
-    ka::W<ka::range2d<double_type> >,	/* T */
-    ka::W<ka::range1d<double_type> >,	/* TAU */
-    ka::W<ka::range1d<double_type> >	/* WORK */
+    ka::RW<ka::range2d<double> >,	/* A1 */
+    ka::RW<ka::range2d<double> >,	/* A2 */
+    ka::W<ka::range2d<double> >,	/* T */
+    ka::W<ka::range1d<double> >,	/* TAU */
+    ka::W<ka::range1d<double> >	/* WORK */
 >{};
 
 struct TaskPlasmaDTSMQR: public ka::Task<8>::Signature
@@ -288,11 +283,11 @@ struct TaskPlasmaDTSMQR: public ka::Task<8>::Signature
     CBLAS_ORDER,			/* row / col */
     CBLAS_SIDE,			/* CBLAS left / right */
     CBLAS_TRANSPOSE,             /* transpose flag */
-    ka::RW<ka::range2d<double_type> >,	/* A1 */
-    ka::RW<ka::range2d<double_type> >,	/* A2 */
-    ka::R<ka::range2d<double_type> >,	/* V */
-    ka::W<ka::range2d<double_type> >,	/* T */
-    ka::W<ka::range1d<double_type> >	/* WORK */
+    ka::RW<ka::range2d<double> >,	/* A1 */
+    ka::RW<ka::range2d<double> >,	/* A2 */
+    ka::R<ka::range2d<double> >,	/* V */
+    ka::W<ka::range2d<double> >,	/* T */
+    ka::W<ka::range1d<double> >	/* WORK */
 >{};
 
 
@@ -302,28 +297,28 @@ struct TaskPlasmaDGESSM: public ka::Task<4>::Signature
 <
   CBLAS_ORDER,			/* row / col */
   ka::R<ka::range1d <int> >,  /* pivot */
-  ka::R<ka::range2d<double_type> >, /* L NB-by-NB lower trianguler tile */
-  ka::RW<ka::range2d<double_type> > /* A, Updated by the application of L. */
+  ka::R<ka::range2d<double> >, /* L NB-by-NB lower trianguler tile */
+  ka::RW<ka::range2d<double> > /* A, Updated by the application of L. */
 >{};
 
 struct TaskPlasmaDTSTRF: public ka::Task<7>::Signature
 <
   CBLAS_ORDER,			/* row / col */
   int,				/* block size (algo) */
-  ka::RW<ka::range2d<double_type> >,	    /* U */
-  ka::RW<ka::range2d<double_type> >,	    /* A */
-  ka::RW<ka::range2d<double_type> >,	    /* L */
+  ka::RW<ka::range2d<double> >,	    /* U */
+  ka::RW<ka::range2d<double> >,	    /* A */
+  ka::RW<ka::range2d<double> >,	    /* L */
   ka::W<ka::range1d <int> >,		    /* pivot */
-  ka::RW<ka::range2d<double_type> >	    /* WORK */
+  ka::RW<ka::range2d<double> >	    /* WORK */
 >{};
 
 struct TaskPlasmaDSSSSM: public ka::Task<6>::Signature
 <
   CBLAS_ORDER,			/* row / col */
-  ka::RW<ka::range2d<double_type> >,	    /* A1 */
-  ka::RW<ka::range2d<double_type> >,	    /* A2 */
-  ka::R<ka::range2d<double_type> >,	    /* L1 */
-  ka::R<ka::range2d<double_type> >,	    /* L2 */
+  ka::RW<ka::range2d<double> >,	    /* A1 */
+  ka::RW<ka::range2d<double> >,	    /* A2 */
+  ka::R<ka::range2d<double> >,	    /* L1 */
+  ka::R<ka::range2d<double> >,	    /* L2 */
   ka::R<ka::range1d <int> >		    /* pivot */
 >{};
 
@@ -336,7 +331,7 @@ struct TaskPlasmaDSSSSM: public ka::Task<6>::Signature
 
 #if CONFIG_USE_CUDA
 # include "matrix_gpu.inl"
-#include "matrix_alpha.inl"
+//# include "matrix_alpha.inl"
 #endif
 
 #endif // MATRIX_H_INCLUDED

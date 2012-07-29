@@ -480,8 +480,11 @@ typedef struct kaapi_task_binding
 /* ========================================================================= */
 /** Task priority
 */
-#define KAAPI_TASK_MAX_PRIORITY     31
-#define KAAPI_TASK_MIN_PRIORITY     0
+#define KAAPI_TASK_MAX_PRIORITY     7
+#define KAAPI_TASK_MIN_PRIORITY     0    /* must be 0 because it is the default initialisation == Defaul Prio */
+
+#define KAAPI_TASK_HIGH_PRIORITY    KAAPI_TASK_MAX_PRIORITY
+#define KAAPI_TASK_DEFAULT_PRIORITY KAAPI_TASK_MIN_PRIORITY
 
 #define KAAPI_TASK_STATE_SIGNALED   0x20   /* mask: extra flag to set the task as signaled for preemption */
 
@@ -1561,7 +1564,7 @@ typedef struct kaapi_data_t {
   kaapi_pointer_t               ptr;                /* address of data */
   kaapi_memory_view_t           view;               /* view of data */
   struct kaapi_metadata_info_t* mdi;                /* if not null, pointer to the meta data */
-  struct kaapi_mem_data_t*	kmd;		    /* TODO review */
+  struct kaapi_mem_data_t*	kmd;		                /* TODO review */
 } kaapi_data_t;
 
 

@@ -67,21 +67,12 @@ extern "C" {
    The threads in ready list may be stolen by other processors.
 */
 #define KAAPI_USE_READYLIST 1
-#define KAAPI_TASKLIST_POINTER_TASK 1
 #define TASKLIST_REPLY_ONETD        1
 
-/* Task list priority: used reverse order between min max */
-#define KAAPI_TASKLIST_NUM_PRIORITY (KAAPI_TASK_MAX_PRIORITY+1)
-#define KAAPI_TASKLIST_MAX_PRIORITY KAAPI_TASK_MIN_PRIORITY
-#define KAAPI_TASKLIST_MIN_PRIORITY (KAAPI_TASK_MAX_PRIORITY)
-
-#define KAAPI_TASKLIST_CPU_MIN_PRIORITY	    (KAAPI_TASK_MIN_PRIORITY+4)
-#define KAAPI_TASKLIST_CPU_MAX_PRIORITY	    (KAAPI_TASK_MAX_PRIORITY)
-#define KAAPI_TASKLIST_GPU_MIN_PRIORITY	    (KAAPI_TASK_MAX_PRIORITY-4)
-#define KAAPI_TASKLIST_GPU_MAX_PRIORITY	    (KAAPI_TASK_MIN_PRIORITY)
-
-#define KAAPI_TASKLIST_CPU_INF_PRIORITY	    (KAAPI_TASKLIST_CPU_MAX_PRIORITY)
-#define KAAPI_TASKLIST_GPU_INF_PRIORITY	    (KAAPI_TASKLIST_GPU_MAX_PRIORITY)
+/* Task list priority: order between min max */
+#define KAAPI_TASKLIST_NUM_PRIORITY (KAAPI_TASK_MAX_PRIORITY-KAAPI_TASK_MIN_PRIORITY+1)
+#define KAAPI_TASKLIST_MAX_PRIORITY KAAPI_TASK_MAX_PRIORITY
+#define KAAPI_TASKLIST_MIN_PRIORITY KAAPI_TASK_MIN_PRIORITY
 
 #include "config.h"
 #include "kaapi.h"
@@ -286,6 +277,11 @@ typedef int (*kaapi_emitsteal_init_t)(struct kaapi_processor_t*);
  */
 typedef struct kaapi_processor_t* (*kaapi_affinity_fnc_t)(struct kaapi_processor_t*,struct kaapi_taskdescr_t*);
 
+/* \ingroup AFF
+ * Return the td of the list pointed by head (iterates through prev) that statisfies the criteria 
+ */
+typedef struct kaapi_taskdescr_t* (*kaapi_steal_by_affinity_fnc_t)(const struct kaapi_processor_t*, struct kaapi_taskdescr_t*);
+
 /* \ingroup SCHED
  * Return a priority from ct path value
  */
@@ -344,34 +340,35 @@ typedef struct kaapi_hierarchy_t {
 /** Definition of parameters for the runtime system
 */
 typedef struct kaapi_rtparam_t {
-  size_t                   stacksize;           /* default stack size */
-  size_t                   stacksize_master;    /* stack size for the master thread */
-  unsigned int             syscpucount;         /* number of physical cpus of the system */
-  unsigned int             cpucount;            /* number of physical cpu used for execution */
-  unsigned int             gpucount;            /* number of physical gpu used for execution */
-  kaapi_selectvictim_fnc_t wsselect;            /* default method to select a victim */
-  kaapi_emitsteal_fnc_t	   emitsteal;
-  kaapi_emitsteal_init_t   emitsteal_initctxt;  /* call to initialize the emitsteal ctxt */
-  kaapi_affinity_fnc_t	   affinity;	         	/* call to pick a processor */
-  unsigned int		         use_affinity;        /* use cpu affinity */
-  kaapi_ct2prio_fnc_t		   ctpriority;          /* use critical path priorities, if 0 no */
-  int                      display_perfcounter; /* set to 1 iff KAAPI_DISPLAY_PERF */
+  size_t                        stacksize;           /* default stack size */
+  size_t                        stacksize_master;    /* stack size for the master thread */
+  unsigned int                  syscpucount;         /* number of physical cpus of the system */
+  unsigned int                  cpucount;            /* number of physical cpu used for execution */
+  unsigned int                  gpucount;            /* number of physical gpu used for execution */
+  kaapi_selectvictim_fnc_t      wsselect;            /* default method to select a victim */
+  kaapi_emitsteal_fnc_t	        emitsteal;
+  kaapi_emitsteal_init_t        emitsteal_initctxt;  /* call to initialize the emitsteal ctxt */
+  kaapi_affinity_fnc_t	        affinity;	         	 /* call to pick a processor */
+  kaapi_steal_by_affinity_fnc_t steal_by_affinity;   /* call to pick a TD in a list during steal operation */
+  unsigned int		              use_affinity;        /* use cpu affinity */
+  kaapi_ct2prio_fnc_t		        ctpriority;          /* use critical path priorities, if 0 no */
+  int                           display_perfcounter; /* set to 1 iff KAAPI_DISPLAY_PERF */
 #if defined(KAAPI_USE_CUPTI)
-   uint64_t		             cudastartuptime;
+   uint64_t		                  cudastartuptime;
 #endif
 #if defined(KAAPI_USE_CUDA)
-   uint64_t		             cudawindowsize;
-   unsigned int		         cudapeertopeer;
+   uint64_t		                  cudawindowsize;
+   unsigned int		              cudapeertopeer;
 #endif
-  uint64_t                 startuptime;         /* time at the end of kaapi_init */
-  int                      alarmperiod;         /* period for alarm */
-  uint64_t                 eventmask;           /* event mask */
+  uint64_t                      startuptime;         /* time at the end of kaapi_init */
+  int                           alarmperiod;         /* period for alarm */
+  uint64_t                      eventmask;           /* event mask */
 
-  struct kaapi_procinfo_list_t* kproc_list;     /* list of kprocessors to initialized */
-  kaapi_cpuset_t           usedcpu;             /* cpuset of used physical ressources */
-  kaapi_hierarchy_t        memory;              /* memory hierarchy */
-  unsigned int*	           kid2cpu;             /* mapping: kid->phys cpu  */
-  unsigned int*  	         cpu2kid;             /* mapping: phys cpu -> kid */
+  struct kaapi_procinfo_list_t* kproc_list;          /* list of kprocessors to initialized */
+  kaapi_cpuset_t                usedcpu;             /* cpuset of used physical ressources */
+  kaapi_hierarchy_t             memory;              /* memory hierarchy */
+  unsigned int*	                kid2cpu;             /* mapping: kid->phys cpu  */
+  unsigned int*  	              cpu2kid;             /* mapping: phys cpu -> kid */
 } kaapi_rtparam_t;
 
 extern kaapi_rtparam_t kaapi_default_param;

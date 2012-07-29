@@ -65,7 +65,7 @@ void kaapi_sched_stealtasklist(
   rtl = &tasklist->rtl;
   while( request !=0 )
   {
-    err  = kaapi_readylist_steal( rtl, &td );
+    err  = kaapi_readylist_steal( kaapi_all_kprocessors[request->ident], rtl, &td );
     if( err == 0 )
     {
       /* - create the task steal that will execute the stolen task

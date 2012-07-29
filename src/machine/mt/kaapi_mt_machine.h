@@ -414,7 +414,7 @@ typedef struct kaapi_processor_t {
     __attribute__((aligned(KAAPI_CACHE_LINE)));
 
   struct kaapi_readytasklist_t* rtl;                      /* readylist of task descriptors */
-  struct kaapi_readytasklist_t* rtl_remote;                      /* readylist of task descriptors (remote push) */
+  struct kaapi_readytasklist_t* rtl_remote;               /* readylist of task descriptors (remote push) */
   
   int volatile             isidle;                        /* true if kproc is idle (active thread is empty) */
 
@@ -477,7 +477,7 @@ typedef struct kaapi_processor_t {
   unsigned int              seed_data;
   
   /* memory map */
-  kaapi_mem_host_map_t mem_host_map;
+  kaapi_mem_host_map_t      mem_host_map;
 
   struct kaapi_processor_t* victim_kproc;
 

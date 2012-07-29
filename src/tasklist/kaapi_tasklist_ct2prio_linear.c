@@ -50,8 +50,9 @@
 */
 uint8_t kaapi_ctpath2prio_linear( uint64_t tinfinity, struct kaapi_taskdescr_t* td)
 {
-  double prio = (double)KAAPI_TASKLIST_CPU_MIN_PRIORITY - (double)KAAPI_TASKLIST_CPU_MAX_PRIORITY;
+  double prio = (double)KAAPI_TASKLIST_MIN_PRIORITY - (double)KAAPI_TASKLIST_MAX_PRIORITY;
   prio = prio * (double)td->u.acl.date / (double)tinfinity;
-  prio = (double)KAAPI_TASKLIST_CPU_MIN_PRIORITY - prio;
+  /* invert sign because prio = MIN - MAX is positive and max priority is 0, but max ct is the high */
+  prio = (double)KAAPI_TASKLIST_MIN_PRIORITY - prio;
   return (uint8_t)prio;
 }

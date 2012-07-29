@@ -80,6 +80,7 @@ kaapi_rtparam_t kaapi_default_param = {
    .kid2cpu     = 0,
    .cpu2kid     = 0,
    .affinity	  = 0,
+   .steal_by_affinity	= 0,
    .ctpriority = 0,
    .eventmask   = KAAPI_EVT_MASK_COMPUTE|KAAPI_EVT_MASK_IDLE
 };
@@ -98,6 +99,7 @@ static int kaapi_setup_param()
   const char* wsselect;
   const char* emitsteal;
   const char* affinity;
+  const char* stealaffinity;
   const char* use_ctpath;
     
   /* compute the number of cpu of the system */
@@ -239,6 +241,24 @@ static int kaapi_setup_param()
     else {
       fprintf(stderr, "***Kaapi: bad value for 'KAAPI_AFFINITY': '%s'\n",
         getenv("KAAPI_AFFINITY")
+      );
+      return EINVAL;
+    }
+  }
+
+  stealaffinity = getenv("KAAPI_STEAL_AFFINITY");
+  kaapi_default_param.steal_by_affinity = &kaapi_steal_by_affinity_first;
+  if( stealaffinity != 0 ) 
+  {
+    if (strcmp(stealaffinity, "cp") ==0)
+      kaapi_default_param.steal_by_affinity = &kaapi_steal_by_affinity_maxctpath;
+    else if (strcmp(stealaffinity, "locality") ==0)
+      kaapi_default_param.steal_by_affinity = &kaapi_steal_by_affinity_maxhit;
+    else if (strcmp(stealaffinity, "1") ==0)
+      kaapi_default_param.steal_by_affinity = &kaapi_steal_by_affinity_first;
+    else {
+      fprintf(stderr, "***Kaapi: bad value for 'KAAPI_STEAL_AFFINITY': '%s'\n",
+        stealaffinity
       );
       return EINVAL;
     }

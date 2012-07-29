@@ -76,6 +76,7 @@ typedef struct kaapi_readytasklist_t {
  * max_prio - maximum priority of a given kproc
  * min_prio - minimum priority of a given kproc
  * inc_prio - increment 
+ * Used to iterate from max_prio to min_prio inclusive
  */
 static inline void
 kaapi_readylist_get_priority_range(
@@ -84,18 +85,9 @@ kaapi_readylist_get_priority_range(
   int* const inc_prio 
 )
 {
-  if( kaapi_processor_get_type( kaapi_get_current_processor() ) == KAAPI_PROC_TYPE_CUDA )
-  {
-    *min_prio = (KAAPI_TASKLIST_GPU_MIN_PRIORITY+1);
-    *max_prio = KAAPI_TASKLIST_GPU_MAX_PRIORITY;
-    *inc_prio = 1;
-  } 
-  else 
-  {
-    *min_prio = (KAAPI_TASKLIST_CPU_MIN_PRIORITY-1);
-    *max_prio = KAAPI_TASKLIST_CPU_MAX_PRIORITY;
-    *inc_prio = -1;
-  }
+  *min_prio = KAAPI_TASKLIST_MIN_PRIORITY-1;
+  *max_prio = KAAPI_TASKLIST_MAX_PRIORITY;
+  *inc_prio = -1;
 }
 
 static inline int kaapi_readytasklist_isempty( kaapi_readytasklist_t* rtl )
@@ -127,6 +119,6 @@ extern int kaapi_readylist_remote_push( kaapi_readytasklist_t* rtl, kaapi_taskde
 
 /*
  */
-extern int kaapi_readylist_steal( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t** td );
+extern int kaapi_readylist_steal( const kaapi_processor_t* thiefprocessor, kaapi_readytasklist_t* rtl, kaapi_taskdescr_t** td );
 
 #endif /* _KAAPI_READYTASKLIST_H_ */ 

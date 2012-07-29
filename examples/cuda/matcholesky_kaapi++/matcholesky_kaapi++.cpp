@@ -54,15 +54,17 @@
 
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
-#include "lapacke.h"
+
+typedef float double_type;
+
 
 /* Generate a random matrix symetric definite positive matrix of size m x m 
  - it will be also interesting to generate symetric diagonally dominant 
  matrices which are known to be definite postive.
  Based from MAGMA
  */
-static void
-generate_matrix( double_type* A, size_t N )
+template<typename T>
+static void generate_matrix( T* A, size_t N )
 {
   for (size_t i = 0; i< N; i++) {
     A[i*N+i] = A[i*N+i] + 1.*N; 
@@ -75,38 +77,39 @@ generate_matrix( double_type* A, size_t N )
  *  Check the factorization of the matrix A2
  *  from PLASMA (examples/example_dpotrf.c)
  */
-int check_factorization(int N, double *A1, double *A2, int LDA, int uplo)
+template<typename T>
+int check_factorization(int N, T* A1, T* A2, int LDA, int uplo)
 {
-  double Anorm, Rnorm;
-  double alpha;
+  T Anorm, Rnorm;
+  T alpha;
   int info_factorization;
   int i,j;
-  double eps;
+  T eps;
   
-  eps = LAPACKE_dlamch_work('e');
+  eps = LAPACKE<T>::lamch_work('e');
   
-  double *Residual = (double *)malloc(N*N*sizeof(double));
-  double *L1       = (double *)malloc(N*N*sizeof(double));
-  double *L2       = (double *)malloc(N*N*sizeof(double));
-  double *work              = (double *)malloc(N*sizeof(double));
+  T *Residual = (T *)malloc(N*N*sizeof(T));
+  T *L1       = (T *)malloc(N*N*sizeof(T));
+  T *L2       = (T *)malloc(N*N*sizeof(T));
+  T *work     = (T *)malloc(N*sizeof(T));
   
-  memset((void*)L1, 0, N*N*sizeof(double));
-  memset((void*)L2, 0, N*N*sizeof(double));
+  memset((void*)L1, 0, N*N*sizeof(T));
+  memset((void*)L2, 0, N*N*sizeof(T));
   
   alpha= 1.0;
   
-  LAPACKE_dlacpy_work(LAPACK_COL_MAJOR,' ', N, N, A1, LDA, Residual, N);
+  LAPACKE<T>::lacpy_work(LAPACK_COL_MAJOR,' ', N, N, A1, LDA, Residual, N);
   
   /* Dealing with L'L or U'U  */
   if (uplo == CblasUpper){
-    LAPACKE_dlacpy_work(LAPACK_COL_MAJOR,'u', N, N, A2, LDA, L1, N);
-    LAPACKE_dlacpy_work(LAPACK_COL_MAJOR,'u', N, N, A2, LDA, L2, N);
-    cblas_dtrmm(CblasColMajor, CblasLeft, CblasUpper, CblasTrans, CblasNonUnit, N, N, (alpha), L1, N, L2, N);
+    LAPACKE<T>::lacpy_work(LAPACK_COL_MAJOR,'u', N, N, A2, LDA, L1, N);
+    LAPACKE<T>::lacpy_work(LAPACK_COL_MAJOR,'u', N, N, A2, LDA, L2, N);
+    CBLAS<T>::trmm(CblasColMajor, CblasLeft, CblasUpper, CblasTrans, CblasNonUnit, N, N, (alpha), L1, N, L2, N);
   }
   else{
-    LAPACKE_dlacpy_work(LAPACK_COL_MAJOR,'l', N, N, A2, LDA, L1, N);
-    LAPACKE_dlacpy_work(LAPACK_COL_MAJOR,'l', N, N, A2, LDA, L2, N);
-    cblas_dtrmm(CblasColMajor, CblasRight, CblasLower, CblasTrans, CblasNonUnit, N, N, (alpha), L1, N, L2, N);
+    LAPACKE<T>::lacpy_work(LAPACK_COL_MAJOR,'l', N, N, A2, LDA, L1, N);
+    LAPACKE<T>::lacpy_work(LAPACK_COL_MAJOR,'l', N, N, A2, LDA, L2, N);
+    CBLAS<T>::trmm(CblasColMajor, CblasRight, CblasLower, CblasTrans, CblasNonUnit, N, N, (alpha), L1, N, L2, N);
   }
   
   /* Compute the Residual || A -L'L|| */
@@ -114,8 +117,8 @@ int check_factorization(int N, double *A1, double *A2, int LDA, int uplo)
     for (j = 0; j < N; j++)
       Residual[j*N+i] = L2[j*N+i] - Residual[j*N+i];
   
-  Rnorm = LAPACKE_dlange_work(LAPACK_COL_MAJOR, 'I', N, N, Residual, N, work);
-  Anorm = LAPACKE_dlange_work(LAPACK_COL_MAJOR, 'I', N, N, A1, LDA, work);
+  Rnorm = LAPACKE<T>::lange_work(LAPACK_COL_MAJOR, 'I', N, N, Residual, N, work);
+  Anorm = LAPACKE<T>::lange_work(LAPACK_COL_MAJOR, 'I', N, N, A1, LDA, work);
   
   printf("# ============\n");
   printf("# Checking the Cholesky Factorization \n");
@@ -140,78 +143,78 @@ int check_factorization(int N, double *A1, double *A2, int LDA, int uplo)
  Based on PLASMA library.
  */
 /* TODO: inverted indexes as XKaapi does not have ColMajor matrix */
+template<typename T>
 struct TaskCholesky: public ka::Task<2>::Signature<
-ka::RPWP<ka::range2d<double_type> >, /* A */
-CBLAS_UPLO
+    ka::RPWP<ka::range2d<T> >, /* A */
+    CBLAS_UPLO
 >{};
 static size_t global_blocsize = 2;
-template<>
-struct TaskBodyCPU<TaskCholesky> {
+
+template<typename T>
+struct TaskBodyCPU<TaskCholesky<T> > {
   void operator()(
       const ka::StaticSchedInfo* info, 
-      ka::range2d_rpwp<double_type> A,
+      ka::range2d_rpwp<T> A,
       const enum CBLAS_UPLO uplo
   )
   {
     size_t N = A->dim(0);
     size_t blocsize = global_blocsize;
     
-    /* Distribute matrix A to bloc cyclic 1D (grid = ncpu x 1) over GPU set */
-    ka::Distribute( A, ka::BlockCyclic2D(info->count_gpu(), blocsize, 1, blocsize) );
+    /* Distribution over the set AllGPU of kind 
+       bloc cyclic 2D (ressource grid = ngpu x 1) 
+    */
+    ka::Distribution2D<ka::BlockCyclic2D> D( 
+        ka::SetnGPU(info->count_gpu()), /* the ressource set */
+        ka::BlockCyclic2D(info->count_gpu(), blocsize, 1, blocsize) /* the template */
+    );
     
-    if( uplo == CblasLower ) {
+    if( uplo == CblasLower ) 
+    {
       for (size_t k=0; k < N; k += blocsize) {
         ka::rangeindex rk(k, k+blocsize);
-        ka::Spawn<TaskDPOTRF>( ka::SetPriority(0) )
+        ka::Spawn<TaskPOTRF<T> >( )
 	      ( CblasColMajor, CblasLower, A(rk,rk) );
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
           ka::rangeindex rm(m, m+blocsize);
-          ka::Spawn<TaskDTRSM>( ka::SetPriority(12) )
-          ( CblasColMajor, CblasRight, uplo,
-           CblasTrans, CblasNonUnit, 1.0, A(rk,rk), A(rk,rm));
+          ka::Spawn<TaskTRSM<T> >( )
+          ( CblasColMajor, CblasRight, uplo, CblasTrans, CblasNonUnit, (T)1.0, A(rk,rk), A(rk,rm));
         }
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
           ka::rangeindex rm(m, m+blocsize);
-          ka::Spawn<TaskDSYRK>( ka::SetPriority(12) )
-          ( CblasColMajor, uplo,
-           CblasNoTrans, -1.0, A(rk,rm), 1.0, A(rm,rm));
+          ka::Spawn<TaskSYRK<T> >( )
+          ( CblasColMajor, uplo, CblasNoTrans, (T)-1.0, A(rk,rm), (T)1.0, A(rm,rm));
           
           for (size_t n=k+blocsize; n < m; n += blocsize) {
             ka::rangeindex rn(n, n+blocsize);
-            ka::Spawn<TaskDGEMM>( ka::SetPriority(12) )
-            (   CblasColMajor, CblasNoTrans, CblasTrans,
-             -1.0, A(rk,rm), A(rk,rn), 1.0, A(rn,rm));
+            ka::Spawn<TaskGEMM<T> >( )
+            ( CblasColMajor, CblasNoTrans, CblasTrans, (T)-1.0, A(rk,rm), A(rk,rn), (T)1.0, A(rn,rm));
           }
         }
       }
     } else if( uplo == CblasUpper ) {
       for (size_t k=0; k < N; k += blocsize) {
         ka::rangeindex rk(k, k+blocsize);
-        ka::Spawn<TaskDPOTRF>( ka::SetPriority(0) )
+        ka::Spawn<TaskPOTRF<T> >( )
 	      ( CblasColMajor, uplo, A(rk,rk) );
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
           ka::rangeindex rm(m, m+blocsize);
-          ka::Spawn<TaskDTRSM>()
-          ( CblasColMajor, CblasLeft, uplo,
-           CblasTrans, CblasNonUnit, 1.0, A(rk,rk), A(rm,rk) );
+          ka::Spawn<TaskTRSM<T> >()
+          ( CblasColMajor, CblasLeft, uplo, CblasTrans, CblasNonUnit, (T)1.0, A(rk,rk), A(rm,rk) );
         }
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
           ka::rangeindex rm(m, m+blocsize);
-          ka::Spawn<TaskDSYRK>( ka::SetPriority(12) )
-          ( CblasColMajor, uplo,
-           CblasTrans, -1.0, A(rm,rk), 1.0, A(rm,rm) );
+          ka::Spawn<TaskSYRK<T> >( )
+          ( CblasColMajor, uplo, CblasTrans, (T)-1.0, A(rm,rk), (T)1.0, A(rm,rm) );
           
           for (size_t n=k+blocsize; n < m; n += blocsize) {
             ka::rangeindex rn(n, n+blocsize);
-            ka::Spawn<TaskDGEMM>( ka::SetPriority(12) )
-            ( CblasColMajor, CblasTrans, CblasNoTrans,
-             -1.0, A(rn,rk),
-             A(rm,rk),
-             1.0, A(rm,rn));
+            ka::Spawn<TaskGEMM<T> >( )
+            ( CblasColMajor, CblasTrans, CblasNoTrans, (T)-1.0, A(rn,rk), A(rm,rk), (T)1.0, A(rm,rn));
           }
         }
       }
@@ -271,15 +274,16 @@ struct doit {
     double fmuls = FMULS_POTRF(n);
     double fadds = FADDS_POTRF(n);
     
-    for (int i=0; i<niter; ++i) {
+    for (int i=0; i<niter; ++i) 
+    {
       /* based on MAGMA */
-      TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(A) );
-      generate_matrix(dA, n); 
+      TaskBodyCPU<TaskLARNV<double_type> >()( ka::range2d_w<double_type>(A) );
+      generate_matrix<double_type>(dA, n); 
       if (verif)
         memcpy(dAcopy, dA, n*n*sizeof(double_type) );
       
       t0 = kaapi_get_elapsedtime();
-      ka::Spawn<TaskCholesky>(ka::SetStaticSched())( A, CblasLower );
+      ka::Spawn<TaskCholesky<double_type> >(ka::SetStaticSched())( A, CblasLower );
       ka::Sync();
 #if CONFIG_USE_CUDA
       ka::MemorySync();
@@ -289,12 +293,13 @@ struct doit {
       gflops = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / (t1-t0);
       if (gflops > gflops_max) gflops_max = gflops;
       
-      sumt += double(t1-t0);
-      sumgf += gflops;
+      sumt   += double(t1-t0);
+      sumgf  += gflops;
       sumgf2 += gflops*gflops;
       
-      if (verif) {
-        check_factorization( n, dAcopy, dA, n, CblasLower );
+      if (verif) 
+      {
+        check_factorization<double_type>( n, dAcopy, dA, n, CblasLower );
         free( dAcopy );
       }
     }

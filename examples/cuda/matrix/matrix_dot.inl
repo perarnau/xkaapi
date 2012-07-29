@@ -1,31 +1,31 @@
 
-template<>
-struct TaskDOT<TaskDGEMM> {
-    static const char* name() { return "DGEMM"; }
+template<typename T>
+struct TaskDOT<TaskGEMM<T> > {
+    static const char* name() { return "GEMM"; }
     static const char* color() { return "grey"; }
 };
 
-template<>
-struct TaskDOT<TaskDPOTRF> {
-    static const char* name() { return "DPOTRF"; }
+template<typename T>
+struct TaskDOT<TaskPOTRF<T> > {
+    static const char* name() { return "POTRF"; }
     static const char* color() { return "orange"; }
 };
 
-template<>
-struct TaskDOT<TaskDTRSM> {
-    static const char* name() { return "DTRSM"; }
+template<typename T>
+struct TaskDOT<TaskTRSM<T> > {
+    static const char* name() { return "TRSM"; }
     static const char* color() { return "skyblue"; }
 };
 
-template<>
-struct TaskDOT<TaskDSYRK> {
-    static const char* name() { return "DSYRK"; }
+template<typename T>
+struct TaskDOT<TaskSYRK<T> > {
+    static const char* name() { return "SYRK"; }
     static const char* color() { return "green"; }
 };
 
-template<>
-struct TaskDOT<TaskDGETRF> {
-    static const char* name() { return "DGETRF"; }
+template<typename T>
+struct TaskDOT<TaskGETRF<T> > {
+    static const char* name() { return "GETRF"; }
     static const char* color() { return "orange"; }
 };
 

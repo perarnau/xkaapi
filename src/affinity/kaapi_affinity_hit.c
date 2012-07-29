@@ -5,8 +5,8 @@
  ** Copyright 2009 INRIA.
  **
  ** Contributors :
+ **
  ** joao.lima@imag.fr
- ** thierry.gautier@inrialpes.fr
  ** 
  ** This software is a computer program whose purpose is to execute
  ** multithreaded computation with data flow synchronization between
@@ -44,31 +44,54 @@
 
 #include "kaapi_impl.h"
 
-static inline int kaapi_onereadytasklist_push(
-  kaapi_onereadytasklist_t* ortl, 
-  kaapi_taskdescr_t* td 
+#include "kaapi_affinity.h"
+
+#include "kaapi_tasklist.h"
+
+
+/* return the sum of data valid in the kproc asid */
+uint64_t kaapi_data_get_affinity_hit_size(
+       const kaapi_processor_t * kproc,
+       kaapi_taskdescr_t * td
 )
 {
-  td->next = td->prev = NULL;
-  kaapi_atomic_lock( &ortl->lock );
-  td->next = ortl->head;
-  if( ortl->head != NULL )
-    ortl->head->prev = td;
-  else
-    ortl->tail = td;
-  ortl->head = td;
-  ortl->size++;
-  kaapi_atomic_unlock( &ortl->lock );
-  return 0;
-}
+  int i;
+  kaapi_mem_data_t *kmd;
+  uint64_t hit = 0;
+  void *sp = td->task->sp;
 
-int kaapi_readylist_push( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t* td, int priority )
-{
-  kaapi_onereadytasklist_t* ortl;
-  kaapi_assert_debug( (priority >= KAAPI_TASKLIST_MIN_PRIORITY) && (priority <= KAAPI_TASKLIST_MAX_PRIORITY) );
+  if (td->fmt == NULL)
+    return 0;
   
-  ortl = &rtl->prl[priority];
-  kaapi_onereadytasklist_push( ortl, td );
-  KAAPI_ATOMIC_INCR( &rtl->cnt_tasks );
-  return priority;
+  const kaapi_mem_host_map_t* kproc_map = &kproc->mem_host_map;
+  kaapi_mem_asid_t kproc_asid = kaapi_mem_host_map_get_asid(kproc_map);
+  const size_t count_params = kaapi_format_get_count_params(td->fmt, sp);
+
+  
+  for (i = 0; i < count_params; i++) 
+  {
+    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(td->fmt, i, sp));
+    if (m == KAAPI_ACCESS_MODE_V)
+      continue;
+    
+    if (m == KAAPI_ACCESS_MODE_W)
+    {
+      kaapi_memory_view_t view = kaapi_format_get_view_param(td->fmt, i, sp);
+      hit += kaapi_memory_view_size(&view);
+    }
+    else 
+    {
+      kaapi_access_t access = kaapi_format_get_access_param(td->fmt, i, sp);
+      kaapi_data_t* data = kaapi_data(kaapi_data_t, &access);
+      kmd = data->kmd;
+      kaapi_assert_debug(kmd != 0);
+      if (kaapi_bitmap_get_64(&kmd->valid_bits, kproc_asid))
+      {
+        kaapi_memory_view_t view = kaapi_format_get_view_param(td->fmt, i, sp);
+        hit += kaapi_memory_view_size(&view);
+      } 
+    }
+  }
+  
+  return hit;
 }
