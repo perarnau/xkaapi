@@ -49,8 +49,10 @@
 #include "kaapi_tasklist.h"
 
 
-kaapi_processor_t *kaapi_affinity_default(kaapi_processor_t * kproc,
-					      kaapi_taskdescr_t * td)
+kaapi_processor_t *kaapi_affinity_default(
+  kaapi_processor_t * kproc,
+	kaapi_taskdescr_t * td
+)
 {
   return kproc;
 }
