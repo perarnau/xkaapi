@@ -421,6 +421,7 @@ struct TaskBodyCPU<TaskTRSM_right<T> > {
 /* DGEMM rountine to compute
     Aij <- alpha* Aik * Akj + beta Aij
 */
+#define THRESHOLD 2
 template<typename T>
 struct TaskBodyCPU<TaskGEMM<T> > {
   void operator()
@@ -457,7 +458,59 @@ struct TaskBodyCPU<TaskGEMM<T> > {
   }
 };
 
+#if 0
+template<typename T>
+struct TaskBodyCPU<TaskParallelGEMM<T> > {
+  void operator()
+  (
+    CBLAS_ORDER		   order, 
+    CBLAS_TRANSPOSE transA,
+    CBLAS_TRANSPOSE transB,
+    T alpha,
+    ka::range2d_r<T> Aik,
+    ka::range2d_r<T> Akj,
+    T beta,
+    ka::range2d_rw<T> Aij
+  )
+  {
+    const T* const a = Aik->ptr();
+    const T* const b = Akj->ptr();
+    T* const c       = Aij->ptr();
 
+    const int m = Aik->dim(0); 
+    const int n = Aik->dim(1); // eq. to Akj->rows();
+    const int k = Akj->dim(1); 
+
+    const int lda = Aik->lda();
+    const int ldb = Akj->lda();
+    const int ldc = Aij->lda();
+
+    KAAPI_TIMING_BEGIN();
+    if( m > THRESHOLD )
+    {
+      const int bloc = 128;
+      
+      for (size_t j=0; j<M; j += bloc)
+      {
+	ka::rangeindex rj(j, j+bloc);
+	for (size_t i=0; i<N; i += bloc)
+	{
+	  ka::rangeindex ri(i, i+bloc);
+	  for (size_t k=0; k<K; k += bloc)
+	  {
+	    ka::rangeindex rk(k, k+bloc);
+	      ka::Spawn<TaskGEMM<T> >( )
+		(  CblasColMajor, CblasNoTrans, CblasNoTrans, (T)1.0, 
+		     B(rk,rj), A(ri,rk), (T)1.0, C(ri,rj) );
+	  }
+	}
+      }
+    }
+    KAAPI_TIMING_END("CPU DGEMM", n);
+  }
+};
+
+#endif
 
 /* Rank k update
 */

@@ -49,7 +49,7 @@
 #include "kaapi_tasklist.h"
 
 
-kaapi_processor_t *kaapi_affinity_wrmode(kaapi_processor_t * kproc,
+kaapi_processor_t *kaapi_affinity_writer(kaapi_processor_t * kproc,
 					      kaapi_taskdescr_t * td)
 {
   int i;
