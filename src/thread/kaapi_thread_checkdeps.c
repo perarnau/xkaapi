@@ -101,7 +101,7 @@ int kaapi_thread_computedep_task(
       continue;
     kaapi_assert_debug( m != KAAPI_ACCESS_MODE_VOID );
     
-    
+#if 0 // TODO    
     /* this is an shared access candidate for ocr */
     if (KAAPI_ACCESS_IS_WRITE(m))
     {
@@ -112,6 +112,7 @@ int kaapi_thread_computedep_task(
     {
       kaapi_bitmap_value_set_32(&taskdescr->ocr, i);
     }
+#endif
     
     /* it is an access */
     kaapi_access_t access = kaapi_format_get_access_param(task_fmt, i, sp);
@@ -181,11 +182,9 @@ int kaapi_thread_computedep_task(
   if( task_fmt != NULL )
   {
     taskdescr->priority = kaapi_task_get_priority(task);
-    taskdescr->site = kaapi_task_get_site(task);
   }
   else  {
     taskdescr->priority = KAAPI_TASKLIST_MIN_PRIORITY;
-    taskdescr->site = -1;
   }
   
   kaapi_task_set_priority( task, taskdescr->priority );

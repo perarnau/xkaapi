@@ -106,7 +106,7 @@ extern int kaapi_readytasklist_destroy( kaapi_readytasklist_t* rtl );
 
 /*
  */
-extern int kaapi_readylist_push( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t* td, int priority );
+extern int kaapi_readylist_push( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t* td );
 
 
 /*
@@ -115,7 +115,7 @@ extern int kaapi_readylist_pop( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t** 
 
 /*
  */
-extern int kaapi_readylist_remote_push( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t* td, int priority );
+extern int kaapi_readylist_remote_push( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t* td );
 
 /*
  */

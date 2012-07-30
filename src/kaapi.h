@@ -519,10 +519,10 @@ typedef struct kaapi_task_t {
   union { /* should be of size of uintptr */
     struct {
       kaapi_atomic8_t           state;     /** state of the task */
-      uint8_t                   priority;  /** of the task */
       uint8_t                   flag;      /** some flag as splittable, local... */
-      uint8_t                   ocr;       /** currently ocr */
-      uint32_t                  site;      /** currently 1+site, if 0 no site */
+      uint8_t                   arch;      /** bitmap of authorized arch. 0 == all archs */
+      uint8_t                   priority;  /** of the task */
+      uint32_t                  site;      /** currently 1+kid where task is able to run, no site ==0 */
       /* ... */                            /** some bits are available on 64bits LP machine */
     } s;
     uintptr_t                   dummy;     /* to clear previous fields in one write */
@@ -530,12 +530,6 @@ typedef struct kaapi_task_t {
   void* volatile                reserved;  /** reserved field for internal usage */
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
-
-static inline void kaapi_task_set_ocr_index(kaapi_task_t* task, uint8_t ith)
-{ 
-  kaapi_assert_debug( ith <255 );
-  task->u.s.ocr = 1U+ith; 
-}
 
 static inline void kaapi_task_set_priority(kaapi_task_t* task, uint8_t prio)
 { 
@@ -545,9 +539,21 @@ static inline void kaapi_task_set_priority(kaapi_task_t* task, uint8_t prio)
 
 static inline void kaapi_task_set_site(kaapi_task_t* task, uint32_t site)
 { 
-  kaapi_assert_debug((site >=0) && (site < (uint32_t)kaapi_getconcurrency()));
-  task->u.s.site = 1U+site; 
+  kaapi_assert_debug( site < (uint32_t)kaapi_getconcurrency());
+  task->u.s.site = 1 + site;
 }
+
+static inline void kaapi_task_set_arch(kaapi_task_t* task, int arch)
+{ 
+  kaapi_assert_debug( (arch >=0) && (arch < KAAPI_PROC_TYPE_MAX) );
+  task->u.s.arch = 1U<<arch;
+}
+
+static inline void kaapi_task_set_arch_mask(kaapi_task_t* task, uint8_t arch_mask)
+{ 
+  task->u.s.arch = arch_mask;
+}
+
 
 /* ========================================================================= */
 /** Task splitter
