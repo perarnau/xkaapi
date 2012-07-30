@@ -51,15 +51,8 @@ namespace ka {
 SetStickyC SetSticky;
 SetStack SetInStack;
 SetHeap SetInHeap;
-#if 0 // DEPRECATED   /* */
-SetLocalAttribut SetLocal;
-#endif
-#if 0 // DEPRECATED   /* */
-DefaultAttribut SetDefault;
-#endif
 FlagReplyHead ReplyHead;
 FlagReplyTail ReplyTail;
-
 
 // --------------------------------------------------------------------
 uint32_t System::local_gid = uint32_t( -1U ); // <-> GlobalId::NO_SITE;

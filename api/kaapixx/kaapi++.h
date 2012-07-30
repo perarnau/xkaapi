@@ -507,8 +507,8 @@ namespace ka {
   struct _ArchHOST {};
   struct _ArchCUDA {};
   struct _ArchHOSTCUDA {};
-  extern _ArchHOST ArchHost;
-  extern _ArchCUDA ArchCUDA;
+  static const _ArchHOST ArchHost = _ArchHOST();
+  static const _ArchCUDA ArchCUDA = _ArchCUDA();
 
   inline _ArchHOSTCUDA operator|( const _ArchHOST& xx, const _ArchCUDA& yy)
   { return _ArchHOSTCUDA(); }
