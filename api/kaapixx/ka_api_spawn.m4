@@ -21,7 +21,10 @@
 #endif
 
       kaapi_task_t* clo = kaapi_thread_toptask( _thread );
-      kaapi_task_init( clo, KaapiFormatTask_t::default_bodies.cpu_body, kaapi_thread_pushdata(_thread, sizeof(TaskArg_t)) );
+      if (KaapiFormatTask_t::default_bodies.cpu_body != 0)
+	kaapi_task_init( clo, KaapiFormatTask_t::default_bodies.cpu_body, kaapi_thread_pushdata(_thread, sizeof(TaskArg_t)) );
+      else
+	kaapi_task_init( clo, KaapiFormatTask_t::default_bodies.gpu_body, kaapi_thread_pushdata(_thread, sizeof(TaskArg_t)) );
       TaskArg_t* arg = kaapi_task_getargst( clo, TaskArg_t);
 
       // here we do not detect a compile time the error without compilation with -DKAAPI_DEBUG 

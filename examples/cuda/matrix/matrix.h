@@ -331,7 +331,7 @@ struct TaskPlasmaDSSSSM: public ka::Task<6>::Signature
 
 #if CONFIG_USE_CUDA
 # include "matrix_gpu.inl"
-# include "matrix_alpha.inl"
+//# include "matrix_alpha.inl"
 #endif
 
 #endif // MATRIX_H_INCLUDED

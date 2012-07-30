@@ -842,7 +842,6 @@ kaapi_cuda_mem_copy_dtod_buffer(kaapi_pointer_t dest,
                                 const kaapi_memory_view_t * view_host)
 {
   cudaError_t res;
-
   cudaStream_t stream;
 
   kaapi_cuda_ctx_set(src_dev);

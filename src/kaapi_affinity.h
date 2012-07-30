@@ -73,6 +73,9 @@ extern kaapi_processor_t *kaapi_affinity_datawizard(
     struct kaapi_taskdescr_t * td
 );
 
+kaapi_processor_t *kaapi_affinity_wrmode(kaapi_processor_t * kproc,
+					      struct kaapi_taskdescr_t * td);
+
 extern int kaapi_affinity_exec_readylist( kaapi_processor_t* kproc );
 
 /* return the sum of data valid in the kproc asid 

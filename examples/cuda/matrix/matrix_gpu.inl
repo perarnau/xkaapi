@@ -870,7 +870,7 @@ struct TaskBodyGPU<TaskPOTRF<T> >
 };
 #endif
 
-#if defined(CONFIG_USE_DOUBLE)
+#if defined(CONFIG_USE_PLASMA)
 template<>
 struct TaskBodyGPU<TaskPlasmaDSSSSM> {
   void operator()( 

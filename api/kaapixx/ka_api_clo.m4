@@ -566,30 +566,6 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     return 0;
   }
 
-#if 0
-  static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( M4_PARAM(`formal$1_t', `', `,') ) )
-  {
-    typedef void (TASK::*type_default_t)(THIS_TYPE_IS_USED_ONLY_INTERNALLY M4_PARAM(`, signature$1_t', `', `'));
-    type_default_t f_default = &TASK::operator();
-    if ((type_default_t)method == f_default) return 0;
-    kaapi_task_body_t body = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::body;
-    kaapi_task_body_t bodywithhandle = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<1, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::bodywithhandle;
-    kaapi_format_taskregister_body(fmt, body, bodywithhandle, KAAPI_PROC_TYPE_CPU );
-    return body;
-  }
-
-  static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( Thread* M4_PARAM(`, formal$1_t', `', `') ) )
-  {
-    typedef void (TASK::*type_default_t)(THIS_TYPE_IS_USED_ONLY_INTERNALLY M4_PARAM(`, signature$1_t', `', `'));
-    type_default_t f_default = &TASK::operator();
-    if ((type_default_t)method == f_default) return 0;
-
-    kaapi_task_body_t body = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::body;
-    kaapi_task_body_t bodywithhandle = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<2, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::bodywithhandle;
-    kaapi_format_taskregister_body(fmt, body, bodywithhandle, KAAPI_PROC_TYPE_CPU );
-    return body;
-  }
-#else // #if 0
   ifelse(KAAPI_NUMBER_PARAMS,0,`',`template< M4_PARAM(`class F$1_t', `', `,')>')
   static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( M4_PARAM(`F$1_t', `', `,') ) )
   {
@@ -639,8 +615,6 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     return body;
   }
 
-#endif
-
   static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( StealContext* M4_PARAM(`, formal$1_t', `', `') ) )
   {
     typedef void (TASK::*type_default_t)(THIS_TYPE_IS_USED_ONLY_INTERNALLY M4_PARAM(`, signature$1_t', `', `'));
@@ -651,30 +625,6 @@ struct KAAPI_INITFORMATCLOSURE(KAAPI_NUMBER_PARAMS) {
     kaapi_format_taskregister_body(fmt, body, bodywithhandle, KAAPI_PROC_TYPE_CPU );
     return body;
   }
-
-#if 0
-  static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( StaticSchedInfo* M4_PARAM(`, formal$1_t', `', `') ) )
-  {
-    typedef void (TASK::*type_default_t)(THIS_TYPE_IS_USED_ONLY_INTERNALLY M4_PARAM(`, signature$1_t', `', `'));
-    type_default_t f_default = &TASK::operator();
-    if ((type_default_t)method == f_default) return 0;
-    kaapi_task_body_t body = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<4, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::body;
-    kaapi_task_body_t bodywithhandle = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<4, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::bodywithhandle;
-    kaapi_format_taskregister_body(fmt, body, bodywithhandle, KAAPI_PROC_TYPE_CPU );
-    return body;
-  }
-
-  static kaapi_task_body_t registercpubody( kaapi_format_t* fmt, void (TaskBodyCPU<TASK>::*method)( const StaticSchedInfo* M4_PARAM(`, formal$1_t', `', `') ) )
-  {
-    typedef void (TASK::*type_default_t)(THIS_TYPE_IS_USED_ONLY_INTERNALLY M4_PARAM(`, signature$1_t', `', `'));
-    type_default_t f_default = &TASK::operator();
-    if ((type_default_t)method == f_default) return 0;
-    kaapi_task_body_t body = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<4, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::body;
-    kaapi_task_body_t bodywithhandle = (kaapi_task_body_t)KAAPIWRAPPER_CPU_BODY(KAAPI_NUMBER_PARAMS)<4, TASK M4_PARAM(`,TraitFormalParam$1', `', ` ')>::bodywithhandle;
-    kaapi_format_taskregister_body(fmt, body, bodywithhandle, KAAPI_PROC_TYPE_CPU );
-    return body;
-  }
-#endif
 
   /* GPU registration */
 

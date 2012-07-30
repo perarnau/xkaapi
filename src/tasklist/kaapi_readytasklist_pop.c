@@ -49,6 +49,7 @@ static inline int kaapi_onereadytasklist_pop(
   kaapi_taskdescr_t** td 
 )
 {
+  kaapi_taskdescr_t* curr;
   /* fast check, without lock */
   if( kaapi_onereadytasklist_isempty( ortl ) )
     return EBUSY;
@@ -58,14 +59,33 @@ static inline int kaapi_onereadytasklist_pop(
     kaapi_atomic_unlock( &ortl->lock );
     return EBUSY;
   }
-  *td = ortl->head;
-  ortl->head = (*td)->next;
-  if( ortl->head != NULL )
-    ortl->head->prev = 0;
+
+  int arch = kaapi_processor_get_type(kaapi_get_current_processor());
+  curr = ortl->head;
+  /* only pops for the righ processor arch or if fmt ==0 (means internal task) */
+  while ((curr != 0) && ((curr->fmt !=0) && (kaapi_format_get_task_body_by_arch(curr->fmt, arch) ==0)))
+  {
+    curr = curr->next;
+  }
+
+  if (curr ==0) 
+  {
+    kaapi_atomic_unlock( &ortl->lock );
+    return EBUSY;
+  }
+
+  if( curr->prev != 0 )
+    curr->prev->next = curr->next;
   else
-    ortl->tail = NULL; /* empty */
+    ortl->head = curr->next;
+  if (curr->next !=0)
+    curr->next->prev = curr->prev;
+  else
+    ortl->tail = curr->prev;
   ortl->size--;
   kaapi_atomic_unlock( &ortl->lock );
+  curr->prev = curr->next = 0;
+  *td = curr;
   return 0;
 }
 

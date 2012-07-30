@@ -116,6 +116,7 @@ libkaapi_la_SOURCES=\
   affinity/kaapi_affinity_default.c \
   affinity/kaapi_affinity_rand.c \
   affinity/kaapi_affinity_datawizard.c \
+  affinity/kaapi_affinity_wrmode.c \
   affinity/kaapi_affinity_hit.c\
   affinity/kaapi_affinity_steal.c\
   affinity/kaapi_affinity_wrmode.c \
