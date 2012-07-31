@@ -3,7 +3,7 @@
 #SCRATCH=/scratch/jvlima
 CUDA_HOME=$SCRATCH/install/cuda
 export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=$SCRATCH/install/xkaapi/default/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/install/xkaapi/default/lib:$LD_LIBRARY_PATH
 
 niter=1
 #niter=30
@@ -13,7 +13,7 @@ version="$(date +%s)"
 
 function run_test {
     export KAAPI_CPUSET="4"
-#    export KAAPI_CPUSET="0"
+#    export KAAPI_CPUSET="0:1"
 #    export KAAPI_CPUSET="4,5,10,11"
 #    export KAAPI_GPUSET="0~0,2~2,4~6,6~8"
 #    export KAAPI_GPUSET="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
@@ -37,15 +37,19 @@ function run_test {
 
 #    export KAAPI_DISPLAY_PERF=1
 
-#    export KAAPI_AFFINITY=1
+#    export KAAPI_AFFINITY="writer"
+#    export KAAPI_AFFINITY="dw"
+
 #    export KAAPI_CUDA_PEER=1
+
+#  export KAAPI_STEAL_AFFINITY="locality"
 
 #    msizes="20480"
 #     msizes="16384"
 #    msizes="$(seq 512 512 2048)"
 #    msizes="8192"
 #    msizes="4096"
-    msizes="2048"
+    msizes="1024"
 #    bsizes="2048"
 #    bsizes="1024"
     bsizes="512"

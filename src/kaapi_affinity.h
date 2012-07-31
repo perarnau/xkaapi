@@ -73,7 +73,7 @@ extern kaapi_processor_t *kaapi_affinity_datawizard(
     struct kaapi_taskdescr_t * td
 );
 
-kaapi_processor_t *kaapi_affinity_wrmode(kaapi_processor_t * kproc,
+kaapi_processor_t *kaapi_affinity_writer(kaapi_processor_t * kproc,
 					      struct kaapi_taskdescr_t * td);
 
 extern int kaapi_affinity_exec_readylist( kaapi_processor_t* kproc );

@@ -421,6 +421,7 @@ struct TaskBodyCPU<TaskTRSM_right<T> > {
 /* DGEMM rountine to compute
     Aij <- alpha* Aik * Akj + beta Aij
 */
+#define GEMM_THRESHOLD	  256
 template<typename T>
 struct TaskBodyCPU<TaskGEMM<T> > {
   void operator()
@@ -447,7 +448,22 @@ struct TaskBodyCPU<TaskGEMM<T> > {
     const int ldb = Akj->lda();
     const int ldc = Aij->lda();
 
+      fprintf(stdout,"TaskCPU GEMM m=%d lda=%d\n", m, lda );
+      fflush(stdout);
     KAAPI_TIMING_BEGIN();
+#if 0
+    if( m > GEMM_THRESHOLD )
+    {
+      ka::Spawn<TaskParallelGEMM<T> >( ka::SetStaticSched() )(
+	  order, transA, transB, 
+	  alpha, Aik,
+	  Akj,
+	  beta, Aij
+	);
+     ka::Sync();
+    } else {
+    }
+#endif
     CBLAS<T>::gemm
     (
       order, transA, transB,
@@ -457,6 +473,48 @@ struct TaskBodyCPU<TaskGEMM<T> > {
   }
 };
 
+template<typename T>
+struct TaskBodyCPU<TaskParallelGEMM<T> > {
+  void operator()
+  (
+    CBLAS_ORDER		   order, 
+    CBLAS_TRANSPOSE transA,
+    CBLAS_TRANSPOSE transB,
+    T alpha,
+    ka::range2d_r<T> A,
+    ka::range2d_r<T> B,
+    T beta,
+    ka::range2d_rw<T> C
+  )
+  {
+    const size_t M = A->dim(0);
+    const size_t K = B->dim(0);
+    const size_t N = B->dim(1);
+    const int bloc = GEMM_THRESHOLD;
+
+      fprintf(stdout,"TaskCPU ParallelGEMM m=%d lda=%d\n", (int)M, (int)A->lda());
+      fflush(stdout);
+    for (size_t j=0; j<M; j += bloc)
+    {
+      ka::rangeindex rj(j, j+bloc);
+      for (size_t i=0; i<N; i += bloc)
+      {
+	ka::rangeindex ri(i, i+bloc);
+	for (size_t k=0; k<K; k += bloc)
+	{
+	  ka::rangeindex rk(k, k+bloc);
+	    ka::Spawn<TaskGEMM<T> >( )
+	      (
+	       order, transA, transB,
+	       alpha, B(rk,rj),
+	       A(ri,rk),
+	       beta, C(ri,rj)
+	      );
+	}
+      }
+    }
+  }
+};
 
 
 /* Rank k update
@@ -603,6 +661,10 @@ struct TaskBodyCPU<TaskPOTRF<T> > {
     KAAPI_TIMING_BEGIN();
 #if 1
     CLAPACK<T>::potrf( order, uplo, n, a, lda );
+#if 0
+    fprintf(stdout, "TaskCPU DPOTRF res=%d\n", res );
+    fflush(stdout);
+#endif
 #else
     LAPACKE_dpotrf_work(
 //	    convertToOrderLapack(order),

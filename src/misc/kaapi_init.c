@@ -236,8 +236,8 @@ static int kaapi_setup_param()
       kaapi_default_param.affinity = &kaapi_affinity_rand;
     else if (strcmp(affinity, "dw") ==0)
       kaapi_default_param.affinity = &kaapi_affinity_datawizard;
-    else if (strcmp(affinity, "wrmode") ==0)
-      kaapi_default_param.affinity = &kaapi_affinity_wrmode;
+    else if (strcmp(affinity, "writer") ==0)
+      kaapi_default_param.affinity = &kaapi_affinity_writer;
     else {
       fprintf(stderr, "***Kaapi: bad value for 'KAAPI_AFFINITY': '%s'\n",
         getenv("KAAPI_AFFINITY")

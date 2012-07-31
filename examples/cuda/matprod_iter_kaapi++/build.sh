@@ -1,10 +1,11 @@
 #!/bin/bash
 
 SCRATCH=/tmp
-XKAAPIDIR=/tmp/xkaapi
+#XKAAPIDIR=/tmp/xkaapi
+XKAAPIDIR=$HOME/install/xkaapi/default
 
-CXX=g++-mp-4.6
-#CXX=g++
+#CXX=g++-mp-4.6
+CXX=g++
 
 function do_test() {
     eval var=\$$1
@@ -15,10 +16,10 @@ function do_test() {
     fi
 }
 
-CBLAS_CFLAGS="-I/usr/local/atlas/include"
-CBLAS_LDFLAGS="/usr/local/atlas/lib/libcblas.a /usr/local/atlas/lib/liblapack.a /usr/local/atlas/lib/libatlas.a"
-LAPACKE_CFLAGS="-I/usr/local/include"
-LAPACKE_LDFLAGS="-L/usr/local/lib -llapacke -llapack"
+#CBLAS_CFLAGS="-I/usr/local/atlas/include"
+#CBLAS_LDFLAGS="/usr/local/atlas/lib/libcblas.a /usr/local/atlas/lib/liblapack.a /usr/local/atlas/lib/libatlas.a"
+#LAPACKE_CFLAGS="-I/usr/local/include"
+#LAPACKE_LDFLAGS="-L/usr/local/lib -llapacke -llapack"
 
 do_test "CBLAS_CFLAGS" "No CBLAS_CFLAGS found."
 do_test "CBLAS_LDFLAGS" "No CBLAS_LDFLAGS found."
