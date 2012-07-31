@@ -421,7 +421,7 @@ struct TaskBodyCPU<TaskTRSM_right<T> > {
 /* DGEMM rountine to compute
     Aij <- alpha* Aik * Akj + beta Aij
 */
-#define THRESHOLD 2
+#define GEMM_THRESHOLD	  256
 template<typename T>
 struct TaskBodyCPU<TaskGEMM<T> > {
   void operator()
@@ -448,7 +448,22 @@ struct TaskBodyCPU<TaskGEMM<T> > {
     const int ldb = Akj->lda();
     const int ldc = Aij->lda();
 
+      fprintf(stdout,"TaskCPU GEMM m=%d lda=%d\n", m, lda );
+      fflush(stdout);
     KAAPI_TIMING_BEGIN();
+#if 0
+    if( m > GEMM_THRESHOLD )
+    {
+      ka::Spawn<TaskParallelGEMM<T> >( ka::SetStaticSched() )(
+	  order, transA, transB, 
+	  alpha, Aik,
+	  Akj,
+	  beta, Aij
+	);
+     ka::Sync();
+    } else {
+    }
+#endif
     CBLAS<T>::gemm
     (
       order, transA, transB,
@@ -458,7 +473,6 @@ struct TaskBodyCPU<TaskGEMM<T> > {
   }
 };
 
-#if 0
 template<typename T>
 struct TaskBodyCPU<TaskParallelGEMM<T> > {
   void operator()
@@ -467,50 +481,41 @@ struct TaskBodyCPU<TaskParallelGEMM<T> > {
     CBLAS_TRANSPOSE transA,
     CBLAS_TRANSPOSE transB,
     T alpha,
-    ka::range2d_r<T> Aik,
-    ka::range2d_r<T> Akj,
+    ka::range2d_r<T> A,
+    ka::range2d_r<T> B,
     T beta,
-    ka::range2d_rw<T> Aij
+    ka::range2d_rw<T> C
   )
   {
-    const T* const a = Aik->ptr();
-    const T* const b = Akj->ptr();
-    T* const c       = Aij->ptr();
+    const size_t M = A->dim(0);
+    const size_t K = B->dim(0);
+    const size_t N = B->dim(1);
+    const int bloc = GEMM_THRESHOLD;
 
-    const int m = Aik->dim(0); 
-    const int n = Aik->dim(1); // eq. to Akj->rows();
-    const int k = Akj->dim(1); 
-
-    const int lda = Aik->lda();
-    const int ldb = Akj->lda();
-    const int ldc = Aij->lda();
-
-    KAAPI_TIMING_BEGIN();
-    if( m > THRESHOLD )
+      fprintf(stdout,"TaskCPU ParallelGEMM m=%d lda=%d\n", (int)M, (int)A->lda());
+      fflush(stdout);
+    for (size_t j=0; j<M; j += bloc)
     {
-      const int bloc = 128;
-      
-      for (size_t j=0; j<M; j += bloc)
+      ka::rangeindex rj(j, j+bloc);
+      for (size_t i=0; i<N; i += bloc)
       {
-	ka::rangeindex rj(j, j+bloc);
-	for (size_t i=0; i<N; i += bloc)
+	ka::rangeindex ri(i, i+bloc);
+	for (size_t k=0; k<K; k += bloc)
 	{
-	  ka::rangeindex ri(i, i+bloc);
-	  for (size_t k=0; k<K; k += bloc)
-	  {
-	    ka::rangeindex rk(k, k+bloc);
-	      ka::Spawn<TaskGEMM<T> >( )
-		(  CblasColMajor, CblasNoTrans, CblasNoTrans, (T)1.0, 
-		     B(rk,rj), A(ri,rk), (T)1.0, C(ri,rj) );
-	  }
+	  ka::rangeindex rk(k, k+bloc);
+	    ka::Spawn<TaskGEMM<T> >( )
+	      (
+	       order, transA, transB,
+	       alpha, B(rk,rj),
+	       A(ri,rk),
+	       beta, C(ri,rj)
+	      );
 	}
       }
     }
-    KAAPI_TIMING_END("CPU DGEMM", n);
   }
 };
 
-#endif
 
 /* Rank k update
 */
