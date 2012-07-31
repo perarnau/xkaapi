@@ -843,23 +843,6 @@ kaapi_cuda_mem_copy_dtod_buffer(kaapi_pointer_t dest,
 {
   cudaError_t res;
   cudaStream_t stream;
-  cudaEvent_t event;
-
-  kaapi_cuda_ctx_set(src_dev);
-  res = cudaStreamCreate(&stream);
-  cudaEventCreateWithFlags( &event, cudaEventDisableTiming);
-  kaapi_assert_debug( res == cudaSuccess );
-  res = kaapi_cuda_mem_copy_dtoh_(host, view_host, src, view_src, stream );
-  cudaEventRecord( event, stream );
-  kaapi_assert_debug( res == cudaSuccess );
-  cudaStreamDestroy(stream);
-  kaapi_cuda_ctx_set(dest_dev);
-
-  cudaStreamWaitEvent( kaapi_cuda_HtoD_stream(), event, 0 );
-  return kaapi_cuda_mem_copy_htod(dest, view_dest, host, view_host);
-#if 0
-  cudaError_t res;
-  cudaStream_t stream;
 
   kaapi_cuda_ctx_set(src_dev);
   res = cudaStreamCreate(&stream);
@@ -876,7 +859,6 @@ kaapi_cuda_mem_copy_dtod_buffer(kaapi_pointer_t dest,
   kaapi_cuda_ctx_set(dest_dev);
 
   return kaapi_cuda_mem_copy_htod(dest, view_dest, host, view_host);
-#endif
 }
 
 int

@@ -661,6 +661,10 @@ struct TaskBodyCPU<TaskPOTRF<T> > {
     KAAPI_TIMING_BEGIN();
 #if 1
     CLAPACK<T>::potrf( order, uplo, n, a, lda );
+#if 0
+    fprintf(stdout, "TaskCPU DPOTRF res=%d\n", res );
+    fflush(stdout);
+#endif
 #else
     LAPACKE_dpotrf_work(
 //	    convertToOrderLapack(order),

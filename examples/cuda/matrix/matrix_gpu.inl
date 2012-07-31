@@ -825,7 +825,7 @@ struct TaskBodyGPU<TaskGETRFNoPiv<T> >
 };
 
 
-#if 0 /* DO NOT USE GPU FOR POTRF */
+#if 1 /* DO NOT USE GPU FOR POTRF */
 template<typename T> 
 struct TaskBodyGPU<TaskPOTRF<T> >
 {

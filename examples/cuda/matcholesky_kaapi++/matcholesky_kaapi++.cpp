@@ -55,7 +55,11 @@
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
 
+#if defined(CONFIG_USE_DOUBLE)
+typedef double double_type;
+#elif defined(CONFIG_USE_FLOAT)
 typedef float double_type;
+#endif
 
 
 /* Generate a random matrix symetric definite positive matrix of size m x m 
@@ -173,23 +177,23 @@ struct TaskBodyCPU<TaskCholesky<T> > {
     {
       for (size_t k=0; k < N; k += blocsize) {
         ka::rangeindex rk(k, k+blocsize);
-        ka::Spawn<TaskPOTRF<T> >( )
+        ka::Spawn<TaskPOTRF<T> >( ka::SetArch(ka::ArchHost) )
 	      ( CblasColMajor, CblasLower, A(rk,rk) );
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
           ka::rangeindex rm(m, m+blocsize);
-          ka::Spawn<TaskTRSM<T> >( )
+          ka::Spawn<TaskTRSM<T> >( ka::SetArch(ka::ArchCUDA) )
           ( CblasColMajor, CblasRight, uplo, CblasTrans, CblasNonUnit, (T)1.0, A(rk,rk), A(rk,rm));
         }
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
           ka::rangeindex rm(m, m+blocsize);
-          ka::Spawn<TaskSYRK<T> >( )
+          ka::Spawn<TaskSYRK<T> >( ka::SetArch(ka::ArchCUDA) )
           ( CblasColMajor, uplo, CblasNoTrans, (T)-1.0, A(rk,rm), (T)1.0, A(rm,rm));
           
           for (size_t n=k+blocsize; n < m; n += blocsize) {
             ka::rangeindex rn(n, n+blocsize);
-            ka::Spawn<TaskGEMM<T> >( )
+            ka::Spawn<TaskGEMM<T> >( ka::SetArch(ka::ArchCUDA) )
             ( CblasColMajor, CblasNoTrans, CblasTrans, (T)-1.0, A(rk,rm), A(rk,rn), (T)1.0, A(rn,rm));
           }
         }
