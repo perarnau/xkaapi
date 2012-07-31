@@ -78,9 +78,8 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     kaapi_network_poll();
 #endif
 #if defined(KAAPI_USE_CUDA)
-    if( kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA ) {
+    if( kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA ) 
       kaapi_cuda_proc_poll( kproc );
-    }
 #endif
     if (kaapi_suspendflag)
       kaapi_mt_suspend_self(kproc);
@@ -198,13 +197,6 @@ redo_execute:
     {
       kaapi_stack_reset(&kproc->thread->stack);
       kaapi_synchronize_steal(kproc);
-#if 0
-      kaapi_assert( kaapi_frame_isempty( kproc->thread->stack.sfp ) );
-      kaapi_assert( kproc->thread->stack.sfp == kproc->thread->stack.stackframe );
-      kaapi_assert( kproc->thread->stack.sfp->pc == kproc->thread->stack.task );
-      kaapi_assert( kproc->thread->stack.sfp->sp == kproc->thread->stack.task );
-      kaapi_assert( kproc->thread->stack.sfp->sp_data == kproc->thread->stack.data );
-#endif
     }
 #endif
     

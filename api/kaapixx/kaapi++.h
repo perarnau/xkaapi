@@ -499,8 +499,49 @@ namespace ka {
   
   inline AttributSchedSiteTask SetSite( int s )
   { return AttributSchedSiteTask(s); }
+
+
+  /* This attribut is currently supported to make experiment.
+     It would be deleted in the future when the right API will be designed
+   */
+  struct _ArchHOST {};
+  struct _ArchCUDA {};
+  struct _ArchHOSTCUDA {};
+  static const _ArchHOST ArchHost = _ArchHOST();
+  static const _ArchCUDA ArchCUDA = _ArchCUDA();
+
+  inline _ArchHOSTCUDA operator|( const _ArchHOST& xx, const _ArchCUDA& yy)
+  { return _ArchHOSTCUDA(); }
+
+  inline _ArchHOSTCUDA operator|( const _ArchCUDA& xx, const _ArchHOST& yy)
+  { return _ArchHOSTCUDA(); }
+
+  class AttributSchedSiteArch : protected DefaultAttribut {
+  public:
+    uint8_t  _arch_mask;   // an architecture mask
+  public:
+    AttributSchedSiteArch( uint8_t k ) : _arch_mask(k) {}
+    void operator()( kaapi_thread_t* thread ) const
+    { 
+      kaapi_task_set_arch_mask(kaapi_thread_toptask(thread), _arch_mask);
+      DefaultAttribut::operator()(thread);
+    }
+  };
   
-  
+  inline AttributSchedSiteArch SetArch( _ArchHOST xx )
+  { return AttributSchedSiteArch(1U << KAAPI_PROC_TYPE_HOST); }
+
+  inline AttributSchedSiteArch SetArch( _ArchCUDA xx )
+  { return AttributSchedSiteArch(1U << KAAPI_PROC_TYPE_CUDA); }
+
+  inline AttributSchedSiteArch SetArch( _ArchHOSTCUDA xx )
+  { 
+    return AttributSchedSiteArch( 
+        (1U << KAAPI_PROC_TYPE_HOST)
+      | (1U << KAAPI_PROC_TYPE_CUDA)
+    ); 
+  }
+    
   /* The only attribut that can be passed to task creation:
    */
   class AttributPriorityTask : protected DefaultAttribut {

@@ -127,6 +127,10 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc )
 #if defined(KAAPI_USE_NETWORK)
     kaapi_network_poll();
 #endif
+#if defined(KAAPI_USE_CUDA)
+    if( kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA ) 
+      kaapi_cuda_proc_poll( kproc );
+#endif
     
     /* end of a parallel region ? */
     if (kaapi_suspendflag)

@@ -56,6 +56,7 @@ int kaapi_sched_steal_task
   kaapi_task_t* tasksteal;
   unsigned int war_param;
   unsigned int cw_param;
+  kaapi_request_t* request;  
   size_t wc;
 
   if (task_fmt == 0) 
@@ -94,10 +95,15 @@ int kaapi_sched_steal_task
   int retval = kaapi_task_marksteal( task );
   if (unlikely( !retval ) ) 
     return EBUSY;
+
+  request = kaapi_listrequest_iterator_get( lrequests, lrrange );
   
-  kaapi_request_t* request =
-	kaapi_listrequest_iterator_get( lrequests, lrrange );
-  kaapi_assert_debug( request != 0 );
+  /* To be solved before marking the task as theft */
+  kaapi_assert_debug( 
+      kaapi_task_has_arch(task, 
+          kaapi_processor_get_type( kaapi_all_kprocessors[request->ident]) 
+      )
+  );
 
   /* - create the task steal that will execute the stolen task
      The task stealtask stores:
@@ -112,7 +118,7 @@ int kaapi_sched_steal_task
   argsteal->origin_fmt            = task_fmt;
   argsteal->war_param             = war_param;  
   argsteal->cw_param              = cw_param;
-
+  
   tasksteal = kaapi_request_toptask(request);
   kaapi_task_init( 
     tasksteal,
@@ -125,7 +131,7 @@ int kaapi_sched_steal_task
   /* success of steal */
   kaapi_request_replytask( request, KAAPI_REQUEST_S_OK);
   KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( lrrange ) );
-    
+
   /* advance to the next request */
   kaapi_listrequest_iterator_next( lrequests, lrrange );
 

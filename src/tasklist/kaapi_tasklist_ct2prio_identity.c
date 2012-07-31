@@ -6,7 +6,6 @@
 **
 ** Contributors :
 **
-** joao.limag@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -42,66 +41,11 @@
 ** terms.
 ** 
 */
-#ifndef _KAAPI_AFFINITY_H_
-#define _KAAPI_AFFINITY_H_
-
 #include "kaapi_impl.h"
 
-struct kaapi_taskdescr_t;
-
-/*
- * Default affinity function, returns local kproc.
- */
-extern kaapi_processor_t *kaapi_affinity_default(
-    kaapi_processor_t * kproc,
-    struct kaapi_taskdescr_t * td
-);
-
-/*
- * Return random kprocessor.
- */
-extern kaapi_processor_t *kaapi_affinity_rand(
-    kaapi_processor_t * kproc,
-    struct kaapi_taskdescr_t * td
-);
-
-/*
- * Consider valid data to pick a processor.
- */
-extern kaapi_processor_t *kaapi_affinity_datawizard(
-    kaapi_processor_t * kproc,
-    struct kaapi_taskdescr_t * td
-);
-
-kaapi_processor_t *kaapi_affinity_writer(kaapi_processor_t * kproc,
-					      struct kaapi_taskdescr_t * td);
-
-extern int kaapi_affinity_exec_readylist( kaapi_processor_t* kproc );
-
-/* return the sum of data valid in the kproc asid 
+/* Do nothing: keep priority, but allows to compute CTpath.
 */
-extern uint64_t kaapi_data_get_affinity_hit_size(
-     const kaapi_processor_t * kproc,
-     struct kaapi_taskdescr_t * td
-);
-
-/*
-*/
-extern struct kaapi_taskdescr_t* kaapi_steal_by_affinity_first( const kaapi_processor_t* thief, struct kaapi_taskdescr_t* tail );
-
-
-/*
-*/
-extern struct kaapi_taskdescr_t* kaapi_steal_by_affinity_maxctpath( const kaapi_processor_t* thief, struct kaapi_taskdescr_t* tail );
-
-
-/*
-*/
-extern struct kaapi_taskdescr_t* kaapi_steal_by_affinity_maxhit( const kaapi_processor_t* thief, struct kaapi_taskdescr_t* tail );
-
-/*
-*/
-extern kaapi_processor_t *kaapi_affinity_wrmode(kaapi_processor_t * kproc,
-					      struct kaapi_taskdescr_t * td);
-
-#endif /* _KAAPI_AFFINITY_H_ */
+uint8_t kaapi_ctpath2prio_identity( uint64_t tinfinity, struct kaapi_taskdescr_t* td)
+{
+  return td->priority;
+}

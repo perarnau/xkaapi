@@ -305,20 +305,21 @@ extern void kaapi_taskfinalizer_body( void*, kaapi_thread_t* );
 /** \ingroup TASK
 */
 /**@{ */
-static inline int kaapi_task_get_ocr_index(const kaapi_task_t* task)
-{ 
-  return task->u.s.ocr; 
-}
-
 static inline int kaapi_task_get_priority(const kaapi_task_t* task)
 { 
   return task->u.s.priority; 
 }
 
-/* return the site or -1 if no site */
-static inline int kaapi_task_get_site(const kaapi_task_t* task)
+/* return the 1+site where task is able to run or 0 if no site */
+static inline uint32_t kaapi_task_get_site(const kaapi_task_t* task)
 { 
-  return ((int)task->u.s.site)-1; 
+  return task->u.s.site;
+}
+
+/* return 1 if kid is in the site mask */
+static inline int kaapi_task_has_arch(const kaapi_task_t* task, int arch)
+{ 
+  return (task->u.s.arch ==0) || ((task->u.s.arch & (1<<arch)) !=0);
 }
 
 static inline int kaapi_task_is_unstealable(kaapi_task_t* task)
@@ -639,6 +640,7 @@ extern int kaapi_sched_stealframe
     \retval 0 if case of successfull steal of the task
     \retval ENOENT the task does not have format and cannot be stolen
     \retval EACCES the task is not ready due to data flow dependency
+    \retval EINVAL the task cannot be execute on the any of the requests
     \retval EPERM the task is not stealable: either state is not INIT or flag unstealable is set
     \retval EBUSY the task has not been stolen because some body else has steal it or execute it.
 */

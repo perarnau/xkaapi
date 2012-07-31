@@ -147,8 +147,6 @@ typedef struct kaapi_taskdescr_t {
   kaapi_task_t*                 task;      /* the DFG task to execute */
   const kaapi_format_t*         fmt;       /* format of the task */
   int                           priority;
-  kaapi_bitmap_value32_t        ocr;       /* OCR flag for the task */  
-  int32_t                       site;      /* Site for task execution = kid or -1 == no kid */  
   int                           mark;      /* used by some graph algorithm, initial value=0 */
 
   struct kaapi_tasklist_t*      tasklist;  /* the owner, initial master tasklist for terminaison */
@@ -369,11 +367,8 @@ static inline kaapi_taskdescr_t* kaapi_allocator_allocate_td(
   td->task       = task;
   td->fmt 	     = task_fmt;
   td->priority   = KAAPI_TASKLIST_MIN_PRIORITY;
-  kaapi_bitmap_value_clear_32(&td->ocr); /* means no ocr */
-  td->site       = -1; /* means not site */
   td->next       = 0;
   td->prev       = 0;
-  kaapi_bitmap_value_clear_32(&td->ocr);       /* means no OCR */
   td->mark             = 0;
   td->u.acl.date       = 0;
   KAAPI_DEBUG_INST(td->u.acl.exec_date = 0);
@@ -573,15 +568,17 @@ static inline int kaapi_readytasklist_pushready_td(
     td->priority = (*kaapi_default_param.ctpriority)(td->tasklist->t_infinity, td);    
 #endif
   
-  if (td->site !=-1)
+  if (kaapi_task_get_site(td->task) !=0)
   {
-    kaapi_assert_debug( (td->site >=0) && (td->site < (int32_t)kaapi_count_kprocessors) );
-    kaapi_processor_t* kproc_remote = kaapi_all_kprocessors[td->site];
+    /* always take the first bit ==1 */
+    int kid = kaapi_task_get_site(td->task)-1;
+    kaapi_assert_debug( (kid >=0) && (kid < (int32_t)kaapi_count_kprocessors) );
+    kaapi_processor_t* kproc_remote = kaapi_all_kprocessors[kid];
     if ( kproc_remote != curr_kproc ) 
     {
-	    return kaapi_readylist_remote_push( kproc_remote->rtl, td, td->priority );
+	    return kaapi_readylist_remote_push( kproc_remote->rtl, td );
     }
-    return kaapi_readylist_push( rtl, td, td->priority );
+    return kaapi_readylist_push( rtl, td );
   }
   
   if ( kaapi_processor_get_type(curr_kproc) == KAAPI_PROC_TYPE_CUDA ) 
@@ -590,18 +587,18 @@ static inline int kaapi_readytasklist_pushready_td(
     if ( (td->fmt !=0) && (kaapi_format_get_task_bodywh_by_arch( td->fmt, KAAPI_PROC_TYPE_CUDA ) == 0)) //(td->priority == KAAPI_TASKLIST_MIN_PRIORITY ) 
     {
       kaapi_assert_debug( td->tasklist != 0 );
-      return kaapi_readylist_push( &td->tasklist->rtl, td, td->priority );
+      return kaapi_readylist_push( &td->tasklist->rtl, td );
     }
     kaapi_processor_t* kproc_remote = curr_kproc->affinity( curr_kproc, td );
     if ( kproc_remote != curr_kproc ) 
     {
-      return kaapi_readylist_remote_push( kproc_remote->rtl_remote, td, td->priority );
+      return kaapi_readylist_remote_push( kproc_remote->rtl_remote, td );
     }
   }
   /* for test only: push on master list task with highest priority */
   if ((td->priority == KAAPI_TASKLIST_MAX_PRIORITY) && (curr_kproc->kid != 0))
-    return kaapi_readylist_remote_push( rtl, td, td->priority );
-  return kaapi_readylist_push( rtl, td, td->priority );
+    return kaapi_readylist_remote_push( rtl, td );
+  return kaapi_readylist_push( rtl, td );
 }
 
 static inline int kaapi_readytasklist_push_from_activationlist( 

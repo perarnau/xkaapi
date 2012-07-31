@@ -45,6 +45,10 @@
 #include "kaapi_impl.h"
 #include "kaapi_tasklist.h"
 
+
+//#undef KAAPI_DEBUG_INST
+//#define KAAPI_DEBUG_INST(x) x
+
 /* return the first td that can be executed on arch 
 */
 kaapi_taskdescr_t* kaapi_steal_by_affinity_first( const kaapi_processor_t* thief, kaapi_taskdescr_t* td )
@@ -52,7 +56,9 @@ kaapi_taskdescr_t* kaapi_steal_by_affinity_first( const kaapi_processor_t* thief
   int arch = kaapi_processor_get_type(thief);
   
   /* only steal for the righ processor arch or if fmt ==0 (means internal task) */
-  while ((td != 0) && ((td->fmt !=0) && (kaapi_format_get_task_body_by_arch(td->fmt, arch) ==0)))
+  while ((td != 0) 
+      && (   !kaapi_task_has_arch(td->task,arch) 
+          || ((td->fmt !=0) && (kaapi_format_get_task_body_by_arch(td->fmt, arch) ==0)) ) )
   {
     td = td->prev;
   }
@@ -73,7 +79,7 @@ kaapi_taskdescr_t* kaapi_steal_by_affinity_maxctpath( const kaapi_processor_t* t
   /* only steal for the righ processor arch or if fmt ==0 (means internal task) */
   while (td != 0)
   {
-    if ((td->fmt !=0) && kaapi_format_get_task_body_by_arch(td->fmt, arch))
+    if ((td->fmt ==0) || (kaapi_task_has_arch(td->task,arch) && (kaapi_format_get_task_body_by_arch(td->fmt, arch) !=0)))
     {
       if (td->u.acl.date > td_max_date->u.acl.date)
         td_max_date = td;
@@ -117,7 +123,7 @@ KAAPI_DEBUG_INST(
         tdfirst_forarch = td;
 )
     }
-    else if (kaapi_format_get_task_body_by_arch(td->fmt, arch) !=0)
+    else if (kaapi_task_has_arch(td->task,arch) && (kaapi_format_get_task_body_by_arch(td->fmt, arch) !=0))
     {
       hit = kaapi_data_get_affinity_hit_size( thief, td );
       if (tdhitmax ==0)
@@ -144,7 +150,9 @@ KAAPI_DEBUG_INST(
 
 KAAPI_DEBUG_INST(
   if ((tdhitmax !=0) && (hitmax > hitfirst))
-    printf("Arch: %s  Hit Max: %lu, default hit:%lu\n", (arch == KAAPI_PROC_TYPE_CPU ? "CPU" : "GPU"), hitmax, hitfirst);
+    printf("Arch: %s  Hit Max: %lu, default hit:%lu\n", (arch == KAAPI_PROC_TYPE_CPU ? "CPU" : "GPU"), 
+        (unsigned long)hitmax, (unsigned long)hitfirst
+    );
 )
 
   return tdhitmax;

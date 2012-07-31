@@ -110,6 +110,17 @@ extern kaapi_atomic_t kaapi_term_barrier;
 extern volatile int kaapi_isterm;
 
 /* ========================================================================= */
+/** \ingroup WS
+    Number of used cores
+*/
+extern uint32_t volatile kaapi_count_kprocessors;
+
+/** \ingroup WS
+    One K-processors per core
+*/
+extern struct kaapi_processor_t** kaapi_all_kprocessors;
+
+/* ========================================================================= */
 /* Functions to manipulate thread context 
    These functions are intended to be portability layer on top of ucontext.h
    interfance or setjmp/longjmp.
@@ -263,6 +274,16 @@ static inline int kaapi_listrequest_iterator_count(
 { return kaapi_bitmap_value_count(&lrrange->bitmap) 
       + (int)(lrrange->idcurr == -1 ? 0 : 1); }
 
+/* return the bitmap of all requests */
+static inline kaapi_bitmap_value_t kaapi_listrequest_iterator_bitmap(
+    kaapi_listrequest_iterator_t* lrrange
+)
+{ kaapi_bitmap_value_t retval;
+  kaapi_bitmap_value_set(&retval, (lrrange->idcurr == -1 ? 0 : lrrange->idcurr) );
+  kaapi_bitmap_value_or( &retval, &lrrange->bitmap );
+  return retval;
+}
+
 /* get the first request of the range. range iterator should have been initialized by kaapi_listrequest_iterator_init 
 */
 static inline kaapi_request_t* kaapi_listrequest_iterator_get( 
@@ -276,7 +297,7 @@ static inline kaapi_request_t* kaapi_listrequest_iterator_getkid_andnext(
   kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange, int kid 
 )
 { 
-  kaapi_assert_debug( (kid >=0) && (kid < (int)kaapi_default_param.cpucount) );
+  kaapi_assert_debug( (kid >=0) && (kid < (int)kaapi_count_kprocessors) );
   if (kid == lrrange->idcurr)
     lrrange->idcurr = kaapi_bitmap_value_first1_and_zero( &lrrange->bitmap )-1;
   else 
@@ -637,17 +658,6 @@ static inline kaapi_thread_context_t* kaapi_lfree_pop(struct kaapi_processor_t* 
 
   return node;
 }
-
-
-/** \ingroup WS
-    Number of used cores
-*/
-extern uint32_t volatile kaapi_count_kprocessors;
-
-/** \ingroup WS
-    One K-processors per core
-*/
-extern kaapi_processor_t** kaapi_all_kprocessors;
 
 
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)

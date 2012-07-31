@@ -298,7 +298,7 @@ struct TaskBodyCPU<TaskCholesky> {
 
     for (int k=0; k < N; ++k)
     {
-      ka::Spawn<TaskDPOTRF>( SITE(dist(k,k)) )( CblasLower, (*A)[k][k], NB );
+      ka::Spawn<TaskDPOTRF>( ka::SetArch(ka::ArchHost) /* SITE(dist(k,k))*/ )( CblasLower, (*A)[k][k], NB );
 
       for (int m=k+1; m < N; ++m)
       {

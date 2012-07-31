@@ -62,13 +62,13 @@ static inline int kaapi_onereadytasklist_push(
   return 0;
 }
 
-int kaapi_readylist_push( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t* td, int priority )
+int kaapi_readylist_push( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t* td )
 {
   kaapi_onereadytasklist_t* ortl;
-  kaapi_assert_debug( (priority >= KAAPI_TASKLIST_MIN_PRIORITY) && (priority <= KAAPI_TASKLIST_MAX_PRIORITY) );
+  kaapi_assert_debug( (td->priority >= KAAPI_TASKLIST_MIN_PRIORITY) && (td->priority <= KAAPI_TASKLIST_MAX_PRIORITY) );
   
-  ortl = &rtl->prl[priority];
+  ortl = &rtl->prl[td->priority];
   kaapi_onereadytasklist_push( ortl, td );
   KAAPI_ATOMIC_INCR( &rtl->cnt_tasks );
-  return priority;
+  return td->priority;
 }
