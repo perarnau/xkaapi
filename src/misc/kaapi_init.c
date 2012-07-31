@@ -72,7 +72,7 @@ kaapi_rtparam_t kaapi_default_param = {
    .cudawindowsize = 1,
    .cudapeertopeer = 0,
 #endif
-   .stacksize   = 64*4096, /**/
+   .stacksize        = 64*4096, /**/
    .stacksize_master = 64*4096, /**/
    .cpucount    = 0,
    .gpucount    = 0,
