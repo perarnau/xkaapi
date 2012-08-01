@@ -99,3 +99,43 @@ kaapi_processor_t *kaapi_affinity_writer(kaapi_processor_t * kproc,
 
   return kproc;
 }
+
+int kaapi_data_get_affinity_is_valid_writer(
+     const kaapi_processor_t * kproc, kaapi_taskdescr_t * td)
+{
+  int i;
+  kaapi_mem_data_t *kmd;
+  void *sp;
+  sp = td->task->sp;
+
+  kaapi_mem_host_map_t *local_map = kaapi_get_current_mem_host_map();
+  kaapi_mem_asid_t local_asid = kaapi_mem_host_map_get_asid(local_map);
+  const size_t count_params = kaapi_format_get_count_params(td->fmt, sp);
+
+  for (i = 0; i < count_params; i++) {
+    kaapi_access_mode_t m =
+	KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(td->fmt, i, sp));
+    if (m == KAAPI_ACCESS_MODE_V)
+      continue;
+
+    if (KAAPI_ACCESS_IS_WRITE(m)) {
+      kaapi_access_t access = kaapi_format_get_access_param(td->fmt, i, sp);
+      kaapi_data_t *data = kaapi_data(kaapi_data_t, &access);
+      kmd = data->kmd;
+      kaapi_assert_debug(kmd != 0);
+      if (!kaapi_mem_data_is_dirty(kmd, local_asid)) {
+#if 1
+	fprintf(stdout, "[%s]: asid=%d valid (td=%p,name=%s)\n",
+	    __FUNCTION__,
+	    local_asid,
+	    (void*)td,
+	    td->fmt->name );
+	fflush(stdout);
+#endif
+	return 1;
+      }
+    }
+  }
+
+  return 0;
+}

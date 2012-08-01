@@ -234,8 +234,8 @@ static int kaapi_setup_param()
   {
     if (strcmp(affinity, "rand") ==0)
       kaapi_default_param.affinity = &kaapi_affinity_rand;
-    else if (strcmp(affinity, "dw") ==0)
-      kaapi_default_param.affinity = &kaapi_affinity_datawizard;
+    else if (strcmp(affinity, "locality") ==0)
+      kaapi_default_param.affinity = &kaapi_affinity_locality;
     else if (strcmp(affinity, "writer") ==0)
       kaapi_default_param.affinity = &kaapi_affinity_writer;
     else {
@@ -254,6 +254,8 @@ static int kaapi_setup_param()
       kaapi_default_param.steal_by_affinity = &kaapi_steal_by_affinity_maxctpath;
     else if (strcmp(stealaffinity, "locality") ==0)
       kaapi_default_param.steal_by_affinity = &kaapi_steal_by_affinity_maxhit;
+    else if (strcmp(stealaffinity, "writer") ==0)
+      kaapi_default_param.steal_by_affinity = &kaapi_steal_by_affinity_writer;
     else if (strcmp(stealaffinity, "1") ==0)
       kaapi_default_param.steal_by_affinity = &kaapi_steal_by_affinity_first;
     else {

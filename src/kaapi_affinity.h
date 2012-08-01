@@ -68,12 +68,12 @@ extern kaapi_processor_t *kaapi_affinity_rand(
 /*
  * Consider valid data to pick a processor.
  */
-extern kaapi_processor_t *kaapi_affinity_datawizard(
+extern kaapi_processor_t *kaapi_affinity_locality(
     kaapi_processor_t * kproc,
     struct kaapi_taskdescr_t * td
 );
 
-kaapi_processor_t *kaapi_affinity_writer(kaapi_processor_t * kproc,
+extern kaapi_processor_t *kaapi_affinity_writer(kaapi_processor_t * kproc,
 					      struct kaapi_taskdescr_t * td);
 
 extern int kaapi_affinity_exec_readylist( kaapi_processor_t* kproc );
@@ -81,6 +81,13 @@ extern int kaapi_affinity_exec_readylist( kaapi_processor_t* kproc );
 /* return the sum of data valid in the kproc asid 
 */
 extern uint64_t kaapi_data_get_affinity_hit_size(
+     const kaapi_processor_t * kproc,
+     struct kaapi_taskdescr_t * td
+);
+
+/* return true if td has an WR parameter valid in kproc
+*/
+extern int kaapi_data_get_affinity_is_valid_writer(
      const kaapi_processor_t * kproc,
      struct kaapi_taskdescr_t * td
 );
@@ -99,9 +106,6 @@ extern struct kaapi_taskdescr_t* kaapi_steal_by_affinity_maxctpath( const kaapi_
 */
 extern struct kaapi_taskdescr_t* kaapi_steal_by_affinity_maxhit( const kaapi_processor_t* thief, struct kaapi_taskdescr_t* tail );
 
-/*
-*/
-extern kaapi_processor_t *kaapi_affinity_wrmode(kaapi_processor_t * kproc,
-					      struct kaapi_taskdescr_t * td);
+extern struct kaapi_taskdescr_t* kaapi_steal_by_affinity_writer( const kaapi_processor_t* thief, struct kaapi_taskdescr_t* tail );
 
 #endif /* _KAAPI_AFFINITY_H_ */
