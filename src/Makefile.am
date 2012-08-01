@@ -113,12 +113,9 @@ libkaapi_la_SOURCES=\
   tasklist/kaapi_tasklist_ct2prio_max.c \
   tasklist/kaapi_tasklist_ct2prio_linear.c \
   tasklist/kaapi_tasklist_ct2prio_identity.c \
-  affinity/kaapi_affinity_default.c \
-  affinity/kaapi_affinity_rand.c \
-  affinity/kaapi_affinity_datawizard.c \
-  affinity/kaapi_affinity_writer.c \
   affinity/kaapi_affinity_hit.c\
   affinity/kaapi_affinity_steal.c\
+  affinity/kaapi_affinity_push.c\
   thread/kaapi_thread_checkdeps.c \
   thread/kaapi_thread_clear.c \
   thread/kaapi_thread_computeready_access.c \

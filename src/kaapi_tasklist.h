@@ -589,7 +589,7 @@ static inline int kaapi_readytasklist_pushready_td(
       kaapi_assert_debug( td->tasklist != 0 );
       return kaapi_readylist_push( &td->tasklist->rtl, td );
     }
-    kaapi_processor_t* kproc_remote = curr_kproc->affinity( curr_kproc, td );
+    kaapi_processor_t* kproc_remote = kaapi_default_param.push_by_affinity( curr_kproc, td );
     if ( kproc_remote != curr_kproc ) 
     {
       return kaapi_readylist_remote_push( kproc_remote->rtl_remote, td );

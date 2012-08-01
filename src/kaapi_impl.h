@@ -275,7 +275,7 @@ typedef int (*kaapi_emitsteal_init_t)(struct kaapi_processor_t*);
 /* \ingroup AFF
  * Return a processor with more affinity to a task.
  */
-typedef struct kaapi_processor_t* (*kaapi_affinity_fnc_t)(struct kaapi_processor_t*,struct kaapi_taskdescr_t*);
+typedef struct kaapi_processor_t* (*kaapi_push_by_affinity_fnc_t)(struct kaapi_processor_t*,struct kaapi_taskdescr_t*);
 
 /* \ingroup AFF
  * Return the td of the list pointed by head (iterates through prev) that statisfies the criteria 
@@ -348,7 +348,7 @@ typedef struct kaapi_rtparam_t {
   kaapi_selectvictim_fnc_t      wsselect;            /* default method to select a victim */
   kaapi_emitsteal_fnc_t	        emitsteal;
   kaapi_emitsteal_init_t        emitsteal_initctxt;  /* call to initialize the emitsteal ctxt */
-  kaapi_affinity_fnc_t	        affinity;	         	 /* call to pick a processor */
+  kaapi_push_by_affinity_fnc_t	        push_by_affinity;	  /* call to pick a processor */
   kaapi_steal_by_affinity_fnc_t steal_by_affinity;   /* call to pick a TD in a list during steal operation */
   unsigned int		              use_affinity;        /* use cpu affinity */
   kaapi_ct2prio_fnc_t		        ctpriority;          /* use critical path priorities, if 0 no */
