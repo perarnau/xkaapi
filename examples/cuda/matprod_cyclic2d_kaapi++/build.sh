@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SCRATCH=$SCRATCH
-XKAAPIDIR=$SCRATCH/install/xkaapi/default
+XKAAPIDIR=$HOME/install/xkaapi/default
 
 function do_test() {
     eval var=\$$1

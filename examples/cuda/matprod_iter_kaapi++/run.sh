@@ -17,9 +17,9 @@ function run_test {
 #    export KAAPI_CPUSET="4,5,10,11"
 #    export KAAPI_GPUSET="0~0,2~2,4~6,6~8"
 #    export KAAPI_GPUSET="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
-#   export KAAPI_GPUSET="0~0,1~1,2~2,3~3"
+   export KAAPI_GPUSET="0~0,1~1,2~2,3~3"
 #   export KAAPI_GPUSET="4~6,5~7,6~8,7~9"
-   export KAAPI_GPUSET="4~6"
+#   export KAAPI_GPUSET="4~6"
 
 #    export COMPUTE_PROFILE=1
 #    export COMPUTE_PROFILE_CSV=1
@@ -42,14 +42,15 @@ function run_test {
 
 #    export KAAPI_CUDA_PEER=1
 
-#  export KAAPI_STEAL_AFFINITY="locality"
-
+#   export KAAPI_STEAL_AFFINITY="locality"
+   export KAAPI_STEAL_AFFINITY="writer"
+ 
 #    msizes="20480"
 #     msizes="16384"
 #    msizes="$(seq 512 512 2048)"
 #    msizes="8192"
-#    msizes="4096"
-    msizes="1024"
+    msizes="4096"
+#    msizes="1024"
 #    bsizes="2048"
 #    bsizes="1024"
     bsizes="512"
