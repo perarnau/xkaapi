@@ -3258,7 +3258,7 @@ namespace ka {
       int r1, r2;
       r1 = d1.map_ressource(index1);
       r2 = d2.map_ressource(index2);
-      return r1 * d1.size() + r2;
+      return r1 * d2.size() + r2;
     }
     
     /* inverse mapping */
