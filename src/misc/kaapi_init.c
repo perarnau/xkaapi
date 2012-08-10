@@ -79,8 +79,8 @@ kaapi_rtparam_t kaapi_default_param = {
    .kproc_list  = 0,
    .kid2cpu     = 0,
    .cpu2kid     = 0,
-   .affinity	  = 0,
    .steal_by_affinity	= 0,
+   .push_by_affinity	= 0,
    .ctpriority = 0,
    .eventmask   = KAAPI_EVT_MASK_COMPUTE|KAAPI_EVT_MASK_IDLE
 };
@@ -228,18 +228,18 @@ static int kaapi_setup_param()
   }
 #endif  
 
-  affinity = getenv("KAAPI_AFFINITY");
-  kaapi_default_param.affinity = &kaapi_affinity_default;
+  affinity = getenv("KAAPI_PUSH_AFFINITY");
+  kaapi_default_param.push_by_affinity = &kaapi_push_by_affinity_default;
   if( affinity != 0 ) 
   {
     if (strcmp(affinity, "rand") ==0)
-      kaapi_default_param.affinity = &kaapi_affinity_rand;
+      kaapi_default_param.push_by_affinity = &kaapi_push_by_affinity_rand;
     else if (strcmp(affinity, "locality") ==0)
-      kaapi_default_param.affinity = &kaapi_affinity_locality;
+      kaapi_default_param.push_by_affinity = &kaapi_push_by_affinity_locality;
     else if (strcmp(affinity, "writer") ==0)
-      kaapi_default_param.affinity = &kaapi_affinity_writer;
+      kaapi_default_param.push_by_affinity = &kaapi_push_by_affinity_writer;
     else {
-      fprintf(stderr, "***Kaapi: bad value for 'KAAPI_AFFINITY': '%s'\n",
+      fprintf(stderr, "***Kaapi: bad value for 'KAAPI_PUSH_AFFINITY': '%s'\n",
         getenv("KAAPI_AFFINITY")
       );
       return EINVAL;

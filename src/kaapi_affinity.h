@@ -52,7 +52,7 @@ struct kaapi_taskdescr_t;
 /*
  * Default affinity function, returns local kproc.
  */
-extern kaapi_processor_t *kaapi_affinity_default(
+extern kaapi_processor_t *kaapi_push_by_affinity_default(
     kaapi_processor_t * kproc,
     struct kaapi_taskdescr_t * td
 );
@@ -60,7 +60,7 @@ extern kaapi_processor_t *kaapi_affinity_default(
 /*
  * Return random kprocessor.
  */
-extern kaapi_processor_t *kaapi_affinity_rand(
+extern kaapi_processor_t *kaapi_push_by_affinity_rand(
     kaapi_processor_t * kproc,
     struct kaapi_taskdescr_t * td
 );
@@ -68,12 +68,12 @@ extern kaapi_processor_t *kaapi_affinity_rand(
 /*
  * Consider valid data to pick a processor.
  */
-extern kaapi_processor_t *kaapi_affinity_locality(
+extern kaapi_processor_t *kaapi_push_by_affinity_locality(
     kaapi_processor_t * kproc,
     struct kaapi_taskdescr_t * td
 );
 
-extern kaapi_processor_t *kaapi_affinity_writer(kaapi_processor_t * kproc,
+extern kaapi_processor_t *kaapi_push_by_affinity_writer(kaapi_processor_t * kproc,
 					      struct kaapi_taskdescr_t * td);
 
 extern int kaapi_affinity_exec_readylist( kaapi_processor_t* kproc );

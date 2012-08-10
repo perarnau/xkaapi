@@ -114,7 +114,6 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   kproc->emitsteal       = kaapi_default_param.emitsteal;
   kaapi_assert( 0 == kaapi_default_param.emitsteal_initctxt(kproc) );
   
-  kproc->affinity	= kaapi_default_param.affinity;
 #if defined(KAAPI_DEBUG)
   kproc->req_version = 0;
   kproc->reply_version = 0;
