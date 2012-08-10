@@ -31,9 +31,9 @@ function run_test {
 
 #    export KAAPI_DISPLAY_PERF=1
 #
-#    export KAAPI_PUSH_AFFINITY="writer"
+    export KAAPI_PUSH_AFFINITY="writer"
 #    export KAAPI_STEAL_AFFINITY="writer"
-    export KAAPI_PUSH_AFFINITY="locality"
+#    export KAAPI_PUSH_AFFINITY="locality"
 #    export KAAPI_STEAL_AFFINITY="locality"
 
 
