@@ -95,6 +95,11 @@ static inline int kaapi_readytasklist_isempty( kaapi_readytasklist_t* rtl )
   return (KAAPI_ATOMIC_READ( &rtl->cnt_tasks ) == 0 );
 }
 
+static inline int kaapi_readytasklist_workload( kaapi_readytasklist_t* rtl )
+{
+  return KAAPI_ATOMIC_READ( &rtl->cnt_tasks );
+}
+
 /*
  */
 extern int kaapi_readytasklist_init( kaapi_readytasklist_t* rtl );
