@@ -862,6 +862,9 @@ extern void kaapi_init_adapfmt(void);
 extern void kaapi_init_adaptmergefmt(void);
 extern void kaapi_init_begendadapfmt(void);
 
+/* */
+extern void kaapi_register_staticschedtask_format(void);
+
 #if defined(__cplusplus)
 }
 #endif
