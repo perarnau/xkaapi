@@ -336,8 +336,10 @@ struct CUBLAS<float> {
   { return cublasSsyrk_v2(handle, uplo, trans, n, k, alpha, A, lda, beta, C, ldc); }
 };
 
-
 #if CONFIG_USE_MAGMA
+
+/* export functions */
+
 typedef int magma_int_t;
 
 #if defined(__cplusplus)
@@ -443,21 +445,38 @@ magma_int_t magma_dormqr_gpu( char side, char trans,
 }
 #endif
 
-#if CONFIG_USE_FLOAT
+/* create structures */
 
-# define magma_potrf magma_spotrf_gpu
-# define magma_getrf magma_sgetrf_gpu
-# define magma_getrf_nopiv magma_sgetrf_nopiv_gpu
-#define magmablas_gemm magmablas_sgemm
+/* for MAGMA */
+template<class T>
+struct MAGMA {
+  typedef T value_type;
+  static int potrf(char uplo, int n, value_type *A, int lda);
+};
+             
+template<>
+struct MAGMA<double> {
+  typedef double value_type;
+  static int potrf(char uplo, int n, value_type *A, int lda)
+  {
+    int info;
+    magma_dpotrf_gpu( uplo, n, A, lda, &info );
+    return info;
+  }
 
-#else
+};
 
-# define magma_potrf magma_dpotrf_gpu
-# define magma_getrf magma_dgetrf_gpu
-# define magma_getrf_nopiv magma_dgetrf_nopiv_gpu
-#define magmablas_gemm magmablas_dgemm
+template<>
+struct MAGMA<float> {
+  typedef float value_type;
+  static int potrf(char uplo, int n, value_type *A, int lda)
+  {
+    int info;
+    magma_spotrf_gpu( uplo, n, A, lda, &info );
+    return info;
+  }
 
-#endif
+};
 
 #endif // CONFIG_USE_MAGMA
 
@@ -777,6 +796,7 @@ struct TaskBodyGPU<TaskDGETRF> {
 };
 #endif
 
+#if 0
 template<typename T> 
 struct TaskBodyGPU<TaskGETRFNoPiv<T> >
 {
@@ -814,7 +834,7 @@ struct TaskBodyGPU<TaskGETRFNoPiv<T> >
 	    lda*sizeof(T), n, lda, 
 	    cudaMemcpyDeviceToHost );
     CLAPACK<T>::getrf( order, m, n, work, lda, piv );
-    LAPACKE<T>::laswp( order, m, work, lda, ione, n, piv, ione);
+    LAPACKE<T>::laswp( order, m, work, lda, ione, n, piv, ione );
     cudaMemcpy2D( a, lda*sizeof(T), work,
 	    lda*sizeof(T), n, lda,
 	    cudaMemcpyHostToDevice );
@@ -823,7 +843,7 @@ struct TaskBodyGPU<TaskGETRFNoPiv<T> >
 #endif
   }
 };
-
+#endif
 
 #if 1 /* DO NOT USE GPU FOR POTRF */
 template<typename T> 

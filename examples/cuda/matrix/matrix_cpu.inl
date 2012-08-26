@@ -83,6 +83,12 @@ struct CBLAS {
   static void axpy(const int N, const value_type alpha, const value_type *X,
                    const int incX, value_type *Y, const int incY);
 
+  static void scal(const int N, const value_type alpha, value_type *X, const int incX);
+
+  static void ger(const enum CBLAS_ORDER order, const int M, const int N,
+		  const value_type alpha, const value_type *X, const int incX,
+		  const value_type *Y, const int incY, value_type *A, const int lda);
+
 };
 
 template<class T>
@@ -115,6 +121,9 @@ struct LAPACKE {
   static lapack_int lacpy_work( int matrix_order, char uplo, lapack_int m,
                                 lapack_int n, const value_type* a, lapack_int lda,
                                 value_type* b, lapack_int ldb );
+
+  static lapack_int getf2_nopiv( int matrix_order, lapack_int m, lapack_int n,
+			     value_type * a, lapack_int lda );
 };
 
 
@@ -153,6 +162,13 @@ struct CBLAS<double> {
                    const int incX, value_type *Y, const int incY)
   { cblas_daxpy(N, alpha, X, incX, Y, incY); }
 
+  static void scal(const int N, const value_type alpha, value_type *X, const int incX)
+  { cblas_dscal(N, alpha, X, incX); }
+
+  static void ger(const enum CBLAS_ORDER order, const int M, const int N,
+		  const value_type alpha, const value_type *X, const int incX,
+		  const value_type *Y, const int incY, value_type *A, const int lda)
+  { cblas_dger(order, M, N, alpha, X, incX, Y, incY, A, lda); }
 };
 
 template<>
@@ -197,6 +213,67 @@ struct LAPACKE<double> {
                                 lapack_int n, const value_type* a, lapack_int lda,
                                 value_type* b, lapack_int ldb )
   { return LAPACKE_dlacpy_work( matrix_order, uplo, m, n, a, lda, b, ldb ); }
+
+  static lapack_int getf2_nopiv( int matrix_order, lapack_int m, lapack_int n,
+			     value_type * a, lapack_int lda )
+  {
+    double c_one = 1.f, c_zero = 0.f;
+    static int c__1 = 1;
+
+    int a_dim1, a_offset, i__1, i__2, i__3;
+    double z__1;
+    static int i__, j;
+    static double sfmin;
+
+    a_dim1 = lda;
+    a_offset = 1 + a_dim1;
+    a -= a_offset;
+
+    /* Compute machine safe minimum */
+    sfmin = LAPACKE<value_type>::lamch_work('S');
+
+    i__1 = std::min(m,n);
+    for (j = 1; j <= i__1; ++j) 
+      {
+	/* Test for singularity. */
+	i__2 = j + j * a_dim1;
+	if (!(a[i__2] == c_zero)) {
+
+	  /* Compute elements J+1:M of J-th column. */
+	  if (j < m) {
+	    if (abs(a[j + j * a_dim1]) >= sfmin) 
+	      {
+		i__2 = m - j;
+		z__1 = c_one / a[j + j * a_dim1];
+		CBLAS<value_type>::scal(i__2, z__1, &a[j + 1 + j * a_dim1], c__1);
+	      } 
+	    else 
+	      {
+		i__2 = m - j;
+		for (i__ = 1; i__ <= i__2; ++i__) {
+		  i__3 = j + i__ + j * a_dim1;
+		  a[i__3] = a[j + i__ + j * a_dim1] / a[j + j*a_dim1];
+		}
+	      }
+	  }
+	  
+	} 
+	
+	if (j < std::min(m,n)) {  
+	  /* Update trailing submatrix. */
+	  i__2 = m - j;
+	  i__3 = n - j;
+	  z__1 = -1.f; 
+	  CBLAS<value_type>::ger( 
+	      ((matrix_order == LAPACK_COL_MAJOR) ? CblasColMajor : CblasRowMajor),
+	      i__2, i__3, z__1, &a[j + 1 + j * a_dim1], c__1,
+		 &a[j + (j+1) * a_dim1], lda, &a[j + 1 + (j+1) * a_dim1], lda);
+	}
+      }
+
+    return 0;
+  }
+
 };
 
 
@@ -234,6 +311,14 @@ struct CBLAS<float> {
   static void axpy(const int N, const value_type alpha, const value_type *X,
                    const int incX, value_type *Y, const int incY)
   { cblas_saxpy(N, alpha, X, incX, Y, incY); }
+
+  static void scal(const int N, const value_type alpha, value_type *X, const int incX)
+  { cblas_sscal(N, alpha, X, incX); }
+
+  static void ger(const enum CBLAS_ORDER order, const int M, const int N,
+		  const value_type alpha, const value_type *X, const int incX,
+		  const value_type *Y, const int incY, value_type *A, const int lda)
+  { cblas_sger(order, M, N, alpha, X, incX, Y, incY, A, lda); }
 };
 
 
@@ -448,8 +533,6 @@ struct TaskBodyCPU<TaskGEMM<T> > {
     const int ldb = Akj->lda();
     const int ldc = Aij->lda();
 
-      fprintf(stdout,"TaskCPU GEMM m=%d lda=%d\n", m, lda );
-      fflush(stdout);
     KAAPI_TIMING_BEGIN();
 #if 0
     if( m > GEMM_THRESHOLD )
@@ -625,6 +708,33 @@ struct TaskBodyCPU<TaskGETRF<T> > {
 /* Compute inplace LU factorization of A.
 */
 template<typename T>
+struct TaskBodyCPU<TaskGETF2NoPiv<T> > {
+  void operator()( 
+    CBLAS_ORDER order, 
+    ka::range2d_rw<T> A
+  )
+  {
+    const int m        = A->dim(0); 
+    const int n        = A->dim(0); 
+    const int lda      = A->lda();
+    T* const a    = A->ptr();
+
+#if 0
+    int res =
+#endif 
+    LAPACKE<T>::getf2_nopiv(
+	((order == CblasColMajor) ? LAPACK_COL_MAJOR : LAPACK_ROW_MAJOR),
+	m, n, a, lda );
+#if 0
+    fprintf(stdout, "TaskGETF2NoPiv n=%d res=%d\n", m, res );
+    fflush(stdout);
+#endif
+  }
+};
+
+/* Compute inplace LU factorization of A.
+*/
+template<typename T>
 struct TaskBodyCPU<TaskGETRFNoPiv<T> > {
   void operator()( 
     CBLAS_ORDER order, 
@@ -638,8 +748,12 @@ struct TaskBodyCPU<TaskGETRFNoPiv<T> > {
     const int ione   = 1;
     int* piv = (int*) calloc(m, sizeof(int));
 
-    CLAPACK<T>::getrf( order, m, n, a, lda, piv );
-    LAPACKE<T>::laswp( order, m, a, lda, ione, n, piv, ione);
+    int res = CLAPACK<T>::getrf( order, m, n, a, lda, piv );
+#if 1
+    fprintf(stdout, "TaskGETRFNoPiv n=%d res=%d\n", m, res );
+    fflush(stdout);
+#endif
+    LAPACKE<T>::laswp_work( order, m, a, lda, ione, n, piv, ione);
     free( piv );
   }
 };

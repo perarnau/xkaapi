@@ -223,6 +223,13 @@ struct TaskGETRFNoPiv: public ka::Task<2>::Signature
 >{};
 
 template<typename T>
+struct TaskGETF2NoPiv: public ka::Task<2>::Signature
+<
+  CBLAS_ORDER,            /* row / col */
+  ka::RW<ka::range2d<T> > /* A */
+>{};
+
+template<typename T>
 struct TaskPOTRF: public ka::Task<3>::Signature
 <
   CBLAS_ORDER,			      /* row / col */

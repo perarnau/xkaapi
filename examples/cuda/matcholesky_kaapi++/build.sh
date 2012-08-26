@@ -4,7 +4,6 @@
 #XKAAPIDIR=/tmp/xkaapi
 XKAAPIDIR=$HOME/install/xkaapi/default
 
-#CXX=g++-mp-4.6 
 CXX=g++
 
 function do_test() {
