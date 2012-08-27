@@ -8,80 +8,7 @@ extern "C" {
 #include "cblas.h"
 #include "clapack.h"
 #include "lapacke.h"
-
-#if defined(CONFIG_USE_PLASMA)
-#include "plasma.h"
-#include "core_blas.h"
-#endif
 }
-
-#define	    IB	    40
-
-#if 0
-static inline int
-convertToOrderLapack( const enum CBLAS_ORDER order ) 
-{
-    switch(order) {
-        case CblasRowMajor:
-            return LAPACK_ROW_MAJOR;
-        case CblasColMajor:
-            return LAPACK_COL_MAJOR;
-        default:
-            return LAPACK_COL_MAJOR;
-    }
-}
-
-static inline char
-convertToOpLapack( const enum CBLAS_TRANSPOSE trans ) 
-{
-    switch(trans) {
-        case CblasNoTrans:
-            return 'n';
-        case CblasTrans:
-            return 't';
-        case CblasConjTrans:
-            return 'c';                        
-        default:
-            return 'n';
-    }
-}
-
-static inline char
-convertToFillModeLapack( const enum CBLAS_UPLO uplo ) 
-{
-    switch (uplo) {
-        case CblasUpper:
-            return 'u';
-	case CblasLower:
-        default:
-         return 'l';
-    }        
-}
-
-static inline char
-convertToDiagTypeLapack( const enum CBLAS_DIAG diag ) 
-{
-    switch (diag) {
-	case CblasUnit:
-            return 'u';
-	case CblasNonUnit:
-        default:
-         return 'n';
-    }        
-}
-
-static inline char
-convertToSideModeLapack( const enum CBLAS_SIDE side ) 
-{
-    switch (side) {
-	case CblasRight:
-            return 'r';
-	case CblasLeft:
-        default:
-         return 'l';
-    }        
-}
-#endif
 
 #if defined(KAAPI_TIMING)
 
@@ -137,21 +64,6 @@ struct TaskPrintMatrixInt : public ka::Task<2>::Signature
   std::string,
   ka::R<ka::range2d<int> >
 >{};
-
-template<typename T>
-struct TaskTRSM_left: public ka::Task<2>::Signature
-<
-  ka::R<ka::range2d<T> >, /* Akk */
-  ka::RW<ka::range2d<T> > /* Akj */
->{};
-
-template<typename T>
-struct TaskTRSM_right: public ka::Task<2>::Signature
-<
-  ka::R<ka::range2d<T> >, /* Akk */
-  ka::RW<ka::range2d<T> > /* Aik */
->{};
-
 
 template<typename T>
 struct TaskGEMM: public ka::Task<8>::Signature
@@ -237,14 +149,6 @@ struct TaskPOTRF: public ka::Task<3>::Signature
   ka::RW<ka::range2d<T> > /* A */
 >{};
 
-
-struct TaskDPOTRF_cpu: public ka::Task<3>::Signature
-<
-  CBLAS_ORDER,			/* row / col */
-  CBLAS_UPLO,                  /* upper / lower */
-  ka::RW<ka::range2d<double> > /* A */
->{};
-
 /* LAPACK auxiliary routine 
 DLACPY copies all or part of a two-dimensional matrix A to another
 matrix B.
@@ -267,82 +171,85 @@ struct TaskLARNV: public ka::Task<1>::Signature
 /*
  * LAPACK QR factorization of a real M-by-N matrix A.
  */
-struct TaskPlasmaDGEQRT: public ka::Task<5>::Signature
+template<typename T>
+struct TaskGEQRT: public ka::Task<5>::Signature
 <
     CBLAS_ORDER,			/* row / col */
-    ka::RW<ka::range2d<double> >,	/* A */
-    ka::W<ka::range2d<double> >,	/* T */
-    ka::W<ka::range1d<double> >,	/* TAU */
-    ka::W<ka::range1d<double> >	/* WORK */
+    ka::RW<ka::range2d<T> >,	/* A */
+    ka::W<ka::range2d<T> >,	/* T */
+    ka::W<ka::range1d<T> >,	/* TAU */
+    ka::W<ka::range1d<T> >	/* WORK */
 >{};
 
 /*  */
-struct TaskPlasmaDORMQR: public ka::Task<7>::Signature
+template<typename T>
+struct TaskORMQR: public ka::Task<7>::Signature
 <
     CBLAS_ORDER,			/* row / col */
     CBLAS_SIDE,			/* CBLAS left / right */
     CBLAS_TRANSPOSE,             /* transpose flag */
-    ka::R<ka::range2d<double> >,	/* A */
-    ka::W<ka::range2d<double> >,	/* T */
-    ka::RW<ka::range2d<double> >,	/* C */
-    ka::RW<ka::range1d<double> >	/* WORK */
+    ka::R<ka::range2d<T> >,	/* A */
+    ka::W<ka::range2d<T> >,	/* T */
+    ka::RW<ka::range2d<T> >,	/* C */
+    ka::RW<ka::range1d<T> >	/* WORK */
 >{};
 
-struct TaskPlasmaDTSQRT: public ka::Task<6>::Signature
+template<typename T>
+struct TaskTSQRT: public ka::Task<6>::Signature
 <
     CBLAS_ORDER,		/* row / col */
-    ka::RW<ka::range2d<double> >,	/* A1 */
-    ka::RW<ka::range2d<double> >,	/* A2 */
-    ka::W<ka::range2d<double> >,	/* T */
-    ka::W<ka::range1d<double> >,	/* TAU */
-    ka::W<ka::range1d<double> >	/* WORK */
+    ka::RW<ka::range2d<T> >,	/* A1 */
+    ka::RW<ka::range2d<T> >,	/* A2 */
+    ka::W<ka::range2d<T> >,	/* T */
+    ka::W<ka::range1d<T> >,	/* TAU */
+    ka::W<ka::range1d<T> >	/* WORK */
 >{};
 
-struct TaskPlasmaDTSMQR: public ka::Task<8>::Signature
+template<typename T>
+struct TaskTSMQR: public ka::Task<8>::Signature
 <
     CBLAS_ORDER,			/* row / col */
     CBLAS_SIDE,			/* CBLAS left / right */
     CBLAS_TRANSPOSE,             /* transpose flag */
-    ka::RW<ka::range2d<double> >,	/* A1 */
-    ka::RW<ka::range2d<double> >,	/* A2 */
-    ka::R<ka::range2d<double> >,	/* V */
-    ka::W<ka::range2d<double> >,	/* T */
-    ka::W<ka::range1d<double> >	/* WORK */
+    ka::RW<ka::range2d<T> >,	/* A1 */
+    ka::RW<ka::range2d<T> >,	/* A2 */
+    ka::R<ka::range2d<T> >,	/* V */
+    ka::W<ka::range2d<T> >,	/* T */
+    ka::W<ka::range1d<T> >	/* WORK */
 >{};
 
 
-#if 1 /* LU new tasks */
-
-struct TaskPlasmaDGESSM: public ka::Task<4>::Signature
+template<typename T>
+struct TaskGESSM: public ka::Task<4>::Signature
 <
   CBLAS_ORDER,			/* row / col */
   ka::R<ka::range1d <int> >,  /* pivot */
-  ka::R<ka::range2d<double> >, /* L NB-by-NB lower trianguler tile */
-  ka::RW<ka::range2d<double> > /* A, Updated by the application of L. */
+  ka::R<ka::range2d<T> >, /* L NB-by-NB lower trianguler tile */
+  ka::RW<ka::range2d<T> > /* A, Updated by the application of L. */
 >{};
 
-struct TaskPlasmaDTSTRF: public ka::Task<7>::Signature
+template<typename T>
+struct TaskTSTRF: public ka::Task<7>::Signature
 <
   CBLAS_ORDER,			/* row / col */
   int,				/* block size (algo) */
-  ka::RW<ka::range2d<double> >,	    /* U */
-  ka::RW<ka::range2d<double> >,	    /* A */
-  ka::RW<ka::range2d<double> >,	    /* L */
+  ka::RW<ka::range2d<T> >,	    /* U */
+  ka::RW<ka::range2d<T> >,	    /* A */
+  ka::RW<ka::range2d<T> >,	    /* L */
   ka::W<ka::range1d <int> >,		    /* pivot */
-  ka::RW<ka::range2d<double> >	    /* WORK */
+  ka::RW<ka::range2d<T> >	    /* WORK */
 >{};
 
-struct TaskPlasmaDSSSSM: public ka::Task<6>::Signature
+template<typename T>
+struct TaskSSSSM: public ka::Task<6>::Signature
 <
   CBLAS_ORDER,			/* row / col */
-  ka::RW<ka::range2d<double> >,	    /* A1 */
-  ka::RW<ka::range2d<double> >,	    /* A2 */
-  ka::R<ka::range2d<double> >,	    /* L1 */
-  ka::R<ka::range2d<double> >,	    /* L2 */
+  ka::RW<ka::range2d<T> >,	    /* A1 */
+  ka::RW<ka::range2d<T> >,	    /* A2 */
+  ka::R<ka::range2d<T> >,	    /* L1 */
+  ka::R<ka::range2d<T> >,	    /* L2 */
   ka::R<ka::range1d <int> >		    /* pivot */
 >{};
-
-#endif
 
 // task definitions
 # include "matrix_cpu.inl"

@@ -9,7 +9,6 @@
 **
 ** thierry.gautier@inrialpes.fr
 ** Joao.Lima@imag.fr / joao.lima@inf.ufrgs.br
-** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -52,7 +51,6 @@
 #include <sys/types.h>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
-
 #if defined(CONFIG_USE_DOUBLE)
 typedef double double_type;
 #elif defined(CONFIG_USE_FLOAT)
@@ -62,113 +60,76 @@ typedef float double_type;
 #include "../matrix/matrix.h"
 
 template<typename T>
-static void generate_matrix( T* A, size_t N )
-{
-  srand48(0);
-  for (size_t i = 0; i< (N*N); i++) {
-    A[i] = drand48()*1000.0;
-  }
-}
-
-/* Block LU factorization without pivoting 
-*/
-template<typename T>
-struct TaskLUNoPiv: public ka::Task<1>::Signature<
-      ka::RPWP<ka::range2d<T> >  /* A */ 
+struct TaskQR: public ka::Task<4>::Signature<
+      ka::RPWP<ka::range2d<T> >,  /* A */ 
+      ka::RPWP<ka::range2d<T> >,  /* T */ 
+      ka::RPWP<ka::range1d<T> >,  /* T */ 
+      ka::RPWP<ka::range1d<T> >  /* WORK */ 
 >{};
 
 static size_t global_blocsize = 2;
 
 template<typename T>
-struct TaskBodyCPU<TaskLUNoPiv<T> > {
+struct TaskBodyCPU<TaskQR<T> > {
   void operator()( 
-      const ka::StaticSchedInfo* info, 
-      ka::range2d_rpwp<T> A )
-  {
-    size_t N = A->dim(0);
+	ka::range2d_rpwp<T> A,
+	ka::range2d_rpwp<T> _T,
+	ka::range1d_rpwp<T> TAU,
+	ka::range1d_rpwp<T> WORK
+    )
+{
+    size_t M = A->dim(0);
+    size_t N = A->dim(1);
+    size_t K = std::min(M, N);
     size_t blocsize = global_blocsize;
 
-    for (size_t k=0; k<N; k += blocsize)
-    {
-      ka::rangeindex rk(k, k+blocsize);
-      // A(rk,rk) = L(rk,rk) * U(rk,rk) <- LU( A(rk,rk) 
-      ka::Spawn<TaskGETF2NoPiv<T> >( ka::SetArch(ka::ArchHost) )( CblasColMajor, A(rk,rk) );
-      //ka::Spawn<TaskDGETRFNoPiv<T> >()( A(rk,rk) );
+    for (size_t k=0; k < K; k += blocsize) {
+	ka::rangeindex rk(k, k+blocsize);
+	ka::Spawn<TaskGEQRT<T> >()( CblasColMajor,
+		A(rk,rk),
+		_T(rk,rk),
+		TAU, WORK
+	    );
 
-      for (size_t j=k+blocsize; j<N; j += blocsize)
-      {
-        ka::rangeindex rj(j, j+blocsize);
-        // A(rk,rj) <- L(rk,rk)^-1 * A(rk,rj) 
-        ka::Spawn<TaskTRSM<T> >( ka::SetArch(ka::ArchCUDA) )( CblasColMajor, CblasLeft, CblasLower, CblasNoTrans, CblasUnit, 1.0, A(rk,rk), A(rj,rk) );
-        //ka::Spawn<TaskTRSM<T> >()( CblasColMajor, CblasLeft, CblasLower, CblasNoTrans, CblasUnit, 1.0, A(rk,rk), A(rk,rj) );
-      }
-      for (size_t i=k+blocsize; i<N; i += blocsize)
-      {
-        ka::rangeindex ri(i, i+blocsize);
-        // A(ri,rk) <- A(ri,rk) * U(rk,rk)^-1
-        //ka::Spawn<TaskTRSM<T> >()( CblasColMajor, CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit, 1.0, A(rk,rk), A(ri,rk));
-        ka::Spawn<TaskTRSM<T> >( ka::SetArch(ka::ArchCUDA) )( CblasColMajor, CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit, 1.0, A(rk,rk), A(rk,ri));
-      }
+	for (size_t j=k+blocsize; j < N; j += blocsize) {
+	    ka::rangeindex rj(j, j+blocsize);
+	    ka::Spawn<TaskORMQR<T> >()(
+		CblasColMajor, CblasLeft, CblasTrans,
+		A(rk, rk),
+		_T(rk,rk),
+		A(rk, rj),
+		WORK
+	    );
+	}
 
-      for (size_t i=k+blocsize; i<N; i += blocsize)
-      {
-        ka::rangeindex ri(i, i+blocsize);
-        for (size_t j=k+blocsize; j<N; j += blocsize)
-        {
-          ka::rangeindex rj(j, j+blocsize);
-          // A(ri,rj) <- A(ri,rj) - A(ri,rk)*A(rk,rj)
-          ka::Spawn<TaskGEMM<T> >( ka::SetArch(ka::ArchCUDA) )( CblasColMajor, CblasNoTrans, CblasNoTrans, -1.0, A(rk,ri), A(rj,rk), 1.0, A(rj,ri));
-          //ka::Spawn<TaskGEMM<T> >()( CblasColMajor, CblasNoTrans, CblasNoTrans, -1.0, A(ri,rk), A(rk,rj), 1.0, A(ri,rj));
-        }
-      }
+	for (size_t i=k+blocsize; i < M; i += blocsize) {
+	    ka::rangeindex ri(i, i+blocsize);
+	    ka::Spawn<TaskTSQRT<T> >()(
+		CblasColMajor,
+		A(rk,rk),
+		A(ri,rk),
+		_T(ri, rk),
+		TAU,
+		WORK
+	    );
+
+	    for (size_t j=k+blocsize; j<N; j += blocsize) {
+		ka::rangeindex rj(j, j+blocsize);
+		ka::Spawn<TaskTSMQR<T> >()(
+			CblasColMajor, CblasLeft, CblasTrans,
+			A(rk, rj),
+			A(ri, rj),
+			A(ri, rk),
+			_T(ri, rk),
+			WORK
+		    );
+	    }
+	}
     }
-  }
+}
 };
 
-template<typename T>
-int check(int n, T* A, T* LU, int LDA)
-{
-  T norm, residual;
-  T alpha, beta;
-  int i,j;
-  
-  T *L       = (T *)malloc(n*n*sizeof(T));
-  T *U       = (T *)malloc(n*n*sizeof(T));
-  T *work     = (T *)malloc(n*sizeof(T));
-  
-  memset((void*)L, 0, n*n*sizeof(T));
-  memset((void*)U, 0, n*n*sizeof(T));
-  
-  alpha= 1.0;
-  beta= 0.0;
-  
-  LAPACKE<T>::lacpy_work(LAPACK_COL_MAJOR,'l', n, n, LU, LDA, L, n);
-  LAPACKE<T>::lacpy_work(LAPACK_COL_MAJOR,'u', n, n, LU, LDA, U, n);
-  
-  for (j = 0; j < n; j++)
-    L[j*n+j] = 1.0;
 
-  norm = LAPACKE<T>::lange_work(LAPACK_COL_MAJOR, 'f', n, n, A, n, work);
-
-  CBLAS<T>::gemm
-  (
-      CblasColMajor, CblasNoTrans, CblasNoTrans,
-      n, n, n, alpha, L, n, U, n, beta, LU, n
-  );
-
-  /* Compute the Residual || A -L'L|| */
-  for (j = 0; j < n; j++)
-    for (i = 0; i < n; i++)
-      LU[j*n+i] = LU[j*n+i] - A[j*n+i];
-  
-  residual = LAPACKE<T>::lange_work(LAPACK_COL_MAJOR, 'f', n, n, LU, n, work);
-  fprintf( stdout, "# LU error: %e\n", residual/ (norm*n) );
-  fflush(stdout);
-  
-  free(L); free(U); free(work);
-  
-  return 0;
-}
 
 /* Main of the program
 */
@@ -197,6 +158,7 @@ struct doit {
 
     global_blocsize = block_size;
     n = (n / block_size) * block_size;
+    const int ib = 48;
 
     double t0, t1;
     double_type* dA = (double_type*) calloc(n* n, sizeof(double_type));
@@ -208,9 +170,18 @@ struct doit {
     }
 
     ka::array<2,double_type> A(dA, n, n, n);
-    //TaskBodyCPU<TaskLARNV<double_type> >()( ka::range2d_w<double_type>(A) );
-    generate_matrix<double_type>(dA, n); 
-    ka::Memory::Register( A );
+    //TaskBodyCPU<TaskDLARNV>()( ka::range2d_w<double_type>(A) );
+    TaskBodyCPU<TaskLARNV<double_type> >()( ka::range2d_w<double_type>(A) );
+//    ka::Memory::Register( A );
+
+    double_type* dT = (double_type*) malloc(n * n * sizeof(double_type));
+    ka::array<2,double_type> T( dT, n, n, n);
+
+    double_type* dTAU = (double_type*) malloc(n * sizeof(double_type));
+    ka::array<1,double_type> TAU( dTAU, n);
+
+    double_type* dWORK = (double_type*) malloc( ib * n * block_size * sizeof(double_type));
+    ka::array<1,double_type> WORK( dWORK, ib * n);
 
     if (verif) {
 	/* copy the matrix to compute the norm */
@@ -232,17 +203,22 @@ struct doit {
     }
 #endif
 
-    // LU factorization of A using ka::
     double ggflops = 0;
     double gtime = 0;
     fprintf( stdout, "# size blocksize #threads time Gflops\n" );
     for (int i=0; i<niter; ++i)
     {
       t0 = kaapi_get_elapsedtime();
-      ka::Spawn<TaskLUNoPiv<double_type> >(ka::SetStaticSched())( A );
+      ka::Spawn<TaskQR<double_type> >(ka::SetStaticSched())( A, T, TAU, WORK );
       ka::Sync();
-#if CONFIG_USE_CUDA
-      ka::MemorySync();
+#if 0
+    TaskBodyCPU<TaskPlasmaDGEQRT>()(
+	    CblasColMajor,
+	    ka::range2d_rw<double_type>(A),
+	    ka::range2d_w<double_type>(T),
+	    ka::range1d_w<double_type>(TAU),
+	    ka::range1d_w<double_type>(WORK)
+	    );
 #endif
       t1 = kaapi_get_elapsedtime();
 
@@ -254,7 +230,7 @@ struct doit {
       double gflops = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / (t1-t0);
       gtime += t1-t0;
       ggflops += gflops;
-	fprintf( stdout, "GETRF %6d %5d %5d %9.10f %9.6f\n",
+	fprintf( stdout, "GEQRF %6d %5d %5d %9.10f %9.6f\n",
 	    (int)n,
 	    (int)global_blocsize,
 	    (int)kaapi_getconcurrency(),
@@ -262,14 +238,65 @@ struct doit {
 	fflush(stdout);
     }
 
+#if 0
     if (verif) {
+	/* If n is small, print the results */
+	if (n <= 32) {
+		ka::Spawn<TaskPrintMatrixLU>()( std::string(""), A );
+		ka::Sync();
+	}
 	// /* compute the norm || A - L*U ||inf */
-      check<double_type>( n, dAcopy, dA, n);
-      free(dAcopy);
-    }
+	{
+	double_type norm;
+	double_type* dAcopy2 = (double_type*) calloc(n* n, sizeof(double_type));
+	double_type* dA2 = (double_type*) calloc(n* n, sizeof(double_type));
+	memcpy(dAcopy2, dAcopy, n*n*sizeof(double_type) );
+	memcpy(dA2, dAcopy, n*n*sizeof(double_type) );
+    	ka::array<2,double_type> A2(dA2, n, n, n);
 
+	t0 = kaapi_get_elapsedtime();
+//	ka::Spawn<TaskNormMatrix>()( &norm, ka::array<2,double_type>(dAcopy, n, n, n), A );
+#if 1
+	TaskBodyCPU<TaskNormMatrix>()( CblasColMajor, CblasUpper,
+		&norm,
+		ka::range2d_rw<double_type>(ka::array<2,double_type>(dAcopy, n,
+			n, n)),
+		ka::range2d_rw<double_type>(A) );
+#endif
+	ka::Sync();
+	t1 = kaapi_get_elapsedtime();
+	std::cout << "# Error ||A-LU||inf " << norm 
+		<< ", in " << (t1-t0) << " seconds." 
+		<< std::endl;
+
+	t0 = kaapi_get_elapsedtime();
+	TaskBodyCPU<TaskDGETRFNoPiv>() ( CblasColMajor,
+		ka::range2d_rw<double_type>(A2) );
+#if 1
+	TaskBodyCPU<TaskNormMatrix>()( CblasColMajor, CblasUpper, 
+		&norm,
+		ka::range2d_rw<double_type>(ka::array<2,double_type>(dAcopy2, n,
+			n, n)),
+		ka::range2d_rw<double_type>(A2) );
+#endif
+	ka::Sync();
+	t1 = kaapi_get_elapsedtime();
+	std::cout << "# sequential Error ||A-LU||inf " << norm 
+		<< ", in " << (t1-t0) << " seconds." 
+		<< std::endl;
+	free( dAcopy2 );
+	free( dA2 );
+	}
+
+	free(dAcopy);
+	}
     ka::Memory::Unregister( A );
+#endif
+
     free(dA);
+    free(dT);
+    free(dTAU);
+    free(dWORK);
   }
 };
 

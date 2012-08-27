@@ -464,6 +464,19 @@ struct MAGMA<double> {
     return info;
   }
 
+  static int getrf(int m, int n, value_type* A, int lda, int* piv )
+  {
+    int info;
+    magma_dgetrf_gpu( m, n, A, lda, piv, &info );
+    return info;
+  }
+
+  static int getrf_nopiv(int m, int n, value_type* A, int lda )
+  {
+    int info;
+    magma_dgetrf_nopiv_gpu( m, n, A, lda, &info );
+    return info;
+  }
 };
 
 template<>
@@ -476,88 +489,24 @@ struct MAGMA<float> {
     return info;
   }
 
+  static int getrf(int m, int n, value_type* A, int lda, int* piv )
+  {
+    int info;
+    magma_sgetrf_gpu( m, n, A, lda, piv, &info );
+    return info;
+  }
+
+  static int getrf_nopiv(int m, int n, value_type* A, int lda )
+  {
+    int info;
+    magma_sgetrf_nopiv_gpu( m, n, A, lda, &info );
+    return info;
+  }
 };
 
 #endif // CONFIG_USE_MAGMA
 
 // task definitions
-
-template<typename T> 
-struct TaskBodyGPU<TaskTRSM_left<T> >
-{
-  void operator()
-  (
-    ka::gpuStream     stream,
-    ka::range2d_r<T>  Akk,
-    ka::range2d_rw<T> Akj
-  )
-  {
-#if CONFIG_USE_CUBLAS
-    const T* const a = Akk->ptr();
-    const int lda = Akk->lda();
-
-    T* const b = Akj->ptr();
-    const int ldb   = Akj->lda();
-    const int n     = Akj->dim(0);
-    const int m     = Akj->dim(1);
-
-    static const T static_alpha = 1.;
-
-    const cublasStatus_t status = CUBLAS<T>::trsm
-      (
-       kaapi_cuda_cublas_handle(),
-       convertToSideMode(CblasLeft),
-       convertToFillMode(CblasLower),
-       convertToOp(CblasNoTrans),
-       convertToDiagType(CblasUnit),
-       n, m, &static_alpha, a, lda, b, ldb
-      );
-
-    if (status != CUBLAS_STATUS_SUCCESS)
-      printf("%s::cublasTrsm() == %d\n", __FUNCTION__, status);
-#endif
-  }
-};
-
-
-template<typename T> 
-struct TaskBodyGPU<TaskTRSM_right<T> >
-{
-  void operator()
-  (
-    ka::gpuStream stream,
-    ka::range2d_r<T> Akk,
-    ka::range2d_rw<T> Aik
-  )
-  {
-#if CONFIG_USE_CUBLAS
-    const T* const a = Akk->ptr();
-    const int lda = Akk->lda();
-
-    T* const b = Aik->ptr();
-    const int ldb = Aik->lda();
-    const int n = Aik->dim(0); // b.rows();
-    const int m = Aik->dim(1); // b.cols();
-
-    static const T static_alpha = 1.;
-
-    const cublasStatus_t status = CUBLAS<T>::trsm
-      (
-       kaapi_cuda_cublas_handle(),
-       convertToSideMode(CblasRight),
-       convertToFillMode(CblasUpper),
-       convertToOp(CblasNoTrans),
-       convertToDiagType(CblasNonUnit),
-       n, m,
-       &static_alpha, a, lda,
-       b, ldb
-      );
-
-    if (status != CUBLAS_STATUS_SUCCESS)
-      printf("%s::cublasTrsm() == %d\n", __FUNCTION__, status);
-#endif
-  }
-};
 
 template<typename T> 
 struct TaskBodyGPU<TaskGEMM<T> >
@@ -759,19 +708,19 @@ struct TaskBodyGPU<TaskTRSM<T> >
 };
 
 #if defined(CONFIG_USE_MAGMA)
-template<>
-struct TaskBodyGPU<TaskDGETRF> {
+template<typename T>
+struct TaskBodyGPU<TaskGETRF<T> > {
   void operator()( 
     ka::gpuStream stream,
     CBLAS_ORDER order, 
-    ka::range2d_rw<double> A, 
+    ka::range2d_rw<T> A, 
     ka::range1d_w<int> piv
   )
   {
     const int m        = A->dim(0); 
     const int n        = A->dim(1); 
     const int lda      = A->lda();
-    double* const a    = A->ptr();
+    T* const a    = A->ptr();
     int* const ipiv = piv->ptr();
 
 #if 1
@@ -780,9 +729,8 @@ struct TaskBodyGPU<TaskDGETRF> {
 #endif
 
     int* const hipiv = (int*) calloc( piv->size(), sizeof(int) );
-
-    magma_int_t info = 0;
-    magma_dgetrf_gpu( m, n, a, lda, hipiv, &info );
+    const int info = MAGMA<T>::getrf( m, n, a, lda, hipiv );
+    //magma_dgetrf_gpu( m, n, a, lda, hipiv, &info );
     if (info){
 	fprintf( stdout, "TaskDGETRF::magma_getrf() ERROR %d\n", info );
 	fflush(stdout);
@@ -796,54 +744,29 @@ struct TaskBodyGPU<TaskDGETRF> {
 };
 #endif
 
-#if 0
-template<typename T> 
-struct TaskBodyGPU<TaskGETRFNoPiv<T> >
-{
-  void operator()
-  (
-   ka::gpuStream stream,
-   CBLAS_ORDER		   order, 
-   ka::range2d_rw<T> A
+#if defined(CONFIG_USE_MAGMA)
+template<typename T>
+struct TaskBodyGPU<TaskGETF2NoPiv<T> > {
+  void operator()( 
+    ka::gpuStream stream,
+    CBLAS_ORDER order, 
+    ka::range2d_rw<T> A
   )
   {
     const int m        = A->dim(0); 
     const int n        = A->dim(1); 
-//    const int lda      = A->lda();
-    const int lda      = A->dim(1);
+    const int lda      = A->lda();
     T* const a    = A->ptr();
 
-#if KAAPI_VERBOSE
-    fprintf(stdout, "TaskGPU DGETRF m=%d n=%d lda=%d A=%p\n",
-		m, n, lda, (void*)a ); fflush(stdout);
-#endif
-
-#if CONFIG_USE_MAGMA
-    magma_int_t info = 0;
-    magma_getrf_nopiv( m, n, a, lda, &info );
+    const int info = MAGMA<T>::getrf_nopiv( m, n, a, lda );
     if (info){
 	fprintf( stdout, "TaskDGETRF::magma_getrf_nopiv() ERROR %d\n", info );
 	fflush(stdout);
-	}
-#else
-    const int ione   = 1;
-    int* piv = (int*) calloc(m, sizeof(int));
-    T* work = (T*) calloc( n*lda, sizeof(T));
-
-    cudaMemcpy2D( work, lda*sizeof(T), a,
-	    lda*sizeof(T), n, lda, 
-	    cudaMemcpyDeviceToHost );
-    CLAPACK<T>::getrf( order, m, n, work, lda, piv );
-    LAPACKE<T>::laswp( order, m, work, lda, ione, n, piv, ione );
-    cudaMemcpy2D( a, lda*sizeof(T), work,
-	    lda*sizeof(T), n, lda,
-	    cudaMemcpyHostToDevice );
-    free( piv );
-    free( work );
-#endif
+    }
   }
 };
 #endif
+
 
 #if 1 /* DO NOT USE GPU FOR POTRF */
 template<typename T> 
@@ -865,9 +788,9 @@ struct TaskBodyGPU<TaskPOTRF<T> >
     fprintf(stdout, "TaskGPU DPOTRF m=%d A=%p lda=%d\n", n, (void*)a, lda ); fflush(stdout);
 #endif
 #if CONFIG_USE_MAGMA
-    magma_int_t info = 0;
+    int info = 0;
     const char uplo_ = (uplo == CblasUpper) ? 'U' : 'L';
-    magma_potrf( uplo_, n, a, lda, &info );
+    info = MAGMA<T>::potrf( uplo_, n, a, lda );
     if (info){
 	fprintf( stdout, "TaskDPOTRF::magma_potrf() ERROR %d\n", info );
 	fflush(stdout);
@@ -890,7 +813,8 @@ struct TaskBodyGPU<TaskPOTRF<T> >
 };
 #endif
 
-#if defined(CONFIG_USE_PLASMA)
+//#if defined(CONFIG_USE_PLASMA)
+#if 0
 template<>
 struct TaskBodyGPU<TaskPlasmaDSSSSM> {
   void operator()( 
@@ -1015,7 +939,8 @@ struct TaskBodyGPU<TaskPlasmaDSSSSM> {
 };
 #endif
 
-#if defined(CONFIG_USE_MAGMA)
+//#if defined(CONFIG_USE_MAGMA)
+#if 0
 template<>
 struct TaskBodyGPU<TaskPlasmaDGESSM> {
   void operator()( 
@@ -1125,7 +1050,8 @@ struct TaskBodyGPU<TaskPlasmaDGESSM> {
 };
 #endif
 
-#if defined(CONFIG_USE_MAGMA)
+//#if defined(CONFIG_USE_MAGMA)
+#if 0
 template<>
 struct TaskBodyGPU<TaskPlasmaDTSTRF> {
   void operator()( 
