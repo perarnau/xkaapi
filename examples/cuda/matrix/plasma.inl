@@ -7,33 +7,6 @@ extern "C" {
 
 #define	    IB	    40
 
-static inline int
-convertToSidePlasma( int side ) 
-{
-    switch (side) {
-	case CblasRight:
-            return PlasmaRight;
-	case CblasLeft:
-        default:
-         return PlasmaLeft;
-    }        
-}
-
-static inline int
-convertToTransPlasma( int trans ) 
-{
-    switch(trans) {
-        case CblasNoTrans:
-            return PlasmaNoTrans;
-        case CblasTrans:
-            return PlasmaTrans;
-        case CblasConjTrans:
-            return PlasmaConjTrans;                        
-        default:
-            return PlasmaNoTrans;
-    }
-}
-
 template<class T>
 struct PLASMA {
   typedef T value_type;
@@ -81,7 +54,38 @@ struct PLASMA {
 		   value_type *l1, int ldl1,
 		   value_type *l2, int ldl2,
 		   int *ipiv);
+
+  static int getrf(int m, int n, int ib,
+		      value_type *a, int lda,
+		      int *ipiv, int *info);
 };
+
+static inline int
+convertToSidePlasma( int side ) 
+{
+    switch (side) {
+	case CblasRight:
+            return PlasmaRight;
+	case CblasLeft:
+        default:
+         return PlasmaLeft;
+    }        
+}
+
+static inline int
+convertToTransPlasma( int trans ) 
+{
+    switch(trans) {
+        case CblasNoTrans:
+            return PlasmaNoTrans;
+        case CblasTrans:
+            return PlasmaTrans;
+        case CblasConjTrans:
+            return PlasmaConjTrans;                        
+        default:
+            return PlasmaNoTrans;
+    }
+}
 
 template<>
 struct PLASMA<double> {
@@ -153,6 +157,13 @@ struct PLASMA<double> {
 		   int *ipiv)
   {
     return CORE_dssssm(m1, n1, m2, n2, k, ib, a1, lda1, a2, lda2, l1, ldl1, l2, ldl2, ipiv);
+  }
+
+  static int getrf(int m, int n, int ib,
+		      value_type *a, int lda,
+		      int *ipiv, int *info)
+  {
+    return CORE_dgetrf_incpiv(m, n, ib, a, lda, ipiv, info);
   }
 };
 
@@ -226,6 +237,13 @@ struct PLASMA<float> {
 		   int *ipiv)
   {
     return CORE_sssssm(m1, n1, m2, n2, k, ib, a1, lda1, a2, lda2, l1, ldl1, l2, ldl2, ipiv);
+  }
+
+  static int getrf(int m, int n, int ib,
+		      value_type *a, int lda,
+		      int *ipiv, int *info)
+  {
+    return CORE_sgetrf_incpiv(m, n, ib, a, lda, ipiv, info);
   }
 };
 

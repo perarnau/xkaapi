@@ -9,6 +9,7 @@
 **
 ** thierry.gautier@inrialpes.fr
 ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+** Joao.Lima@imag.fr / joao.lima@inf.ufrgs.br
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -47,7 +48,6 @@
 #ifndef MATRIX_GPU_INL_INCLUDED
 # define MATRIX_GPU_INL_INCLUDED
 
-
 #include "kaapi++"
 #include <stdio.h>
 
@@ -56,16 +56,18 @@
 // needed for flags
 #include <cblas.h>
 
-
 #if CONFIG_USE_CUBLAS
 #include "cublas_v2.h"
 #else
 #include "cublas.h"
 #endif
 
-#if 0
-#include "magma.h"
-#include "magmablas.h"
+#if defined(CONFIG_USE_CUBLAS)
+#include "cublas.inl"
+#endif
+
+#if defined(CONFIG_USE_MAGMA)
+#include "magma.inl"
 #endif
 
 #if (CONFIG_USE_CUBLAS) || (CONFIG_USE_MAGMA)
@@ -79,432 +81,6 @@ extern cublasHandle_t kaapi_cuda_cublas_handle( void );
 #endif
 
 #endif
-
-
-#if CONFIG_USE_CUBLAS
-/* from cublas.h */
-
-/* Helper functions */
-static inline cublasOperation_t convertToOp( int trans ) 
-//static inline cublasOperation_t convertToOp( const enum CBLAS_TRANSPOSE trans ) 
-{
-    switch(trans) {
-        case CblasNoTrans:
-            return CUBLAS_OP_N;
-        case CblasTrans:
-            return CUBLAS_OP_T;
-        case CblasConjTrans:
-            return CUBLAS_OP_C;                        
-        default:
-            return CUBLAS_OP_N;
-    }
-
-}
-
-//static inline cublasFillMode_t convertToFillMode( const enum CBLAS_UPLO uplo ) 
-static inline cublasFillMode_t convertToFillMode( int uplo ) 
-{
-    switch (uplo) {
-        case CblasUpper:
-            return CUBLAS_FILL_MODE_UPPER;
-	case CblasLower:
-        default:
-         return CUBLAS_FILL_MODE_LOWER;
-    }        
-}
-
-//static inline cublasDiagType_t convertToDiagType( const enum CBLAS_DIAG diag ) 
-static inline cublasDiagType_t convertToDiagType( int diag ) 
-{
-    switch (diag) {
-	case CblasUnit:
-            return CUBLAS_DIAG_UNIT;
-	case CblasNonUnit:
-        default:
-         return CUBLAS_DIAG_NON_UNIT;
-    }        
-}
-
-//static inline cublasSideMode_t convertToSideMode( const enum CBLAS_SIDE side ) 
-static inline cublasSideMode_t convertToSideMode( int side ) 
-{
-    switch (side) {
-	case CblasRight:
-            return CUBLAS_SIDE_RIGHT;
-	case CblasLeft:
-        default:
-         return CUBLAS_SIDE_LEFT;
-    }        
-}
-
-#endif /* CONFIG_USE_CUBLAS */
-
-#if 0
-
-/* Old CUBLAS API, returns char parameters */
-
-//static inline char convertToOp( const enum CBLAS_TRANSPOSE trans ) 
-static inline char convertToOp( int trans ) 
-{
-    switch(trans) {
-        case CblasNoTrans:
-            return 'n';
-        case CblasTrans:
-            return 't';
-        case CblasConjTrans:
-            return 'c';                        
-        default:
-            return 'n';
-    }
-
-}
-
-//static inline char convertToFillMode( const enum CBLAS_UPLO uplo ) 
-static inline char convertToFillMode( int uplo ) 
-{
-    switch (uplo) {
-        case CblasUpper:
-            return 'u';
-	case CblasLower:
-        default:
-         return 'l';
-    }        
-}
-
-//static inline char convertToDiagType( const enum CBLAS_DIAG diag ) 
-static inline char convertToDiagType( int diag ) 
-{
-    switch (diag) {
-	case CblasUnit:
-            return 'u';
-	case CblasNonUnit:
-        default:
-         return 'n';
-    }        
-}
-
-//static inline char convertToSideMode( const enum CBLAS_SIDE side ) 
-static inline char convertToSideMode( int side ) 
-{
-    switch (side) {
-	case CblasRight:
-            return 'r';
-	case CblasLeft:
-        default:
-         return 'l';
-    }        
-}
-
-#endif /* CONFIG_USE_MAGMA */
-
-
-/* for cublas v2 */
-template<class T>
-struct CUBLAS {
-  typedef T value_type;
-  static cublasStatus_t trsm(cublasHandle_t handle,
-                     cublasSideMode_t side,
-                     cublasFillMode_t uplo,
-                     cublasOperation_t trans,
-                     cublasDiagType_t diag,
-                     int m,
-                     int n,
-                     const value_type *alpha, /* host or device pointer */
-                     const value_type *A,
-                     int lda,
-                     value_type *B,
-                     int ldb);
-                                         
-  static cublasStatus_t gemm( cublasHandle_t handle,
-                    cublasOperation_t transa,
-                    cublasOperation_t transb,
-                    int m,
-                    int n,
-                    int k,
-                    const value_type *alpha, /* host or device pointer */
-                    const value_type *A,
-                    int lda,
-                    const value_type *B,
-                    int ldb,
-                    const value_type *beta, /* host or device pointer */
-                    value_type *C,
-                    int ldc);
-  static cublasStatus_t syrk(cublasHandle_t handle,
-                     cublasFillMode_t uplo,
-                     cublasOperation_t trans,
-                     int n,
-                     int k,
-                     const value_type *alpha,  /* host or device pointer */
-                     const value_type *A,
-                     int lda,
-                     const value_type *beta,  /* host or device pointer */
-                     value_type *C,
-                     int ldc);
-};
-
-template<>
-struct CUBLAS<double> {
-  typedef double value_type;
-  static cublasStatus_t trsm(cublasHandle_t handle,
-                   cublasSideMode_t side,
-                   cublasFillMode_t uplo,
-                   cublasOperation_t trans,
-                   cublasDiagType_t diag,
-                   int m,
-                   int n,
-                   const value_type *alpha, /* host or device pointer */
-                   const value_type *A,
-                   int lda,
-                   value_type *B,
-                   int ldb)
-  { return cublasDtrsm_v2(handle, side, uplo, trans, diag, m, n, alpha, A, lda, B, ldb); }
-
-  static cublasStatus_t gemm( cublasHandle_t handle,
-                    cublasOperation_t transa,
-                    cublasOperation_t transb,
-                    int m,
-                    int n,
-                    int k,
-                    const value_type *alpha, /* host or device pointer */
-                    const value_type *A,
-                    int lda,
-                    const value_type *B,
-                    int ldb,
-                    const value_type *beta, /* host or device pointer */
-                    value_type *C,
-                    int ldc)
-  { return cublasDgemm_v2(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc); }
-
-  static cublasStatus_t syrk(cublasHandle_t handle,
-                     cublasFillMode_t uplo,
-                     cublasOperation_t trans,
-                     int n,
-                     int k,
-                     const value_type *alpha,  /* host or device pointer */
-                     const value_type *A,
-                     int lda,
-                     const value_type *beta,  /* host or device pointer */
-                     value_type *C,
-                     int ldc)
-  { return cublasDsyrk_v2(handle, uplo, trans, n, k, alpha, A, lda, beta, C, ldc); }
-};
-
-template<>
-struct CUBLAS<float> {
-  typedef float value_type;
-  static cublasStatus_t trsm(cublasHandle_t handle,
-                   cublasSideMode_t side,
-                   cublasFillMode_t uplo,
-                   cublasOperation_t trans,
-                   cublasDiagType_t diag,
-                   int m,
-                   int n,
-                   const value_type *alpha, /* host or device pointer */
-                   const value_type *A,
-                   int lda,
-                   value_type *B,
-                   int ldb)
-  { return cublasStrsm_v2(handle, side, uplo, trans, diag, m, n, alpha, A, lda, B, ldb); }
-
-  static cublasStatus_t gemm( cublasHandle_t handle,
-                    cublasOperation_t transa,
-                    cublasOperation_t transb,
-                    int m,
-                    int n,
-                    int k,
-                    const value_type *alpha, /* host or device pointer */
-                    const value_type *A,
-                    int lda,
-                    const value_type *B,
-                    int ldb,
-                    const value_type *beta, /* host or device pointer */
-                    value_type *C,
-                    int ldc)
-  { return cublasSgemm_v2(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc); }
-
-  static cublasStatus_t syrk(cublasHandle_t handle,
-                     cublasFillMode_t uplo,
-                     cublasOperation_t trans,
-                     int n,
-                     int k,
-                     const value_type *alpha,  /* host or device pointer */
-                     const value_type *A,
-                     int lda,
-                     const value_type *beta,  /* host or device pointer */
-                     value_type *C,
-                     int ldc)
-  { return cublasSsyrk_v2(handle, uplo, trans, n, k, alpha, A, lda, beta, C, ldc); }
-};
-
-#if CONFIG_USE_MAGMA
-
-/* export functions */
-
-typedef int magma_int_t;
-
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
-magma_int_t magma_spotrf_gpu
-(char, magma_int_t, float*, magma_int_t, magma_int_t*);
-
-magma_int_t magma_dpotrf_gpu
-(char, magma_int_t, double*, magma_int_t, magma_int_t*);
-
-magma_int_t magma_sgetrf_gpu
-(
- magma_int_t m, magma_int_t n, float *A,
- magma_int_t lda, magma_int_t *ipiv,
- magma_int_t *info
-);
-
-magma_int_t magma_dgetrf_gpu
-(
- magma_int_t m, magma_int_t n, double *A,
- magma_int_t lda, magma_int_t *ipiv,
- magma_int_t *info
-);
-
-magma_int_t magma_sgetrf_nopiv_gpu
-(
- magma_int_t m, magma_int_t n, float *A,
- magma_int_t lda, 
- magma_int_t *info
-);
-
-magma_int_t magma_dgetrf_nopiv_gpu
-(
- magma_int_t m, magma_int_t n, double *A,
- magma_int_t lda, 
- magma_int_t *info
-);
-
-void magmablas_sgemm(char tA, char tB,
-		     magma_int_t m, magma_int_t n, magma_int_t k, 
-		     float alpha,
-		     const float *A, magma_int_t lda, 
-		     const float *B, magma_int_t ldb, 
-		     float beta,
-		     float *C, magma_int_t ldc);
-
-void magmablas_dgemm(char tA, char tB,
-		     magma_int_t m, magma_int_t n, magma_int_t k, 
-		     double alpha,
-		     const double *A, magma_int_t lda, 
-		     const double *B, magma_int_t ldb, 
-		     double beta,
-		     double *C, magma_int_t ldc);
-
-magma_int_t
-magma_dgessm_gpu( char storev, magma_int_t m, magma_int_t n, magma_int_t k, magma_int_t ib, 
-                  magma_int_t *ipiv, 
-                  double *dL1, magma_int_t lddl1, 
-                  double *dL,  magma_int_t lddl, 
-                  double *dA,  magma_int_t ldda, 
-                  magma_int_t *info);
-
-magma_int_t
-magma_dtstrf_gpu( char storev, magma_int_t m, magma_int_t n, magma_int_t ib, magma_int_t nb,
-                  double *hU, magma_int_t ldhu, double *dU, magma_int_t lddu, 
-                  double *hA, magma_int_t ldha, double *dA, magma_int_t ldda, 
-                  double *hL, magma_int_t ldhl, double *dL, magma_int_t lddl,
-                  magma_int_t *ipiv, 
-                  double *hwork, magma_int_t ldhwork, double *dwork, magma_int_t lddwork,
-                  magma_int_t *info);
-
-magma_int_t
-magma_dssssm_gpu(char storev, magma_int_t m1, magma_int_t n1, 
-                 magma_int_t m2, magma_int_t n2, magma_int_t k, magma_int_t ib, 
-                 double *dA1, magma_int_t ldda1, 
-                 double *dA2, magma_int_t ldda2, 
-                 double *dL1, magma_int_t lddl1, 
-                 double *dL2, magma_int_t lddl2,
-                 magma_int_t *IPIV, magma_int_t *info);
-
-
-void   magmablas_dlaswp( magma_int_t N, 
-             double *dAT, magma_int_t lda, 
-             magma_int_t i1,  magma_int_t i2, 
-             magma_int_t *ipiv, magma_int_t inci );
-
-
-magma_int_t magma_dgeqrf_gpu( magma_int_t m, magma_int_t n, 
-                              double *dA,  magma_int_t ldda, 
-                              double *tau, double *dT, 
-                              magma_int_t *info);
-
-magma_int_t magma_dormqr_gpu( char side, char trans, 
-                              magma_int_t m, magma_int_t n, magma_int_t k,
-                              double *a,    magma_int_t lda, double *tau, 
-                              double *c,    magma_int_t ldc,
-                              double *work, magma_int_t lwork, 
-                              double *td,   magma_int_t nb, magma_int_t *info);
-
-#if defined(__cplusplus)
-}
-#endif
-
-/* create structures */
-
-/* for MAGMA */
-template<class T>
-struct MAGMA {
-  typedef T value_type;
-  static int potrf(char uplo, int n, value_type *A, int lda);
-};
-             
-template<>
-struct MAGMA<double> {
-  typedef double value_type;
-  static int potrf(char uplo, int n, value_type *A, int lda)
-  {
-    int info;
-    magma_dpotrf_gpu( uplo, n, A, lda, &info );
-    return info;
-  }
-
-  static int getrf(int m, int n, value_type* A, int lda, int* piv )
-  {
-    int info;
-    magma_dgetrf_gpu( m, n, A, lda, piv, &info );
-    return info;
-  }
-
-  static int getrf_nopiv(int m, int n, value_type* A, int lda )
-  {
-    int info;
-    magma_dgetrf_nopiv_gpu( m, n, A, lda, &info );
-    return info;
-  }
-};
-
-template<>
-struct MAGMA<float> {
-  typedef float value_type;
-  static int potrf(char uplo, int n, value_type *A, int lda)
-  {
-    int info;
-    magma_spotrf_gpu( uplo, n, A, lda, &info );
-    return info;
-  }
-
-  static int getrf(int m, int n, value_type* A, int lda, int* piv )
-  {
-    int info;
-    magma_sgetrf_gpu( m, n, A, lda, piv, &info );
-    return info;
-  }
-
-  static int getrf_nopiv(int m, int n, value_type* A, int lda )
-  {
-    int info;
-    magma_sgetrf_nopiv_gpu( m, n, A, lda, &info );
-    return info;
-  }
-};
-
-#endif // CONFIG_USE_MAGMA
 
 // task definitions
 
@@ -730,16 +306,17 @@ struct TaskBodyGPU<TaskGETRF<T> > {
 
     int* const hipiv = (int*) calloc( piv->size(), sizeof(int) );
     const int info = MAGMA<T>::getrf( m, n, a, lda, hipiv );
-    //magma_dgetrf_gpu( m, n, a, lda, hipiv, &info );
     if (info){
 	fprintf( stdout, "TaskDGETRF::magma_getrf() ERROR %d\n", info );
 	fflush(stdout);
     }
     /* TODO */
+#if 1
     cudaMemcpyAsync( hipiv, ipiv, piv->size() * sizeof(int), 
 	    cudaMemcpyHostToDevice,
 	    (cudaStream_t)stream.stream
      );
+#endif
   }
 };
 #endif
@@ -768,7 +345,6 @@ struct TaskBodyGPU<TaskGETF2NoPiv<T> > {
 #endif
 
 
-#if 1 /* DO NOT USE GPU FOR POTRF */
 template<typename T> 
 struct TaskBodyGPU<TaskPOTRF<T> >
 {
@@ -811,19 +387,16 @@ struct TaskBodyGPU<TaskPOTRF<T> >
 
   }
 };
-#endif
 
-//#if defined(CONFIG_USE_PLASMA)
-#if 0
-template<>
-struct TaskBodyGPU<TaskPlasmaDSSSSM> {
+template<typename T>
+struct TaskBodyGPU<TaskSSSSM<T> > {
   void operator()( 
     ka::gpuStream stream,
     CBLAS_ORDER order, 
-    ka::range2d_rw<double> A1, 
-    ka::range2d_rw<double> A2,
-    ka::range2d_r<double> L1,
-    ka::range2d_r<double> L2,
+    ka::range2d_rw<T> A1, 
+    ka::range2d_rw<T> A2,
+    ka::range2d_r<T> L1,
+    ka::range2d_r<T> L2,
     ka::range1d_r<int> piv
   )
   {
@@ -836,14 +409,14 @@ struct TaskBodyGPU<TaskPlasmaDSSSSM> {
     int lda2 = A2->lda();
     int ldl1 = L1->lda();
     int ldl2 = L2->lda();
-    double* const a1 = A1->ptr();
-    double* const a2 = A2->ptr();
-    double* const l1 = (double*)L1->ptr();
-    double* const l2 = (double*)L2->ptr();
+    T* const a1 = A1->ptr();
+    T* const a2 = A2->ptr();
+    T* const l1 = (T*)L1->ptr();
+    T* const l2 = (T*)L2->ptr();
     int* const ipiv = (int*)piv->ptr();
     const int ib = IB; // from PLASMA
 
-#if 0
+#if 1
     fprintf( stdout, "TaskGPU DSSSSM A1(%lu,%lu) a1=%p lda1=%d "
 	   "A2(%lu,%lu) a2=%p lda2=%d "
 	   "L1(%lu,%lu) l1=%p ldl1=%d "
@@ -861,22 +434,15 @@ struct TaskBodyGPU<TaskPlasmaDSSSSM> {
     cudaMemcpy( hipiv, ipiv, piv->size() * sizeof(int), 
 	    cudaMemcpyDeviceToHost );
 
-    magma_int_t info = 0;
-    magma_dssssm_gpu(
-	    'f',
-	    m1, n1, m2, n2, k, ib,
-	    a1, lda1,
-	    a2, lda2,
-	    l1, ldl1,
-	    l2, ldl2,
-	    hipiv,
-	    &info
-    );
+    const int info = MAGMA<T>::ssssm('f', m1, n1, m2, n2, k, ib, a1, lda1, a2, lda2, l1, ldl1, l2, ldl2, hipiv);
+    if(info){
+      fprintf(stdout, "TaskSSSSM ERROR (%d)\n", info );
+      fflush(stdout);
+    }
 #endif
-
 #if 1
-    static double zone  = 1.0;
-    static double mzone =-1.0;
+    static T zone  = 1.0;
+    static T mzone =-1.0;
     cublasStatus_t status;
 
     int* h_ipiv = (int*)calloc( piv->size(), sizeof(int) );
@@ -895,7 +461,7 @@ struct TaskBodyGPU<TaskPlasmaDSSSSM> {
 
             if (im != (ii+i)) {
                 im = im - m1;
-		status = cublasDswap
+		status = CUBLAS<T>::swap
 		  (
 		   kaapi_cuda_cublas_handle(),
 		   n1,
@@ -906,7 +472,7 @@ struct TaskBodyGPU<TaskPlasmaDSSSSM> {
             ip = ip + 1;
         }
 
-	status = CUBLAS<double>::trsm
+	status = CUBLAS<T>::trsm
 	  (
 	   kaapi_cuda_cublas_handle(),
 	   convertToSideMode(CblasLeft),
@@ -918,9 +484,9 @@ struct TaskBodyGPU<TaskPlasmaDSSSSM> {
            &a1[ii], lda1
 	  );
 	if (status != CUBLAS_STATUS_SUCCESS)
-	  printf("TaskPlasmaDSSSSM::cublasTrsm() == %d\n", status);
+	  printf("TaskSSSSM::trsm() == %d\n", status);
 
-	status = CUBLAS<double>::gemm
+	status = CUBLAS<T>::gemm
 	(
 	    kaapi_cuda_cublas_handle(),
 	    convertToOp(CblasNoTrans),
@@ -932,36 +498,34 @@ struct TaskBodyGPU<TaskPlasmaDSSSSM> {
             &zone, a2, lda2
 	);
 	if (status != CUBLAS_STATUS_SUCCESS)
-	  printf("TaskPlasmaDSSSSM::cublasGemm() == %d\n", status);
+	  printf("TaskSSSSM::gemm() == %d\n", status);
     }
 #endif
   }
 };
-#endif
 
-//#if defined(CONFIG_USE_MAGMA)
-#if 0
-template<>
-struct TaskBodyGPU<TaskPlasmaDGESSM> {
+template<typename T>
+struct TaskBodyGPU<TaskGESSM<T> > {
   void operator()( 
     ka::gpuStream stream,
     CBLAS_ORDER order, 
     ka::range1d_r<int> piv,
-    ka::range2d_r<double> L, 
-    ka::range2d_rw<double> A
+    ka::range2d_r<T> L, 
+    ka::range2d_rw<T> A
   )
   {
+#if defined(CONFIG_USE_MAGMA)
     int m = A->dim(0); 
     int n = A->dim(1);
     int k = A->dim(1);
     int lda = A->lda();
     int ldl = L->lda();
-    double* const a = A->ptr();
-    double* const l = (double*)L->ptr();
+    T* const a = A->ptr();
+    T* const l = (T*)L->ptr();
     int* const ipiv = (int*)piv->ptr();
     const int ib = IB; // from PLASMA
 
-#if 0
+#if 1
     fprintf( stdout, "TaskGPU DGESSM A(%lu,%lu) a=%p lda=%d  L(%lu,%lu) l=%p ldl=%d\n",
 	    A->dim(0), A->dim(1), (void*)a, A->lda(),
 	    L->dim(0), L->dim(1), (void*)l, L->lda()
@@ -973,16 +537,15 @@ struct TaskBodyGPU<TaskPlasmaDGESSM> {
     cudaMemcpy( hipiv, ipiv, piv->size() * sizeof(int), 
 	    cudaMemcpyDeviceToHost );
 
-    magma_int_t info = 0;
-    magma_dgessm_gpu( 
-	'f',
-	m, n, k, ib,
-	hipiv,
-	l, ldl,
-	a, lda,
-	a, lda,
-	&info
-    );
+    const int info =
+      MAGMA<T>::gessm('f', m, n, k, ib, hipiv, l, ldl, a, lda, a, lda);
+    if(info){
+      fprintf(stdout, "TaskGESSM ERROR (%d)\n", info);
+      fflush(stdout);
+    }
+#else
+    /* TODO */
+#endif
 #if 0
     int* h_ipiv = (int*)calloc( k, sizeof(int) );
     cudaMemcpy( h_ipiv, ipiv, k * sizeof(int), 
@@ -1048,37 +611,35 @@ struct TaskBodyGPU<TaskPlasmaDGESSM> {
 #endif
   }
 };
-#endif
 
-//#if defined(CONFIG_USE_MAGMA)
-#if 0
-template<>
-struct TaskBodyGPU<TaskPlasmaDTSTRF> {
+template<typename T>
+struct TaskBodyGPU<TaskTSTRF<T> > {
   void operator()( 
     ka::gpuStream stream,
     CBLAS_ORDER order, 
     int nb,
-    ka::range2d_rw<double> U, 
-    ka::range2d_rw<double> A,
-    ka::range2d_rw<double> L,
+    ka::range2d_rw<T> U, 
+    ka::range2d_rw<T> A,
+    ka::range2d_rw<T> L,
     ka::range1d_w<int> piv,
-    ka::range2d_rw<double> WORK
+    ka::range2d_rw<T> WORK
   )
   {
+#if defined(CONFIG_USE_MAGMA)
     int m = A->dim(0); 
     int n = A->dim(1);
     int lda = A->lda();
     int ldl = L->lda();
     int ldu = U->lda();
     int ldw = WORK->lda();
-    double* const a = A->ptr();
-    double* const l = L->ptr();
-    double* const u = U->ptr();
-    double* const work = WORK->ptr();
+    T* const a = A->ptr();
+    T* const l = L->ptr();
+    T* const u = U->ptr();
+    T* const work = WORK->ptr();
     int* const ipiv = piv->ptr();
     const int ib = IB; // from PLASMA
 
-#if 0
+#if 1
     fprintf( stdout, "TaskGPU DTSTRF A(%lu,%lu) a=%p lda=%d "
 	    "L(%lu,%lu) l=%p ldl=%d "
 	    "U(%lu,%lu) u=%p ldu=%d ipiv=%p\n",
@@ -1090,35 +651,32 @@ struct TaskBodyGPU<TaskPlasmaDTSTRF> {
     fflush(stdout);
 #endif
 
-    double* ha = (double*)malloc( A->dim(0)*A->dim(1) * sizeof(double) );
-    double* hl = (double*)malloc( L->dim(0)*L->dim(1) * sizeof(double) );
-    double* hu = (double*)malloc( U->dim(0)*U->dim(1) * sizeof(double) );
-    double* hwork = (double*)malloc( WORK->dim(0)*WORK->dim(1) * sizeof(double) );
-    cublasGetMatrix( m, n, sizeof(double), u, ldu, hu, ldu );
-    cublasGetMatrix( m, ib, sizeof(double), a, lda, ha, lda );
-    memset( hl, 0, L->dim(0)*L->dim(1)*sizeof(double) );
+    T* ha = (T*)malloc( A->dim(0)*A->dim(1) * sizeof(T) );
+    T* hl = (T*)malloc( L->dim(0)*L->dim(1) * sizeof(T) );
+    T* hu = (T*)malloc( U->dim(0)*U->dim(1) * sizeof(T) );
+    T* hwork = (T*)malloc( WORK->dim(0)*WORK->dim(1) * sizeof(T) );
+    cublasGetMatrix( m, n, sizeof(T), u, ldu, hu, ldu );
+    cublasGetMatrix( m, ib, sizeof(T), a, lda, ha, lda );
+    memset( hl, 0, L->dim(0)*L->dim(1)*sizeof(T) );
     int* hipiv = (int*)calloc( piv->size(), sizeof(int) );
     cudaMemcpy( hipiv, ipiv, piv->size() * sizeof(int), 
 	    cudaMemcpyDeviceToHost );
 
-    magma_int_t info = 0;
-    magma_dtstrf_gpu( 
-	'f',
-	m, n, ib, L->dim(1),
-	hu, ldu, u, ldu,
-	ha, lda, a, lda,
-	hl, ldl, l, ldl,
-	hipiv,
-	hwork, ldw, work, lda,
-	&info
-    );
+    int info =
+      MAGMA<T>::tstrf( 'f', m, n, ib, L->dim(1), hu, ldu, u, ldu, ha, lda, a, lda, hl, ldl, l, ldl, hipiv, hwork, ldw, work, lda );
+    if(info){
+      fprintf( stdout, "TaskTSTRF ERROR (%d)\n", info );
+      fflush(stdout);
+    }
     /* TODO */
     cudaMemcpyAsync( hipiv, ipiv, piv->size() * sizeof(int), 
 	    cudaMemcpyHostToDevice,
 	    (cudaStream_t)stream.stream
      );
+#else
+    /* TODO */
+#endif
   }
 };
-#endif
 
 #endif /* ! MATRIX_GPU_INL_INCLUDED */

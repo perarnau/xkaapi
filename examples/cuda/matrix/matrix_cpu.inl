@@ -307,18 +307,11 @@ struct TaskBodyCPU<TaskGETRF<T> > {
     int* const ipiv = piv->ptr();
 
 #if defined(CONFIG_USE_PLASMA)
-/* TODO: wrap the call to a PLASMA<T>:: struct in order to have code specialization
-   for double or float */
     const int ib = IB; // from PLASMA
     int info;
-    CORE_dgetrf_incpiv(
-	    m, n, ib, 
-	    a, lda,
-	    ipiv,
-	    &info
-	);
+    PLASMA<T>::getrf(m, n, ib, a, lda, ipiv, &info);
 #else
-    CLAPACK<T>::getrf(CblasRowMajor, m, n, a, lda, ipiv);
+    CLAPACK<T>::getrf(CblasColMajor, m, n, a, lda, ipiv);
 #endif
   }
 };
@@ -434,14 +427,14 @@ struct TaskBodyCPU<TaskLARNV<T> > {
 	void operator() (
 		ka::range2d_w<T> A
 	)
-	{
-		const int IDIST = 1;
-		int ISEED[4] = {0,0,0,1};
- 		const int mn     = A->dim(0)*A->dim(1); 
-		T* const a = A->ptr();
+  {
+    const int IDIST = 1;
+    int ISEED[4] = {0,0,0,1};
+    const int mn     = A->dim(0)*A->dim(1); 
+    T* const a = A->ptr();
 
-		LAPACKE<T>::larnv( IDIST, ISEED, mn, a );
-	}
+    LAPACKE<T>::larnv( IDIST, ISEED, mn, a );
+  }
 };
 
 template<typename T>
@@ -573,14 +566,14 @@ struct TaskBodyCPU<TaskTSMQR<T> > {
 #endif
   }
 };
-#if 0
-template<>
-struct TaskBodyCPU<TaskPlasmaDGESSM> {
+
+template<typename T>
+struct TaskBodyCPU<TaskGESSM<T> > {
   void operator()( 
     CBLAS_ORDER order, 
     ka::range1d_r<int> piv,
-    ka::range2d_r<double> L, 
-    ka::range2d_rw<double> A
+    ka::range2d_r<T> L, 
+    ka::range2d_rw<T> A
   )
   {
 #if defined(CONFIG_USE_PLASMA)
@@ -589,32 +582,28 @@ struct TaskBodyCPU<TaskPlasmaDGESSM> {
     const int k = A->dim(1); /* TODO check */
     const int lda = A->lda();
     const int ldl = L->lda();
-    double* const a = A->ptr();
-    double* const l = (double*)L->ptr();
+    T* const a = A->ptr();
+    T* const l = (T*)L->ptr();
     int* const ipiv = (int*)piv->ptr();
 
     const int ib = IB; // from PLASMA
-    CORE_dgessm( 
-	    m, n, k, ib,
-	    ipiv,
-	    l, ldl,
-	    a, lda
-	);
+    PLASMA<T>::gessm(m, n, k, ib, ipiv, l, ldl, a, lda);
 #else
+    /* TODO */
 #endif
   }
 };
 
-template<>
-struct TaskBodyCPU<TaskPlasmaDTSTRF> {
+template<typename T>
+struct TaskBodyCPU<TaskTSTRF<T> > {
   void operator()( 
     CBLAS_ORDER order, 
     int nb,
-    ka::range2d_rw<double> U, 
-    ka::range2d_rw<double> A,
-    ka::range2d_rw<double> L,
+    ka::range2d_rw<T> U, 
+    ka::range2d_rw<T> A,
+    ka::range2d_rw<T> L,
     ka::range1d_w<int> piv,
-    ka::range2d_rw<double> WORK
+    ka::range2d_rw<T> WORK
   )
   {
 #if defined(CONFIG_USE_PLASMA)
@@ -624,10 +613,10 @@ struct TaskBodyCPU<TaskPlasmaDTSTRF> {
     const int ldl = L->lda();
     const int ldu = U->lda();
     const int ldw = WORK->lda();
-    double* const a = A->ptr();
-    double* const l = L->ptr();
-    double* const u = U->ptr();
-    double* const work = WORK->ptr();
+    T* const a = A->ptr();
+    T* const l = L->ptr();
+    T* const u = U->ptr();
+    T* const work = WORK->ptr();
     int* const ipiv = piv->ptr();
 
 #if 0
@@ -636,29 +625,21 @@ struct TaskBodyCPU<TaskPlasmaDTSTRF> {
 #endif
     const int ib = IB; // from PLASMA
     int info;
-    /* TODO */
-    CORE_dtstrf(
-	m, n, ib, nb,
-	u, ldu,
-	a, lda,
-	l, ldl,
-	ipiv,
-	work, ldw,
-	&info
-    );
+    PLASMA<T>::tstrf(m, n, ib, nb, u, ldu, a, lda, l, ldl, ipiv, work, ldw, &info);
 #else
+    /* TODO */
 #endif
   }
 };
 
-template<>
-struct TaskBodyCPU<TaskPlasmaDSSSSM> {
+template<typename T>
+struct TaskBodyCPU<TaskSSSSM<T> > {
   void operator()( 
     CBLAS_ORDER order, 
-    ka::range2d_rw<double> A1, 
-    ka::range2d_rw<double> A2,
-    ka::range2d_r<double> L1,
-    ka::range2d_r<double> L2,
+    ka::range2d_rw<T> A1, 
+    ka::range2d_rw<T> A2,
+    ka::range2d_r<T> L1,
+    ka::range2d_r<T> L2,
     ka::range1d_r<int> piv
   )
   {
@@ -672,10 +653,10 @@ struct TaskBodyCPU<TaskPlasmaDSSSSM> {
     const int lda2 = A2->lda();
     const int ldl1 = L1->lda();
     const int ldl2 = L2->lda();
-    double* const a1 = A1->ptr();
-    double* const a2 = A2->ptr();
-    double* const l1 = (double*)L1->ptr();
-    double* const l2 = (double*)L2->ptr();
+    T* const a1 = A1->ptr();
+    T* const a2 = A2->ptr();
+    T* const l1 = (T*)L1->ptr();
+    T* const l2 = (T*)L2->ptr();
     int* const ipiv = (int*)piv->ptr();
 
 #if 0
@@ -683,21 +664,11 @@ struct TaskBodyCPU<TaskPlasmaDSSSSM> {
 	    L1->dim(0), L1->dim(1), k );
 #endif
     const int ib = IB; // from PLASMA
-    CORE_dssssm( 
-	m1, n1,
-	m2, n2,
-	k, ib,
-	a1, lda1,
-	a2, lda2,
-	l1, ldl1,
-	l2, ldl2,
-	ipiv
-    );
+    PLASMA<T>::ssssm(m1, n1, m2, n2, k, ib, a1, lda1, a2, lda2, l1, ldl1, l2, ldl2, ipiv);
 #else
+    /* TODO */
 #endif
   }
 };
-
-#endif
 
 #endif /* ! MATRIX_CPU_INL_INCLUDED */
