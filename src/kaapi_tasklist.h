@@ -580,7 +580,9 @@ static inline int kaapi_readytasklist_pushready_td(
     }
     return kaapi_readylist_push( rtl, td );
   }
-  
+
+/* TG: why to not do that for any kind of processor ?
+*/
   if ( kaapi_processor_get_type(curr_kproc) == KAAPI_PROC_TYPE_CUDA ) 
   {
     /* if td does not have GPU implementation, push it on master tasklist */

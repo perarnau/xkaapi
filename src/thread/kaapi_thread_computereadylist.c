@@ -68,7 +68,6 @@ int kaapi_sched_computereadylist( void )
 /** task is the top task not yet pushed.
     This function is called is after all task has been pushed into a specific frame.
  */
-double _kaapi_time_tasklist;
 int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_frame_tasklist_t* frame_tasklist )
 {
   kaapi_frame_t*          frame;
@@ -76,6 +75,7 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_frame_t
   kaapi_task_t*           task_bottom;
 
 #if defined(KAAPI_USE_PERFCOUNTER)
+  double _kaapi_time_tasklist;
   kaapi_perf_counter_t    t1,t0;
 #endif
   

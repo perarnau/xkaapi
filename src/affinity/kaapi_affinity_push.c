@@ -60,7 +60,7 @@ kaapi_processor_t *kaapi_push_by_affinity_default(
 kaapi_processor_t *kaapi_push_by_affinity_locality(
                                              kaapi_processor_t * kproc,
                                              kaapi_taskdescr_t * td
-                                             )
+)
 {
   int i;
   kaapi_mem_data_t *kmd;

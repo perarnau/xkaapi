@@ -126,8 +126,8 @@ typedef struct kaapi_address_space_t {
 */
 extern kaapi_address_space_id_t kaapi_memory_address_space_create(
   kaapi_globalid_t gid, 
-  int type, 
-  size_t size 
+  int              type, 
+  size_t           size 
 );
 
 #define KAAPI_ASID_MASK_LID   0x000000000000FFFFULL /* shift = 0 */
@@ -204,8 +204,8 @@ extern int kaapi_memory_address_space_fprintf( FILE* file, kaapi_address_space_i
 #define KAAPI_MEM_SHARABLE   0x2
 extern kaapi_pointer_t kaapi_memory_allocate( 
     kaapi_address_space_id_t kasid, 
-    size_t size, 
-    int flag 
+    size_t                   size, 
+    int                      flag 
 );
 
 
@@ -220,8 +220,8 @@ extern kaapi_pointer_t kaapi_memory_allocate(
 */
 extern kaapi_pointer_t kaapi_memory_allocate_view( 
     kaapi_address_space_id_t kasid, 
-    kaapi_memory_view_t* view, 
-    int flag 
+    kaapi_memory_view_t*     view, 
+    int                      flag 
 );
 
 
@@ -388,9 +388,9 @@ extern kaapi_pointer_t kaapi_memory_synchronize_( kaapi_metadata_info_t* kdmi );
 */
 extern kaapi_metadata_info_t* kaapi_memory_bind( 
   kaapi_address_space_id_t kasid, 
-  int flag, 
-  void* ptr, 
-  size_t size 
+  int                      flag, 
+  void*                    ptr, 
+  size_t                   size 
 );
 
 /** Bind an address of the calling virtual space of the process in the address space data structure kasid.
@@ -398,9 +398,9 @@ extern kaapi_metadata_info_t* kaapi_memory_bind(
     Return the pointer.
 */
 extern kaapi_metadata_info_t* kaapi_memory_bind_view( 
-  kaapi_address_space_id_t kasid, 
-  int flag, 
-  void* ptr, 
+  kaapi_address_space_id_t   kasid, 
+  int                        flag, 
+  void*                      ptr, 
   const kaapi_memory_view_t* view 
 );
 
