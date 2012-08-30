@@ -47,8 +47,8 @@ $CXX -O3 -Wall \
     $LAPACK_CLAGS \
     $LAPACKE_CFLAGS \
     $MAGMA_CFLAGS \
-    -o matprod_iter_kaapi++ \
-    matprod_iter_kaapi++.cpp \
+    -o matprod_rec_kaapi++ \
+    matprod_rec_kaapi++.cpp \
     $LDFLAGS \
     $CUDA_LDFLAGS \
     $CUBLAS_LDFLAGS \

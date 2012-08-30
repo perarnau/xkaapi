@@ -134,22 +134,34 @@ function hybrid {
     gpuset="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
 
    export KAAPI_STEAL_AFFINITY="locality"
-    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_kaapi++" "xkaapiv2-dpotrf-steal-locality" "$nblocks" $niter "$wins"
+    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matlu_nopiv_kaapi++" "xkaapi-dgetrf-steal-locality" "$nblocks" $niter "$wins"
     export KAAPI_STEAL_AFFINITY="writer"
-    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_kaapi++" "xkaapiv2-dpotrf-steal-writer" "$nblocks" $niter "$wins"
+    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matlu_nopiv_kaapi++" "xkaapi-dgetrf-steal-writer" "$nblocks" $niter "$wins"
 
    unset KAAPI_STEAL_AFFINITY
 
    export KAAPI_AFFINITY="locality"
-    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_kaapi++" "xkaapiv2-dpotrf-push-locality" "$nblocks" $niter "$wins"
+    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matlu_nopiv_kaapi++" "xkaapi-dgetrf-push-locality" "$nblocks" $niter "$wins"
     export KAAPI_AFFINITY="writer"
-    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_kaapi++" "xkaapiv2-dpotrf-push-writer" "$nblocks" $niter "$wins"
-
-    exit 0
+    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matlu_nopiv_kaapi++" "xkaapi-dgetrf-push-writer" "$nblocks" $niter "$wins"
 
     ngpu=4
     export KAAPI_NGPU=$ngpu
     gpuset="0~0,1~1,2~2,3~3"
+
+   export KAAPI_STEAL_AFFINITY="locality"
+    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matlu_nopiv_kaapi++" "xkaapi-dgetrf-steal-locality" "$nblocks" $niter "$wins"
+    export KAAPI_STEAL_AFFINITY="writer"
+    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matlu_nopiv_kaapi++" "xkaapi-dgetrf-steal-writer" "$nblocks" $niter "$wins"
+
+   unset KAAPI_STEAL_AFFINITY
+
+   export KAAPI_AFFINITY="locality"
+    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matlu_nopiv_kaapi++" "xkaapi-dgetrf-push-locality" "$nblocks" $niter "$wins"
+    export KAAPI_AFFINITY="writer"
+    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matlu_nopiv_kaapi++" "xkaapi-dgetrf-push-writer" "$nblocks" $niter "$wins"
+
+    exit 0
 
     ngpu=8
     export KAAPI_NGPU=$ngpu

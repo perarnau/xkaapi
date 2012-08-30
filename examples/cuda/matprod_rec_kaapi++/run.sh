@@ -49,8 +49,8 @@ function run_test {
 #     msizes="16384"
 #    msizes="$(seq 512 512 2048)"
 #    msizes="8192"
-    msizes="4096"
-#    msizes="1024"
+#    msizes="4096"
+    msizes="2048"
 #    bsizes="2048"
 #    bsizes="1024"
     bsizes="512"
@@ -66,9 +66,9 @@ function run_test {
 	    for i in `seq 1 $niter`
 	    do
 #	    echo "window $KAAPI_WINDOW_SIZE $KAAPI_CPUSET $KAAPI_GPUSET \
-#		    ./matprod_iter_kaapi++ $m $b $verif"
-	    KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
-#	    KAAPI_STACKSIZE=536870912 gdb ./matprod_iter_kaapi++ 
+#		    ./matprod_rec_kaapi++ $m $b $verif"
+	    KAAPI_STACKSIZE=536870912 ./matprod_rec_kaapi++ $m $b $verif
+#	    KAAPI_STACKSIZE=536870912 gdb ./matprod_rec_kaapi++ 
 	    done
 	done
     done
@@ -96,8 +96,8 @@ function run_dgemm {
 	    do
 	    for i in `seq 1 $niter`
 	    do
-		echo "$KAAPI_CPUSET($ncpu) $KAAPI_GPUSET($ngpu) ./matprod_iter_kaapi++ $m $b $verif"
-		KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif >> $out
+		echo "$KAAPI_CPUSET($ncpu) $KAAPI_GPUSET($ngpu) ./matprod_rec_kaapi++ $m $b $verif"
+		KAAPI_STACKSIZE=536870912 ./matprod_rec_kaapi++ $m $b $verif >> $out
 	    done
 	done
     done
@@ -119,9 +119,9 @@ function run_dgemm_cpu {
 	for m in $msizes ; do
 	    for i in `seq 1 $niter`
 	    do
-	    echo "$KAAPI_CPUSET($ncpu) ./matprod_iter_kaapi++ $m $b $verif"
+	    echo "$KAAPI_CPUSET($ncpu) ./matprod_rec_kaapi++ $m $b $verif"
 	    KAAPI_STACKSIZE=536870912 \
-		    ./matprod_iter_kaapi++ $m $b $verif >> $out
+		    ./matprod_rec_kaapi++ $m $b $verif >> $out
 	    done
 	done
     done
@@ -131,9 +131,9 @@ function run_dgemm_cpu {
 	for m in $msizes ; do
 	    for i in `seq 1 $niter`
 	    do
-	    echo "$KAAPI_CPUSET($ncpu) ./matprod_iter_kaapi++ $m $b $verif"
+	    echo "$KAAPI_CPUSET($ncpu) ./matprod_rec_kaapi++ $m $b $verif"
 	    KAAPI_STACKSIZE=536870912 \
-		    ./matprod_iter_kaapi++ $m $b $verif >> $out
+		    ./matprod_rec_kaapi++ $m $b $verif >> $out
 	    done
 	done
     done
@@ -143,9 +143,9 @@ function run_dgemm_cpu {
 	for m in $msizes ; do
 	    for i in `seq 1 $niter`
 	    do
-	    echo "$KAAPI_CPUSET($ncpu) ./matprod_iter_kaapi++ $m $b $verif"
+	    echo "$KAAPI_CPUSET($ncpu) ./matprod_rec_kaapi++ $m $b $verif"
 	    KAAPI_STACKSIZE=536870912 \
-		    ./matprod_iter_kaapi++ $m $b $verif >> $out
+		    ./matprod_rec_kaapi++ $m $b $verif >> $out
 	    done
 	done
     done
@@ -168,11 +168,11 @@ function run_test_block {
 	    for b in $bsizes; do
 	    for i in `seq 1 $niter`
 	    do
-	    echo "$KAAPI_CPUSET($ncpu) $KAAPI_GPUSET($ngpu) ./matprod_iter_kaapi++ $m $b $verif"
+	    echo "$KAAPI_CPUSET($ncpu) $KAAPI_GPUSET($ngpu) ./matprod_rec_kaapi++ $m $b $verif"
 	    KAAPI_STACKSIZE=536870912 \
-		    ./matprod_iter_kaapi++ $m $b $verif >> $out
-#	    	KAAPI_STACKSIZE=536870912 ./matprod_iter_kaapi++ $m $b $verif
-#       KAAPI_STACKSIZE=536870912 gdb ./matprod_iter_kaapi++ 
+		    ./matprod_rec_kaapi++ $m $b $verif >> $out
+#	    	KAAPI_STACKSIZE=536870912 ./matprod_rec_kaapi++ $m $b $verif
+#       KAAPI_STACKSIZE=536870912 gdb ./matprod_rec_kaapi++ 
 	    done
 	done
     done

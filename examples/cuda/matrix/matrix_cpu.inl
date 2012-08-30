@@ -124,7 +124,6 @@ struct TaskBodyCPU<TaskPrintMatrixInt> {
 /* DGEMM rountine to compute
     Aij <- alpha* Aik * Akj + beta Aij
 */
-#define GEMM_THRESHOLD	  256
 template<typename T>
 struct TaskBodyCPU<TaskGEMM<T> > {
   void operator()
@@ -152,19 +151,6 @@ struct TaskBodyCPU<TaskGEMM<T> > {
     const int ldc = Aij->lda();
 
     KAAPI_TIMING_BEGIN();
-#if 0
-    if( m > GEMM_THRESHOLD )
-    {
-      ka::Spawn<TaskParallelGEMM<T> >( ka::SetStaticSched() )(
-	  order, transA, transB, 
-	  alpha, Aik,
-	  Akj,
-	  beta, Aij
-	);
-     ka::Sync();
-    } else {
-    }
-#endif
     CBLAS<T>::gemm
     (
       order, transA, transB,
@@ -174,8 +160,9 @@ struct TaskBodyCPU<TaskGEMM<T> > {
   }
 };
 
+#define TASK_GEMM_THRESHOLD	  256
 template<typename T>
-struct TaskBodyCPU<TaskParallelGEMM<T> > {
+struct TaskBodyCPU<TaskRecursiveGEMM<T> > {
   void operator()
   (
     CBLAS_ORDER		   order, 
@@ -188,31 +175,47 @@ struct TaskBodyCPU<TaskParallelGEMM<T> > {
     ka::range2d_rw<T> C
   )
   {
+    const T* const a = A->ptr();
+    const T* const b = B->ptr();
+    T* const c       = C->ptr();
+
     const size_t M = A->dim(0);
     const size_t K = B->dim(0);
     const size_t N = B->dim(1);
-    const int bloc = GEMM_THRESHOLD;
 
-      fprintf(stdout,"TaskCPU ParallelGEMM m=%d lda=%d\n", (int)M, (int)A->lda());
-      fflush(stdout);
-    for (size_t j=0; j<M; j += bloc)
+    const int lda = A->lda();
+    const int ldb = B->lda();
+    const int ldc = C->lda();
+    const int bloc = TASK_GEMM_THRESHOLD;
+
+#if 1
+    fprintf(stdout, "TaskCPU RecursiveGEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", M, N, K, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
+#endif
+    if( M > TASK_GEMM_THRESHOLD )
     {
-      ka::rangeindex rj(j, j+bloc);
-      for (size_t i=0; i<N; i += bloc)
+      for (size_t i=0; i<M; i += bloc)
       {
 	ka::rangeindex ri(i, i+bloc);
-	for (size_t k=0; k<K; k += bloc)
+	for (size_t j=0; j<N; j += bloc)
 	{
-	  ka::rangeindex rk(k, k+bloc);
-	    ka::Spawn<TaskGEMM<T> >( )
-	      (
-	       order, transA, transB,
-	       alpha, B(rk,rj),
-	       A(ri,rk),
-	       beta, C(ri,rj)
-	      );
+	  ka::rangeindex rj(j, j+bloc);
+	  for (size_t k=0; k<K; k += bloc)
+	  {
+	    ka::rangeindex rk(k, k+bloc);
+	      ka::Spawn<TaskGEMM<T> >(ka::SetArch(ka::ArchHost))
+		(
+		 order, transA, transB,
+		 alpha, A(rk,ri), B(rj,rk), beta, C(rj,ri)
+		);
+	  }
 	}
       }
+    } else {
+      CBLAS<T>::gemm
+      (
+	order, transA, transB,
+	M, N, K, alpha, a, lda, b, ldb, beta, c, ldc
+      );
     }
   }
 };
