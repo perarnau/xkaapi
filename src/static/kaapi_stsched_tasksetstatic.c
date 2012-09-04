@@ -161,6 +161,10 @@ void kaapi_staticschedtask_body_gen(
       break;
   }
 
+  /* do nothing if no task pushed */
+  if (kaapi_frame_isempty(uthread)) 
+    return;
+
   /* allocate the tasklist for this task
   */
   frame_tasklist = (kaapi_frame_tasklist_t*)malloc(sizeof(kaapi_frame_tasklist_t));
@@ -252,6 +256,18 @@ void kaapi_staticschedtask_body_wh( void* sp, kaapi_thread_t* uthread, kaapi_tas
   kaapi_staticschedtask_body_gen( sp, uthread, pc, 2); /* 2 == with wh */
 }
 
+
+void kaapi_staticschedtask_body_gpu( void* sp, kaapi_gpustream_t stream )
+{
+  kaapi_thread_t* uthread = kaapi_self_thread();
+  kaapi_staticschedtask_body_gen( sp, uthread, uthread[-1].pc, 1); /* 1 == without wh */
+}
+
+void kaapi_staticschedtask_body_gpu_wh( void* sp, kaapi_gpustream_t stream )
+{
+  kaapi_thread_t* uthread = kaapi_self_thread();
+  kaapi_staticschedtask_body_gen( sp, uthread, uthread[-1].pc, 2); /* 2 == with wh */
+}
 
 
 /* --------- format for task SetStatic --------- 
@@ -420,6 +436,12 @@ void kaapi_register_staticschedtask_format(void)
     0, /* redinit */
     0, /* task binding */
     0  /* get_splitter */
+  );
+  kaapi_format_taskregister_body(
+    format,
+    (kaapi_task_body_t)kaapi_staticschedtask_body_gpu, 
+    (kaapi_task_body_t)kaapi_staticschedtask_body_gpu_wh,
+    KAAPI_PROC_TYPE_GPU
   );
 }
 
