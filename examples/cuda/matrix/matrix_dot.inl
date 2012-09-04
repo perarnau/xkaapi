@@ -29,21 +29,3 @@ struct TaskDOT<TaskGETRF<T> > {
     static const char* color() { return "orange"; }
 };
 
-template<>
-struct TaskDOT<TaskPlasmaDGESSM> {
-    static const char* name() { return "DGESSM"; }
-    static const char* color() { return "orange"; }
-};
-
-template<>
-struct TaskDOT<TaskPlasmaDTSTRF> {
-    static const char* name() { return "DTSTRF"; }
-    static const char* color() { return "orange"; }
-};
-
-template<>
-struct TaskDOT<TaskPlasmaDSSSSM> {
-    static const char* name() { return "DSSSSM"; }
-    static const char* color() { return "orange"; }
-};
-

@@ -52,263 +52,17 @@
 #include "kaapi++"
 
 extern "C" {
-#include <cblas.h>   // 
-#include <clapack.h> // assume MKL/ATLAS clapack version
+#include <cblas.h>
+#include <clapack.h>
 #include <lapacke.h>
 }
 
-template<class T>
-struct CBLAS {
-  typedef T value_type;
-  static void trmm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                   const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
-                   const enum CBLAS_DIAG Diag, const int M, const int N,
-                   const value_type alpha, const value_type *A, const int lda,
-                   value_type *B, const int ldb);
-  static void trsm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                   const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
-                   const enum CBLAS_DIAG Diag, const int M, const int N,
-                   const value_type alpha, const value_type *A, const int lda,
-                   value_type *B, const int ldb);
-  static void gemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA,
-                   const enum CBLAS_TRANSPOSE TransB, const int M, const int N,
-                   const int K, const value_type alpha, const value_type *A,
-                   const int lda, const value_type *B, const int ldb,
-                   const value_type beta, value_type *C, const int ldc);
-  static void syrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
-                   const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
-                   const value_type alpha, const value_type *A, const int lda,
-                   const value_type beta, value_type *C, const int ldc);
-
-  static void axpy(const int N, const value_type alpha, const value_type *X,
-                   const int incX, value_type *Y, const int incY);
-
-};
-
-template<class T>
-struct CLAPACK {
-  typedef T value_type;
-  static int getrf(const enum CBLAS_ORDER Order, const int M, const int N,
-                   value_type *A, const int lda, int *ipiv);
-  static int potrf(const enum ATLAS_ORDER Order, const enum ATLAS_UPLO Uplo,
-                   const int N, value_type *A, const int lda);
-};
-
-template<class T>
-struct LAPACKE {
-  typedef T value_type;
-  static lapack_int lacpy( int matrix_order, char uplo, lapack_int m,
-                             lapack_int n, const value_type* a, lapack_int lda, value_type* b,
-                             lapack_int ldb );
-  static lapack_int larnv( lapack_int idist, lapack_int* iseed, lapack_int n,
-                             value_type* x );
-  static value_type lamch_work( char cmach );
-
-  static value_type lange_work( int matrix_order, char norm, lapack_int m,
-                                  lapack_int n, const value_type* a, lapack_int lda,
-                                  value_type* work );
-
-  static lapack_int laswp_work( int matrix_order, lapack_int n, value_type* a,
-                                  lapack_int lda, lapack_int k1, lapack_int k2,
-                                  const lapack_int* ipiv, lapack_int incx );
-
-  static lapack_int lacpy_work( int matrix_order, char uplo, lapack_int m,
-                                lapack_int n, const value_type* a, lapack_int lda,
-                                value_type* b, lapack_int ldb );
-};
-
-
-/* specialization for double */
-template<>
-struct CBLAS<double> {
-  typedef double value_type;
-  static void trmm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                   const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
-                   const enum CBLAS_DIAG Diag, const int M, const int N,
-                   const value_type alpha, const value_type *A, const int lda,
-                   value_type *B, const int ldb)
-  { cblas_dtrmm( Order, Side, Uplo, TransA, Diag, M, N, alpha, A, lda, B, ldb); }
-
-  static void trsm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                   const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
-                   const enum CBLAS_DIAG Diag, const int M, const int N,
-                   const value_type alpha, const value_type *A, const int lda,
-                   value_type *B, const int ldb)
-  { cblas_dtrsm( Order, Side, Uplo, TransA, Diag, M, N, alpha, A, lda, B, ldb); }
-
-  static void gemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA,
-                   const enum CBLAS_TRANSPOSE TransB, const int M, const int N,
-                   const int K, const value_type alpha, const value_type *A,
-                   const int lda, const value_type *B, const int ldb,
-                   const value_type beta, value_type *C, const int ldc)
-  { cblas_dgemm( Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc); }
-
-  static void syrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
-                   const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
-                   const value_type alpha, const value_type *A, const int lda,
-                   const value_type beta, value_type *C, const int ldc)
-  { cblas_dsyrk( Order, Uplo, Trans, N, K, alpha, A, lda, beta, C, ldc); }
-
-  static void axpy(const int N, const value_type alpha, const value_type *X,
-                   const int incX, value_type *Y, const int incY)
-  { cblas_daxpy(N, alpha, X, incX, Y, incY); }
-
-};
-
-template<>
-struct CLAPACK<double> {
-  typedef double value_type;
-  static int getrf(const enum CBLAS_ORDER Order, const int M, const int N,
-                   value_type *A, const int lda, int *ipiv)
-  { return clapack_dgetrf(Order, M, N, A, lda, ipiv); }
-                   
-  static int potrf(const enum ATLAS_ORDER Order, const enum ATLAS_UPLO Uplo,
-                   const int N, value_type *A, const int lda)
-  { return clapack_dpotrf(Order, Uplo, N, A, lda); }
-};
-
-
-template<>
-struct LAPACKE<double> {
-  typedef double value_type;
-  static lapack_int lacpy( int matrix_order, char uplo, lapack_int m,
-                             lapack_int n, const value_type* a, lapack_int lda, value_type* b,
-                             lapack_int ldb )
-  { return LAPACKE_dlacpy( matrix_order, uplo, m, n, a, lda, b, ldb ); }
-                           
-  static lapack_int larnv( lapack_int idist, lapack_int* iseed, lapack_int n,
-                             value_type* x )
-  { return LAPACKE_dlarnv( idist, iseed, n, x ); }
-
-  static value_type lamch_work( char cmach )
-  { return LAPACKE_dlamch_work( cmach ); }
-
-  static value_type lange_work( int matrix_order, char norm, lapack_int m,
-                                  lapack_int n, const value_type* a, lapack_int lda,
-                                  value_type* work )
-  { return LAPACKE_dlange_work( matrix_order, norm, m, n, a, lda, work ); }
-
-  static lapack_int laswp_work( int matrix_order, lapack_int n, value_type* a,
-                                  lapack_int lda, lapack_int k1, lapack_int k2,
-                                  const lapack_int* ipiv, lapack_int incx )
-  { return LAPACKE_dlaswp_work( matrix_order, n, a, lda, k1, k2, ipiv, incx ); }
-
-  static lapack_int lacpy_work( int matrix_order, char uplo, lapack_int m,
-                                lapack_int n, const value_type* a, lapack_int lda,
-                                value_type* b, lapack_int ldb )
-  { return LAPACKE_dlacpy_work( matrix_order, uplo, m, n, a, lda, b, ldb ); }
-};
-
-
-/* specialization for float */
-template<>
-struct CBLAS<float> {
-  typedef float value_type;
-  static void trmm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                   const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
-                   const enum CBLAS_DIAG Diag, const int M, const int N,
-                   const value_type alpha, const value_type *A, const int lda,
-                   value_type *B, const int ldb)
-  { cblas_strmm( Order, Side, Uplo, TransA, Diag, M, N, alpha, A, lda, B, ldb); }
-
-  static void trsm(const enum CBLAS_ORDER Order, const enum CBLAS_SIDE Side,
-                   const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE TransA,
-                   const enum CBLAS_DIAG Diag, const int M, const int N,
-                   const value_type alpha, const value_type *A, const int lda,
-                   value_type *B, const int ldb)
-  { cblas_strsm( Order, Side, Uplo, TransA, Diag, M, N, alpha, A, lda, B, ldb); }
-
-  static void gemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA,
-                   const enum CBLAS_TRANSPOSE TransB, const int M, const int N,
-                   const int K, const value_type alpha, const value_type *A,
-                   const int lda, const value_type *B, const int ldb,
-                   const value_type beta, value_type *C, const int ldc)
-  { cblas_sgemm( Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc); }
-
-  static void syrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo,
-                   const enum CBLAS_TRANSPOSE Trans, const int N, const int K,
-                   const value_type alpha, const value_type *A, const int lda,
-                   const value_type beta, value_type *C, const int ldc)
-  { cblas_ssyrk( Order, Uplo, Trans, N, K, alpha, A, lda, beta, C, ldc); }
-
-  static void axpy(const int N, const value_type alpha, const value_type *X,
-                   const int incX, value_type *Y, const int incY)
-  { cblas_saxpy(N, alpha, X, incX, Y, incY); }
-};
-
-
-template<>
-struct CLAPACK<float> {
-  typedef float value_type;
-  static int getrf(const enum CBLAS_ORDER Order, const int M, const int N,
-                   value_type *A, const int lda, int *ipiv)
-  { return clapack_sgetrf(Order, M, N, A, lda, ipiv); }
-                   
-  static int potrf(const enum ATLAS_ORDER Order, const enum ATLAS_UPLO Uplo,
-                   const int N, value_type *A, const int lda)
-  { return clapack_spotrf(Order, Uplo, N, A, lda); }
-};
-
-
-template<>
-struct LAPACKE<float> {
-  typedef float value_type;
-  static lapack_int lacpy( int matrix_order, char uplo, lapack_int m,
-                             lapack_int n, const value_type* a, lapack_int lda, value_type* b,
-                             lapack_int ldb )
-  { return LAPACKE_slacpy( matrix_order, uplo, m, n, a, lda, b, ldb ); }
-                           
-  static lapack_int larnv( lapack_int idist, lapack_int* iseed, lapack_int n,
-                             value_type* x )
-  { return LAPACKE_slarnv( idist, iseed, n, x ); }
-
-  static value_type lamch_work( char cmach )
-  { return LAPACKE_slamch_work( cmach ); }
-
-  static value_type lange_work( int matrix_order, char norm, lapack_int m,
-                                  lapack_int n, const value_type* a, lapack_int lda,
-                                  value_type* work )
-  { return LAPACKE_slange_work( matrix_order, norm, m, n, a, lda, work ); }
-
-  static lapack_int laswp_work( int matrix_order, lapack_int n, value_type* a,
-                                  lapack_int lda, lapack_int k1, lapack_int k2,
-                                  const lapack_int* ipiv, lapack_int incx )
-  { return LAPACKE_slaswp_work( matrix_order, n, a, lda, k1, k2, ipiv, incx ); }
-
-  static lapack_int lacpy_work( int matrix_order, char uplo, lapack_int m,
-                                lapack_int n, const value_type* a, lapack_int lda,
-                                value_type* b, lapack_int ldb )
-  { return LAPACKE_slacpy_work( matrix_order, uplo, m, n, a, lda, b, ldb ); }
-};
-
+#include "cblas.inl"
+#include "clapack.inl"
+#include "lapacke.inl"
 
 #if defined(CONFIG_USE_PLASMA)
-static inline int
-convertToSidePlasma( int side ) 
-{
-    switch (side) {
-	case CblasRight:
-            return PlasmaRight;
-	case CblasLeft:
-        default:
-         return PlasmaLeft;
-    }        
-}
-
-static inline int
-convertToTransPlasma( int trans ) 
-{
-    switch(trans) {
-        case CblasNoTrans:
-            return PlasmaNoTrans;
-        case CblasTrans:
-            return PlasmaTrans;
-        case CblasConjTrans:
-            return PlasmaConjTrans;                        
-        default:
-            return PlasmaNoTrans;
-    }
-}
+#include "plasma.inl"
 #endif
 
 /* Note: this file defines 
@@ -367,57 +121,6 @@ struct TaskBodyCPU<TaskPrintMatrixInt> {
   }
 };
 
-
-/* =================== CBLAS routines =================== */
-
-/* Solve : L(rk,rk) * X =  * A(rk,rj) 
-    ie:  X <- L(rk,rk)^-1 * A(rk,rj) 
-*/
-template<typename T>
-struct TaskBodyCPU<TaskTRSM_left<T> > {
-  void operator()( ka::range2d_r<T> Akk, ka::range2d_rw<T> Akj )
-  { 
-    const T* const a = Akk->ptr();
-    const int lda = Akk->lda();
-
-    T* const b = Akj->ptr();
-    const int ldb   = Akj->lda();
-    const int n     = Akj->dim(0);
-    const int m     = Akj->dim(1);
-
-    CBLAS<T>::trsm
-    (
-      CblasRowMajor, CblasLeft, CblasLower, CblasNoTrans, CblasUnit,
-      n, m, 1., a, lda, b, ldb
-    );
-  }
-};
-
-
-/* Solve : X * U(rk,rk) =  A(ri,rk) 
-    ie:  X <- A(ri,rk) * U(rk,rk)^-1
-*/
-template<typename T>
-struct TaskBodyCPU<TaskTRSM_right<T> > {
-  void operator()( ka::range2d_r<T> Akk, ka::range2d_rw<T> Aik )
-  {
-    const T* const a = Akk->ptr();
-    const int lda = Akk->lda();
-
-    T* const b = Aik->ptr();
-    const int ldb = Aik->lda();
-    const int n = Aik->dim(0); // b.rows();
-    const int m = Aik->dim(1); // b.cols();
-
-    CBLAS<T>::trsm
-    (
-      CblasRowMajor, CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit,
-      n, m, 1., a, lda, b, ldb
-    );
-  }
-};
-
-
 /* DGEMM rountine to compute
     Aij <- alpha* Aik * Akj + beta Aij
 */
@@ -448,8 +151,6 @@ struct TaskBodyCPU<TaskGEMM<T> > {
     const int ldb = Akj->lda();
     const int ldc = Aij->lda();
 
-      fprintf(stdout,"TaskCPU GEMM m=%d lda=%d\n", m, lda );
-      fflush(stdout);
     KAAPI_TIMING_BEGIN();
 #if 0
     if( m > GEMM_THRESHOLD )
@@ -606,18 +307,38 @@ struct TaskBodyCPU<TaskGETRF<T> > {
     int* const ipiv = piv->ptr();
 
 #if defined(CONFIG_USE_PLASMA)
-/* TODO: wrap the call to a PLASMA<T>:: struct in order to have code specialization
-   for double or float */
     const int ib = IB; // from PLASMA
     int info;
-    CORE_dgetrf_incpiv(
-	    m, n, ib, 
-	    a, lda,
-	    ipiv,
-	    &info
-	);
+    PLASMA<T>::getrf(m, n, ib, a, lda, ipiv, &info);
 #else
-    CLAPACK<T>::getrf(CblasRowMajor, m, n, a, lda, ipiv);
+    CLAPACK<T>::getrf(CblasColMajor, m, n, a, lda, ipiv);
+#endif
+  }
+};
+
+/* Compute inplace LU factorization of A.
+*/
+template<typename T>
+struct TaskBodyCPU<TaskGETF2NoPiv<T> > {
+  void operator()( 
+    CBLAS_ORDER order, 
+    ka::range2d_rw<T> A
+  )
+  {
+    const int m        = A->dim(0); 
+    const int n        = A->dim(0); 
+    const int lda      = A->lda();
+    T* const a    = A->ptr();
+
+#if 0
+    int res =
+#endif 
+    LAPACKE<T>::getf2_nopiv(
+	((order == CblasColMajor) ? LAPACK_COL_MAJOR : LAPACK_ROW_MAJOR),
+	m, n, a, lda );
+#if 0
+    fprintf(stdout, "TaskGETF2NoPiv n=%d res=%d\n", m, res );
+    fflush(stdout);
 #endif
   }
 };
@@ -638,8 +359,12 @@ struct TaskBodyCPU<TaskGETRFNoPiv<T> > {
     const int ione   = 1;
     int* piv = (int*) calloc(m, sizeof(int));
 
-    CLAPACK<T>::getrf( order, m, n, a, lda, piv );
-    LAPACKE<T>::laswp( order, m, a, lda, ione, n, piv, ione);
+    int res = CLAPACK<T>::getrf( order, m, n, a, lda, piv );
+#if 1
+    fprintf(stdout, "TaskGETRFNoPiv n=%d res=%d\n", m, res );
+    fflush(stdout);
+#endif
+    LAPACKE<T>::laswp_work( order, m, a, lda, ione, n, piv, ione);
     free( piv );
   }
 };
@@ -702,23 +427,153 @@ struct TaskBodyCPU<TaskLARNV<T> > {
 	void operator() (
 		ka::range2d_w<T> A
 	)
-	{
-		const int IDIST = 1;
-		int ISEED[4] = {0,0,0,1};
- 		const int mn     = A->dim(0)*A->dim(1); 
-		T* const a = A->ptr();
+  {
+    const int IDIST = 1;
+    int ISEED[4] = {0,0,0,1};
+    const int mn     = A->dim(0)*A->dim(1); 
+    T* const a = A->ptr();
 
-		LAPACKE<T>::larnv( IDIST, ISEED, mn, a );
-	}
+    LAPACKE<T>::larnv( IDIST, ISEED, mn, a );
+  }
 };
 
-template<>
-struct TaskBodyCPU<TaskPlasmaDGESSM> {
+template<typename T>
+struct TaskBodyCPU<TaskGEQRT<T> > {
+  void operator()( 
+	CBLAS_ORDER order,
+	ka::range2d_rw<T> A,
+	ka::range2d_w<T>  _T,
+	ka::range1d_w<T>  TAU,
+	ka::range1d_w<T>  WORK
+  )
+  {
+    const int m = A->dim(0); 
+    const int n = A->dim(1);
+    const int lda = A->lda();
+    const int ldt = _T->lda();
+    T* const a = A->ptr();
+    T* const t = _T->ptr();
+    T* const work = WORK->ptr();
+    const int ib = IB; // PLASMA(control/auxiliary.c)
+
+#if defined(CONFIG_USE_PLASMA)
+    T* const tau = TAU->ptr();
+    int res = PLASMA<T>::geqrt( m, n, ib, a, lda, t, ldt, tau, work );
+    if(res){
+      fprintf(stdout, "TaskGEQRT error (%d) from PLASMA\n", res );
+      fflush(stdout);
+    }
+#else
+    LAPACKE<T>::geqrt(
+	((order == CblasColMajor) ? LAPACK_COL_MAJOR : LAPACK_ROW_MAJOR),
+	m, n, ib, a, lda, t, ldt, work );
+#endif
+  }
+};
+
+template<typename T>
+struct TaskBodyCPU<TaskORMQR<T> > {
+  void operator()( 
+	CBLAS_ORDER		order,
+	CBLAS_SIDE		side,
+	CBLAS_TRANSPOSE		trans,
+	ka::range2d_r<T>  A,
+	ka::range2d_w<T>  _T,
+	ka::range2d_rw<T> C,
+	ka::range1d_rw<T> WORK
+  )
+  {
+    const int m = A->dim(0); 
+    const int n = A->dim(1);
+    const int lda = A->lda();
+    const int ldt = _T->lda();
+    T* const a = A->ptr();
+    T* const t = _T->ptr();
+    T* const work = WORK->ptr();
+    const int ib = IB; // PLASMA(control/auxiliary.c)
+
+#if defined(CONFIG_USE_PLASMA)
+    const int k = std::min(m, n);
+    const int ldc = C->lda();
+    const int ldwork = WORK->size();
+    T* const c = C->ptr();
+    PLASMA<T>::ormqr(side, trans, m, n, k, ib, a, lda, t, ldt, c, ldc, work, ldwork);
+#endif
+  }
+};
+
+template<typename T>
+struct TaskBodyCPU<TaskTSQRT<T> > {
+  void operator()( 
+	CBLAS_ORDER order,
+	ka::range2d_rw<T> A1,
+	ka::range2d_rw<T> A2,
+	ka::range2d_w<T>  _T,
+	ka::range1d_w<T>  TAU,
+	ka::range1d_w<T>  WORK
+  )
+  {
+#if defined(CONFIG_USE_PLASMA)
+    const int m = A2->dim(1); 
+    const int n = A1->dim(0);
+    const int lda1 = A1->lda();
+    const int lda2 = A2->lda();
+    const int ldt = _T->lda();
+    T* const a1 = A1->ptr();
+    T* const a2 = A2->ptr();
+    T* const t = _T->ptr();
+    T* const work = WORK->ptr();
+    T* const tau = TAU->ptr();
+    const int ib = IB; // PLASMA(control/auxiliary.c)
+
+    PLASMA<T>::tsqrt( m, n, ib, a1, lda1, a2, lda2, t, ldt, tau, work );
+#endif
+  }
+};
+
+template<typename T>
+struct TaskBodyCPU<TaskTSMQR<T> > {
+  void operator()( 
+	CBLAS_ORDER		order,
+	CBLAS_SIDE		side,
+	CBLAS_TRANSPOSE		trans,
+	ka::range2d_rw<T> A1,
+	ka::range2d_rw<T> A2,
+	ka::range2d_r<T>  V,
+	ka::range2d_w<T>  _T,
+	ka::range1d_w<T>  WORK
+  )
+  {
+#if defined(CONFIG_USE_PLASMA)
+    const int m1 = A1->dim(0); 
+    const int n1 = A1->dim(1);
+    const int m2 = A2->dim(0); 
+    const int n2 = A2->dim(1);
+    const int lda1 = A1->lda();
+    const int lda2 = A2->lda();
+    const int ldv = V->lda();
+    const int ldt = _T->lda();
+    T* const a1 = A1->ptr();
+    T* const a2 = A2->ptr();
+    T* const v = V->ptr();
+    T* const t = _T->ptr();
+    T* const work = WORK->ptr();
+    const int ib = IB; // PLASMA(control/auxiliary.c)
+    const int k = A1->dim(1);
+    const int ldwork = WORK->size();
+
+    PLASMA<T>::tsmqr( side, trans, m1, n1, m2, n2, k, ib, a1, lda1, a2, lda2, v, ldv, t, ldt, work, ldwork );
+#endif
+  }
+};
+
+template<typename T>
+struct TaskBodyCPU<TaskGESSM<T> > {
   void operator()( 
     CBLAS_ORDER order, 
     ka::range1d_r<int> piv,
-    ka::range2d_r<double> L, 
-    ka::range2d_rw<double> A
+    ka::range2d_r<T> L, 
+    ka::range2d_rw<T> A
   )
   {
 #if defined(CONFIG_USE_PLASMA)
@@ -727,32 +582,28 @@ struct TaskBodyCPU<TaskPlasmaDGESSM> {
     const int k = A->dim(1); /* TODO check */
     const int lda = A->lda();
     const int ldl = L->lda();
-    double* const a = A->ptr();
-    double* const l = (double*)L->ptr();
+    T* const a = A->ptr();
+    T* const l = (T*)L->ptr();
     int* const ipiv = (int*)piv->ptr();
 
     const int ib = IB; // from PLASMA
-    CORE_dgessm( 
-	    m, n, k, ib,
-	    ipiv,
-	    l, ldl,
-	    a, lda
-	);
+    PLASMA<T>::gessm(m, n, k, ib, ipiv, l, ldl, a, lda);
 #else
+    /* TODO */
 #endif
   }
 };
 
-template<>
-struct TaskBodyCPU<TaskPlasmaDTSTRF> {
+template<typename T>
+struct TaskBodyCPU<TaskTSTRF<T> > {
   void operator()( 
     CBLAS_ORDER order, 
     int nb,
-    ka::range2d_rw<double> U, 
-    ka::range2d_rw<double> A,
-    ka::range2d_rw<double> L,
+    ka::range2d_rw<T> U, 
+    ka::range2d_rw<T> A,
+    ka::range2d_rw<T> L,
     ka::range1d_w<int> piv,
-    ka::range2d_rw<double> WORK
+    ka::range2d_rw<T> WORK
   )
   {
 #if defined(CONFIG_USE_PLASMA)
@@ -762,10 +613,10 @@ struct TaskBodyCPU<TaskPlasmaDTSTRF> {
     const int ldl = L->lda();
     const int ldu = U->lda();
     const int ldw = WORK->lda();
-    double* const a = A->ptr();
-    double* const l = L->ptr();
-    double* const u = U->ptr();
-    double* const work = WORK->ptr();
+    T* const a = A->ptr();
+    T* const l = L->ptr();
+    T* const u = U->ptr();
+    T* const work = WORK->ptr();
     int* const ipiv = piv->ptr();
 
 #if 0
@@ -774,29 +625,21 @@ struct TaskBodyCPU<TaskPlasmaDTSTRF> {
 #endif
     const int ib = IB; // from PLASMA
     int info;
-    /* TODO */
-    CORE_dtstrf(
-	m, n, ib, nb,
-	u, ldu,
-	a, lda,
-	l, ldl,
-	ipiv,
-	work, ldw,
-	&info
-    );
+    PLASMA<T>::tstrf(m, n, ib, nb, u, ldu, a, lda, l, ldl, ipiv, work, ldw, &info);
 #else
+    /* TODO */
 #endif
   }
 };
 
-template<>
-struct TaskBodyCPU<TaskPlasmaDSSSSM> {
+template<typename T>
+struct TaskBodyCPU<TaskSSSSM<T> > {
   void operator()( 
     CBLAS_ORDER order, 
-    ka::range2d_rw<double> A1, 
-    ka::range2d_rw<double> A2,
-    ka::range2d_r<double> L1,
-    ka::range2d_r<double> L2,
+    ka::range2d_rw<T> A1, 
+    ka::range2d_rw<T> A2,
+    ka::range2d_r<T> L1,
+    ka::range2d_r<T> L2,
     ka::range1d_r<int> piv
   )
   {
@@ -810,10 +653,10 @@ struct TaskBodyCPU<TaskPlasmaDSSSSM> {
     const int lda2 = A2->lda();
     const int ldl1 = L1->lda();
     const int ldl2 = L2->lda();
-    double* const a1 = A1->ptr();
-    double* const a2 = A2->ptr();
-    double* const l1 = (double*)L1->ptr();
-    double* const l2 = (double*)L2->ptr();
+    T* const a1 = A1->ptr();
+    T* const a2 = A2->ptr();
+    T* const l1 = (T*)L1->ptr();
+    T* const l2 = (T*)L2->ptr();
     int* const ipiv = (int*)piv->ptr();
 
 #if 0
@@ -821,187 +664,11 @@ struct TaskBodyCPU<TaskPlasmaDSSSSM> {
 	    L1->dim(0), L1->dim(1), k );
 #endif
     const int ib = IB; // from PLASMA
-    CORE_dssssm( 
-	m1, n1,
-	m2, n2,
-	k, ib,
-	a1, lda1,
-	a2, lda2,
-	l1, ldl1,
-	l2, ldl2,
-	ipiv
-    );
+    PLASMA<T>::ssssm(m1, n1, m2, n2, k, ib, a1, lda1, a2, lda2, l1, ldl1, l2, ldl2, ipiv);
 #else
+    /* TODO */
 #endif
   }
 };
-
-#if defined(CONFIG_USE_DOUBLE)
-template<>
-struct TaskBodyCPU<TaskPlasmaDGEQRT> {
-  void operator()( 
-	CBLAS_ORDER order,
-	ka::range2d_rw<double> A,
-	ka::range2d_w<double>  T,
-	ka::range1d_w<double>  TAU,
-	ka::range1d_w<double>  WORK
-  )
-  {
-    const int m = A->dim(0); 
-    const int n = A->dim(1);
-    const int lda = A->lda();
-    const int ldt = T->lda();
-    double* const a = A->ptr();
-    double* const t = T->ptr();
-    double* const work = WORK->ptr();
-    const int ib = IB; // PLASMA(control/auxiliary.c)
-
-#if defined(CONFIG_USE_PLASMA)
-    double* const tau = TAU->ptr();
-    CORE_dgeqrt(
-	m, n, ib,
-	a, lda,
-	t, ldt,
-	tau, work
-    );
-#else
-    LAPACKE_dgeqrt_work( order, 
-	m, n, ib,
-	a, lda,
-	t, ldt,
-	work
-	);
-#endif
-  }
-};
-
-template<>
-struct TaskBodyCPU<TaskPlasmaDORMQR> {
-  void operator()( 
-	CBLAS_ORDER		order,
-	CBLAS_SIDE		side,
-	CBLAS_TRANSPOSE		trans,
-	ka::range2d_r<double>  A,
-	ka::range2d_w<double>  T,
-	ka::range2d_rw<double> C,
-	ka::range1d_rw<double> WORK
-  )
-  {
-    const int m = A->dim(0); 
-    const int n = A->dim(1);
-    const int lda = A->lda();
-    const int ldt = T->lda();
-    double* const a = A->ptr();
-    double* const t = T->ptr();
-    double* const work = WORK->ptr();
-    const int ib = IB; // PLASMA(control/auxiliary.c)
-
-#if defined(CONFIG_USE_PLASMA)
-    const int k = std::min(m, n);
-    const int ldc = C->lda();
-    const int ldwork = WORK->size();
-    double* const c = C->ptr();
-    CORE_dormqr(
-	    convertToSidePlasma(side),
-	    convertToTransPlasma(trans),
-	    m, n, k, ib,
-	    a, lda,
-	    t, ldt,
-	    c, ldc,
-	    work, ldwork
-    );
-#else
-    LAPACKE_dgeqrt_work( order, 
-	m, n, ib,
-	a, lda,
-	t, ldt,
-	work
-	);
-#endif
-  }
-};
-
-template<>
-struct TaskBodyCPU<TaskPlasmaDTSQRT> {
-  void operator()( 
-	CBLAS_ORDER order,
-	ka::range2d_rw<double> A1,
-	ka::range2d_rw<double> A2,
-	ka::range2d_w<double>  T,
-	ka::range1d_w<double>  TAU,
-	ka::range1d_w<double>  WORK
-  )
-  {
-#if defined(CONFIG_USE_PLASMA)
-    const int m = A2->dim(1); 
-    const int n = A1->dim(0);
-    const int lda1 = A1->lda();
-    const int lda2 = A2->lda();
-    const int ldt = T->lda();
-    double* const a1 = A1->ptr();
-    double* const a2 = A2->ptr();
-    double* const t = T->ptr();
-    double* const work = WORK->ptr();
-    double* const tau = TAU->ptr();
-    const int ib = IB; // PLASMA(control/auxiliary.c)
-
-    CORE_dtsqrt(
-	m, n, ib,
-	a1, lda1,
-	a2, lda2,
-	t, ldt,
-	tau, work
-    );
-#endif
-  }
-};
-
-template<>
-struct TaskBodyCPU<TaskPlasmaDTSMQR> {
-  void operator()( 
-	CBLAS_ORDER		order,
-	CBLAS_SIDE		side,
-	CBLAS_TRANSPOSE		trans,
-	ka::range2d_rw<double> A1,
-	ka::range2d_rw<double> A2,
-	ka::range2d_r<double>  V,
-	ka::range2d_w<double>  T,
-	ka::range1d_w<double>  WORK
-  )
-  {
-#if defined(CONFIG_USE_PLASMA)
-    const int m1 = A1->dim(0); 
-    const int n1 = A1->dim(1);
-    const int m2 = A2->dim(0); 
-    const int n2 = A2->dim(1);
-    const int lda1 = A1->lda();
-    const int lda2 = A2->lda();
-    const int ldv = V->lda();
-    const int ldt = T->lda();
-    double* const a1 = A1->ptr();
-    double* const a2 = A2->ptr();
-    double* const v = V->ptr();
-    double* const t = T->ptr();
-    double* const work = WORK->ptr();
-    const int ib = IB; // PLASMA(control/auxiliary.c)
-    const int k = A1->dim(1);
-    const int ldwork = WORK->size();
-
-    CORE_dtsmqr(
-	convertToSidePlasma(side),
-	convertToTransPlasma(trans),
-	m1, n1,
-	m2, n2,
-	k, ib,
-	a1, lda1,
-	a2, lda2,
-	v, ldv,
-	t, ldt,
-	work, ldwork
-    );
-#endif
-  }
-};
-#endif /* CONFIG_USE_DOUBLE */
 
 #endif /* ! MATRIX_CPU_INL_INCLUDED */
