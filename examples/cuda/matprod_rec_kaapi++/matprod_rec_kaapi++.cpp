@@ -103,7 +103,7 @@ struct TaskBodyCPU<TaskMatProduct<T> > {
         for (size_t k=0; k<K; k += bloc)
         {
           ka::rangeindex rk(k, k+bloc);
-            ka::Spawn<TaskRecursiveGEMM<T> >(ka::SetStaticSched())
+            ka::Spawn<TaskParallelGEMM<T> >(ka::SetStaticSched())
 	      (  CblasColMajor, CblasNoTrans, CblasNoTrans, (T)1.0, 
 		   B(rk,ri), A(rj,rk), (T)1.0, C(rj,ri) );
         }

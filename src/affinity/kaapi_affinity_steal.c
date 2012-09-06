@@ -57,6 +57,7 @@ kaapi_taskdescr_t* kaapi_steal_by_affinity_first( const kaapi_processor_t* thief
   
   /* only steal for the righ processor arch or if fmt ==0 (means internal task) */
   while ((td != 0) 
+      && ( kaapi_task_getbody(td->task) != (kaapi_task_body_t)kaapi_staticschedtask_body )
       && (   !kaapi_task_has_arch(td->task,arch) 
           || ((td->fmt !=0) && (kaapi_format_get_task_body_by_arch(td->fmt, arch) ==0)) ) )
   {

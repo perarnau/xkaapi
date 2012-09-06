@@ -98,12 +98,14 @@ kaapi_cuda_data_async_input_alloc(kaapi_cuda_stream_t * kstream,
     
     kaapi_access_t access = kaapi_format_get_access_param(td->fmt, i, sp);
     kaapi_data_t *src = kaapi_data(kaapi_data_t, &access);
-    kmd = src->kmd;
+    kaapi_mem_host_map_find_or_insert( host_map, (kaapi_mem_addr_t)access.data, &kmd );
+    //kmd = src->kmd;
     kaapi_assert_debug(kmd != 0);
     
     if (!kaapi_mem_data_has_addr(kmd, host_asid)) {
       kaapi_mem_data_set_addr(kmd, host_asid, (kaapi_mem_addr_t) src);
       kaapi_mem_data_clear_dirty(kmd, host_asid);
+      src->kmd = kmd;
     }
     
     kaapi_data_t *dest =

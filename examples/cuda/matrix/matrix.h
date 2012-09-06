@@ -81,7 +81,7 @@ struct TaskGEMM: public ka::Task<8>::Signature
 >{};
 
 template<typename T>
-struct TaskRecursiveGEMM: public ka::Task<8>::Signature
+struct TaskParallelGEMM: public ka::Task<8>::Signature
 <
   CBLAS_ORDER,			      /* row / col */
   CBLAS_TRANSPOSE,        /* NoTrans/Trans for A */

@@ -162,7 +162,7 @@ struct TaskBodyCPU<TaskGEMM<T> > {
 
 #define TASK_GEMM_THRESHOLD	  256
 template<typename T>
-struct TaskBodyCPU<TaskRecursiveGEMM<T> > {
+struct TaskBodyCPU<TaskParallelGEMM<T> > {
   void operator()
   (
     CBLAS_ORDER		   order, 
@@ -188,8 +188,8 @@ struct TaskBodyCPU<TaskRecursiveGEMM<T> > {
     const int ldc = C->lda();
     const int bloc = TASK_GEMM_THRESHOLD;
 
-#if 1
-    fprintf(stdout, "TaskCPU RecursiveGEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", M, N, K, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
+#if 0
+    fprintf(stdout, "TaskCPU ParallelGEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", M, N, K, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
 #endif
     if( M > TASK_GEMM_THRESHOLD )
     {
@@ -211,6 +211,7 @@ struct TaskBodyCPU<TaskRecursiveGEMM<T> > {
 	}
       }
     } else {
+      // spawn here
       CBLAS<T>::gemm
       (
 	order, transA, transB,
@@ -219,7 +220,6 @@ struct TaskBodyCPU<TaskRecursiveGEMM<T> > {
     }
   }
 };
-
 
 /* Rank k update
 */

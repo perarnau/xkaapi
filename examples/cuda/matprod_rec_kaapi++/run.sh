@@ -50,7 +50,7 @@ function run_test {
 #    msizes="$(seq 512 512 2048)"
 #    msizes="8192"
 #    msizes="4096"
-    msizes="2048"
+    msizes="1024"
 #    bsizes="2048"
 #    bsizes="1024"
     bsizes="512"

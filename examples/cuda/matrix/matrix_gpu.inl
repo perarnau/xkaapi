@@ -182,7 +182,7 @@ struct TaskBodyGPU<TaskGEMM<T> >
 };
 
 template<typename T> 
-struct TaskBodyGPU<TaskRecursiveGEMM<T> >
+struct TaskBodyGPU<TaskParallelGEMM<T> >
 {
   void operator()
   (
@@ -211,7 +211,7 @@ struct TaskBodyGPU<TaskRecursiveGEMM<T> >
     const int ldc = C->lda();
 
 
-#if 1
+#if 0
     fprintf(stdout, "TaskGPU RecursiveGEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", m, n, k, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
 #endif
 
