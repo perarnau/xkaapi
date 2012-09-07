@@ -281,6 +281,8 @@ kaapi_task_body_t kaapi_format_get_task_bodywh_by_arch
   return fmt->entrypoint_wh[arch];
 }
 
+extern struct kaapi_format_t* kaapi_staticschedtask_format;
+
 static inline 
 kaapi_task_body_t kaapi_format_get_task_body_by_arch
 (
@@ -291,7 +293,11 @@ kaapi_task_body_t kaapi_format_get_task_body_by_arch
   return fmt->entrypoint[arch];
 }
 
-
+static inline int
+kaapi_format_is_staticschedtask( const kaapi_format_t*	const	fmt )
+{
+  return ( fmt == kaapi_staticschedtask_format);
+}
 
 /** Initialise default formats
 */

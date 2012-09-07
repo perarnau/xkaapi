@@ -302,7 +302,6 @@ int kaapi_cuda_thread_execframe_tasklist(kaapi_thread_context_t * thread)
         
         /* new tasks created ? */
         if (unlikely(fp->sp > stack->sfp->sp)) {
-        redo_frameexecution:
           err = kaapi_stack_execframe(&thread->stack);
           if (err == EWOULDBLOCK) {
             return EWOULDBLOCK;

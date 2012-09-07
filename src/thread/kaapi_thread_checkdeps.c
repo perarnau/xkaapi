@@ -151,9 +151,17 @@ int kaapi_thread_computedep_task(
     handle = kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
 
     /* register to host memory mapping */
-    kaapi_mem_host_map_find_or_insert( host_map, (kaapi_mem_addr_t)access.data, &kmd );
-    kaapi_mem_data_set_addr( kmd, host_asid, (kaapi_mem_addr_t)handle );
-    kaapi_mem_data_clear_dirty( kmd, host_asid );
+    kaapi_mem_host_map_find_or_insert( host_map,
+	(kaapi_mem_addr_t)((size_t)access.data+kaapi_memory_view_size(&handle->view)),
+	&kmd );
+    if (!kaapi_mem_data_has_addr(kmd, host_asid)) {
+      kaapi_data_t* kdata = (kaapi_data_t*)calloc( 1, sizeof(kaapi_data_t) );
+      kdata->ptr = kaapi_make_pointer(0, access.data);
+      kdata->view = handle->view;
+      kdata->kmd = kmd;
+      kaapi_mem_data_set_addr( kmd, host_asid, (kaapi_mem_addr_t)kdata );
+      kaapi_mem_data_clear_dirty( kmd, host_asid );
+    }
     handle->kmd = kmd;
 
     /* replace the pointer to the data in the task argument by the pointer to the global data */

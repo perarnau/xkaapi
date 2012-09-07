@@ -160,7 +160,7 @@ struct TaskBodyCPU<TaskGEMM<T> > {
   }
 };
 
-#define TASK_GEMM_THRESHOLD	  256
+#define TASK_GEMM_THRESHOLD	  512
 template<typename T>
 struct TaskBodyCPU<TaskParallelGEMM<T> > {
   void operator()
@@ -202,7 +202,8 @@ struct TaskBodyCPU<TaskParallelGEMM<T> > {
 	  for (size_t k=0; k<K; k += bloc)
 	  {
 	    ka::rangeindex rk(k, k+bloc);
-	      ka::Spawn<TaskGEMM<T> >(ka::SetArch(ka::ArchHost))
+//	      ka::Spawn<TaskGEMM<T> >(ka::SetArch(ka::ArchHost))
+	      ka::Spawn<TaskGEMM<T> >()
 		(
 		 order, transA, transB,
 		 alpha, A(rk,ri), B(rj,rk), beta, C(rj,ri)
@@ -243,6 +244,10 @@ struct TaskBodyCPU<TaskSYRK<T> > {
     const int ldc   = C->lda();
     T* const c = C->ptr();
 
+#if 0
+    fprintf(stdout, "TaskCPU DSYRK n=%d k=%d lda=%d A=%p ldc=%d C=%p\n",
+		n, k, lda, (void*)a, ldc, c ); fflush(stdout);
+#endif
     KAAPI_TIMING_BEGIN();
     CBLAS<T>::syrk
     (
@@ -280,6 +285,10 @@ struct TaskBodyCPU<TaskTRSM<T> > {
     //const int k = C->dim(1);
     const int k = (transA == CblasNoTrans ? A->dim(1) : A->dim(0) );
 
+#if 0
+    fprintf(stdout, "TaskCPU DTRSM n=%d k=%d lda=%d A=%p ldc=%d C=%p\n",
+		n, k, lda, (void*)a, ldc, c ); fflush(stdout);
+#endif
     KAAPI_TIMING_BEGIN();
     CBLAS<T>::trsm
     (
@@ -387,12 +396,12 @@ struct TaskBodyCPU<TaskPOTRF<T> > {
     T* const a = A->ptr();
 
     KAAPI_TIMING_BEGIN();
-#if 1
-    CLAPACK<T>::potrf( order, uplo, n, a, lda );
 #if 0
-    fprintf(stdout, "TaskCPU DPOTRF res=%d\n", res );
+    fprintf(stdout, "TaskCPU TaskPOTRF n=%d lda=%d a=%p\n", n, lda, (void*)a);
     fflush(stdout);
 #endif
+#if 1
+    CLAPACK<T>::potrf( order, uplo, n, a, lda );
 #else
     LAPACKE_dpotrf_work(
 //	    convertToOrderLapack(order),

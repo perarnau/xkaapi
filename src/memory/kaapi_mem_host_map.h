@@ -49,4 +49,10 @@ struct kaapi_taskdescr_t;
 int
 kaapi_mem_host_map_sync( struct kaapi_taskdescr_t* const );
 
+static inline kaapi_mem_addr_t
+kaapi_mem_host_map_generate_addr_id( kaapi_data_t* const kdata )
+{
+  return (kaapi_mem_addr_t)(((kaapi_mem_addr_t)kaapi_pointer2void(kdata->ptr))+kaapi_memory_view_size(&kdata->view));
+}
+
 #endif /* KAAPI_MEM_HOST_MAP_H_INCLUDED */

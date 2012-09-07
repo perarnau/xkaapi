@@ -67,7 +67,7 @@ static inline int kaapi_onereadytasklist_pop(
   /* only pops for the righ processor arch or if fmt ==0 (means internal task) */
   while (  (curr != 0) 
         && (  !kaapi_task_has_arch(curr->task,arch)
-            || ((curr->fmt !=0) && (kaapi_format_get_task_body_by_arch(curr->fmt, arch) ==0)) ) )
+            || ((curr->fmt !=0) && (kaapi_get_task_body_by_arch(curr, arch) ==0)) ) )
   {
     curr = curr->next;
   }

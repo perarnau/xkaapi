@@ -865,6 +865,18 @@ extern void kaapi_init_begendadapfmt(void);
 /* */
 extern void kaapi_register_staticschedtask_format(void);
 
+extern kaapi_task_body_t kaapi_task_stsched_get_body_by_arch
+(
+  const struct kaapi_taskdescr_t* const td,
+  unsigned int arch
+);
+
+extern kaapi_task_body_t kaapi_task_stsched_get_bodywh_by_arch
+(
+  const struct kaapi_taskdescr_t* const td,
+  unsigned int arch
+);
+
 #if defined(__cplusplus)
 }
 #endif

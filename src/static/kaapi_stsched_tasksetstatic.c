@@ -412,13 +412,14 @@ static void kaapi_taskformat_get_task_binding(
   b->type = KAAPI_BINDING_ANY;
 }
 
+struct kaapi_format_t* kaapi_staticschedtask_format = 0;
 
 void kaapi_register_staticschedtask_format(void)
 {
-  struct kaapi_format_t* format = kaapi_format_allocate();
+  kaapi_staticschedtask_format = kaapi_format_allocate();
   kaapi_format_taskregister_func
   (
-    format,
+    kaapi_staticschedtask_format,
     (kaapi_task_body_t)kaapi_staticschedtask_body, 
     (kaapi_task_body_t)kaapi_staticschedtask_body_wh,
     "kaapi_staticschedtask_body",
@@ -436,12 +437,36 @@ void kaapi_register_staticschedtask_format(void)
     0, /* task binding */
     0  /* get_splitter */
   );
+#if 1
   kaapi_format_taskregister_body
   (
-    format,
+    kaapi_staticschedtask_format,
     (kaapi_task_body_t)kaapi_staticschedtask_body_gpu, 
     (kaapi_task_body_t)kaapi_staticschedtask_body_gpu_wh,
     KAAPI_PROC_TYPE_CUDA
   );
+#endif
+}
+
+kaapi_task_body_t kaapi_task_stsched_get_body_by_arch
+(
+  const struct kaapi_taskdescr_t* const td,
+  unsigned int arch
+)
+{
+  kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)kaapi_task_getargs(td->task);
+  const kaapi_format_t* fmt = kaapi_format_resolvebybody( (kaapi_task_body_t)arg->sub_body);
+  return kaapi_format_get_task_body_by_arch(fmt, arch);
+}
+
+kaapi_task_body_t kaapi_task_stsched_get_bodywh_by_arch
+(
+  const struct kaapi_taskdescr_t* const td,
+  unsigned int arch
+)
+{
+  kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)kaapi_task_getargs(td->task);
+  const kaapi_format_t* fmt = kaapi_format_resolvebybody( (kaapi_task_body_t)arg->sub_body);
+  return kaapi_format_get_task_bodywh_by_arch(fmt, arch);
 }
 
