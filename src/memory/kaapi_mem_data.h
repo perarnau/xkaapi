@@ -11,6 +11,7 @@ kaapi_mem_data_init( kaapi_mem_data_t *m )
   m->parent = NULL;
   kaapi_bitmap_clear_64( &m->valid_bits );
   kaapi_bitmap_clear_64( &m->addr_bits );
+  memset(&m->addr, 0, KAAPI_MEM_ASID_MAX*sizeof(kaapi_mem_addr_t));
 }
 
 static inline void

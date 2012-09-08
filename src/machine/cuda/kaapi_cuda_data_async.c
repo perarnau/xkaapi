@@ -498,7 +498,7 @@ int kaapi_cuda_data_async_input_host_sync(kaapi_taskdescr_t * const td)
   void *sp = td->task->sp;
   const size_t count_params = kaapi_format_get_count_params(td->fmt, sp);
   kaapi_mem_host_map_t *host_map =
-  kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
+    kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
   const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
   size_t i;
   cudaStream_t stream;

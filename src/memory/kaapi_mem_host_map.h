@@ -21,6 +21,14 @@ kaapi_mem_host_map_init( kaapi_mem_host_map_t* map, kaapi_processor_id_t kid, ka
   return 0;
 }
 
+extern void kaapi_mem_host_map_destroy_all( kaapi_mem_host_map_t* map );
+
+static inline void
+kaapi_mem_host_map_destroy( kaapi_mem_host_map_t* map )
+{
+  kaapi_big_hashmap_destroy( &map->hmap );
+}
+
 static inline kaapi_mem_asid_t
 kaapi_mem_host_map_get_asid( const kaapi_mem_host_map_t* map )
 { return map->asid; }

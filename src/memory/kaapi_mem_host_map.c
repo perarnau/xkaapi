@@ -102,3 +102,37 @@ kaapi_mem_data_t* kaapi_mem_host_map_register_to_host(
   return kmd;
 }
 
+static inline void
+kaapi_mem_host_map_destroy_kmd( kaapi_mem_data_t* const kmd )
+{
+  int i;
+
+  for(i = 0; i < KAAPI_MEM_ASID_MAX; i++){
+    if(kaapi_mem_data_has_addr(kmd, i)){
+      free((void*)kaapi_mem_data_get_addr(kmd, i));
+    }
+  }
+}
+
+void kaapi_mem_host_map_destroy_all( kaapi_mem_host_map_t* map )
+{
+  static const uint32_t map_size = KAAPI_HASHMAP_BIG_SIZE;
+  kaapi_big_hashmap_t *const hmap = &map->hmap;
+  kaapi_hashentries_t *entry;
+  uint32_t i;
+
+  for (i = 0; i < map_size; ++i) {
+    for (entry = hmap->entries[i]; entry != NULL; entry = entry->next) {
+      kaapi_mem_data_t *const kmd = entry->u.kmd;
+      if (kmd == NULL)
+	continue;
+
+      kaapi_mem_host_map_destroy_kmd( kmd );
+      free(kmd);
+      entry->u.kmd = 0;
+    }
+  }
+
+  kaapi_big_hashmap_destroy( hmap );
+}
+
