@@ -12,8 +12,8 @@ function run_test {
 #    export KAAPI_CPUSET="0"
     export KAAPI_CPUSET="4"
 #    export KAAPI_CPUSET="4,5,10,11"
-#    export KAAPI_GPUSET="0~0,1~1,2~2,3~3"
-    export KAAPI_GPUSET="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
+    export KAAPI_GPUSET="0~0,1~1,2~2,3~3"
+#    export KAAPI_GPUSET="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
 
 #    export COMPUTE_PROFILE=1
 #    export COMPUTE_PROFILE_CSV=1
@@ -38,12 +38,13 @@ function run_test {
 
 
 #    msizes="10240"
-#    msizes="256"
-    msizes="16384"
-    bsizes="1024"
+    msizes="4096"
+#    msizes="16384"
+#    bsizes="1024"
+    bsizes="512"
 #    bsizes="128"
     niter=1
-#    verif=1
+    verif=1
     export KAAPI_WINDOW_SIZE=2
     for m in $msizes ; do
 	    for b in $bsizes; do

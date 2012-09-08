@@ -143,8 +143,10 @@ static inline void kaapi_cuda_mem_blk_check_host(kaapi_pointer_t ptr, size_t siz
   const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
   kaapi_mem_data_t *kmd;
   
-  kaapi_mem_host_map_find_or_insert(cuda_map, (kaapi_mem_addr_t)
-                                    ((size_t)__kaapi_pointer2void(ptr)+size), &kmd);
+  kaapi_mem_host_map_find_or_insert(cuda_map,
+                                    kaapi_mem_host_map_generate_id(__kaapi_pointer2void(ptr), size),
+				    &kmd
+				  );
   
   /* valid on host ? */
   if (kaapi_mem_data_has_addr(kmd, host_asid) &&
@@ -928,7 +930,10 @@ kaapi_cuda_memory_pool_validate_host(kaapi_cuda_mem_t * const cuda_mem,
   kaapi_mem_data_t *kmd;
   
   kaapi_mem_host_map_find_or_insert(cuda_map, (kaapi_mem_addr_t)
-                                    ((size_t)__kaapi_pointer2void(blk->ptr)+blk->size), &kmd);
+				    kaapi_mem_host_map_generate_id(__kaapi_pointer2void(blk->ptr),
+					blk->size),
+				    &kmd
+				  );
   if (kaapi_mem_data_has_addr(kmd, cuda_asid)) {
     /* valid on the GPU and invalid on host ? */
     if ((!kaapi_mem_data_is_dirty(kmd, cuda_asid)) &&

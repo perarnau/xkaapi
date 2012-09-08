@@ -53,6 +53,7 @@ function run_test {
 		    ./matcholesky_rec_kaapi++ $m $b $verif"
 	    KAAPI_STACKSIZE=536870912 ./matcholesky_rec_kaapi++ $m $b 1 $verif 
 #	    KAAPI_STACKSIZE=536870912 gdb ./matcholesky_rec_kaapi++ 
+#	    KAAPI_STACKSIZE=536870912 valgrind --show-reachable=yes --tool=memcheck --leak-check=full --log-file=log.txt ./matcholesky_rec_kaapi++ $m $b 1 $verif
 	    done
 	done
     done

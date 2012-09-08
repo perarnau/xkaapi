@@ -2392,7 +2392,7 @@ extern size_t kaapi_perf_counter_num(void);
 
 /** return the size of the view
 */
-static inline size_t kaapi_memory_view_size( const kaapi_memory_view_t* kmv )
+static inline size_t kaapi_memory_view_size( const kaapi_memory_view_t* const kmv )
 {
   switch (kmv->type) 
   {

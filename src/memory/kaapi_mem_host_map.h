@@ -50,9 +50,23 @@ int
 kaapi_mem_host_map_sync( struct kaapi_taskdescr_t* const );
 
 static inline kaapi_mem_addr_t
-kaapi_mem_host_map_generate_addr_id( kaapi_data_t* const kdata )
+kaapi_mem_host_map_generate_id( void* const ptr, const size_t size )
 {
-  return (kaapi_mem_addr_t)(((kaapi_mem_addr_t)kaapi_pointer2void(kdata->ptr))+kaapi_memory_view_size(&kdata->view));
+  return (kaapi_mem_addr_t)( ((kaapi_mem_addr_t)ptr) + (kaapi_mem_addr_t)size );
 }
+
+static inline kaapi_mem_addr_t
+kaapi_mem_host_map_generate_id_by_data( kaapi_data_t* const kdata )
+{
+  return (kaapi_mem_addr_t)(
+      ((kaapi_mem_addr_t)kaapi_pointer2void(kdata->ptr)) + 
+	(kaapi_mem_addr_t)kaapi_memory_view_size(&kdata->view)
+      );
+}
+
+extern kaapi_mem_data_t* kaapi_mem_host_map_register_to_host(
+      void* ptr,
+      kaapi_memory_view_t* const view
+    );
 
 #endif /* KAAPI_MEM_HOST_MAP_H_INCLUDED */

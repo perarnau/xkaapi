@@ -47,13 +47,6 @@ kaapi_cuda_sync_host_data(kaapi_mem_data_t * const kmd,
   kaapi_data_t *const src = (kaapi_data_t *) kaapi_mem_data_get_addr(kmd,
 								     cuda_asid);
   kaapi_cuda_mem_copy_dtoh(dest->ptr, &dest->view, src->ptr, &src->view);
-#if 0
-  fprintf(stdout, "[%s] kmd=%p host_asid=%lu cuda_asid=%lu\n",
-	  __FUNCTION__,
-	  (void *) kmd, (unsigned int) host_asid,
-	  (unsigned int) cuda_asid);
-  fflush(stdout);
-#endif
 }
 
 
@@ -65,7 +58,7 @@ static inline void kaapi_cuda_sync_memory(kaapi_processor_t * const kproc)
   kaapi_mem_host_map_t *cuda_map = kaapi_get_current_mem_host_map();
   const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
   static const uint32_t map_size = KAAPI_HASHMAP_BIG_SIZE;
-  kaapi_big_hashmap_t *const hmap = &host_map->hmap;
+  kaapi_big_hashmap_t *const hmap = &cuda_map->hmap;
   kaapi_hashentries_t *entry;
   uint32_t i;
 
@@ -77,8 +70,11 @@ static inline void kaapi_cuda_sync_memory(kaapi_processor_t * const kproc)
 
       if (kaapi_mem_data_has_addr(kmd, cuda_asid) &&
 	  !kaapi_mem_data_is_dirty(kmd, cuda_asid) &&
-	  kaapi_mem_data_is_dirty(kmd, host_asid)) {
-	kaapi_cuda_sync_host_data(kmd, host_asid, cuda_asid);
+	  kaapi_mem_data_is_dirty(kmd, host_asid)
+	  )
+      {
+	if(kaapi_mem_data_clear_dirty_and_check(kmd, host_asid))
+	  kaapi_cuda_sync_host_data(kmd, host_asid, cuda_asid);
       }
     }
   }

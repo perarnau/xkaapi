@@ -55,8 +55,9 @@ static inline kaapi_data_t
     kaapi_mem_data_set_dirty(kmd, asid);
     dest->kmd = kmd;
     kaapi_mem_host_map_find_or_insert_(cuda_map,
-				      kaapi_mem_host_map_generate_addr_id(dest),
-                                       &kmd);
+				      kaapi_mem_host_map_generate_id_by_data(dest),
+                                       &kmd
+				       );
     return dest;
   } else {
     kaapi_data_t *dest = (kaapi_data_t *) kaapi_mem_data_get_addr(kmd,
@@ -479,6 +480,7 @@ kaapi_cuda_data_async_sync_host(kaapi_data_t * kdata, cudaStream_t stream)
   kaapi_mem_asid_t valid_asid;
   
   kaapi_assert_debug(kmd != 0);
+//  if (kaapi_mem_data_clear_dirty_and_check(kmd, host_asid)) {
   if (kaapi_mem_data_is_dirty(kmd, host_asid)) {
     valid_asid = kaapi_mem_data_get_nondirty_asid(kmd);
     kaapi_data_t *valid_data =

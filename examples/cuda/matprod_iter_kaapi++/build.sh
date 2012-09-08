@@ -39,7 +39,7 @@ CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"
 CUBLAS_LDFLAGS="-lcublas"
 
 #g++ -g -Wall 
-$CXX -O3 -Wall \
+$CXX -g -Wall \
     $CFLAGS \
     $CUDA_CFLAGS \
     $CBLAS_CFLAGS \

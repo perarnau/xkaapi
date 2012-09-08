@@ -64,11 +64,6 @@ int kaapi_thread_computedep_task(
   kaapi_version_t*        version;
   int                     islocal;
 
-  kaapi_mem_host_map_t* host_map = 
-      kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
-  const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
-  kaapi_mem_data_t *kmd;
-
 #if 0
     uint64_t t0 = kaapi_get_elapsedns();
 #endif
@@ -150,19 +145,8 @@ int kaapi_thread_computedep_task(
     */
     handle = kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
 
-    /* register to host memory mapping */
-    kaapi_mem_host_map_find_or_insert( host_map,
-	(kaapi_mem_addr_t)((size_t)access.data+kaapi_memory_view_size(&handle->view)),
-	&kmd );
-    if (!kaapi_mem_data_has_addr(kmd, host_asid)) {
-      kaapi_data_t* kdata = (kaapi_data_t*)calloc( 1, sizeof(kaapi_data_t) );
-      kdata->ptr = kaapi_make_pointer(0, access.data);
-      kdata->view = handle->view;
-      kdata->kmd = kmd;
-      kaapi_mem_data_set_addr( kmd, host_asid, (kaapi_mem_addr_t)kdata );
-      kaapi_mem_data_clear_dirty( kmd, host_asid );
-    }
-    handle->kmd = kmd;
+    /* register to kaapi memory system */
+    handle->kmd = kaapi_mem_host_map_register_to_host(access.data, &handle->view);
 
     /* replace the pointer to the data in the task argument by the pointer to the global data */
     access.data = handle;

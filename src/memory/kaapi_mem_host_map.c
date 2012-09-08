@@ -76,3 +76,29 @@ kaapi_mem_host_map_sync( kaapi_taskdescr_t* const td )
   return 0;
 }
 
+kaapi_mem_data_t* kaapi_mem_host_map_register_to_host(
+      void* ptr,
+      kaapi_memory_view_t* const view
+    )
+{
+  kaapi_mem_host_map_t* const host_map = 
+      kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
+  const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
+  kaapi_mem_data_t *kmd;
+
+  /* register to host memory mapping */
+  kaapi_mem_host_map_find_or_insert( host_map,
+      kaapi_mem_host_map_generate_id(ptr, kaapi_memory_view_size(view)),
+      &kmd );
+  if (!kaapi_mem_data_has_addr(kmd, host_asid)) {
+    kaapi_data_t* kdata = (kaapi_data_t*)calloc( 1, sizeof(kaapi_data_t) );
+    kdata->ptr = kaapi_make_pointer(0, ptr);
+    kdata->view = *view;
+    kdata->kmd = kmd;
+    kaapi_mem_data_set_addr( kmd, host_asid, (kaapi_mem_addr_t)kdata );
+    kaapi_mem_data_clear_dirty( kmd, host_asid );
+  }
+
+  return kmd;
+}
+
