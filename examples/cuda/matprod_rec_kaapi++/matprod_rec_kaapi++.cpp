@@ -79,6 +79,155 @@ static int do_check(const T* a, const T* b, T* c, T* c_old, unsigned int n)
 #endif // CONFIG_DO_CHECK
 
 template<typename T>
+struct TaskParallelGEMM: public ka::Task<8>::Signature
+<
+  CBLAS_ORDER,			      /* row / col */
+  CBLAS_TRANSPOSE,        /* NoTrans/Trans for A */
+  CBLAS_TRANSPOSE,        /* NoTrans/Trans for B */
+  T,                      /* alpha */
+  ka::R<ka::range2d<T> >, /* Aik   */
+  ka::R<ka::range2d<T> >, /* Akj   */
+  T,                      /* beta */
+  ka::RW<ka::range2d<T> > /* Aij   */
+>{};
+
+#define TASK_GEMM_THRESHOLD	  512
+template<typename T>
+struct TaskBodyCPU<TaskParallelGEMM<T> > {
+  void operator()
+  (
+    CBLAS_ORDER		   order, 
+    CBLAS_TRANSPOSE transA,
+    CBLAS_TRANSPOSE transB,
+    T alpha,
+    ka::range2d_r<T> A,
+    ka::range2d_r<T> B,
+    T beta,
+    ka::range2d_rw<T> C
+  )
+  {
+    const T* const a = A->ptr();
+    const T* const b = B->ptr();
+    T* const c       = C->ptr();
+
+    const size_t M = A->dim(0);
+    const size_t K = B->dim(0);
+    const size_t N = B->dim(1);
+
+    const int lda = A->lda();
+    const int ldb = B->lda();
+    const int ldc = C->lda();
+    const int bloc = TASK_GEMM_THRESHOLD;
+
+#if 0
+    fprintf(stdout, "TaskCPU ParallelGEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", M, N, K, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
+#endif
+    if( M > TASK_GEMM_THRESHOLD )
+    {
+      for (size_t i=0; i<M; i += bloc)
+      {
+	ka::rangeindex ri(i, i+bloc);
+	for (size_t j=0; j<N; j += bloc)
+	{
+	  ka::rangeindex rj(j, j+bloc);
+	  for (size_t k=0; k<K; k += bloc)
+	  {
+	    ka::rangeindex rk(k, k+bloc);
+//	      ka::Spawn<TaskGEMM<T> >(ka::SetArch(ka::ArchHost))
+	      ka::Spawn<TaskGEMM<T> >()
+		(
+		 order, transA, transB,
+		 alpha, A(rk,ri), B(rj,rk), beta, C(rj,ri)
+		);
+	  }
+	}
+      }
+    } else {
+      // spawn here
+      CBLAS<T>::gemm
+      (
+	order, transA, transB,
+	M, N, K, alpha, a, lda, b, ldb, beta, c, ldc
+      );
+    }
+  }
+};
+
+#if defined(KAAPI_USE_CUDA)
+
+template<typename T> 
+struct TaskBodyGPU<TaskParallelGEMM<T> >
+{
+  void operator()
+  (
+   ka::gpuStream stream,
+   CBLAS_ORDER		   order, 
+   CBLAS_TRANSPOSE transA,
+   CBLAS_TRANSPOSE transB,
+   T alpha,
+   ka::range2d_r<T> A,
+   ka::range2d_r<T> B,
+   T beta,
+   ka::range2d_rw<T> C
+  )
+  {
+    const T* const a = A->ptr();
+    const T* const b = B->ptr();
+    T* const c       = C->ptr();
+
+    const int m = A->dim(0); 
+    const int n = B->dim(1); // eq. to Akj->rows();
+    const int k = C->dim(1); 
+
+
+    const int lda = A->lda();
+    const int ldb = B->lda();
+    const int ldc = C->lda();
+
+
+#if 0
+    fprintf(stdout, "TaskGPU RecursiveGEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", m, n, k, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
+#endif
+
+    KAAPI_TIMING_CUDA_BEGIN((cudaStream_t)stream.stream);
+#if CONFIG_USE_CUBLAS
+    cublasStatus_t status;
+    if( order == CblasColMajor ) 
+      status = CUBLAS<T>::gemm (
+	     kaapi_cuda_cublas_handle(),
+	     convertToOp(transA),
+	     convertToOp(transB),
+	     m, n, k,
+	     &alpha,
+	     a, lda,
+	     b, ldb, 
+	     &beta, c, ldc
+      );
+    else {
+      kaapi_assert_debug( order == CblasRowMajor )
+      status = CUBLAS<T>::gemm(
+	     kaapi_cuda_cublas_handle(),
+	     convertToOp(transB),
+	     convertToOp(transA),
+	     n, m, k,
+	     &alpha,
+	     b, ldb, 
+	     a, lda,
+	     &beta, c, ldc
+      );
+  }
+	
+  if (status != CUBLAS_STATUS_SUCCESS)
+    printf("%s::cublasGemm() == %d\n", __FUNCTION__, status);
+#endif
+
+    KAAPI_TIMING_CUDA_END((cudaStream_t)stream.stream, "GPU DGEMM", n);
+  }
+};
+
+#endif
+
+template<typename T>
 struct TaskMatProduct: public ka::Task<3>::Signature<
       ka::R<ka::range2d<T> >, /* A */
       ka::R<ka::range2d<T> >,  /* B */

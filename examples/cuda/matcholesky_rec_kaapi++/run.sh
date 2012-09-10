@@ -266,25 +266,40 @@ function hybrid {
     wins="2"
     nblocks="1024"
 
-    ncpu=1
-    cpuset="4"
+    ncpu=4
+    cpuset="4,5,10,11"
     export KAAPI_NCPU=$ncpu
 
     ngpu=8
     export KAAPI_NGPU=$ngpu
     gpuset="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
 
-   export KAAPI_STEAL_AFFINITY="locality"
-    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_rec_kaapi++" "xkaapiv2-dpotrf-steal-locality" "$nblocks" $niter "$wins"
-    export KAAPI_STEAL_AFFINITY="writer"
-    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_rec_kaapi++" "xkaapiv2-dpotrf-steal-writer" "$nblocks" $niter "$wins"
+    export KAAPI_PUSH_AFFINITY="writer"
 
-   unset KAAPI_STEAL_AFFINITY
+    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_rec_kaapi++" "xkaapi-dpotrf-recursive-push-writer" "$nblocks" $niter "$wins"
 
-   export KAAPI_AFFINITY="locality"
-    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_rec_kaapi++" "xkaapiv2-dpotrf-push-locality" "$nblocks" $niter "$wins"
-    export KAAPI_AFFINITY="writer"
-    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_rec_kaapi++" "xkaapiv2-dpotrf-push-writer" "$nblocks" $niter "$wins"
+    ngpu=6
+    export KAAPI_NGPU=$ngpu
+    gpuset="0~0,1~1,2~2,3~3,5~7,7~9"
+    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_rec_kaapi++" "xkaapi-dpotrf-recursive-push-writer" "$nblocks" $niter "$wins"
+
+
+    ngpu=4
+    export KAAPI_NGPU=$ngpu
+    gpuset="0~0,1~1,2~2,3~3"
+    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_rec_kaapi++" "xkaapi-dpotrf-recursive-push-writer" "$nblocks" $niter "$wins"
+
+
+    ngpu=2
+    export KAAPI_NGPU=$ngpu
+    gpuset="0~0,1~1"
+    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_rec_kaapi++" "xkaapi-dpotrf-recursive-push-writer" "$nblocks" $niter "$wins"
+
+
+    ngpu=1
+    export KAAPI_NGPU=$ngpu
+    gpuset="0~0"
+    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_rec_kaapi++" "xkaapi-dpotrf-recursive-push-writer" "$nblocks" $niter "$wins"
 
     exit 0
 

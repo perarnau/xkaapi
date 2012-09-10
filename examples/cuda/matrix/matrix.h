@@ -81,19 +81,6 @@ struct TaskGEMM: public ka::Task<8>::Signature
 >{};
 
 template<typename T>
-struct TaskParallelGEMM: public ka::Task<8>::Signature
-<
-  CBLAS_ORDER,			      /* row / col */
-  CBLAS_TRANSPOSE,        /* NoTrans/Trans for A */
-  CBLAS_TRANSPOSE,        /* NoTrans/Trans for B */
-  T,                      /* alpha */
-  ka::R<ka::range2d<T> >, /* Aik   */
-  ka::R<ka::range2d<T> >, /* Akj   */
-  T,                      /* beta */
-  ka::RW<ka::range2d<T> > /* Aij   */
->{};
-
-template<typename T>
 struct TaskSYRK: public ka::Task<7>::Signature
 <
   CBLAS_ORDER,			      /* row / col */

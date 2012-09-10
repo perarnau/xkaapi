@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRATCH=/tmp
+#SCRATCH=/tmp
 #XKAAPIDIR=/tmp/xkaapi
 XKAAPIDIR=$HOME/install/xkaapi/default
 
@@ -15,11 +15,6 @@ function do_test() {
     fi
 }
 
-#CBLAS_CFLAGS="-I/usr/local/atlas/include"
-#CBLAS_LDFLAGS="/usr/local/atlas/lib/libcblas.a /usr/local/atlas/lib/liblapack.a /usr/local/atlas/lib/libatlas.a"
-#LAPACKE_CFLAGS="-I/usr/local/include"
-#LAPACKE_LDFLAGS="-L/usr/local/lib -llapacke -llapack"
-
 do_test "CBLAS_CFLAGS" "No CBLAS_CFLAGS found."
 do_test "CBLAS_LDFLAGS" "No CBLAS_LDFLAGS found."
 #do_test "LAPACK_CFLAGS" "No LAPACK_CFLAGS found."
@@ -33,13 +28,11 @@ CFLAGS="-DKAAPI_DEBUG=0 -DKAAPI_NDEBUG=1
 -DCONFIG_USE_DOUBLE=1 -I$XKAAPIDIR/include"
 LDFLAGS="-L$XKAAPIDIR/lib -lkaapi -lkaapi++"
 
-
 CUDA_CFLAGS="-DCONFIG_USE_CUDA=1 $CUDA_CFLAGS"
 CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"
 CUBLAS_LDFLAGS="-lcublas"
 
-#g++ -g -Wall 
-$CXX -O3 -Wall \
+$CXX -g -Wall \
     $CFLAGS \
     $CUDA_CFLAGS \
     $CBLAS_CFLAGS \

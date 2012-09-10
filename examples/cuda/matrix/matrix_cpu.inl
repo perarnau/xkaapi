@@ -160,68 +160,6 @@ struct TaskBodyCPU<TaskGEMM<T> > {
   }
 };
 
-#define TASK_GEMM_THRESHOLD	  512
-template<typename T>
-struct TaskBodyCPU<TaskParallelGEMM<T> > {
-  void operator()
-  (
-    CBLAS_ORDER		   order, 
-    CBLAS_TRANSPOSE transA,
-    CBLAS_TRANSPOSE transB,
-    T alpha,
-    ka::range2d_r<T> A,
-    ka::range2d_r<T> B,
-    T beta,
-    ka::range2d_rw<T> C
-  )
-  {
-    const T* const a = A->ptr();
-    const T* const b = B->ptr();
-    T* const c       = C->ptr();
-
-    const size_t M = A->dim(0);
-    const size_t K = B->dim(0);
-    const size_t N = B->dim(1);
-
-    const int lda = A->lda();
-    const int ldb = B->lda();
-    const int ldc = C->lda();
-    const int bloc = TASK_GEMM_THRESHOLD;
-
-#if 0
-    fprintf(stdout, "TaskCPU ParallelGEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", M, N, K, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
-#endif
-    if( M > TASK_GEMM_THRESHOLD )
-    {
-      for (size_t i=0; i<M; i += bloc)
-      {
-	ka::rangeindex ri(i, i+bloc);
-	for (size_t j=0; j<N; j += bloc)
-	{
-	  ka::rangeindex rj(j, j+bloc);
-	  for (size_t k=0; k<K; k += bloc)
-	  {
-	    ka::rangeindex rk(k, k+bloc);
-//	      ka::Spawn<TaskGEMM<T> >(ka::SetArch(ka::ArchHost))
-	      ka::Spawn<TaskGEMM<T> >()
-		(
-		 order, transA, transB,
-		 alpha, A(rk,ri), B(rj,rk), beta, C(rj,ri)
-		);
-	  }
-	}
-      }
-    } else {
-      // spawn here
-      CBLAS<T>::gemm
-      (
-	order, transA, transB,
-	M, N, K, alpha, a, lda, b, ldb, beta, c, ldc
-      );
-    }
-  }
-};
-
 /* Rank k update
 */
 template<typename T>
