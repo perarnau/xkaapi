@@ -407,6 +407,32 @@ static inline kaapi_task_t* kaapi_tasklist_allocate_task(
   return task;
 }
 
+static inline 
+kaapi_task_body_t kaapi_get_task_body_by_arch
+(
+  const kaapi_taskdescr_t* const td,
+  unsigned int arch
+)
+{
+  if( kaapi_format_is_staticschedtask(td->fmt) ){
+    return kaapi_task_stsched_get_body_by_arch( td, arch );
+  }
+  return td->fmt->entrypoint[arch];
+}
+
+static inline 
+kaapi_task_body_t kaapi_get_task_bodywh_by_arch
+(
+  const kaapi_taskdescr_t* const td,
+  unsigned int arch
+)
+{
+  if( kaapi_format_is_staticschedtask(td->fmt) )
+    return kaapi_task_stsched_get_bodywh_by_arch( td, arch );
+
+  return td->fmt->entrypoint_wh[arch];
+}
+
 /* Push task in the front: the execution with revert it at the begining
 */
 static inline void kaapi_frame_tasklist_pushback_ready( kaapi_frame_tasklist_t* tl, kaapi_taskdescr_t* td)
@@ -586,7 +612,7 @@ static inline int kaapi_readytasklist_pushready_td(
   if ( kaapi_processor_get_type(curr_kproc) == KAAPI_PROC_TYPE_CUDA ) 
   {
     /* if td does not have GPU implementation, push it on master tasklist */
-    if ( (td->fmt !=0) && (kaapi_format_get_task_bodywh_by_arch( td->fmt, KAAPI_PROC_TYPE_CUDA ) == 0)) //(td->priority == KAAPI_TASKLIST_MIN_PRIORITY ) 
+    if ( (td->fmt !=0) && (kaapi_get_task_bodywh_by_arch( td, KAAPI_PROC_TYPE_CUDA ) == 0)) //(td->priority == KAAPI_TASKLIST_MIN_PRIORITY ) 
     {
       kaapi_assert_debug( td->tasklist != 0 );
       return kaapi_readylist_push( &td->tasklist->rtl, td );
@@ -757,7 +783,6 @@ extern void kaapi_print_state_tasklist( kaapi_frame_tasklist_t* tl );
 /**
 */
 extern void kaapi_thread_signalend_exec( kaapi_thread_context_t* thread );
-
 
 #if defined(__cplusplus)
 }

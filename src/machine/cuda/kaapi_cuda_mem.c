@@ -71,7 +71,8 @@ kaapi_cuda_mem_blk_insert(kaapi_processor_t * proc,
     kaapi_cuda_mem_blk_insert_ro(cuda_mem, blk);
   
   entry = kaapi_big_hashmap_findinsert(&cuda_mem->kmem,
-                                       __kaapi_pointer2void(*ptr));
+                                       __kaapi_pointer2void(*ptr)
+				       );
   entry->u.block = blk;
   cuda_mem->used += size;
   
@@ -114,7 +115,8 @@ static inline void *kaapi_cuda_mem_blk_remove_ro(kaapi_processor_t * proc,
     ptr_size = blk->size;
     free(blk);
     entry = kaapi_big_hashmap_findinsert(&cuda_mem->kmem,
-                                         __kaapi_pointer2void(ptr));
+                                         __kaapi_pointer2void(ptr)
+					 );
     entry->u.block = NULL;
     if (ptr_size >= size) {
       devptr = __kaapi_pointer2void(ptr);
@@ -132,7 +134,7 @@ static inline void *kaapi_cuda_mem_blk_remove_ro(kaapi_processor_t * proc,
   return devptr;
 }
 
-static inline void kaapi_cuda_mem_blk_check_host(kaapi_pointer_t ptr)
+static inline void kaapi_cuda_mem_blk_check_host(kaapi_pointer_t ptr, size_t size)
 {
   const kaapi_mem_host_map_t *host_map =
   kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
@@ -141,8 +143,10 @@ static inline void kaapi_cuda_mem_blk_check_host(kaapi_pointer_t ptr)
   const kaapi_mem_asid_t cuda_asid = kaapi_mem_host_map_get_asid(cuda_map);
   kaapi_mem_data_t *kmd;
   
-  kaapi_mem_host_map_find_or_insert(cuda_map, (kaapi_mem_addr_t)
-                                    __kaapi_pointer2void(ptr), &kmd);
+  kaapi_mem_host_map_find_or_insert(cuda_map,
+                                    kaapi_mem_host_map_generate_id(__kaapi_pointer2void(ptr), size),
+				    &kmd
+				  );
   
   /* valid on host ? */
   if (kaapi_mem_data_has_addr(kmd, host_asid) &&
@@ -203,7 +207,7 @@ static inline void *kaapi_cuda_mem_blk_remove_rw(kaapi_processor_t * proc,
                                          __kaapi_pointer2void(ptr));
     entry->u.block = NULL;
     
-    kaapi_cuda_mem_blk_check_host(ptr);
+    kaapi_cuda_mem_blk_check_host(ptr, ptr_size);
     
     if (ptr_size >= size) {
       devptr = __kaapi_pointer2void(ptr);
@@ -469,7 +473,7 @@ kaapi_cuda_mem_inc_use_rw(kaapi_cuda_mem_t * mem,
 }
 
 int
-kaapi_cuda_mem_inc_use(kaapi_pointer_t * ptr, const kaapi_access_mode_t m)
+kaapi_cuda_mem_inc_use(kaapi_pointer_t * ptr, kaapi_memory_view_t* const view, const kaapi_access_mode_t m)
 {
   kaapi_hashentries_t *entry;
   kaapi_cuda_mem_blk_t *blk;
@@ -477,7 +481,7 @@ kaapi_cuda_mem_inc_use(kaapi_pointer_t * ptr, const kaapi_access_mode_t m)
   kaapi_cuda_mem_t *cuda_mem =
   &kaapi_get_current_processor()->cuda_proc.memory;
   
-  entry = kaapi_big_hashmap_findinsert(&cuda_mem->kmem, (void *) devptr);
+  entry = kaapi_big_hashmap_findinsert(&cuda_mem->kmem, devptr);
   if (entry->u.block == 0)
     return -1;
   blk = (kaapi_cuda_mem_blk_t *) entry->u.block;
@@ -541,7 +545,7 @@ kaapi_cuda_mem_dec_use_ro(kaapi_cuda_mem_t * mem,
 }
 
 int
-kaapi_cuda_mem_dec_use(kaapi_pointer_t * ptr, const kaapi_access_mode_t m)
+kaapi_cuda_mem_dec_use(kaapi_pointer_t * ptr, kaapi_memory_view_t* const view, const kaapi_access_mode_t m)
 {
   kaapi_hashentries_t *entry;
   kaapi_cuda_mem_blk_t *blk;
@@ -549,7 +553,7 @@ kaapi_cuda_mem_dec_use(kaapi_pointer_t * ptr, const kaapi_access_mode_t m)
   kaapi_cuda_mem_t *cuda_mem =
   &kaapi_get_current_processor()->cuda_proc.memory;
   
-  entry = kaapi_big_hashmap_findinsert(&cuda_mem->kmem, (void *) devptr);
+  entry = kaapi_big_hashmap_findinsert(&cuda_mem->kmem, devptr);
   if (entry->u.block == 0)
     return -1;
   blk = (kaapi_cuda_mem_blk_t *) entry->u.block;
@@ -926,7 +930,10 @@ kaapi_cuda_memory_pool_validate_host(kaapi_cuda_mem_t * const cuda_mem,
   kaapi_mem_data_t *kmd;
   
   kaapi_mem_host_map_find_or_insert(cuda_map, (kaapi_mem_addr_t)
-                                    __kaapi_pointer2void(blk->ptr), &kmd);
+				    kaapi_mem_host_map_generate_id(__kaapi_pointer2void(blk->ptr),
+					blk->size),
+				    &kmd
+				  );
   if (kaapi_mem_data_has_addr(kmd, cuda_asid)) {
     /* valid on the GPU and invalid on host ? */
     if ((!kaapi_mem_data_is_dirty(kmd, cuda_asid)) &&

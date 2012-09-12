@@ -295,6 +295,10 @@ void* kaapi_sched_run_processor( void* arg )
   kaapi_mt_perf_thread_fini( kproc );
 #endif
   
+#if defined(KAAPI_USE_CUDA)
+  kaapi_mem_host_map_destroy(kaapi_get_current_mem_host_map());
+#endif
+
   /* kprocessor correctly initialize */
   kaapi_barrier_td_setactive(&kaapi_term_barrier, 0);
 

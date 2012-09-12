@@ -11,6 +11,7 @@ kaapi_mem_data_init( kaapi_mem_data_t *m )
   m->parent = NULL;
   kaapi_bitmap_clear_64( &m->valid_bits );
   kaapi_bitmap_clear_64( &m->addr_bits );
+  memset(&m->addr, 0, KAAPI_MEM_ASID_MAX*sizeof(kaapi_mem_addr_t));
 }
 
 static inline void
@@ -30,6 +31,13 @@ static inline void
 kaapi_mem_data_clear_dirty( kaapi_mem_data_t* m, kaapi_mem_asid_t asid )
 {
   kaapi_bitmap_set_64( &m->valid_bits, asid );
+}
+
+/* test if the previous value was dirty */
+static inline int
+kaapi_mem_data_clear_dirty_and_check( kaapi_mem_data_t* m, kaapi_mem_asid_t asid )
+{
+  return (kaapi_bitmap_fetch_and_set_64( &m->valid_bits, asid ) == 0);
 }
 
 static inline unsigned int

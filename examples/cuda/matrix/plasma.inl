@@ -5,8 +5,6 @@ extern "C" {
 #include "core_blas.h"
 }
 
-#define	    IB	    40
-
 template<class T>
 struct PLASMA {
   typedef T value_type;

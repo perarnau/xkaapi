@@ -10,6 +10,8 @@ extern "C" {
 #include "lapacke.h"
 }
 
+#define	    IB	    40
+
 #if defined(KAAPI_TIMING)
 
 #define	    KAAPI_TIMING_BEGIN() \
@@ -90,7 +92,6 @@ struct TaskParallelGEMM: public ka::Task<8>::Signature
   T,                      /* beta */
   ka::RW<ka::range2d<T> > /* Aij   */
 >{};
-
 
 template<typename T>
 struct TaskSYRK: public ka::Task<7>::Signature

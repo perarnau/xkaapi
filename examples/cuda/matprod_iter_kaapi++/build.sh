@@ -34,12 +34,12 @@ CFLAGS="-DKAAPI_DEBUG=0 -DKAAPI_NDEBUG=1
 LDFLAGS="-L$XKAAPIDIR/lib -lkaapi -lkaapi++"
 
 
-CUDA_CFLAGS="-I/usr/local/cuda/include -DCONFIG_USE_CUDA=1 $CUDA_CFLAGS"
+CUDA_CFLAGS="-DCONFIG_USE_CUDA=1 $CUDA_CFLAGS"
 CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"
-CUBLAS_LDFLAGS="-L/usr/local/cuda/lib -lcublas -lcuda -lcudart"
+CUBLAS_LDFLAGS="-lcublas"
 
 #g++ -g -Wall 
-$CXX -O3 -Wall \
+$CXX -g -Wall \
     $CFLAGS \
     $CUDA_CFLAGS \
     $CBLAS_CFLAGS \

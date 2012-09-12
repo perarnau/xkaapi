@@ -42,7 +42,7 @@ CUBLAS_LDFLAGS="-L/usr/local/cuda/lib -lcublas -lcuda -lcudart"
 
 #MAGMA_CFLAGS="-DCONFIG_USE_MAGMA=1 $MAGMA_CFLAGS"
 
-$CXX -g -Wall \
+$CXX -O3 -Wall \
     $CFLAGS \
     $CUDA_CFLAGS \
     $CBLAS_CFLAGS \
@@ -50,12 +50,12 @@ $CXX -g -Wall \
     $LAPACK_CLAGS \
     $LAPACKE_CFLAGS \
     $MAGMA_CFLAGS \
-    -c matcholesky_kaapi++.cpp 
+    -c matcholesky_rec_kaapi++.cpp 
 
 
-$CXX -g \
-    -o matcholesky_kaapi++ \
-    matcholesky_kaapi++.o \
+$CXX -O3 \
+    -o matcholesky_rec_kaapi++ \
+    matcholesky_rec_kaapi++.o \
     $LDFLAGS \
     $MAGMA_LDFLAGS \
     $CUDA_LDFLAGS \

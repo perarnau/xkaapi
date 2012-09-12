@@ -213,6 +213,20 @@ void kaapi_staticschedtask_body_gen(
   /* exec the spawned subtasks */
   kaapi_sched_sync_(thread);
 
+  /* Pop & restore the frame */
+  thread->stack.sfp->tasklist = 0;
+  kaapi_thread_pop_frame_(thread);
+
+#if 1 /* TODO: do not allocate if multiple uses of tasklist */
+  kaapi_frame_tasklist_destroy( frame_tasklist );
+  free(frame_tasklist);
+
+//HERE: hack to do loop over SetStaticSched because memory state
+// is leaved in inconsistant state.
+//  kaapi_memory_destroy();
+//  kaapi_memory_init();
+#endif /* TODO */
+
 #if 0
   fprintf(stdout, "[%s] kid=%i tasklist tasks: %llu total: %llu\n", 
     __FUNCTION__,
@@ -230,19 +244,6 @@ void kaapi_staticschedtask_body_gen(
   printf("[tasklist] exec time               : %e (s)\n",t1_exec-t0_exec);
 #endif
 
-  /* Pop & restore the frame */
-  thread->stack.sfp->tasklist = 0;
-  kaapi_thread_pop_frame_(thread);
-
-#if 1 /* TODO: do not allocate if multiple uses of tasklist */
-  kaapi_frame_tasklist_destroy( frame_tasklist );
-  free(frame_tasklist);
-
-//HERE: hack to do loop over SetStaticSched because memory state
-// is leaved in inconsistant state.
-//  kaapi_memory_destroy();
-//  kaapi_memory_init();
-#endif /* TODO */
 }
 
 
@@ -251,19 +252,18 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   kaapi_staticschedtask_body_gen( sp, uthread, pc, 1); /* 1 == without wh */
 }
 
-void kaapi_staticschedtask_body_wh( void* sp, kaapi_thread_t* uthread, kaapi_task_t* pc )
+static void kaapi_staticschedtask_body_wh( void* sp, kaapi_thread_t* uthread, kaapi_task_t* pc )
 {
   kaapi_staticschedtask_body_gen( sp, uthread, pc, 2); /* 2 == with wh */
 }
 
-
-void kaapi_staticschedtask_body_gpu( void* sp, kaapi_gpustream_t stream )
+static void kaapi_staticschedtask_body_gpu( void* sp, kaapi_gpustream_t stream )
 {
   kaapi_thread_t* uthread = kaapi_self_thread();
   kaapi_staticschedtask_body_gen( sp, uthread, uthread[-1].pc, 1); /* 1 == without wh */
 }
 
-void kaapi_staticschedtask_body_gpu_wh( void* sp, kaapi_gpustream_t stream )
+static void kaapi_staticschedtask_body_gpu_wh( void* sp, kaapi_gpustream_t stream )
 {
   kaapi_thread_t* uthread = kaapi_self_thread();
   kaapi_staticschedtask_body_gen( sp, uthread, uthread[-1].pc, 2); /* 2 == with wh */
@@ -413,13 +413,14 @@ static void kaapi_taskformat_get_task_binding(
   b->type = KAAPI_BINDING_ANY;
 }
 
+struct kaapi_format_t* kaapi_staticschedtask_format = 0;
 
 void kaapi_register_staticschedtask_format(void)
 {
-  struct kaapi_format_t* format = kaapi_format_allocate();
+  kaapi_staticschedtask_format = kaapi_format_allocate();
   kaapi_format_taskregister_func
   (
-    format,
+    kaapi_staticschedtask_format,
     (kaapi_task_body_t)kaapi_staticschedtask_body, 
     (kaapi_task_body_t)kaapi_staticschedtask_body_wh,
     "kaapi_staticschedtask_body",
@@ -437,11 +438,35 @@ void kaapi_register_staticschedtask_format(void)
     0, /* task binding */
     0  /* get_splitter */
   );
-  kaapi_format_taskregister_body(
-    format,
+
+  kaapi_format_taskregister_body
+  (
+    kaapi_staticschedtask_format,
     (kaapi_task_body_t)kaapi_staticschedtask_body_gpu, 
     (kaapi_task_body_t)kaapi_staticschedtask_body_gpu_wh,
-    KAAPI_PROC_TYPE_GPU
+    KAAPI_PROC_TYPE_CUDA
   );
+}
+
+kaapi_task_body_t kaapi_task_stsched_get_body_by_arch
+(
+  const struct kaapi_taskdescr_t* const td,
+  unsigned int arch
+)
+{
+  kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)kaapi_task_getargs(td->task);
+  const kaapi_format_t* fmt = kaapi_format_resolvebybody( (kaapi_task_body_t)arg->sub_body);
+  return kaapi_format_get_task_body_by_arch(fmt, arch);
+}
+
+kaapi_task_body_t kaapi_task_stsched_get_bodywh_by_arch
+(
+  const struct kaapi_taskdescr_t* const td,
+  unsigned int arch
+)
+{
+  kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)kaapi_task_getargs(td->task);
+  const kaapi_format_t* fmt = kaapi_format_resolvebybody( (kaapi_task_body_t)arg->sub_body);
+  return kaapi_format_get_task_bodywh_by_arch(fmt, arch);
 }
 

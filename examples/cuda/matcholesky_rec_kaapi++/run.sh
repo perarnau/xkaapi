@@ -12,7 +12,7 @@ function run_test {
 #    export KAAPI_CPUSET="0"
     export KAAPI_CPUSET="4"
 #    export KAAPI_CPUSET="4,5,10,11"
-    export KAAPI_GPUSET="0~0,1~1,2~2,3~3"
+    export KAAPI_GPUSET="0~0"
 #    export KAAPI_GPUSET="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
 
 #    export COMPUTE_PROFILE=1
@@ -31,18 +31,17 @@ function run_test {
 
 #    export KAAPI_DISPLAY_PERF=1
 #
-    export KAAPI_PUSH_AFFINITY="writer"
+#    export KAAPI_PUSH_AFFINITY="writer"
 #    export KAAPI_STEAL_AFFINITY="writer"
 #    export KAAPI_PUSH_AFFINITY="locality"
 #    export KAAPI_STEAL_AFFINITY="locality"
 
 
 #    msizes="10240"
-    msizes="4096"
+    msizes="2048"
 #    msizes="16384"
 #    bsizes="1024"
-    bsizes="512"
-#    bsizes="128"
+    bsizes="1024"
     niter=1
     verif=1
     export KAAPI_WINDOW_SIZE=2
@@ -51,9 +50,10 @@ function run_test {
 	    for i in `seq 1 $niter`
 	    do
 	    echo "$KAAPI_CPUSET $KAAPI_GPUSET \
-		    ./matcholesky_kaapi++ $m $b $verif"
-	    KAAPI_STACKSIZE=536870912 ./matcholesky_kaapi++ $m $b 1 $verif 
-#	    KAAPI_STACKSIZE=536870912 gdb ./matcholesky_kaapi++ 
+		    ./matcholesky_rec_kaapi++ $m $b $verif"
+	    KAAPI_STACKSIZE=536870912 ./matcholesky_rec_kaapi++ $m $b 1 $verif 
+#	    KAAPI_STACKSIZE=536870912 gdb ./matcholesky_rec_kaapi++ 
+#	    KAAPI_STACKSIZE=536870912 valgrind --show-reachable=yes --tool=memcheck --leak-check=full --log-file=log.txt ./matcholesky_rec_kaapi++ $m $b 1 $verif
 	    done
 	done
     done
@@ -86,10 +86,10 @@ function run_potrf_gpu {
 	    do
 	    for i in `seq 1 $niter`
 	    do
-		echo "($i/$niter) $KAAPI_CPUSET $KAAPI_GPUSET ./matcholesky_kaapi++-gpu $m $b $verif >> $out"
+		echo "($i/$niter) $KAAPI_CPUSET $KAAPI_GPUSET ./matcholesky_rec_kaapi++-gpu $m $b $verif >> $out"
 		if [ -n "$dorun" ]
 		then
-		KAAPI_STACKSIZE=536870912  ./matcholesky_kaapi++-gpu $m $b 1 $verif >> $out
+		KAAPI_STACKSIZE=536870912  ./matcholesky_rec_kaapi++-gpu $m $b 1 $verif >> $out
 		fi
 	    done
 	done
@@ -111,7 +111,7 @@ function run_potrf {
     bsizes="512 1024"
     niter=10
     wins="2"
-    exe="./matcholesky_kaapi++-cpu-gpu"
+    exe="./matcholesky_rec_kaapi++-cpu-gpu"
     for w in $wins
     do
 	export KAAPI_WINDOW_SIZE=$w
@@ -160,10 +160,10 @@ function run_potrf_mem_gpu {
 	    do
 	    for i in `seq 1 $niter`
 	    do
-		echo "($i/$niter) $KAAPI_CPUSET $KAAPI_GPUSET ./matcholesky_kaapi++-gpu $m $b $verif >> $out"
+		echo "($i/$niter) $KAAPI_CPUSET $KAAPI_GPUSET ./matcholesky_rec_kaapi++-gpu $m $b $verif >> $out"
 		if [ -n "$dorun" ]
 		then
-		KAAPI_STACKSIZE=536870912  ./matcholesky_kaapi++-gpu $m $b 1 $verif &> $out
+		KAAPI_STACKSIZE=536870912  ./matcholesky_rec_kaapi++-gpu $m $b 1 $verif &> $out
 		fi
 	    done
 	done
@@ -275,16 +275,16 @@ function hybrid {
     gpuset="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
 
    export KAAPI_STEAL_AFFINITY="locality"
-    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_kaapi++" "xkaapiv2-dpotrf-steal-locality" "$nblocks" $niter "$wins"
+    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_rec_kaapi++" "xkaapiv2-dpotrf-steal-locality" "$nblocks" $niter "$wins"
     export KAAPI_STEAL_AFFINITY="writer"
-    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_kaapi++" "xkaapiv2-dpotrf-steal-writer" "$nblocks" $niter "$wins"
+    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_rec_kaapi++" "xkaapiv2-dpotrf-steal-writer" "$nblocks" $niter "$wins"
 
    unset KAAPI_STEAL_AFFINITY
 
    export KAAPI_AFFINITY="locality"
-    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_kaapi++" "xkaapiv2-dpotrf-push-locality" "$nblocks" $niter "$wins"
+    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_rec_kaapi++" "xkaapiv2-dpotrf-push-locality" "$nblocks" $niter "$wins"
     export KAAPI_AFFINITY="writer"
-    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_kaapi++" "xkaapiv2-dpotrf-push-writer" "$nblocks" $niter "$wins"
+    run_xkaapi_generic "$ncpu" "$cpuset" "$ngpu" "$gpuset" "./matcholesky_rec_kaapi++" "xkaapiv2-dpotrf-push-writer" "$nblocks" $niter "$wins"
 
     exit 0
 

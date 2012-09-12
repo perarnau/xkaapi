@@ -344,6 +344,10 @@ int kaapi_finalize(void)
   kaapi_network_finalize();
 #endif
 
+#if defined(KAAPI_USE_CUDA)
+//TODO:  kaapi_cuda_finalize();
+#endif
+
   return 0;
 }
 

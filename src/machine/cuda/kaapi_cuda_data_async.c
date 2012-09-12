@@ -54,14 +54,15 @@ static inline kaapi_data_t
     kaapi_mem_data_set_addr(kmd, asid, (kaapi_mem_addr_t) dest);
     kaapi_mem_data_set_dirty(kmd, asid);
     dest->kmd = kmd;
-    kaapi_mem_host_map_find_or_insert_(cuda_map, (kaapi_mem_addr_t)
-                                       kaapi_pointer2void(dest->ptr),
-                                       &kmd);
+    kaapi_mem_host_map_find_or_insert_(cuda_map,
+				      kaapi_mem_host_map_generate_id_by_data(dest),
+                                       &kmd
+				       );
     return dest;
   } else {
     kaapi_data_t *dest = (kaapi_data_t *) kaapi_mem_data_get_addr(kmd,
                                                                   asid);
-    kaapi_cuda_mem_inc_use(&dest->ptr, m);
+    kaapi_cuda_mem_inc_use(&dest->ptr, &dest->view, m);
     return dest;
   }
   
@@ -74,9 +75,6 @@ kaapi_cuda_data_async_input_alloc(kaapi_cuda_stream_t * kstream,
 {
   size_t i;
   kaapi_mem_host_map_t *cuda_map = kaapi_get_current_mem_host_map();
-  kaapi_mem_host_map_t *host_map =
-  kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
-  const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
   kaapi_mem_data_t *kmd;
   void *sp;
   sp = td->task->sp;
@@ -92,7 +90,7 @@ kaapi_cuda_data_async_input_alloc(kaapi_cuda_stream_t * kstream,
   
   for (i = 0; i < count_params; i++) {
     kaapi_access_mode_t m =
-    KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(td->fmt, i, sp));
+      KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(td->fmt, i, sp));
     if (m == KAAPI_ACCESS_MODE_V)
       continue;
     
@@ -101,13 +99,8 @@ kaapi_cuda_data_async_input_alloc(kaapi_cuda_stream_t * kstream,
     kmd = src->kmd;
     kaapi_assert_debug(kmd != 0);
     
-    if (!kaapi_mem_data_has_addr(kmd, host_asid)) {
-      kaapi_mem_data_set_addr(kmd, host_asid, (kaapi_mem_addr_t) src);
-      kaapi_mem_data_clear_dirty(kmd, host_asid);
-    }
-    
     kaapi_data_t *dest =
-    xxx_kaapi_cuda_data_async_allocate(cuda_map, kmd, src, m);
+      xxx_kaapi_cuda_data_async_allocate(cuda_map, kmd, src, m);
     
     /* sets new pointer to the task */
     access.data = dest;
@@ -159,8 +152,6 @@ kaapi_cuda_data_async_input_dev_sync(kaapi_cuda_stream_t * kstream,
       kaapi_assert_debug(kmd != 0);
       kaapi_mem_data_set_all_dirty_except(kmd, cuda_asid);
     }
-    //access.data = dev_data;
-    //kaapi_format_set_access_param(fmt, i, sp, &access);
   }
   
   return 0;
@@ -260,7 +251,7 @@ kaapi_cuda_data_async_output_dev_dec_use(kaapi_cuda_stream_t * kstream,
     kaapi_access_t access = kaapi_format_get_access_param(td->fmt, i, sp);
     kaapi_data_t *dev_data = kaapi_data(kaapi_data_t, &access);
     
-    kaapi_cuda_mem_dec_use(&dev_data->ptr, m);
+    kaapi_cuda_mem_dec_use(&dev_data->ptr, &dev_data->view, m);
   }
   
   return 0;
@@ -489,6 +480,7 @@ kaapi_cuda_data_async_sync_host(kaapi_data_t * kdata, cudaStream_t stream)
   kaapi_mem_asid_t valid_asid;
   
   kaapi_assert_debug(kmd != 0);
+//  if (kaapi_mem_data_clear_dirty_and_check(kmd, host_asid)) {
   if (kaapi_mem_data_is_dirty(kmd, host_asid)) {
     valid_asid = kaapi_mem_data_get_nondirty_asid(kmd);
     kaapi_data_t *valid_data =
@@ -506,7 +498,7 @@ int kaapi_cuda_data_async_input_host_sync(kaapi_taskdescr_t * const td)
   void *sp = td->task->sp;
   const size_t count_params = kaapi_format_get_count_params(td->fmt, sp);
   kaapi_mem_host_map_t *host_map =
-  kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
+    kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
   const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
   size_t i;
   cudaStream_t stream;

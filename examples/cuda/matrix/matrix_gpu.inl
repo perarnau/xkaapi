@@ -181,6 +181,75 @@ struct TaskBodyGPU<TaskGEMM<T> >
   }
 };
 
+template<typename T> 
+struct TaskBodyGPU<TaskParallelGEMM<T> >
+{
+  void operator()
+  (
+   ka::gpuStream stream,
+   CBLAS_ORDER		   order, 
+   CBLAS_TRANSPOSE transA,
+   CBLAS_TRANSPOSE transB,
+   T alpha,
+   ka::range2d_r<T> A,
+   ka::range2d_r<T> B,
+   T beta,
+   ka::range2d_rw<T> C
+  )
+  {
+    const T* const a = A->ptr();
+    const T* const b = B->ptr();
+    T* const c       = C->ptr();
+
+    const int m = A->dim(0); 
+    const int n = B->dim(1); // eq. to Akj->rows();
+    const int k = C->dim(1); 
+
+
+    const int lda = A->lda();
+    const int ldb = B->lda();
+    const int ldc = C->lda();
+
+
+#if 0
+    fprintf(stdout, "TaskGPU RecursiveGEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", m, n, k, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
+#endif
+
+    KAAPI_TIMING_CUDA_BEGIN((cudaStream_t)stream.stream);
+#if CONFIG_USE_CUBLAS
+    cublasStatus_t status;
+    if( order == CblasColMajor ) 
+      status = CUBLAS<T>::gemm (
+	     kaapi_cuda_cublas_handle(),
+	     convertToOp(transA),
+	     convertToOp(transB),
+	     m, n, k,
+	     &alpha,
+	     a, lda,
+	     b, ldb, 
+	     &beta, c, ldc
+      );
+    else {
+      kaapi_assert_debug( order == CblasRowMajor )
+      status = CUBLAS<T>::gemm(
+	     kaapi_cuda_cublas_handle(),
+	     convertToOp(transB),
+	     convertToOp(transA),
+	     n, m, k,
+	     &alpha,
+	     b, ldb, 
+	     a, lda,
+	     &beta, c, ldc
+      );
+  }
+	
+  if (status != CUBLAS_STATUS_SUCCESS)
+    printf("%s::cublasGemm() == %d\n", __FUNCTION__, status);
+#endif
+
+    KAAPI_TIMING_CUDA_END((cudaStream_t)stream.stream, "GPU DGEMM", n);
+  }
+};
 
 template<typename T> 
 struct TaskBodyGPU<TaskSYRK<T> >
