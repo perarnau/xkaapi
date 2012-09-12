@@ -58,6 +58,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   kaapi_request_status_t  ws_status;
   kaapi_thread_context_t* thread;
   kaapi_thread_context_t* tmp;
+  kaapi_taskdescr_t* td;
   int err;
   
   kaapi_assert_debug( kproc !=0 );
@@ -70,11 +71,15 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
   KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
 #endif
-
+  
   do 
   {
 #if defined(KAAPI_USE_NETWORK)
     kaapi_network_poll();
+#endif
+#if defined(KAAPI_USE_CUDA)
+    if( kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA ) 
+      kaapi_cuda_proc_poll( kproc );
 #endif
     if (kaapi_suspendflag)
       kaapi_mt_suspend_self(kproc);
@@ -82,6 +87,10 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     /* terminaison ? */
     if (kaapi_isterminated())
     {
+#if defined(KAAPI_USE_CUDA)
+      if( kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA )
+        kaapi_assert_debug( kaapi_cuda_proc_end_isvalid( kproc ) );
+#endif
       KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
       return;
     }
@@ -96,7 +105,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
         tmp = kproc->thread;
         /* set new context to the kprocessor */
         kaapi_setcontext(kproc, thread);
-
+        
         /* push kproc context into free list */
         if (tmp) 
           kaapi_context_free( kproc, tmp );
@@ -104,7 +113,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
         goto redo_execute;
       }
     }
-
+    
     /* always allocate a thread before emitting a steal request */
     if (kproc->thread ==0)
     {
@@ -114,11 +123,23 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       kaapi_setcontext(kproc, thread);
     }
 
+    if( 0 == kaapi_readylist_pop( kproc->rtl_remote, &td ))
+    {
+      kaapi_thread_startexecwithtd( kproc, td );
+      goto redo_execute;
+    }
+    
+    if( 0 == kaapi_readylist_pop( kproc->rtl, &td ))
+    {
+      kaapi_thread_startexecwithtd( kproc, td );
+      goto redo_execute;
+    }
+    
     /* steal request */
     ws_status = kproc->emitsteal(kproc);
     if (ws_status != KAAPI_REQUEST_S_OK)
       continue;
-
+    
 redo_execute:    
     kproc->isidle = 0;
     
@@ -127,21 +148,22 @@ redo_execute:
     KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_END );
     KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_TASK_BEG );
 #endif
-
+    
 #if defined(KAAPI_USE_CUDA)
-    if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
-    {
-      if (kproc->thread->sfp->tasklist == 0)
-        err = kaapi_thread_execframe(&kproc->thread->stack);
+    if( kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA ) {
+      if (kproc->thread->stack.sfp->tasklist ==0)
+        err = kaapi_cuda_thread_stack_execframe( &kproc->thread->stack );
       else
-        err = kaapi_cuda_thread_execframe_tasklist(&kproc->thread->stack);
+        err = kaapi_cuda_thread_execframe_tasklist( kproc->thread );
     }
     else
 #endif /* KAAPI_USE_CUDA */
-      if (kproc->thread->stack.sfp->tasklist ==0)
+    {
+      if( kproc->thread->stack.sfp->tasklist == 0 )
         err = kaapi_stack_execframe(&kproc->thread->stack);
       else
         err = kaapi_thread_execframe_tasklist( kproc->thread );
+    }
     
 #if defined(KAAPI_USE_PERFCOUNTER)
     KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_TASK_END );  
@@ -155,7 +177,7 @@ redo_execute:
       thread = kproc->thread;
       kaapi_setcontext(kproc, 0);
       kaapi_wsqueuectxt_push( kproc, thread );
-
+      
 #if defined(KAAPI_USE_PERFCOUNTER)
       ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_SUSPEND);
 #endif      
@@ -175,16 +197,9 @@ redo_execute:
     {
       kaapi_stack_reset(&kproc->thread->stack);
       kaapi_synchronize_steal(kproc);
-#if 0
-      kaapi_assert( kaapi_frame_isempty( kproc->thread->stack.sfp ) );
-      kaapi_assert( kproc->thread->stack.sfp == kproc->thread->stack.stackframe );
-      kaapi_assert( kproc->thread->stack.sfp->pc == kproc->thread->stack.task );
-      kaapi_assert( kproc->thread->stack.sfp->sp == kproc->thread->stack.task );
-      kaapi_assert( kproc->thread->stack.sfp->sp_data == kproc->thread->stack.data );
-#endif
     }
 #endif
-
+    
     kproc->isidle = 1;
   } while (1);
   

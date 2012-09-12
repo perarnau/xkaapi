@@ -47,12 +47,10 @@
     Return 1 if at least one ready task has been pushed into ready queue.
     Else return 0.
 */
+#if 0
 int kaapi_tasklist_pushready_td( 
     kaapi_tasklist_t*       tasklist, 
     kaapi_taskdescr_t*      td,
-#if !defined(TASKLIST_ONEGLOBAL_MASTER)  
-    kaapi_taskdescr_t**     tdref,
-#endif
     int                     priority
 )
 {
@@ -62,11 +60,7 @@ int kaapi_tasklist_pushready_td(
   kaapi_bitmap_value32_t ocr = td->ocr;
   uintptr_t addr = 0;
   kaapi_task_t* task;
-#if defined(KAAPI_TASKLIST_POINTER_TASK)
   task = td->task;
-#else
-  task = &td->task;
-#endif
 #endif
 
 
@@ -106,9 +100,38 @@ int kaapi_tasklist_pushready_td(
   }
 #endif
   
+#if 0
   if (1) //(queue == 0)
   {
     /* I was not able to identify a queue for the task: push locally */
+#if defined(KAAPI_USE_CUDA)
+    if( kaapi_processor_get_type(kaapi_get_current_processor()) == KAAPI_PROC_TYPE_CUDA ) {
+	if( KAAPI_TASKLIST_GPU_MIN_PRIORITY < priority )
+	    kaapi_readylist_pushone_td( 
+		&tasklist->master->rtl, 
+		td, 
+		(tasklist->t_infinity !=0) ?
+		  (tasklist->t_infinity - td->u.acl.date) * (KAAPI_TASKLIST_NUM_PRIORITY-1) / tasklist->t_infinity
+		:  td->priority 
+	    );
+	else
+	    kaapi_readylist_pushone_td( 
+		&tasklist->rtl, 
+		td, 
+		(tasklist->t_infinity !=0) ?
+		  (tasklist->t_infinity - td->u.acl.date) * (KAAPI_TASKLIST_NUM_PRIORITY-1) / tasklist->t_infinity
+		:  td->priority 
+	    );
+    } else {
+	kaapi_readylist_pushone_td( 
+	    &tasklist->rtl, 
+	    td, 
+	    (tasklist->t_infinity !=0) ?
+	      (tasklist->t_infinity - td->u.acl.date) * (KAAPI_TASKLIST_NUM_PRIORITY-1) / tasklist->t_infinity
+	    :  td->priority 
+	);
+    }
+#else
     kaapi_readylist_pushone_td( 
         &tasklist->rtl, 
         td, 
@@ -116,24 +139,19 @@ int kaapi_tasklist_pushready_td(
           (tasklist->t_infinity - td->u.acl.date) * (KAAPI_TASKLIST_NUM_PRIORITY-1) / tasklist->t_infinity
         :  td->priority 
     );
+#endif
     return 0;
   }
+#endif
 
 #if 0
   /* push remote queue:
      - same code as kaapi_task_splitter_readylist except state ALLOCATED */
-#if defined(TASKLIST_ONEGLOBAL_MASTER)  
   if (tasklist->master == 0)
     td->tasksteal_arg.master_tasklist     = tasklist;
   else
     td->tasksteal_arg.master_tasklist     = tasklist->master;
   td->tasksteal_arg.td                    = td;
-#else
-  td->tasksteal_arg.master_tasklist       = tasklist;
-  td->tasksteal_arg.td_beg                = &td;
-  td->tasksteal_arg.td_beg                = tdref;
-  td->tasksteal_arg.td_end                = tdref+1;
-#endif
 
   kaapi_task_init(
       &td->tasksteal, 
@@ -141,14 +159,10 @@ int kaapi_tasklist_pushready_td(
       &td->tasksteal_arg
   );
 
-#if defined(TASKLIST_ONEGLOBAL_MASTER)  
   if (tasklist->master == 0)
     KAAPI_ATOMIC_INCR(&tasklist->count_thief);
   else
     KAAPI_ATOMIC_INCR(&tasklist->master->count_thief);
-#else
-  KAAPI_ATOMIC_INCR(&tasklist->count_thief);
-#endif
 
   /* push the task in the remote queue */
   //kaapi_thread_pushtask_atlevel(task, KAAPI_HWS_LEVELID_NUMA);
@@ -158,3 +172,4 @@ int kaapi_tasklist_pushready_td(
 
   return 1;
 }
+#endif

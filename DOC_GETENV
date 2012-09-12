@@ -12,7 +12,8 @@ KAAPI_GPUSET:
   CPUSET for mapping kprocessors that manage GPU. 
 
 KAAPI_STACKSIZE: 
-  Stack size to store tasks and task' arguments. 
+  Stack size to store tasks and task' arguments.
+  Unit: Byte 
 
 KAAPI_NETWORK:
   Name of the network to used.

@@ -45,15 +45,15 @@
 */
 
 
-#ifndef KAAPI_CUDA_ERROR_H_INCLUDED
-# define KAAPI_CUDA_ERROR_H_INCLUDED
+#if 0
+#define KAAPI_CUDA_ERROR_H_INCLUDED
 
 /* internally defined */
 #define KAAPI_CUDA_ERROR 1
 
 #if KAAPI_CUDA_ERROR
 #include <stdio.h>
-static void kaapi_cuda_error(const char* s, CUresult e)
+static void kaapi_cuda_error(const char *s, CUresult e)
 {
   printf("[!] %s: %u\n", s, e);
 }
@@ -61,4 +61,4 @@ static void kaapi_cuda_error(const char* s, CUresult e)
 #define kaapi_cuda_error(__a, __b)
 #endif
 
-#endif /* ! KAAPI_CUDA_ERROR_H_INCLUDED */
+#endif				/* ! KAAPI_CUDA_ERROR_H_INCLUDED */

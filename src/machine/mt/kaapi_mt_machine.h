@@ -70,13 +70,17 @@
 #if defined(KAAPI_USE_CUDA)
 #  include "../cuda/kaapi_cuda_proc.h"
 #endif
-#include "../../memory/kaapi_mem.h"
 
 #include "kaapi_mt_bitmap.h"
+
+#include "../../memory/kaapi_mem.h"
+#include "../../memory/kaapi_mem_data.h"
+#include "../../memory/kaapi_mem_host_map.h"
 
 /* ========================================================================== */
 struct kaapi_procinfo_t;
 struct kaapi_event_buffer_t;
+struct kaapi_readytasklist_t;
 
 /* ============================= Documentation ============================ */
 /* This is the multithreaded definition of machine type for X-Kaapi.
@@ -104,6 +108,17 @@ extern kaapi_atomic_t kaapi_term_barrier;
 /** Termination flag
 */
 extern volatile int kaapi_isterm;
+
+/* ========================================================================= */
+/** \ingroup WS
+    Number of used cores
+*/
+extern uint32_t volatile kaapi_count_kprocessors;
+
+/** \ingroup WS
+    One K-processors per core
+*/
+extern struct kaapi_processor_t** kaapi_all_kprocessors;
 
 /* ========================================================================= */
 /* Functions to manipulate thread context 
@@ -165,21 +180,16 @@ typedef struct kaapi_lfree
   kaapi_thread_context_t* _back;
 } kaapi_lfree_t;
 
+struct kaapi_taskdescr_t;
 
-/**
-*/
-typedef struct kaapi_task_withlink_t {
-  struct kaapi_task_withlink_t* volatile next;
-  kaapi_task_t                           task;
-} kaapi_task_withlink_t;
-
+#if 0
 /** Mail box queue: remote thead may push stealtask into this queue.
 */
 typedef  struct {
   kaapi_task_withlink_t*         volatile head;
   kaapi_task_withlink_t*         volatile tail;
 }   __attribute__((aligned(KAAPI_CACHE_LINE))) kaapi_mailbox_queue_t;
-
+#endif
 
 /** \ingroup WS
     Higher level context manipulation.
@@ -264,6 +274,16 @@ static inline int kaapi_listrequest_iterator_count(
 { return kaapi_bitmap_value_count(&lrrange->bitmap) 
       + (int)(lrrange->idcurr == -1 ? 0 : 1); }
 
+/* return the bitmap of all requests */
+static inline kaapi_bitmap_value_t kaapi_listrequest_iterator_bitmap(
+    kaapi_listrequest_iterator_t* lrrange
+)
+{ kaapi_bitmap_value_t retval;
+  kaapi_bitmap_value_set(&retval, (lrrange->idcurr == -1 ? 0 : lrrange->idcurr) );
+  kaapi_bitmap_value_or( &retval, &lrrange->bitmap );
+  return retval;
+}
+
 /* get the first request of the range. range iterator should have been initialized by kaapi_listrequest_iterator_init 
 */
 static inline kaapi_request_t* kaapi_listrequest_iterator_get( 
@@ -277,7 +297,7 @@ static inline kaapi_request_t* kaapi_listrequest_iterator_getkid_andnext(
   kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange, int kid 
 )
 { 
-  kaapi_assert_debug( (kid >=0) && (kid < (int)kaapi_default_param.cpucount) );
+  kaapi_assert_debug( (kid >=0) && (kid < (int)kaapi_count_kprocessors) );
   if (kid == lrrange->idcurr)
     lrrange->idcurr = kaapi_bitmap_value_first1_and_zero( &lrrange->bitmap )-1;
   else 
@@ -400,7 +420,6 @@ typedef struct kaapi_cpuhierarchy_t {
   kaapi_onelevel_t      levels[ENCORE_UNE_MACRO_DETAILLEE];
 } kaapi_cpuhierarchy_t;
 
-
 /** \ingroup WS
     This data structure defines a work stealer processor kernel thread.
     A kprocessor is a container of tasks stored by stack.
@@ -415,8 +434,9 @@ typedef struct kaapi_processor_t {
   kaapi_lock_t             lock                           /* all requests attached to each kprocessor ordered by increasing level */
     __attribute__((aligned(KAAPI_CACHE_LINE)));
 
-  kaapi_mailbox_queue_t    mailbox;
-
+  struct kaapi_readytasklist_t* rtl;                      /* readylist of task descriptors */
+  struct kaapi_readytasklist_t* rtl_remote;               /* readylist of task descriptors (remote push) */
+  
   int volatile             isidle;                        /* true if kproc is idle (active thread is empty) */
 
   kaapi_wsqueuectxt_t      lsuspend                       /* list of suspended context */
@@ -477,7 +497,7 @@ typedef struct kaapi_processor_t {
   unsigned int              seed_data;
   
   /* memory map */
-  kaapi_mem_map_t          mem_map;
+  kaapi_mem_host_map_t      mem_host_map;
 
   struct kaapi_processor_t* victim_kproc;
 
@@ -639,17 +659,6 @@ static inline kaapi_thread_context_t* kaapi_lfree_pop(struct kaapi_processor_t* 
 }
 
 
-/** \ingroup WS
-    Number of used cores
-*/
-extern uint32_t volatile kaapi_count_kprocessors;
-
-/** \ingroup WS
-    One K-processors per core
-*/
-extern kaapi_processor_t** kaapi_all_kprocessors;
-
-
 #if defined(KAAPI_HAVE_COMPILER_TLS_SUPPORT)
 extern __thread kaapi_processor_t*      kaapi_current_processor_key;
 extern __thread kaapi_threadgroup_t     kaapi_current_threadgroup_key;
@@ -674,6 +683,14 @@ static inline kaapi_thread_context_t* kaapi_self_thread_context(void)
 /* */
 static inline kaapi_processor_id_t kaapi_get_current_kid(void)
 { return kaapi_get_current_processor()->kid; }
+
+static inline kaapi_mem_host_map_t*
+kaapi_get_current_mem_host_map(void)
+{ return &kaapi_get_current_processor()->mem_host_map; }
+
+static inline kaapi_mem_host_map_t*
+kaapi_processor_get_mem_host_map( kaapi_processor_t* kproc )
+{ return &kproc->mem_host_map; }
 
 
 /* ========================================================================== */

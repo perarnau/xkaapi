@@ -353,6 +353,11 @@ static inline void kaapi_bitmap_value_copy_64( kaapi_bitmap_value64_t* retval, c
   retval->proc64 = b->proc64;
 }
 
+static inline void kaapi_bitmap_copy_64( kaapi_bitmap_value64_t* retval, const kaapi_bitmap64_t* b ) 
+{ 
+  retval->proc64 = KAAPI_ATOMIC_READ(&b->proc64);
+}
+
 static inline void kaapi_bitmap_swap0_64( kaapi_bitmap64_t* b, kaapi_bitmap_value64_t* v ) 
 {
   v->proc64 = KAAPI_ATOMIC_AND64_ORIG(&b->proc64, (uint64_t)0);
@@ -401,6 +406,15 @@ static inline int kaapi_bitmap_set_64( kaapi_bitmap64_t* b, int i )
   return 1;
 }
 
+static inline int kaapi_bitmap_fetch_and_set_64( kaapi_bitmap64_t* b, int i ) 
+{ 
+  uint64_t x;
+  
+  kaapi_assert_debug( (i<64) && (i>=0) );
+  x = KAAPI_ATOMIC_OR64_ORIG(&b->proc64, ((uint64_t)1)<<i); 
+  return (x & ((uint64_t)1 << i));
+}
+
 static inline int kaapi_bitmap_get_64( const kaapi_bitmap64_t* b, int i ) 
 { 
   kaapi_assert_debug( (i<64) && (i>=0) );
@@ -416,6 +430,11 @@ static inline int kaapi_bitmap_unset_64( kaapi_bitmap64_t* b, int i )
   /* was not unset before, success */
   if (x & ((uint64_t)1 << i)) return 0;
   return -1;
+}
+
+static inline void kaapi_bitmap_full_except_64( kaapi_bitmap64_t* b, int i )  
+{
+  KAAPI_ATOMIC_WRITE( &b->proc64, ~(((uint64_t)1)<<i) );
 }
 
 static inline int kaapi_bitmap_count_64( const kaapi_bitmap64_t* b ) 

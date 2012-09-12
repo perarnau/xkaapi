@@ -77,7 +77,7 @@ static inline void _kaapi_free_link( kaapi_activationlink_t* freelist, kaapi_act
     consider that they are ready.
 */
 int kaapi_thread_abstractexec_readylist( 
-  const kaapi_tasklist_t* tasklist, 
+  const kaapi_frame_tasklist_t* tasklist, 
   void (*taskdescr_executor)(kaapi_taskdescr_t*, void*),
   void* arg_executor
 )

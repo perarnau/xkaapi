@@ -104,9 +104,10 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread, kaapi_task_t*
           */
           if (fmt_param->assign ==0)
           {
-            kaapi_pointer_t     ptr_dest;
+            kaapi_pointer_t     ptr_dest, ptr_src;
             kaapi_void2pointer(&ptr_dest, access_param.data);
-            kaapi_memory_write_cpu2cpu(ptr_dest, &view_dest, access_param.version, &view_src);
+            kaapi_void2pointer(&ptr_src, access_param.version);
+            kaapi_memory_write_cpu2cpu(ptr_dest, &view_dest, ptr_src, &view_src);
           }
           else
             (*fmt_param->assign)( access_param.data, &view_dest, access_param.version, &view_src );

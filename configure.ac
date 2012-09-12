@@ -620,16 +620,32 @@ dnl The "--with-cuda"
 dnl -----------------------------------------------------------------------
 KAAPI_PKGLIB_CHECK([GPU programming], [cuda], [CUDA], [no], [KAAPI_USE_CUDA],
   [build CUDA support [EXPERIMENTAL]],
-  [cuda], [], [cuda.h], [cuDeviceGetProperties], [
+  [cuda], [], [cuda_runtime_api.h], [cuDeviceGetAttribute], [
 dnl    CUDA is there
     AC_DEFINE([KAAPI_USE_CUDA],1,[Support for CUDA])
     HACK_USE_CUDA=yes
   ],
   [
   ],
-  [])
+  [-lcublas])
 AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$HACK_USE_CUDA" = x"yes"])
 ACX_LIB_LINK([KAAPILIB],[CUDA])
+
+dnl -----------------------------------------------------------------------
+dnl The "--with-cupti"
+dnl -----------------------------------------------------------------------
+KAAPI_PKGLIB_CHECK([GPU programming], [cupti], [CUPTI], [no], [KAAPI_USE_CUPTI],
+  [build CUDA profiler support [EXPERIMENTAL]],
+  [cupti], [], [cuda_runtime_api.h], [cuDeviceGetAttribute], [
+dnl    CUPTI is there
+    AC_DEFINE([KAAPI_USE_CUPTI],1,[Support for CUDA profiler])
+    HACK_USE_CUPTI=yes
+  ],
+  [
+  ],
+  [])
+AM_CONDITIONAL([KAAPI_TARGET_CUPTI],[test x"$HACK_USE_CUPTI" = x"yes"])
+ACX_LIB_LINK([KAAPILIB],[CUPTI])
 
 
 dnl -----------------------------------------------------------------------
@@ -874,6 +890,7 @@ dnl Dependencies between libs
 dnl -----------------------------------------------------------------------
 ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [KAAPILIB])
 ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUDA])
+ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUPTI])
 dnl ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [HWLOC])
 
 dnl ACX_LIB_LINK([KANETLIB], [PUBLIC], [KAAPIXXLIB])
@@ -881,25 +898,32 @@ ACX_LIB_LINK([KANETLIB], [PRIVATE], [KAAPIXXLIB])
 
 ACX_LIB_LINK([ATHALIB], [PUBLIC], [KAAPIXXLIB])
 ACX_LIB_LINK([ATHALIB], [PRIVATE], [CUDA])
+ACX_LIB_LINK([ATHALIB], [PRIVATE], [CUPTI])
 dnl ACX_LIB_LINK([ATHALIB], [PRIVATE], [HWLOC])
 
 ACX_LIB_LINK([KASTLLIB], [PUBLIC], [KAAPIXXLIB])
 ACX_LIB_LINK([KASTLLIB], [PRIVATE], [CUDA])
+ACX_LIB_LINK([KASTLLIB], [PRIVATE], [CUPTI])
 dnl ACX_LIB_LINK([KASTLLIB], [PRIVATE], [HWLOC])
 
 ACX_LIB_LINK([KAAPICLIB], [PUBLIC], [KAAPILIB])
 ACX_LIB_LINK([KAAPICLIB], [PRIVATE], [CUDA])
+ACX_LIB_LINK([KAAPICLIB], [PRIVATE], [CUPTI])
 
 ACX_LIB_LINK([KAAPIFLIB], [PUBLIC], [KAAPICLIB])
 ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [CUDA])
+ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [CUPTI])
 dnl ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [HWLOC])
 
 ACX_LIB_LINK([LIBGOMP], [PUBLIC], [KAAPILIB KAAPICLIB])
+ACX_LIB_LINK([LIBGOMP], [PRIVATE], [KAAPILIB KAAPICLIB CUDA])
 
 ACX_LIB_LINK([KAAPIPROGS], [KAAPILIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIPROGS],
 	[-I\$(top_srcdir)/src],[],[],
 	[\$(top_builddir)/src/libkaapi.la])
+ACX_LIB_LINK([KAAPIPROGS], [CUDA])
+ACX_LIB_LINK([KAAPIPROGS], [CUPTI])
 
 ACX_LIB_LINK([KAAPICPROGS], [KAAPICLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPICPROGS],

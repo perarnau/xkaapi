@@ -65,13 +65,13 @@ int kaapi_sched_stealprocessor(
 
   /* 2/ steal in suspended threads */
   cell = kproc->lsuspend.tail;
-
-  while ( !kaapi_listrequest_iterator_empty(lrrange) && (cell !=0))
+  while ( !kaapi_listrequest_iterator_empty(lrrange) && (cell !=0)) 
   {
     thread = cell->thread;
     if (thread != 0)
       kaapi_sched_stealstack( thread, lrequests, lrrange );
-    cell = cell->next;
+    // TODO impact if iteration in reverse order ???
+    cell = cell->prev;
   }
 
   /* 3/ steal current thread; make local copy because it can disappear */
@@ -81,6 +81,11 @@ int kaapi_sched_stealprocessor(
     /* signal that count thefts are waiting */
     kaapi_sched_stealstack( thread, lrequests, lrrange );
   }
+
+#if 1 /* to disable steal in kproc ready list */
+  if( !kaapi_readytasklist_isempty( kproc->rtl ) )
+    kaapi_sched_stealreadytasklist( thread, kproc->rtl, lrequests, lrrange );
+#endif
 
   return 0;
 }

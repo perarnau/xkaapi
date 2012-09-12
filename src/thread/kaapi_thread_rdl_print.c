@@ -61,11 +61,7 @@ static int kaapi_task_descriptor_print( FILE* file, int pad, kaapi_taskdescr_t* 
   const kaapi_format_t* fmt;
   kaapi_task_body_t body;
 
-#if defined(KAAPI_TASKLIST_POINTER_TASK)
   body = kaapi_task_getbody(td->task);
-#else
-  body = kaapi_task_getbody(&td->task);
-#endif
   fmt = kaapi_format_resolvebybody( body );
   if (fmt !=0) 
     name = fmt->name;
@@ -147,7 +143,7 @@ static int kaapi_insert_unvisited_td( kaapi_hashmap_t* khm, kaapi_activationlink
 
 /**
 */
-int kaapi_thread_tasklist_print( FILE* file, kaapi_tasklist_t* tl )
+int kaapi_frame_tasklist_print( FILE* file, kaapi_frame_tasklist_t* tl )
 {
   /* new history of visited data */
   kaapi_hashmap_t visit_khm;

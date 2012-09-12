@@ -2,7 +2,7 @@
 ** kaapi_cuda_proc.h
 ** xkaapi
 ** 
-**
+** Created on Jul 2010
 ** Copyright 2010 INRIA.
 **
 ** Contributors :
@@ -43,127 +43,112 @@
 ** terms.
 ** 
 */
+
+#include <stdio.h>
+#include <cuda_runtime_api.h>
+
 #include "kaapi_impl.h"
 #include "kaapi_cuda_proc.h"
 #include "kaapi_cuda_kasid.h"
-#include "kaapi_cuda_error.h"
+#include "kaapi_cuda_dev.h"
+#include "kaapi_cuda_ctx.h"
+#include "kaapi_cuda_cublas.h"
+#include "kaapi_cuda_mem.h"
 
-
-static int open_cuda_device(CUdevice* dev, CUcontext* ctx, unsigned int index)
-{
-  CUresult res;
-
-  res = cuDeviceGet(dev, index);
-  if (res != CUDA_SUCCESS)
-  {
-    kaapi_cuda_error("cuDeviceGet", res);
-    return -1;
-  }
-
-  /* use sched_yield while waiting for sync.
-     context is made current for the thread.
-   */
-  res = cuCtxCreate(ctx, CU_CTX_SCHED_YIELD | CU_CTX_MAP_HOST, *dev);
-  if (res != CUDA_SUCCESS)
-  {
-    kaapi_cuda_error("cuCtxCreate", res);
-    return -1;
-  }
-
-#if 0 /* print device attributes */
-  {
-    int value;
-    cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_GPU_OVERLAP, *dev);
-    printf("gpu_overlap: %u\n", value);
-#if CUDA_VERSION >= 3000
-    cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_CONCCURENT_KERNELS, *dev);
-    printf("conc_kernels: %u\n", value);
-#endif
-  }
+#if defined(KAAPI_CUDA_KSTREAM)
+#include "kaapi_cuda_stream.h"
 #endif
 
-  return 0;
-}
+#if defined(KAAPI_USE_CUPTI)
+#include "kaapi_cuda_trace.h"
+#endif
 
-static void close_cuda_device(CUdevice dev, CUcontext ctx)
-{
-  dev = dev; /* unused */
-  cuCtxDestroy(ctx);
-}
+/* number of CUDA devices */
+uint32_t kaapi_cuda_count_kprocessors = 0;
 
-
+/* index of kprocessors by CUDA devid */
+kaapi_processor_t *kaapi_cuda_all_kprocessors[KAAPI_CUDA_MAX_DEV];
 /* exported */
 
-int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t* proc, unsigned int idev)
+void kaapi_cuda_init(void)
 {
-  CUresult res;
+  KAAPI_ATOMIC_WRITE(&kaapi_cuda_synchronize_barrier, 0);
+}
+
+int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t * proc, unsigned int idev)
+{
+  cudaError_t res;
 
   proc->is_initialized = 0;
 
-  if (open_cuda_device(&proc->dev, &proc->ctx, idev))
-    return -1;
+  if ((res = kaapi_cuda_dev_open(proc, idev)) != cudaSuccess)
+    return res;
 
-  res = cuStreamCreate(&proc->stream, 0);
-  if (res != CUDA_SUCCESS)
-  {
-    kaapi_cuda_error("cuStreamCreate", res);
-    close_cuda_device(proc->dev, proc->ctx);
-    return -1;
-  }
+  kaapi_cuda_device_sync();
 
-  /* cache the device attributes
-   */
-  proc->attr_concurrent_kernels = 0;
-  res = cuDeviceGetAttribute
-  (
-   (int*)&proc->attr_concurrent_kernels,
-   CU_DEVICE_ATTRIBUTE_CONCURRENT_KERNELS,
-   proc->dev
-  );
-
-#if defined(KAAPI_DEBUG)
-  if (res != CUDA_SUCCESS)
-    kaapi_cuda_error("cuGetDeviceAttribute", res);
+#if defined(KAAPI_USE_WINDOW)
+  if (kaapi_default_param.cudawindowsize > 0)
+    kaapi_cuda_stream_init(kaapi_default_param.cudawindowsize * 3, proc);
+  else
 #endif
+    kaapi_cuda_stream_init(512, proc);
 
   /* pop the context to make it floating. doing
      so allow another thread to use it, such
      as the main one with kaapi_mem_synchronize2
-  */
-  res = cuCtxPopCurrent(&proc->ctx);
-  if (res != CUDA_SUCCESS)
-  {
-    kaapi_cuda_error("cuCtxPopCurrent", res);
-    close_cuda_device(proc->dev, proc->ctx);
-    return -1;
-  }
+   */
+  kaapi_cuda_cublas_init(proc);
+  kaapi_cuda_cublas_set_stream();
 
-  if (pthread_mutex_init(&proc->ctx_lock, NULL))
-  {
-    kaapi_cuda_error("pthread_mutex_init", 0);
-    return -1;
-  }
+  if (kaapi_default_param.cudapeertopeer)
+    kaapi_cuda_dev_enable_peer_access(proc);
 
+#if defined(KAAPI_USE_CUPTI)
+  if (getenv("KAAPI_RECORD_TRACE") != 0) {
+    kaapi_cuda_trace_thread_init();
+  }
+#endif
+
+  kaapi_cuda_device_sync();
+
+#if KAAPI_VERBOSE
+  fprintf(stdout, "%s: dev=%lu kid=%lu\n", __FUNCTION__,
+	  idev, kaapi_get_current_kid());
+  fflush(stdout);
+#endif
+
+  KAAPI_ATOMIC_WRITE(&proc->synchronize_flag, 0);
   proc->kasid_user = KAAPI_CUDA_KASID_USER_BASE + idev;
-
   proc->is_initialized = 1;
+  proc->asid = kaapi_memory_address_space_create
+      (idev, KAAPI_MEM_TYPE_CUDA, 0x100000000UL);
+
+  kaapi_cuda_all_kprocessors[idev] = kaapi_get_current_processor();
+  kaapi_cuda_count_kprocessors++;
 
   return 0;
 }
 
 
-int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t* proc)
+int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t * proc)
 {
   if (proc->is_initialized == 0)
     return -1;
 
-  cuStreamDestroy(proc->stream);
+#if 0
+  fprintf(stdout, "[%s] kid=%lu\n", __FUNCTION__, proc->index);
+  fflush(stdout);
+  kaapi_cuda_cublas_finalize(proc);
+#ifdef KAAPI_CUDA_ASYNC
+  cudaStreamDestroy(proc->stream);
+#endif
 
-  pthread_mutex_lock(&proc->ctx_lock);
-  close_cuda_device(proc->dev, proc->ctx);
-  pthread_mutex_unlock(&proc->ctx_lock);
-  pthread_mutex_destroy(&proc->ctx_lock);
-
+//  kaapi_cuda_ctx_pop( );
+  kaapi_cuda_stream_destroy(proc->kstream);
+  kaapi_cuda_dev_close(proc);
+  kaapi_cuda_mem_destroy(proc);
+  /* TODO MAGMA is breaking Free codes */
+#endif
   proc->is_initialized = 0;
 
   return 0;
@@ -172,32 +157,67 @@ int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t* proc)
 
 size_t kaapi_cuda_get_proc_count(void)
 {
-  /* returns the number of kproc being of cuda type */
-  /* todo: dont walk the kproc list every time, ok for now */
-  kaapi_processor_t** pos = kaapi_all_kprocessors;
-  size_t count = 0;
-  size_t i;
-  for (i = 0; i < kaapi_count_kprocessors; ++i, ++pos)
-    if ((*pos)->proc_type == KAAPI_PROC_TYPE_CUDA)
-      ++count;
-  return count;
+  return kaapi_cuda_count_kprocessors;
 }
 
-
-unsigned int kaapi_cuda_get_first_kid(void)
+cudaStream_t kaapi_cuda_kernel_stream(void)
 {
-  kaapi_processor_t** pos = kaapi_all_kprocessors;
-  size_t i;
-  for (i = 0; i < kaapi_count_kprocessors; ++i, ++pos)
-    if ((*pos)->proc_type == KAAPI_PROC_TYPE_CUDA)
-      return (*pos)->kid;
-  return (unsigned int)-1;
+  kaapi_processor_t *const self_proc = kaapi_get_current_processor();
+  return
+      kaapi_cuda_get_cudastream(kaapi_cuda_get_kernel_fifo
+				(self_proc->cuda_proc.kstream));
 }
 
-
-CUstream kaapi_cuda_kernel_stream(void)
+cudaStream_t kaapi_cuda_HtoD_stream(void)
 {
-  kaapi_processor_t* const self_proc =
-    kaapi_get_current_processor();
-  return self_proc->cuda_proc.stream;
+  kaapi_processor_t *const self_proc = kaapi_get_current_processor();
+  return
+      kaapi_cuda_get_cudastream(kaapi_cuda_get_input_fifo
+				(self_proc->cuda_proc.kstream));
+}
+
+cudaStream_t kaapi_cuda_DtoH_stream(void)
+{
+  kaapi_processor_t *const self_proc = kaapi_get_current_processor();
+  return
+      kaapi_cuda_get_cudastream(kaapi_cuda_get_output_fifo
+				(self_proc->cuda_proc.kstream));
+}
+
+cudaStream_t kaapi_cuda_DtoD_stream(void)
+{
+  kaapi_processor_t *const self_proc = kaapi_get_current_processor();
+  return
+      kaapi_cuda_get_cudastream(kaapi_cuda_get_output_fifo
+				(self_proc->cuda_proc.kstream));
+}
+
+void kaapi_cuda_proc_poll(kaapi_processor_t * const kproc)
+{
+  if (KAAPI_ATOMIC_READ(&kproc->cuda_proc.synchronize_flag) == 1) {
+    kaapi_cuda_sync(kproc);
+    KAAPI_ATOMIC_WRITE(&kproc->cuda_proc.synchronize_flag, 0);
+  } else {
+    kaapi_cuda_stream_poll(kproc);
+//    kaapi_cuda_memory_poll( kproc );
+  }
+}
+
+int kaapi_cuda_proc_end_isvalid(kaapi_processor_t * const kproc)
+{
+  return kaapi_cuda_stream_is_empty(kproc->cuda_proc.kstream);
+}
+
+int kaapi_cuda_proc_all_isvalid(void)
+{
+  kaapi_processor_t **pos = kaapi_all_kprocessors;
+  size_t i;
+
+  for (i = 0; i < kaapi_count_kprocessors; ++i, ++pos)
+    if ((*pos)->proc_type == KAAPI_PROC_TYPE_CUDA) {
+      if (!kaapi_cuda_proc_end_isvalid(*pos))
+	return 0;
+    }
+
+  return 1;
 }

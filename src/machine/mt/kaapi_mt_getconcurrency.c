@@ -51,3 +51,8 @@ int kaapi_getconcurrency(void )
 {
   return kaapi_count_kprocessors;
 }
+
+int kaapi_getconcurrency_cpu(void)
+{
+  return kaapi_default_param.cpucount;
+}

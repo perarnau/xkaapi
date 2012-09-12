@@ -43,32 +43,17 @@
  */
 #include "kaapi_impl.h"
 
+typedef void (*kaapi_task_alpha_body_t)( void*, float * const );
+
 static inline uint64_t _kaapi_max(uint64_t d1, uint64_t d2)
 { return (d1 < d2 ? d2 : d1); }
-
-/** Call by attribut ka::SetPartition of the user level C++ or directly
-    by the compiler
-*/
-int kaapi_thread_pushtask_withpartitionid(kaapi_thread_t* frame, int pid)
-{
-  int err;
-  kaapi_thread_context_t* thread = kaapi_self_thread_context();
-  if (thread ==0) return EINVAL;
-  /* here: if pid is not the current thread->tasklist
-      - allocate a new tasklist entry in thread->tasklist->group
-      that stores information about all others tasklist.
-      - then allocate the task into the choosen tasklist
-  */
-  err = kaapi_thread_computedep_task( thread, frame->tasklist, frame->sp );
-  return err;
-}
 
 
 /**
 */
 int kaapi_thread_computedep_task(
     kaapi_thread_context_t* thread, 
-    kaapi_tasklist_t* tasklist, 
+    kaapi_frame_tasklist_t* tasklist, 
     kaapi_task_t* task
 )
 {
@@ -79,6 +64,9 @@ int kaapi_thread_computedep_task(
   kaapi_version_t*        version;
   int                     islocal;
 
+#if 0
+    uint64_t t0 = kaapi_get_elapsedns();
+#endif
   /* assume task list  */
   kaapi_assert( tasklist != 0 );
   
@@ -108,7 +96,7 @@ int kaapi_thread_computedep_task(
       continue;
     kaapi_assert_debug( m != KAAPI_ACCESS_MODE_VOID );
     
-    
+#if 0 // TODO    
     /* this is an shared access candidate for ocr */
     if (KAAPI_ACCESS_IS_WRITE(m))
     {
@@ -119,6 +107,7 @@ int kaapi_thread_computedep_task(
     {
       kaapi_bitmap_value_set_32(&taskdescr->ocr, i);
     }
+#endif
     
     /* it is an access */
     kaapi_access_t access = kaapi_format_get_access_param(task_fmt, i, sp);
@@ -156,6 +145,9 @@ int kaapi_thread_computedep_task(
     */
     handle = kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
 
+    /* register to kaapi memory system */
+    handle->kmd = kaapi_mem_host_map_register_to_host(access.data, &handle->view);
+
     /* replace the pointer to the data in the task argument by the pointer to the global data */
     access.data = handle;
     kaapi_format_set_access_param(task_fmt, i, task->sp, &access);
@@ -169,12 +161,9 @@ int kaapi_thread_computedep_task(
 
   } /* end for all arguments of the task */
 
-  /* call to reserved memory before execution without several memory allocation */
-  kaapi_tasklist_newpriority_task( tasklist, taskdescr->priority );
-  
   /* store the format to avoid lookup */
   taskdescr->fmt = task_fmt;
-  
+
   /* Convert TASK priority to internal management of priority:
      KAAPI_TASK_MAX_PRIORITY >0
      KAAPI_TASK_MIN_PRIORITY ==0 (default value)
@@ -182,11 +171,30 @@ int kaapi_thread_computedep_task(
      KAAPI_TASKLIST_MAX_PRIORITY=0
      KAAPI_TASKLIST_MIN_PRIORITY>0
   */
-  taskdescr->priority = KAAPI_TASKLIST_MIN_PRIORITY-kaapi_task_get_priority(task);
-
+  if( task_fmt != NULL )
+  {
+    taskdescr->priority = kaapi_task_get_priority(task);
+  }
+  else  {
+    taskdescr->priority = KAAPI_TASKLIST_MIN_PRIORITY;
+  }
+  
+  kaapi_task_set_priority( task, taskdescr->priority );
+  /* call to reserved memory before execution without several memory allocation */
+  kaapi_tasklist_newpriority_task( taskdescr->priority );
+  
   /* if wc ==0, push the task into the ready list */
   if (taskdescr->wc == 0)
-    kaapi_tasklist_pushback_ready(tasklist, taskdescr);
+    kaapi_readytasklist_pushactivated(&tasklist->tasklist.rtl, taskdescr);
+
+#if 0
+    uint64_t t1 = kaapi_get_elapsedns();
+    fprintf( stdout, "%lu:%x:%s:%s:%d\n", kaapi_get_current_kid(),
+	    kaapi_get_current_processor()->proc_type,
+	    __FUNCTION__,
+	    "",
+	    t1-t0);
+#endif
 
   return 0;
 }

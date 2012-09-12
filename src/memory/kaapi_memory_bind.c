@@ -76,81 +76,6 @@ void kaapi_memory_destroy(void)
 #endif
 }
 
-
-/**
-*/
-int kaapi_memory_synchronize(void)
-{
-  /* todo: use self thread asid */
-  const kaapi_address_space_id_t host_asid = 0UL;
-
-  const kaapi_globalid_t host_gid =
-    kaapi_memory_address_space_getgid(host_asid);
-
-#ifdef SMALL_HASH
-  static const uint32_t map_size = KAAPI_HASHMAP_SIZE;
-#else
-  static const uint32_t map_size = KAAPI_HASHMAP_BIG_SIZE;
-#endif
-
-  kaapi_hashentries_t* entry;
-  uint32_t i;
-
-  for (i = 0; i < map_size; ++i)
-  {
-
-#ifdef SMALL_HASH
-    if ((kmdi_hm.entry_map & (1 << i)) == 0)
-      continue ;
-#endif
-
-    for (entry = kmdi_hm.entries[i]; entry != NULL; entry = entry->next)
-    {
-      kaapi_metadata_info_t* const mdi = entry->u.mdi;
-      unsigned int valid_id;
-      int error;
-
-      /* this host asid has an invalid copy */
-      if (mdi->data[host_gid].ptr.ptr == (uintptr_t)NULL) continue ;
-      else if (mdi->validbits & (1UL << host_gid)) continue ;
-
-      /* todo_optimize */
-      /* find a valid copy and revalidate host */
-      for (valid_id = 0; valid_id < KAAPI_MAX_ADDRESS_SPACE; ++valid_id)
-	if (mdi->validbits & (1UL << valid_id)) break ;
-      if (valid_id == KAAPI_MAX_ADDRESS_SPACE) return -1;
-
-#if 0 /* to_remove */
-      printf("kaapi_memory_copy(%lx:%lu,%lu:%lu, %lx:%lu,%lu:%lu)\n",
-	     mdi->data[host_gid].ptr.ptr,
-	     mdi->data[host_gid].view.size[0],
-	     mdi->data[host_gid].view.size[1],
-	     mdi->data[host_gid].view.lda,
-	     mdi->data[valid_id].ptr.ptr,
-	     mdi->data[valid_id].view.size[0],
-	     mdi->data[valid_id].view.size[1],
-	     mdi->data[valid_id].view.lda);
-#endif /* to_remove */
-
-      error = kaapi_memory_copy
-      (
-       mdi->data[host_gid].ptr,
-       &mdi->data[host_gid].view,
-       mdi->data[valid_id].ptr,
-       &mdi->data[valid_id].view
-      );
-
-      if (error) return -1;
-
-      /* mark as valid */
-      mdi->validbits |= 1UL << host_gid;
-    }
-  }
-
-  return 0;
-}
-
-
 /**
 */
 kaapi_metadata_info_t* kaapi_memory_find_metadata( void* ptr )
@@ -215,7 +140,7 @@ kaapi_version_t** _kaapi_metadata_info_bind_data(
   kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
   kmdi->data[lid].ptr  = kaapi_make_pointer(kasid, ptr);
   kmdi->data[lid].view = *view;
-  kmdi->data[lid].mdi = kmdi;
+  kmdi->data[lid].mdi = kmdi; 
   kmdi->validbits |= (1UL << lid);
   return &kmdi->version[lid];
 }

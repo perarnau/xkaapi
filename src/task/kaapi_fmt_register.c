@@ -81,13 +81,17 @@ kaapi_format_id_t kaapi_format_register(
   fmt->fmtid  = kaapi_hash_value( name );
   fmt->name   = strdup(name); /* TODO: strdup ? */
   fmt->isinit = 1;
+#if defined(KAAPI_DEBUG)
+  fmt->name_dot = NULL;
+  fmt->color_dot = NULL;
+#endif
 
   /* register it into hashmap: fmtid -> fmt */
   entry = (uint8_t) (fmt->fmtid & (kaapi_format_id_t)0xFFUL);
   head =  kaapi_all_format_byfmtid[entry];
   fmt->next_byfmtid = head;
   kaapi_all_format_byfmtid[entry] = fmt;
-  
+
   return fmt->fmtid;
 }
 
