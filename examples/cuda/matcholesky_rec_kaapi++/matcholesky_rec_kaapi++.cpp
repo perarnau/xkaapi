@@ -142,6 +142,9 @@ int check_factorization(int N, T* A1, T* A2, int LDA, int uplo)
   return info_factorization;
 }
 
+static size_t global_blocsize = 512;
+static size_t global_recblocsize = 512;
+
 template<typename T>
 struct TaskParallelPOTRF: public ka::Task<3>::Signature
 <
@@ -150,7 +153,6 @@ struct TaskParallelPOTRF: public ka::Task<3>::Signature
   ka::RPWP<ka::range2d<T> > /* A */
 >{};
 
-#define TASK_POTRF_THRESHOLD	  256
 template<typename T>
 struct TaskBodyCPU<TaskParallelPOTRF<T> > {
   void operator()( 
@@ -160,9 +162,9 @@ struct TaskBodyCPU<TaskParallelPOTRF<T> > {
     const int N     = A->dim(0); 
     const int lda   = A->lda();
     T* const a = A->ptr();
-    const int blocsize = TASK_POTRF_THRESHOLD;
+    const int blocsize = global_recblocsize;
 
-    if( N > TASK_POTRF_THRESHOLD )
+    if( N > blocsize )
     {
       for (int k=0; k < N; k += blocsize) {
 	ka::rangeindex rk(k, k+blocsize);
@@ -177,12 +179,12 @@ struct TaskBodyCPU<TaskParallelPOTRF<T> > {
 	
 	for (int m=k+blocsize; m < N; m += blocsize) {
 	  ka::rangeindex rm(m, m+blocsize);
-	  ka::Spawn<TaskSYRK<T> >(  ka::SetArch(ka::ArchHost))
+	  ka::Spawn<TaskSYRK<T> >(  ka::SetArch(ka::ArchHost) )
 	  ( order, uplo, CblasNoTrans, (T)-1.0, A(rk,rm), (T)1.0, A(rm,rm));
 	  
 	  for (int n=k+blocsize; n < m; n += blocsize) {
 	    ka::rangeindex rn(n, n+blocsize);
-	    ka::Spawn<TaskGEMM<T> >(  ka::SetArch(ka::ArchHost))
+	    ka::Spawn<TaskGEMM<T> >(  ka::SetArch(ka::ArchHost) )
 	    ( order, CblasNoTrans, CblasTrans, (T)-1.0, A(rk,rm), A(rk,rn), (T)1.0, A(rn,rm));
 	  }
 	}
@@ -205,7 +207,6 @@ struct TaskCholesky: public ka::Task<2>::Signature<
     ka::RPWP<ka::range2d<T> >, /* A */
     CBLAS_UPLO
 >{};
-static size_t global_blocsize = 2;
 
 template<typename T>
 struct TaskBodyCPU<TaskCholesky<T> > {
@@ -227,19 +228,19 @@ struct TaskBodyCPU<TaskCholesky<T> > {
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
           ka::rangeindex rm(m, m+blocsize);
-          ka::Spawn<TaskTRSM<T> >( ka::SetArch(ka::ArchCUDA) )
-          ( CblasColMajor, CblasRight, uplo, CblasTrans, CblasNonUnit, (T)1.0, A(rk,rk), A(rk,rm));
+          ka::Spawn<TaskTRSM<T> >( )
+	    ( CblasColMajor, CblasRight, uplo, CblasTrans, CblasNonUnit, (T)1.0, A(rk,rk), A(rk,rm));
         }
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
           ka::rangeindex rm(m, m+blocsize);
           ka::Spawn<TaskSYRK<T> >( ka::SetArch(ka::ArchCUDA) )
-          ( CblasColMajor, uplo, CblasNoTrans, (T)-1.0, A(rk,rm), (T)1.0, A(rm,rm));
+	    ( CblasColMajor, uplo, CblasNoTrans, (T)-1.0, A(rk,rm), (T)1.0, A(rm,rm));
           
           for (size_t n=k+blocsize; n < m; n += blocsize) {
             ka::rangeindex rn(n, n+blocsize);
             ka::Spawn<TaskGEMM<T> >( ka::SetArch(ka::ArchCUDA) )
-            ( CblasColMajor, CblasNoTrans, CblasTrans, (T)-1.0, A(rk,rm), A(rk,rn), (T)1.0, A(rn,rm));
+	      ( CblasColMajor, CblasNoTrans, CblasTrans, (T)-1.0, A(rk,rm), A(rk,rn), (T)1.0, A(rn,rm));
           }
         }
       }
@@ -274,9 +275,10 @@ struct TaskBodyCPU<TaskCholesky<T> > {
 /* Main of the program
  */
 struct doit {
-  void doone_exp( int n, int block_size, int niter, int verif )
+  void doone_exp( int n, int block_size, int rec_block_size, int niter, int verif )
   {
     global_blocsize = block_size;
+    global_recblocsize = rec_block_size;
     double t0, t1;
     double_type* dA = (double_type*) calloc(n* n, sizeof(double_type));
     if (0 == dA) {
@@ -354,9 +356,10 @@ struct doit {
     }
     
     gflops = sumgf/niter;
-    printf("POTRF %6d %5d %5d %9.10f %9.6f\n",
+    printf("POTRF %6d %5d %5d %5d %9.10f %9.6f\n",
            (int)n,
            (int)global_blocsize,
+	   (int)global_recblocsize,
            (int)kaapi_getconcurrency(),
            sumt/niter, gflops );
     
@@ -378,20 +381,25 @@ struct doit {
     if (argc > 2)
       block_size = atoi(argv[2]);
     
+    // block count
+    int rec_block_size = 1;
+    if (argc > 3)
+      rec_block_size = atoi(argv[3]);
+    
     // Number of iterations
     int niter = 1;
-    if (argc >3)
-      niter = atoi(argv[3]);
+//    if (argc > 4)
+//      niter = atoi(argv[4]);
     
     // Make verification ?
     int verif = 0;
-    if (argc >4)
+    if(argc > 4)
       verif = atoi(argv[4]);
     
-    printf("# size  blocksize  #threads   time      GFlop/s\n");
+    printf("# size  blocksize recblocksize  #threads   time      GFlop/s\n");
     for (int k=0; k<1; ++k, ++n )
     {
-      doone_exp( n, block_size, niter, verif );
+      doone_exp( n, block_size, rec_block_size, niter, verif );
     }
   }
   

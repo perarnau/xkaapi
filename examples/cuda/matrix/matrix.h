@@ -10,48 +10,7 @@ extern "C" {
 #include "lapacke.h"
 }
 
-#define	    IB	    40
-
-#if defined(KAAPI_TIMING)
-
-#define	    KAAPI_TIMING_BEGIN() \
-    double _t0 = kaapi_get_elapsedtime()
-
-#define	    KAAPI_TIMING_END(task,n)			    \
-    do{							    \
-	double _t1 = kaapi_get_elapsedtime();		    \
-	fprintf(stdout, "%s %d %.10f\n", task, n, _t1-_t0);   \
-    }while(0)
-
-#if defined(CONFIG_USE_CUDA)
-
-#define	    KAAPI_TIMING_CUDA_BEGIN(stream)	\
-    cudaEvent_t _evt0,_evt1;			\
-    do{						\
-        cudaEventCreate(&_evt0);		\
-        cudaEventCreate(&_evt1);		\
-        cudaEventRecord(_evt0,stream);		\
-    }while(0)
-
-#define	    KAAPI_TIMING_CUDA_END(stream,task,n)	    \
-    do{							    \
-	cudaEventRecord(_evt1,stream);			    \
-	cudaEventSynchronize(_evt1);			    \
-	float _tdelta;					    \
-	cudaEventElapsedTime(&_tdelta, _evt0, _evt1);	    \
-	fprintf(stdout, "%s %d %.10f\n", task, n, (_tdelta/1e3) );\
-    }while(0)
-
-#endif /* CONFIG_USE_CUDA */
-
-#else /* KAAPI_TIMING */
-
-#define	    KAAPI_TIMING_BEGIN()
-#define	    KAAPI_TIMING_END(task,n)
-#define	    KAAPI_TIMING_CUDA_BEGIN(stream)
-#define	    KAAPI_TIMING_CUDA_END(stream,task,n)
-
-#endif /* KAAPI_USE_TIMING */
+#define	    CONFIG_IB	    128
 
 // task signatures
 template<typename T>
@@ -112,7 +71,7 @@ struct TaskGETRF: public ka::Task<3>::Signature
 <
   CBLAS_ORDER,               /* row / col */
   ka::RW<ka::range2d<T> >,   /* A */
-  ka::W<ka::range1d <int> >  /* pivot */
+  ka::RPWP<ka::range1d <int> >  /* pivot */
 >{};
 
 template<typename T>
@@ -156,88 +115,7 @@ struct TaskLARNV: public ka::Task<1>::Signature
 	ka::W<ka::range2d<T> > /* A */
 >{};
 
-/*
- * LAPACK QR factorization of a real M-by-N matrix A.
- */
-template<typename T>
-struct TaskGEQRT: public ka::Task<5>::Signature
-<
-    CBLAS_ORDER,			/* row / col */
-    ka::RW<ka::range2d<T> >,	/* A */
-    ka::W<ka::range2d<T> >,	/* T */
-    ka::W<ka::range1d<T> >,	/* TAU */
-    ka::W<ka::range1d<T> >	/* WORK */
->{};
-
-/*  */
-template<typename T>
-struct TaskORMQR: public ka::Task<7>::Signature
-<
-    CBLAS_ORDER,			/* row / col */
-    CBLAS_SIDE,			/* CBLAS left / right */
-    CBLAS_TRANSPOSE,             /* transpose flag */
-    ka::R<ka::range2d<T> >,	/* A */
-    ka::W<ka::range2d<T> >,	/* T */
-    ka::RW<ka::range2d<T> >,	/* C */
-    ka::RW<ka::range1d<T> >	/* WORK */
->{};
-
-template<typename T>
-struct TaskTSQRT: public ka::Task<6>::Signature
-<
-    CBLAS_ORDER,		/* row / col */
-    ka::RW<ka::range2d<T> >,	/* A1 */
-    ka::RW<ka::range2d<T> >,	/* A2 */
-    ka::W<ka::range2d<T> >,	/* T */
-    ka::W<ka::range1d<T> >,	/* TAU */
-    ka::W<ka::range1d<T> >	/* WORK */
->{};
-
-template<typename T>
-struct TaskTSMQR: public ka::Task<8>::Signature
-<
-    CBLAS_ORDER,			/* row / col */
-    CBLAS_SIDE,			/* CBLAS left / right */
-    CBLAS_TRANSPOSE,             /* transpose flag */
-    ka::RW<ka::range2d<T> >,	/* A1 */
-    ka::RW<ka::range2d<T> >,	/* A2 */
-    ka::R<ka::range2d<T> >,	/* V */
-    ka::W<ka::range2d<T> >,	/* T */
-    ka::W<ka::range1d<T> >	/* WORK */
->{};
-
-
-template<typename T>
-struct TaskGESSM: public ka::Task<4>::Signature
-<
-  CBLAS_ORDER,			/* row / col */
-  ka::R<ka::range1d <int> >,  /* pivot */
-  ka::R<ka::range2d<T> >, /* L NB-by-NB lower trianguler tile */
-  ka::RW<ka::range2d<T> > /* A, Updated by the application of L. */
->{};
-
-template<typename T>
-struct TaskTSTRF: public ka::Task<7>::Signature
-<
-  CBLAS_ORDER,			/* row / col */
-  int,				/* block size (algo) */
-  ka::RW<ka::range2d<T> >,	    /* U */
-  ka::RW<ka::range2d<T> >,	    /* A */
-  ka::RW<ka::range2d<T> >,	    /* L */
-  ka::W<ka::range1d <int> >,		    /* pivot */
-  ka::RW<ka::range2d<T> >	    /* WORK */
->{};
-
-template<typename T>
-struct TaskSSSSM: public ka::Task<6>::Signature
-<
-  CBLAS_ORDER,			/* row / col */
-  ka::RW<ka::range2d<T> >,	    /* A1 */
-  ka::RW<ka::range2d<T> >,	    /* A2 */
-  ka::R<ka::range2d<T> >,	    /* L1 */
-  ka::R<ka::range2d<T> >,	    /* L2 */
-  ka::R<ka::range1d <int> >		    /* pivot */
->{};
+#include "timing.inl"
 
 // task definitions
 # include "matrix_cpu.inl"
@@ -248,5 +126,8 @@ struct TaskSSSSM: public ka::Task<6>::Signature
 # include "matrix_gpu.inl"
 //# include "matrix_alpha.inl"
 #endif
+
+#include "kblas.inl"
+//#include "kplasma.inl"
 
 #endif // MATRIX_H_INCLUDED

@@ -85,7 +85,7 @@ struct TaskBodyCPU<TaskLU<T> > {
     size_t N = A->dim(0);
     size_t blocsize = global_blocsize;
     int* ipiv = piv->ptr();
-    const int ib = IB; // from PLASMA
+//    const int ib = CONFIG_IB; // from PLASMA
 
 #if 0
     fprintf(stdout, "A(%lu,%lu) L(%lu,%lu) PIV(%lu) WORK(%lu,%lu)\n",
@@ -95,9 +95,8 @@ struct TaskBodyCPU<TaskLU<T> > {
 	    WORK->dim(0), WORK->dim(1)
 	    );
 #endif
-    for( size_t k=0, lk=0; k < N; k += blocsize, lk += ib ) {
+    for(size_t k=0; k < N; k += blocsize) {
 	ka::rangeindex rk(k, k+blocsize);
-	ka::rangeindex lrk( lk, lk+ib );
 	ka::range1d<int> rkpiv( ipiv+k, blocsize );
 #if 0
 	fprintf(stdout, "DGETRF IPIV([%lu:%lu]) A([%lu:%lu],[%lu:%lu])\n",
@@ -110,8 +109,8 @@ struct TaskBodyCPU<TaskLU<T> > {
 	// A(rk,rk) = L(rk,rk) * U(rk,rk) * P(rk,rk) <- LU( A(rk,rk) )
 	ka::Spawn<TaskGETRF<T> >(ka::SetArch(ka::ArchHost))( CblasColMajor, A(rk,rk), rkpiv );
 
-	for (size_t j=k+blocsize; j<N; j += blocsize) {
-	    ka::rangeindex rj(j, j+blocsize);
+	for (size_t n=k+blocsize; n<N; n += blocsize) {
+	    ka::rangeindex rn(n, n+blocsize);
 #if 0
 	    fprintf(stdout, "DGESSM IPIV([%lu:%lu]) A([%lu:%lu],[%lu:%lu]) A([%lu:%lu],[%lu:%lu])\n",
 		k, 
@@ -123,18 +122,18 @@ struct TaskBodyCPU<TaskLU<T> > {
 		);
 #endif
 #if 1
-	    ka::Spawn<TaskGESSM<T> >(ka::SetArch(ka::ArchHost))(
+	    ka::Spawn<kplasma::GESSM<T> >(ka::SetArch(ka::ArchHost))(
 		CblasColMajor, 
 		rkpiv,
 		A(rk, rk), 
-		A(rj, rk)	    
+		A(rn, rk)	    
 	    );
 #endif
 	}
 
-	for( size_t i=k+blocsize; i<N; i += blocsize ){
-	    ka::rangeindex ri(i, i+blocsize);
-	    ka::range1d<int> ripiv( ipiv+i, blocsize );
+	for( size_t m=k+blocsize; m<N; m += blocsize ){
+	    ka::rangeindex rm(m, m+blocsize);
+	    ka::range1d<int> rmpiv( ipiv+m, blocsize );
 #if 0
 	    fprintf(stdout,
 		"DTSTRF IPIV([%lu:%lu]) A([%lu:%lu],[%lu:%lu]) A([%lu:%lu],[%lu:%lu]) L([%lu:%lu],[%lu:%lu])\n",
@@ -149,20 +148,20 @@ struct TaskBodyCPU<TaskLU<T> > {
 #endif
 
 #if 1
-	    ka::Spawn<TaskTSTRF<T> >(ka::SetArch(ka::ArchHost))(
+	    ka::Spawn<kplasma::TSTRF<T> >(ka::SetArch(ka::ArchHost))(
 		    CblasColMajor,
 		    blocsize,
 		    A(rk, rk),
-		    A(rk, ri),
-		    L( ri, lrk ),
-		    ripiv,
+		    A(rk, rm),
+		    L(rk, rm),
+		    rmpiv,
 		    WORK
 	    );
 #endif
 
-	    for (size_t j=k+blocsize; j<N; j += blocsize) {
-		ka::rangeindex rj(j, j+blocsize);
-		// A(ri,rj) <- A(ri,rj) - A(ri,rk)*A(rk,rj)
+	    for (size_t n=k+blocsize; n<N; n += blocsize) {
+		ka::rangeindex rn(n, n+blocsize);
+		// A(rm,rn) <- A(rm,rn) - A(rm,rk)*A(rk,rn)
 #if 0
 	    fprintf(stdout,
 		"DSSSSM IPIV([%lu:%lu]) A([%lu:%lu],[%lu:%lu]) A([%lu:%lu],[%lu:%lu]) L([%lu:%lu],[%lu:%lu]) A([%lu:%lu],[%lu:%lu])\n",
@@ -180,13 +179,13 @@ struct TaskBodyCPU<TaskLU<T> > {
 		);
 #endif
 #if 1
-		ka::Spawn<TaskSSSSM<T> >(ka::SetArch(ka::ArchHost))(
+		ka::Spawn<kplasma::SSSSM<T> >(ka::SetArch(ka::ArchHost))(
 			CblasColMajor,
-			A(rj, rk),
-			A(rj, ri),
-			L( ri, lrk ),
-			A(rk, ri),
-			ripiv
+			A(rn, rk),
+			A(rn, rm),
+			L(rk, rm),
+			A(rk, rm),
+			rmpiv
 		);
 #endif
 	    }
@@ -268,18 +267,13 @@ struct doit {
       verif = atoi(argv[4]);
 
     global_blocsize = block_size;
-    int nblock = (n%block_size==0) ? (n/block_size) : ((n/block_size)+1);
-    const int ib = IB; // from PLASMA
+//    int nblock = (n%block_size==0) ? (n/block_size) : ((n/block_size)+1);
+    const int ib = CONFIG_IB; // from PLASMA
 
     double t0, t1;
 
-    double_type* dL = (double_type*) calloc(
-	    nblock*ib*nblock*block_size, sizeof(double_type) );
-    ka::array<2,double_type> L(dL,
-	    nblock*block_size,
-	    nblock*ib,
-	    nblock*ib
-    );
+    double_type* dL = (double_type*) calloc( n*n, sizeof(double_type) );
+    ka::array<2,double_type> L(dL, n, n, n);
 
     int* dIpiv = (int*) calloc(n, sizeof(int));
     if (0 == dIpiv) {

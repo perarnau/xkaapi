@@ -57,14 +57,13 @@ kaapi_cuda_mem_blk_insert(kaapi_processor_t * proc,
 {
   kaapi_hashentries_t *entry;
   kaapi_cuda_mem_t *cuda_mem = &proc->cuda_proc.memory;
-  kaapi_cuda_mem_blk_t *blk =
-  (kaapi_cuda_mem_blk_t *) malloc(sizeof(kaapi_cuda_mem_blk_t));
+  kaapi_cuda_mem_blk_t *blk = (kaapi_cuda_mem_blk_t *) calloc(1, sizeof(kaapi_cuda_mem_blk_t));
   if (blk == NULL)
     return -1;
   
   blk->ptr = *ptr;
   blk->size = size;
-  blk->prev = blk->next = NULL;
+  blk->prev = blk->next = 0;
   if (KAAPI_ACCESS_IS_WRITE(m))
     kaapi_cuda_mem_blk_insert_rw(cuda_mem, blk);
   else
@@ -88,13 +87,13 @@ static inline void *kaapi_cuda_mem_blk_remove_ro(kaapi_processor_t * proc,
   kaapi_cuda_mem_t *cuda_mem = &proc->cuda_proc.memory;
   size_t mem_free = 0;
   size_t ptr_size;
-  void *devptr = NULL;
+  void *devptr = 0;
   
-  if (cuda_mem->ro.beg == NULL)
-    return NULL;
+  if (cuda_mem->ro.beg == 0)
+    return 0;
   
   blk = cuda_mem->ro.beg;
-  while (NULL != blk) {
+  while (0 != blk) {
     if (blk->u.rc > 0) {
 #if defined(KAAPI_VERBOSE)
       fprintf(stdout, "[%s] head in use ptr=%p (rc=%lu)\n",
@@ -104,11 +103,14 @@ static inline void *kaapi_cuda_mem_blk_remove_ro(kaapi_processor_t * proc,
       blk = blk->next;
       continue;
     }
-    if (NULL == blk->prev)
+    if (0 == blk->prev)
       cuda_mem->ro.beg = blk->next;
     else
       blk->prev->next = blk->next;
-    if (NULL != blk->next)
+
+    if(0 == blk->next)
+	cuda_mem->ro.end = blk->prev;
+    if (0 != blk->next)
       blk->next->prev = blk->prev;
     
     ptr = blk->ptr;
@@ -197,7 +199,10 @@ static inline void *kaapi_cuda_mem_blk_remove_rw(kaapi_processor_t * proc,
       cuda_mem->rw.beg = blk->next;
     else
       blk->prev->next = blk->next;
-    if (NULL != blk->next)
+
+    if (NULL == blk->next)
+      cuda_mem->rw.end = blk->prev;
+    else
       blk->next->prev = blk->prev;
     
     ptr = blk->ptr;

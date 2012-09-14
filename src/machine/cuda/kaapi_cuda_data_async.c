@@ -89,8 +89,11 @@ kaapi_cuda_data_async_input_alloc(kaapi_cuda_stream_t * kstream,
 #endif
   
   for (i = 0; i < count_params; i++) {
-    kaapi_access_mode_t m =
-      KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(td->fmt, i, sp));
+    kaapi_access_mode_t m = kaapi_format_get_mode_param(td->fmt, i, sp);
+    if( KAAPI_ACCESS_IS_POSTPONED(m) )
+      continue;
+
+    m = KAAPI_ACCESS_GET_MODE(m);
     if (m == KAAPI_ACCESS_MODE_V)
       continue;
     
@@ -137,8 +140,11 @@ kaapi_cuda_data_async_input_dev_sync(kaapi_cuda_stream_t * kstream,
 #endif
   
   for (i = 0; i < count_params; i++) {
-    kaapi_access_mode_t m =
-    KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(td->fmt, i, sp));
+    kaapi_access_mode_t m = kaapi_format_get_mode_param(td->fmt, i, sp);
+    if( KAAPI_ACCESS_IS_POSTPONED(m) )
+      continue;
+
+    m = KAAPI_ACCESS_GET_MODE(m);
     if (m == KAAPI_ACCESS_MODE_V)
       continue;
     
@@ -168,8 +174,11 @@ kaapi_cuda_data_async_input_host_sync_from_dev(kaapi_cuda_stream_t *
   const size_t count_params = kaapi_format_get_count_params(td->fmt, sp);
   
   for (i = 0; i < count_params; i++) {
-    kaapi_access_mode_t m =
-    KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(td->fmt, i, sp));
+    kaapi_access_mode_t m = kaapi_format_get_mode_param(td->fmt, i, sp);
+    if( KAAPI_ACCESS_IS_POSTPONED(m) )
+      continue;
+
+    m = KAAPI_ACCESS_GET_MODE(m);
     if (m == KAAPI_ACCESS_MODE_V)
       continue;
     
@@ -212,7 +221,11 @@ kaapi_cuda_data_async_recv(kaapi_cuda_stream_t * kstream, kaapi_taskdescr_t * td
   
   for (i = 0; i < count_params; i++) 
   {
-    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(td->fmt, i, sp));
+    kaapi_access_mode_t m = kaapi_format_get_mode_param(td->fmt, i, sp);
+    if( KAAPI_ACCESS_IS_POSTPONED(m) )
+      continue;
+
+    m = KAAPI_ACCESS_GET_MODE(m);
     if (m == KAAPI_ACCESS_MODE_V)
       continue;
     
@@ -243,8 +256,11 @@ kaapi_cuda_data_async_output_dev_dec_use(kaapi_cuda_stream_t * kstream,
   const size_t count_params = kaapi_format_get_count_params(td->fmt, sp);
   
   for (i = 0; i < count_params; i++) {
-    kaapi_access_mode_t m =
-    KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(td->fmt, i, sp));
+    kaapi_access_mode_t m = kaapi_format_get_mode_param(td->fmt, i, sp);
+    if( KAAPI_ACCESS_IS_POSTPONED(m) )
+      continue;
+
+    m = KAAPI_ACCESS_GET_MODE(m);
     if (m == KAAPI_ACCESS_MODE_V)
       continue;
     
@@ -505,9 +521,11 @@ int kaapi_cuda_data_async_input_host_sync(kaapi_taskdescr_t * const td)
   cudaStreamCreate(&stream);
   
   for (i = 0; i < count_params; i++) {
-    kaapi_access_mode_t m =
-    KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(td->fmt, i, sp));
-    
+    kaapi_access_mode_t m = kaapi_format_get_mode_param(td->fmt, i, sp);
+    if( KAAPI_ACCESS_IS_POSTPONED(m) )
+      continue;
+
+    m = KAAPI_ACCESS_GET_MODE(m);
     if (m == KAAPI_ACCESS_MODE_V)
       continue;
     
