@@ -434,7 +434,8 @@ int kaapi_cuda_mem_cache_inc_use(kaapi_pointer_t * ptr, kaapi_memory_view_t* con
 
 static inline int
 kaapi_cuda_mem_cache_dec_use_rw(kaapi_cuda_mem_cache_t * mem,
-                          kaapi_cuda_mem_cache_blk_t * blk)
+                          kaapi_cuda_mem_cache_blk_t * blk,
+			  const kaapi_access_mode_t m)
 {
 #if defined(KAAPI_DEBUG)
   if (blk->u.wc == 0) {
@@ -460,7 +461,8 @@ kaapi_cuda_mem_cache_dec_use_rw(kaapi_cuda_mem_cache_t * mem,
 
 static inline int
 kaapi_cuda_mem_cache_dec_use_ro(kaapi_cuda_mem_cache_t * mem,
-                          kaapi_cuda_mem_cache_blk_t * blk)
+                          kaapi_cuda_mem_cache_blk_t * blk,
+			  const kaapi_access_mode_t m)
 {
 #if defined(KAAPI_DEBUG)
   if (blk->u.rc == 0) {
@@ -498,10 +500,10 @@ kaapi_cuda_mem_cache_dec_use(kaapi_pointer_t * ptr, kaapi_memory_view_t* const v
     return -1;
   blk = (kaapi_cuda_mem_cache_blk_t *) entry->u.block;
   
-  if (KAAPI_ACCESS_IS_WRITE(blk->m))
-    return kaapi_cuda_mem_cache_dec_use_rw(cache, blk);
+  if (KAAPI_ACCESS_IS_WRITE(m))
+    return kaapi_cuda_mem_cache_dec_use_rw(cache, blk, m);
   else
-    return kaapi_cuda_mem_cache_dec_use_ro(cache, blk);
+    return kaapi_cuda_mem_cache_dec_use_ro(cache, blk, m);
 }
 
 int kaapi_cuda_mem_cache_destroy(kaapi_cuda_proc_t * proc)

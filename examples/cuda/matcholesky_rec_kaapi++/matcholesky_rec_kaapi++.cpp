@@ -228,7 +228,7 @@ struct TaskBodyCPU<TaskCholesky<T> > {
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
           ka::rangeindex rm(m, m+blocsize);
-          ka::Spawn<TaskTRSM<T> >( )
+          ka::Spawn<TaskTRSM<T> >( ka::SetArch(ka::ArchCUDA) )
 	    ( CblasColMajor, CblasRight, uplo, CblasTrans, CblasNonUnit, (T)1.0, A(rk,rk), A(rk,rm));
         }
         

@@ -12,9 +12,12 @@ function run_test {
 #    export KAAPI_CPUSET="1,3,4,5,7,8,9,10,11"
 #    export KAAPI_GPUSET="0~0,2~2,4~6"
 
-    export KAAPI_CPUSET="4,5,10,11"
-    export KAAPI_GPUSET="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
+    export KAAPI_CPUSET="0,5,6,11"
+    export KAAPI_GPUSET="0~1,1~2,2~3,3~4"
+#    export KAAPI_GPUSET="0~1,1~2,2~3,3~4,4~7,5~8,6~9,7~10"
 
+#    export KAAPI_CPUSET="4,5,10,11"
+#    export KAAPI_GPUSET="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
 #    export KAAPI_CPUSET="2,3,4,5,8,9,10,11"
 #    export KAAPI_GPUSET="0~0,1~0,2~1,3~1,4~6,5~6,6~7,7~7"
 
@@ -60,8 +63,8 @@ function run_test {
 #    msizes="32768"
 #    msizes="20480"
 #    bsizes="2048"
-    msizes="21504"
-#    msizes="21504 22528 23552 24576"
+    msizes="40960"
+#    msizes="10240 21504 22528 23552 24576"
     bsizes="1024"
 #    bsizes="512"
     bloc_recursive="128"
