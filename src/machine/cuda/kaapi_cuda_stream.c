@@ -70,7 +70,6 @@ static int kaapi_cuda_request_destroy(kaapi_cuda_request_t * req)
   return 0;
 }
 
-
 /* Create a CUDA fifo stream.
    \retval 0 in case of success
    \retval else an error code

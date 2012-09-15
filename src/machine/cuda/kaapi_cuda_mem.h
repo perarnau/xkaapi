@@ -8,6 +8,8 @@
 
 int kaapi_cuda_mem_free(kaapi_pointer_t * ptr);
 
+int kaapi_cuda_mem_free_(void* ptr);
+
 int kaapi_cuda_mem_alloc(kaapi_pointer_t * ptr,
 			 const kaapi_address_space_id_t kasid,
 			 const size_t size, const kaapi_access_mode_t m);

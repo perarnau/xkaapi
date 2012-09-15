@@ -60,12 +60,12 @@ function run_test {
 #    msizes="32768"
 #    msizes="20480"
 #    bsizes="2048"
-    msizes="24576"
-#    msizes="21504 22528 23552"
+    msizes="21504"
+#    msizes="21504 22528 23552 24576"
     bsizes="1024"
 #    bsizes="512"
     bloc_recursive="128"
-    niter=1
+    niter=2
 #    verif=1
     export KAAPI_WINDOW_SIZE=2
     for m in $msizes
