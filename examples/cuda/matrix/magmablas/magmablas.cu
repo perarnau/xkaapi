@@ -1,4 +1,10 @@
 
+#ifndef BLOCK_SIZE
+#define BLOCK_SIZE  64
+#endif
+
+#include <cuda.h>
+#include "magmablas.h"
 
 typedef struct {
         double *A;

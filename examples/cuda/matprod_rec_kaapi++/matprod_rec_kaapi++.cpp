@@ -154,7 +154,6 @@ struct TaskBodyCPU<TaskParallelGEMM<T> > {
 };
 
 #if defined(KAAPI_USE_CUDA)
-
 template<typename T> 
 struct TaskBodyGPU<TaskParallelGEMM<T> >
 {
@@ -189,7 +188,6 @@ struct TaskBodyGPU<TaskParallelGEMM<T> >
     fprintf(stdout, "TaskGPU RecursiveGEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", m, n, k, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
 #endif
 
-    KAAPI_TIMING_CUDA_BEGIN((cudaStream_t)stream.stream);
 #if CONFIG_USE_CUBLAS
     cublasStatus_t status;
     if( order == CblasColMajor ) 
@@ -220,8 +218,6 @@ struct TaskBodyGPU<TaskParallelGEMM<T> >
   if (status != CUBLAS_STATUS_SUCCESS)
     printf("%s::cublasGemm() == %d\n", __FUNCTION__, status);
 #endif
-
-    KAAPI_TIMING_CUDA_END((cudaStream_t)stream.stream, "GPU DGEMM", n);
   }
 };
 

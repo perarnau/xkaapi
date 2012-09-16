@@ -8,8 +8,8 @@
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** Joao.Lima@imag.fr / joao.lima@inf.ufrgs.br
+** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -52,6 +52,7 @@
 #include <sys/types.h>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
+
 #if defined(CONFIG_USE_DOUBLE)
 typedef double double_type;
 #elif defined(CONFIG_USE_FLOAT)
@@ -60,67 +61,127 @@ typedef float double_type;
 
 #include "../matrix/matrix.h"
 
-
-/* Block LU factorization
-*/
 template<typename T>
-struct TaskLU: public ka::Task<4>::Signature<
-      ka::RPWP<ka::range2d<T> >,	/* A */ 
-      ka::RPWP<ka::range2d<T> >,	/* L */ 
-      ka::RPWP<ka::range1d<int> >,		/* ipiv */ 
-      ka::RPWP<ka::range2d<T> >	/* WORK */ 
->{};
+static void generate_matrix( T* A, size_t N )
+{
+  srand48(0);
+  for (size_t i = 0; i< (N*N); i++) {
+    A[i] = drand48()*1000.0;
+  }
+}
 
 static size_t global_blocsize = 2;
+static size_t global_recblocsize = 1;
+
+/* Block LU factorization without pivoting 
+*/
+template<typename T>
+struct TaskLUNoPiv: public ka::Task<1>::Signature<
+      ka::RPWP<ka::range2d<T> >  /* A */ 
+>{};
 
 template<typename T>
-struct TaskBodyCPU<TaskLU<T> > {
+struct TaskParallelGETF2NoPiv: public ka::Task<2>::Signature
+<
+  CBLAS_ORDER,            /* row / col */
+  ka::RPWP<ka::range2d<T> > /* A */
+>{};
+
+template<typename T>
+struct TaskBodyCPU<TaskParallelGETF2NoPiv<T> > {
   void operator()( 
-		  ka::range2d_rpwp<T> A,
-		  ka::range2d_rpwp<T> L,
-		  ka::range1d_rpwp<int>		piv,
-		  ka::range2d_rpwp<T> WORK
-	  )
-{
-    size_t N = A->dim(0);
-    size_t blocsize = global_blocsize;
-    int* ipiv = piv->ptr();
+    CBLAS_ORDER order, 
+    ka::range2d_rpwp<T> A
+  )
+  {
+    const int m        = A->dim(0); 
+    const int N        = A->dim(0); 
+    const int lda      = A->lda();
+    T* const a    = A->ptr();
+    const int blocsize = global_recblocsize;
 
-    for(size_t k=0; k < N; k += blocsize) {
+    if( N > global_recblocsize )
+    {
+      for (int k=0; k<N; k += blocsize)
+      {
 	ka::rangeindex rk(k, k+blocsize);
-	ka::range1d<int> rkpiv( ipiv+k, blocsize );
-	// A(rk,rk) = L(rk,rk) * U(rk,rk) * P(rk,rk) <- LU( A(rk,rk) )
-	ka::Spawn<TaskGETRF<T> >(ka::SetArch(ka::ArchHost))( CblasColMajor, A(rk,rk), rkpiv );
+	ka::Spawn<TaskGETF2NoPiv<T> >( ka::SetArch(ka::ArchHost) )( CblasColMajor, A(rk,rk) );
 
-	for (size_t n=k+blocsize; n<N; n += blocsize) {
-	    ka::rangeindex rn(n, n+blocsize);
-	    ka::Spawn<kplasma::TaskGESSM<T> >(ka::SetArch(ka::ArchCUDA))(
-		CblasColMajor, rkpiv, A(rk, rk), A(rn, rk)	    
-	    );
+	for (int j=k+blocsize; j<N; j += blocsize)
+	{
+	  ka::rangeindex rj(j, j+blocsize);
+	  ka::Spawn<TaskTRSM<T> >( ka::SetArch(ka::ArchHost) )( CblasColMajor, CblasLeft, CblasLower, CblasNoTrans, CblasUnit, 1.0, A(rk,rk), A(rj,rk) );
+	}
+	for (int i=k+blocsize; i<N; i += blocsize)
+	{
+	  ka::rangeindex ri(i, i+blocsize);
+	  ka::Spawn<TaskTRSM<T> >( ka::SetArch(ka::ArchHost) )( CblasColMajor, CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit, 1.0, A(rk,rk), A(rk,ri));
 	}
 
-	for( size_t m=k+blocsize; m<N; m += blocsize ){
-	    ka::rangeindex rm(m, m+blocsize);
-	    ka::range1d<int> rmpiv( ipiv+m, blocsize );
-
-	    ka::Spawn<kplasma::TaskTSTRF<T> >(ka::SetArch(ka::ArchHost))(
-		    CblasColMajor, blocsize, A(rk, rk), A(rk, rm), L(rk, rm), rmpiv, WORK
-	    );
-
-	    for (size_t n=k+blocsize; n<N; n += blocsize) {
-		ka::rangeindex rn(n, n+blocsize);
-		// A(rm,rn) <- A(rm,rn) - A(rm,rk)*A(rk,rn)
-		ka::Spawn<kplasma::TaskSSSSM<T> >(ka::SetArch(ka::ArchCUDA))(
-			CblasColMajor, A(rn, rk), A(rn, rm), L(rk, rm), A(rk, rm), rmpiv
-		);
-	    }
+	for (int i=k+blocsize; i<N; i += blocsize)
+	{
+	  ka::rangeindex ri(i, i+blocsize);
+	  for (int j=k+blocsize; j<N; j += blocsize)
+	  {
+	    ka::rangeindex rj(j, j+blocsize);
+	    ka::Spawn<TaskGEMM<T> >( ka::SetArch(ka::ArchHost) )( CblasColMajor, CblasNoTrans, CblasNoTrans, -1.0, A(rk,ri), A(rj,rk), 1.0, A(rj,ri));
+	  }
 	}
+      }
     }
-}
+    else
+    {
+      LAPACKE<T>::getf2_nopiv(
+	  ((order == CblasColMajor) ? LAPACK_COL_MAJOR : LAPACK_ROW_MAJOR),
+	  m, N, a, lda );
+    }
+  }
 };
 
 template<typename T>
-int check(int n, T* A, T* LU, int LDA, int* piv)
+struct TaskBodyCPU<TaskLUNoPiv<T> > {
+  void operator()( 
+      const ka::StaticSchedInfo* info, 
+      ka::range2d_rpwp<T> A )
+  {
+    size_t N = A->dim(0);
+    size_t blocsize = global_blocsize;
+
+    for (size_t k=0; k<N; k += blocsize)
+    {
+      ka::rangeindex rk(k, k+blocsize);
+      // A(rk,rk) = L(rk,rk) * U(rk,rk) <- LU( A(rk,rk) 
+      ka::Spawn<TaskParallelGETF2NoPiv<T> >( ka::SetStaticSched()  )( CblasColMajor, A(rk,rk) );
+
+      for (size_t j=k+blocsize; j<N; j += blocsize)
+      {
+        ka::rangeindex rj(j, j+blocsize);
+        // A(rk,rj) <- L(rk,rk)^-1 * A(rk,rj) 
+        ka::Spawn<TaskTRSM<T> >( ka::SetArch(ka::ArchCUDA) )( CblasColMajor, CblasLeft, CblasLower, CblasNoTrans, CblasUnit, 1.0, A(rk,rk), A(rj,rk) );
+      }
+      for (size_t i=k+blocsize; i<N; i += blocsize)
+      {
+        ka::rangeindex ri(i, i+blocsize);
+        // A(ri,rk) <- A(ri,rk) * U(rk,rk)^-1
+        ka::Spawn<TaskTRSM<T> >( ka::SetArch(ka::ArchCUDA) )( CblasColMajor, CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit, 1.0, A(rk,rk), A(rk,ri));
+      }
+
+      for (size_t i=k+blocsize; i<N; i += blocsize)
+      {
+        ka::rangeindex ri(i, i+blocsize);
+        for (size_t j=k+blocsize; j<N; j += blocsize)
+        {
+          ka::rangeindex rj(j, j+blocsize);
+          // A(ri,rj) <- A(ri,rj) - A(ri,rk)*A(rk,rj)
+          ka::Spawn<TaskGEMM<T> >( ka::SetArch(ka::ArchCUDA) )( CblasColMajor, CblasNoTrans, CblasNoTrans, -1.0, A(rk,ri), A(rj,rk), 1.0, A(rj,ri));
+        }
+      }
+    }
+  }
+};
+
+template<typename T>
+int check(int n, T* A, T* LU, int LDA)
 {
   T norm, residual;
   T alpha, beta;
@@ -136,8 +197,6 @@ int check(int n, T* A, T* LU, int LDA, int* piv)
   alpha= 1.0;
   beta= 0.0;
   
-  LAPACKE<T>::laswp_work(LAPACK_COL_MAJOR, n, A, n, 1, n, piv, 1);
-
   LAPACKE<T>::lacpy_work(LAPACK_COL_MAJOR,'l', n, n, LU, LDA, L, n);
   LAPACKE<T>::lacpy_work(LAPACK_COL_MAJOR,'u', n, n, LU, LDA, U, n);
   
@@ -180,57 +239,36 @@ struct doit {
     int block_size = 2;
     if (argc > 2)
       block_size = atoi(argv[2]);
+
+    int rec_block_size = 1;
+    if (argc > 3)
+      rec_block_size = atoi(argv[3]);
       
     // Number of iterations
     int niter = 1;
-    if (argc >3)
-      niter = atoi(argv[3]);
 
     // Make verification ?
     int verif = 0;
-    if (argc >4)
+    if (argc > 4)
       verif = atoi(argv[4]);
 
     global_blocsize = block_size;
-//    int nblock = (n%block_size==0) ? (n/block_size) : ((n/block_size)+1);
-    const int ib = CONFIG_IB; // from PLASMA
+    global_recblocsize = rec_block_size;
+    n = (n / block_size) * block_size;
 
     double t0, t1;
-
-    double_type* dL = (double_type*) calloc( n*n, sizeof(double_type) );
-    ka::array<2,double_type> L(dL, n, n, n);
-
-    int* dIpiv = (int*) calloc(n, sizeof(int));
-    if (0 == dIpiv) {
-	std::cout << "Fatal Error. Cannot allocate matrices A, "
-	    << std::endl;
-	abort();
-    }
-    ka::range1d<int> ipiv(dIpiv, n);
-
-    double_type* dWORK = (double_type*) calloc(
-	    ib*block_size, sizeof(double_type) );
-    ka::array<2,double_type> WORK(dWORK,
-	    ib,
-	    block_size,
-	    block_size
-	    );
-
-    double_type* dAcopy;
     double_type* dA = (double_type*) calloc(n* n, sizeof(double_type));
+    double_type* dAcopy;
     if (0 == dA) {
       std::cout << "Fatal Error. Cannot allocate matrices A, "
                 << std::endl;
       return;
     }
+
     ka::array<2,double_type> A(dA, n, n, n);
-    TaskBodyCPU<TaskLARNV<double_type> >()( ka::range2d_w<double_type>(A) );
-#if CONFIG_USE_CUDA
+    //TaskBodyCPU<TaskLARNV<double_type> >()( ka::range2d_w<double_type>(A) );
+    generate_matrix<double_type>(dA, n); 
     ka::Memory::Register( A );
-    ka::Memory::Register( L );
-    ka::Memory::Register( ipiv );
-    ka::Memory::Register( WORK );
-#endif
 
     if (verif) {
 	/* copy the matrix to compute the norm */
@@ -243,52 +281,54 @@ struct doit {
 	    }
     }
 
+#if 0
+    if (n <= 32) 
+    {
+      /* output respect the Maple format */
+      ka::Spawn<TaskPrintMatrix<double_type> >()("A", A);
+      ka::Sync();
+    }
+#endif
+
     // LU factorization of A using ka::
     double ggflops = 0;
     double gtime = 0;
-    fprintf( stdout, "# size blocksize #threads time Gflops\n" );
-    for (int i=0; i<niter; ++i) {
-
-	t0 = kaapi_get_elapsedtime();
-	ka::Spawn<TaskLU<double_type> >(ka::SetStaticSched())( A, L, ipiv, WORK );
-	ka::Sync();
+    fprintf( stdout, "# size blocksize recblocksize #threads time Gflops\n" );
+    for (int i=0; i<niter; ++i)
+    {
+      t0 = kaapi_get_elapsedtime();
+      ka::Spawn<TaskLUNoPiv<double_type> >(ka::SetStaticSched())( A );
+      ka::Sync();
 #if CONFIG_USE_CUDA
       ka::MemorySync();
 #endif
-	t1 = kaapi_get_elapsedtime();
+      t1 = kaapi_get_elapsedtime();
 
-	/* formula used by plasma */
-	double fp_per_mul = 1;
-	double fp_per_add = 1;
-	double fmuls = (n * (1.0 / 3.0 * n )      * n);
-	double fadds = (n * (1.0 / 3.0 * n - 0.5) * n);
-	double gflops = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / (t1-t0);
-	gtime += t1-t0;
-	ggflops += gflops;
-	fprintf( stdout, "GETRF %6d %5d %5d %9.10f %9.6f\n",
+      /* formula used by plasma */
+      double fp_per_mul = 1;
+      double fp_per_add = 1;
+      double fmuls = (n * (1.0 / 3.0 * n )      * n);
+      double fadds = (n * (1.0 / 3.0 * n - 0.5) * n);
+      double gflops = 1e-9 * (fmuls * fp_per_mul + fadds * fp_per_add) / (t1-t0);
+      gtime += t1-t0;
+      ggflops += gflops;
+	fprintf( stdout, "GETRF %6d %5d %5d %5d %9.10f %9.6f\n",
 	    (int)n,
 	    (int)global_blocsize,
+	    (int)global_recblocsize,
 	    (int)kaapi_getconcurrency(),
 	    t1-t0, gflops );
 	fflush(stdout);
     }
 
     if (verif) {
-      // /* compute the norm || A - L*U ||inf */
-      check<double_type>(n, dAcopy, dA, n, dIpiv);
+	// /* compute the norm || A - L*U ||inf */
+      check<double_type>( n, dAcopy, dA, n);
       free(dAcopy);
     }
 
-#if CONFIG_USE_CUDA
     ka::Memory::Unregister( A );
-    ka::Memory::Unregister( L );
-    ka::Memory::Unregister( ipiv );
-    ka::Memory::Unregister( WORK );
-#endif
     free(dA);
-    free(dL);
-    free(dIpiv);
-    free( dWORK );
   }
 };
 

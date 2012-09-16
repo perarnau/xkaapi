@@ -259,12 +259,16 @@ struct TaskBodyCPU<TaskGETRF<T> > {
     T* const a      = A->ptr();
     int* const ipiv = piv->ptr();
 
+#if 0
+    fprintf(stdout, "TaskCPU DGETRF m=%d n=%d lda=%d A=%p ipiv=%p\n",
+		m, n, lda, (void*)a, (void*)ipiv ); fflush(stdout);
+#endif
 #if defined(CONFIG_USE_PLASMA)
     const int ib = CONFIG_IB; // from PLASMA
     int info;
     PLASMA<T>::getrf(m, n, ib, a, lda, ipiv, &info);
 #else
-    CLAPACK<T>::getrf(CblasColMajor, m, n, a, lda, ipiv);
+    CLAPACK<T>::getrf(order, m, n, a, lda, ipiv);
 #endif
   }
 };
@@ -317,7 +321,9 @@ struct TaskBodyCPU<TaskGETRFNoPiv<T> > {
     fprintf(stdout, "TaskGETRFNoPiv n=%d res=%d\n", m, res );
     fflush(stdout);
 #endif
-    LAPACKE<T>::laswp_work( order, m, a, lda, ione, n, piv, ione);
+    LAPACKE<T>::laswp_work( 
+	((order == CblasColMajor) ? LAPACK_COL_MAJOR : LAPACK_ROW_MAJOR),
+	m, a, lda, ione, n, piv, ione);
     free( piv );
   }
 };
@@ -371,7 +377,9 @@ struct TaskBodyCPU<TaskLACPY<T> > {
     T* const a = A->ptr();
     T* const b = B->ptr();
 
-    LAPACKE<T>::lacpy( order, uplo, m, n, a, lda, b, ldb );
+    LAPACKE<T>::lacpy( 
+	((order == CblasColMajor) ? LAPACK_COL_MAJOR : LAPACK_ROW_MAJOR),
+       	uplo, m, n, a, lda, b, ldb );
   }
 };
 
@@ -387,6 +395,28 @@ struct TaskBodyCPU<TaskLARNV<T> > {
     T* const a = A->ptr();
 
     LAPACKE<T>::larnv( IDIST, ISEED, mn, a );
+  }
+};
+
+template<typename T>
+struct TaskBodyCPU<TaskLASWP<T> > {
+  void operator()( 
+	CBLAS_ORDER order,
+	ka::range2d_rw<T> A,
+	int k1,
+	int k2,
+	ka::range1d_r<int> ipiv,
+	int inc
+  )
+  {
+    const int n = A->dim(1);
+    const int lda   = A->lda();
+    T* const a = A->ptr();
+    int* const piv = ipiv->ptr();
+
+    LAPACKE<T>::laswp_work(
+	((order == CblasColMajor) ? LAPACK_COL_MAJOR : LAPACK_ROW_MAJOR),
+       	n, a, lda, k1, k2, piv, inc);
   }
 };
 

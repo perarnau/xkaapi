@@ -115,6 +115,17 @@ struct TaskLARNV: public ka::Task<1>::Signature
 	ka::W<ka::range2d<T> > /* A */
 >{};
 
+template<typename T>
+struct TaskLASWP: public ka::Task<6>::Signature
+<
+  CBLAS_ORDER,			       /* row / col */
+  ka::RW<ka::range2d<T> >,		/* A */
+  int,				/* K1 */
+  int,				/* K2 */
+  ka::R<ka::range1d<int> > ,		/* IPIV */
+  int				/* INC */
+>{};
+
 #include "timing.inl"
 
 // task definitions
@@ -124,10 +135,13 @@ struct TaskLARNV: public ka::Task<1>::Signature
 
 #if CONFIG_USE_CUDA
 # include "matrix_gpu.inl"
+#include "magmablas/magmablas.h"
 //# include "matrix_alpha.inl"
 #endif
 
 #include "kblas.inl"
-//#include "kplasma.inl"
+#if defined(CONFIG_USE_PLASMA)
+#include "kplasma.inl"
+#endif
 
 #endif // MATRIX_H_INCLUDED

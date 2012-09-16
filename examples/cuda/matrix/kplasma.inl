@@ -3,18 +3,161 @@
  * KPLASMA - package of PLASMA kernels on CPU or GPU (CUDA)
  */
 
+template<class T>
+struct KPLASMA {
+  typedef T value_type;
+  
+  static int gessm_gpu(cudaStream_t stream, int m, int n, int k, int ib,
+		   int *ipiv,
+		   value_type *l, int ldl,
+		   value_type *a, int lda);
+
+  static int ssssm_gpu(cudaStream_t stream, int m1, int n1, int m2, int n2, int k, int ib,
+		   value_type *a1, int lda1,
+		   value_type *a2, int lda2,
+		   value_type *l1, int ldl1,
+		   value_type *l2, int ldl2,
+		   int *ipiv);
+};
+
+template<>
+struct KPLASMA<double> {
+  typedef double value_type;
+
+  static int gessm_gpu(cudaStream_t stream, int m, int n, int k, int ib,
+		   int *ipiv,
+		   value_type *l, int ldl,
+		   value_type *a, int lda)
+  {
+    static value_type zone  =  1.0;
+    static value_type mzone = -1.0;
+    cublasStatus_t status;
+
+    int i, sb;
+    int tmp, tmp2;
+
+    for(i = 0; i < k; i += ib) {
+        sb = std::min(ib, k-i);
+        tmp  = i+1;
+        tmp2 = i+sb;
+
+	magmablas<value_type>::laswp(stream, n, a, lda, i+1, i+sb, ipiv, 1);
+
+        /*
+         * Compute block row of U.
+         */
+	status = CUBLAS<value_type>::trsm (
+	   convertToSideMode(CblasLeft),
+	   convertToFillMode(CblasLower),
+	   convertToOp(CblasNoTrans),
+	   convertToDiagType(CblasUnit),
+	   sb, n,
+	   &zone,
+           &l[ldl*i+i], ldl,
+           &a[i], lda
+	  );
+	if (status != CUBLAS_STATUS_SUCCESS)
+	  printf("TaskGESSM::cublasDtrsm() == %d\n", status);
+
+        if (i+sb < m) {
+	    /*
+	    * Update trailing submatrix.
+	    */
+	    status = CUBLAS<value_type>::gemm(
+		convertToOp(CblasNoTrans),
+		convertToOp(CblasNoTrans),
+		m-(i+sb), n, sb,
+		&mzone,
+		&l[ldl*i+(i+sb)], ldl,
+		&a[i], lda,
+		&zone, &a[i+sb], lda
+	    );
+	    if (status != CUBLAS_STATUS_SUCCESS)
+	      printf("TaskGESSM::cublasDgemm() == %d\n", status);
+	}
+    }
+
+    return 0;
+  }
+
+  static int ssssm_gpu(cudaStream_t stream, int m1, int n1, int m2, int n2, int k, int ib,
+		   value_type *a1, int lda1,
+		   value_type *a2, int lda2,
+		   value_type *l1, int ldl1,
+		   value_type *l2, int ldl2,
+		   int *ipiv)
+  {
+    const value_type zone  = 1.0;
+    const value_type mzone =-1.0;
+    cublasStatus_t status;
+
+    int i, ii, sb;
+    int im, ip;
+    ip = 0;
+
+    for(ii = 0; ii < k; ii += ib) {
+        sb = std::min(k-ii, ib);
+
+        for(i = 0; i < sb; i++) {
+            im = ipiv[ip]-1;
+
+            if (im != (ii+i)) {
+                im = im - m1;
+		status = CUBLAS<value_type>::swap
+		  (
+		   kaapi_cuda_cublas_handle(),
+		   n1,
+		   &a1[ii+i], lda1,
+		   &a2[im], lda2
+		  );
+            }
+            ip = ip + 1;
+        }
+
+	status = CUBLAS<value_type>::trsm
+	  (
+	   kaapi_cuda_cublas_handle(),
+	   convertToSideMode(CblasLeft),
+	   convertToFillMode(CblasLower),
+	   convertToOp(CblasNoTrans),
+	   convertToDiagType(CblasUnit),
+	   sb, n1, &zone,
+           &l1[ldl1*ii], ldl1,
+           &a1[ii], lda1
+	  );
+	if (status != CUBLAS_STATUS_SUCCESS)
+	  printf("TaskTaskSSSSM::trsm() == %d\n", status);
+
+	status = CUBLAS<value_type>::gemm
+	(
+	    kaapi_cuda_cublas_handle(),
+	    convertToOp(CblasNoTrans),
+	    convertToOp(CblasNoTrans),
+	    m2, n2, sb,
+	    &mzone,
+	    &l2[ldl2*ii], ldl2,
+            &a1[ii], lda1,
+            &zone, a2, lda2
+	);
+	if (status != CUBLAS_STATUS_SUCCESS)
+	  printf("TaskSSSSM::gemm() == %d\n", status);
+    }
+    return 0;
+  }
+};
+
 namespace kplasma {
   template<typename T>
-  struct GESSM: public ka::Task<4>::Signature
+  struct TaskGESSM: public ka::Task<4>::Signature
   <
     CBLAS_ORDER,			/* row / col */
-    ka::RPWP<ka::range1d <int> >,  /* pivot */
+    ka::R<ka::range1d <int> >,  /* pivot */
     ka::R<ka::range2d<T> >, /* L NB-by-NB lower trianguler tile */
     ka::RW<ka::range2d<T> > /* A, Updated by the application of L. */
   >{};
 
   template<typename T>
-  struct TSTRF: public ka::Task<7>::Signature
+  struct TaskTSTRF: public ka::Task<7>::Signature
   <
     CBLAS_ORDER,			/* row / col */
     int,				/* block size (algo) */
@@ -26,7 +169,7 @@ namespace kplasma {
   >{};
 
   template<typename T>
-  struct SSSSM: public ka::Task<6>::Signature
+  struct TaskSSSSM: public ka::Task<6>::Signature
   <
     CBLAS_ORDER,			/* row / col */
     ka::RW<ka::range2d<T> >,	    /* A1 */
@@ -38,10 +181,10 @@ namespace kplasma {
 };
 
 template<typename T>
-struct TaskBodyCPU<kplasma::GESSM<T> > {
+struct TaskBodyCPU<kplasma::TaskGESSM<T> > {
   void operator()( 
     CBLAS_ORDER order, 
-    ka::range1d_rpwp<int> piv,
+    ka::range1d_r<int> piv,
     ka::range2d_r<T> L, 
     ka::range2d_rw<T> A
   )
@@ -65,7 +208,7 @@ struct TaskBodyCPU<kplasma::GESSM<T> > {
 };
 
 template<typename T>
-struct TaskBodyCPU<kplasma::TSTRF<T> > {
+struct TaskBodyCPU<kplasma::TaskTSTRF<T> > {
   void operator()( 
     CBLAS_ORDER order, 
     int nb,
@@ -90,7 +233,7 @@ struct TaskBodyCPU<kplasma::TSTRF<T> > {
     int* const ipiv = piv->ptr();
 
 #if 0
-    fprintf( stdout, "TaskDTSTRF L(%lu,%lu,%d)\n", L->dim(0), L->dim(1), L->lda() );
+    fprintf( stdout, "TaskDTaskTSTRF L(%lu,%lu,%d)\n", L->dim(0), L->dim(1), L->lda() );
     fflush(stdout);
 #endif
     const int ib = CONFIG_IB; // from PLASMA
@@ -103,7 +246,7 @@ struct TaskBodyCPU<kplasma::TSTRF<T> > {
 };
 
 template<typename T>
-struct TaskBodyCPU<kplasma::SSSSM<T> > {
+struct TaskBodyCPU<kplasma::TaskSSSSM<T> > {
   void operator()( 
     CBLAS_ORDER order, 
     ka::range2d_rw<T> A1, 
@@ -130,7 +273,7 @@ struct TaskBodyCPU<kplasma::SSSSM<T> > {
     int* const ipiv = (int*)piv->ptr();
 
 #if 0
-    fprintf( stdout, "TaskDSSSSM L(%lu,%lu), k=%d\n",
+    fprintf( stdout, "TaskDTaskSSSSM L(%lu,%lu), k=%d\n",
 	    L1->dim(0), L1->dim(1), k );
 #endif
     const int ib = CONFIG_IB; // from PLASMA
@@ -141,103 +284,167 @@ struct TaskBodyCPU<kplasma::SSSSM<T> > {
   }
 };
 
+#if defined(CONFIG_USE_CUDA)
 template<typename T>
-struct TaskBodyGPU<kplasma::GESSM<T> > {
+struct TaskBodyGPU<kplasma::TaskGESSM<T> > {
   void operator()( 
     ka::gpuStream stream,
     CBLAS_ORDER order, 
-    ka::range1d_rpwp<int> piv,
+    ka::range1d_r<int> piv,
     ka::range2d_r<T> L, 
     ka::range2d_rw<T> A
   )
   {
-    int m = A->dim(0); 
-    int n = A->dim(1);
-    int k = A->dim(1);
-    int lda = A->lda();
-    int ldl = L->lda();
+    const int m = A->dim(0); 
+    const int n = A->dim(1);
+    const int k = A->dim(1); /* TODO check */
+    const int lda = A->lda();
+    const int ldl = L->lda();
     T* const a = A->ptr();
     T* const l = (T*)L->ptr();
     int* const ipiv = (int*)piv->ptr();
-    const int ib = CONFIG_IB; // from PLASMA
+//    const int ib = CONFIG_IB; // from PLASMA
+    const int ib = k; // from PLASMA
 
-#if 1
-    fprintf( stdout, "TaskGPU DGESSM A(%lu,%lu) a=%p lda=%d  L(%lu,%lu) l=%p ldl=%d\n",
+    /* TODO: kaapi call */
+    int* hipiv = (int*)calloc( k, sizeof(int) );
+    cudaMemcpy( hipiv, ipiv, k * sizeof(int), 
+	    cudaMemcpyDeviceToHost );
+
+#if 0
+    fprintf( stdout, "TaskGPU TaskGESSM A(%lu,%lu) a=%p lda=%d  L(%lu,%lu) l=%p ldl=%d\n",
 	    A->dim(0), A->dim(1), (void*)a, A->lda(),
 	    L->dim(0), L->dim(1), (void*)l, L->lda()
 	   );
     fflush(stdout);
 #endif
+    KPLASMA<T>::gessm_gpu((cudaStream_t)stream.stream, m, n, k, ib, hipiv, l, ldl, a, lda);
+    free(hipiv);
+  }
+};
 
-#if defined(CONFIG_USE_MAGMA)
+template<typename T>
+struct TaskBodyGPU<kplasma::TaskSSSSM<T> > {
+  void operator()( 
+    ka::gpuStream stream,
+    CBLAS_ORDER order, 
+    ka::range2d_rw<T> A1, 
+    ka::range2d_rw<T> A2,
+    ka::range2d_r<T> L1,
+    ka::range2d_r<T> L2,
+    ka::range1d_r<int> piv
+  )
+  {
+    int m1 = A1->dim(0); 
+    int n1 = A1->dim(1);
+    int m2 = A2->dim(0); 
+    int n2 = A2->dim(1);
+    int k = L1->dim(0);
+    int lda1 = A1->lda();
+    int lda2 = A2->lda();
+    int ldl1 = L1->lda();
+    int ldl2 = L2->lda();
+    T* const a1 = A1->ptr();
+    T* const a2 = A2->ptr();
+    T* const l1 = (T*)L1->ptr();
+    T* const l2 = (T*)L2->ptr();
+    int* const ipiv = (int*)piv->ptr();
+//    const int ib = CONFIG_IB; // from PLASMA
+    const int ib = k; // from PLASMA
+
+#if 0
+    fprintf( stdout, "TaskGPU DTaskSSSSM A1(%lu,%lu) a1=%p lda1=%d "
+	   "A2(%lu,%lu) a2=%p lda2=%d "
+	   "L1(%lu,%lu) l1=%p ldl1=%d "
+	   "L2(%lu,%lu) l2=%p ldl2=%d ipiv=%p\n",
+	   A1->dim(0), A1->dim(1), (void*)a1, lda1,
+	   A2->dim(0), A2->dim(1), (void*)a2, lda2,
+	   L1->dim(0), L1->dim(1), (void*)l1, ldl1,
+	   L2->dim(0), L2->dim(1), (void*)l2, ldl2,
+	   ipiv
+	);
+    fflush(stdout);
+#endif
+    /* TODO KAAPI call */
     int* hipiv = (int*)calloc( piv->size(), sizeof(int) );
     cudaMemcpy( hipiv, ipiv, piv->size() * sizeof(int), 
 	    cudaMemcpyDeviceToHost );
 
-    const int info =
-      MAGMA<T>::gessm('f', m, n, k, ib, ipiv, l, ldl, a, lda, a, lda);
-    if(info){
-      fprintf(stdout, "TaskGESSM ERROR (%d)\n", info);
-      fflush(stdout);
-    }
-#else
-    int* h_ipiv = (int*)calloc( k, sizeof(int) );
-    cudaMemcpy( h_ipiv, ipiv, k * sizeof(int), 
-	    cudaMemcpyDeviceToHost );
-
-    static double zone  =  1.0;
-    static double mzone = -1.0;
-//    static int                ione  =  1;
-    cublasStatus_t status;
-
-    int i, sb;
-    int tmp, tmp2;
-
-    for(i = 0; i < k; i += ib) {
-        sb = std::min(ib, k-i);
-        tmp  = i+1;
-        tmp2 = i+sb;
-
-//	magmablas<T>::laswp(n, a, lda, i+1, i+sb, ipiv, 1);
-
-        /*
-         * Compute block row of U.
-         */
-	status = CUBLAS<T>::trsm (
-	   convertToSideMode(CblasLeft),
-	   convertToFillMode(CblasLower),
-	   convertToOp(CblasNoTrans),
-	   convertToDiagType(CblasUnit),
-	   sb, n,
-	   &zone,
-           &l[ldl*i+i], ldl,
-           &a[i], lda
-	  );
-	if (status != CUBLAS_STATUS_SUCCESS)
-	  printf("DGESSM::cublasDtrsm() == %d\n", status);
-
-        if (i+sb < m) {
-	    /*
-	    * Update trailing submatrix.
-	    */
-	    status = CUBLAS<T>::gemm(
-		convertToOp(CblasNoTrans),
-		convertToOp(CblasNoTrans),
-		m-(i+sb), n, sb,
-		&mzone,
-		&l[ldl*i+(i+sb)], ldl,
-		&a[i], lda,
-		&zone, &a[i+sb], lda
-	    );
-	    if (status != CUBLAS_STATUS_SUCCESS)
-	      printf("DGESSM::cublasDgemm() == %d\n", status);
-	}
-    }
-#endif
+    KPLASMA<T>::ssssm_gpu((cudaStream_t)stream.stream, m1, n1, m2, n2, k, ib, a1, lda1, a2, lda2, l1, ldl1, l2, ldl2, hipiv);
+    free(hipiv);
   }
 };
 
+#endif /* CONFIG_USE_CUDA */
+
 #if 0
+
+template<typename T>
+struct TaskBodyGPU<kplasma::TaskTSTRF<T> > {
+  void operator()( 
+    ka::gpuStream stream,
+    CBLAS_ORDER order, 
+    int nb,
+    ka::range2d_rw<T> U, 
+    ka::range2d_rw<T> A,
+    ka::range2d_rw<T> L,
+    ka::range1d_w<int> piv,
+    ka::range2d_rw<T> WORK
+  )
+  {
+#if defined(CONFIG_USE_MAGMA)
+    int m = A->dim(0); 
+    int n = A->dim(1);
+    int lda = A->lda();
+    int ldl = L->lda();
+    int ldu = U->lda();
+    int ldw = WORK->lda();
+    T* const a = A->ptr();
+    T* const l = L->ptr();
+    T* const u = U->ptr();
+    T* const work = WORK->ptr();
+    int* const ipiv = piv->ptr();
+    const int ib = CONFIG_IB; // from PLASMA
+
+#if 1
+    fprintf( stdout, "TaskGPU DTaskTSTRF A(%lu,%lu) a=%p lda=%d "
+	    "L(%lu,%lu) l=%p ldl=%d "
+	    "U(%lu,%lu) u=%p ldu=%d ipiv=%p\n",
+	    A->dim(0), A->dim(1), (void*)a, lda,
+	    L->dim(0), L->dim(1), (void*)l, ldl,
+	    U->dim(0), U->dim(1), (void*)u, ldu,
+	    (void*)ipiv 
+    );
+    fflush(stdout);
+#endif
+
+    T* ha = (T*)malloc( A->dim(0)*A->dim(1) * sizeof(T) );
+    T* hl = (T*)malloc( L->dim(0)*L->dim(1) * sizeof(T) );
+    T* hu = (T*)malloc( U->dim(0)*U->dim(1) * sizeof(T) );
+    T* hwork = (T*)malloc( WORK->dim(0)*WORK->dim(1) * sizeof(T) );
+    cublasGetMatrix( m, n, sizeof(T), u, ldu, hu, ldu );
+    cublasGetMatrix( m, ib, sizeof(T), a, lda, ha, lda );
+    memset( hl, 0, L->dim(0)*L->dim(1)*sizeof(T) );
+    int* hipiv = (int*)calloc( piv->size(), sizeof(int) );
+    cudaMemcpy( hipiv, ipiv, piv->size() * sizeof(int), 
+	    cudaMemcpyDeviceToHost );
+
+    int info =
+      MAGMA<T>::tstrf( 'f', m, n, ib, L->dim(1), hu, ldu, u, ldu, ha, lda, a, lda, hl, ldl, l, ldl, hipiv, hwork, ldw, work, lda );
+    if(info){
+      fprintf( stdout, "TaskTaskTSTRF ERROR (%d)\n", info );
+      fflush(stdout);
+    }
+    /* TODO */
+    cudaMemcpyAsync( hipiv, ipiv, piv->size() * sizeof(int), 
+	    cudaMemcpyHostToDevice,
+	    (cudaStream_t)stream.stream
+     );
+#else
+    /* TODO */
+#endif
+  }
+};
 
 /*
  * LAPACK QR factorization of a real M-by-N matrix A.
@@ -288,189 +495,6 @@ struct TaskTSMQR: public ka::Task<8>::Signature
     ka::W<ka::range2d<T> >,	/* T */
     ka::W<ka::range1d<T> >	/* WORK */
 >{};
-
-template<typename T>
-struct TaskBodyGPU<TaskTSTRF<T> > {
-  void operator()( 
-    ka::gpuStream stream,
-    CBLAS_ORDER order, 
-    int nb,
-    ka::range2d_rw<T> U, 
-    ka::range2d_rw<T> A,
-    ka::range2d_rw<T> L,
-    ka::range1d_w<int> piv,
-    ka::range2d_rw<T> WORK
-  )
-  {
-#if defined(CONFIG_USE_MAGMA)
-    int m = A->dim(0); 
-    int n = A->dim(1);
-    int lda = A->lda();
-    int ldl = L->lda();
-    int ldu = U->lda();
-    int ldw = WORK->lda();
-    T* const a = A->ptr();
-    T* const l = L->ptr();
-    T* const u = U->ptr();
-    T* const work = WORK->ptr();
-    int* const ipiv = piv->ptr();
-    const int ib = CONFIG_IB; // from PLASMA
-
-#if 1
-    fprintf( stdout, "TaskGPU DTSTRF A(%lu,%lu) a=%p lda=%d "
-	    "L(%lu,%lu) l=%p ldl=%d "
-	    "U(%lu,%lu) u=%p ldu=%d ipiv=%p\n",
-	    A->dim(0), A->dim(1), (void*)a, lda,
-	    L->dim(0), L->dim(1), (void*)l, ldl,
-	    U->dim(0), U->dim(1), (void*)u, ldu,
-	    (void*)ipiv 
-    );
-    fflush(stdout);
-#endif
-
-    T* ha = (T*)malloc( A->dim(0)*A->dim(1) * sizeof(T) );
-    T* hl = (T*)malloc( L->dim(0)*L->dim(1) * sizeof(T) );
-    T* hu = (T*)malloc( U->dim(0)*U->dim(1) * sizeof(T) );
-    T* hwork = (T*)malloc( WORK->dim(0)*WORK->dim(1) * sizeof(T) );
-    cublasGetMatrix( m, n, sizeof(T), u, ldu, hu, ldu );
-    cublasGetMatrix( m, ib, sizeof(T), a, lda, ha, lda );
-    memset( hl, 0, L->dim(0)*L->dim(1)*sizeof(T) );
-    int* hipiv = (int*)calloc( piv->size(), sizeof(int) );
-    cudaMemcpy( hipiv, ipiv, piv->size() * sizeof(int), 
-	    cudaMemcpyDeviceToHost );
-
-    int info =
-      MAGMA<T>::tstrf( 'f', m, n, ib, L->dim(1), hu, ldu, u, ldu, ha, lda, a, lda, hl, ldl, l, ldl, hipiv, hwork, ldw, work, lda );
-    if(info){
-      fprintf( stdout, "TaskTSTRF ERROR (%d)\n", info );
-      fflush(stdout);
-    }
-    /* TODO */
-    cudaMemcpyAsync( hipiv, ipiv, piv->size() * sizeof(int), 
-	    cudaMemcpyHostToDevice,
-	    (cudaStream_t)stream.stream
-     );
-#else
-    /* TODO */
-#endif
-  }
-};
-
-template<typename T>
-struct TaskBodyGPU<TaskSSSSM<T> > {
-  void operator()( 
-    ka::gpuStream stream,
-    CBLAS_ORDER order, 
-    ka::range2d_rw<T> A1, 
-    ka::range2d_rw<T> A2,
-    ka::range2d_r<T> L1,
-    ka::range2d_r<T> L2,
-    ka::range1d_r<int> piv
-  )
-  {
-    int m1 = A1->dim(0); 
-    int n1 = A1->dim(1);
-    int m2 = A2->dim(0); 
-    int n2 = A2->dim(1);
-    int k = L1->dim(0);
-    int lda1 = A1->lda();
-    int lda2 = A2->lda();
-    int ldl1 = L1->lda();
-    int ldl2 = L2->lda();
-    T* const a1 = A1->ptr();
-    T* const a2 = A2->ptr();
-    T* const l1 = (T*)L1->ptr();
-    T* const l2 = (T*)L2->ptr();
-    int* const ipiv = (int*)piv->ptr();
-    const int ib = CONFIG_IB; // from PLASMA
-
-#if 1
-    fprintf( stdout, "TaskGPU DSSSSM A1(%lu,%lu) a1=%p lda1=%d "
-	   "A2(%lu,%lu) a2=%p lda2=%d "
-	   "L1(%lu,%lu) l1=%p ldl1=%d "
-	   "L2(%lu,%lu) l2=%p ldl2=%d ipiv=%p\n",
-	   A1->dim(0), A1->dim(1), (void*)a1, lda1,
-	   A2->dim(0), A2->dim(1), (void*)a2, lda2,
-	   L1->dim(0), L1->dim(1), (void*)l1, ldl1,
-	   L2->dim(0), L2->dim(1), (void*)l2, ldl2,
-	   ipiv
-	);
-    fflush(stdout);
-#endif
-#if 0
-    int* hipiv = (int*)calloc( piv->size(), sizeof(int) );
-    cudaMemcpy( hipiv, ipiv, piv->size() * sizeof(int), 
-	    cudaMemcpyDeviceToHost );
-
-    const int info = MAGMA<T>::ssssm('f', m1, n1, m2, n2, k, ib, a1, lda1, a2, lda2, l1, ldl1, l2, ldl2, hipiv);
-    if(info){
-      fprintf(stdout, "TaskSSSSM ERROR (%d)\n", info );
-      fflush(stdout);
-    }
-#endif
-#if 1
-    static T zone  = 1.0;
-    static T mzone =-1.0;
-    cublasStatus_t status;
-
-    int* h_ipiv = (int*)calloc( piv->size(), sizeof(int) );
-    cudaMemcpy( h_ipiv, ipiv, piv->size() * sizeof(int), 
-	    cudaMemcpyDeviceToHost );
-
-    int i, ii, sb;
-    int im, ip;
-    ip = 0;
-
-    for(ii = 0; ii < k; ii += ib) {
-        sb = std::min(k-ii, ib);
-
-        for(i = 0; i < sb; i++) {
-            im = h_ipiv[ip]-1;
-
-            if (im != (ii+i)) {
-                im = im - m1;
-		status = CUBLAS<T>::swap
-		  (
-		   kaapi_cuda_cublas_handle(),
-		   n1,
-		   &a1[ii+i], lda1,
-		   &a2[im], lda2
-		  );
-            }
-            ip = ip + 1;
-        }
-
-	status = CUBLAS<T>::trsm
-	  (
-	   kaapi_cuda_cublas_handle(),
-	   convertToSideMode(CblasLeft),
-	   convertToFillMode(CblasLower),
-	   convertToOp(CblasNoTrans),
-	   convertToDiagType(CblasUnit),
-	   sb, n1, &zone,
-           &l1[ldl1*ii], ldl1,
-           &a1[ii], lda1
-	  );
-	if (status != CUBLAS_STATUS_SUCCESS)
-	  printf("TaskSSSSM::trsm() == %d\n", status);
-
-	status = CUBLAS<T>::gemm
-	(
-	    kaapi_cuda_cublas_handle(),
-	    convertToOp(CblasNoTrans),
-	    convertToOp(CblasNoTrans),
-	    m2, n2, sb,
-	    &mzone,
-	    &l2[ldl2*ii], ldl2,
-            &a1[ii], lda1,
-            &zone, a2, lda2
-	);
-	if (status != CUBLAS_STATUS_SUCCESS)
-	  printf("TaskSSSSM::gemm() == %d\n", status);
-    }
-#endif
-  }
-};
 
 template<typename T>
 struct TaskBodyCPU<TaskORMQR<T> > {

@@ -44,7 +44,6 @@ $CXX -g -Wall \
     $CUBLAS_CFLAGS \
     $LAPACK_CLAGS \
     $LAPACKE_CFLAGS \
-    $MAGMA_CFLAGS \
     -c matcholesky_rec_kaapi++.cpp 
 
 
@@ -52,7 +51,6 @@ $CXX -g \
     -o matcholesky_rec_kaapi++ \
     matcholesky_rec_kaapi++.o \
     $LDFLAGS \
-    $MAGMA_LDFLAGS \
     $CUDA_LDFLAGS \
     $CUBLAS_LDFLAGS \
     $LAPACKE_LDFLAGS \

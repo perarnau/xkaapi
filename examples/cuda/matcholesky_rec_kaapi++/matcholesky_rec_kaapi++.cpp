@@ -197,6 +197,148 @@ struct TaskBodyCPU<TaskParallelPOTRF<T> > {
   }
 };
 
+template<typename T>
+struct TaskParallelGEMM: public ka::Task<8>::Signature
+<
+  CBLAS_ORDER,			      /* row / col */
+  CBLAS_TRANSPOSE,        /* NoTrans/Trans for A */
+  CBLAS_TRANSPOSE,        /* NoTrans/Trans for B */
+  T,                      /* alpha */
+  ka::R<ka::range2d<T> >, /* Aik   */
+  ka::R<ka::range2d<T> >, /* Akj   */
+  T,                      /* beta */
+  ka::RPWP<ka::range2d<T> > /* Aij   */
+>{};
+
+template<typename T>
+struct TaskBodyCPU<TaskParallelGEMM<T> > {
+  void operator()
+  (
+    CBLAS_ORDER		   order, 
+    CBLAS_TRANSPOSE transA,
+    CBLAS_TRANSPOSE transB,
+    T alpha,
+    ka::range2d_r<T> A,
+    ka::range2d_r<T> B,
+    T beta,
+    ka::range2d_rpwp<T> C
+  )
+  {
+    const T* const a = A->ptr();
+    const T* const b = B->ptr();
+    T* const c       = C->ptr();
+
+    const int M = A->dim(0);
+    const int K = B->dim(0);
+    const int N = B->dim(1);
+
+    const int lda = A->lda();
+    const int ldb = B->lda();
+    const int ldc = C->lda();
+    const int bloc = global_recblocsize;
+
+    /* It works only for B with CblasTrans */
+#if 0
+    fprintf(stdout, "TaskCPU ParallelGEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", M, N, K, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
+#endif
+    if(M > bloc)
+    {
+      for (int i=0; i<M; i += bloc)
+      {
+	ka::rangeindex ri(i, i+bloc);
+	for (int j=0; j<N; j += bloc)
+	{
+	  ka::rangeindex rj(j, j+bloc);
+	  for (int k=0; k<K; k += bloc)
+	  {
+	    ka::rangeindex rk(k, k+bloc);
+	      ka::Spawn<TaskGEMM<T> >(ka::SetArch(ka::ArchHost))
+		(
+		 order, transA, transB,
+		 alpha, A(rk,ri), B(rk,rj), beta, C(rj,ri)
+		);
+	  }
+	}
+      }
+    } else {
+      // spawn here
+      CBLAS<T>::gemm
+      (
+	order, transA, transB,
+	M, N, K, alpha, a, lda, b, ldb, beta, c, ldc
+      );
+    }
+  }
+};
+
+#if defined(KAAPI_USE_CUDA)
+template<typename T> 
+struct TaskBodyGPU<TaskParallelGEMM<T> >
+{
+  void operator()
+  (
+   ka::gpuStream stream,
+   CBLAS_ORDER		   order, 
+   CBLAS_TRANSPOSE transA,
+   CBLAS_TRANSPOSE transB,
+   T alpha,
+   ka::range2d_r<T> A,
+   ka::range2d_r<T> B,
+   T beta,
+   ka::range2d_rpwp<T> C
+  )
+  {
+    const T* const a = A->ptr();
+    const T* const b = B->ptr();
+    T* const c       = C->ptr();
+
+    const int m = A->dim(0); 
+    const int n = B->dim(1); // eq. to Akj->rows();
+    const int k = C->dim(1); 
+
+
+    const int lda = A->lda();
+    const int ldb = B->lda();
+    const int ldc = C->lda();
+
+#if 0
+    fprintf(stdout, "TaskGPU RecursiveGEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", m, n, k, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
+#endif
+
+#if CONFIG_USE_CUBLAS
+    cublasStatus_t status;
+    if( order == CblasColMajor ) 
+      status = CUBLAS<T>::gemm (
+	     kaapi_cuda_cublas_handle(),
+	     convertToOp(transA),
+	     convertToOp(transB),
+	     m, n, k,
+	     &alpha,
+	     a, lda,
+	     b, ldb, 
+	     &beta, c, ldc
+      );
+    else {
+      kaapi_assert_debug( order == CblasRowMajor )
+      status = CUBLAS<T>::gemm(
+	     kaapi_cuda_cublas_handle(),
+	     convertToOp(transB),
+	     convertToOp(transA),
+	     n, m, k,
+	     &alpha,
+	     b, ldb, 
+	     a, lda,
+	     &beta, c, ldc
+      );
+  }
+	
+  if (status != CUBLAS_STATUS_SUCCESS)
+    printf("%s::cublasGemm() == %d\n", __FUNCTION__, status);
+#endif
+  }
+};
+#endif /* KAAPI_USE_CUDA */
+
 /* Block Cholesky factorization A <- L * L^t
  Lower triangular matrix, with the diagonal, stores the Cholesky factor.
  Based on PLASMA library.
@@ -239,6 +381,7 @@ struct TaskBodyCPU<TaskCholesky<T> > {
           
           for (size_t n=k+blocsize; n < m; n += blocsize) {
             ka::rangeindex rn(n, n+blocsize);
+            //ka::Spawn<TaskParallelGEMM<T> >(ka::SetStaticSched())
             ka::Spawn<TaskGEMM<T> >( ka::SetArch(ka::ArchCUDA) )
 	      ( CblasColMajor, CblasNoTrans, CblasTrans, (T)-1.0, A(rk,rm), A(rk,rn), (T)1.0, A(rn,rm));
           }
