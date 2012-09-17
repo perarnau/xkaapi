@@ -56,8 +56,7 @@ extern "C" {
    It means that bit must match.   
 */
 typedef union {
-    uint32_t     bits32[4];
-    uint64_t     bits64[2];
+    uint64_t     bits64[4];
 } kaapi_cpuset_t;
 
 
@@ -72,6 +71,8 @@ static inline void kaapi_cpuset_clear(kaapi_cpuset_t* affinity )
 {
   affinity->bits64[0] = 0;
   affinity->bits64[1] = 0;
+  affinity->bits64[2] = 0;
+  affinity->bits64[3] = 0;
 }
 
 
@@ -81,6 +82,8 @@ static inline void kaapi_cpuset_full(kaapi_cpuset_t* affinity )
 {
   affinity->bits64[0] = ~0UL;
   affinity->bits64[1] = ~0UL;
+  affinity->bits64[2] = ~0UL;
+  affinity->bits64[3] = ~0UL;
 }
 
 
@@ -91,7 +94,10 @@ static inline int kaapi_cpuset_intersect(
     const kaapi_cpuset_t* s2
 )
 {
-  return ((s1->bits64[0] & s2->bits64[0]) != 0) || ((s1->bits64[1] & s2->bits64[1]) != 0);
+  return ((s1->bits64[0] & s2->bits64[0]) != 0) 
+      || ((s1->bits64[1] & s2->bits64[1]) != 0)
+      || ((s1->bits64[2] & s2->bits64[2]) != 0)
+      || ((s1->bits64[3] & s2->bits64[3]) != 0);
 }
 
 
@@ -99,7 +105,11 @@ static inline int kaapi_cpuset_intersect(
 */
 static inline int kaapi_cpuset_empty(const kaapi_cpuset_t* affinity)
 {
-  return (affinity->bits64[0] == 0) && (affinity->bits64[1] == 0);
+  return (affinity->bits64[0] == 0) 
+      && (affinity->bits64[1] == 0)
+      && (affinity->bits64[2] == 0)
+      && (affinity->bits64[3] == 0)
+  ;
 }
 
 
@@ -111,14 +121,14 @@ static inline int kaapi_cpuset_set(
 )
 {
   kaapi_assert_debug( i < sizeof(kaapi_cpuset_t)*8 );
-  if (i <32)
-    affinity->bits32[0] |= ((uint32_t)1)<<i;
-  else if (i <64)
-    affinity->bits32[1] |= ((uint32_t)1)<<(i-32);
-  else if (i <96)
-    affinity->bits32[2] |= ((uint32_t)1)<<(i-64);
+  if (i <64)
+    affinity->bits64[0] |= ((uint64_t)1)<<i;
+  else if (i <128)
+    affinity->bits64[1] |= ((uint64_t)1)<<(i-64);
+  else if (i <192)
+    affinity->bits64[2] |= ((uint64_t)1)<<(i-128);
   else
-    affinity->bits32[3] |= ((uint32_t)1)<<(i-96);
+    affinity->bits64[3] |= ((uint64_t)1)<<(i-192);
   return 0;
 }
 
@@ -132,6 +142,8 @@ static inline int kaapi_cpuset_copy(
 {
   dest->bits64[0] = src->bits64[0];
   dest->bits64[1] = src->bits64[1];
+  dest->bits64[2] = src->bits64[2];
+  dest->bits64[3] = src->bits64[3];
   return 0;
 }
 
@@ -151,14 +163,14 @@ static inline int kaapi_cpuset_has(
 )
 {
   kaapi_assert_debug( i < sizeof(kaapi_cpuset_t)*8 );
-  if (i <32)
-    return (affinity->bits32[0] & ((uint32_t)1)<<i) !=0;
-  else if (i <64)
-    return (affinity->bits32[1] & ((uint32_t)1)<<(i-32)) !=0;
-  else if (i <96)
-    return (affinity->bits32[2] & ((uint32_t)1)<<(i-64)) !=0;
+  if (i <64)
+    return (affinity->bits64[0] & ((uint64_t)1)<<i) !=0;
+  else if (i <128)
+    return (affinity->bits64[1] & ((uint64_t)1)<<(i-64)) !=0;
+  else if (i <192)
+    return (affinity->bits64[2] & ((uint64_t)1)<<(i-128)) !=0;
   else
-    return (affinity->bits32[3] & ((uint32_t)1)<<(i-96)) !=0;
+    return (affinity->bits64[3] & ((uint64_t)1)<<(i-192)) !=0;
 }
 
 /** Return *dest &= mask
@@ -167,6 +179,8 @@ static inline void kaapi_cpuset_and(kaapi_cpuset_t* dest, const kaapi_cpuset_t* 
 {
   dest->bits64[0] &= mask->bits64[0];
   dest->bits64[1] &= mask->bits64[1];
+  dest->bits64[2] &= mask->bits64[2];
+  dest->bits64[3] &= mask->bits64[3];
 }
 
 /** Return *dest |= mask
@@ -175,6 +189,8 @@ static inline void kaapi_cpuset_or(kaapi_cpuset_t* dest, const kaapi_cpuset_t* m
 {
   dest->bits64[0] |= mask->bits64[0];
   dest->bits64[1] |= mask->bits64[1];
+  dest->bits64[2] |= mask->bits64[2];
+  dest->bits64[3] |= mask->bits64[3];
 }
 
 /** Return *dest &= ~mask
@@ -183,6 +199,8 @@ static inline void kaapi_cpuset_notand(kaapi_cpuset_t* dest, const kaapi_cpuset_
 {
   dest->bits64[0] ^= mask->bits64[0];
   dest->bits64[1] ^= mask->bits64[1];
+  dest->bits64[2] ^= mask->bits64[2];
+  dest->bits64[3] ^= mask->bits64[3];
 }
 
 #if defined(__cplusplus)
