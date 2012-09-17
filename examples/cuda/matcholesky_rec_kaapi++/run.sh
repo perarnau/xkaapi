@@ -62,14 +62,14 @@ function run_test {
 
 
 #    msizes="10240"
-    msizes="2048"
+    msizes="4096"
 #    msizes="32768"
 #    msizes="20480"
 #    bsizes="2048"
 #    msizes="40960"
 #    msizes="10240 21504 22528 23552 24576"
 #    bsizes="1024"
-    bsizes="512"
+    bsizes="640 768 896"
     bloc_recursive="128"
     niter=1
     verif=1

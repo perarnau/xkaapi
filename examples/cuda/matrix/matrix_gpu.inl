@@ -104,9 +104,9 @@ struct TaskBodyGPU<TaskGEMM<T> >
     const T* const b = Akj->ptr();
     T* const c       = Aij->ptr();
 
-    const int m = Aik->dim(0); 
-    const int n = Aik->dim(1); // eq. to Akj->rows();
-    const int k = Akj->dim(1); 
+    const int m = Aik->dim(1); 
+    const int n = Aik->dim(0); // eq. to Akj->rows();
+    const int k = Akj->dim(0); 
 
 
     const int lda = Aik->lda();
@@ -196,8 +196,8 @@ struct TaskBodyGPU<TaskSYRK<T> >
     ka::range2d_rw<T> C 
   )
   {
-    const int n     = A->dim(0); 
-    const int k     = A->dim(1); // eq. to Akj->rows();
+    const int n     = A->dim(1); 
+    const int k     = A->dim(0); // eq. to Akj->rows();
     const int lda   = A->lda();
     const T* const a = A->ptr();
 
@@ -252,7 +252,7 @@ struct TaskBodyGPU<TaskTRSM<T> >
     T* const c = C->ptr();
     const int ldc = C->lda();
 
-    const int n = C->dim(0);
+    const int n = C->dim(1);
     const int k = (transA == CblasNoTrans ? A->dim(1) : A->dim(0) );
 
 #if 0

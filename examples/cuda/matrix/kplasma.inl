@@ -18,6 +18,13 @@ struct KPLASMA {
 		   value_type *l1, int ldl1,
 		   value_type *l2, int ldl2,
 		   int *ipiv);
+
+  static int tstrf_gpu(cudaStream_t stream, int m, int n, int ib, int nb,
+                  value_type *hU, int ldhu, value_type *dU, int lddu, 
+                  value_type *hA, int ldha, value_type *dA, int ldda, 
+                  value_type *hL, int ldhl, value_type *dL, int lddl,
+                  int *ipiv, 
+                  value_type *hwork, int ldhwork, value_type *dwork, int lddwork);
 };
 
 template<>
@@ -143,6 +150,201 @@ struct KPLASMA<double> {
 	  printf("TaskSSSSM::gemm() == %d\n", status);
     }
     return 0;
+  }
+
+  static int tstrf_gpu(cudaStream_t stream, int m, int n, int ib, int nb,
+                  value_type *hU, int ldhu, value_type *dU, int lddu, 
+                  value_type *hA, int ldha, value_type *dA, int ldda, 
+                  value_type *hL, int ldhl, value_type *dL, int lddl,
+                  int *ipiv, 
+                  value_type *hwork, int ldhwork, value_type *dwork, int lddwork)
+  {
+#define UT(i,j) (dUT + (i)*ib*lddu + (j)*ib )
+#define AT(i,j) (dAT + (i)*ib*ldda + (j)*ib )
+#define L(i)    (dL  + (i)*ib*lddl          )
+#define L2(i)   (dL2 + (i)*ib*lddl          )
+#define hU(i,j) (hU  + (j)*ib*ldhu + (i)*ib )
+#define hA(i,j) (hA  + (j)*ib*ldha + (i)*ib )
+#define hL(i)   (hL  + (i)*ib*ldhl          )
+#define hL2(i)  (hL2 + (i)*ib*ldhl          )
+
+    value_type c_one     = 1.0;
+    value_type c_neg_one = -1.0;
+
+    int iinfo = 0;
+    int info = 0;
+    int maxm, mindim;
+    int i, j, im, s, ip, ii, sb, p = 1;
+    value_type *dAT, *dUT;
+    value_type *dAp, *dUp;
+#if 1
+    value_type *dL2 = dL + ib;
+    value_type *hL2 = hL + ib;
+    p = 2;
+#endif
+    ip = 0;
+
+    /* Function Body */
+    mindim = std::min(m, n);
+    s      = mindim / ib;
+
+    /* Use hybrid blocked code. */
+    maxm = ((m + 31)/32)*32;
+
+    dUT = dU; dAT = dA;
+    dAp = dwork;
+    dUp = dAp + ib*lddwork;
+
+    ip = 0;
+    for( i=0; i<s; i++ )
+    {
+	ii = i * ib;
+	sb = std::min(mindim-ii, ib);
+	
+	if ( i>0 ){
+	    // download i-th panel
+	    magmablas<value_type>::transpose( stream, dUp, lddu, UT(0, i), lddu, sb, ii );
+	    magmablas<value_type>::transpose( stream, dAp, ldda, AT(0, i), ldda, sb, m  );
+	    
+	    cublasGetMatrix( ii, sb, sizeof(value_type), dUp, lddu, hU(0, i), ldhu);
+	    cublasGetMatrix( m,  sb, sizeof(value_type), dAp, ldda, hA(0, i), ldha);
+	    
+	    // make sure that gpu queue is empty
+	    //cuCtxSynchronize();
+	    
+#if 1
+	    CUBLAS<value_type>::trsm( CUBLAS_SIDE_RIGHT, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_T, CUBLAS_DIAG_UNIT, 
+			 n-(ii+sb), ib, 
+			 &c_one, L2(i-1),      lddl,
+				UT(i-1, i+1), lddu);
+#else
+	    CUBLAS<value_type>::trsm( CUBLAS_SIDE_RIGHT, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_T, CUBLAS_DIAG_UNIT, 
+			 n-(ii+sb), ib, 
+			 &c_one, L(i-1),       lddl,
+				UT(i-1, i+1), lddu);
+#endif
+	    CUBLAS<value_type>::gemm( CUBLAS_OP_N, CUBLAS_OP_N, 
+			 n-(ii+sb), m, ib,
+			 &c_neg_one, UT(i-1, i+1), lddu, 
+				    AT(0,   i-1), ldda,
+			 &c_one,     AT(0,   i+1), ldda );
+	}
+
+	// do the cpu part
+#if 1
+	PLASMA<value_type>::tstrf(m, sb, ib, nb,
+		    (value_type*)hU(i, i), ldhu, 
+		    (value_type*)hA(0, i), ldha,
+		    (value_type*)hL(i),    ldhl, 
+		    ipiv+ii, 
+		    (value_type*)hwork, ldhwork, 
+		    &info);
+#endif
+
+	if ( (info == 0) && (iinfo > 0) )
+	    info = iinfo + ii;
+	
+	// Need to swap betw U and A
+#if 1
+// 	magmablas_dswapblk( 'R', n-(ii+sb),
+// 			    UT(i, i+1), lddu,
+// 			    AT(0, i+1), ldda,
+// 			    1, sb, ipiv+ii, 1, nb );
+	magmablas<value_type>::swapblk( stream, n-(ii+sb),
+			    UT(i, i+1), lddu,
+			    AT(0, i+1), ldda,
+			    1, sb, ipiv+ii, 1, nb );
+
+	for(j=0; j<ib; j++) {
+	    im = ipiv[ip]-1;
+	    if ( im == j ) {
+		ipiv[ip] += ii;
+	    }
+	    ip++;
+	}
+#else
+	for(j=0; j<ib; j++) {
+	    im = ipiv[ip]-1;
+	    if ( im != (j) ) {
+		im = im - nb;
+		//assert( (im>=0) && (im<m) );
+		CUBLAS<value_type>::swap(  n-(ii+sb), UT(i, i+1)+j*lddu, 1, AT(0, i+1)+im*ldda, 1 );
+                //magmablas_dswap( n-(ii+sb), UT(i, i+1)+j*lddu, 1, AT(0, i+1)+im*ldda, 1 );
+	    } else {
+		ipiv[ip] += ii;
+	    }
+	    ip++;
+	}
+#endif
+
+#if 1
+	CORE_dlacpy( PlasmaUpperLower, sb, sb, 
+		     (value_type*)hL(i), ldhl, 
+		     (value_type*)hL2(i), ldhl );
+	CORE_dtrtri( PlasmaLower, PlasmaUnit, sb, 
+		     (value_type*)hL2(i), ldhl, &info );
+	if (info != 0) {
+	  fprintf(stderr, "ERROR, trtri returned with info = %d\n", info);
+	}   
+#endif
+	// upload i-th panel
+	cublasSetMatrix( sb,   sb, sizeof(value_type), hU(i, i), ldhu, dUp,  lddu );
+	cublasSetMatrix( m,    sb, sizeof(value_type), hA(0, i), ldha, dAp,  ldda );
+	cublasSetMatrix( p*ib, sb, sizeof(value_type), hL(i),    ldhl, L(i), lddl );
+	magmablas<value_type>::transpose( stream, UT(i, i), lddu, dUp, lddu, sb, sb);
+	magmablas<value_type>::transpose( stream, AT(0, i), ldda, dAp, ldda, m,  sb);
+	
+	// make sure that gpu queue is empty
+	//cuCtxSynchronize();
+	
+	// do the small non-parallel computations
+	if ( s > (i+1) ) {
+#if 1
+	     CUBLAS<value_type>::trsm( CUBLAS_SIDE_RIGHT, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_T, CUBLAS_DIAG_UNIT, 
+			  sb, sb, 
+			  &c_one, L2(i),      lddl,
+				 UT(i, i+1), lddu);
+#else
+	     CUBLAS<value_type>::trsm( CUBLAS_SIDE_RIGHT, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_T, CUBLAS_DIAG_UNIT, 
+			  sb, sb, 
+			  &c_one, L(i),      lddl,
+				 UT(i, i+1), lddu);
+#endif
+	    CUBLAS<value_type>::gemm( CUBLAS_OP_N, CUBLAS_OP_N, 
+			 sb, m, sb,
+			 &c_neg_one, UT(i, i+1), lddu, 
+				    AT(0, i  ), ldda,
+			 &c_one,     AT(0, i+1), ldda );
+	}
+	else {
+#if 1
+	    CUBLAS<value_type>::trsm( CUBLAS_SIDE_RIGHT, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_T, CUBLAS_DIAG_UNIT, 
+			 n-mindim, sb, 
+			 &c_one, L2(i),      lddl,
+				UT(i, i+1), lddu);
+#else
+	    CUBLAS<value_type>::trsm( CUBLAS_SIDE_RIGHT, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_T, CUBLAS_DIAG_UNIT, 
+			 n-mindim, sb, 
+			 &c_one, L(i),      lddl,
+				UT(i, i+1), lddu);
+#endif
+	    CUBLAS<value_type>::gemm( CUBLAS_OP_N, CUBLAS_OP_N, 
+			 n-mindim, m, sb,
+			 &c_neg_one, UT(i, i+1), lddu, 
+				    AT(0, i  ), ldda,
+			 &c_one,     AT(0, i+1), ldda );
+	}
+    }
+
+    return info;
+#undef UT
+#undef AT
+#undef L
+#undef L2
+#undef hU
+#undef hA
+#undef hL
+#undef hL2
   }
 };
 
@@ -375,10 +577,6 @@ struct TaskBodyGPU<kplasma::TaskSSSSM<T> > {
   }
 };
 
-#endif /* CONFIG_USE_CUDA */
-
-#if 0
-
 template<typename T>
 struct TaskBodyGPU<kplasma::TaskTSTRF<T> > {
   void operator()( 
@@ -392,7 +590,6 @@ struct TaskBodyGPU<kplasma::TaskTSTRF<T> > {
     ka::range2d_rw<T> WORK
   )
   {
-#if defined(CONFIG_USE_MAGMA)
     int m = A->dim(0); 
     int n = A->dim(1);
     int lda = A->lda();
@@ -404,7 +601,8 @@ struct TaskBodyGPU<kplasma::TaskTSTRF<T> > {
     T* const u = U->ptr();
     T* const work = WORK->ptr();
     int* const ipiv = piv->ptr();
-    const int ib = CONFIG_IB; // from PLASMA
+    const int ib = m; // from PLASMA
+//    const int ib = CONFIG_IB; // from PLASMA
 
 #if 1
     fprintf( stdout, "TaskGPU DTaskTSTRF A(%lu,%lu) a=%p lda=%d "
@@ -422,29 +620,35 @@ struct TaskBodyGPU<kplasma::TaskTSTRF<T> > {
     T* hl = (T*)malloc( L->dim(0)*L->dim(1) * sizeof(T) );
     T* hu = (T*)malloc( U->dim(0)*U->dim(1) * sizeof(T) );
     T* hwork = (T*)malloc( WORK->dim(0)*WORK->dim(1) * sizeof(T) );
-    cublasGetMatrix( m, n, sizeof(T), u, ldu, hu, ldu );
-    cublasGetMatrix( m, ib, sizeof(T), a, lda, ha, lda );
+    cublasGetMatrix( L->dim(0), L->dim(1), sizeof(T), u, ldu, hu, ldu );
+    cublasGetMatrix( A->dim(0), A->dim(1), sizeof(T), a, lda, ha, lda );
     memset( hl, 0, L->dim(0)*L->dim(1)*sizeof(T) );
     int* hipiv = (int*)calloc( piv->size(), sizeof(int) );
     cudaMemcpy( hipiv, ipiv, piv->size() * sizeof(int), 
 	    cudaMemcpyDeviceToHost );
 
     int info =
-      MAGMA<T>::tstrf( 'f', m, n, ib, L->dim(1), hu, ldu, u, ldu, ha, lda, a, lda, hl, ldl, l, ldl, hipiv, hwork, ldw, work, lda );
+      KPLASMA<T>::tstrf_gpu( (cudaStream_t)stream.stream, m, n, ib, (int)L->dim(1), hu, ldu, u, ldu, ha, lda, a, lda, hl, ldl, l, ldl, hipiv, hwork, ldw, work, lda);
     if(info){
-      fprintf( stdout, "TaskTaskTSTRF ERROR (%d)\n", info );
+      fprintf( stdout, "TaskTSTRF ERROR (%d)\n", info );
       fflush(stdout);
     }
     /* TODO */
-    cudaMemcpyAsync( hipiv, ipiv, piv->size() * sizeof(int), 
-	    cudaMemcpyHostToDevice,
-	    (cudaStream_t)stream.stream
+    cudaMemcpy( hipiv, ipiv, piv->size() * sizeof(int), 
+	    cudaMemcpyHostToDevice
      );
-#else
-    /* TODO */
-#endif
+
+    free(ha);
+    free(hl);
+    free(hu);
+    free(hwork);
+    free(hipiv);
   }
 };
+
+#endif /* CONFIG_USE_CUDA */
+
+#if 0
 
 /*
  * LAPACK QR factorization of a real M-by-N matrix A.

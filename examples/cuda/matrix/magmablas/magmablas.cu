@@ -3,6 +3,8 @@
 #define BLOCK_SIZE  64
 #endif
 
+#define PRECISION_d
+
 #include <cuda.h>
 #include "magmablas.h"
 
@@ -32,6 +34,108 @@ __global__ void mydlaswp2( dlaswp_params_t2 params )
         }
 }
 
+#define	DSIZE_1SHARED	32
+
+__global__ void dtranspose_32( double *B, int ldb, double *A, int lda )
+{        
+        __shared__ double a[32][DSIZE_1SHARED+1];
+        
+        int inx = threadIdx.x;
+        int iny = threadIdx.y;
+        int ibx = blockIdx.x*32;
+        int iby = blockIdx.y*32;
+        
+        A += ibx + inx + __mul24( iby + iny, lda );
+        B += iby + inx + __mul24( ibx + iny, ldb );
+        
+        a[iny+0][inx] = A[0*lda];
+        a[iny+8][inx] = A[8*lda];
+        a[iny+16][inx] = A[16*lda];
+        a[iny+24][inx] = A[24*lda];
+        
+        __syncthreads();
+        
+#if defined(PRECISION_s) || defined(PRECISION_d) || defined(PRECISION_c)
+        B[0*ldb] = a[inx][iny+0];
+        B[8*ldb] = a[inx][iny+8];
+        B[16*ldb] = a[inx][iny+16];
+        B[24*ldb] = a[inx][iny+24];
+#else /* defined(PRECISION_z) */
+        B[0*ldb]    = a[inx][iny+0];
+        B[8*ldb]    = a[inx][iny+8];
+        B[0*ldb+16] = a[inx+16][iny+0];
+        B[8*ldb+16] = a[inx+16][iny+8];
+
+        __syncthreads();
+        A += DSIZE_1SHARED;
+        B += __mul24( 16, ldb);
+
+        a[iny+0][inx] = A[0*lda];
+        a[iny+8][inx] = A[8*lda];
+        a[iny+16][inx] = A[16*lda];
+        a[iny+24][inx] = A[24*lda];
+
+        __syncthreads();
+
+        B[0*ldb] = a[inx][iny+0];
+        B[8*ldb] = a[inx][iny+8];
+        B[0*ldb+16] = a[inx+16][iny+0];
+        B[8*ldb+16] = a[inx+16][iny+8];
+#endif
+} 
+
+typedef struct {
+    double *A1;
+    double *A2;
+    int n, lda1, lda2, npivots;
+    short ipiv[BLOCK_SIZE];
+} magmagpu_dswapblk_params_t;
+
+__global__ void magmagpu_dswapblkrm( magmagpu_dswapblk_params_t params )
+{
+    unsigned int y = threadIdx.x + blockDim.x*blockIdx.x;
+    if( y < params.n )
+    {
+        double *A1 = params.A1 + y - params.lda1;
+        double *A2 = params.A2 + y;
+      
+        for( int i = 0; i < params.npivots; i++ )
+        {
+            A1 += params.lda1;
+            if ( params.ipiv[i] == -1 )
+                continue;
+            double tmp1  = *A1;
+            double *tmp2 = A2 + params.ipiv[i]*params.lda2;
+            *A1   = *tmp2;
+            *tmp2 = tmp1;
+        }
+    }
+}
+
+__global__ void magmagpu_dswapblkcm( magmagpu_dswapblk_params_t params )
+{
+    unsigned int y = threadIdx.x + blockDim.x*blockIdx.x;
+    unsigned int offset1 = __mul24( y, params.lda1);
+    unsigned int offset2 = __mul24( y, params.lda2);
+    if( y < params.n )
+    {
+        double *A1 = params.A1 + offset1 - 1;
+        double *A2 = params.A2 + offset2;
+      
+        for( int i = 0; i < params.npivots; i++ )
+        {
+            A1++;
+            if ( params.ipiv[i] == -1 )
+                continue;
+            double tmp1  = *A1;
+            double *tmp2 = A2 + params.ipiv[i];
+            *A1   = *tmp2;
+            *tmp2 = tmp1;
+        }
+    }
+    __syncthreads();
+}
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -59,6 +163,40 @@ magmablas_dlaswp( cudaStream_t stream, int n, double *dAT, int lda,
           params.ipiv[j] = ipiv[(k+j)*inci] - k - 1;
         }
       dlaswp3( stream, params );
+    }
+}
+
+void magmablas_dtranspose(cudaStream_t stream, double *odata, int ldo, 
+                     double *idata, int ldi, 
+                     int m, int n )
+{
+        dim3 threads( DSIZE_1SHARED, 8, 1 );
+        dim3 grid( m/32, n/32, 1 );
+        dtranspose_32<<<grid, threads, 0, stream>>>( odata, ldo, idata, ldi );
+}
+
+void magmablas_dswapblk(cudaStream_t stream, int n, 
+                    double *dA1T, int lda1,
+                    double *dA2T, int lda2,
+                    int i1, int i2, int *ipiv, int inci, int offset)
+{
+    int  blocksize = 64;
+    dim3 blocks( (n+blocksize-1) / blocksize, 1, 1);
+    int  k, im;
+
+    for( k=(i1-1); k<i2; k+=BLOCK_SIZE )
+    {
+	int sb = min(BLOCK_SIZE, i2-k);
+	magmagpu_dswapblk_params_t params = { dA1T+k*lda1, dA2T, n, lda1, lda2, sb };
+	for( int j = 0; j < sb; j++ )
+	{
+	    im = ipiv[(k+j)*inci] - 1;
+	    if ( (k+j) == im)
+		params.ipiv[j] = -1;
+	    else
+		params.ipiv[j] = im - offset;
+	}
+	magmagpu_dswapblkrm<<< blocks, blocksize, 0, stream >>>( params );
     }
 }
 

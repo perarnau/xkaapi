@@ -364,23 +364,27 @@ struct TaskBodyCPU<TaskCholesky<T> > {
     if( uplo == CblasLower ) 
     {
       for (size_t k=0; k < N; k += blocsize) {
-        ka::rangeindex rk(k, k+blocsize);
+	size_t ik = (k+blocsize < N) ? k+blocsize : N;
+        ka::rangeindex rk(k, ik);
         ka::Spawn<TaskParallelPOTRF<T> >( ka::SetStaticSched() )
 	      ( CblasColMajor, CblasLower, A(rk,rk) );
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
-          ka::rangeindex rm(m, m+blocsize);
+	  size_t im = (m+blocsize < N) ? m+blocsize : N;
+          ka::rangeindex rm(m, im);
           ka::Spawn<TaskTRSM<T> >( ka::SetArch(ka::ArchCUDA) )
 	    ( CblasColMajor, CblasRight, uplo, CblasTrans, CblasNonUnit, (T)1.0, A(rk,rk), A(rk,rm));
         }
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
-          ka::rangeindex rm(m, m+blocsize);
+	  size_t im = (m+blocsize < N) ? m+blocsize : N;
+          ka::rangeindex rm(m, im);
           ka::Spawn<TaskSYRK<T> >( ka::SetArch(ka::ArchCUDA) )
 	    ( CblasColMajor, uplo, CblasNoTrans, (T)-1.0, A(rk,rm), (T)1.0, A(rm,rm));
           
           for (size_t n=k+blocsize; n < m; n += blocsize) {
-            ka::rangeindex rn(n, n+blocsize);
+	    size_t in = (n+blocsize < N) ? n+blocsize : N;
+            ka::rangeindex rn(n, in);
             //ka::Spawn<TaskParallelGEMM<T> >(ka::SetStaticSched())
             ka::Spawn<TaskGEMM<T> >( ka::SetArch(ka::ArchCUDA) )
 	      ( CblasColMajor, CblasNoTrans, CblasTrans, (T)-1.0, A(rk,rm), A(rk,rn), (T)1.0, A(rn,rm));
