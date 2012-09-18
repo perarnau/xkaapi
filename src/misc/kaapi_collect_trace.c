@@ -115,7 +115,7 @@ void kaapi_collect_trace(void)
 #endif    
 
     /* */
-    if (kaapi_default_param.display_perfcounter) //( && (kaapi_count_kprocessors <4))
+    if (kaapi_default_param.display_perfcounter == KAAPI_DISPLAY_PERF_FULL)
     {
 
       printf("----- Performance counters, core    : %i\n", i);
@@ -177,7 +177,7 @@ void kaapi_collect_trace(void)
   }
 
   /* */
-  if (kaapi_default_param.display_perfcounter)
+  if (kaapi_default_param.display_perfcounter != KAAPI_NO_DISPLAY_PERF)
   {
     printf("----- Cumulated Performance counters\n");
     printf("Total number of tasks executed      : %" PRIu64 "\n", cnt_tasks);

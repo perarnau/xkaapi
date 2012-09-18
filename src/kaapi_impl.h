@@ -336,6 +336,13 @@ typedef struct kaapi_hierarchy_t {
   kaapi_hierarchy_one_level_t* levels;
 } kaapi_hierarchy_t;
 
+/** Predefined value for KAAPI_DISPLAY_PERF
+*/
+typedef enum  {
+  KAAPI_NO_DISPLAY_PERF     = 0,  /* do not display performance counters */
+  KAAPI_DISPLAY_PERF_FULL   = 1,  /* display all counters, for each threads */
+  KAAPI_DISPLAY_PERF_RESUME = 2   /* display only cumulated counters per process */
+} kaapi_display_perf_value_t;
 
 /** Definition of parameters for the runtime system
 */
@@ -352,7 +359,7 @@ typedef struct kaapi_rtparam_t {
   kaapi_steal_by_affinity_fnc_t steal_by_affinity;   /* call to pick a TD in a list during steal operation */
   unsigned int		              use_affinity;        /* use cpu affinity */
   kaapi_ct2prio_fnc_t		        ctpriority;          /* use critical path priorities, if 0 no */
-  int                           display_perfcounter; /* set to 1 iff KAAPI_DISPLAY_PERF */
+  kaapi_display_perf_value_t    display_perfcounter; /* see value above for kaapi_display_perf_value_t  */
 #if defined(KAAPI_USE_CUPTI)
    uint64_t		                  cudastartuptime;
 #endif
