@@ -420,7 +420,7 @@ AS_CASE([$with_perfcounter],
 # Select compilation of static scheduling as part of the library
 # Default is to compile it
 AC_ARG_ENABLE([partitioning],[AS_HELP_STRING([--enable-partitioning],
-	[Disable to not compile static scheduling code, default: enable])],[],
+	[Disable to not compile static scheduling code, default: disable])],[],
   [enable_partitioning=no]
 )
 AS_IF([test "x$enable_partitioning" != "xno"], 
@@ -562,6 +562,21 @@ dnl -----------------------------------------------------------------------
 dnl --with && --enable OPTIONS
 dnl -----------------------------------------------------------------------
 dnl -----------------------------------------------------------------------
+
+dnl -----------------------------------------------------------------------
+dnl The "--enable-aggregation"
+dnl -----------------------------------------------------------------------
+# Select compilation of aggregation support
+# Default is yes
+KAAPI_FEATURE([aggregation], [build with support for work steal requests aggregation strategy],
+  [Work steal requests aggregation], [yes],
+  [
+    AC_DEFINE([KAAPI_USE_AGGREGATION],1,[defined to 1 when compiling with aggregation support])
+    KAAPI_USE_AGGREGATION=yes
+  ],
+  []
+  )
+
 
 dnl -----------------------------------------------------------------------
 dnl The "--enable-pthreadaffinity"
