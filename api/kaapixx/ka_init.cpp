@@ -35,7 +35,13 @@
 namespace ka {
 
 kaapi_bodies_t::kaapi_bodies_t( kaapi_task_body_t cb, kaapi_task_body_t gb )
- : cpu_body(cb), gpu_body( gb ), 
+ : cpu_body(cb), gpu_body( gb ), alpha_body(0),
+   default_body(cb) /* because we are on a CPU */
+{
+}
+
+kaapi_bodies_t::kaapi_bodies_t( kaapi_task_body_t cb, kaapi_task_body_t gb, kaapi_task_body_t ab )
+ : cpu_body(cb), gpu_body( gb ), alpha_body( ab ),
    default_body(cb) /* because we are on a CPU */
 {
 }

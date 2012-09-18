@@ -137,6 +137,11 @@ redo_exec:
     state = kaapi_task_markexec( pc );
     if (likely(state ==0))
     {
+#if 0
+	kaapi_format_t* fmt = kaapi_format_resolvebybody( pc->body );
+	if ( fmt != 0 )
+		kaapi_mem_host_map_sync_ptr( fmt, pc );
+#endif
       ((kaapi_task_body_internal_t)pc->body)( pc->sp, fp, pc );
     }
     else 

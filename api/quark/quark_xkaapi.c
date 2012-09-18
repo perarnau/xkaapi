@@ -90,7 +90,7 @@ typedef struct Quark_sequence_s {
   int                     state_init;  /* see flag above */
   int                     save_state;  /* */
   kaapi_frame_t           save_fp;     /* saved fp of the current stack before sequence creation */
-  kaapi_tasklist_t        tasklist;    /* */
+  kaapi_frame_tasklist_t  frame_tasklist;    /* */
 } kaapi_quark_sequence_t;
 
 
@@ -821,16 +821,15 @@ printf("IN %s\n", __PRETTY_FUNCTION__);  fflush(stdout);
 
 
   if ((sequence->state_init & QUARK_SEQUENCE_TASKLIST_INIT) == 0)
-    kaapi_tasklist_init( &sequence->tasklist, thread );
-  kaapi_thread_computereadylist( thread, &sequence->tasklist );
-
-  /* see kaapi_stsched_tasksetstatic.c */
+  {
+    kaapi_frame_tasklist_init( &sequence->frame_tasklist, thread );
+  }
+  kaapi_thread_computereadylist( thread, &sequence->frame_tasklist );
   /* populate tasklist with initial ready tasks */
-  kaapi_thread_tasklistready_push_init( &sequence->tasklist, &sequence->tasklist.readylist );
-  kaapi_thread_tasklist_commit_ready( &sequence->tasklist );
-  sequence->tasklist.context.chkpt = 0;
+  kaapi_thread_tasklistready_push_init( &sequence->frame_tasklist.tasklist, &sequence->frame_tasklist.readylist);
 
-  thread->stack.sfp->tasklist = &sequence->tasklist;
+  thread->stack.sfp->tasklist = &sequence->frame_tasklist.tasklist;
+  
 
   if (quark_dump_dot)
   {
@@ -841,7 +840,7 @@ printf("IN %s\n", __PRETTY_FUNCTION__);  fflush(stdout);
     else
       sprintf(filename,"graph.%i.dot",counter++);
     FILE* filedot = fopen(filename, "w");
-    kaapi_thread_tasklist_print_dot( filedot,  &sequence->tasklist, 0 );
+    kaapi_frame_tasklist_print_dot( filedot,  &sequence->frame_tasklist, 0 );
     fclose(filedot);
   }
 
@@ -864,7 +863,7 @@ printf("IN %s\n", __PRETTY_FUNCTION__);  fflush(stdout);
   kaapi_sched_unlock(&thread->stack.lock);
 
 #if defined(STATIC)
-  kaapi_tasklist_destroy( &sequence->tasklist );
+  kaapi_frame_tasklist_destroy( &sequence->frame_tasklist );
 #endif
   
 #if defined(TRACE)

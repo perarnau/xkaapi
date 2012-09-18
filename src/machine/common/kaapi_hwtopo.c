@@ -118,20 +118,24 @@ static void kaapi_hw_standardinit(void)
   kaapi_cpuset_clear(&kaapi_default_param.usedcpu);
 
   /* build the procinfo list */
-  kaapi_default_param.kproc_list = (kaapi_procinfo_list_t*)malloc(
+  kaapi_default_param.kproc_list = (kaapi_procinfo_list_t*)calloc(
+      1, 
       sizeof(kaapi_procinfo_list_t) 
   );
   kaapi_assert(kaapi_default_param.kproc_list);
 
+  /* WARNING: here should allocate at lest cpucount+gpucount descriptor 
+     Currently allocate maximal number of Kprocessor
+  */
   kaapi_default_param.kid2cpu=(unsigned int*)malloc(
-      kaapi_default_param.cpucount*sizeof(unsigned int)
+      KAAPI_MAX_PROCESSOR_LIMIT*sizeof(unsigned int)
   );
   kaapi_assert(kaapi_default_param.kid2cpu);
   kaapi_default_param.cpu2kid=(unsigned int*)malloc(
-      kaapi_default_param.cpucount*sizeof(unsigned int)
+      KAAPI_MAX_PROCESSOR_LIMIT*sizeof(unsigned int)
   );
   kaapi_assert(kaapi_default_param.cpu2kid);
-  for (size_t i=0; i<kaapi_default_param.cpucount; ++i)
+  for (size_t i=0; i<KAAPI_MAX_PROCESSOR_LIMIT; ++i)
   {
     kaapi_default_param.kid2cpu[i]= -1U;
     kaapi_default_param.cpu2kid[i]= -1U;
@@ -139,9 +143,16 @@ static void kaapi_hw_standardinit(void)
 
   kaapi_procinfo_list_init(kaapi_default_param.kproc_list);
   kaapi_mt_register_procs(kaapi_default_param.kproc_list);
+  kaapi_assert_m(kaapi_default_param.cpucount <=KAAPI_MAX_PROCESSOR_LIMIT,
+    "[kaapi] to many required processor for this configuration. See definition of KAAPI_MAX_PROCESSOR_LIMIT" 
+  );
 
 #if defined(KAAPI_USE_CUDA)
   kaapi_cuda_register_procs(kaapi_default_param.kproc_list);
+  kaapi_assert_m( (kaapi_default_param.cpucount+kaapi_default_param.gpucount) 
+    <= KAAPI_MAX_PROCESSOR_LIMIT,
+    "[kaapi] to many required CPU and GPU for this configuration. See definition of KAAPI_MAX_PROCESSOR_LIMIT" 
+  );
 #endif /* KAAPI_USE_CUDA */
 }
 

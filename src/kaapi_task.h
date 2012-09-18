@@ -305,14 +305,21 @@ extern void kaapi_taskfinalizer_body( void*, kaapi_thread_t* );
 /** \ingroup TASK
 */
 /**@{ */
-static inline int kaapi_task_get_ocr_index(const kaapi_task_t* task)
-{ 
-  return task->u.s.ocr; 
-}
-
 static inline int kaapi_task_get_priority(const kaapi_task_t* task)
 { 
   return task->u.s.priority; 
+}
+
+/* return the 1+site where task is able to run or 0 if no site */
+static inline uint32_t kaapi_task_get_site(const kaapi_task_t* task)
+{ 
+  return task->u.s.site;
+}
+
+/* return 1 if kid is in the site mask */
+static inline int kaapi_task_has_arch(const kaapi_task_t* task, int arch)
+{ 
+  return (task->u.s.arch ==0) || ((task->u.s.arch & (1<<arch)) !=0);
 }
 
 static inline int kaapi_task_is_unstealable(kaapi_task_t* task)
@@ -545,7 +552,7 @@ static inline int kaapi_stack_destroy(kaapi_stack_t* stack )
 extern int kaapi_task_print( FILE* file, kaapi_task_t* task, kaapi_task_body_t body );
 
 /** \ingroup TASK
-    The function kaapi_thread_execframe() execute all the tasks in the thread' stack following
+    The function kaapi_stack_execframe() execute all the tasks in the thread' stack following
     the RFO order in the closures of the frame [frame_sp,..,sp[
     If successful, the kaapi_thread_execframe() function will return zero and the stack is empty.
     Otherwise, an error number will be returned to indicate the error.
@@ -557,7 +564,7 @@ extern int kaapi_task_print( FILE* file, kaapi_task_t* task, kaapi_task_body_t b
 extern int kaapi_stack_execframe( kaapi_stack_t* thread );
 
 /** \ingroup TASK
-    The function kaapi_threadgroup_execframe() execute all the tasks in the thread' stack following
+    The function kaapi_thread_execframe_tasklist() execute all the tasks in the thread' stack following
     using the list of ready tasks.
     If successful, the kaapi_threadgroup_execframe() function will return zero and the stack is empty.
     Otherwise, an error number will be returned to indicate the error.
@@ -566,7 +573,7 @@ extern int kaapi_stack_execframe( kaapi_stack_t* thread );
     \retval EWOULDBLOCK the execution of the stack will block the control flow.
     \retval EINTR the execution of the stack is interupt and the thread is detached to the kprocessor.
 */
-extern int kaapi_threadgroup_execframe( struct kaapi_thread_context_t* thread );
+extern int kaapi_thread_execframe_tasklist( struct kaapi_thread_context_t* thread );
 
 /** \ingroup WS
     This method tries to steal work from the tasks of a stack passed in argument.
@@ -633,6 +640,7 @@ extern int kaapi_sched_stealframe
     \retval 0 if case of successfull steal of the task
     \retval ENOENT the task does not have format and cannot be stolen
     \retval EACCES the task is not ready due to data flow dependency
+    \retval EINVAL the task cannot be execute on the any of the requests
     \retval EPERM the task is not stealable: either state is not INIT or flag unstealable is set
     \retval EBUSY the task has not been stolen because some body else has steal it or execute it.
 */
@@ -732,13 +740,12 @@ typedef struct kaapi_tasksteal_arg_t {
 /** Args for taskstealready
 */
 typedef struct kaapi_taskstealready_arg_t {
-  struct kaapi_tasklist_t*   master_tasklist; /* the original task list */
-  struct kaapi_tasklist_t*   victim_tasklist; /* the victim task list or 0 if steal from the master */
+  struct kaapi_tasklist_t*  master_tasklist;   /* the original task list to signal */
 #if defined(TASKLIST_REPLY_ONETD)
-  struct kaapi_taskdescr_t*  td;              /* the stolen td */
+  struct kaapi_taskdescr_t*  td;               /* the stolen td */
 #else
-  struct kaapi_taskdescr_t** td_beg;          /* range of stolen task into origin_tasklist */
-  struct kaapi_taskdescr_t** td_end;          /* range of stolen task into origin_tasklist */
+  struct kaapi_taskdescr_t** td_beg;           /* range of stolen task into origin_tasklist */
+  struct kaapi_taskdescr_t** td_end;           /* range of stolen task into origin_tasklist */
 #endif
 } kaapi_taskstealready_arg_t;
 
@@ -854,6 +861,21 @@ static inline int kaapi_task_isready(const kaapi_task_t* task)
 extern void kaapi_init_adapfmt(void);
 extern void kaapi_init_adaptmergefmt(void);
 extern void kaapi_init_begendadapfmt(void);
+
+/* */
+extern void kaapi_register_staticschedtask_format(void);
+
+extern kaapi_task_body_t kaapi_task_stsched_get_body_by_arch
+(
+  const struct kaapi_taskdescr_t* const td,
+  unsigned int arch
+);
+
+extern kaapi_task_body_t kaapi_task_stsched_get_bodywh_by_arch
+(
+  const struct kaapi_taskdescr_t* const td,
+  unsigned int arch
+);
 
 #if defined(__cplusplus)
 }

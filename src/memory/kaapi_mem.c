@@ -46,7 +46,8 @@
 #include "kaapi_impl.h"
 #include "kaapi_mem.h"
 
-#if defined(KAAPI_USE_CUDA)
+//#if defined(KAAPI_USE_CUDA)
+#if 0
 
 #include <cuda.h>
 #include "../machine/cuda/kaapi_cuda_error.h"
@@ -190,7 +191,7 @@ void kaapi_mem_free_host(void* hostptr)
 {
   kaapi_cuda_proc_t* const cu_proc = get_cu_context();
   if (cu_proc == NULL) return ;
-  cuMemFreeHost(hostptr);
+//  cuMemFreeHost(hostptr);
   put_cu_context(cu_proc);
 }
 
@@ -198,7 +199,7 @@ void kaapi_mem_free_host(void* hostptr)
 
 
 /* exported */
-
+#if 0
 void kaapi_mem_map_cleanup(kaapi_mem_map_t* map)
 {
   kaapi_mem_mapping_t* pos = map->head;
@@ -347,7 +348,7 @@ void kaapi_mem_delete_host_mappings
       /* assume the remote device is a gpu.
 	 todo: asid_to_kproc[] map
       */
-#if defined(KAAPI_USE_CUDA)
+#if 0 // defined(KAAPI_USE_CUDA)
       {
 	CUresult res;
 	CUcontext ctx;
@@ -383,7 +384,9 @@ void kaapi_mem_delete_host_mappings
   }
 }
 
-#if defined(KAAPI_USE_CUDA)
+#endif 
+
+#if 0 // defined(KAAPI_USE_CUDA)
 
 void kaapi_mem_synchronize(kaapi_mem_addr_t devptr, size_t size)
 {

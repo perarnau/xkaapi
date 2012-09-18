@@ -44,6 +44,10 @@
 #include "kaapi_impl.h"
 #include "../common/kaapi_procinfo.h"
 
+#if defined(KAAPI_USE_PERFCOUNTER)
+#include "machine/cuda/kaapi_cuda_trace.h"
+#endif
+
 static void* kaapi_sched_run_processor( void* arg );
 
 /**
@@ -280,10 +284,21 @@ void* kaapi_sched_run_processor( void* arg )
   /*  */
   kaapi_perf_thread_stop(kproc);
   KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_KPROC_STOP );
+
   /*  */
-  kaapi_perf_thread_fini(kproc); 
+#if defined(KAAPI_USE_CUPTI)
+  if (getenv("KAAPI_RECORD_TRACE") !=0) {
+    if ( kproc->proc_type == KAAPI_PROC_TYPE_CUDA )
+      kaapi_cuda_trace_thread_finalize();
+  }
+#endif /* KAAPI_USE_CUPTI */
+  kaapi_mt_perf_thread_fini( kproc );
 #endif
   
+#if defined(KAAPI_USE_CUDA)
+  kaapi_mem_host_map_destroy(kaapi_get_current_mem_host_map());
+#endif
+
   /* kprocessor correctly initialize */
   kaapi_barrier_td_setactive(&kaapi_term_barrier, 0);
 

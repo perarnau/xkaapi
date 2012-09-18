@@ -80,28 +80,7 @@ kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc->thread !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
-  
-  if (kproc->mailbox.head != 0 )
-  {
-    kaapi_task_withlink_t* taskwl;
-
-    /* pop the first item at kproc->mailbox.head
-       lock free MPSC FIFO queue must be used here.
-    */
-    kaapi_atomic_lock(&kproc->lock);
-    taskwl = kproc->mailbox.head;
-    if (kproc->mailbox.tail == taskwl)
-      kproc->mailbox.tail = 0;
-    kproc->mailbox.head = taskwl->next;
-    kaapi_atomic_unlock(&kproc->lock);
     
-    /* push the task into local queue */
-    *kaapi_thread_toptask(&kproc->thread->stack.stackframe[0]) = taskwl->task;
-    kaapi_thread_pushtask(&kproc->thread->stack.stackframe[0]);
-
-    return KAAPI_REQUEST_S_OK;
-  }
-  
   if (kaapi_count_kprocessors <2) 
     return KAAPI_REQUEST_S_NOK;
     
@@ -114,20 +93,34 @@ redo_select:
     goto redo_select;
   }
 
-#if 1 // TG: test, steal also allow to steal stack from myself. Else only wakeup
+  /* JOAO: need to allow kproc to steal itself */
+#if 0 // TG: test, steal also allow to steal stack from myself. Else only wakeup
   /* never pass by this function for a processor to steal itself */
   if (kproc == victim.kproc) 
     return KAAPI_REQUEST_S_NOK;
 #endif
 
+  /* JOAO: need to disable this code until a correct test for tasklist is
+   * develpped
+   */
+#if 0
   /* quick test to detect if thread has no work */
   if (kaapi_processor_has_nowork(victim.kproc))
   {
     (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_FAILED );
     goto redo_select;
   }
+#endif
   kaapi_assert_debug( (victim.kproc->kid >=0) && (victim.kproc->kid <kaapi_count_kprocessors));
 
+#if 0
+  fprintf(stdout, "[%s] kid=%lu kvictim=%lu\n", 
+	  __FUNCTION__,
+	    (long unsigned int)kaapi_get_current_kid(),
+	    (long unsigned int)victim.kproc->kid
+	  );
+  fflush(stdout);
+#endif
 
   /* (1) 
      Fill & Post the request to the victim processor 

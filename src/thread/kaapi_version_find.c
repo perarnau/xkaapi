@@ -46,9 +46,9 @@
 /*
 */
 kaapi_version_t* kaapi_version_findinsert( 
-    int* islocal,
+    int*                    islocal,
     kaapi_thread_context_t* thread,
-    kaapi_tasklist_t*       tl,
+    kaapi_frame_tasklist_t* tl,
     const void*             addr 
 )
 {

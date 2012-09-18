@@ -42,68 +42,40 @@
  ** 
  */
 #include "kaapi_impl.h"
-
+#include <inttypes.h>
 
 /**
 */
 int kaapi_sched_computereadylist( void )
 {
-  kaapi_tasklist_t* tasklist;
+  kaapi_frame_tasklist_t* frame_tasklist;
   int err;
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
   if (thread ==0) return EINVAL;
   if (kaapi_frame_isempty(thread->stack.sfp)) return ENOENT;
-  tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
-  kaapi_tasklist_init( tasklist, thread );
-  err= kaapi_thread_computereadylist( thread, tasklist  );
-  kaapi_thread_tasklistready_push_init( tasklist, &tasklist->readylist );
-  kaapi_thread_tasklist_commit_ready( tasklist );
-  /* NO */ /*keep the first task to execute outside the workqueue */
-  tasklist->context.chkpt = 0;
-  thread->stack.sfp->tasklist = tasklist;
+  frame_tasklist = (kaapi_frame_tasklist_t*)malloc(sizeof(kaapi_frame_tasklist_t));
+  kaapi_frame_tasklist_init( frame_tasklist, thread );
+  
+  err= kaapi_thread_computereadylist( thread, frame_tasklist  );
+  kaapi_readytasklist_push_from_activationlist( &frame_tasklist->tasklist.rtl, frame_tasklist->readylist.front );
+
+  thread->stack.sfp->tasklist = &frame_tasklist->tasklist;
   return err;
 }
 
-
-/**
-*/
-int kaapi_sched_clearreadylist( void )
-{
-  kaapi_thread_context_t* thread = kaapi_self_thread_context();
-  if (thread ==0) return EINVAL;
-
-  kaapi_tasklist_t* tasklist = thread->stack.sfp->tasklist;
-
-  if (tasklist != 0)
-  {
-    kaapi_sched_lock(&thread->stack.proc->lock);
-    thread->stack.sfp->tasklist = 0;
-    kaapi_sched_unlock(&thread->stack.proc->lock);
-    kaapi_tasklist_destroy(tasklist);
-    free( tasklist );
-  }
-
-  /* HERE: hack to do loop over SetStaticSched because memory state
-     is leaved in inconsistant state.
-  */
-  kaapi_memory_destroy();
-  kaapi_memory_init();
-
-  return 0;
-}
 
 
 /** task is the top task not yet pushed.
     This function is called is after all task has been pushed into a specific frame.
  */
-double _kaapi_time_tasklist;
-int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_tasklist_t* tasklist )
+int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_frame_tasklist_t* frame_tasklist )
 {
   kaapi_frame_t*          frame;
   kaapi_task_t*           task_top;
   kaapi_task_t*           task_bottom;
 
 #if defined(KAAPI_USE_PERFCOUNTER)
+  double _kaapi_time_tasklist;
   kaapi_perf_counter_t    t1,t0;
 #endif
   
@@ -124,21 +96,20 @@ int kaapi_thread_computereadylist( kaapi_thread_context_t* thread, kaapi_tasklis
   task_bottom = frame->sp;
   while (task_top > task_bottom)
   {
-    kaapi_thread_computedep_task( thread, tasklist, task_top );
+    kaapi_thread_computedep_task( thread, frame_tasklist, task_top );
     --task_top;
   } /* end while task */
 
-  /* */
-//  kaapi_thread_tasklist_print( stdout, tasklist );
-
   /* Here compute the apriori minimal date of execution */
-//TEST WITH USER DEFINED PRIORITY  
-{
-  //double t0 = kaapi_get_elapsedtime();
-  //kaapi_tasklist_critical_path( tasklist );  
-  //double t1 = kaapi_get_elapsedtime();
-  //printf("Time criticalpath:%f\n", t1-t0);
-}
+  if (kaapi_default_param.ctpriority)
+  {
+    
+    KAAPI_DEBUG_INST(double t0 =) kaapi_get_elapsedtime();
+    kaapi_tasklist_critical_path( frame_tasklist );  
+    KAAPI_DEBUG_INST(double t1 =) kaapi_get_elapsedtime();
+//    kaapi_frame_tasklist_print( stdout, frame_tasklist );
+    KAAPI_DEBUG_INST(printf("Criticalpath = %" PRIu64 "\n Time criticalpath:%f\n", frame_tasklist->tasklist.t_infinity, t1-t0);)
+  }
   
   kaapi_big_hashmap_destroy( thread->kversion_hm );
   free( thread->kversion_hm );

@@ -44,23 +44,27 @@
 ** 
 */
 #ifndef KAAPI_CUDA_EXECFRAME_H_INCLUDED
-# define KAAPI_CUDA_EXECFRAME_H_INCLUDED
+#define KAAPI_CUDA_EXECFRAME_H_INCLUDED
 
 
 struct kaapi_thread_context_t;
 struct kaapi_format_t;
 
-int kaapi_cuda_execframe(struct kaapi_thread_context_t*);
+int kaapi_cuda_execframe(struct kaapi_thread_context_t *);
 
 int kaapi_cuda_exectask
-(struct kaapi_thread_context_t*, void*, struct kaapi_format_t*);
+    (struct kaapi_thread_context_t *, void *, struct kaapi_format_t *);
 
+#if 0
 static inline int kaapi_cuda_thread_execframe
-(struct kaapi_thread_context_t* thread)
-{ return kaapi_cuda_execframe(thread); }
+    (struct kaapi_thread_context_t *thread) {
+  return kaapi_cuda_execframe(thread);
+}
+#endif
 
-int kaapi_cuda_thread_execframe_tasklist
-(struct kaapi_thread_context_t*);
+int kaapi_cuda_thread_stack_execframe(kaapi_stack_t * stack);
+
+int kaapi_cuda_thread_execframe_tasklist(struct kaapi_thread_context_t *);
 
 
-#endif /* ! KAAPI_CUDA_EXECFRAME_H_INCLUDED */
+#endif				/* ! KAAPI_CUDA_EXECFRAME_H_INCLUDED */

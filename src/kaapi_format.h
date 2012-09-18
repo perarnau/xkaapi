@@ -81,6 +81,8 @@ typedef struct kaapi_format_t {
   kaapi_format_id_t          fmtid;                                   /* identifier of the format */
   short                      isinit;                                  /* ==1 iff initialize */
   const char*                name;                                    /* debug information */
+  const char*                name_dot;                                /* name for DOT */
+  const char*                color_dot;                               /* color for DOT */
   
   /* flag to indicate how to interpret the following fields */
   kaapi_format_flag_t        flag;
@@ -98,6 +100,7 @@ typedef struct kaapi_format_t {
   kaapi_task_body_t          default_body;                            /* iff a task used on current node */
   kaapi_task_body_t          entrypoint[KAAPI_PROC_TYPE_MAX];         /* maximum architecture considered in the configuration */
   kaapi_task_body_t          entrypoint_wh[KAAPI_PROC_TYPE_MAX];      /* same as entrypoint, except that shared params are handle to memory location */
+  kaapi_task_body_t	     alpha_body;				/* alpha function of acceleration */
 
   /* case of format for a structure or for a task with flag= KAAPI_FORMAT_STATIC_FIELD */
   int                         _count_params;                          /* number of parameters */
@@ -266,6 +269,34 @@ kaapi_adaptivetask_splitter_t kaapi_format_get_splitter(const struct kaapi_forma
   if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return 0;
   kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
   return (*fmt->get_splitter)(fmt, sp);
+}
+
+static inline 
+kaapi_task_body_t kaapi_format_get_task_bodywh_by_arch
+(
+  const kaapi_format_t*	const	fmt, 
+  unsigned int arch
+)
+{
+  return fmt->entrypoint_wh[arch];
+}
+
+extern struct kaapi_format_t* kaapi_staticschedtask_format;
+
+static inline 
+kaapi_task_body_t kaapi_format_get_task_body_by_arch
+(
+  const kaapi_format_t*	const	fmt, 
+  unsigned int arch
+)
+{
+  return fmt->entrypoint[arch];
+}
+
+static inline int
+kaapi_format_is_staticschedtask( const kaapi_format_t*	const	fmt )
+{
+  return ( fmt == kaapi_staticschedtask_format);
 }
 
 /** Initialise default formats

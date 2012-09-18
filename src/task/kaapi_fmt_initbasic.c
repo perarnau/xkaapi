@@ -42,7 +42,7 @@
 ** terms.
 ** 
 */
-#include "kaapi_format.h"
+#include "kaapi_impl.h"
 #include <string.h>
 
 
@@ -166,4 +166,7 @@ void kaapi_init_basicformat(void)
    voidp_type_assign,
    voidp_type_printf
   );
+  
+  /* register format for some internal tasks */
+  kaapi_register_staticschedtask_format();
 }

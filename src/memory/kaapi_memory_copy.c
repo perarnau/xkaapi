@@ -46,19 +46,20 @@
 #include "kaapi_network.h"
 #endif
 
+#if defined(KAAPI_USE_CUDA)
+#include "../cuda/kaapi_cuda.h"
+#include "../machine/cuda/kaapi_cuda_mem.h"
+#include "../machine/cuda/kaapi_cuda_ctx.h"
+#include "../machine/cuda/kaapi_cuda_dev.h"
+#endif
+
 /* basic function to write contiguous block of memory */
 typedef int (*contiguous_write_func_t)(void*, void*, const void*, size_t);
 
-
-/* Generic memcpy 
-   The function takes into arguments the dest and src informations
-   to made copy as well as the basic memcpy for contiguous memory region.
-   Used by cuda memcpy code or 
-*/
 static int kaapi_memory_write_view
 (
    kaapi_pointer_t dest, const kaapi_memory_view_t* view_dest,
-   const void* src, const kaapi_memory_view_t* view_src,
+   kaapi_pointer_t src, const kaapi_memory_view_t* view_src,
    contiguous_write_func_t write_fn, void* write_arg
 )
 {
@@ -72,48 +73,30 @@ static int kaapi_memory_write_view
       if (view_dest->size[0] != view_src->size[0]) 
         return EINVAL;
 
-      error = write_fn(write_arg, kaapi_pointer2void(dest), src, view_src->size[0]*view_src->wordsize );
-    } break;
+      //error = kaapi_cuda_mem_1dcopy_dtoh( dest, view_dest, src, view_src );
+      break;
+    } 
       
     case KAAPI_MEMORY_VIEW_2D:
     {
-      const char* laddr;
-      char* raddr;
-      size_t size;
-      
-      kaapi_assert(view_dest->type == KAAPI_MEMORY_VIEW_2D);
-      if (view_dest->size[0] != view_src->size[0]) 
-        /* this case may be implemented */
-        return EINVAL;
-      
-      size = view_src->size[0] * view_src->size[1];
-      if (view_src->size[1] != view_dest->size[1]) 
-        return EINVAL;
-      
-      laddr = (const char*)src;
-      raddr = (char*)kaapi_pointer2void(dest);
-      
-      if (kaapi_memory_view_iscontiguous(view_src) &&
-          kaapi_memory_view_iscontiguous(view_dest))
-      {
-        error = write_fn(write_arg, raddr, laddr, size * view_src->wordsize);
-      }
-      else 
-      {
-        size_t i;
-        size_t size_row = view_src->size[1]*view_src->wordsize;
-        size_t llda = view_src->lda * view_src->wordsize;
-        size_t rlda = view_dest->lda * view_src->wordsize;
-        
-        kaapi_assert_debug( view_dest->size[1] == view_src->size[1] );
-        
-        for (i=0; i<view_src->size[0]; ++i, laddr += llda, raddr += rlda)
-        {
-          error = write_fn(write_arg, raddr, laddr, size_row);
-          if (error) break;
-        }
-      }
-      break;
+      //error = kaapi_cuda_mem_2dcopy_dtoh( dest, view_dest, src, view_src );
+
+#if KAAPI_VERBOSE
+  kaapi_processor_t* const proc = kaapi_get_current_processor();
+  printf("[%s]: [%u:%u] (%lx:%lx -> %lx:%lx) src lda=%lu %lux%lu dst lda=%lu %lux%lu\n",
+	 __FUNCTION__,
+	 proc->kid, proc->proc_type,
+	 src.asid, (uintptr_t)src.ptr,
+	 dest.asid, (uintptr_t)dest.ptr,
+	view_src->lda,
+	view_src->size[0],
+	view_src->size[1],
+	view_dest->lda,
+	view_dest->size[0],
+	view_dest->size[1]
+	 );
+#endif 
+	      break;
     }
       
     default: 
@@ -124,13 +107,13 @@ static int kaapi_memory_write_view
   return error;
 }
 
-
-
 #if defined(KAAPI_USE_CUDA)
 
-#include "../cuda/kaapi_cuda.h"
-#include "../machine/cuda/kaapi_cuda_error.h"
-
+/* Generic memcpy 
+   The function takes into arguments the dest and src informations
+   to made copy as well as the basic memcpy for contiguous memory region.
+   Used by cuda memcpy code or 
+*/
 #if 0
 static inline unsigned int is_self_cu_proc
 (kaapi_cuda_proc_t* cu_proc)
@@ -141,101 +124,61 @@ static inline unsigned int is_self_cu_proc
 }
 #endif
 
-kaapi_cuda_proc_t* get_cu_context(void)
+/*
+ * TODO: better way to perform GPU -> CPU copies but from the CPU 
+ * assuming that we have more than 1 GPU and only the pointer, not the device
+ * So, the function has to: 1) search device 2) push ctx
+ */
+kaapi_processor_t*
+get_cu_context( void )
 {
-  kaapi_cuda_proc_t* const cu_proc =
-    &kaapi_get_current_processor()->cuda_proc;
-  CUresult res;
+  kaapi_processor_t* cu_proc;
+  if( kaapi_get_current_processor()->proc_type != KAAPI_PROC_TYPE_CUDA )
+	  cu_proc= kaapi_cuda_mem_get_proc();
+  else
+  	 cu_proc = kaapi_get_current_processor();
   
-  if (cu_proc == NULL) return NULL;
   
-#if 0 /* todo */
-  /* self proc, dont acquire */
-  if (is_self_cu_proc(cu_proc)) return cu_proc;
-#endif
-  
-  pthread_mutex_lock(&cu_proc->ctx_lock);
-  res = cuCtxPushCurrent(cu_proc->ctx);
-  if (res == CUDA_SUCCESS) return cu_proc;
-  pthread_mutex_unlock(&cu_proc->ctx_lock);
-  return NULL;
+  return cu_proc;
 }
 
-void put_cu_context(kaapi_cuda_proc_t* cu_proc)
+static kaapi_processor_t*
+xxx_get_cu_context( kaapi_address_space_id_t asid )
 {
-  cuCtxPopCurrent(&cu_proc->ctx);
-  pthread_mutex_unlock(&cu_proc->ctx_lock);
+	kaapi_processor_t* proc = kaapi_cuda_get_proc_by_asid( asid );
+	return proc;
 }
 
-static inline int memcpy_cu_htod
-(kaapi_cuda_proc_t* cu_proc, CUdeviceptr devptr, const void* hostptr, size_t size)
+static void xxx_put_cu_context( kaapi_processor_t* proc )
 {
-#if 0 /* async version */
-  const CUresult res = cuMemcpyHtoDAsync
-  (devptr, hostptr, size, cu_proc->stream);
-#else
-  const CUresult res = cuMemcpyHtoD
-  (devptr, hostptr, size);
-#endif
-  
-#if 0
-  printf("htod(%lx, %lx, %lx)\n", (uintptr_t)devptr, (uintptr_t)hostptr, size);
-#endif
-  
-  if (res != CUDA_SUCCESS)
-  {
-    kaapi_cuda_error("cuMemcpyHToDAsync", res);
-    return -1;
-  }
-  
-  return 0;
 }
 
-static inline int memcpy_cu_dtoh
-(kaapi_cuda_proc_t* cu_proc, void* hostptr, CUdeviceptr devptr, size_t size)
+void put_cu_context( kaapi_processor_t* cu_proc)
 {
-#if 0 /* async version */
-  const CUresult res = cuMemcpyDtoHAsync
-  (hostptr, devptr, size, cu_proc->stream);
-#else
-  const CUresult res = cuMemcpyDtoH
-  (hostptr, devptr, size);
-#endif
-  
-#if 0
-  printf("dtoh(%lx, %lx, %lx)\n", (uintptr_t)hostptr, (uintptr_t)devptr, size);
-#endif
-  
-  if (res != CUDA_SUCCESS)
-  {
-    kaapi_cuda_error("cuMemcpyDToHAsync", res);
-    return -1;
-  }
-  
-  return 0;
 }
 
 static inline int kaapi_memory_write_cu2cpu
 (
  kaapi_pointer_t dest,
  const kaapi_memory_view_t* view_dest,
- const void* src,
+ kaapi_pointer_t src,
  const kaapi_memory_view_t* view_src
 )
 {
-  kaapi_cuda_proc_t* cu_proc = NULL;
+  kaapi_processor_t* cu_proc = NULL;
   int error = EINVAL;
 
   if (kaapi_pointer_isnull(dest)) return EINVAL;
-  else if (src == NULL) return EINVAL;
+  else if (kaapi_pointer_isnull(src)) return EINVAL;
   
-  cu_proc = get_cu_context();
+  //cu_proc = get_cu_context();
+  cu_proc = xxx_get_cu_context( kaapi_pointer2asid(src) );
   if (cu_proc == NULL) return EINVAL;
   
   error = kaapi_memory_write_view
-  (dest, view_dest, src, view_src, (contiguous_write_func_t)memcpy_cu_dtoh, (void*)cu_proc);
+  (dest, view_dest, src, view_src, NULL, (void*)cu_proc);
   
-  put_cu_context(cu_proc);
+  xxx_put_cu_context( cu_proc );
   
   return error;
 }
@@ -244,21 +187,21 @@ static int kaapi_memory_write_cpu2cu
 (
  kaapi_pointer_t dest,
  const kaapi_memory_view_t* view_dest,
- const void* src,
+ kaapi_pointer_t src,
  const kaapi_memory_view_t* view_src
 )
 {
-  kaapi_cuda_proc_t* cu_proc = NULL;
+  kaapi_processor_t* cu_proc = NULL;
   int error = EINVAL;
 
   if (kaapi_pointer_isnull(dest)) return EINVAL;
-  else if (src == NULL) return EINVAL;
+  else if (kaapi_pointer_isnull(src)) return EINVAL;
   
   cu_proc = get_cu_context();
   if (cu_proc == NULL) return EINVAL;
   
   error = kaapi_memory_write_view
-  (dest, view_dest, src, view_src, (contiguous_write_func_t)memcpy_cu_htod, (void*)cu_proc);
+  (dest, view_dest, src, view_src, NULL, (void*)cu_proc);
   
   put_cu_context(cu_proc);
   
@@ -268,10 +211,10 @@ static int kaapi_memory_write_cpu2cu
 
 static int kaapi_memory_write_cu2cu
 (
-  kaapi_pointer_t dest,
-  const kaapi_memory_view_t* view_dest,
-  const void* src,
-  const kaapi_memory_view_t* view_src
+ kaapi_pointer_t dest,
+ const kaapi_memory_view_t* view_dest,
+ kaapi_pointer_t src,
+ const kaapi_memory_view_t* view_src
 )
 {
   /* use the host to make the tmp copy for now.
@@ -279,7 +222,7 @@ static int kaapi_memory_write_cu2cu
    assume correctness regarding the tmp view
    todo: cuMemcpyDtoD(). warning, async function
    */
-  
+#if 0
   int error = 0;
   kaapi_pointer_t tmp_pointer;
   
@@ -318,6 +261,8 @@ static int kaapi_memory_write_cu2cu
 on_error:
   free(tmp_buffer);
   return error;
+#endif
+  return -1;
 }
 
 #endif /* KAAPI_USE_CUDA */
@@ -337,11 +282,11 @@ int kaapi_memory_write_cpu2cpu
 (
   kaapi_pointer_t dest,
   const kaapi_memory_view_t* view_dest,
-  const void* src,
+  kaapi_pointer_t src,
   const kaapi_memory_view_t* view_src
 )
 {
-  if (kaapi_pointer_isnull(dest) || (src == 0)) return EINVAL;
+  if (kaapi_pointer_isnull(dest) || (kaapi_pointer_isnull(src) == 0)) return EINVAL;
   return 
     kaapi_memory_write_view
       (dest, view_dest, src, view_src, memcpy_wrapper, NULL);
@@ -360,7 +305,7 @@ int kaapi_memory_write_cpu2cpu
 typedef int (*kaapi_signature_memcpy_func_t)( 
  kaapi_pointer_t dest,
  const kaapi_memory_view_t* view_dest,
- const void* src,
+ kaapi_pointer_t src,
  const kaapi_memory_view_t* view_src
 );
 
@@ -369,20 +314,21 @@ typedef int (*kaapi_signature_memcpy_func_t)(
 #define kaapi_memory_write_cu2cpu 0
 #define kaapi_memory_write_cu2cu  0
 #endif
+
 #if !defined(KAAPI_USE_NETWORK)
 #define kaapi_memory_write_rdma 0
 #else
 static int kaapi_memory_write_rdma(
  kaapi_pointer_t dest,
  const kaapi_memory_view_t* view_dest,
- const void* src,
+ kaapi_pointer_t src,
  const kaapi_memory_view_t* view_src
 )
 {
   return kaapi_network_rdma(
     kaapi_pointer2gid(dest), 
     dest, view_dest,
-    src, view_src 
+    kaapi_pointer2void(src), view_src 
   );
 }
 #endif
@@ -427,11 +373,6 @@ int kaapi_memory_copy(
   kaapi_globalid_t localgid = kaapi_network_get_current_globalid();
   kaapi_signature_memcpy_func_t fnc;
   
-#if 0
-  printf("[kaapi_memory_copy] copy dest@:%p, src@:%p, size:%lu\n",
-	 (void*)dest.ptr, (void*)src.ptr, kaapi_memory_view_size(view_src)); 
-  fflush(stdout);
-#endif
 
 #if !defined(KAAPI_USE_CUDA)  
   /* cannot initiate copy if source is not local */
@@ -452,8 +393,15 @@ int kaapi_memory_copy(
   if (type_src == -1) ++type_src;
 #endif
 
+#if 1
+//#if KAAPI_VERBOSE
+  fprintf(stdout, "[kaapi_memory_copy] copy dest@:%p, src@:%p, size:%lu dst_gid=%d src_gid=%d\n",
+	 (void*)dest.ptr, (void*)src.ptr, kaapi_memory_view_size(view_src), kaapi_pointer2gid(dest), kaapi_pointer2gid(src) ); 
+  fflush(stdout);
+#endif
+
   fnc = the_good_choice_is[(dest_gid == localgid ? 0: 1)][type_dest][type_src];
-  return fnc( dest, view_dest, kaapi_pointer2void(src), view_src );
+  return fnc( dest, view_dest, src, view_src );
 }
 
 

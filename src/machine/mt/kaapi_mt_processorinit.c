@@ -86,8 +86,10 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   
   kaapi_sched_initlock( &kproc->lock );
   
+#if 0
   kproc->mailbox.head   = 0;
   kproc->mailbox.tail   = 0;
+#endif
   
   kproc->isidle         = 1;
   kaapi_wsqueuectxt_init( &kproc->lsuspend );
@@ -99,6 +101,11 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   kproc->fnc_selecarg[1] = 0;
   kproc->fnc_selecarg[2] = 0;
   kproc->fnc_selecarg[3] = 0;
+#if defined(KAAPI_USE_CUDA)
+  if( kproc->proc_type == KAAPI_PROC_TYPE_CUDA )
+	kproc->fnc_select = kaapi_sched_select_victim_with_cuda_tasks;
+  else
+#endif
   kproc->fnc_select      = kaapi_default_param.wsselect;
 
   /* not that, as all other fields, the processor_init is called
@@ -130,10 +137,10 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   kproc->seed_data = rand();
 
   /* memory: as[0] for cpu, as[1 + gpuindex] for gpu */
-  if (kpi->proc_type == KAAPI_PROC_TYPE_CPU)
-    kaapi_mem_map_initialize(&kproc->mem_map, 0);
+  if ( kpi->proc_type == KAAPI_PROC_TYPE_CPU )
+    kaapi_mem_host_map_init( &kproc->mem_host_map, kproc->kid, 0 );
   else
-    kaapi_mem_map_initialize(&kproc->mem_map, 1 + kpi->proc_index);
+    kaapi_mem_host_map_init( &kproc->mem_host_map, kproc->kid, 1 + kpi->proc_index );
   
   kaapi_processor_computetopo( kproc );  
 
@@ -145,14 +152,16 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   
   kproc->libkomp_tls = 0;
 
+  kproc->rtl = (kaapi_readytasklist_t*)malloc( sizeof (kaapi_readytasklist_t) );
+  kaapi_readytasklist_init( kproc->rtl );
+  kproc->rtl_remote = (kaapi_readytasklist_t*)malloc( sizeof (kaapi_readytasklist_t) );
+  kaapi_readytasklist_init( kproc->rtl_remote );
+
 #if defined(KAAPI_USE_CUDA)
   /* initialize cuda processor */
-  if (kpi->proc_type == KAAPI_PROC_TYPE_CUDA)
-  {
+  if (kpi->proc_type == KAAPI_PROC_TYPE_CUDA) {
     if (kaapi_cuda_proc_initialize(&kproc->cuda_proc, kpi->proc_index))
       return -1;
-
-    kproc->fnc_select = kaapi_sched_select_victim_with_cuda_tasks;
   }
 #endif
   

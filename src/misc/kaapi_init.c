@@ -65,12 +65,23 @@ static kaapi_atomic_t kaapi_count_init = {0};
 */
 kaapi_rtparam_t kaapi_default_param = {
    .startuptime = 0,
-   .stacksize   = 64*4096, /**/
+#if defined(KAAPI_USE_CUPTI)
+   .cudastartuptime = 0,
+#endif
+#if defined(KAAPI_USE_CUDA)
+   .cudawindowsize = 1,
+   .cudapeertopeer = 0,
+#endif
+   .stacksize        = 64*4096, /**/
    .stacksize_master = 64*4096, /**/
    .cpucount    = 0,
+   .gpucount    = 0,
    .kproc_list  = 0,
    .kid2cpu     = 0,
    .cpu2kid     = 0,
+   .steal_by_affinity	= 0,
+   .push_by_affinity	= 0,
+   .ctpriority = 0,
    .eventmask   = KAAPI_EVT_MASK_COMPUTE|KAAPI_EVT_MASK_IDLE
 };
 
@@ -87,6 +98,9 @@ static int kaapi_setup_param()
 {
   const char* wsselect;
   const char* emitsteal;
+  const char* affinity;
+  const char* stealaffinity;
+  const char* use_ctpath;
     
   /* compute the number of cpu of the system */
 #if defined(__linux__)
@@ -213,6 +227,71 @@ static int kaapi_setup_param()
     kaapi_default_param.eventmask |= KAAPI_EVT_MASK_STARTUP;
   }
 #endif  
+
+  affinity = getenv("KAAPI_PUSH_AFFINITY");
+  kaapi_default_param.push_by_affinity = &kaapi_push_by_affinity_default;
+  if( affinity != 0 ) 
+  {
+    if (strcmp(affinity, "rand") ==0)
+      kaapi_default_param.push_by_affinity = &kaapi_push_by_affinity_rand;
+    else if (strcmp(affinity, "locality") ==0)
+      kaapi_default_param.push_by_affinity = &kaapi_push_by_affinity_locality;
+    else if (strcmp(affinity, "writer") ==0)
+      kaapi_default_param.push_by_affinity = &kaapi_push_by_affinity_writer;
+    else {
+      fprintf(stderr, "***Kaapi: bad value for 'KAAPI_PUSH_AFFINITY': '%s'\n",
+        getenv("KAAPI_AFFINITY")
+      );
+      return EINVAL;
+    }
+  }
+
+  stealaffinity = getenv("KAAPI_STEAL_AFFINITY");
+  kaapi_default_param.steal_by_affinity = &kaapi_steal_by_affinity_first;
+  if( stealaffinity != 0 ) 
+  {
+    if (strcmp(stealaffinity, "cp") ==0)
+      kaapi_default_param.steal_by_affinity = &kaapi_steal_by_affinity_maxctpath;
+    else if (strcmp(stealaffinity, "locality") ==0)
+      kaapi_default_param.steal_by_affinity = &kaapi_steal_by_affinity_maxhit;
+    else if (strcmp(stealaffinity, "writer") ==0)
+      kaapi_default_param.steal_by_affinity = &kaapi_steal_by_affinity_writer;
+    else if (strcmp(stealaffinity, "1") ==0)
+      kaapi_default_param.steal_by_affinity = &kaapi_steal_by_affinity_first;
+    else {
+      fprintf(stderr, "***Kaapi: bad value for 'KAAPI_STEAL_AFFINITY': '%s'\n",
+        stealaffinity
+      );
+      return EINVAL;
+    }
+  }
+
+  use_ctpath = getenv("KAAPI_CTPATH_PRIO");
+  if( use_ctpath != 0 ) 
+  {
+    if ((strcmp(use_ctpath, "identity") ==0) || (strcmp(use_ctpath, "1") ==0))
+      kaapi_default_param.ctpriority = &kaapi_ctpath2prio_identity;
+    else if (strcmp(use_ctpath, "max") ==0)
+      kaapi_default_param.ctpriority = &kaapi_ctpath2prio_max;
+    else if (strcmp(use_ctpath, "linear") ==0) 
+      kaapi_default_param.ctpriority = &kaapi_ctpath2prio_linear;
+    else {
+      fprintf(stderr, "***Kaapi: bad value for 'KAAPI_CTPATH_PRIO': '%s'\n",
+        getenv("KAAPI_CTPATH_PRIO")
+      );
+      return EINVAL;
+    }
+  }
+
+#if defined(KAAPI_USE_CUDA)
+  if (getenv("KAAPI_WINDOW_SIZE") !=0 ) {
+	kaapi_default_param.cudawindowsize =
+	    atoll(getenv("KAAPI_WINDOW_SIZE"));
+  }
+  if (getenv("KAAPI_CUDA_PEER") !=0 ) {
+	kaapi_default_param.cudapeertopeer = 1;
+  }
+#endif
   
   return 0;
 }
@@ -236,8 +315,12 @@ int kaapi_init(int flag, int* argc, char*** argv)
   kaapi_network_init(argc, argv);
 #endif
 
-  kaapi_memory_init();
+  kaapi_memory_init(); /* TODO: not necessary */
   int err = kaapi_mt_init();
+
+#if defined(KAAPI_USE_CUDA)
+  kaapi_cuda_init();
+#endif
 
   if (flag)
     kaapi_begin_parallel(KAAPI_SCHEDFLAG_DEFAULT);
@@ -254,11 +337,15 @@ int kaapi_finalize(void)
     return EAGAIN;
 
   kaapi_memory_destroy();
-
+  
   kaapi_mt_finalize();
 
 #if defined(KAAPI_USE_NETWORK)
   kaapi_network_finalize();
+#endif
+
+#if defined(KAAPI_USE_CUDA)
+//TODO:  kaapi_cuda_finalize();
 #endif
 
   return 0;

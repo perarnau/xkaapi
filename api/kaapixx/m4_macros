@@ -17,3 +17,5 @@ define(`KAAPI_INITFORMATCLOSURE',InitFormatClosure$1)
 define(M4_PARAM_0,`ifelse(KAAPI_NUMBER_PARAMS,0,$@,)')
 
 define(`KAAPI_CLOSURE',KaapiTaskArg$1)
+
+define(`KAAPIWRAPPER_ALPHA_BODY',KaapiAlphaBody$1)

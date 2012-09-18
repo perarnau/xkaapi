@@ -46,7 +46,7 @@
 /*
 */
 kaapi_version_t* kaapi_version_createreplicat( 
-    kaapi_tasklist_t*       tl,
+    kaapi_frame_tasklist_t* tl,
     kaapi_version_t*        master_version
 )
 {
@@ -88,9 +88,9 @@ kaapi_version_t* kaapi_version_createreplicat(
 /*
 */
 int kaapi_thread_insert_synchro(
-    kaapi_tasklist_t*    tl,
-    kaapi_version_t*     version, 
-    kaapi_access_mode_t  m
+    kaapi_frame_tasklist_t* tl,
+    kaapi_version_t*        version, 
+    kaapi_access_mode_t     m
 )
 {
 #if 0

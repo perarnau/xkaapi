@@ -100,11 +100,21 @@ kaapi_task_body_t kaapi_format_taskregister_body(
 #endif
 
   /* register it into hashmap: body -> fmt */
-  entry = ((unsigned long)body) & 0xFF;
+  entry = (uint8_t)kaapi_hash_ulong7((unsigned long)body);
   head =  kaapi_all_format_bybody[entry];
   fmt->next_bybody = head;
   kaapi_all_format_bybody[entry] = fmt;
 
   /* already registered into hashmap: fmtid -> fmt */  
   return body;
+}
+
+kaapi_task_body_t
+kaapi_format_taskregister_alphabody( 
+        kaapi_format_t*             fmt,
+        kaapi_task_body_t           body
+    )
+{
+    fmt->alpha_body = body;
+    return body;
 }

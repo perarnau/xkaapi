@@ -49,16 +49,22 @@
 # include "../machine/cuda/kaapi_cuda_threadgroup_execframe.h"
 #endif
 
+
 /* 
 */
-void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t* pc )
+void kaapi_staticschedtask_body_gen( 
+    void* sp, 
+    kaapi_thread_t* uthread, 
+    kaapi_task_t* pc,
+    int selector
+)
 {
   int save_state;
-  kaapi_frame_t* fp;
-  kaapi_frame_t save_fp;
-  kaapi_tasklist_t* tasklist;
+  kaapi_frame_tasklist_t* frame_tasklist;
   int16_t ngpu = 0;
   int16_t ncpu = 0;
+  
+  kaapi_assert_debug( (selector==1) || (selector==2) )
   
   kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)sp;
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
@@ -69,12 +75,7 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   KAAPI_EVENT_PUSH0(thread->stack.proc, thread, KAAPI_EVT_STATIC_BEG );
   
   /* Push a new frame */
-  fp = (kaapi_frame_t*)thread->stack.sfp;
-  /* push the frame for the next task to execute */
-  save_fp = *fp;
-  thread->stack.sfp[1] = *fp;
-  kaapi_writemem_barrier();
-  ++thread->stack.sfp;
+  kaapi_thread_push_frame_(thread);
   
   /* unset steal capability and wait no more thief 
      lock the kproc: it ensure that no more thief has reference on it 
@@ -137,26 +138,43 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
         + arg->schedinfo.nkproc[KAAPI_PROC_TYPE_GPU];
   }
 
-
   /* the embedded task cannot be steal because it was not visible to thieves */
-  arg->sub_body( arg->sub_sp, uthread, pc );
+  switch (selector) 
+  {
+    case 1:
+      arg->sub_body( arg->sub_sp, uthread, pc );
+      break;
+
+    case 2:
+    {
+      /* wh handle -> get it from embded task */
+      const kaapi_format_t* fmt = kaapi_format_resolvebybody( (kaapi_task_body_t)arg->sub_body);
+      kaapi_task_vararg_body_t body_wh = (kaapi_task_vararg_body_t)kaapi_format_get_task_bodywh_by_arch(
+          fmt, 
+          kaapi_processor_get_type(thread->stack.proc)
+      );
+      body_wh( arg->sub_sp, uthread, pc );
+    } break;
+
+    default:
+      kaapi_assert(0);
+      break;
+  }
+
+  /* do nothing if no task pushed */
+  if (kaapi_frame_isempty(uthread)) 
+    return;
 
   /* allocate the tasklist for this task
   */
-  tasklist = (kaapi_tasklist_t*)malloc(sizeof(kaapi_tasklist_t));
-  kaapi_tasklist_init( tasklist, thread );
+  frame_tasklist = (kaapi_frame_tasklist_t*)malloc(sizeof(kaapi_frame_tasklist_t));
+  kaapi_frame_tasklist_init( frame_tasklist, thread );
 
   /* currently: that all, do not compute other things */
-  kaapi_thread_computereadylist(thread, tasklist);
-  KAAPI_ATOMIC_WRITE(&tasklist->count_thief, 0);
+  kaapi_thread_computereadylist(thread, frame_tasklist);
 
   /* populate tasklist with initial ready tasks */
-  kaapi_thread_tasklistready_push_init( tasklist, &tasklist->readylist );
-  kaapi_thread_tasklist_commit_ready( tasklist );
-
-  /* keep the first task to execute outside the workqueue */
-//FALSE  tasklist->context.chkpt = 2;
-  tasklist->context.chkpt = 0;
+  kaapi_thread_tasklistready_push_init( &frame_tasklist->tasklist, &frame_tasklist->readylist );
 
   KAAPI_EVENT_PUSH0(thread->stack.proc, thread, KAAPI_EVT_STATIC_END );
 
@@ -169,20 +187,55 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
     if (getenv("USER") !=0)
       sprintf(filename,"/tmp/graph.%s.%i.dot", getenv("USER"), counter++ );
     else
-      sprintf(filename,"/tmp/graph.%i.dot",counter++);
+      sprintf(filename,"/tmp/graph.%i.dot", counter++);
     FILE* filedot = fopen(filename, "w");
-    kaapi_thread_tasklist_print_dot( filedot, tasklist, 0 );
+    kaapi_frame_tasklist_print_dot( filedot, frame_tasklist, 0 );
     fclose(filedot);
+  }
+  if (getenv("KAAPI_DUMP_TASKLIST") !=0)
+  {
+    static uint32_t counter = 0;
+    char filename[128]; 
+    if (getenv("USER") !=0)
+      sprintf(filename,"/tmp/tasklist.%s.%i.log", getenv("USER"), counter++ );
+    else
+      sprintf(filename,"/tmp/tasklist.%i.log",counter++);
+    FILE* filetask = fopen(filename, "w");
+    kaapi_frame_tasklist_print( filetask, frame_tasklist );
+    fclose(filetask);
   }
 #endif
   
   /* restore state */
   kaapi_thread_set_unstealable(save_state);
-  thread->stack.sfp->tasklist = tasklist;
+  thread->stack.sfp->tasklist = &frame_tasklist->tasklist;
 
   /* exec the spawned subtasks */
   kaapi_sched_sync_(thread);
-  kaapi_assert_debug( KAAPI_ATOMIC_READ(&tasklist->count_thief) == 0);
+
+  /* Pop & restore the frame */
+  thread->stack.sfp->tasklist = 0;
+  kaapi_thread_pop_frame_(thread);
+
+#if 1 /* TODO: do not allocate if multiple uses of tasklist */
+  kaapi_frame_tasklist_destroy( frame_tasklist );
+  free(frame_tasklist);
+
+//HERE: hack to do loop over SetStaticSched because memory state
+// is leaved in inconsistant state.
+//  kaapi_memory_destroy();
+//  kaapi_memory_init();
+#endif /* TODO */
+
+#if 0
+  fprintf(stdout, "[%s] kid=%i tasklist tasks: %llu total: %llu\n", 
+    __FUNCTION__,
+    kaapi_get_self_kid(),
+    KAAPI_ATOMIC_READ(&tasklist->cnt_exec),
+    tasklist->total_tasks
+  );
+  fflush(stdout);
+#endif
 
 #if 0//defined(KAAPI_USE_PERFCOUNTER)
   printf("[tasklist] T1                      : %" PRIu64 "\n", tasklist->cnt_tasks);
@@ -191,30 +244,229 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   printf("[tasklist] exec time               : %e (s)\n",t1_exec-t0_exec);
 #endif
 
-#if 0
-  printf("%i::[tasklist] exec tasks: %llu\n", 
-    kaapi_get_self_kid(),
-    tasklist->cnt_exectasks 
-  );
-  fflush(stdout);
-#endif
-
-  /* Pop & restore the frame */
-  kaapi_sched_lock(&thread->stack.proc->lock);
-  thread->stack.sfp->tasklist = 0;
-  --thread->stack.sfp;
-  *thread->stack.sfp = save_fp;
-  kaapi_sched_unlock(&thread->stack.proc->lock);
-
-#if 1 /* TODO: do not allocate if multiple uses of tasklist */
-  kaapi_tasklist_destroy( tasklist );
-  free(tasklist);
-
-//HERE: hack to do loop over SetStaticSched because memory state
-// is leaved in inconsistant state.
-//  kaapi_memory_destroy();
-//  kaapi_memory_init();
-#endif /* TODO */
 }
 
+
+void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t* pc )
+{
+  kaapi_staticschedtask_body_gen( sp, uthread, pc, 1); /* 1 == without wh */
+}
+
+static void kaapi_staticschedtask_body_wh( void* sp, kaapi_thread_t* uthread, kaapi_task_t* pc )
+{
+  kaapi_staticschedtask_body_gen( sp, uthread, pc, 2); /* 2 == with wh */
+}
+
+static void kaapi_staticschedtask_body_gpu( void* sp, kaapi_gpustream_t stream )
+{
+  kaapi_thread_t* uthread = kaapi_self_thread();
+  kaapi_staticschedtask_body_gen( sp, uthread, uthread[-1].pc, 1); /* 1 == without wh */
+}
+
+static void kaapi_staticschedtask_body_gpu_wh( void* sp, kaapi_gpustream_t stream )
+{
+  kaapi_thread_t* uthread = kaapi_self_thread();
+  kaapi_staticschedtask_body_gen( sp, uthread, uthread[-1].pc, 2); /* 2 == with wh */
+}
+
+
+/* --------- format for task SetStatic --------- 
+   - same format as the embedded task
+*/
+static size_t kaapi_taskformat_get_count_params(
+ const struct kaapi_format_t* f,
+ const void* sp
+)
+{
+  kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)sp;
+  const kaapi_format_t*	task_fmt= kaapi_format_resolvebybody((kaapi_task_body_t)arg->sub_body);
+  if (task_fmt ==0) return 0;
+  return kaapi_format_get_count_params(task_fmt, arg->sub_sp);
+}
+
+static kaapi_access_mode_t kaapi_taskformat_get_mode_param(
+ const struct kaapi_format_t* f,
+ unsigned int i,
+ const void* sp
+)
+{
+  kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)sp;
+  const kaapi_format_t*	task_fmt= kaapi_format_resolvebybody((kaapi_task_body_t)arg->sub_body);
+  if (task_fmt ==0) 
+    return KAAPI_ACCESS_MODE_VOID;
+  return kaapi_format_get_mode_param(task_fmt, i, arg->sub_sp);
+}
+
+static void* kaapi_taskformat_get_off_param(
+ const struct kaapi_format_t* f,
+ unsigned int i,
+ const void* sp
+)
+{
+  kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)sp;
+  const kaapi_format_t*	task_fmt= kaapi_format_resolvebybody((kaapi_task_body_t)arg->sub_body);
+  if (task_fmt ==0) return 0;
+  return kaapi_taskformat_get_off_param(task_fmt, i, arg->sub_sp);
+}
+
+static kaapi_access_t kaapi_taskformat_get_access_param(
+ const struct kaapi_format_t* f,
+ unsigned int i,
+ const void* sp
+)
+{
+  kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)sp;
+  const kaapi_format_t*	task_fmt= kaapi_format_resolvebybody((kaapi_task_body_t)arg->sub_body);
+  if (task_fmt !=0) 
+    return kaapi_format_get_access_param(task_fmt, i, arg->sub_sp);
+  {
+    kaapi_access_t dummy;
+    return dummy;
+  }
+}
+
+static void kaapi_taskformat_set_access_param(
+ const struct kaapi_format_t* f,
+ unsigned int i,
+ void* sp,
+ const kaapi_access_t* a
+)
+{
+  kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)sp;
+  const kaapi_format_t*	task_fmt= kaapi_format_resolvebybody((kaapi_task_body_t)arg->sub_body);
+  if (task_fmt ==0) return;
+  kaapi_format_set_access_param(task_fmt, i, arg->sub_sp, a);
+}
+
+static const struct kaapi_format_t* kaapi_taskformat_get_fmt_param(
+ const struct kaapi_format_t* f,
+ unsigned int i,
+ const void* sp
+)
+{
+  kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)sp;
+  const kaapi_format_t*	task_fmt= kaapi_format_resolvebybody((kaapi_task_body_t)arg->sub_body);
+  if (task_fmt ==0) return 0;
+  return kaapi_format_get_fmt_param(task_fmt, i, arg->sub_sp);
+}
+
+static kaapi_memory_view_t kaapi_taskformat_get_view_param(
+ const struct kaapi_format_t* f,
+ unsigned int i,
+ const void* sp
+)
+{
+  kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)sp;
+  const kaapi_format_t*	task_fmt= kaapi_format_resolvebybody((kaapi_task_body_t)arg->sub_body);
+  if (task_fmt !=0) 
+    return kaapi_format_get_view_param(task_fmt, i, arg->sub_sp);
+  {
+    kaapi_memory_view_t view;
+    return view;
+  }
+}
+
+static void kaapi_taskformat_set_view_param(
+ const struct kaapi_format_t* f,
+ unsigned int i,
+ void* sp,
+ const kaapi_memory_view_t* v
+)
+{
+  kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)sp;
+  const kaapi_format_t*	task_fmt= kaapi_format_resolvebybody((kaapi_task_body_t)arg->sub_body);
+  if (task_fmt !=0)
+    kaapi_format_set_view_param(task_fmt, i, arg->sub_sp, v);
+}
+
+__attribute__((unused)) 
+static void kaapi_taskformat_reducor
+(
+ const struct kaapi_format_t* f,
+ unsigned int i,
+ void* p,
+ const void* q
+)
+{
+  kaapi_abort();
+}
+
+__attribute__((unused)) 
+static void kaapi_taskformat_redinit
+(
+ const struct kaapi_format_t* f,
+ unsigned int i,
+ const void* sp,
+ void* p
+)
+{
+  kaapi_abort();
+}
+
+__attribute__((unused))
+static void kaapi_taskformat_get_task_binding(
+ const struct kaapi_format_t* f,
+ const kaapi_task_t* t,
+ kaapi_task_binding_t* b
+)
+{
+  b->type = KAAPI_BINDING_ANY;
+}
+
+struct kaapi_format_t* kaapi_staticschedtask_format = 0;
+
+void kaapi_register_staticschedtask_format(void)
+{
+  kaapi_staticschedtask_format = kaapi_format_allocate();
+  kaapi_format_taskregister_func
+  (
+    kaapi_staticschedtask_format,
+    (kaapi_task_body_t)kaapi_staticschedtask_body, 
+    (kaapi_task_body_t)kaapi_staticschedtask_body_wh,
+    "kaapi_staticschedtask_body",
+    sizeof(kaapi_staticschedtask_arg_t),
+    kaapi_taskformat_get_count_params,
+    kaapi_taskformat_get_mode_param,
+    kaapi_taskformat_get_off_param,
+    kaapi_taskformat_get_access_param,
+    kaapi_taskformat_set_access_param,
+    kaapi_taskformat_get_fmt_param,
+    kaapi_taskformat_get_view_param,
+    kaapi_taskformat_set_view_param,
+    0, /* reducor */
+    0, /* redinit */
+    0, /* task binding */
+    0  /* get_splitter */
+  );
+
+  kaapi_format_taskregister_body
+  (
+    kaapi_staticschedtask_format,
+    (kaapi_task_body_t)kaapi_staticschedtask_body_gpu, 
+    (kaapi_task_body_t)kaapi_staticschedtask_body_gpu_wh,
+    KAAPI_PROC_TYPE_CUDA
+  );
+}
+
+kaapi_task_body_t kaapi_task_stsched_get_body_by_arch
+(
+  const struct kaapi_taskdescr_t* const td,
+  unsigned int arch
+)
+{
+  kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)kaapi_task_getargs(td->task);
+  const kaapi_format_t* fmt = kaapi_format_resolvebybody( (kaapi_task_body_t)arg->sub_body);
+  return kaapi_format_get_task_body_by_arch(fmt, arch);
+}
+
+kaapi_task_body_t kaapi_task_stsched_get_bodywh_by_arch
+(
+  const struct kaapi_taskdescr_t* const td,
+  unsigned int arch
+)
+{
+  kaapi_staticschedtask_arg_t* arg = (kaapi_staticschedtask_arg_t*)kaapi_task_getargs(td->task);
+  const kaapi_format_t* fmt = kaapi_format_resolvebybody( (kaapi_task_body_t)arg->sub_body);
+  return kaapi_format_get_task_bodywh_by_arch(fmt, arch);
+}
 

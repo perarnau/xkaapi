@@ -94,11 +94,23 @@ extern "C" {
 #define KAAPI_EVT_FOREACH_END        26 /* */
 #define KAAPI_EVT_FOREACH_STEAL      27 /* */
 
+#define KAAPI_EVT_CUDA_GPU_HTOD_BEG      28 /* cudaMemcpy time from GPU */
+#define KAAPI_EVT_CUDA_GPU_HTOD_END      29
+
+#define KAAPI_EVT_CUDA_GPU_DTOH_BEG      30 /* cudaMemcpy time from CPU */
+#define KAAPI_EVT_CUDA_GPU_DTOH_END      31
+
+#define KAAPI_EVT_CUDA_GPU_KERNEL_BEG        32
+#define KAAPI_EVT_CUDA_GPU_KERNEL_END        33
+
+
+#define KAAPI_EVT_CUDA_CPU_SYNC_BEG	    34	    /* CUDA sync calls by CPU */
+#define KAAPI_EVT_CUDA_CPU_SYNC_END	    35
 
 
 /** Size of the event mask 
 */
-typedef uint32_t kaapi_event_mask_type_t;
+typedef uint64_t kaapi_event_mask_type_t;
 
 /** Heler for creating mask from an event
 */
@@ -122,6 +134,14 @@ typedef uint32_t kaapi_event_mask_type_t;
      | KAAPI_EVT_MASK(KAAPI_EVT_FOREACH_BEG) \
      | KAAPI_EVT_MASK(KAAPI_EVT_FOREACH_END) \
      | KAAPI_EVT_MASK(KAAPI_EVT_FOREACH_STEAL) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_GPU_HTOD_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_GPU_HTOD_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_GPU_DTOH_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_GPU_DTOH_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_GPU_KERNEL_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_GPU_KERNEL_END) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_CPU_SYNC_BEG) \
+     | KAAPI_EVT_MASK(KAAPI_EVT_CUDA_CPU_SYNC_END) \
     )
 
 #define KAAPI_EVT_MASK_IDLE \

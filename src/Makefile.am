@@ -36,6 +36,9 @@ libkaapi_la_SOURCES=\
   kaapi_hashmap.h \
   kaapi_allocator.h \
   kaapi_task.h \
+  tasklist/kaapi_version.h \
+  tasklist/kaapi_readytasklist.h \
+  kaapi_affinity.h \
   kaapi_tasklist.h \
   kaapi_network.h \
   kaapi_compiler.h \
@@ -88,6 +91,7 @@ libkaapi_la_SOURCES=\
   task/kaapi_fmt_taskregister.c \
   task/kaapi_fmt_taskregister_func.c \
   task/kaapi_fmt_taskregister_static.c \
+  task/kaapi_fmt_dot.c \
   task/kaapi_task_aftersteal.c \
   task/kaapi_task_computeready.c \
   task/kaapi_task_initflag.c \
@@ -97,9 +101,21 @@ libkaapi_la_SOURCES=\
   task/kaapi_task_startup_body.c \
   task/kaapi_task_steal_body.c \
   task/kaapi_task_stealready_body.c \
-  thread/kaapi_tasklist.c \
-  thread/kaapi_tasklist_activate.c \
-  thread/kaapi_tasklist_criticalpath.c \
+  tasklist/kaapi_tasklist.c \
+  tasklist/kaapi_readytasklist_init.c\
+  tasklist/kaapi_readytasklist_destroy.c\
+  tasklist/kaapi_readytasklist_push.c\
+  tasklist/kaapi_readytasklist_pop.c\
+  tasklist/kaapi_readytasklist_rpush.c\
+  tasklist/kaapi_readytasklist_steal.c\
+  tasklist/kaapi_tasklist_activate.c \
+  tasklist/kaapi_tasklist_criticalpath.c \
+  tasklist/kaapi_tasklist_ct2prio_max.c \
+  tasklist/kaapi_tasklist_ct2prio_linear.c \
+  tasklist/kaapi_tasklist_ct2prio_identity.c \
+  affinity/kaapi_affinity_hit.c\
+  affinity/kaapi_affinity_steal.c\
+  affinity/kaapi_affinity_push.c\
   thread/kaapi_thread_checkdeps.c \
   thread/kaapi_thread_clear.c \
   thread/kaapi_thread_computeready_access.c \
@@ -117,6 +133,7 @@ libkaapi_la_SOURCES=\
   thread/kaapi_version_addaccess.c \
   thread/kaapi_version_find.c \
   thread/kaapi_version_replicat.c \
+  thread/kaapi_thread_startexectd.c \
   adapt/kaapi_adapt_adaptfmt.c \
   adapt/kaapi_adapt_api_lr.c \
   adapt/kaapi_adapt_begendadaptfmt.c \
@@ -146,9 +163,17 @@ libkaapi_la_SOURCES=\
   memory/kaapi_memory_allocate.c \
   memory/kaapi_memory_bind.c \
   memory/kaapi_memory_find_writer.c \
+  memory/kaapi_memory_register.c \
   memory/kaapi_numa.c \
+  memory/kaapi_mem_init.c \
+  memory/kaapi_mem_destroy.c \
+  memory/kaapi_mem_data.c \
+  memory/kaapi_mem_sync.c \
+  memory/kaapi_mem_host_map.c \
   memory/kaapi_mem.c \
   memory/kaapi_mem.h \
+  memory/kaapi_mem_host_map.h \
+  memory/kaapi_mem_data.h \
   workstealing/kaapi_sched_select_rand.c \
   workstealing/kaapi_sched_select_rand_f0.c \
   workstealing/kaapi_sched_select_workload_rand.c \
@@ -162,6 +187,7 @@ libkaapi_la_SOURCES=\
   workstealing/kaapi_sched_stealtask.c \
   workstealing/kaapi_sched_splittask.c \
   workstealing/kaapi_sched_stealtasklist.c \
+  workstealing/kaapi_sched_stealreadytasklist.c \
   workstealing/kaapi_sched_idle.c \
   workstealing/kaapi_sched_wakeup.c \
   workstealing/kaapi_sched_suspend.c \
@@ -226,13 +252,38 @@ libkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda_register_procs.c \
   machine/cuda/kaapi_cuda_proc.c \
   machine/cuda/kaapi_cuda_proc.h \
+  machine/cuda/kaapi_cuda_sync.c \
   machine/cuda/kaapi_cuda_func.h \
   machine/cuda/kaapi_cuda_func.c \
   machine/cuda/kaapi_cuda_execframe.h \
   machine/cuda/kaapi_cuda_execframe.c \
   machine/cuda/kaapi_cuda_thread_execframe_tasklist.c \
+  machine/cuda/kaapi_cuda_thread_stack_execframe.c \
   machine/cuda/kaapi_cuda_threadgroup_execframe.h \
   machine/cuda/kaapi_cuda_threadgroup_execframe.c \
+  machine/cuda/kaapi_cuda_cublas.h \
+  machine/cuda/kaapi_cuda_cublas.c \
+  machine/cuda/kaapi_cuda_data.h \
+  machine/cuda/kaapi_cuda_data_basic.h \
+  machine/cuda/kaapi_cuda_data_basic.c \
+  machine/cuda/kaapi_cuda_data_async.h \
+  machine/cuda/kaapi_cuda_data_async.c \
+  machine/cuda/kaapi_cuda_mem.h \
+  machine/cuda/kaapi_cuda_mem.c \
+  machine/cuda/kaapi_cuda_stream.h \
+  machine/cuda/kaapi_cuda_stream.c \
+  machine/cuda/kaapi_cuda_taskmovealloc.h \
+  machine/cuda/kaapi_cuda_taskmovealloc.c \
+  machine/cuda/kaapi_cuda_dev.h \
+  machine/cuda/kaapi_cuda_dev.c \
+  machine/cuda/kaapi_cuda_ctx.h \
+  machine/cuda/kaapi_cuda_ctx.c \
+  machine/cuda/kaapi_cuda_task_steal_body.h \
+  machine/cuda/kaapi_cuda_task_steal_body.c \
+  machine/cuda/kaapi_cuda_event.h \
+  machine/cuda/kaapi_cuda_trace.h \
+  machine/cuda/kaapi_cuda_trace.c \
+  machine/cuda/kaapi_sched_select_victim_with_cuda_tasks.c \
   machine/cuda/kaapi_cuda_kasid.c
 endif
 

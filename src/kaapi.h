@@ -57,6 +57,12 @@
 #  include <winnt.h>
 #endif
 
+//#define KAAPI_VERBOSE 1
+
+//#define KAAPI_NO_CPU	    1	/* no CPU task executed */
+//#define KAAPI_CUDA_NO_H2D   1	/* host to device copies disabled */
+//#define KAAPI_CUDA_NO_D2H   1	/* device to host copies disabled */
+
 #define __KAAPI__ 1
 #define __KAAPI_MINOR__ 2
 
@@ -271,6 +277,14 @@ typedef enum kaapi_hws_levelmask
  */
 extern int kaapi_getconcurrency (void);
 
+/* \ingroup WS
+*/
+extern int kaapi_getconcurrency_cpu(void);
+
+/* \ingroup WS
+*/
+extern int kaapi_getconcurrency_gpu(void);
+
 /** \ingroup WS
     Set the workstealing conccurency by instanciating kprocs according
     to the registration of each subsystem (ie. mt, cuda...)
@@ -466,8 +480,11 @@ typedef struct kaapi_task_binding
 /* ========================================================================= */
 /** Task priority
 */
-#define KAAPI_TASK_MAX_PRIORITY     1
-#define KAAPI_TASK_MIN_PRIORITY     0
+#define KAAPI_TASK_MAX_PRIORITY     7
+#define KAAPI_TASK_MIN_PRIORITY     0    /* must be 0 because it is the default initialisation == Defaul Prio */
+
+#define KAAPI_TASK_HIGH_PRIORITY    KAAPI_TASK_MAX_PRIORITY
+#define KAAPI_TASK_DEFAULT_PRIORITY KAAPI_TASK_MIN_PRIORITY
 
 #define KAAPI_TASK_STATE_SIGNALED   0x20   /* mask: extra flag to set the task as signaled for preemption */
 
@@ -502,9 +519,10 @@ typedef struct kaapi_task_t {
   union { /* should be of size of uintptr */
     struct {
       kaapi_atomic8_t           state;     /** state of the task */
+      uint8_t                   flag;      /** some flag as splittable, local... */
+      uint8_t                   arch;      /** bitmap of authorized arch. 0 == all archs */
       uint8_t                   priority;  /** of the task */
-      uint8_t                   ocr;       /** of the task */
-      uint8_t                   flag;      /** scheduling information */
+      uint32_t                  site;      /** currently 1+kid where task is able to run, no site ==0 */
       /* ... */                            /** some bits are available on 64bits LP machine */
     } s;
     uintptr_t                   dummy;     /* to clear previous fields in one write */
@@ -513,16 +531,27 @@ typedef struct kaapi_task_t {
 } kaapi_task_t __attribute__((aligned(8))); /* should be aligned on 64 bits boundary on Intel & Opteron */
 
 
-static inline void kaapi_task_set_ocr_index(kaapi_task_t* task, uint8_t ith)
-{ 
-  kaapi_assert_debug( ith <255 );
-  task->u.s.ocr = 1U+ith; 
-}
-
 static inline void kaapi_task_set_priority(kaapi_task_t* task, uint8_t prio)
 { 
   kaapi_assert_debug( prio <= KAAPI_TASK_MAX_PRIORITY );
   task->u.s.priority = prio; 
+}
+
+static inline void kaapi_task_set_site(kaapi_task_t* task, uint32_t site)
+{ 
+  kaapi_assert_debug( site < (uint32_t)kaapi_getconcurrency());
+  task->u.s.site = 1 + site;
+}
+
+static inline void kaapi_task_set_arch(kaapi_task_t* task, int arch)
+{ 
+  kaapi_assert_debug( (arch >=0) && (arch < KAAPI_PROC_TYPE_MAX) );
+  task->u.s.arch = 1U<<arch;
+}
+
+static inline void kaapi_task_set_arch_mask(kaapi_task_t* task, uint8_t arch_mask)
+{ 
+  task->u.s.arch = arch_mask;
 }
 
 
@@ -1020,12 +1049,6 @@ extern int kaapi_sched_sync( void );
 */
 extern int kaapi_sched_computereadylist( void );
 
-/** Clear the tasklist of the current frame that has been previously 
-    computed by 'kaapi_sched_computereadylist'
-    \retval EINVAL invalid current thread
-    \retval 0 in case of success
-*/
-extern int kaapi_sched_clearreadylist( void );
 
 /* ========================================================================= */
 /* API for adaptive algorithm                                                */
@@ -1547,6 +1570,7 @@ typedef struct kaapi_data_t {
   kaapi_pointer_t               ptr;                /* address of data */
   kaapi_memory_view_t           view;               /* view of data */
   struct kaapi_metadata_info_t* mdi;                /* if not null, pointer to the meta data */
+  struct kaapi_mem_data_t*	kmd;		                /* TODO review */
 } kaapi_data_t;
 
 
@@ -1555,10 +1579,17 @@ typedef struct kaapi_data_t {
 */
 typedef kaapi_data_t* kaapi_handle_t;
 
-
 /** Synchronize all shared memory in the local address space to the up-to-date value.
 */
 extern int kaapi_memory_synchronize(void);
+
+extern int kaapi_memory_synchronize_pointer( void * );
+
+/* Register memory for Xkaapi optimizations */
+extern int kaapi_memory_register( void* ptr, kaapi_memory_view_t view );
+
+/* Register memory for Xkaapi optimizations */
+extern void kaapi_memory_unregister( void* ptr );
 
 /** Create a thread group with size threads. 
     Mapping function should be set at creation step. 
@@ -1911,7 +1942,7 @@ static inline kaapi_workqueue_index_ull_t
 /**
 */
 static inline kaapi_workqueue_index_t 
-  kaapi_workqueue_size( kaapi_workqueue_t* kwq )
+  kaapi_workqueue_size( const kaapi_workqueue_t* kwq )
 {
   kaapi_workqueue_index_t size = kwq->rep.li.end - kwq->rep.li.beg;
   return (size <0 ? 0 : size);
@@ -1920,7 +1951,7 @@ static inline kaapi_workqueue_index_t
 /**
 */
 static inline kaapi_workqueue_index_ull_t 
-  kaapi_workqueue_size_ull( kaapi_workqueue_t* kwq )
+  kaapi_workqueue_size_ull( const kaapi_workqueue_t* kwq )
 {
   kaapi_workqueue_index_ull_t b = kwq->rep.ull.beg;
   kaapi_workqueue_index_ull_t e = kwq->rep.ull.end;
@@ -1991,6 +2022,53 @@ static inline int kaapi_workqueue_push_ull(
   }
   return EINVAL;
 }
+
+/** This function should be called by the current kaapi thread that own the workqueue.
+    The function pushes work into the workqueue.
+    Assuming that before the call, the workqueue is [beg,end).
+    After the successful call to the function the workqueu becomes [beg,newend).
+    newend is assumed to be greather than end.
+    In case of concurrency, the lock on the queue must be taken.
+    Return 0 in case of success 
+    Return EINVAL if invalid arguments
+*/
+static inline int kaapi_workqueue_rpush(
+  kaapi_workqueue_t*      kwq, 
+  kaapi_workqueue_index_t newend
+)
+{
+  if ( newend > kwq->rep.li.end  )
+  {
+    kaapi_mem_barrier();
+    kwq->rep.li.end = newend;
+    return 0;
+  }
+  return EINVAL;
+}
+
+/** This function should be called by the current kaapi thread that own the workqueue.
+    The function pushes work into the workqueue.
+    Assuming that before the call, the workqueue is [beg,end).
+    After the successful call to the function the workqueu becomes [beg,newend).
+    newend is assumed to be greather than end.
+    In case of concurrency, the lock on the queue must be taken.
+    Return 0 in case of success 
+    Return EINVAL if invalid arguments
+*/
+static inline int kaapi_workqueue_rpush_ull(
+  kaapi_workqueue_t*          kwq, 
+  kaapi_workqueue_index_ull_t newend
+)
+{
+  if ( newend > kwq->rep.ull.end  )
+  {
+    kaapi_mem_barrier();
+    kwq->rep.li.end = newend;
+    return 0;
+  }
+  return EINVAL;
+}
+
 
 /** Helper function called in case of conflict.
     Return EBUSY is the queue is empty.
@@ -2234,6 +2312,9 @@ int kaapi_splitter_default
 #define KAAPI_PERF_ID_QUEUETHREAD   10 /* count the maximal number of thread in queue */
 #define KAAPI_PERF_ID_TASKLISTCALC  11 /* tick to compute task lists in ns */
 
+#define KAAPI_PERF_ID_COMM_OUT	    12 /* host to device transfers */
+#define KAAPI_PERF_ID_COMM_IN	    13 /* device to host transfers */
+
 #define KAAPI_PERF_ID_ENDSOFTWARE   14 /* mark end of software counters */
 
 #define KAAPI_PERF_ID_PAPI_BASE    (KAAPI_PERF_ID_ENDSOFTWARE)
@@ -2311,7 +2392,7 @@ extern size_t kaapi_perf_counter_num(void);
 
 /** return the size of the view
 */
-static inline size_t kaapi_memory_view_size( const kaapi_memory_view_t* kmv )
+static inline size_t kaapi_memory_view_size( const kaapi_memory_view_t* const kmv )
 {
   switch (kmv->type) 
   {
@@ -2469,6 +2550,11 @@ extern kaapi_task_body_t kaapi_format_taskregister_body(
         int                         archi
 );
 
+extern kaapi_task_body_t kaapi_format_taskregister_alphabody( 
+        struct kaapi_format_t*      fmt,
+        kaapi_task_body_t           body
+);
+
 /** \ingroup TASK
     Register a data structure format
 */
@@ -2523,6 +2609,10 @@ extern struct kaapi_format_t* kaapi_format_resolvebyfmit(kaapi_format_id_t key);
     isinit = 1;\
     kaapi_format_structregister( &formatobject, name, size, cstor, dstor, cstorcopy, copy, assign );\
   }
+
+extern void kaapi_fmt_set_dot_name( struct kaapi_format_t* , const char* );
+
+extern void kaapi_fmt_set_dot_color( struct kaapi_format_t* , const char* );
 
 
 #ifdef __cplusplus

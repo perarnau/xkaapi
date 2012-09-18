@@ -56,6 +56,8 @@
 
 #if defined(KAAPI_USE_PERFCOUNTER)
 #include <signal.h>
+
+#include "machine/cuda/kaapi_cuda_trace.h"
 #endif
 
 /*
@@ -227,6 +229,9 @@ int kaapi_mt_init(void)
 #if defined(KAAPI_USE_PERFCOUNTER)
   /* call prior setconcurrency */
   kaapi_perf_global_init();
+  if (getenv("KAAPI_RECORD_TRACE") !=0) {
+    kaapi_cuda_trace_init();
+  }
   /* kaapi_perf_thread_init(); */
 #endif
     
@@ -268,7 +273,36 @@ int kaapi_mt_init(void)
   KAAPI_EVENT_PUSH1(kproc, kproc->thread, KAAPI_EVT_TASK_BEG, task );
   
 
+#if defined(KAAPI_DEBUG)
+  /* set signal handler print callstack */
+  {
+    struct sigaction sa;
+    sa.sa_handler = _kaapi_signal_dump_backtrace;
+    sa.sa_flags = SA_RESTART;
+    sigemptyset (&sa.sa_mask);
+    sigaction(SIGABRT, &sa, NULL);
+    sigaction(SIGBUS,  &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
+    sigaction(SIGSEGV, &sa, NULL);
+    sigaction(SIGFPE, &sa, NULL);
+    sigaction(SIGILL, &sa, NULL);
+  }
 #if defined(KAAPI_USE_PERFCOUNTER)
+  if (getenv("KAAPI_RECORD_TRACE") !=0)
+  {
+    /* set signal handler to flush event */
+    struct sigaction sa;
+    sa.sa_handler = _kaapi_signal_dump_counters;
+    sa.sa_flags = SA_RESTART;
+    sigemptyset (&sa.sa_mask);
+    sigaction(SIGINT,  &sa, NULL);
+    sigaction(SIGQUIT, &sa, NULL);
+    sigaction(SIGTSTP, &sa, NULL);
+    /* other signals: SIGABRT, SIGBUS, SIGTERM, SIGSEGV are handled by backtrace_sighandler */
+  }
+#endif
+  
+#elif defined(KAAPI_USE_PERFCOUNTER)
   if (getenv("KAAPI_RECORD_TRACE") !=0)
   {
     /* set signal handler to flush event */
@@ -349,10 +383,18 @@ int kaapi_mt_finalize(void)
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_EVENT_PUSH0(kaapi_all_kprocessors[0], 0, KAAPI_EVT_KPROC_STOP);
+#if defined(KAAPI_USE_CUDA)
+  if (getenv("KAAPI_RECORD_TRACE") !=0) {
+      kaapi_cuda_trace_finalize();
+  }
+#endif /* KAAPI_USE_CUDA */
   kaapi_perf_thread_fini(kaapi_all_kprocessors[0]);
   kaapi_perf_global_fini();
 #endif
 
+#if defined(KAAPI_USE_CUDA)
+  kaapi_mem_host_map_destroy_all(kaapi_get_current_mem_host_map());
+#endif
 
   for (i=0; i<kaapi_count_kprocessors; ++i)
   {
