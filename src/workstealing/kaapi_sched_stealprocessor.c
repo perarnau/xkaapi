@@ -82,7 +82,7 @@ int kaapi_sched_stealprocessor(
   }
 
 #if 1 /* to disable steal in kproc ready list */
-  if( !kaapi_readytasklist_isempty( kproc->rtl ) )
+  if (!kaapi_readytasklist_isempty( kproc->rtl ))
     kaapi_sched_stealreadytasklist( thread, kproc->rtl, lrequests, lrrange );
 #endif
 
