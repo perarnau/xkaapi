@@ -205,7 +205,9 @@ redo_select:
       (kaapi_atomic64_t*)&KAAPI_PERF_REG(victim.kproc, KAAPI_PERF_ID_STEALIN),
       kaapi_listrequest_iterator_count(&lri)
     );
+    ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
 #endif
+
     kaapi_sched_stealprocessor( victim.kproc, &victim_stealctxt->lr, &lri );
 
     /* reply failed for all others requests */
@@ -266,13 +268,10 @@ redo_select:
     }
   }
   
-#if defined(KAAPI_USE_PERFCOUNTER)
-  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
-#endif
-
   return KAAPI_REQUEST_S_NOK;
   
 return_value:
+
   /* mark current processor as no stealing anymore */
   kaapi_assert_debug( (kaapi_request_status_get(&status) != KAAPI_REQUEST_S_POSTED) ); 
 
