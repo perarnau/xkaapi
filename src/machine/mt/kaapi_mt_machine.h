@@ -251,7 +251,7 @@ static inline int kaapi_listrequest_iterator_empty(kaapi_listrequest_iterator_t*
 { return kaapi_bitmap_value_empty(&lrrange->bitmap) && (lrrange->idcurr == -1); }
 
 /* clear the bit the at given position
- */
+*/
 static inline void kaapi_listrequest_iterator_unset_at(
   kaapi_listrequest_iterator_t* lrrange, 
   int pos
@@ -271,8 +271,7 @@ static inline void kaapi_listrequest_iterator_unset_at(
 static inline int kaapi_listrequest_iterator_count(
     kaapi_listrequest_iterator_t* lrrange
 )
-{ return kaapi_bitmap_value_count(&lrrange->bitmap) 
-      + (int)(lrrange->idcurr == -1 ? 0 : 1); }
+{ return kaapi_bitmap_value_count(&lrrange->bitmap) + (int)(lrrange->idcurr == -1 ? 0 : 1); }
 
 /* return the bitmap of all requests */
 static inline kaapi_bitmap_value_t kaapi_listrequest_iterator_bitmap(
