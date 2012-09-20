@@ -165,7 +165,6 @@ redo_select:
     &status, 
     &kproc->thread->stack.stackframe[0] 
   );
-  
 
 #if defined(KAAPI_USE_AGGREGATION)
   /* (2) In case of aggregation, lock after thief has posted its request.
