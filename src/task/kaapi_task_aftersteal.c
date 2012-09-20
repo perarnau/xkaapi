@@ -72,7 +72,8 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread, kaapi_task_t*
   */
   for (i=0; i<count_params; ++i)
   {
-    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(fmt, i, taskarg) );
+    kaapi_access_mode_t mode = kaapi_format_get_mode_param(fmt, i, taskarg);
+    kaapi_access_mode_t m = KAAPI_ACCESS_GET_MODE( mode ); /* forget extra flags */
     if (m == KAAPI_ACCESS_MODE_V)
       continue;
 
@@ -112,10 +113,15 @@ void kaapi_aftersteal_body( void* taskarg, kaapi_thread_t* thread, kaapi_task_t*
             (*fmt_param->assign)( access_param.data, &view_dest, access_param.version, &view_src );
         }
         else {
-          kaapi_format_reduce_param( fmt, i, taskarg, access_param.version );
+          /* this is a CW mode : do reduction except if it is INPLACE */
+          if ((mode & KAAPI_ACCESS_MODE_IP) ==0)
+            kaapi_format_reduce_param( fmt, i, taskarg, access_param.version );
         }
-        if (fmt_param->dstor !=0) (*fmt_param->dstor) ( access_param.version );
-        free(access_param.version);
+        if ((mode & KAAPI_ACCESS_MODE_IP) ==0)
+        {
+          if (fmt_param->dstor !=0) (*fmt_param->dstor) ( access_param.version );
+          free(access_param.version);
+        }
       }
       access_param.version = 0;
 #if defined(KAAPI_DEBUG)

@@ -70,6 +70,7 @@ int kaapi_sched_stealprocessor(
     thread = cell->thread;
     if (thread != 0)
       kaapi_sched_stealstack( thread, lrequests, lrrange );
+    // TODO impact if iteration in reverse order ???
     cell = cell->prev;
   }
 

@@ -162,9 +162,7 @@ komp_init_parallel_start (
     num_threads = 1;
   else {
     if (num_threads == 0)
-      num_threads = ctxt->icv.next_numthreads;
-    if (num_threads > kaapi_getconcurrency())
-      num_threads = kaapi_getconcurrency();
+      num_threads = (komp_env_nthreads != 0) ? komp_env_nthreads : ctxt->icv.next_numthreads;
   }
 
   thread = kaapi_threadcontext2thread(kproc->thread);
@@ -183,8 +181,6 @@ komp_init_parallel_start (
         sizeof(komp_teaminfo_t), 
         8
   );
-  /* lock for ??? */
-  kaapi_atomic_initlock(&teaminfo->lock);
 
   /* barrier for the team */
   komp_barrier_init (&teaminfo->barrier, num_threads);
@@ -217,6 +213,32 @@ komp_init_parallel_start (
   return teaminfo;
 }
 
+static void
+komp_task_prepare (kaapi_task_t *task, 
+                   komp_parallel_task_arg_t *allarg,
+                   kaapi_thread_t *thread,
+                   void (*fn) (void *),
+                   void *data,
+                   komp_teaminfo_t *teaminfo,
+                   kompctxt_t* ctxt,
+                   int task_logical_id)
+{
+  komp_parallel_task_arg_t *arg = NULL;
+  kaapi_task_init( 
+                  task, 
+                  komp_trampoline_task_parallel, 
+                  allarg + task_logical_id
+                  );
+  arg = kaapi_task_getargst( task, komp_parallel_task_arg_t );
+  arg->threadid       = task_logical_id;
+  arg->fn             = fn;
+  arg->data           = data;
+  arg->teaminfo       = teaminfo;
+  /* WARNING: see spec: nextnum threads is inherited ? */
+  arg->nextnumthreads = ctxt->icv.next_numthreads;
+  arg->nestedlevel    = ctxt->icv.nested_level;
+  arg->nestedparallel = ctxt->icv.nested_parallel;
+}
 
 void 
 komp_parallel_start (
@@ -230,7 +252,6 @@ komp_parallel_start (
   kaapi_thread_t* thread;
   komp_teaminfo_t* teaminfo;
   kaapi_task_t* task;
-  komp_parallel_task_arg_t* arg;
   komp_parallel_task_arg_t* allarg;
     
   /* begin parallel region: also push a new frame that will be pop
@@ -253,27 +274,14 @@ komp_parallel_start (
 
 
 //POUR BENJAMIN: force ou non a pousser une tache dans la queue d'un Kthread particulier
-#if 0  /* OLD CODE: push locally all tasks that may be steal by any thread */
+#if 0  
+  /* OLD CODE: push locally all tasks that may be steal by any thread */
   /* The master thread (id 0) calls fn (data) directly. That's why we
      start this loop from id = 1.*/
   task = kaapi_thread_toptask(thread);
   for (int i = 1; i < num_threads; i++)
   {
-    kaapi_task_init( 
-        task, 
-        komp_trampoline_task_parallel, 
-        allarg+i
-    );
-    arg = kaapi_task_getargst( task, komp_parallel_task_arg_t );
-    arg->threadid       = i;
-    arg->fn             = fn;
-    arg->data           = data;
-    arg->teaminfo       = teaminfo;
-    /* WARNING: see spec: nextnum threads is inherited ? */
-    arg->nextnumthreads = ctxt->icv.next_numthreads;
-    arg->nestedlevel    = ctxt->icv.nested_level;
-    arg->nestedparallel = ctxt->icv.nested_parallel;
-
+    komp_task_prepare (task, allarg, thread, fn, data, teaminfo, ctxt, i);
     task = kaapi_thread_nexttask(thread, task);
   }
   kaapi_thread_push_packedtasks(thread, num_threads-1);
@@ -287,27 +295,37 @@ komp_parallel_start (
      the task (...)
   */
 
-  /* The master thread (id 0) calls fn (data) directly. That's why we
-     start this loop from id = 1.*/
-  for (int i = 1; i < num_threads; i++)
-  {
-    task = kaapi_thread_toptask(thread);
-    kaapi_task_init( 
-        task, 
-        komp_trampoline_task_parallel, 
-        allarg+i
-    );
-    arg = kaapi_task_getargst( task, komp_parallel_task_arg_t );
-    arg->threadid       = i;
-    arg->fn             = fn;
-    arg->data           = data;
-    arg->teaminfo       = teaminfo;
-    /* WARNING: see spec: nextnum threads is inherited ? */
-    arg->nextnumthreads = ctxt->icv.next_numthreads;
-    arg->nestedlevel    = ctxt->icv.nested_level;
-    arg->nestedparallel = ctxt->icv.nested_parallel;
+  int nb_worker_threads = kaapi_getconcurrency ();
+  int tasks_per_thread[nb_worker_threads];
+  int chunk_size = num_threads / nb_worker_threads;
+  int remaining_tasks = num_threads - (nb_worker_threads * chunk_size);
 
-    kaapi_thread_distribute_task( thread, i );
+  for (int i = 0; i < nb_worker_threads; i++)
+    tasks_per_thread[i] = chunk_size;
+  
+  int thread_id = 0;
+  while (remaining_tasks != 0)
+  {
+    tasks_per_thread[thread_id]++;
+    thread_id = (thread_id + 1) % nb_worker_threads;
+    remaining_tasks--;
+  }
+  
+  int task_id = 1;
+  /* Distribute the num_threads tasks over the nb_worker_threads workers. */
+  for (int i = 0; i < nb_worker_threads; i++)
+  {
+    int nb_pushed_tasks = (i == 0) ? 1 : 0; /* The master thread calls fn (data) directly. */
+    
+    task = kaapi_thread_toptask(thread);
+    while (nb_pushed_tasks < tasks_per_thread[i])
+    {
+      komp_task_prepare (task, allarg, thread, fn, data, teaminfo, ctxt, task_id++);
+      kaapi_thread_distribute_task (thread, i);
+
+      task = kaapi_thread_nexttask(thread, task);      
+      nb_pushed_tasks++;
+    }
   }
 #endif  
 }
@@ -343,6 +361,5 @@ GOMP_parallel_end (void)
   kproc->libkomp_tls = old_ctxt;
 
   /* free shared resource */
-  kaapi_atomic_destroylock(&teaminfo->lock);
   komp_barrier_destroy(&teaminfo->barrier);
 }

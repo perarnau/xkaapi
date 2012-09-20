@@ -68,6 +68,7 @@ void kaapi_taskwrite_body(
   void*                 orig_task_args;
   kaapi_access_t        access_param;
 
+  kaapi_access_mode_t   mode;
   kaapi_access_mode_t   mode_param;
   const kaapi_format_t* fmt_param;
   unsigned int          war_param;     /* */
@@ -94,7 +95,8 @@ void kaapi_taskwrite_body(
     count_params = kaapi_format_get_count_params( fmt, orig_task_args );
     for (i=0; i<count_params; ++i)
     {
-      mode_param = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(fmt, i, copy_task_args) );
+      mode            = kaapi_format_get_mode_param(fmt, i, copy_task_args); 
+      mode_param      = KAAPI_ACCESS_GET_MODE( mode ); 
       if (mode_param == KAAPI_ACCESS_MODE_V) 
       {
         fmt_param       = kaapi_format_get_fmt_param(fmt, i, orig_task_args);
@@ -103,7 +105,7 @@ void kaapi_taskwrite_body(
         continue;
       }
 
-      if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param) || KAAPI_ACCESS_IS_CUMULWRITE(mode_param))
+      if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param) || (KAAPI_ACCESS_IS_CUMULWRITE(mode_param) && ((mode & KAAPI_ACCESS_MODE_IP) ==0)))
       {
         access_param      = kaapi_format_get_access_param(fmt, i, orig_task_args); 
         copy_access_param = kaapi_format_get_access_param(fmt, i, copy_task_args); 
@@ -152,6 +154,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   void*                  data_param;
   kaapi_access_t         access_param;
 
+  kaapi_access_mode_t    mode;
   kaapi_access_mode_t    mode_param;
   const kaapi_format_t*  fmt_param;
 
@@ -220,7 +223,8 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 
     for (i=0; i<count_params; ++i)
     {
-      mode_param      = KAAPI_ACCESS_GET_MODE( kaapi_format_get_mode_param(fmt, i, orig_task_args) ); 
+      mode            = kaapi_format_get_mode_param(fmt, i, orig_task_args); 
+      mode_param      = KAAPI_ACCESS_GET_MODE( mode ); 
       fmt_param       = kaapi_format_get_fmt_param(fmt, i, orig_task_args);
       
       if (mode_param == KAAPI_ACCESS_MODE_V) 
@@ -237,11 +241,13 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
       copy_access_param.data    = access_param.data;
       copy_access_param.version = 0; /*access_param->version; / * not required... * / */
       
-      if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param) || KAAPI_ACCESS_IS_CUMULWRITE(mode_param) )
+      /* allocate new data for the war or cw param, else points to the original data
+         if mode is CW and Inplace flag is set, then do not copy data.
+      */
+      if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param) || (KAAPI_ACCESS_IS_CUMULWRITE(mode_param) && ((mode & KAAPI_ACCESS_MODE_IP) ==0)) )
       {
         if (((war_param & (1<<i)) !=0) || ((cw_param & (1<<i)) !=0))
         { 
-          /* allocate new data for the war or cw param, else points to the original data !*/
           kaapi_memory_view_t view = kaapi_format_get_view_param(fmt, i, orig_task_args);
 #if defined(KAAPI_DEBUG)
           copy_access_param.data    = calloc(1, kaapi_memory_view_size(&view));
@@ -255,7 +261,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
           if ((cw_param & (1<<i)) !=0)
             kaapi_format_redinit_neutral(fmt, i, copy_task_args, copy_access_param.data );
           
-          /* set new data to copy of the data with new view */
+          /* set new data to copy with new view */
           kaapi_format_set_access_param(fmt, i, copy_task_args, &copy_access_param );
           kaapi_memory_view_reallocated( &view );
           kaapi_format_set_view_param( fmt, i, copy_task_args, &view );

@@ -761,6 +761,10 @@ printf("OUT %s\n", __PRETTY_FUNCTION__);  fflush(stdout);
 /* Called by worker, cancel any pending tasks, and mark sequence so that it does not accept any more tasks */
 int QUARK_Sequence_Cancel( Quark *quark, Quark_Sequence *sequence )
 {
+  int retval;
+  if ( quark==NULL || sequence==NULL ) return QUARK_ERR;
+  return QUARK_SUCCESS;
+
 //printf("%s\n", __PRETTY_FUNCTION__);  
   kaapi_assert(0);
   return 0;

@@ -13,7 +13,5 @@ main (int argc, char **argv)
     cpt++;
   }
 
-  test_check ("single", (cpt == 1));
-  
-  return 0;
+  return !(cpt == 1);
 }

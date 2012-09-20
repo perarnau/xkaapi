@@ -17,7 +17,5 @@ main (int argc, char **argv)
     cpt++;
   }
 
-  test_check ("critical", (cpt == nthreads));
-
-  return 0;
+  return !(cpt == nthreads);
 }

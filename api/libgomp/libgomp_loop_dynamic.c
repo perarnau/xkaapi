@@ -133,6 +133,8 @@ static inline void komp_loop_dynamic_start_master(
   kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
   komp_teaminfo_t* teaminfo = ctxt->teaminfo;
 
+  teaminfo->current_ordered_index = start;
+  
   long ka_start = 0;
   long ka_end   = (end-start+incr-1)/incr;
   
@@ -171,7 +173,10 @@ static inline void komp_loop_dynamic_start_master(
 
   /* publish the global work information */
   kaapi_writemem_barrier();
-  teaminfo->gwork = workshare->lwork->global;
+  if (workshare->lwork !=0)
+    teaminfo->gwork = workshare->lwork->global;
+  else
+    teaminfo->gwork = 0;
 }
 
 
@@ -186,7 +191,7 @@ static inline void komp_loop_dynamic_start_slave(
   long start, end;
 
   /* wait global work becomes ready */
-  kaapi_assert_debug(gwork !=0);
+  if (gwork ==0) return;
         
   /* get own slice */
   if (!kaapic_global_work_pop( gwork, kproc->kid, &start, &end))
@@ -210,7 +215,7 @@ bool GOMP_loop_dynamic_start (
   long *istart, 
   long *iend
 )
-{  
+{
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
   komp_teaminfo_t* teaminfo = ctxt->teaminfo;
@@ -218,6 +223,14 @@ bool GOMP_loop_dynamic_start (
 
   komp_workshare_t* workshare = 
     komp_loop_dynamic_start_init( kproc, start, incr );
+
+  if (((incr >0) && (end <= start)) || ((incr <0) && (start <= end)))
+  {
+    *istart = *iend = 0;
+    ctxt->workshare->rep.li.start = 0;
+    ctxt->workshare->rep.li.incr  = 0;
+    return 0;
+  }
 
   if (ctxt->icv.thread_id ==0)
   {
@@ -256,6 +269,8 @@ bool GOMP_loop_dynamic_start (
                *istart * ctxt->workshare->rep.li.incr;
     *iend   = ctxt->workshare->rep.li.start + 
                *iend   * ctxt->workshare->rep.li.incr;
+    ctxt->workshare->cur_start = *istart;
+    ctxt->workshare->cur_end = *iend;
     return 1;
   }
   return 0;
@@ -269,6 +284,11 @@ bool GOMP_loop_dynamic_next (long *istart, long *iend)
   kaapi_processor_t*   kproc = kaapi_get_current_processor();
   kompctxt_t* ctxt  = komp_get_ctxtkproc( kproc );
 
+  if ((ctxt->workshare ==0) || (ctxt->workshare->rep.li.incr ==0))
+  {
+    *istart = *iend = 0;
+    return 0;
+  }
   if (kaapic_foreach_worknext(
         ctxt->workshare->lwork, 
         istart,
@@ -279,6 +299,8 @@ bool GOMP_loop_dynamic_next (long *istart, long *iend)
                *istart * ctxt->workshare->rep.li.incr;
     *iend   = ctxt->workshare->rep.li.start + 
                *iend   * ctxt->workshare->rep.li.incr;
+    ctxt->workshare->cur_start = *istart;
+    ctxt->workshare->cur_end = *iend;
     return 1;
   }
   return 0;
@@ -343,6 +365,14 @@ void GOMP_parallel_loop_dynamic_start (
 
   /* initialize master workshare construct */
   workshare = komp_loop_dynamic_start_init( kproc, start, incr );
+  
+  if (((incr >0) && (end <= start)) || ((incr <0) && (start <= end)))
+  {
+    workshare->rep.li.start = 0;
+    workshare->rep.li.incr  = 0;
+    return;
+  }
+
   komp_loop_dynamic_start_master(
     kproc,
     workshare,
@@ -483,14 +513,12 @@ bool GOMP_loop_ordered_dynamic_start (
           long *iend
 )
 {
-  printf("%s:: \n", __FUNCTION__);
-  return 0;
+  return GOMP_loop_dynamic_start (start, end, incr, chunk_size, istart, iend);
 }
 
 bool GOMP_loop_ordered_dynamic_next (long *istart, long *iend)
-{
-  printf("%s:: \n", __FUNCTION__);
-  return 0;
+{  
+  return GOMP_loop_dynamic_next (istart, iend);
 }
 
 

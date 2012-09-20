@@ -89,6 +89,8 @@ void komp_barrier_init (struct komp_barrier *barrier, unsigned int num);
 void komp_barrier_destroy (struct komp_barrier *barrier);
 void komp_barrier_wait (struct komp_barrier *barrier);
 
+extern unsigned long komp_env_nthreads;
+
 struct kompctxt_t;
 struct komp_workshare_t;
 typedef kaapic_global_work_t komp_globalworkshare_t;
@@ -125,8 +127,8 @@ typedef struct komp_icv_t {
    of the runing Kaapi thread.
 */
 typedef struct komp_teaminfo_t {
-  kaapi_lock_t                     lock;
   komp_barrier_t                   barrier;
+  int volatile                     current_ordered_index;
   void*  volatile                  single_data;  /* 0 or the & of copy_end */
   unsigned int volatile            section_state;
   unsigned int volatile            ordered_state;  
@@ -155,6 +157,8 @@ typedef struct komp_workshare_t {
       bool                     up;     /* upward / downward count */
     } ull;
   } rep;
+  long                         cur_start;
+  long                         cur_end;
   unsigned long                serial; /* serial number of workshare construct */
 } komp_workshare_t;
 
@@ -203,7 +207,6 @@ static inline kompctxt_t* komp_get_ctxtkproc( kaapi_processor_t* kproc )
 #if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
     kaapic_foreach_attr_init( &first->ctxt.icv.attr );
 #endif
-    kaapi_atomic_initlock(&first->teaminfo.lock);
     komp_barrier_init (&first->teaminfo.barrier, 1);
     first->teaminfo.ordered_state       = 0;
     first->teaminfo.single_data = 0;
@@ -298,5 +301,27 @@ extern int  komp_test_nest_lock_25 (omp_nest_lock_25_t *) __GOMP_NOTHROW;
 __attribute__((weak))
 extern void komp_set_datadistribution_bloccyclic( unsigned long long size, unsigned int length );
 
+extern void omp_set_num_threads (int);
+extern int omp_get_num_threads (void);
+extern int omp_get_thread_num (void);
+extern int omp_get_max_threads (void);
+extern int omp_get_num_procs (void);
+extern int omp_in_parallel (void);
+extern void omp_set_dynamic (int);
+extern int omp_get_dynamic (void);
+extern void omp_set_nested (int);
+extern int omp_get_nested (void);
+extern void omp_set_schedule (omp_sched_t, int);
+extern void omp_get_schedule (omp_sched_t *, int *);
+extern int omp_get_thread_limit (void);
+extern void omp_set_max_active_levels (int);
+extern int omp_get_max_active_levels (void);
+extern int omp_get_level (void);
+extern int omp_get_ancestor_thread_num (int);
+extern int omp_get_team_size (int);
+extern int omp_get_active_level (void);
+extern int omp_in_final (void);
+extern double omp_get_wtime (void);
+extern double omp_get_wtick (void);
 
 #endif // #ifndef _KAAPI_LIBGOMP_
