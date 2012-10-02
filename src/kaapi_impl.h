@@ -617,11 +617,13 @@ extern void kaapi_sched_idle ( kaapi_processor_t* proc );
 
 /** \ingroup WS
     Suspend the current context due to unsatisfied condition and do stealing until the condition becomes true.
+    The condition is evaluated as fcondition(arg_fcondition) and it is true (!=0) when the thread can continue
+    its execution.
     \retval 0 in case of success
     \retval EINTR in case of termination detection
     \TODO reprendre specs
 */
-extern int kaapi_sched_suspend ( kaapi_processor_t* kproc );
+extern int kaapi_sched_suspend ( kaapi_processor_t* kproc, int (*fcondition)(void* ), void* arg_fcondition );
 
 /** \ingroup WS
     Synchronize the current control flow until all the task in the current frame have been executed.
