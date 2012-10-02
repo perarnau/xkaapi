@@ -32,7 +32,5 @@ main (int argc, char **argv)
       passed = KO;
   }
   
-  test_check ("task-firstprivate", (passed == OK));
-  
-  return 0;
+  return !(passed == OK);
 }

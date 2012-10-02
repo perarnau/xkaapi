@@ -55,9 +55,9 @@ void GOMP_loop_end (void)
   kaapi_processor_t* kproc = kaapi_get_current_processor();
   kaapi_thread_context_t* const self_thread = kproc->thread;
   kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
-  
+
   /* implicit barrier at the end ? It will deadlock if parallel region task is steal ...*/
-  komp_barrier_wait(&ctxt->teaminfo->barrier);
+  komp_barrier_wait(ctxt, &ctxt->teaminfo->barrier);
 
   ctxt->teaminfo->gwork = 0;
   if (ctxt->icv.thread_id == 0)
@@ -68,16 +68,9 @@ void GOMP_loop_end (void)
 
 void GOMP_loop_end_nowait (void)
 {
-  GOMP_loop_end();
-#if 0
-  kaapi_processor_t* kproc = kaapi_get_current_processor();
-  kaapi_thread_context_t* const self_thread = kproc->thread;
-  kompctxt_t* ctxt = komp_get_ctxtkproc( kproc );
-
-  ctxt->teaminfo->gwork = 0;
+  kompctxt_t *ctxt = komp_get_ctxt ();
   if (ctxt->icv.thread_id == 0)
-    kaapic_foreach_workend( self_thread, ctxt->workshare->lwork);
+    GOMP_loop_end ();
   else
-    kaapic_foreach_local_workend( self_thread, ctxt->workshare->lwork );
-#endif
+    komp_barrier_wait_start (&komp_get_ctxt()->teaminfo->barrier);
 }

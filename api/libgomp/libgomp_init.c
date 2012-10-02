@@ -44,10 +44,16 @@
 */
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdbool.h>
 #include <ctype.h>
 #include <errno.h>
-#include "kaapic.h"
+
+#include "kaapi_impl.h"
+#include "kaapic_impl.h"
+
+unsigned long komp_env_nthreads = 0;
+unsigned long omp_max_active_levels = 0;
 
 /* Parse an unsigned long environment varible.  Return true if one was
    present and it was successfully parsed.  */
@@ -85,27 +91,76 @@ parse_unsigned_long (const char *name, unsigned long *pvalue)
   return false;
 }
 
+#define __append_string_with_format(kaapi_cpuset_string, format, ...)  \
+do {                                                                   \
+  char tmp[16];                                                        \
+  sprintf (tmp, format, __VA_ARGS__);                                  \
+  strcat (kaapi_cpuset_string, tmp);                                   \
+} while (0)
+
+
+/* This function parses the content of the GOMP_CPU_AFFINITY 
+   environment variable to generate something that fits the semantic 
+   of the KAAPI_CPUSET environment variable. */
+static void
+komp_parse_cpu_affinity (void)
+{
+  char *cpu_affinity = getenv ("GOMP_CPU_AFFINITY");
+  if (cpu_affinity == NULL)
+    return;
+  
+  char kaapi_cpuset[512];
+  bzero (kaapi_cpuset, 512 * sizeof (char));
+  
+  char *cpuset_string = NULL;  
+  while ((cpuset_string = strsep (&cpu_affinity, " \t")) != NULL)
+  {
+    char *first_cpu = strsep (&cpuset_string, "-");
+    char *last_cpu = strsep (&cpuset_string, ":");
+    char *stride = cpuset_string;
+
+    if (stride != NULL)
+    {
+      int begin = atoi (first_cpu);
+      int end = atoi (last_cpu);
+      int hop = atoi (stride);
+      
+      for (int i = begin; i < end; i += hop)
+        __append_string_with_format (kaapi_cpuset, "%d,", i); 
+
+    } else {
+      if (last_cpu != NULL)
+        __append_string_with_format (kaapi_cpuset, "%s:%s,", first_cpu, last_cpu); 
+      else 
+        __append_string_with_format (kaapi_cpuset, "%s,", first_cpu); 
+    }
+  }
+  kaapi_cpuset[strlen (kaapi_cpuset) - 1] = '\0';
+  setenv ("KAAPI_CPUSET", kaapi_cpuset, 1);
+}
 
 static void __attribute__ ((constructor))  
 initialize_lib (void) 
 {
-  unsigned long env_nthreads = 0;
-  
-  if (parse_unsigned_long ("OMP_NUM_THREADS", &env_nthreads))
+  if (parse_unsigned_long ("OMP_NUM_THREADS", &komp_env_nthreads))
   {
+#if 0 /* This may break programs that use more threads than cores. */ 
     /* Kaapi inherits OMP_NUM_THREADS */
     setenv ("KAAPI_CPUCOUNT", getenv ("OMP_NUM_THREADS"), 1);
+#endif
   }
-  /* here to do: convert GOM_AFFINITY to KAAPI_CPUSET */
+  
+  /* Turn GOMP_CPU_AFFINITY into KAAPI_CPUSET. */
+  komp_parse_cpu_affinity ();
+
+  if (!parse_unsigned_long ("OMP_MAX_ACTIVE_LEVELS", &omp_max_active_levels))
+    omp_max_active_levels = KAAPI_MAX_RECCALL;
 
   kaapic_init (KAAPIC_START_ONLY_MAIN);
-
-  //kaapic_begin_parallel ();
 }
 
 static void __attribute__ ((destructor))
 finalize_lib (void)
 {
-  //kaapic_end_parallel (0);
   kaapic_finalize ();
 }

@@ -49,6 +49,25 @@
 # include "../../machine/cuda/kaapi_cuda_threadgroup_execframe.h"
 #endif
 
+static int _kaapi_condition_task_isready(void* thearg)
+{
+  kaapi_tasklist_t*       tasklist;
+  kaapi_thread_context_t* thread_condition = (kaapi_thread_context_t*)thearg;
+
+  /* first look if tasklist is built on this frame */
+  tasklist = thread_condition->stack.sfp->tasklist;
+  if (tasklist !=0) 
+  {
+    if (kaapi_thread_isready( thread_condition ) ) 
+      return 1;
+  } 
+  else {
+    kaapi_task_t* task_condition = thread_condition->stack.sfp->pc;
+    if (kaapi_task_isready( task_condition )) 
+      return 1;
+  }
+  return 0;
+}
 
 /** kaapi_sched_sync
     Here the stack frame is organised like this, task1 is the running task.
@@ -91,9 +110,8 @@ int kaapi_sched_sync_(kaapi_thread_context_t* thread)
   if ((thread->stack.sfp->tasklist == 0) && kaapi_frame_isempty( thread->stack.sfp ) ) 
     return 0;
 
-  /* here affinity should be deleted (not scalable concept) 
-     - use localkid to enforce execution into one specific
-     kprocessor
+  /* here affinity should be replace because affinity bitmap is not scalable. 
+     - use localkid to enforce execution into one specific kprocessor ?
   */
   kaapi_cpuset_copy(&save_affinity, &thread->affinity);
   kaapi_cpuset_clear(&thread->affinity);
@@ -111,26 +129,31 @@ int kaapi_sched_sync_(kaapi_thread_context_t* thread)
   
 redo:
 #if defined(KAAPI_USE_CUDA)
-  if( kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA ){
-    if (thread->stack.sfp->tasklist == 0) 
-      err = kaapi_cuda_thread_stack_execframe( &thread->stack );
+  if (thread->stack.proc->proc_type == KAAPI_PROC_TYPE_CUDA)
+  {
+    if (thread->sfp->tasklist == 0)
+      err = kaapi_thread_execframe(thread);
     else
-      err = kaapi_cuda_thread_execframe_tasklist( thread );
+      err = kaapi_cuda_thread_execframe_tasklist(thread);
   }
   else
 #endif /* KAAPI_USE_CUDA */
+  if (thread->stack.sfp->tasklist == 0) 
   {
-      if (thread->stack.sfp->tasklist == 0) {
-	err = kaapi_stack_execframe(&thread->stack);
-      } else {
-	err = kaapi_thread_execframe_tasklist(thread);
-      }
+    err = kaapi_stack_execframe(&thread->stack);
+  } 
+  else
+  {
+    err = kaapi_thread_execframe_tasklist(thread);
   }
   kaapi_assert_debug( kaapi_self_thread_context() == thread );
 
   if (err == EWOULDBLOCK)
   {
-    kaapi_sched_suspend( kaapi_get_current_processor() );
+    /* add assert: before thaht call kaapi_sched_suspend with kaapi_get_current_processor, but should be thread->proc */
+    kaapi_assert_debug( kaapi_get_current_processor() == thread->stack.proc );
+    kaapi_sched_suspend( thread->stack.proc, _kaapi_condition_task_isready, thread );
+
     kaapi_assert_debug( kaapi_self_thread_context() == thread );
     kaapi_assert_debug( thread->stack.proc == kaapi_get_current_processor() );
     goto redo;

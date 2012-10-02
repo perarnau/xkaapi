@@ -1,14 +1,20 @@
 #include <stdio.h>
+#include <omp.h>
 
 int
 main (int argc, char **argv)
 {
-
-#pragma omp parallel
+  omp_set_nested (1);
+  int cpt = 0;
+  
+#pragma omp parallel num_threads (2) shared (cpt)
   {
-#pragma omp parallel
-    printf ("Hello world!\n");
+#pragma omp parallel num_threads (2) shared (cpt)
+    {
+#pragma omp atomic
+      cpt++;
+    }
   }
   
-  return 0;
+  return !(cpt == 4);
 }

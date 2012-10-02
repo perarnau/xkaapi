@@ -55,8 +55,7 @@ omp_set_num_threads (int n)
 int
 omp_get_num_threads (void)
 {
-  kompctxt_t* ctxt = komp_get_ctxt();
-  return ctxt->teaminfo ? komp_get_ctxt()->teaminfo->numthreads : 1;
+  return omp_in_parallel () ? komp_get_ctxt()->teaminfo->numthreads : 1;
 }
 
 int
@@ -89,7 +88,7 @@ int
 omp_in_parallel(void)
 {
   kompctxt_t* ctxt = komp_get_ctxt();
-  return (ctxt->teaminfo !=0) && (ctxt->teaminfo->numthreads >1);
+  return (ctxt->teaminfo != 0) && (ctxt->teaminfo->numthreads > -1);
 }
 
 /*
@@ -163,11 +162,8 @@ omp_get_thread_limit(void)
 }
 
 
-/* TODO: 
-   1/ parse OMP_MAX_ACTIVE_LEVELS
-   2/ do not add thread is nested level > omp_max_active_levels
+/* TODO: do not add thread is nested level > omp_max_active_levels
 */
-int omp_max_active_levels = KAAPI_MAX_RECCALL;
 
 /*
 */
@@ -188,29 +184,72 @@ omp_get_max_active_levels(void)
 
 /*
 */
-int 
+int
 omp_get_level(void)
 {
   kompctxt_t* ctxt = komp_get_ctxt();
   return ctxt->icv.nested_level;
 }
 
-/*
-*/
+/* Returns the id of the level-th ancestor task/thread of the calling
+task. */
 int 
-omp_get_ancestor_thread_num(int level)
+omp_get_ancestor_thread_num (int level)
 {
-  return kaapi_getconcurrency();
+  kompctxt_t *ctxt = komp_get_ctxt ();
+  komp_teaminfo_t *prev_team, *teaminfo = ctxt->teaminfo;
+  int hops = omp_get_level () - level;
+  int error = -1;
+
+  if (level == 0)
+    return 0;
+
+  if (hops == 0)
+    return ctxt->icv.thread_id;
+  
+  if ((level < 0) || (hops < 0) || teaminfo == NULL)
+    return -1;
+ 
+  for (int i = 0; i < hops; i++)
+    {
+      if (teaminfo->previous_team == NULL)
+	return error;
+
+      prev_team = teaminfo;
+      teaminfo = teaminfo->previous_team;
+    }
+
+  return prev_team->father_id;
 }
 
 /*
 */
 int 
-omp_get_team_size(int level)
+omp_get_team_size (int level)
 {
-  kompctxt_t* ctxt = komp_get_ctxt();
-  if (ctxt->teaminfo ==0) return 1;
-  return ctxt->teaminfo->numthreads;
+  kompctxt_t *ctxt = komp_get_ctxt();
+  komp_teaminfo_t *teaminfo = ctxt->teaminfo;
+  int hops = omp_get_level () - level;
+  int error = -1;
+
+  if ((level < 0) || (hops < 0))
+    return error;
+  
+  if (level == 0)
+    return 1;
+
+  if (hops == 0)
+    return teaminfo->numthreads;
+
+  for (int i = 0; i < hops; i++)
+    {
+      if (teaminfo->previous_team == NULL)
+	return error;
+
+      teaminfo = teaminfo->previous_team;
+    }
+
+  return teaminfo->numthreads;
 }
 
 /*
@@ -218,9 +257,15 @@ omp_get_team_size(int level)
 int 
 omp_get_active_level(void)
 {
-  kompctxt_t* ctxt = komp_get_ctxt();
-  if (ctxt->teaminfo ==0) return 0;
-  return 1;
+  kompctxt_t *ctxt = komp_get_ctxt ();
+  
+  if (ctxt == NULL)
+    return -1;
+  
+  if (ctxt->teaminfo == NULL) 
+    return -1;
+  
+  return ctxt->icv.active_level;
 }
 
 /*

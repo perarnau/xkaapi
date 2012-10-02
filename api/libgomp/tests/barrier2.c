@@ -7,14 +7,9 @@ int
 main (int argc, char **argv)
 {
   int cpt = 0, total = 0;
-  int nthreads = 0;
+  int nthreads = 128;
 
-#pragma omp parallel
-  {
-    nthreads = omp_get_num_threads ();
-  }
-
-#pragma omp parallel shared (cpt, total)
+#pragma omp parallel shared (cpt, total) num_threads (nthreads)
   {
 #pragma omp critical
     cpt++;
