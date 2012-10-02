@@ -659,10 +659,12 @@ extern int kaapi_sched_stealprocessor (
 extern kaapi_thread_context_t* kaapi_sched_wakeup ( 
   kaapi_processor_t* kproc, 
   kaapi_processor_id_t kproc_thiefid, 
-  struct kaapi_thread_context_t* cond_thread,
-  kaapi_task_t* cond_task
+  kaapi_thread_context_t* cond_thread,
+  int (*fcondition)(void* ), 
+  void* arg_fcondition
+//  struct kaapi_thread_context_t* cond_thread,
+//  kaapi_task_t* cond_task
 );
-
 
 /** \ingroup WS
     The method starts a work stealing operation and return the result of one steal request
