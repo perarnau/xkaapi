@@ -44,9 +44,7 @@
 
 /*
 */
-int kaapi_cpuset_firstone_zero(
-    kaapi_cpuset_t* cpuset
-)
+int kaapi_cpuset_firstone_zero( kaapi_cpuset_t* cpuset )
 {
   kaapi_bitmap_value_t* bm = (kaapi_bitmap_value_t*)cpuset;
   return kaapi_bitmap_value_first1_and_zero(bm)-1;

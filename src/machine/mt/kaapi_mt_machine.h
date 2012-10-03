@@ -229,6 +229,7 @@ typedef struct kaapi_listrequest_t {
 */
 extern  kaapi_request_t kaapi_global_requests_list[KAAPI_MAX_PROCESSOR+1];
 
+#define KAAPI_USE_LRI_WITH_SNAPSHOT 1
 
 #if defined(KAAPI_USE_LRI_WITH_SNAPSHOT)
 /* to iterate over list of requests: once an iterator has been captured, 
@@ -246,7 +247,7 @@ typedef struct kaapi_listrequest_iterator_t {
 #endif  
 } kaapi_listrequest_iterator_t;
 
-#else
+#else /* avoid to capture state at the begining of the steal */
 
 /* New implementation to delay the date where bitmap is captured...
    to iterate over list of requests without capture of the request' initiators.
