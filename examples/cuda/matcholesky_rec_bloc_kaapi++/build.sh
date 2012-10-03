@@ -44,12 +44,12 @@ $CXX -g -Wall \
     $CUBLAS_CFLAGS \
     $LAPACK_CLAGS \
     $LAPACKE_CFLAGS \
-    -c matcholesky_rec_kaapi++.cpp 
+    -c matcholesky_rec_bloc_kaapi++.cpp 
 
 
 $CXX -g \
-    -o matcholesky_rec_kaapi++ \
-    matcholesky_rec_kaapi++.o \
+    -o matcholesky_rec_bloc_kaapi++ \
+    matcholesky_rec_bloc_kaapi++.o \
     $LDFLAGS \
     $CUDA_LDFLAGS \
     $CUBLAS_LDFLAGS \

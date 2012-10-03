@@ -91,10 +91,17 @@ int kaapi_thread_computedep_task(
   for (unsigned int i=0; i < count_params; i++) 
   {
     kaapi_access_mode_t m = kaapi_format_get_mode_param(task_fmt, i, sp);
+#if 0
+    if( KAAPI_ACCESS_IS_POSTPONED(m) ){
+      fprintf(stdout, "%s post\n", __FUNCTION__);
+      fflush(stdout);
+    }
+#endif
     m = KAAPI_ACCESS_GET_MODE( m );
     if (m == KAAPI_ACCESS_MODE_V)
       continue;
     kaapi_assert_debug( m != KAAPI_ACCESS_MODE_VOID );
+
     
 #if 0 // TODO    
     /* this is an shared access candidate for ocr */

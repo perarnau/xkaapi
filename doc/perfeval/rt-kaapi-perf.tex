@@ -130,7 +130,7 @@ Thierry Gautier
  \RRNo{????}
 
 \authorhead{Briot \& Gautier \& Testard}
-\RRtitle{Automatic \kaapi peformance evaluation}
+\RRtitle{Automatic \kaapi performance evaluation}
 \RRetitle{Automatic \kaapi peformance evaluation}
 \titlehead{Automatic \kaapi peformance evaluation}
 
@@ -185,58 +185,61 @@ The source repository is managed by \verb+git+. The master branch is composed of
 \end{itemize} 
 \end{description}
 
-In this document, we focus on the libKOMP library that allows to execute for free GCC/OpenMP program on top of \kaapi. As presented in~\cite{DBLP:conf/iwomp/BroquedisGD12} the gain was better performance on fine grain OpenMP tasks.
+In this document, we focus on the libKOMP library that allows to execute for free GCC/OpenMP program on top of \kaapi. As presented in~\cite{DBLP:conf/iwomp/BroquedisGD12} the performance gain was better on fine grain OpenMP tasks.
 
 \subsection{Goals of automatic performance tracing tool}
 
 The goals of automatic performance tracing are:
 \begin{itemize}
 \item it must provide better understanding on runtime modification, such as modifying the work-stealing heuristic coded in \kaapi. Impact of modification will be experimented and measured on standard benchmark.
-\item it must provide a historical evolution of \kaapi library. By keeping in data bases performances of benchmarks and by the capability of comparing two same benchmarks it is possible to identify automatically which commit introduces performance difference.
+\item it must provide a historical evolution of \kaapi library. By keeping benchmarks performances in data bases and by the capability of comparing two identical benchmarks it is possible to identify automatically which commit introduces performance difference.
 \end{itemize}
 
 \section{The benchmark suites BOTS and RODINIA}
 
 BOTS and RODINIA are standard benchmark suites for OpenMP. We target them in order to provide up-to-date \kaapi implementation of libKOMP.
 
-Each of these benchmark is composed of set of applications. Each application required specific inputs that are given as environment variable and/or command line options.
+Each of these benchmark suites is composed of an applications set. Each application requires specific inputs that are given with environment variables and/or command line options.
 
 \subsection{BOTS}
 BOTS is a benchmark suite dedicated to OpenMP-3.0 tasks. The reference paper is \url{http://capinfo.e.ac.upc.edu/PDFs/dir04/file003629.pdf}. 
 
-BOTS benchmarks can be download at \url{https://pm.bsc.es/projects/bots}.
+BOTS benchmarks can be downloaded at \url{https://pm.bsc.es/projects/bots}.
 
-We have developed a set of script to launch each application of the benchmark suite with some standard parameters. The scripts pass to the application the correct inputs and environment variables required to run our libKOMP runtime.
+We have developed a set of scripts to launch each application of the benchmark suite with some standard parameters. The scripts pass to the application the correct inputs and environment variables required to run our libKOMP runtime.
 
-On output we collect time to run each application. The important inputs was:
+On output we collect time to run each application. The important inputs are:
 \begin{itemize}
-\item the input file for the benchmark or the set of parameter. It is fixed.
+\item the input file for the benchmark or the set of parameters. It is fixed.
 \item the number of cores on which the application runs.
 \item the XKaapi scheduling policy or other parameters we want to test.
 \end{itemize}
 
-The output file contains the results of $Niter$ runs of the applications with a given set of parameters. After that a ad-hoc tools collect timings to produce the average, standard deviation of each benchmark and for each number of core.
+The output file contains the results of $Niter$ runs of the applications with a given set of parameters. After that, an ad-hoc tool collects timings to produce the average and standard deviation of each benchmark for each number of core.
 
 
 \subsection{RODINIA}
 
-RODINIA is a benchmark suite of the Berkley's DWARF problems. Parallelization is provided on top of CUDA (and me be OpenCL) and OpenMP. OpenMP parallelization relies on the parallel (independent) loops annotated by \verb+#pragma omp parallel loop+.
+RODINIA is a benchmark suite of the Berkley's DWARF problems. Parallelization is provided on top of CUDA (in some cases also in OpenCL) and OpenMP. OpenMP parallelization relies on the parallel (independent) loops annotated by \verb+#pragma omp parallel loop+.
 
 We modify some of the benchmarks in order to report time of the parallel region.
 
-As for BOTS, a set of script is going to be developed by B. Briot. The output files will have the same structure as for the BOTS in order to reuse one of our scripts.
+As for BOTS, a set of scripts is going to be developed.
+The output files will have the same structure as for the BOTS in order to reuse one of our scripts.
 
 \section{Benchmarking \kaapi with BOTS and RODINIA}
 
-Our goal is to report the performances of these benchmarks when we vary important features for parallel execution. Moreover, \kaapi is managed by git, thus it is important to report evolution of performances for different version of the library (each version is uniquely identify by its git hash number).
+Our goal is to report the performances of these benchmarks when we vary important features for parallel execution. Moreover, \kaapi is managed by git, thus it is important to report evolution of performances for different versions of the library (each version is uniquely identified by its git hash number).
+
+We want to keep traces of:
 \begin{itemize}
 \item the scheduling policy (default or specific scheduling strategy)
 \item the number of cores
-\item the way the library is configured, for instance the following configurations are often tested (from the most used to the less used).
+\item the way the library is configured, for instance the following configurations are often tested (from the most used to the less used):
 \begin{itemize}
-\item default configuration is the "release configuration".
-\item With options to take into account NUMA characteristic of the architecture.
-\item With option to capture of some performance counters: the library add extra code to collect a set of software and hardware performance counters. The purpose here is to measure the overhead with respect to the release configuration.
+\item default configuration is the ``release configuration".
+\item with options to take into account NUMA characteristic of the architecture.
+\item with option to capture some performance counters: the library add extra code to collect a set of software and hardware performance counters. The purpose here is to measure the overhead with respect to the release configuration.
 \end{itemize}
 \end{itemize}
 
@@ -256,7 +259,7 @@ From them, it would be better to build more interesting metrics to compare varia
 \begin{figure}[!htb]
 \centering
 \includegraphics[width=\linewidth]{workflow}
-\caption{Global workflow of automatic benchmarking of \kaapi
+\caption{Global workflow of automatic benchmarking of \kaapi. Only the green part is currently developed for BOTS and under active development for RODINIA benchmarks.
 }
 \end{figure}
 

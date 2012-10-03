@@ -149,12 +149,14 @@ KAAPI_DEBUG_INST(
     td = td->prev;
   }
 
+#if 0
 KAAPI_DEBUG_INST(
   if ((tdhitmax !=0) && (hitmax > hitfirst))
     printf("Arch: %s  Hit Max: %lu, default hit:%lu\n", (arch == KAAPI_PROC_TYPE_CPU ? "CPU" : "GPU"), 
         (unsigned long)hitmax, (unsigned long)hitfirst
     );
 )
+#endif
 
   return tdhitmax;
 }

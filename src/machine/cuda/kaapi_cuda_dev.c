@@ -35,13 +35,13 @@ int kaapi_cuda_dev_open(kaapi_cuda_proc_t * proc, unsigned int index)
   }
   
   /* 80% of total memory */
-  proc->memory.total = 0.8 * proc->deviceProp.totalGlobalMem;
-  proc->memory.used = 0;
-  proc->memory.ro.beg = proc->memory.ro.end = NULL;
-  proc->memory.rw.beg = proc->memory.rw.end = NULL;
-  kaapi_big_hashmap_init(&proc->memory.kmem, 0);
+  proc->cache.total = 0.8 * proc->deviceProp.totalGlobalMem;
+  proc->cache.used = 0;
+  proc->cache.ro.beg = proc->cache.ro.end = NULL;
+  proc->cache.rw.beg = proc->cache.rw.end = NULL;
+  kaapi_big_hashmap_init(&proc->cache.kmem, 0);
   res =
-  cudaEventCreateWithFlags(&proc->memory.event,
+  cudaEventCreateWithFlags(&proc->cache.event,
                            cudaEventDisableTiming);
   if (res != cudaSuccess) {
     fprintf(stdout, "%s: cudaEventCreateWithFlags ERROR %d\n",

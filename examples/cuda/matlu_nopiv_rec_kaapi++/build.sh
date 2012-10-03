@@ -24,12 +24,12 @@ $CXX -g -Wall \
     $LAPACK_CLAGS \
     $LAPACKE_CFLAGS \
     $MAGMA_CFLAGS \
-    -c matlu_nopiv_kaapi++.cpp 
+    -c matlu_nopiv_rec_kaapi++.cpp 
 
 
 $CXX -g -Wall \
-    -o matlu_nopiv_kaapi++ \
-    matlu_nopiv_kaapi++.o \
+    -o matlu_nopiv_rec_kaapi++ \
+    matlu_nopiv_rec_kaapi++.o \
     $LDFLAGS \
     $MAGMA_LDFLAGS \
     $CUDA_LDFLAGS \

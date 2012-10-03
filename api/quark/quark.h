@@ -131,8 +131,11 @@ Quark *QUARK_Setup(int num_threads);
 /* Setup scheduler data structures, spawn worker threads, start the workers working  */
 Quark *QUARK_New(int num_threads);
 
-/* Add a task, called by the master process (thread_rank 0)  */
-unsigned long long QUARK_Insert_Task(Quark * quark, void (*function) (Quark *), Quark_Task_Flags *task_flags, ...);
+/* XKaapi version for multicpu/multigpu */
+extern unsigned long long QUARK_Insert_Task_Hybrid(Quark * quark, void (*function_cpu) (Quark *), void (*function_gpu) (Quark *), Quark_Task_Flags *task_flags, ...);
+
+/* export symbol == QUARK_Insert_HTask with 0 == func GPU */
+extern unsigned long long QUARK_Insert_Task(Quark * quark, void (*function_cpu) (Quark *), Quark_Task_Flags *task_flags, ...);
 
 /* Main work loop, called externally by everyone but the master
  * (master manages this internally to the insert_task and waitall
