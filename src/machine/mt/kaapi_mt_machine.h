@@ -501,11 +501,11 @@ typedef struct kaapi_processor_t {
 
   struct kaapi_processor_t* victim_kproc;
 
-  void*                    libkomp_tls;
+  void*                     libkomp_tls;
 
   /* cuda */
 #if defined(KAAPI_USE_CUDA)
-  kaapi_cuda_proc_t cuda_proc;
+  kaapi_cuda_proc_t         cuda_proc;
 #endif
 
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_KPROCESSOR_ALIGNMENT_SIZE)));
