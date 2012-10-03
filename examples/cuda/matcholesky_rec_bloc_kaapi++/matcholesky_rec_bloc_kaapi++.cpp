@@ -8,7 +8,6 @@
  ** Contributors :
  **
  ** thierry.gautier@inrialpes.fr
- ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
  ** Joao.Lima@imag.fr / joao.lima@inf.ufrgs.br
  ** 
  ** This software is a computer program whose purpose is to execute
@@ -68,12 +67,18 @@ typedef float double_type;
  Based from MAGMA
  */
 template<typename T>
-static void generate_matrix( T* A, size_t N )
+static void generate_blocked_matrix( T** A, size_t N, size_t bloc )
 {
+  const size_t nb = N / bloc;
   for (size_t i = 0; i< N; i++) {
-    A[i*N+i] = A[i*N+i] + 1.*N; 
-    for (size_t j = 0; j < i; j++)
-      A[i*N+j] = A[j*N+i];
+    int ibloc = i / bloc;
+    int ipos = i % bloc;
+    A[ibloc*nb+ibloc][ipos*bloc+ipos] = A[ibloc*nb+ibloc][ipos*bloc+ibloc] + 1.*N; 
+    for (size_t j = 0; j < i; j++){
+      int jbloc = j / bloc;
+      int jpos = j % bloc;
+      A[ibloc*nb+jbloc][ipos*bloc+jpos] = A[jbloc*nb+ibloc][jpos*bloc+ipos];
+    }
   }
 }
 
@@ -144,6 +149,7 @@ int check_factorization(int N, T* A1, T* A2, int LDA, int uplo)
 
 static size_t global_blocsize = 512;
 static size_t global_recblocsize = 512;
+static size_t global_nbloc = 1;
 
 template<typename T>
 struct TaskParallelPOTRF: public ka::Task<3>::Signature
@@ -197,148 +203,6 @@ struct TaskBodyCPU<TaskParallelPOTRF<T> > {
   }
 };
 
-template<typename T>
-struct TaskParallelGEMM: public ka::Task<8>::Signature
-<
-  CBLAS_ORDER,			      /* row / col */
-  CBLAS_TRANSPOSE,        /* NoTrans/Trans for A */
-  CBLAS_TRANSPOSE,        /* NoTrans/Trans for B */
-  T,                      /* alpha */
-  ka::R<ka::range2d<T> >, /* Aik   */
-  ka::R<ka::range2d<T> >, /* Akj   */
-  T,                      /* beta */
-  ka::RPWP<ka::range2d<T> > /* Aij   */
->{};
-
-template<typename T>
-struct TaskBodyCPU<TaskParallelGEMM<T> > {
-  void operator()
-  (
-    CBLAS_ORDER		   order, 
-    CBLAS_TRANSPOSE transA,
-    CBLAS_TRANSPOSE transB,
-    T alpha,
-    ka::range2d_r<T> A,
-    ka::range2d_r<T> B,
-    T beta,
-    ka::range2d_rpwp<T> C
-  )
-  {
-    const T* const a = A->ptr();
-    const T* const b = B->ptr();
-    T* const c       = C->ptr();
-
-    const int M = A->dim(0);
-    const int K = B->dim(0);
-    const int N = B->dim(1);
-
-    const int lda = A->lda();
-    const int ldb = B->lda();
-    const int ldc = C->lda();
-    const int bloc = global_recblocsize;
-
-    /* It works only for B with CblasTrans */
-#if 0
-    fprintf(stdout, "TaskCPU ParallelGEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", M, N, K, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
-#endif
-    if(M > bloc)
-    {
-      for (int i=0; i<M; i += bloc)
-      {
-	ka::rangeindex ri(i, i+bloc);
-	for (int j=0; j<N; j += bloc)
-	{
-	  ka::rangeindex rj(j, j+bloc);
-	  for (int k=0; k<K; k += bloc)
-	  {
-	    ka::rangeindex rk(k, k+bloc);
-	      ka::Spawn<TaskGEMM<T> >(ka::SetArch(ka::ArchHost))
-		(
-		 order, transA, transB,
-		 alpha, A(rk,ri), B(rk,rj), beta, C(rj,ri)
-		);
-	  }
-	}
-      }
-    } else {
-      // spawn here
-      CBLAS<T>::gemm
-      (
-	order, transA, transB,
-	M, N, K, alpha, a, lda, b, ldb, beta, c, ldc
-      );
-    }
-  }
-};
-
-#if defined(KAAPI_USE_CUDA)
-template<typename T> 
-struct TaskBodyGPU<TaskParallelGEMM<T> >
-{
-  void operator()
-  (
-   ka::gpuStream stream,
-   CBLAS_ORDER		   order, 
-   CBLAS_TRANSPOSE transA,
-   CBLAS_TRANSPOSE transB,
-   T alpha,
-   ka::range2d_r<T> A,
-   ka::range2d_r<T> B,
-   T beta,
-   ka::range2d_rpwp<T> C
-  )
-  {
-    const T* const a = A->ptr();
-    const T* const b = B->ptr();
-    T* const c       = C->ptr();
-
-    const int m = A->dim(0); 
-    const int n = B->dim(1); // eq. to Akj->rows();
-    const int k = C->dim(1); 
-
-
-    const int lda = A->lda();
-    const int ldb = B->lda();
-    const int ldc = C->lda();
-
-#if 0
-    fprintf(stdout, "TaskGPU RecursiveGEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", m, n, k, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
-#endif
-
-#if CONFIG_USE_CUBLAS
-    cublasStatus_t status;
-    if( order == CblasColMajor ) 
-      status = CUBLAS<T>::gemm (
-	     kaapi_cuda_cublas_handle(),
-	     convertToOp(transA),
-	     convertToOp(transB),
-	     m, n, k,
-	     &alpha,
-	     a, lda,
-	     b, ldb, 
-	     &beta, c, ldc
-      );
-    else {
-      kaapi_assert_debug( order == CblasRowMajor )
-      status = CUBLAS<T>::gemm(
-	     kaapi_cuda_cublas_handle(),
-	     convertToOp(transB),
-	     convertToOp(transA),
-	     n, m, k,
-	     &alpha,
-	     b, ldb, 
-	     a, lda,
-	     &beta, c, ldc
-      );
-  }
-	
-  if (status != CUBLAS_STATUS_SUCCESS)
-    printf("%s::cublasGemm() == %d\n", __FUNCTION__, status);
-#endif
-  }
-};
-#endif /* KAAPI_USE_CUDA */
-
 /* Block Cholesky factorization A <- L * L^t
  Lower triangular matrix, with the diagonal, stores the Cholesky factor.
  Based on PLASMA library.
@@ -346,7 +210,7 @@ struct TaskBodyGPU<TaskParallelGEMM<T> >
 /* TODO: inverted indexes as XKaapi does not have ColMajor matrix */
 template<typename T>
 struct TaskCholesky: public ka::Task<2>::Signature<
-    ka::RPWP<ka::range2d<T> >, /* A */
+    uintptr_t,
     CBLAS_UPLO
 >{};
 
@@ -354,68 +218,44 @@ template<typename T>
 struct TaskBodyCPU<TaskCholesky<T> > {
   void operator()(
       const ka::StaticSchedInfo* info, 
-      ka::range2d_rpwp<T> A,
+      uintptr_t pA,
       const enum CBLAS_UPLO uplo
   )
   {
-    size_t N = A->dim(0);
+//    size_t N = A->dim(0);
     size_t blocsize = global_blocsize;
+    size_t nbloc = global_nbloc;
+    double_type** a = (double_type**)pA;
     
     if( uplo == CblasLower ) 
     {
-      for (size_t k=0; k < N; k += blocsize) {
-	size_t ik = (k+blocsize < N) ? k+blocsize : N;
-        ka::rangeindex rk(k, ik);
+      for (size_t k=0; k < nbloc; k++) {
+	ka::array<2,double_type> Akk( a[k*nbloc+k], blocsize, blocsize, blocsize);
         ka::Spawn<TaskParallelPOTRF<T> >( ka::SetStaticSched() )
-	      ( CblasColMajor, CblasLower, A(rk,rk) );
+	      ( CblasColMajor, CblasLower, Akk );
         
-        for (size_t m=k+blocsize; m < N; m += blocsize) {
-	  size_t im = (m+blocsize < N) ? m+blocsize : N;
-          ka::rangeindex rm(m, im);
+        for (size_t m=k+1; m < nbloc; m++) {
+	  ka::array<2,double_type> Amk( a[k*nbloc+m], blocsize, blocsize, blocsize);
           ka::Spawn<TaskTRSM<T> >( ka::SetArch(ka::ArchCUDA) )
-	    ( CblasColMajor, CblasRight, uplo, CblasTrans, CblasNonUnit, (T)1.0, A(rk,rk), A(rk,rm));
+	    ( CblasColMajor, CblasRight, uplo, CblasTrans, CblasNonUnit, (T)1.0, Akk, Amk);
         }
         
-        for (size_t m=k+blocsize; m < N; m += blocsize) {
-	  size_t im = (m+blocsize < N) ? m+blocsize : N;
-          ka::rangeindex rm(m, im);
+        for (size_t m=k+1; m < nbloc; m++) {
+	  ka::array<2,double_type> Amk( a[k*nbloc+m], blocsize, blocsize, blocsize);
+	  ka::array<2,double_type> Amm( a[m*nbloc+m], blocsize, blocsize, blocsize);
           ka::Spawn<TaskSYRK<T> >( ka::SetArch(ka::ArchCUDA) )
-	    ( CblasColMajor, uplo, CblasNoTrans, (T)-1.0, A(rk,rm), (T)1.0, A(rm,rm));
+	    ( CblasColMajor, uplo, CblasNoTrans, (T)-1.0, Amk, (T)1.0, Amm);
           
-          for (size_t n=k+blocsize; n < m; n += blocsize) {
-	    size_t in = (n+blocsize < N) ? n+blocsize : N;
-            ka::rangeindex rn(n, in);
+          for (size_t n=k+1; n < m; n++) {
+	    ka::array<2,double_type> Ank( a[k*nbloc+n], blocsize, blocsize, blocsize);
+	    ka::array<2,double_type> Amn( a[n*nbloc+m], blocsize, blocsize, blocsize);
             //ka::Spawn<TaskParallelGEMM<T> >(ka::SetStaticSched())
             ka::Spawn<TaskGEMM<T> >( ka::SetArch(ka::ArchCUDA) )
-	      ( CblasColMajor, CblasNoTrans, CblasTrans, (T)-1.0, A(rk,rm), A(rk,rn), (T)1.0, A(rn,rm));
+	      ( CblasColMajor, CblasNoTrans, CblasTrans, (T)-1.0, Amk, Ank, (T)1.0, Amn);
           }
         }
       }
-    } else if( uplo == CblasUpper ) {
-      for (size_t k=0; k < N; k += blocsize) {
-        ka::rangeindex rk(k, k+blocsize);
-        ka::Spawn<TaskPOTRF<T> >( )
-	      ( CblasColMajor, uplo, A(rk,rk) );
-        
-        for (size_t m=k+blocsize; m < N; m += blocsize) {
-          ka::rangeindex rm(m, m+blocsize);
-          ka::Spawn<TaskTRSM<T> >()
-          ( CblasColMajor, CblasLeft, uplo, CblasTrans, CblasNonUnit, (T)1.0, A(rk,rk), A(rm,rk) );
-        }
-        
-        for (size_t m=k+blocsize; m < N; m += blocsize) {
-          ka::rangeindex rm(m, m+blocsize);
-          ka::Spawn<TaskSYRK<T> >( )
-          ( CblasColMajor, uplo, CblasTrans, (T)-1.0, A(rm,rk), (T)1.0, A(rm,rm) );
-          
-          for (size_t n=k+blocsize; n < m; n += blocsize) {
-            ka::rangeindex rn(n, n+blocsize);
-            ka::Spawn<TaskGEMM<T> >( )
-            ( CblasColMajor, CblasTrans, CblasNoTrans, (T)-1.0, A(rn,rk), A(rm,rk), (T)1.0, A(rm,rn));
-          }
-        }
-      }
-    }
+    } 
   }
 };
 
@@ -424,38 +264,54 @@ struct TaskBodyCPU<TaskCholesky<T> > {
 struct doit {
   void doone_exp( int n, int block_size, int rec_block_size, int niter, int verif )
   {
+    const int nb = n / block_size;
     global_blocsize = block_size;
     global_recblocsize = rec_block_size;
+    global_nbloc = nb;
     double t0, t1;
-    double_type* dA = (double_type*) calloc(n* n, sizeof(double_type));
+
+
+    double_type** dA = (double_type**) calloc(nb*nb, sizeof(double_type*));
     if (0 == dA) {
       std::cout << "Fatal Error. Cannot allocate matrice A "
       << std::endl;
       return;
     }
     
+    for(int i= 0; i < nb; i++){
+      for(int j= 0; j < nb; j++){
+	dA[j*nb+i] = (double_type*)malloc(block_size*block_size*sizeof(double_type));
+	if(dA[j*nb+i] == 0){
+	  std::cout << "ERROR. Cannot allocate matrice A[" << j << "," << i << "]." << std::endl;
+	  abort();
+	}
+
+	ka::array<2,double_type> A(dA[j*nb+i], block_size, block_size, block_size);
+	TaskBodyCPU<TaskLARNV<double_type> >()( ka::range2d_w<double_type>(A) );
+#if CONFIG_USE_CUDA
+	ka::Memory::Register( A );
+#endif
+      }
+    }
+    generate_blocked_matrix<double_type>(dA, n, block_size); 
+    
     double_type* dAcopy = 0;
     if (verif) {
       dAcopy = (double_type*) calloc(n* n, sizeof(double_type));
-      if (dAcopy ==0)
-      {
-        std::cout << "Fatal Error. Cannot allocate matrice Acopy "
-        << std::endl;
-        return;
+      if (dAcopy ==0) {
+        std::cout << "ERROR. Cannot allocate matrice Acopy" << std::endl;
+	abort();
+      }
+      for(int i= 0; i < n; i++){
+	for(int j= 0; j < n; j++){
+	  int ibloc = i/block_size;
+	  int ipos = i%block_size;
+	  int jbloc = j/block_size;
+	  int jpos = j%block_size;
+	  dAcopy[j*n+i] = dA[jbloc*nb+ibloc][jpos*block_size+ipos];
+	}
       }
     }
-    
-    ka::array<2,double_type> A(dA, n, n, n);
-#if CONFIG_USE_CUDA
-    ka::Memory::Register( A );
-#endif
-    
-#if 0
-    std::cout << "Start Cholesky with " 
-    << block_count << 'x' << block_count 
-    << " blocs of matrix of size " << n << 'x' << n 
-    << std::endl;
-#endif
     
     // Cholesky factorization of A 
     double sumt = 0.0;
@@ -474,14 +330,8 @@ struct doit {
     
     for (int i=0; i<niter; ++i) 
     {
-      /* based on MAGMA */
-      TaskBodyCPU<TaskLARNV<double_type> >()( ka::range2d_w<double_type>(A) );
-      generate_matrix<double_type>(dA, n); 
-      if (verif)
-        memcpy(dAcopy, dA, n*n*sizeof(double_type) );
-      
       t0 = kaapi_get_elapsedtime();
-      ka::Spawn<TaskCholesky<double_type> >(ka::SetStaticSched())( A, CblasLower );
+      ka::Spawn<TaskCholesky<double_type> >(ka::SetStaticSched())( (uintptr_t)dA, CblasLower );
       ka::Sync();
 #if CONFIG_USE_CUDA
       ka::MemorySync();
@@ -495,9 +345,24 @@ struct doit {
       sumgf  += gflops;
       sumgf2 += gflops*gflops;
       
-      if (verif) 
-      {
-        check_factorization<double_type>( n, dAcopy, dA, n, CblasLower );
+      if (verif) {
+	double_type* dAout = 0;
+	dAout = (double_type*) calloc(n* n, sizeof(double_type));
+	if (dAout ==0) {
+	  std::cout << "ERROR. Cannot allocate matrice Acopy" << std::endl;
+	  abort();
+	}
+	for(int i= 0; i < n; i++){
+	  for(int j= 0; j < n; j++){
+	    int ibloc = i/block_size;
+	    int ipos = i%block_size;
+	    int jbloc = j/block_size;
+	    int jpos = j%block_size;
+	    dAout[j*n+i] = dA[jbloc*nb+ibloc][jpos*block_size+ipos];
+	  }
+	}
+        check_factorization<double_type>( n, dAcopy, dAout, n, CblasLower );
+        free( dAout );
         free( dAcopy );
       }
     }
@@ -510,9 +375,15 @@ struct doit {
            (int)kaapi_getconcurrency(),
            sumt/niter, gflops );
     
+    for(int i= 0; i < nb; i++){
+      for(int j= 0; j < nb; j++){
+	ka::array<2,double_type> A(dA[j*nb+i], block_size, block_size, block_size);
 #if CONFIG_USE_CUDA
-    ka::Memory::Unregister( A );
+	ka::Memory::Unregister( A );
 #endif
+	free(dA[j*nb+i]);
+      }
+    }
     free(dA);
   }
   

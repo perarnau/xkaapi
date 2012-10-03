@@ -221,7 +221,7 @@ int kaapi_data_get_affinity_is_valid_writer(
       kmd = data->kmd;
       kaapi_assert_debug(kmd != 0);
       if (!kaapi_mem_data_is_dirty(kmd, local_asid)) {
-#if 1
+#if 0
 	fprintf(stdout, "[%s]: asid=%d valid (td=%p,name=%s)\n",
 	    __FUNCTION__,
 	    local_asid,

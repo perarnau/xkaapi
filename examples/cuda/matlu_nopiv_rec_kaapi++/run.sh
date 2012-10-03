@@ -53,9 +53,9 @@ function run_test {
 	    for i in `seq 1 $niter`
 	    do
 	    echo "$KAAPI_CPUSET $KAAPI_GPUSET \
-		    ./matlu_nopiv_kaapi++ $m $b $verif"
-	    KAAPI_STACKSIZE=536870912 ./matlu_nopiv_kaapi++ $m $b 1 $verif 
-#	    KAAPI_STACKSIZE=536870912 gdb ./matlu_nopiv_kaapi++ 
+		    ./matlu_nopiv_rec_kaapi++ $m $b $verif"
+	    KAAPI_STACKSIZE=536870912 ./matlu_nopiv_rec_kaapi++ $m $b 1 $verif 
+#	    KAAPI_STACKSIZE=536870912 gdb ./matlu_nopiv_rec_kaapi++ 
 	    done
 	done
     done
@@ -63,4 +63,3 @@ function run_test {
 
 run_test
 exit 0
-

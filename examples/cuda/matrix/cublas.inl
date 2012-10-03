@@ -53,12 +53,24 @@ static inline cublasSideMode_t convertToSideMode( int side )
          return CUBLAS_SIDE_LEFT;
     }        
 }
-
 /* for cublas v2 */
 template<class T>
 struct CUBLAS {
   typedef T value_type;
   static cublasStatus_t trsm(cublasHandle_t handle,
+                     cublasSideMode_t side,
+                     cublasFillMode_t uplo,
+                     cublasOperation_t trans,
+                     cublasDiagType_t diag,
+                     int m,
+                     int n,
+                     const value_type *alpha, /* host or device pointer */
+                     const value_type *A,
+                     int lda,
+                     value_type *B,
+                     int ldb);
+
+  static cublasStatus_t trsm(
                      cublasSideMode_t side,
                      cublasFillMode_t uplo,
                      cublasOperation_t trans,
@@ -85,6 +97,22 @@ struct CUBLAS {
                     const value_type *beta, /* host or device pointer */
                     value_type *C,
                     int ldc);
+
+  static cublasStatus_t gemm( 
+                    cublasOperation_t transa,
+                    cublasOperation_t transb,
+                    int m,
+                    int n,
+                    int k,
+                    const value_type *alpha, /* host or device pointer */
+                    const value_type *A,
+                    int lda,
+                    const value_type *B,
+                    int ldb,
+                    const value_type *beta, /* host or device pointer */
+                    value_type *C,
+                    int ldc);
+
   static cublasStatus_t syrk(cublasHandle_t handle,
                      cublasFillMode_t uplo,
                      cublasOperation_t trans,
@@ -103,6 +131,10 @@ struct CUBLAS {
 	int incx,
 	value_type* y,
 	int incy);
+
+  static cublasStatus_t swap( int n,
+      value_type* x, int incx, value_type* y, int incy);
+
 };
 
 template<>
@@ -122,6 +154,20 @@ struct CUBLAS<double> {
                    int ldb)
   { return cublasDtrsm_v2(handle, side, uplo, trans, diag, m, n, alpha, A, lda, B, ldb); }
 
+  static cublasStatus_t trsm(
+                   cublasSideMode_t side,
+                   cublasFillMode_t uplo,
+                   cublasOperation_t trans,
+                   cublasDiagType_t diag,
+                   int m,
+                   int n,
+                   const value_type *alpha, /* host or device pointer */
+                   const value_type *A,
+                   int lda,
+                   value_type *B,
+                   int ldb)
+  { return cublasDtrsm_v2(kaapi_cuda_cublas_handle(), side, uplo, trans, diag, m, n, alpha, A, lda, B, ldb); }
+
   static cublasStatus_t gemm( cublasHandle_t handle,
                     cublasOperation_t transa,
                     cublasOperation_t transb,
@@ -137,6 +183,22 @@ struct CUBLAS<double> {
                     value_type *C,
                     int ldc)
   { return cublasDgemm_v2(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc); }
+
+  static cublasStatus_t gemm(
+                    cublasOperation_t transa,
+                    cublasOperation_t transb,
+                    int m,
+                    int n,
+                    int k,
+                    const value_type *alpha, /* host or device pointer */
+                    const value_type *A,
+                    int lda,
+                    const value_type *B,
+                    int ldb,
+                    const value_type *beta, /* host or device pointer */
+                    value_type *C,
+                    int ldc)
+  { return cublasDgemm_v2(kaapi_cuda_cublas_handle(), transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc); }
 
   static cublasStatus_t syrk(cublasHandle_t handle,
                      cublasFillMode_t uplo,
@@ -158,6 +220,11 @@ struct CUBLAS<double> {
 	value_type* y,
 	int incy)
   { return cublasDswap_v2(handle, n, x, incx, y, incy); }
+
+  static cublasStatus_t swap( int n,
+	value_type* x, int incx,
+	value_type* y, int incy)
+  { return cublasDswap_v2(kaapi_cuda_cublas_handle(), n, x, incx, y, incy); }
 };
 
 template<>
@@ -177,6 +244,20 @@ struct CUBLAS<float> {
                    int ldb)
   { return cublasStrsm_v2(handle, side, uplo, trans, diag, m, n, alpha, A, lda, B, ldb); }
 
+  static cublasStatus_t trsm(
+                   cublasSideMode_t side,
+                   cublasFillMode_t uplo,
+                   cublasOperation_t trans,
+                   cublasDiagType_t diag,
+                   int m,
+                   int n,
+                   const value_type *alpha, /* host or device pointer */
+                   const value_type *A,
+                   int lda,
+                   value_type *B,
+                   int ldb)
+  { return cublasStrsm_v2(kaapi_cuda_cublas_handle(), side, uplo, trans, diag, m, n, alpha, A, lda, B, ldb); }
+
   static cublasStatus_t gemm( cublasHandle_t handle,
                     cublasOperation_t transa,
                     cublasOperation_t transb,
@@ -192,6 +273,22 @@ struct CUBLAS<float> {
                     value_type *C,
                     int ldc)
   { return cublasSgemm_v2(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc); }
+
+  static cublasStatus_t gemm(
+                    cublasOperation_t transa,
+                    cublasOperation_t transb,
+                    int m,
+                    int n,
+                    int k,
+                    const value_type *alpha, /* host or device pointer */
+                    const value_type *A,
+                    int lda,
+                    const value_type *B,
+                    int ldb,
+                    const value_type *beta, /* host or device pointer */
+                    value_type *C,
+                    int ldc)
+  { return cublasSgemm_v2(kaapi_cuda_cublas_handle(), transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc); }
 
   static cublasStatus_t syrk(cublasHandle_t handle,
                      cublasFillMode_t uplo,
@@ -213,6 +310,11 @@ struct CUBLAS<float> {
 	value_type* y,
 	int incy)
   { return cublasSswap_v2(handle, n, x, incx, y, incy); }
+
+  static cublasStatus_t swap( int n,
+	value_type* x, int incx,
+	value_type* y, int incy)
+  { return cublasSswap_v2(kaapi_cuda_cublas_handle(), n, x, incx, y, incy); }
 };
 
 #endif /* CONFIG_USE_CUBLAS */

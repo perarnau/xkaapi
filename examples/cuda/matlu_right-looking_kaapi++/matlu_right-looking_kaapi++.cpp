@@ -8,7 +8,6 @@
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** Joao.Lima@imag.fr / joao.lima@inf.ufrgs.br
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -64,107 +63,196 @@ typedef float double_type;
 /* Block LU factorization
 */
 template<typename T>
-struct TaskLU: public ka::Task<4>::Signature<
+struct TaskLU: public ka::Task<2>::Signature<
       ka::RPWP<ka::range2d<T> >,	/* A */ 
-      ka::RPWP<ka::range2d<T> >,	/* L */ 
-      ka::RPWP<ka::range1d<int> >,		/* ipiv */ 
-      ka::RPWP<ka::range2d<T> >	/* WORK */ 
+      ka::RPWP<ka::range1d<int> >		/* ipiv */ 
 >{};
 
 static size_t global_blocsize = 2;
 
 template<typename T>
+struct TaskGETRF2: public ka::Task<4>::Signature
+<
+  CBLAS_ORDER,               /* row / col */
+  ka::RW<ka::range2d<T> >,   /* A */
+  size_t,
+  ka::RPWP<ka::range1d <int> >  /* pivot */
+>{};
+
+template<typename T>
+struct TaskBodyCPU<TaskGETRF2<T> > {
+  void operator()( 
+    CBLAS_ORDER order, 
+    ka::range2d_rw<T> A, 
+    size_t size,
+    ka::range1d_rpwp<int> piv
+  )
+  {
+    const int m     = size; 
+    const int n     = A->dim(1); 
+    const int lda   = A->lda();
+    T* const a      = A->ptr();
+    int* const ipiv = piv->ptr();
+
+#if 1
+    fprintf(stdout, "TaskCPU DGETRF m=%d n=%d lda=%d A=%p ipiv=%p\n",
+		m, n, lda, (void*)a, (void*)ipiv ); fflush(stdout);
+#endif
+#if defined(CONFIG_USE_PLASMA)
+    const int ib = CONFIG_IB; // from PLASMA
+    int info;
+    PLASMA<T>::getrf(m, n, ib, a, lda, ipiv, &info);
+#else
+    CLAPACK<T>::getrf(order, m, n, a, lda, ipiv);
+#endif
+  }
+};
+
+template<typename T>
 struct TaskBodyCPU<TaskLU<T> > {
   void operator()( 
 		  ka::range2d_rpwp<T> A,
-		  ka::range2d_rpwp<T> L,
-		  ka::range1d_rpwp<int>		piv,
-		  ka::range2d_rpwp<T> WORK
+		  ka::range1d_rpwp<int>		ipiv
 	  )
 {
-    size_t N = A->dim(0);
+    size_t M = std::min(A->dim(0), A->dim(1));
+    size_t N = A->dim(1);
     size_t blocsize = global_blocsize;
-    int* ipiv = piv->ptr();
+    const T zone = (T)1.0;
+    const T mzone = (T)-1.0;
 
-    for(size_t k=0; k < N; k += blocsize) {
+    for(size_t k=0; k < M; k += blocsize) {
 	ka::rangeindex rk(k, k+blocsize);
-	ka::range1d<int> rkpiv( ipiv+k, blocsize );
+
 	// A(rk,rk) = L(rk,rk) * U(rk,rk) * P(rk,rk) <- LU( A(rk,rk) )
-	ka::Spawn<TaskGETRF<T> >(ka::SetArch(ka::ArchHost))( CblasColMajor, A(rk,rk), rkpiv );
+	ka::Spawn<TaskGETRF<T> >(ka::SetArch(ka::ArchHost))(CblasColMajor, A(rk,rk), ipiv(rk));
 
 	for (size_t n=k+blocsize; n<N; n += blocsize) {
 	    ka::rangeindex rn(n, n+blocsize);
-	    ka::Spawn<kplasma::TaskGESSM<T> >(ka::SetArch(ka::ArchCUDA))(
-		CblasColMajor, rkpiv, A(rk, rk), A(rn, rk)	    
-	    );
+
+	    ka::Spawn<TaskLASWP<T> >(ka::SetArch(ka::ArchHost))
+	      (CblasColMajor, A(rn, rk), 1, blocsize, ipiv(rk), 1);
+
+	    ka::Spawn<TaskTRSM<T> >( ka::SetArch(ka::ArchCUDA) )
+	      (CblasColMajor, CblasLeft, CblasLower, CblasNoTrans, CblasUnit, zone, A(rk,rk), A(rn,rk));
+
+	  for( size_t m=k+blocsize; m<M; m += blocsize ){
+	      ka::rangeindex rm(m, m+blocsize);
+	      ka::Spawn<TaskGEMM<T> >( ka::SetArch(ka::ArchCUDA) )
+		(CblasColMajor, CblasNoTrans, CblasNoTrans, mzone, A(rk,rm), A(rn,rk), zone, A(rn,rm));
+	  }
 	}
+    }
 
-	for( size_t m=k+blocsize; m<N; m += blocsize ){
-	    ka::rangeindex rm(m, m+blocsize);
-	    ka::range1d<int> rmpiv( ipiv+m, blocsize );
-
-	    ka::Spawn<kplasma::TaskTSTRF<T> >(ka::SetArch(ka::ArchHost))(
-		    CblasColMajor, blocsize, A(rk, rk), A(rk, rm), L(rk, rm), rmpiv, WORK
-	    );
-
-	    for (size_t n=k+blocsize; n<N; n += blocsize) {
-		ka::rangeindex rn(n, n+blocsize);
-		// A(rm,rn) <- A(rm,rn) - A(rm,rk)*A(rk,rn)
-		ka::Spawn<kplasma::TaskSSSSM<T> >(ka::SetArch(ka::ArchCUDA))(
-			CblasColMajor, A(rn, rk), A(rn, rm), L(rk, rm), A(rk, rm), rmpiv
-		);
-	    }
+    for(size_t k=0; k < M; k += blocsize) {
+	ka::rangeindex rk(k, k+blocsize);
+	for (size_t n= 0; n < k; n += blocsize) {
+	    ka::rangeindex rn(n, n+blocsize);
+	    ka::Spawn<TaskLASWP<T> >(ka::SetArch(ka::ArchHost))
+	      (CblasColMajor, A(rn, rk), 1, blocsize, ipiv(rk), 1);
 	}
     }
 }
 };
 
+#if 0
 template<typename T>
-int check(int n, T* A, T* LU, int LDA, int* piv)
+int check(int n, T* A, T* LU, int lda, int* ipiv)
 {
-  T norm, residual;
-  T alpha, beta;
-  int i,j;
+  T* X = (T*)calloc(n*n, sizeof(T));
+  T* B = (T*)calloc(n*n, sizeof(T));
+  TaskBodyCPU<TaskLARNV<T> >()( ka::range2d_w<T>(ka::array<2,T>(X,n,n,n)) );
+  memcpy(B, X, n*n*sizeof(T) );
   
-  T *L       = (T *)malloc(n*n*sizeof(T));
-  T *U       = (T *)malloc(n*n*sizeof(T));
-  T *work     = (T *)malloc(n*sizeof(T));
-  
-  memset((void*)L, 0, n*n*sizeof(T));
-  memset((void*)U, 0, n*n*sizeof(T));
-  
-  alpha= 1.0;
-  beta= 0.0;
-  
-  LAPACKE<T>::laswp_work(LAPACK_COL_MAJOR, n, A, n, 1, n, piv, 1);
+  LAPACKE<T>::getrs(LAPACK_COL_MAJOR, 'n', n, n, LU, lda, ipiv, X, lda);
 
-  LAPACKE<T>::lacpy_work(LAPACK_COL_MAJOR,'l', n, n, LU, LDA, L, n);
-  LAPACKE<T>::lacpy_work(LAPACK_COL_MAJOR,'u', n, n, LU, LDA, U, n);
-  
-  for (j = 0; j < n; j++)
-    L[j*n+j] = 1.0;
+  T zone  =  1.0;
+  T mzone = -1.0;
+  T* work = (T*)malloc(n * sizeof(T));
 
-  norm = LAPACKE<T>::lange_work(LAPACK_COL_MAJOR, 'f', n, n, A, n, work);
+  T Anorm = LAPACKE<T>::lange_work(LAPACK_COL_MAJOR, 'i', 
+					     n, n, A, lda, work);
+  T Xnorm = LAPACKE<T>::lange_work(LAPACK_COL_MAJOR, 'i', 
+					     n, n, X, lda, work);
+  T Bnorm = LAPACKE<T>::lange_work(LAPACK_COL_MAJOR, 'i', 
+					     n, n, B, lda, work);
 
   CBLAS<T>::gemm
   (
       CblasColMajor, CblasNoTrans, CblasNoTrans,
-      n, n, n, alpha, L, n, U, n, beta, LU, n
+      n, n, n, zone, A, lda, X, lda, mzone, B, lda
   );
 
-  /* Compute the Residual || A -L'L|| */
-  for (j = 0; j < n; j++)
-    for (i = 0; i < n; i++)
-      LU[j*n+i] = LU[j*n+i] - A[j*n+i];
+  T Rnorm = LAPACKE<T>::lange_work(LAPACK_COL_MAJOR, 'i', 
+					   n, n, B, lda, work);
+
+  T eps = LAPACKE<T>::lamch_work('e');
+  fprintf(stdout, "# ||Ax-B||_oo/((||A||_oo||x||_oo+||B||_oo).N.eps) = %e\n",
+      Rnorm/((Anorm*Xnorm+Bnorm)*n*eps));
   
-  residual = LAPACKE<T>::lange_work(LAPACK_COL_MAJOR, 'f', n, n, LU, n, work);
-  fprintf( stdout, "# LU error: %e\n", residual/ (norm*n) );
+  if ( isnan(Rnorm/((Anorm*Xnorm+Bnorm)*n*eps)) || (Rnorm/((Anorm*Xnorm+Bnorm)*n*eps) > 10.0) ){
+      fprintf(stdout, "# ERROR - the solution is suspicious ! \n");
+  }
+  else{
+      fprintf(stdout, "# OK - The solution is CORRECT ! \n");
+  }
   fflush(stdout);
-  
-  free(L); free(U); free(work);
-  
+
+  free(work);
+  free( X );
+  free( B );
   return 0;
 }
+#endif
+
+#if 1
+template<typename T>
+int check(int n, T* A, T* LU, int lda, int* ipiv)
+{
+  T *work     = (T *)calloc(n, sizeof(T));
+  int *ipiv2    = (int *)calloc(n, sizeof(int));
+  
+  LAPACKE<T>::getrf_work(LAPACK_COL_MAJOR, n, n, A, lda, ipiv2);
+
+  /* Check ipiv */
+  for(int i=0; i<n; i++) {
+    if( ipiv[i] != (ipiv2[i]-1) ) {
+	fprintf(stderr, "# LU (ipiv[%d] = %d, A[%d] = %e) / LAPACK (ipiv[%d] = %d, A[%d] = [%e])\n",
+		i, ipiv[i],  i, (LU[  i * lda + i ]), 
+		i, ipiv2[i], i, (A[ i * lda + i ])); 
+	break;
+    }
+  }
+
+  T Anorm = LAPACKE<T>::lange_work(LAPACK_COL_MAJOR, 'M', 
+					     n, n, LU, lda, work);
+  T Xnorm = LAPACKE<T>::lange_work(LAPACK_COL_MAJOR, 'M', 
+					     n, n, A, lda, work);
+  T Bnorm = 0.0;
+
+  CBLAS<T>::axpy(n*n, -1.0, LU, 1, A, 1);
+
+  T Rnorm = LAPACKE<T>::lange_work(LAPACK_COL_MAJOR, 'M', 
+					   n, n, A, lda, work);
+
+  T eps = LAPACKE<T>::lamch_work('e');
+  fprintf(stdout, "# ||Ax-B||_oo/((||A||_oo||x||_oo+||B||_oo).N.eps) = %e \n",
+      Rnorm/((Anorm*Xnorm+Bnorm)*n*eps));
+
+  if ( isnan(Rnorm/((Anorm*Xnorm+Bnorm)*n*eps)) || (Rnorm/((Anorm*Xnorm+Bnorm)*n*eps) > 10.0) ){
+      fprintf(stdout, "# ERROR - the solution is suspicious ! \n");
+  }
+  else{
+      fprintf(stdout, "# OK - The solution is CORRECT ! \n");
+  }
+  fflush(stdout);
+
+  free( ipiv2 );
+  free( work );
+  return 0;
+}
+
+#endif
 
 /* Main of the program
 */
@@ -192,13 +280,8 @@ struct doit {
       verif = atoi(argv[4]);
 
     global_blocsize = block_size;
-//    int nblock = (n%block_size==0) ? (n/block_size) : ((n/block_size)+1);
-    const int ib = CONFIG_IB; // from PLASMA
 
     double t0, t1;
-
-    double_type* dL = (double_type*) calloc( n*n, sizeof(double_type) );
-    ka::array<2,double_type> L(dL, n, n, n);
 
     int* dIpiv = (int*) calloc(n, sizeof(int));
     if (0 == dIpiv) {
@@ -207,14 +290,6 @@ struct doit {
 	abort();
     }
     ka::range1d<int> ipiv(dIpiv, n);
-
-    double_type* dWORK = (double_type*) calloc(
-	    ib*block_size, sizeof(double_type) );
-    ka::array<2,double_type> WORK(dWORK,
-	    ib,
-	    block_size,
-	    block_size
-	    );
 
     double_type* dAcopy;
     double_type* dA = (double_type*) calloc(n* n, sizeof(double_type));
@@ -227,9 +302,7 @@ struct doit {
     TaskBodyCPU<TaskLARNV<double_type> >()( ka::range2d_w<double_type>(A) );
 #if CONFIG_USE_CUDA
     ka::Memory::Register( A );
-    ka::Memory::Register( L );
     ka::Memory::Register( ipiv );
-    ka::Memory::Register( WORK );
 #endif
 
     if (verif) {
@@ -250,11 +323,17 @@ struct doit {
     for (int i=0; i<niter; ++i) {
 
 	t0 = kaapi_get_elapsedtime();
-	ka::Spawn<TaskLU<double_type> >(ka::SetStaticSched())( A, L, ipiv, WORK );
+	ka::Spawn<TaskLU<double_type> >(ka::SetStaticSched())( A, ipiv );
 	ka::Sync();
 #if CONFIG_USE_CUDA
       ka::MemorySync();
 #endif
+	{ 
+	  for(int i= block_size; i < n; i+= block_size) {
+	      for (int j=0; j < block_size; j++)
+		  dIpiv[i+j] = dIpiv[i+j] + i;
+	  }
+	}
 	t1 = kaapi_get_elapsedtime();
 
 	/* formula used by plasma */
@@ -281,14 +360,10 @@ struct doit {
 
 #if CONFIG_USE_CUDA
     ka::Memory::Unregister( A );
-    ka::Memory::Unregister( L );
     ka::Memory::Unregister( ipiv );
-    ka::Memory::Unregister( WORK );
 #endif
     free(dA);
-    free(dL);
     free(dIpiv);
-    free( dWORK );
   }
 };
 

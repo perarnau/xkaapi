@@ -135,20 +135,6 @@ int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t * proc)
   if (proc->is_initialized == 0)
     return -1;
 
-#if 0
-  fprintf(stdout, "[%s] kid=%lu\n", __FUNCTION__, proc->index);
-  fflush(stdout);
-  kaapi_cuda_cublas_finalize(proc);
-#ifdef KAAPI_CUDA_ASYNC
-  cudaStreamDestroy(proc->stream);
-#endif
-
-//  kaapi_cuda_ctx_pop( );
-  kaapi_cuda_stream_destroy(proc->kstream);
-  kaapi_cuda_dev_close(proc);
-  kaapi_cuda_mem_destroy(proc);
-  /* TODO MAGMA is breaking Free codes */
-#endif
   proc->is_initialized = 0;
 
   return 0;
@@ -199,7 +185,6 @@ void kaapi_cuda_proc_poll(kaapi_processor_t * const kproc)
     KAAPI_ATOMIC_WRITE(&kproc->cuda_proc.synchronize_flag, 0);
   } else {
     kaapi_cuda_stream_poll(kproc);
-//    kaapi_cuda_memory_poll( kproc );
   }
 }
 
@@ -220,4 +205,14 @@ int kaapi_cuda_proc_all_isvalid(void)
     }
 
   return 1;
+}
+
+void kaapi_cuda_proc_destroy(kaapi_processor_t* const kproc)
+{
+#if 0
+  kaapi_cuda_cublas_finalize(&kproc->cuda_proc);
+  kaapi_cuda_stream_destroy(kproc->cuda_proc.kstream);
+  kaapi_cuda_mem_destroy(&kproc->cuda_proc);
+  kaapi_cuda_dev_close(&kproc->cuda_proc);
+#endif
 }
