@@ -186,8 +186,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   {
     /* Execute the orinal body function with the original args.
     */
-#if 0
-//#if defined(KAAPI_USE_CUDA)
+#if defined(KAAPI_USE_CUDA)
     if (kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA)
     {
       if (fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0)
@@ -205,7 +204,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 #endif
 //	if ( fmt != 0 )
 //		kaapi_mem_host_map_sync_ptr( fmt, orig_task_args );
-	body( orig_task_args, thread );
+      body( orig_task_args, thread );
     }
   }
   else /* it exists at least one w parameter with war dependency or a cw_param: recopies the arguments */
