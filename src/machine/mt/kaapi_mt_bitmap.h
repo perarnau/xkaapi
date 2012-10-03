@@ -438,7 +438,7 @@ static inline int kaapi_bitmap_fetch_and_set_64( kaapi_bitmap64_t* b, int i )
   
   kaapi_assert_debug( (i<64) && (i>=0) );
   x = KAAPI_ATOMIC_OR64_ORIG(&b->proc64, ((uint64_t)1)<<i); 
-  return (x & ((uint64_t)1 << i));
+  return (x & ((uint64_t)1 << (uint64_t)i)) !=0;
 }
 
 static inline int kaapi_bitmap_get_64( const kaapi_bitmap64_t* b, int i ) 
