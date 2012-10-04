@@ -202,6 +202,7 @@ printf("Setup environment KAAPI_CPUCOUNT:%s\n", tmp); fflush(stdout);
   default_Quark[kproc->kid].thread   = kproc->thread;
   default_Quark[kproc->kid].sequence = 0;
   kaapi_begin_parallel(KAAPI_SCHEDFLAG_DEFAULT);
+  
 #if defined(TRACE)
 printf("OUT %s\n", __PRETTY_FUNCTION__);  
   fflush(stdout);
