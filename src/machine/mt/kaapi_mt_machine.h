@@ -229,8 +229,10 @@ typedef struct kaapi_listrequest_t {
 */
 extern  kaapi_request_t kaapi_global_requests_list[KAAPI_MAX_PROCESSOR+1];
 
+#define KAAPI_USE_LRI_WITH_SNAPSHOT 1
 
-/* to iterate over list of request: once an iterator has been captured, 
+#if defined(KAAPI_USE_LRI_WITH_SNAPSHOT)
+/* to iterate over list of requests: once an iterator has been captured, 
    the bitmap is reset to 0 into the listrequest.
    All the futur iterations will be done on top of captured bitmap, not
    those associated with the listrequest which can continue to receive requests
@@ -245,18 +247,37 @@ typedef struct kaapi_listrequest_iterator_t {
 #endif  
 } kaapi_listrequest_iterator_t;
 
+#else /* avoid to capture state at the begining of the steal */
+
+/* New implementation to delay the date where bitmap is captured...
+   to iterate over list of requests without capture of the request' initiators.
+*/
+typedef struct kaapi_listrequest_iterator_t {
+  kaapi_bitmap_t* bitmap;
+  int             idcurr;  /* advance on next, -1 if undefined */
+} kaapi_listrequest_iterator_t;
+#endif
+
 /* return !=0 iff the range is empty
 */
 static inline int kaapi_listrequest_iterator_empty(kaapi_listrequest_iterator_t* lrrange)
-{ return kaapi_bitmap_value_empty(&lrrange->bitmap) && (lrrange->idcurr == -1); }
+{ 
+#if defined(KAAPI_USE_LRI_WITH_SNAPSHOT)
+  return kaapi_bitmap_value_empty(&lrrange->bitmap) && (lrrange->idcurr == -1); 
+#else
+  return kaapi_bitmap_empty(lrrange->bitmap);
+#endif
+}
+
 
 /* clear the bit the at given position
- */
+*/
 static inline void kaapi_listrequest_iterator_unset_at(
   kaapi_listrequest_iterator_t* lrrange, 
   int pos
 )
 { 
+#if defined(KAAPI_USE_LRI_WITH_SNAPSHOT)
   kaapi_bitmap_value_unset(&lrrange->bitmap, pos); 
   if (lrrange->idcurr == pos)
   {
@@ -264,6 +285,9 @@ static inline void kaapi_listrequest_iterator_unset_at(
     /* same as _iterator_next */
     lrrange->idcurr = kaapi_bitmap_value_first1_and_zero( &lrrange->bitmap )-1;
   }    
+#else
+  kaapi_bitmap_unset(lrrange->bitmap, pos); 
+#endif
 }
 
 /* return the number of entries in the range
@@ -271,16 +295,27 @@ static inline void kaapi_listrequest_iterator_unset_at(
 static inline int kaapi_listrequest_iterator_count(
     kaapi_listrequest_iterator_t* lrrange
 )
-{ return kaapi_bitmap_value_count(&lrrange->bitmap) 
-      + (int)(lrrange->idcurr == -1 ? 0 : 1); }
+{ 
+#if defined(KAAPI_USE_LRI_WITH_SNAPSHOT)
+  return kaapi_bitmap_value_count(&lrrange->bitmap) + (int)(lrrange->idcurr == -1 ? 0 : 1);
+#else
+  return kaapi_bitmap_count(lrrange->bitmap);
+#endif  
+}
 
 /* return the bitmap of all requests */
 static inline kaapi_bitmap_value_t kaapi_listrequest_iterator_bitmap(
     kaapi_listrequest_iterator_t* lrrange
 )
-{ kaapi_bitmap_value_t retval;
+{ 
+  kaapi_bitmap_value_t retval;
+#if defined(KAAPI_USE_LRI_WITH_SNAPSHOT)
   kaapi_bitmap_value_set(&retval, (lrrange->idcurr == -1 ? 0 : lrrange->idcurr) );
   kaapi_bitmap_value_or( &retval, &lrrange->bitmap );
+#else
+  kaapi_bitmap_value_clear(&retval);
+  kaapi_bitmap_value_or( &retval, lrrange->bitmap );
+#endif
   return retval;
 }
 
@@ -289,7 +324,13 @@ static inline kaapi_bitmap_value_t kaapi_listrequest_iterator_bitmap(
 static inline kaapi_request_t* kaapi_listrequest_iterator_get( 
   kaapi_listrequest_t* lrequests, kaapi_listrequest_iterator_t* lrrange 
 )
-{ return (lrrange->idcurr == -1 ? 0 : &kaapi_global_requests_list[lrrange->idcurr]); }
+{ 
+#if defined(KAAPI_USE_LRI_WITH_SNAPSHOT)
+  return (lrrange->idcurr == -1 ? 0 : &kaapi_global_requests_list[lrrange->idcurr]);
+#else
+  return (lrrange->idcurr == -1 ? 0 : &kaapi_global_requests_list[lrrange->idcurr]);
+#endif
+}
 
 /* get the first request of the range. range iterator should have been initialized by kaapi_listrequest_iterator_init 
 */
@@ -501,11 +542,11 @@ typedef struct kaapi_processor_t {
 
   struct kaapi_processor_t* victim_kproc;
 
-  void*                    libkomp_tls;
+  void*                     libkomp_tls;
 
   /* cuda */
 #if defined(KAAPI_USE_CUDA)
-  kaapi_cuda_proc_t cuda_proc;
+  kaapi_cuda_proc_t         cuda_proc;
 #endif
 
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_KPROCESSOR_ALIGNMENT_SIZE)));

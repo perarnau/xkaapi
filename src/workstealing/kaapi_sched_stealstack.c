@@ -62,10 +62,10 @@ void kaapi_synchronize_steal_thread(kaapi_thread_context_t * thread)
  */
 int kaapi_sched_stealstack  
 ( 
- kaapi_thread_context_t*       thread, 
- kaapi_listrequest_t*          lrequests, 
- kaapi_listrequest_iterator_t* lrrange
- )
+   kaapi_thread_context_t*       thread, 
+   kaapi_listrequest_t*          lrequests, 
+   kaapi_listrequest_iterator_t* lrrange
+)
 {
   kaapi_frame_t*           top_frame;  
   kaapi_hashmap_t          access_to_gd;
@@ -90,10 +90,8 @@ int kaapi_sched_stealstack
       if (top_frame->pc == top_frame->sp) continue;
       kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );
     } 
-#if 1 // To disable steal in ready list, in order to let only remote push
     else /* if (thread->stack.proc->kid ==0)  */
       kaapi_sched_stealtasklist( thread, top_frame->tasklist, lrequests, lrrange );
-#endif
   }
   
   thread->stack.thieffp = 0;

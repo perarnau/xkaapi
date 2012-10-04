@@ -15,11 +15,6 @@ function do_test() {
     fi
 }
  
-#CBLAS_CFLAGS="-I/usr/local/atlas/include"
-#CBLAS_LDFLAGS="/usr/local/atlas/lib/libcblas.a /usr/local/atlas/lib/liblapack.a /usr/local/atlas/lib/libatlas.a"
-#LAPACKE_CFLAGS="-I/usr/local/include"
-#LAPACKE_LDFLAGS="-L/usr/local/lib -llapacke -llapack"
-
 do_test "CBLAS_CFLAGS" "No CBLAS_CFLAGS found."
 do_test "CBLAS_LDFLAGS" "No CBLAS_LDFLAGS found."
 #do_test "LAPACK_CFLAGS" "No LAPACK_CFLAGS found."
@@ -36,28 +31,26 @@ CFLAGS="-DCONFIG_USE_DOUBLE=1 -I$XKAAPIDIR/include"
 #-DKAAPI_DEBUG=0 -DKAAPI_NDEBUG=1"
 LDFLAGS="-L$XKAAPIDIR/lib -lkaapi -lkaapi++ -lgfortran"
 
-CUDA_CFLAGS="-I/usr/local/cuda/include -DCONFIG_USE_CUDA=1 $CUDA_CFLAGS"
+CUDA_CFLAGS="-DCONFIG_USE_CUDA=1 $CUDA_CFLAGS"
 CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"
-CUBLAS_LDFLAGS="-L/usr/local/cuda/lib -lcublas -lcuda -lcudart"
-
+CUBLAS_LDFLAGS="-lcublas"
+ 
 #MAGMA_CFLAGS="-DCONFIG_USE_MAGMA=1 $MAGMA_CFLAGS"
 
-$CXX -O3 -Wall \
+$CXX -g -Wall \
     $CFLAGS \
     $CUDA_CFLAGS \
     $CBLAS_CFLAGS \
     $CUBLAS_CFLAGS \
     $LAPACK_CLAGS \
     $LAPACKE_CFLAGS \
-    $MAGMA_CFLAGS \
     -c matcholesky_rec_kaapi++.cpp 
 
 
-$CXX -O3 \
+$CXX -g \
     -o matcholesky_rec_kaapi++ \
     matcholesky_rec_kaapi++.o \
     $LDFLAGS \
-    $MAGMA_LDFLAGS \
     $CUDA_LDFLAGS \
     $CUBLAS_LDFLAGS \
     $LAPACKE_LDFLAGS \

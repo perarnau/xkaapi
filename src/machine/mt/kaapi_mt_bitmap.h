@@ -102,10 +102,10 @@ typedef struct {
 	kaapi_atomic64_t proc128[2];
 } kaapi_bitmap128_t;
 typedef struct {
-	kaapi_atomic64_t proc192[3];
+        kaapi_atomic64_t proc192[3];
 } kaapi_bitmap192_t;
 typedef struct {
-	kaapi_atomic64_t proc256[4];
+        kaapi_atomic64_t proc256[4];
 } kaapi_bitmap256_t;
 
 typedef struct {
@@ -118,11 +118,12 @@ typedef struct {
 	uint64_t proc128[2];
 } kaapi_bitmap_value128_t;
 typedef struct {
-	uint64_t proc192[3];
+        uint64_t proc192[3];
 } kaapi_bitmap_value192_t;
 typedef struct {
-	uint64_t proc256[4];
+        uint64_t proc256[4];
 } kaapi_bitmap_value256_t;
+
 
 /******* 32 */
 static inline void kaapi_bitmap_clear_32( kaapi_bitmap32_t* b ) 
@@ -437,7 +438,7 @@ static inline int kaapi_bitmap_fetch_and_set_64( kaapi_bitmap64_t* b, int i )
   
   kaapi_assert_debug( (i<64) && (i>=0) );
   x = KAAPI_ATOMIC_OR64_ORIG(&b->proc64, ((uint64_t)1)<<i); 
-  return (x & ((uint64_t)1 << i));
+  return (x & ((uint64_t)1 << (uint64_t)i)) !=0;
 }
 
 static inline int kaapi_bitmap_get_64( const kaapi_bitmap64_t* b, int i ) 

@@ -41,11 +41,20 @@
 ** terms.
 ** 
 */
+
+/* for debug only */
+#if defined(KAAPI_DEBUG)
+#include <string.h>         /* for debug, strdup */
+#endif
+
 #include "kaapi_impl.h"
 #include <stdarg.h>
+#include <stdio.h>
 #include "quark_unpack_args.h"
 
-double* base_addr = 0;
+#if defined(KAAPI_DEBUG)
+static kaapi_hashmap_t hash_funcptr;
+#endif
 
 //#define TRACE 1
 #define STATIC 1
@@ -202,7 +211,36 @@ printf("Setup environment KAAPI_CPUCOUNT:%s\n", tmp); fflush(stdout);
   default_Quark[kproc->kid].thread   = kproc->thread;
   default_Quark[kproc->kid].sequence = 0;
   kaapi_begin_parallel(KAAPI_SCHEDFLAG_DEFAULT);
-  
+
+#if defined(KAAPI_DEBUG)
+{
+  kaapi_hashmap_init(&hash_funcptr,0);
+
+  printf("Reading .funcname\n");
+  FILE* file = fopen(".func","r");
+  if (file != 0)
+  {
+     void* funcptr;
+     char name[128]; 
+     int err; 
+     kaapi_hashentries_t* entry;
+     while (1)
+     {
+       err = fscanf(file, "%p %s",&funcptr,name);
+       if (err == EOF) break;
+       if (funcptr !=0)
+       {
+         printf("%p -> %s\n",funcptr,name);
+         entry = kaapi_hashmap_findinsert(&hash_funcptr,funcptr); 
+         /* only keep first inserted name in case of alias */
+         if (entry->u.version ==0)
+           entry->u.version = (kaapi_version_t*)strdup(name);
+       }
+     }
+  }
+}  
+#endif
+
 #if defined(TRACE)
 printf("OUT %s\n", __PRETTY_FUNCTION__);  
   fflush(stdout);
@@ -233,7 +271,14 @@ unsigned long long QUARK_Insert_Task(
   XKaapi_Quark * quark, void (*function) (Quark *), Quark_Task_Flags *task_flags, ...
 )
 {
-//printf("%s\n", __PRETTY_FUNCTION__);  
+#if defined(KAAPI_DEBUG)
+  kaapi_hashentries_t* entry = kaapi_hashmap_find(&hash_funcptr, function);
+  if (entry !=0)
+     printf("%s -> body: %p (%s)\n", __PRETTY_FUNCTION__, (void*)function, (char*)entry->u.version);  
+  else
+     printf("%s -> body: %p \n", __PRETTY_FUNCTION__, (void*)function);
+#endif
+
   va_list varg_list;
   int arg_size;
   kaapi_thread_t* thread = kaapi_self_thread();
@@ -762,6 +807,10 @@ printf("OUT %s\n", __PRETTY_FUNCTION__);  fflush(stdout);
 /* Called by worker, cancel any pending tasks, and mark sequence so that it does not accept any more tasks */
 int QUARK_Sequence_Cancel( Quark *quark, Quark_Sequence *sequence )
 {
+  int retval;
+  if ( quark==NULL || sequence==NULL ) return QUARK_ERR;
+  return QUARK_SUCCESS;
+
 //printf("%s\n", __PRETTY_FUNCTION__);  
   kaapi_assert(0);
   return 0;

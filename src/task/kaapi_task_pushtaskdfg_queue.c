@@ -116,6 +116,8 @@ int kaapi_thread_distribute_task (
     kproc->mailbox.tail = remote_task;
   }
   kaapi_atomic_unlock(&kproc->lock);
+#else
+  kaapi_thread_pushtask(thread);
 #endif
     
   return 0;

@@ -165,7 +165,6 @@ redo_select:
     &status, 
     &kproc->thread->stack.stackframe[0] 
   );
-  
 
 #if defined(KAAPI_USE_AGGREGATION)
   /* (2) In case of aggregation, lock after thief has posted its request.
@@ -205,8 +204,17 @@ redo_select:
       (kaapi_atomic64_t*)&KAAPI_PERF_REG(victim.kproc, KAAPI_PERF_ID_STEALIN),
       kaapi_listrequest_iterator_count(&lri)
     );
+    int s_aggr = kaapi_listrequest_iterator_count(&lri);
 #endif
+
     kaapi_sched_stealprocessor( victim.kproc, &victim_stealctxt->lr, &lri );
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+    if (s_aggr != kaapi_listrequest_iterator_count(&lri))
+    {
+      ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
+    }
+#endif
 
     /* reply failed for all others requests */
     request = kaapi_listrequest_iterator_get( &victim_stealctxt->lr, &lri );
@@ -266,13 +274,10 @@ redo_select:
     }
   }
   
-#if defined(KAAPI_USE_PERFCOUNTER)
-  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
-#endif
-
   return KAAPI_REQUEST_S_NOK;
   
 return_value:
+
   /* mark current processor as no stealing anymore */
   kaapi_assert_debug( (kaapi_request_status_get(&status) != KAAPI_REQUEST_S_POSTED) ); 
 

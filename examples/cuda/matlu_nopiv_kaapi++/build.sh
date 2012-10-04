@@ -16,7 +16,7 @@ LDFLAGS="-L$XKAAPIDIR/lib -lkaapi -lkaapi++"
 
 #MAGMA_CFLAGS="-DCONFIG_USE_MAGMA=1 $MAGMA_CFLAGS"
 
-$CXX -O3 -Wall \
+$CXX -g -Wall \
     $CFLAGS \
     $CUDA_CFLAGS \
     $CBLAS_CFLAGS \
@@ -27,7 +27,7 @@ $CXX -O3 -Wall \
     -c matlu_nopiv_kaapi++.cpp 
 
 
-$CXX -O3 \
+$CXX -g -Wall \
     -o matlu_nopiv_kaapi++ \
     matlu_nopiv_kaapi++.o \
     $LDFLAGS \

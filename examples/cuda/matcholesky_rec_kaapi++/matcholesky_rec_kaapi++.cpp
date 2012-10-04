@@ -142,6 +142,9 @@ int check_factorization(int N, T* A1, T* A2, int LDA, int uplo)
   return info_factorization;
 }
 
+static size_t global_blocsize = 512;
+static size_t global_recblocsize = 512;
+
 template<typename T>
 struct TaskParallelPOTRF: public ka::Task<3>::Signature
 <
@@ -150,7 +153,6 @@ struct TaskParallelPOTRF: public ka::Task<3>::Signature
   ka::RPWP<ka::range2d<T> > /* A */
 >{};
 
-#define TASK_POTRF_THRESHOLD	  256
 template<typename T>
 struct TaskBodyCPU<TaskParallelPOTRF<T> > {
   void operator()( 
@@ -160,9 +162,9 @@ struct TaskBodyCPU<TaskParallelPOTRF<T> > {
     const int N     = A->dim(0); 
     const int lda   = A->lda();
     T* const a = A->ptr();
-    const int blocsize = TASK_POTRF_THRESHOLD;
+    const int blocsize = global_recblocsize;
 
-    if( N > TASK_POTRF_THRESHOLD )
+    if( N > blocsize )
     {
       for (int k=0; k < N; k += blocsize) {
 	ka::rangeindex rk(k, k+blocsize);
@@ -177,12 +179,12 @@ struct TaskBodyCPU<TaskParallelPOTRF<T> > {
 	
 	for (int m=k+blocsize; m < N; m += blocsize) {
 	  ka::rangeindex rm(m, m+blocsize);
-	  ka::Spawn<TaskSYRK<T> >(  ka::SetArch(ka::ArchHost))
+	  ka::Spawn<TaskSYRK<T> >(  ka::SetArch(ka::ArchHost) )
 	  ( order, uplo, CblasNoTrans, (T)-1.0, A(rk,rm), (T)1.0, A(rm,rm));
 	  
 	  for (int n=k+blocsize; n < m; n += blocsize) {
 	    ka::rangeindex rn(n, n+blocsize);
-	    ka::Spawn<TaskGEMM<T> >(  ka::SetArch(ka::ArchHost))
+	    ka::Spawn<TaskGEMM<T> >(  ka::SetArch(ka::ArchHost) )
 	    ( order, CblasNoTrans, CblasTrans, (T)-1.0, A(rk,rm), A(rk,rn), (T)1.0, A(rn,rm));
 	  }
 	}
@@ -195,6 +197,148 @@ struct TaskBodyCPU<TaskParallelPOTRF<T> > {
   }
 };
 
+template<typename T>
+struct TaskParallelGEMM: public ka::Task<8>::Signature
+<
+  CBLAS_ORDER,			      /* row / col */
+  CBLAS_TRANSPOSE,        /* NoTrans/Trans for A */
+  CBLAS_TRANSPOSE,        /* NoTrans/Trans for B */
+  T,                      /* alpha */
+  ka::R<ka::range2d<T> >, /* Aik   */
+  ka::R<ka::range2d<T> >, /* Akj   */
+  T,                      /* beta */
+  ka::RPWP<ka::range2d<T> > /* Aij   */
+>{};
+
+template<typename T>
+struct TaskBodyCPU<TaskParallelGEMM<T> > {
+  void operator()
+  (
+    CBLAS_ORDER		   order, 
+    CBLAS_TRANSPOSE transA,
+    CBLAS_TRANSPOSE transB,
+    T alpha,
+    ka::range2d_r<T> A,
+    ka::range2d_r<T> B,
+    T beta,
+    ka::range2d_rpwp<T> C
+  )
+  {
+    const T* const a = A->ptr();
+    const T* const b = B->ptr();
+    T* const c       = C->ptr();
+
+    const int M = A->dim(0);
+    const int K = B->dim(0);
+    const int N = B->dim(1);
+
+    const int lda = A->lda();
+    const int ldb = B->lda();
+    const int ldc = C->lda();
+    const int bloc = global_recblocsize;
+
+    /* It works only for B with CblasTrans */
+#if 0
+    fprintf(stdout, "TaskCPU ParallelGEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", M, N, K, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
+#endif
+    if(M > bloc)
+    {
+      for (int i=0; i<M; i += bloc)
+      {
+	ka::rangeindex ri(i, i+bloc);
+	for (int j=0; j<N; j += bloc)
+	{
+	  ka::rangeindex rj(j, j+bloc);
+	  for (int k=0; k<K; k += bloc)
+	  {
+	    ka::rangeindex rk(k, k+bloc);
+	      ka::Spawn<TaskGEMM<T> >(ka::SetArch(ka::ArchHost))
+		(
+		 order, transA, transB,
+		 alpha, A(rk,ri), B(rk,rj), beta, C(rj,ri)
+		);
+	  }
+	}
+      }
+    } else {
+      // spawn here
+      CBLAS<T>::gemm
+      (
+	order, transA, transB,
+	M, N, K, alpha, a, lda, b, ldb, beta, c, ldc
+      );
+    }
+  }
+};
+
+#if defined(KAAPI_USE_CUDA)
+template<typename T> 
+struct TaskBodyGPU<TaskParallelGEMM<T> >
+{
+  void operator()
+  (
+   ka::gpuStream stream,
+   CBLAS_ORDER		   order, 
+   CBLAS_TRANSPOSE transA,
+   CBLAS_TRANSPOSE transB,
+   T alpha,
+   ka::range2d_r<T> A,
+   ka::range2d_r<T> B,
+   T beta,
+   ka::range2d_rpwp<T> C
+  )
+  {
+    const T* const a = A->ptr();
+    const T* const b = B->ptr();
+    T* const c       = C->ptr();
+
+    const int m = A->dim(0); 
+    const int n = B->dim(1); // eq. to Akj->rows();
+    const int k = C->dim(1); 
+
+
+    const int lda = A->lda();
+    const int ldb = B->lda();
+    const int ldc = C->lda();
+
+#if 0
+    fprintf(stdout, "TaskGPU RecursiveGEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", m, n, k, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
+#endif
+
+#if CONFIG_USE_CUBLAS
+    cublasStatus_t status;
+    if( order == CblasColMajor ) 
+      status = CUBLAS<T>::gemm (
+	     kaapi_cuda_cublas_handle(),
+	     convertToOp(transA),
+	     convertToOp(transB),
+	     m, n, k,
+	     &alpha,
+	     a, lda,
+	     b, ldb, 
+	     &beta, c, ldc
+      );
+    else {
+      kaapi_assert_debug( order == CblasRowMajor )
+      status = CUBLAS<T>::gemm(
+	     kaapi_cuda_cublas_handle(),
+	     convertToOp(transB),
+	     convertToOp(transA),
+	     n, m, k,
+	     &alpha,
+	     b, ldb, 
+	     a, lda,
+	     &beta, c, ldc
+      );
+  }
+	
+  if (status != CUBLAS_STATUS_SUCCESS)
+    printf("%s::cublasGemm() == %d\n", __FUNCTION__, status);
+#endif
+  }
+};
+#endif /* KAAPI_USE_CUDA */
+
 /* Block Cholesky factorization A <- L * L^t
  Lower triangular matrix, with the diagonal, stores the Cholesky factor.
  Based on PLASMA library.
@@ -205,7 +349,6 @@ struct TaskCholesky: public ka::Task<2>::Signature<
     ka::RPWP<ka::range2d<T> >, /* A */
     CBLAS_UPLO
 >{};
-static size_t global_blocsize = 2;
 
 template<typename T>
 struct TaskBodyCPU<TaskCholesky<T> > {
@@ -221,25 +364,30 @@ struct TaskBodyCPU<TaskCholesky<T> > {
     if( uplo == CblasLower ) 
     {
       for (size_t k=0; k < N; k += blocsize) {
-        ka::rangeindex rk(k, k+blocsize);
+	size_t ik = (k+blocsize < N) ? k+blocsize : N;
+        ka::rangeindex rk(k, ik);
         ka::Spawn<TaskParallelPOTRF<T> >( ka::SetStaticSched() )
 	      ( CblasColMajor, CblasLower, A(rk,rk) );
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
-          ka::rangeindex rm(m, m+blocsize);
+	  size_t im = (m+blocsize < N) ? m+blocsize : N;
+          ka::rangeindex rm(m, im);
           ka::Spawn<TaskTRSM<T> >( ka::SetArch(ka::ArchCUDA) )
-          ( CblasColMajor, CblasRight, uplo, CblasTrans, CblasNonUnit, (T)1.0, A(rk,rk), A(rk,rm));
+	    ( CblasColMajor, CblasRight, uplo, CblasTrans, CblasNonUnit, (T)1.0, A(rk,rk), A(rk,rm));
         }
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
-          ka::rangeindex rm(m, m+blocsize);
+	  size_t im = (m+blocsize < N) ? m+blocsize : N;
+          ka::rangeindex rm(m, im);
           ka::Spawn<TaskSYRK<T> >( ka::SetArch(ka::ArchCUDA) )
-          ( CblasColMajor, uplo, CblasNoTrans, (T)-1.0, A(rk,rm), (T)1.0, A(rm,rm));
+	    ( CblasColMajor, uplo, CblasNoTrans, (T)-1.0, A(rk,rm), (T)1.0, A(rm,rm));
           
           for (size_t n=k+blocsize; n < m; n += blocsize) {
-            ka::rangeindex rn(n, n+blocsize);
+	    size_t in = (n+blocsize < N) ? n+blocsize : N;
+            ka::rangeindex rn(n, in);
+            //ka::Spawn<TaskParallelGEMM<T> >(ka::SetStaticSched())
             ka::Spawn<TaskGEMM<T> >( ka::SetArch(ka::ArchCUDA) )
-            ( CblasColMajor, CblasNoTrans, CblasTrans, (T)-1.0, A(rk,rm), A(rk,rn), (T)1.0, A(rn,rm));
+	      ( CblasColMajor, CblasNoTrans, CblasTrans, (T)-1.0, A(rk,rm), A(rk,rn), (T)1.0, A(rn,rm));
           }
         }
       }
@@ -274,9 +422,10 @@ struct TaskBodyCPU<TaskCholesky<T> > {
 /* Main of the program
  */
 struct doit {
-  void doone_exp( int n, int block_size, int niter, int verif )
+  void doone_exp( int n, int block_size, int rec_block_size, int niter, int verif )
   {
     global_blocsize = block_size;
+    global_recblocsize = rec_block_size;
     double t0, t1;
     double_type* dA = (double_type*) calloc(n* n, sizeof(double_type));
     if (0 == dA) {
@@ -354,9 +503,10 @@ struct doit {
     }
     
     gflops = sumgf/niter;
-    printf("POTRF %6d %5d %5d %9.10f %9.6f\n",
+    printf("POTRF %6d %5d %5d %5d %9.10f %9.6f\n",
            (int)n,
            (int)global_blocsize,
+	   (int)global_recblocsize,
            (int)kaapi_getconcurrency(),
            sumt/niter, gflops );
     
@@ -378,20 +528,25 @@ struct doit {
     if (argc > 2)
       block_size = atoi(argv[2]);
     
+    // block count
+    int rec_block_size = 1;
+    if (argc > 3)
+      rec_block_size = atoi(argv[3]);
+    
     // Number of iterations
     int niter = 1;
-    if (argc >3)
-      niter = atoi(argv[3]);
+//    if (argc > 4)
+//      niter = atoi(argv[4]);
     
     // Make verification ?
     int verif = 0;
-    if (argc >4)
+    if(argc > 4)
       verif = atoi(argv[4]);
     
-    printf("# size  blocksize  #threads   time      GFlop/s\n");
+    printf("# size  blocksize recblocksize  #threads   time      GFlop/s\n");
     for (int k=0; k<1; ++k, ++n )
     {
-      doone_exp( n, block_size, niter, verif );
+      doone_exp( n, block_size, rec_block_size, niter, verif );
     }
   }
   

@@ -91,32 +91,32 @@ typedef struct kaapi_cuda_ctx {
   cublasHandle_t handle;
 } kaapi_cuda_ctx_t;
 
-struct kaapi_cuda_mem_blk_t;
+struct kaapi_cuda_mem_cache_blk_t;
 
 typedef struct kaapi_cuda_mem {
   size_t total;
   size_t used;
   struct {
-    struct kaapi_cuda_mem_blk_t *beg;
-    struct kaapi_cuda_mem_blk_t *end;
+    struct kaapi_cuda_mem_cache_blk_t *beg;
+    struct kaapi_cuda_mem_cache_blk_t *end;
   } ro;
   struct {
-    struct kaapi_cuda_mem_blk_t *beg;
-    struct kaapi_cuda_mem_blk_t *end;
+    struct kaapi_cuda_mem_cache_blk_t *beg;
+    struct kaapi_cuda_mem_cache_blk_t *end;
   } rw;
 
   /* all GPU allocated pointers */
   kaapi_big_hashmap_t kmem;
 
   cudaEvent_t event;		/* used to H2D events */
-} kaapi_cuda_mem_t;
+} kaapi_cuda_mem_cache_t;
 
 typedef struct kaapi_cuda_proc_t {
   unsigned int index;
   struct cudaDeviceProp deviceProp;
   struct kaapi_cuda_stream_t *kstream;
   kaapi_cuda_ctx_t ctx;
-  kaapi_cuda_mem_t memory;
+  kaapi_cuda_mem_cache_t cache;
 
   kaapi_atomic_t synchronize_flag;	/* synchronization flag */
 
@@ -166,10 +166,6 @@ static inline struct kaapi_processor_t *kaapi_cuda_get_proc_by_dev(unsigned
 
 extern void kaapi_cuda_stream_poll(struct kaapi_processor_t *const);
 
-/* Seachs for valid blocs in this GPU and invalid on host, and transfer them.
- * Each call it performs one transfer, if necessary. */
-extern int kaapi_cuda_memory_poll(struct kaapi_processor_t *const);
-
 /* Polls current operations on GPU cards using kstream from kproc */
 extern void kaapi_cuda_proc_poll(struct kaapi_processor_t *const);
 
@@ -185,5 +181,7 @@ extern int kaapi_cuda_sync(struct kaapi_processor_t *const);
 
 /* Test if all kproc CUDA had finished their operations (kstream, etc) */
 extern int kaapi_cuda_proc_all_isvalid(void);
+
+extern void kaapi_cuda_proc_destroy(struct kaapi_processor_t *const);
 
 #endif				/* ! KAAPI_CUDA_PROC_H_INCLUDED */

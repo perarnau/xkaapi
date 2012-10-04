@@ -35,6 +35,9 @@ struct LAPACKE {
   static lapack_int getrs( int matrix_order, char trans, lapack_int n,
 			     lapack_int nrhs, const value_type* a, lapack_int lda,
 			     const lapack_int* ipiv, value_type* b, lapack_int ldb );
+
+  static lapack_int getrf_work( int matrix_order, lapack_int m, lapack_int n,
+                                value_type* a, lapack_int lda, lapack_int* ipiv );
 };
 
 template<>
@@ -140,6 +143,12 @@ struct LAPACKE<double> {
   {
     return LAPACKE_dgetrs(matrix_order, trans, n, nrhs, a, lda, ipiv, b, ldb);
   }
+
+  static lapack_int getrf_work( int matrix_order, lapack_int m, lapack_int n,
+                                value_type* a, lapack_int lda, lapack_int* ipiv )
+  {
+    return LAPACKE_dgetrf_work(matrix_order, m, n, a, lda, ipiv);
+  }
 };
 
 template<>
@@ -184,6 +193,12 @@ struct LAPACKE<float> {
 			     const lapack_int* ipiv, value_type* b, lapack_int ldb )
   {
     return LAPACKE_sgetrs(matrix_order, trans, n, nrhs, a, lda, ipiv, b, ldb);
+  }
+
+  static lapack_int getrf_work( int matrix_order, lapack_int m, lapack_int n,
+                                value_type* a, lapack_int lda, lapack_int* ipiv )
+  {
+    return LAPACKE_sgetrf_work(matrix_order, m, n, a, lda, ipiv);
   }
 };
 
