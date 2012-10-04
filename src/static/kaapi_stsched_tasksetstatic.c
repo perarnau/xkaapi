@@ -161,8 +161,9 @@ void kaapi_staticschedtask_body_gen(
       break;
   }
 
-  if (!kaapi_frame_isempty(thread->stack.sfp)) 
-  {
+  /* do nothing if no task pushed */
+  if (kaapi_frame_isempty(uthread)) 
+    return;
 
   /* allocate the tasklist for this task
   */
@@ -226,8 +227,6 @@ void kaapi_staticschedtask_body_gen(
 //  kaapi_memory_init();
 #endif /* TODO */
 
-  } // end if tasks created
-
 #if 0
   fprintf(stdout, "[%s] kid=%i tasklist tasks: %llu total: %llu\n", 
     __FUNCTION__,
@@ -253,19 +252,21 @@ void kaapi_staticschedtask_body( void* sp, kaapi_thread_t* uthread, kaapi_task_t
   kaapi_staticschedtask_body_gen( sp, uthread, pc, 1); /* 1 == without wh */
 }
 
-void kaapi_staticschedtask_body_wh( void* sp, kaapi_thread_t* uthread, kaapi_task_t* pc )
+static void kaapi_staticschedtask_body_wh( void* sp, kaapi_thread_t* uthread, kaapi_task_t* pc )
 {
   kaapi_staticschedtask_body_gen( sp, uthread, pc, 2); /* 2 == with wh */
 }
 
-void kaapi_staticschedtask_body_gpu( void* sp, kaapi_gpustream_t stream )
+static void kaapi_staticschedtask_body_gpu( void* sp, kaapi_gpustream_t stream )
 {
-  kaapi_staticschedtask_body_gen( sp, kaapi_self_thread(), 0, 1); /* 1 == without wh */
+  kaapi_thread_t* uthread = kaapi_self_thread();
+  kaapi_staticschedtask_body_gen( sp, uthread, uthread[-1].pc, 1); /* 1 == without wh */
 }
 
-void kaapi_staticschedtask_body_gpu_wh( void* sp, kaapi_gpustream_t stream )
+static void kaapi_staticschedtask_body_gpu_wh( void* sp, kaapi_gpustream_t stream )
 {
-  kaapi_staticschedtask_body_gen( sp, kaapi_self_thread(), 0, 2); /* 2 == with wh */
+  kaapi_thread_t* uthread = kaapi_self_thread();
+  kaapi_staticschedtask_body_gen( sp, uthread, uthread[-1].pc, 2); /* 2 == with wh */
 }
 
 
@@ -437,7 +438,7 @@ void kaapi_register_staticschedtask_format(void)
     0, /* task binding */
     0  /* get_splitter */
   );
-#if 1
+
   kaapi_format_taskregister_body
   (
     kaapi_staticschedtask_format,
@@ -445,7 +446,6 @@ void kaapi_register_staticschedtask_format(void)
     (kaapi_task_body_t)kaapi_staticschedtask_body_gpu_wh,
     KAAPI_PROC_TYPE_CUDA
   );
-#endif
 }
 
 kaapi_task_body_t kaapi_task_stsched_get_body_by_arch

@@ -153,6 +153,9 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
           err = kaapi_stack_execframe( &thread->stack );
           if (err == EWOULDBLOCK)
           {
+#if defined(KAAPI_USE_PERFCOUNTER)
+            KAAPI_PERF_REG(stack->proc, KAAPI_PERF_ID_TASKS) += cnt_exec;
+#endif
             KAAPI_ATOMIC_ADD(&tasklist->cnt_exec, cnt_exec);
             return EWOULDBLOCK;
           }
@@ -176,6 +179,9 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
   }
   
   KAAPI_ATOMIC_ADD(&tasklist->cnt_exec, cnt_exec);
+#if defined(KAAPI_USE_PERFCOUNTER)
+  KAAPI_PERF_REG(stack->proc, KAAPI_PERF_ID_TASKS) += cnt_exec;
+#endif
 
   /* here... end execute frame tasklist*/
   KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_FRAME_TL_END );

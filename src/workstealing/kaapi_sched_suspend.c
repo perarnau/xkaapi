@@ -121,11 +121,11 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc, int (*fcondition)(void* ), v
         /* push kproc context into free list */
         if (tmp !=0)
           kaapi_context_free( kproc, tmp );
-
 #if 0
         /* ok suspended thread is ready for execution */
         kaapi_assert((tasklist !=0) || (thread->stack.sfp->pc == task_condition));
 #endif
+
 #if defined(KAAPI_USE_PERFCOUNTER)
         kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_USER_STATE );
         KAAPI_EVENT_PUSH0( kproc, 0, KAAPI_EVT_SCHED_IDLE_END );

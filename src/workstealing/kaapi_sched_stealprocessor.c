@@ -70,6 +70,7 @@ int kaapi_sched_stealprocessor(
     thread = cell->thread;
     if (thread != 0)
       kaapi_sched_stealstack( thread, lrequests, lrrange );
+    // TODO impact if iteration in reverse order ???
     cell = cell->prev;
   }
 
@@ -82,7 +83,7 @@ int kaapi_sched_stealprocessor(
   }
 
 #if 1 /* to disable steal in kproc ready list */
-  if( !kaapi_readytasklist_isempty( kproc->rtl ) )
+  if (!kaapi_readytasklist_isempty( kproc->rtl ))
     kaapi_sched_stealreadytasklist( thread, kproc->rtl, lrequests, lrrange );
 #endif
 

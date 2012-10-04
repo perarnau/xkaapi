@@ -73,9 +73,10 @@ Thierry Gautier\thanks{INRIA}
 \RRetitle{\kaapi Fortran programming interface}
 \titlehead{\kaapi Fortran programming interface}
 
+\RRresume{Ce rapport décrit l'interface Fortran du logical \kaapi.}
 \RRabstract{This report defines the \kaapi Fortran programming interface.}
 
-\RRmotcle{}
+\RRmotcle{environment de programmation parallèle, \kaapi, Fortran}
 \RRkeyword{parallel computing, \kaapi, Fortran}
 \RRprojets{MOAIS}
 \RCGrenoble % Grenoble - Rh\^one-Alpes
@@ -275,7 +276,9 @@ sequential grain, since a steal operation requires a bigger task to be amortized
 
 \paragraph{}
 Note that this routine sets global variables used by a subsequent calls to
-\textit{KAAPIF\_FOREACH} family functions. To avoid reentrancy issues,
+\textit{KAAPIF\_FOREACH} family functions. 
+
+To avoid reentrancy issues,
 \textit{KAAPIF\_SET\_GRAINS} should be called just before the corresponding
 \textit{KAAPIF\_FOREACH} function.
 
@@ -405,8 +408,9 @@ SUBROUTINE BODY(I, J, TID, ...)
 \item \textit{FIRST}, \textit{LAST}: the iteration range indices, inclusive.
 \item \textit{NARGS}: the argument count
 \item \textit{BODY}: the function body to be called at each iteration
-\item \textit{...}: the arguments passed to \textit{BODY}. For
-\textit{KAAPIF\_FOREACH\_WITH\_FORMAT}, refer to the \textit{KAAPIF\_SPAWN}
+\item \textit{...}: the arguments passed to \textit{BODY}. For\\
+\textit{KAAPIF\_FOREACH\_WITH\_FORMAT},\\
+ refer to the \textit{KAAPIF\_SPAWN}
 documentation.
 \end{itemize}
 

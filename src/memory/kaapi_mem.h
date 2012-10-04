@@ -70,7 +70,7 @@ typedef struct kaapi_mem_data_t {
 } kaapi_mem_data_t;
 
 typedef struct kaapi_mem_host_map_t {
-    kaapi_mem_asid_t asid;
+    kaapi_mem_asid_t    asid;
     kaapi_big_hashmap_t hmap; /* TODO remove */
 } kaapi_mem_host_map_t;
 

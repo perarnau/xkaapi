@@ -427,9 +427,9 @@ kaapi_task_body_t kaapi_get_task_bodywh_by_arch
   unsigned int arch
 )
 {
-  if( kaapi_format_is_staticschedtask(td->fmt) ){
+  if( kaapi_format_is_staticschedtask(td->fmt) )
     return kaapi_task_stsched_get_bodywh_by_arch( td, arch );
-  }
+
   return td->fmt->entrypoint_wh[arch];
 }
 

@@ -101,6 +101,7 @@ static int kaapi_setup_param()
   const char* affinity;
   const char* stealaffinity;
   const char* use_ctpath;
+  const char* displayperf;
     
   /* compute the number of cpu of the system */
 #if defined(__linux__)
@@ -130,10 +131,21 @@ static int kaapi_setup_param()
 
   kaapi_default_param.cpucount  = kaapi_default_param.syscpucount;
   
-  if (getenv("KAAPI_DISPLAY_PERF") !=0)
-    kaapi_default_param.display_perfcounter = 1;
-  else
-    kaapi_default_param.display_perfcounter = 0;
+  displayperf = getenv("KAAPI_DISPLAY_PERF");
+  if (displayperf !=0)
+  {
+    if ((strcmp(displayperf, "no") == 0) || (strcmp(displayperf, "0") == 0))
+      kaapi_default_param.display_perfcounter = KAAPI_NO_DISPLAY_PERF;
+    else if ((strcmp(displayperf, "full") == 0) || (strcmp(displayperf, "1") == 0))
+      kaapi_default_param.display_perfcounter = KAAPI_DISPLAY_PERF_FULL;
+    else if (strcmp(displayperf, "resume") == 0)
+      kaapi_default_param.display_perfcounter = KAAPI_DISPLAY_PERF_RESUME;
+    else {
+      fprintf(stderr, "***Kaapi: bad value for variable KAAPI_DISPLAY_PERF. Use 'resume'\n");
+      kaapi_default_param.display_perfcounter = KAAPI_DISPLAY_PERF_RESUME;
+    }
+  } else
+    kaapi_default_param.display_perfcounter = KAAPI_NO_DISPLAY_PERF;
 
   if (getenv("KAAPI_STACKSIZE") !=0)
     kaapi_default_param.stacksize = atoll(getenv("KAAPI_STACKSIZE"));
@@ -342,6 +354,10 @@ int kaapi_finalize(void)
 
 #if defined(KAAPI_USE_NETWORK)
   kaapi_network_finalize();
+#endif
+
+#if defined(KAAPI_USE_CUDA)
+//TODO:  kaapi_cuda_finalize();
 #endif
 
   return 0;

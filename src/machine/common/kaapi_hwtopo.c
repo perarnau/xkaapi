@@ -143,14 +143,14 @@ static void kaapi_hw_standardinit(void)
 
   kaapi_procinfo_list_init(kaapi_default_param.kproc_list);
   kaapi_mt_register_procs(kaapi_default_param.kproc_list);
-  kaapi_assert_m(kaapi_default_param.cpucount <KAAPI_MAX_PROCESSOR_LIMIT,
+  kaapi_assert_m(kaapi_default_param.cpucount <=KAAPI_MAX_PROCESSOR_LIMIT,
     "[kaapi] to many required processor for this configuration. See definition of KAAPI_MAX_PROCESSOR_LIMIT" 
   );
 
 #if defined(KAAPI_USE_CUDA)
   kaapi_cuda_register_procs(kaapi_default_param.kproc_list);
   kaapi_assert_m( (kaapi_default_param.cpucount+kaapi_default_param.gpucount) 
-    < KAAPI_MAX_PROCESSOR_LIMIT,
+    <= KAAPI_MAX_PROCESSOR_LIMIT,
     "[kaapi] to many required CPU and GPU for this configuration. See definition of KAAPI_MAX_PROCESSOR_LIMIT" 
   );
 #endif /* KAAPI_USE_CUDA */

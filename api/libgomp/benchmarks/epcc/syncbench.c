@@ -19,7 +19,7 @@
 **************************************************************************/
 
 
-
+#include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -28,12 +28,14 @@
 #include <time.h>
 #include <math.h>
 #include <omp.h>
+#include <string.h>
 
-#define OUTERREPS 200
 #define CONF95 1.96
 
+static int outerreps = 200;
+
 static int nthreads, delaylength, innerreps;
-static double times[OUTERREPS+1], reftime, refsd;
+static double *times, reftime, refsd;
 
 void delay(int);
 void refer(void);
@@ -141,16 +143,20 @@ time_pretty_print (struct tm *tm, char *the_time)
 
 #endif /* EPCC_LOG */
 
-int main (int argv, char **argc)
+int main (int argc, char **argv)
 {
+  if (argc != 0)
+    outerreps = atoi (argv[1]);
 
 #pragma omp parallel
   {
 #pragma omp master
     {
-  nthreads = omp_get_num_threads();
+      nthreads = omp_get_num_threads();
     }
   }
+
+  times = malloc ((outerreps + 1) * sizeof (double));
 
 #ifdef EPCC_LOG
   time_t today;
@@ -173,14 +179,14 @@ int main (int argv, char **argc)
   /* GENERATE REFERENCE TIME */
   refer();
 
-  /* TEST  PARALLEL REGION */
+  /* TEST  PAR REGION */
   innerreps = 1000;
   testpr();
 
   /* TEST  FOR */
   testfor();
 
-  /* TEST  PARALLEL FOR */
+  /* TEST  PARFOR */
   testpfor();
 
   /* TEST  BARRIER */
@@ -189,10 +195,10 @@ int main (int argv, char **argc)
   /* TEST  SINGLE */
   testsing();
 
-  /* TEST  CRITICAL*/
+  /* TEST  CRITIC*/
   testcrit();
 
-  /* TEST  LOCK/UNLOCK */
+  /* TEST  LOCK */
   testlock();
 
   /* TEST ORDERED SECTION */
@@ -207,12 +213,14 @@ int main (int argv, char **argc)
   /* GENERATE NEW REFERENCE TIME */
   referred();
 
-  /* TEST REDUCTION (1 var)  */
+  /* TEST REDUC (1 var)  */
   testred();
 
 #ifdef EPCC_LOG
   close_log_files ();
 #endif /* EPCC_LOG */
+
+  free (times);
 }
 
 void refer()
@@ -227,7 +235,7 @@ void refer()
   printf("--------------------------------------------------------\n");
   printf("Computing reference time 1\n");
 
-  for (k=0; k<=OUTERREPS; k++){
+  for (k=0; k<=outerreps; k++){
     start  = getclock();
     for (j=0; j<innerreps; j++){
       delay(delaylength);
@@ -256,7 +264,7 @@ void referatom()
   printf("--------------------------------------------------------\n");
   printf("Computing reference time 2\n");
 
-  for (k=0; k<=OUTERREPS; k++){
+  for (k=0; k<=outerreps; k++){
     aaaa=0;
     start  = getclock();
     for (j=0; j<innerreps; j++){
@@ -287,7 +295,7 @@ void referred()
   printf("--------------------------------------------------------\n");
   printf("Computing reference time 3\n");
 
-  for (k=0; k<=OUTERREPS; k++){
+  for (k=0; k<=outerreps; k++){
     aaaa=0;
     start  = getclock();
     for (j=0; j<innerreps; j++){
@@ -319,9 +327,9 @@ void testpr()
 
   printf("\n");
   printf("--------------------------------------------------------\n");
-  printf("Computing PARALLEL time\n");
+  printf("Computing PAR time\n");
 
-  for (k=0; k<=OUTERREPS; k++){
+  for (k=0; k<=outerreps; k++){
     start  = getclock();
     for (j=0; j<innerreps; j++){
 #pragma omp parallel
@@ -334,9 +342,9 @@ void testpr()
 
   stats (&meantime, &sd);
 
-  printf("PARALLEL time =                           %f microseconds +/- %f\n", meantime, CONF95*sd);
+  printf("PAR time = %f microseconds +/- %f\n", meantime, CONF95*sd);
 
-  printf("PARALLEL overhead =                       %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
+  printf("PAR overhead = %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
 
 #ifdef EPCC_LOG
   fprintf (par_log, "%s        %f %f\n", the_time, meantime-reftime, CONF95*(sd+refsd));
@@ -356,7 +364,7 @@ void testfor()
   printf("--------------------------------------------------------\n");
   printf("Computing FOR time\n");
 
-  for (k=0; k<=OUTERREPS; k++){
+  for (k=0; k<=outerreps; k++){
     start  = getclock();
 #pragma omp parallel private(j) 
       {
@@ -372,9 +380,9 @@ void testfor()
 
   stats (&meantime, &sd);
 
-  printf("FOR time =                           %f microseconds +/- %f\n", meantime, CONF95*sd);
+  printf("FOR time = %f microseconds +/- %f\n", meantime, CONF95*sd);
 
-  printf("FOR overhead =                       %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
+  printf("FOR overhead = %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
 
 #ifdef EPCC_LOG
   fprintf (for_log, "%s        %f %f\n", the_time, meantime-reftime, CONF95*(sd+refsd));
@@ -392,9 +400,9 @@ void testpfor()
 
   printf("\n");
   printf("--------------------------------------------------------\n");
-  printf("Computing PARALLEL FOR time\n");
+  printf("Computing PARFOR time\n");
 
-  for (k=0; k<=OUTERREPS; k++){
+  for (k=0; k<=outerreps; k++){
     start  = getclock();
     for (j=0; j<innerreps; j++){
 #pragma omp parallel for
@@ -407,9 +415,9 @@ void testpfor()
 
   stats (&meantime, &sd);
 
-  printf("PARALLEL FOR time =                           %f microseconds +/- %f\n", meantime, CONF95*sd);
+  printf("PARFOR time = %f microseconds +/- %f\n", meantime, CONF95*sd);
 
-  printf("PARALLEL FOR overhead =                       %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
+  printf("PARFOR overhead = %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
 
 #ifdef EPCC_LOG
   fprintf (parfor_log, "%s        %f %f\n", the_time, meantime-reftime, CONF95*(sd+refsd));
@@ -429,7 +437,7 @@ void testbar()
   printf("--------------------------------------------------------\n");
   printf("Computing BARRIER time\n");
 
-  for (k=0; k<=OUTERREPS; k++){
+  for (k=0; k<=outerreps; k++){
     start  = getclock();
 #pragma omp parallel private(j)
     {
@@ -443,9 +451,9 @@ void testbar()
 
   stats (&meantime, &sd);
 
-  printf("BARRIER time =                           %f microseconds +/- %f\n", meantime, CONF95*sd);
+  printf("BARRIER time = %f microseconds +/- %f\n", meantime, CONF95*sd);
 
-  printf("BARRIER overhead =                       %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
+  printf("BARRIER overhead = %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
 
 #ifdef EPCC_LOG
   fprintf (barrier_log, "%s        %f %f\n", the_time, meantime-reftime, CONF95*(sd+refsd));
@@ -465,7 +473,7 @@ void testsing()
   printf("--------------------------------------------------------\n");
   printf("Computing SINGLE time\n");
 
-  for (k=0; k<=OUTERREPS; k++){
+  for (k=0; k<=outerreps; k++){
     start  = getclock();
 #pragma omp parallel private(j)
     {
@@ -479,9 +487,9 @@ void testsing()
 
   stats (&meantime, &sd);
 
-  printf("SINGLE time =                           %f microseconds +/- %f\n", meantime, CONF95*sd);
+  printf("SINGLE time = %f microseconds +/- %f\n", meantime, CONF95*sd);
 
-  printf("SINGLE overhead =                       %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
+  printf("SINGLE overhead = %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
 
 #ifdef EPCC_LOG
   fprintf (single_log, "%s        %f %f\n", the_time, meantime-reftime, CONF95*(sd+refsd));
@@ -499,9 +507,9 @@ void testcrit()
 
   printf("\n");
   printf("--------------------------------------------------------\n");
-  printf("Computing CRITICAL time\n");
+  printf("Computing CRITIC time\n");
 
-  for (k=0; k<=OUTERREPS; k++){
+  for (k=0; k<=outerreps; k++){
     start  = getclock();
 #pragma omp parallel private(j)
     {
@@ -517,9 +525,9 @@ void testcrit()
 
   stats (&meantime, &sd);
 
-  printf("CRITICAL time =                           %f microseconds +/- %f\n", meantime, CONF95*sd);
+  printf("CRITIC time = %f microseconds +/- %f\n", meantime, CONF95*sd);
 
-  printf("CRITICAL overhead =                       %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
+  printf("CRITIC overhead = %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
 
 #ifdef EPCC_LOG
   fprintf (critical_log, "%s        %f %f\n", the_time, meantime-reftime, CONF95*(sd+refsd));
@@ -539,10 +547,10 @@ void testlock()
 
   printf("\n");
   printf("--------------------------------------------------------\n");
-  printf("Computing LOCK/UNLOCK time\n");
+  printf("Computing LOCK time\n");
 
   omp_init_lock(&lock);
-  for (k=0; k<=OUTERREPS; k++){
+  for (k=0; k<=outerreps; k++){
     start  = getclock();
 #pragma omp parallel private(j)
     {
@@ -557,9 +565,9 @@ void testlock()
 
   stats (&meantime, &sd);
 
-  printf("LOCK/UNLOCK time =                           %f microseconds +/- %f\n", meantime, CONF95*sd);
+  printf("LOCK time = %f microseconds +/- %f\n", meantime, CONF95*sd);
 
-  printf("LOCK/UNLOCK overhead =                       %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
+  printf("LOCK overhead = %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
 
 #ifdef EPCC_LOG
   fprintf (lock_log, "%s        %f %f\n", the_time, meantime-reftime, CONF95*(sd+refsd));
@@ -579,7 +587,7 @@ void testorder()
   printf("--------------------------------------------------------\n");
   printf("Computing ORDERED time\n");
 
-  for (k=0; k<=OUTERREPS; k++){
+  for (k=0; k<=outerreps; k++){
     start  = getclock();
 #pragma omp parallel for ordered schedule (static,1)
     for (j=0; j<innerreps; j++){
@@ -591,9 +599,9 @@ void testorder()
 
   stats (&meantime, &sd);
 
-  printf("ORDERED time =                           %f microseconds +/- %f\n", meantime, CONF95*sd);
+  printf("ORDERED time = %f microseconds +/- %f\n", meantime, CONF95*sd);
 
-  printf("ORDERED overhead =                       %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
+  printf("ORDERED overhead = %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
 
 #ifdef EPCC_LOG
   fprintf (ordered_log, "%s        %f %f\n", the_time, meantime-reftime, CONF95*(sd+refsd));
@@ -614,7 +622,7 @@ void testatom()
   printf("--------------------------------------------------------\n");
   printf("Computing ATOMIC time\n");
 
-  for (k=0; k<=OUTERREPS; k++){
+  for (k=0; k<=outerreps; k++){
     aaaa = 0;
     start  = getclock();
 #pragma omp parallel private(j)
@@ -630,9 +638,9 @@ void testatom()
 
   stats (&meantime, &sd);
 
-  printf("ATOMIC time =                           %f microseconds +/- %f\n", meantime, CONF95*sd);
+  printf("ATOMIC time = %f microseconds +/- %f\n", meantime, CONF95*sd);
 
-  printf("ATOMIC overhead =                       %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
+  printf("ATOMIC overhead = %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
 
 #ifdef EPCC_LOG
   fprintf (atomic_log, "%s        %f %f\n", the_time, meantime-reftime, CONF95*(sd+refsd));
@@ -651,9 +659,9 @@ void testred()
 
   printf("\n");
   printf("--------------------------------------------------------\n");
-  printf("Computing REDUCTION time\n");
+  printf("Computing REDUC time\n");
 
-  for (k=0; k<=OUTERREPS; k++){
+  for (k=0; k<=outerreps; k++){
     aaaa = 0;
     start  = getclock();
     for (j=0; j<innerreps; j++){
@@ -669,9 +677,9 @@ void testred()
 
   stats (&meantime, &sd);
 
-  printf("REDUCTION time =                           %f microseconds +/- %f\n", meantime, CONF95*sd);
+  printf("REDUC time = %f microseconds +/- %f\n", meantime, CONF95*sd);
 
-  printf("REDUCTION overhead =                       %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
+  printf("REDUC overhead = %f microseconds +/- %f\n", meantime-reftime, CONF95*(sd+refsd));
 
 #ifdef EPCC_LOG
   fprintf (reduction_log, "%s        %f %f\n", the_time, meantime-reftime, CONF95*(sd+refsd));
@@ -691,31 +699,31 @@ void stats (double *mtp, double *sdp)
   maxtime = 0.;
   totaltime = 0.;
 
-  for (i=1; i<=OUTERREPS; i++){
+  for (i=1; i<=outerreps; i++){
     mintime = (mintime < times[i]) ? mintime : times[i];
     maxtime = (maxtime > times[i]) ? maxtime : times[i];
     totaltime +=times[i];
   }
 
-  meantime  = totaltime / OUTERREPS;
+  meantime  = totaltime / outerreps;
   sumsq = 0;
 
-  for (i=1; i<=OUTERREPS; i++){
+  for (i=1; i<=outerreps; i++){
     sumsq += (times[i]-meantime)* (times[i]-meantime);
   }
-  sd = sqrt(sumsq/(OUTERREPS-1));
+  sd = sqrt(sumsq/(outerreps-1));
 
   cutoff = 3.0 * sd;
 
   nr = 0;
 
-  for (i=1; i<=OUTERREPS; i++){
+  for (i=1; i<=outerreps; i++){
     if ( fabs(times[i]-meantime) > cutoff ) nr ++;
   }
 
   printf("\n");
   printf("Sample_size       Average     Min         Max          S.D.          Outliers\n");
-  printf(" %d                %f   %f   %f    %f      %d\n",OUTERREPS, meantime, mintime, maxtime, sd, nr);
+  printf(" %d                %f   %f   %f    %f      %d\n",outerreps, meantime, mintime, maxtime, sd, nr);
   printf("\n");
 
   *mtp = meantime;

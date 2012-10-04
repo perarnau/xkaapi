@@ -315,7 +315,7 @@ komp_parallel_start (
       while (nb_pushed_tasks < tasks_per_thread[i])
 	    {
 	      komp_task_prepare (task, allarg, thread, fn, data, teaminfo, ctxt, task_id++);
-#if 0
+#if 0 /* break due to conflict with GPU implementation of mailbox... */
 	      kaapi_thread_distribute_task (thread, i);
 #else
 	      kaapi_thread_pushtask (thread);

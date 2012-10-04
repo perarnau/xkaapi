@@ -729,6 +729,8 @@ static int _kaapic_split_task
       );
 #endif
       kaapi_request_committask(req);
+      
+      /* unset all thieves for which a reply has been sent */
       kaapi_listrequest_iterator_unset_at( lri, tid );
     } /* else: no work to done, will be reply failed by the runtime */
   }

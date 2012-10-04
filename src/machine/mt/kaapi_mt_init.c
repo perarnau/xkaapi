@@ -264,7 +264,7 @@ int kaapi_mt_init(void)
   ++thread->stack.sfp;
 
   /* dump output information */
-  if (kaapi_default_param.display_perfcounter)
+  if (kaapi_default_param.display_perfcounter != KAAPI_NO_DISPLAY_PERF)
   {
     printf("[KAAPI::INIT] use #physical cpu:%u, start time:%15f\n", kaapi_default_param.cpucount,kaapi_get_elapsedtime());
     fflush( stdout );
@@ -369,7 +369,7 @@ int kaapi_mt_finalize(void)
   kaapi_perf_thread_stop(kaapi_all_kprocessors[0]);
 #endif
 
-  if (kaapi_default_param.display_perfcounter)
+  if (kaapi_default_param.display_perfcounter != KAAPI_NO_DISPLAY_PERF)
   {  
     printf("[KAAPI::TERM] end time:%15f, delta: %15f(s)\n", kaapi_get_elapsedtime(), 
           (double)(kaapi_get_elapsedns()-kaapi_default_param.startuptime)*1e-9 );

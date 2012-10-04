@@ -1,4 +1,4 @@
-CC = /usr/local/bin/gcc
+CC = gcc
 CFLAGS = -fopenmp -O3 -g -DOMPCLOCK
 LDFLAGS = -lm -lgomp
 

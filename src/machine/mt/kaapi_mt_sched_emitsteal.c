@@ -93,17 +93,10 @@ redo_select:
     goto redo_select;
   }
 
-  /* JOAO: need to allow kproc to steal itself */
-#if 0 // TG: test, steal also allow to steal stack from myself. Else only wakeup
-  /* never pass by this function for a processor to steal itself */
-  if (kproc == victim.kproc) 
-    return KAAPI_REQUEST_S_NOK;
-#endif
-
   /* JOAO: need to disable this code until a correct test for tasklist is
    * develpped
    */
-#if 0
+#if 1
   /* quick test to detect if thread has no work */
   if (kaapi_processor_has_nowork(victim.kproc))
   {
@@ -120,6 +113,25 @@ redo_select:
 	    (long unsigned int)victim.kproc->kid
 	  );
   fflush(stdout);
+#endif
+
+#if !defined(KAAPI_USE_AGGREGATION)
+  /* If no aggregation: serialize thieves on the victim lock 
+  */
+  while (!kaapi_sched_trylock( &victim.kproc->lock ))
+  {
+    if (kaapi_request_status_test( &status )) 
+      goto return_value;
+
+#if defined(KAAPI_USE_NETWORK)
+    kaapi_network_poll();
+#endif
+#if defined(KAAPI_USE_CUDA)
+    if( kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA ) 
+      kaapi_cuda_proc_poll( kproc );
+#endif
+    kaapi_slowdown_cpu();
+  }
 #endif
 
   /* (1) 
@@ -153,9 +165,9 @@ redo_select:
     &status, 
     &kproc->thread->stack.stackframe[0] 
   );
-  
 
-  /* (2)
+#if defined(KAAPI_USE_AGGREGATION)
+  /* (2) In case of aggregation, lock after thief has posted its request.
      lock and re-test if they are yet posted requests on victim or not 
      if during tentaive of locking, a reply occurs, then return with reply
   */
@@ -174,6 +186,8 @@ redo_select:
                     (uintptr_t)victim.kproc->kid, serial );
 #endif
 
+#endif /* defined aggregation */
+
   /* here becomes an aggregator... the trylock has synchronized memory */
   kaapi_listrequest_iterator_init(&victim_stealctxt->lr, &lri);
 
@@ -190,8 +204,17 @@ redo_select:
       (kaapi_atomic64_t*)&KAAPI_PERF_REG(victim.kproc, KAAPI_PERF_ID_STEALIN),
       kaapi_listrequest_iterator_count(&lri)
     );
+    int s_aggr = kaapi_listrequest_iterator_count(&lri);
 #endif
+
     kaapi_sched_stealprocessor( victim.kproc, &victim_stealctxt->lr, &lri );
+
+#if defined(KAAPI_USE_PERFCOUNTER)
+    if (s_aggr != kaapi_listrequest_iterator_count(&lri))
+    {
+      ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
+    }
+#endif
 
     /* reply failed for all others requests */
     request = kaapi_listrequest_iterator_get( &victim_stealctxt->lr, &lri );
@@ -251,13 +274,10 @@ redo_select:
     }
   }
   
-#if defined(KAAPI_USE_PERFCOUNTER)
-  ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_STEALOP);
-#endif
-
   return KAAPI_REQUEST_S_NOK;
   
 return_value:
+
   /* mark current processor as no stealing anymore */
   kaapi_assert_debug( (kaapi_request_status_get(&status) != KAAPI_REQUEST_S_POSTED) ); 
 
