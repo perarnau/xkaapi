@@ -92,30 +92,12 @@ redo_select:
     if (kaapi_isterm) return 0;
     goto redo_select;
   }
-
-  /* JOAO: need to disable this code until a correct test for tasklist is
-   * develpped
-   */
-#if 1
-  /* quick test to detect if thread has no work */
-  if (kaapi_processor_has_nowork(victim.kproc))
-  {
-    (*kproc->fnc_select)( kproc, &victim, KAAPI_STEAL_FAILED );
-    goto redo_select;
-  }
-#endif
   kaapi_assert_debug( (victim.kproc->kid >=0) && (victim.kproc->kid <kaapi_count_kprocessors));
 
-#if 0
-  fprintf(stdout, "[%s] kid=%lu kvictim=%lu\n", 
-	  __FUNCTION__,
-	    (long unsigned int)kaapi_get_current_kid(),
-	    (long unsigned int)victim.kproc->kid
-	  );
-  fflush(stdout);
-#endif
-
 #if !defined(KAAPI_USE_AGGREGATION)
+  /* must be set to init value else error... */
+  KAAPI_ATOMIC_WRITE(&status, KAAPI_REQUEST_S_INIT);
+
   /* If no aggregation: serialize thieves on the victim lock 
   */
   while (!kaapi_sched_trylock( &victim.kproc->lock ))
@@ -207,7 +189,16 @@ redo_select:
     int s_aggr = kaapi_listrequest_iterator_count(&lri);
 #endif
 
+#if 0
+  /* JOAO: need to disable this code until a correct test for tasklist is
+   * develpped
+   */
+  /* quick test to detect if thread has no work */
+  if (!kaapi_processor_has_nowork(victim.kproc))
+#endif
+  {
     kaapi_sched_stealprocessor( victim.kproc, &victim_stealctxt->lr, &lri );
+  }
 
 #if defined(KAAPI_USE_PERFCOUNTER)
     if (s_aggr != kaapi_listrequest_iterator_count(&lri))

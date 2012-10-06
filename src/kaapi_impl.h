@@ -220,6 +220,7 @@ extern void kaapi_procinfo_list_free(struct kaapi_procinfo_list_t*);
 */
 typedef enum kaapi_request_status_t {
   KAAPI_REQUEST_S_POSTED   = 0,
+  KAAPI_REQUEST_S_INIT       = 0,
   KAAPI_REQUEST_S_NOK      = 1,
   KAAPI_REQUEST_S_OK       = 2,
   KAAPI_REQUEST_S_ERROR    = 3
