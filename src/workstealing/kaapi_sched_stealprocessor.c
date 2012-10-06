@@ -67,7 +67,6 @@ int kaapi_sched_stealprocessor(
     kaapi_sched_stealreadytasklist( thread, kproc, lrequests, lrrange );
 #endif
 
-
   /* 2/ steal in suspended threads */
   cell = kproc->lsuspend.tail;
   while ( !kaapi_listrequest_iterator_empty(lrrange) && (cell !=0)) 
