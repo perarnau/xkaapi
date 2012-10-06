@@ -37,6 +37,7 @@ static int outerreps = 200;
 static int nthreads, delaylength, innerreps;
 static double *times, reftime, refsd;
 
+
 void delay(int);
 void refer(void);
 void referatom(void);
@@ -181,13 +182,16 @@ int main (int argc, char **argv)
 
   /* TEST  PAR REGION */
   innerreps = 1000;
-  testpr();
+  if (1)
+    testpr();
+exit(1);
 
   /* TEST  FOR */
   testfor();
 
   /* TEST  PARFOR */
   testpfor();
+
 
   /* TEST  BARRIER */
   testbar();
