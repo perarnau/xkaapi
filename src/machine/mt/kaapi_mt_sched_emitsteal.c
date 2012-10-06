@@ -83,6 +83,9 @@ kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
     
   if (kaapi_count_kprocessors <2) 
     return KAAPI_REQUEST_S_NOK;
+
+  /* nothing to do: first yield */
+  pthread_yield();
     
 redo_select:
   /* select the victim processor */
@@ -189,10 +192,10 @@ redo_select:
     int s_aggr = kaapi_listrequest_iterator_count(&lri);
 #endif
 
-#if 0
   /* JOAO: need to disable this code until a correct test for tasklist is
    * develpped
    */
+#if 0
   /* quick test to detect if thread has no work */
   if (!kaapi_processor_has_nowork(victim.kproc))
 #endif
