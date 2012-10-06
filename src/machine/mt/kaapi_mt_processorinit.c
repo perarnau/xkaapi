@@ -152,8 +152,6 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   
   kproc->libkomp_tls = 0;
 
-  kproc->rtl = (kaapi_readytasklist_t*)malloc( sizeof (kaapi_readytasklist_t) );
-  kaapi_readytasklist_init( kproc->rtl );
   kproc->rtl_remote = (kaapi_readytasklist_t*)malloc( sizeof (kaapi_readytasklist_t) );
   kaapi_readytasklist_init( kproc->rtl_remote );
 

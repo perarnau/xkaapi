@@ -76,6 +76,7 @@
 #include "../../memory/kaapi_mem.h"
 #include "../../memory/kaapi_mem_data.h"
 #include "../../memory/kaapi_mem_host_map.h"
+#include "../../tasklist/kaapi_readytasklist.h"
 
 /* ========================================================================== */
 struct kaapi_procinfo_t;
@@ -468,31 +469,30 @@ typedef struct kaapi_cpuhierarchy_t {
     from 0 to N-1.
 */
 typedef struct kaapi_processor_t {
-  kaapi_thread_context_t*  thread;                        /* current thread under execution */
-  kaapi_processor_id_t     kid;                           /* Kprocessor id */
+  kaapi_thread_context_t*  thread;                    /* current thread under execution */
+  kaapi_processor_id_t     kid;                       /* Kprocessor id */
 
   /* cache align: only the lock */
-  kaapi_lock_t             lock                           /* all requests attached to each kprocessor ordered by increasing level */
+  kaapi_lock_t             lock            /* all requests attached to each kprocessor ordered by increasing level */
     __attribute__((aligned(KAAPI_CACHE_LINE)));
 
-  struct kaapi_readytasklist_t* rtl;                      /* readylist of task descriptors */
-  struct kaapi_readytasklist_t* rtl_remote;               /* readylist of task descriptors (remote push) */
+  struct kaapi_readytasklist_t* rtl_remote;           /* readylist of task descriptors (remote push) */
   
-  int volatile             isidle;                        /* true if kproc is idle (active thread is empty) */
+  int volatile             isidle;                    /* true if kproc is idle (active thread is empty) */
 
-  kaapi_wsqueuectxt_t      lsuspend                       /* list of suspended context */
+  kaapi_wsqueuectxt_t      lsuspend                   /* list of suspended context */
       __attribute__((aligned(KAAPI_CACHE_LINE)));
 
   /* free list */
-  kaapi_lfree_t		         lfree;                         /* queue of free context */
-  int                      sizelfree;                     /* size of the queue */
+  kaapi_lfree_t		         lfree;                     /* queue of free context */
+  int                      sizelfree;                 /* size of the queue */
   
-  unsigned int             seed;                          /* for the kproc own random generator */
-  kaapi_selectvictim_fnc_t fnc_select;                    /* function to select a victim */
-  uintptr_t                fnc_selecarg[4];               /* arguments for select victim function, 0 at initialization */
+  unsigned int             seed;                      /* for the kproc own random generator */
+  kaapi_selectvictim_fnc_t fnc_select;                /* function to select a victim */
+  uintptr_t                fnc_selecarg[4];           /* arguments for select victim function, 0 at initialization */
 
-  kaapi_emitsteal_fnc_t	   emitsteal;                     /* virtualization of the WS algorithm */
-  void*                    emitsteal_ctxt;                /* specific to the WS algorithm */
+  kaapi_emitsteal_fnc_t	   emitsteal;                 /* virtualization of the WS algorithm */
+  void*                    emitsteal_ctxt;            /* specific to the WS algorithm */
 
 #if defined(KAAPI_DEBUG)
   volatile uintptr_t       req_version;
@@ -500,22 +500,22 @@ typedef struct kaapi_processor_t {
   volatile uintptr_t       compute_version;
 #endif
   
-  pthread_mutex_t          suspend_lock;                  /* lock used to suspend / resume the threads */
+  pthread_mutex_t          suspend_lock;              /* lock used to suspend / resume the threads */
     
   /* hierachical information of other kprocessor */
-  int                      cpuid;                         /* os index of the bounded physical cpu */
-  int                      numa_nodeid;                   /* os index of the bounded physical memory ressource. See  kaapi_memory_id_t */
-  kaapi_cpuhierarchy_t     hlevel;                        /* hierarchy */
+  int                      cpuid;                     /* os index of the bounded physical cpu */
+  int                      numa_nodeid;               /* os index of the bounded physical memory ressource. See  kaapi_memory_id_t */
+  kaapi_cpuhierarchy_t     hlevel;                    /* hierarchy */
 
   /* performance register */
   kaapi_perf_counter_t	   perf_regs[2][KAAPI_PERF_ID_MAX];
-  kaapi_perf_counter_t*	   curr_perf_regs;                /* either perf_regs[0], either perf_regs[1] */
+  kaapi_perf_counter_t*	   curr_perf_regs;            /* either perf_regs[0], either perf_regs[1] */
 
   int	                     papi_event_set;
   unsigned int	           papi_event_count;
-  kaapi_perf_counter_t     start_t[2];                    /* [KAAPI_PERF_SCHEDULE_STATE]= T1 else = Tidle */
+  kaapi_perf_counter_t     start_t[2];                /* [KAAPI_PERF_SCHEDULE_STATE]= T1 else = Tidle */
    
-  double                   t_preempt;                     /* total idle time in second pass in the preemption */           
+  double                   t_preempt;                 /* total idle time in second pass in the preemption */           
 
   /* proc info */
   const struct kaapi_procinfo_t* kpi;
@@ -524,21 +524,14 @@ typedef struct kaapi_processor_t {
   struct kaapi_event_buffer_t* eventbuffer;
 
 #if defined(KAAPI_USE_PERFCOUNTER)
-  uintptr_t                serial;      /* serial number of generated steal */
-  kaapi_perf_counter_t     lastcounter; /* used by libgomp */
+  uintptr_t                serial;                    /* serial number of generated steal */
+  kaapi_perf_counter_t     lastcounter;               /* used by libgomp */
 #endif
 
-  /* workload */
-  kaapi_atomic64_t          workload;
-
-  /* processor type */
-  unsigned int	            proc_type;
-
-  /* seed for kproc random generator */
-  unsigned int              seed_data;
-  
-  /* memory map */
-  kaapi_mem_host_map_t      mem_host_map;
+  kaapi_atomic64_t          workload;                 /* workload */
+  unsigned int	            proc_type;                /* processor type */
+  unsigned int              seed_data;                /* seed for kproc random generator */
+  kaapi_mem_host_map_t      mem_host_map;             /* memory map */
 
   struct kaapi_processor_t* victim_kproc;
 
@@ -858,7 +851,7 @@ static inline unsigned int kaapi_processor_get_type(const kaapi_processor_t* kpr
 */
 static inline int kaapi_processor_has_nowork( const kaapi_processor_t* kproc )
 {
-  return (kproc->isidle !=0) && kaapi_wsqueuectxt_empty(kproc);
+  return (kproc->isidle !=0) && kaapi_wsqueuectxt_empty(kproc) && kaapi_readytasklist_isempty(kproc->rtl_remote);
 }
 
 /**

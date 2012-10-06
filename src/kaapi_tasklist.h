@@ -354,14 +354,12 @@ static inline kaapi_activationlink_t* kaapi_tasklist_allocate_al( kaapi_frame_ta
 
 
 /**/
-static inline kaapi_taskdescr_t* kaapi_allocator_allocate_td( 
-    kaapi_allocator_t*    kal, 
+static inline kaapi_taskdescr_t* kaapi_allocator_init_td( 
+    kaapi_taskdescr_t*    td,
     kaapi_task_t*         task, 
     const kaapi_format_t* task_fmt 
 )
 {
-  kaapi_taskdescr_t* td = 
-      (kaapi_taskdescr_t*)kaapi_allocator_allocate( kal, sizeof(kaapi_taskdescr_t) );
   KAAPI_ATOMIC_WRITE(&td->counter, 0);
   td->wc         = 0;  
   td->task       = task;
@@ -376,6 +374,18 @@ static inline kaapi_taskdescr_t* kaapi_allocator_allocate_td(
   td->u.acl.list.front = 0; 
   td->u.acl.list.back  = 0;
   return td;
+}
+
+/**/
+static inline kaapi_taskdescr_t* kaapi_allocator_allocate_td( 
+    kaapi_allocator_t*    kal, 
+    kaapi_task_t*         task, 
+    const kaapi_format_t* task_fmt 
+)
+{
+  kaapi_taskdescr_t* td = 
+      (kaapi_taskdescr_t*)kaapi_allocator_allocate( kal, sizeof(kaapi_taskdescr_t) );
+  return kaapi_allocator_init_td(td,task,task_fmt);
 }
 
 
@@ -602,7 +612,7 @@ static inline int kaapi_readytasklist_pushready_td(
     kaapi_processor_t* kproc_remote = kaapi_all_kprocessors[kid];
     if ( kproc_remote != curr_kproc ) 
     {
-	    return kaapi_readylist_remote_push( kproc_remote->rtl, td );
+	    return kaapi_readylist_remote_push( kproc_remote->rtl_remote, td );
     }
     return kaapi_readylist_push( rtl, td );
   }

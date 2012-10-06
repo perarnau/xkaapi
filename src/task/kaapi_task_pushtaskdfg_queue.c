@@ -54,7 +54,7 @@ int kaapi_thread_distribute_task (
   kaapi_processor_id_t kid
 )
 {
-#if 0
+#if 1
   kaapi_processor_t* kproc;
   if (kid >= kaapi_getconcurrency())
     kid %= kaapi_getconcurrency();
@@ -69,34 +69,44 @@ int kaapi_thread_distribute_task (
   
   /* create a new steal_body task.
      task is allocated into local queue: once the local steal task is remotely finished,
-     the local stack may be pop.
+     the local stack may be pop, so no problem with memory allocation.
   */
-  kaapi_task_withlink_t* remote_task    = 
-      (kaapi_task_withlink_t*)kaapi_thread_pushdata_align(
+  kaapi_taskdescr_t* remote_task    = 
+      (kaapi_taskdescr_t*)kaapi_thread_pushdata_align(
                           thread, 
-                          sizeof(kaapi_task_withlink_t), 
+                          sizeof(kaapi_taskdescr_t), 
                           sizeof(uintptr_t)
       );
   
+  kaapi_task_t* tasksteal = kaapi_thread_pushdata_align(
+      thread,
+      sizeof(kaapi_task_t),
+      sizeof(void*)
+      
+  );
   kaapi_tasksteal_arg_t* argsteal = 
       (kaapi_tasksteal_arg_t*)kaapi_thread_pushdata_align(
                           thread, 
                           sizeof(kaapi_tasksteal_arg_t), 
                           sizeof(void*)
-      );
+  );
   argsteal->origin_task           = local_task;
   argsteal->origin_body           = local_task->body;
   argsteal->origin_fmt            = 0;    /* should be computed by a thief */
   argsteal->war_param             = 0;    /* assume no war */
   argsteal->cw_param              = 0;    /* assume no cw mode */
   kaapi_task_init(  
-      &remote_task->task, 
+      tasksteal, 
       kaapi_tasksteal_body, 
       argsteal
   );
-  local_task->reserved             = &remote_task->task;
+  
+  /* what that ? */
+  local_task->reserved  = &remote_task->task;
   argsteal->origin_body = kaapi_task_marksteal( local_task ) ? local_task->body : 0;
   kaapi_assert_debug( argsteal->origin_body != 0);
+  
+  kaapi_allocator_init_td(remote_task, tasksteal, 0 );
   
   /* ok here initial local_task is marked as steal and remote 
      task corresponds to a steal task 
@@ -106,16 +116,7 @@ int kaapi_thread_distribute_task (
   kaapi_thread_pushtask(thread);
   
   /* mail box: FIFO push in tail */
-  remote_task->next = 0;
-  kaapi_atomic_lock(&kproc->lock);
-  {
-    if (kproc->mailbox.tail ==0)
-      kproc->mailbox.tail = kproc->mailbox.head = remote_task;
-    else
-      kproc->mailbox.tail->next = remote_task;
-    kproc->mailbox.tail = remote_task;
-  }
-  kaapi_atomic_unlock(&kproc->lock);
+  kaapi_readylist_remote_push( kproc->rtl_remote, remote_task );
 #else
   kaapi_thread_pushtask(thread);
 #endif

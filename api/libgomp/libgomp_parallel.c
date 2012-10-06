@@ -206,7 +206,7 @@ komp_init_parallel_start (
   new_ctxt->icv.next_numthreads = ctxt->icv.next_numthreads; /* WARNING: spec ? */
   new_ctxt->icv.nested_level    = 1+ctxt->icv.nested_level; 
   new_ctxt->icv.nested_parallel = ctxt->icv.nested_parallel; /* WARNING: spec ? */
-  new_ctxt->icv.active_level   = num_threads == 1 ? ctxt->icv.active_level : ctxt->icv.active_level + 1;
+  new_ctxt->icv.active_level    = num_threads == 1 ? ctxt->icv.active_level : ctxt->icv.active_level + 1;
 #if defined(KAAPI_USE_FOREACH_WITH_DATADISTRIBUTION)
   new_ctxt->icv.attr            = ctxt->icv.attr;            /* WARNING: spec ? */
 #endif
@@ -315,12 +315,7 @@ komp_parallel_start (
       while (nb_pushed_tasks < tasks_per_thread[i])
 	    {
 	      komp_task_prepare (task, allarg, thread, fn, data, teaminfo, ctxt, task_id++);
-#if 0 /* break due to conflict with GPU implementation of mailbox... */
 	      kaapi_thread_distribute_task (thread, i);
-#else
-	      kaapi_thread_pushtask (thread);
-#endif
-	      
 	      task = kaapi_thread_nexttask(thread, task);      
 	      nb_pushed_tasks++;
 	    }

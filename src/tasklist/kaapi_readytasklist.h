@@ -45,13 +45,15 @@
 #ifndef _KAAPI_READYTASKLIST_H_
 #define _KAAPI_READYTASKLIST_H_
 
+struct kaapi_taskdescr_t;
+
 /** One workqueue of ready tasks 
  */
 typedef struct kaapi_onereadytasklist_t {
-  kaapi_lock_t	     lock;
-  kaapi_taskdescr_t* head;
-  kaapi_taskdescr_t* tail;
-  int		             size;
+  kaapi_lock_t              lock;
+  struct kaapi_taskdescr_t* head;
+  struct kaapi_taskdescr_t* tail;
+  int                       size;
 } kaapi_onereadytasklist_t;
 
 /**/
@@ -111,19 +113,19 @@ extern int kaapi_readytasklist_destroy( kaapi_readytasklist_t* rtl );
 
 /*
  */
-extern int kaapi_readylist_push( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t* td );
+extern int kaapi_readylist_push( kaapi_readytasklist_t* rtl, struct kaapi_taskdescr_t* td );
 
 
 /*
  */
-extern int kaapi_readylist_pop( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t** td );
+extern int kaapi_readylist_pop( kaapi_readytasklist_t* rtl, struct kaapi_taskdescr_t** td );
 
 /*
  */
-extern int kaapi_readylist_remote_push( kaapi_readytasklist_t* rtl, kaapi_taskdescr_t* td );
+extern int kaapi_readylist_remote_push( kaapi_readytasklist_t* rtl, struct kaapi_taskdescr_t* td );
 
 /*
  */
-extern int kaapi_readylist_steal( const kaapi_processor_t* thiefprocessor, kaapi_readytasklist_t* rtl, kaapi_taskdescr_t** td );
+extern int kaapi_readylist_steal( const struct kaapi_processor_t* thiefprocessor, kaapi_readytasklist_t* rtl, struct kaapi_taskdescr_t** td );
 
 #endif /* _KAAPI_READYTASKLIST_H_ */ 
