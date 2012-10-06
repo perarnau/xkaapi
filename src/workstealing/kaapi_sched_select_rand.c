@@ -100,10 +100,9 @@ int kaapi_sched_select_victim_rand(
       break ;
     }
 #endif /* CONFIG_USE_DELAY */
-      
-#if CONFIG_USE_DELAY
     case KAAPI_STEAL_FAILED:
     {
+#if CONFIG_USE_DELAY
       const uintptr_t nsteals = (uintptr_t)kproc->fnc_selecarg[1];
       
       /* wait for failures to reach threshold */
@@ -119,21 +118,20 @@ int kaapi_sched_select_victim_rand(
          delayus incremented by delay_step per failure
          delayus not incremented if greater than delay_thre
          delayus reset on steal success
-         */
-        static const uintptr_t delay_init = 1000;
-        static const uintptr_t delay_step = 1000;
-        static const uintptr_t delay_thre = 10000;
-        
+       */
+        static const uintptr_t delay_init = 10;
+        static const uintptr_t delay_step = 200;
+        static const uintptr_t delay_thre = 1000;
+
         uintptr_t delayus = (uintptr_t)kproc->fnc_selecarg[2];
         if (delayus == 0) delayus = delay_init;
         else if (delayus < delay_thre) delayus += delay_step;
         *((uintptr_t*)&kproc->fnc_selecarg[2]) = delayus;
       }
-      
+#endif /* CONFIG_USE_DELAY */
       break ;
     }
-#endif /* CONFIG_USE_DELAY */
-      
+
     default:
     {
       break;
