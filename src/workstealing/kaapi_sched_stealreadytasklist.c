@@ -64,6 +64,7 @@ void kaapi_sched_stealreadytasklist(
   request = kaapi_listrequest_iterator_get( lrequests, lrrange );
   while( request !=0 )
   {
+#if 1
     if (kproc->mailbox.head != 0 )
     {
       kaapi_task_withlink_t* taskwl;
@@ -86,6 +87,7 @@ void kaapi_sched_stealreadytasklist(
       request = kaapi_listrequest_iterator_get( lrequests, lrrange );
       continue;
     }
+#endif
 
     rtl = kproc->rtl_remote;
     err = kaapi_readylist_steal( kproc, rtl, &td );

@@ -139,6 +139,11 @@ komp_parse_cpu_affinity (void)
   setenv ("KAAPI_CPUSET", kaapi_cpuset, 1);
 }
 
+extern double kaapi_komp_start_parallel;
+extern int kaapi_komp_start_parallel_count;
+extern double kaapi_komp_end_parallel;
+extern int kaapi_komp_end_parallel_count;
+
 static void __attribute__ ((constructor))  
 initialize_lib (void) 
 {
@@ -156,11 +161,21 @@ initialize_lib (void)
   if (!parse_unsigned_long ("OMP_MAX_ACTIVE_LEVELS", &omp_max_active_levels))
     omp_max_active_levels = KAAPI_MAX_RECCALL;
 
+  kaapi_komp_start_parallel= 0;
+  kaapi_komp_start_parallel_count= 0;
+  kaapi_komp_end_parallel= 0;
+  kaapi_komp_end_parallel_count= 0;
+
   kaapic_init (KAAPIC_START_ONLY_MAIN);
 }
+
 
 static void __attribute__ ((destructor))
 finalize_lib (void)
 {
   kaapic_finalize ();
+#if KAAPI_KOMP_TRACE
+  printf("KOMP: time start parallel: %f\n", 1e6*kaapi_komp_start_parallel/kaapi_komp_start_parallel_count); 
+  printf("KOMP: time end parallel: %f\n", 1e6*kaapi_komp_end_parallel/kaapi_komp_end_parallel_count); 
+#endif
 }

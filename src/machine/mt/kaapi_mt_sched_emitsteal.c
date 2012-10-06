@@ -80,12 +80,39 @@ kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc->thread !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
-    
+
   if (kaapi_count_kprocessors <2) 
     return KAAPI_REQUEST_S_NOK;
 
+#if 0
+  if (kproc->mailbox.head != 0 )
+  {
+    kaapi_task_withlink_t* taskwl;
+
+    /* pop the first item at kproc->mailbox.head
+       lock free MPSC FIFO queue must be used here.
+    */
+    kaapi_sched_lock(&kproc->lock);
+    taskwl = kproc->mailbox.head;
+    if (kproc->mailbox.tail == taskwl)
+      kproc->mailbox.tail = 0;
+    kproc->mailbox.head = taskwl->next;
+    kaapi_sched_unlock(&kproc->lock);
+
+    /* push the task into local queue */
+    *kaapi_thread_toptask(kaapi_threadcontext2thread(kproc->thread)) = taskwl->task;
+    kaapi_thread_pushtask(kaapi_threadcontext2thread(kproc->thread));
+    return KAAPI_REQUEST_S_OK;
+  }
+#endif
+
+
   /* nothing to do: first yield */
+#if defined(__linux__)
   pthread_yield();
+#elif defined(__APPLE__)
+  pthread_yield_np();
+#endif
     
 redo_select:
   /* select the victim processor */
@@ -105,9 +132,6 @@ redo_select:
   */
   while (!kaapi_sched_trylock( &victim.kproc->lock ))
   {
-    if (kaapi_request_status_test( &status )) 
-      goto return_value;
-
 #if defined(KAAPI_USE_NETWORK)
     kaapi_network_poll();
 #endif

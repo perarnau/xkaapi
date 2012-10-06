@@ -44,6 +44,10 @@
  */
 #include "libgomp.h"
 
+double kaapi_komp_start_parallel;
+int kaapi_komp_start_parallel_count;
+double kaapi_komp_end_parallel;
+int kaapi_komp_end_parallel_count;
 
 typedef struct komp_parallel_task_arg {
   int                       threadid;
@@ -264,12 +268,21 @@ komp_parallel_start (
   /* begin parallel region: also push a new frame that will be pop
    during call to kaapic_end_parallel
    */
+  
+#if KAAPI_KOMP_TRACE
+  double t0, t1;
+  t0 = kaapic_get_time();
+#endif
+
   kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
   
   /* init the new context with team information and workshare construct 
    the method push a new context in the caller Kaapi' stack 
    and a call to komp_get_ctxtkproc must be done to retreive the new ctxt.
    */
+#if KAAPI_KOMP_TRACE
+  t0 = kaapic_get_time();
+#endif
   teaminfo = komp_init_parallel_start( kproc, num_threads );
   thread = kaapi_threadcontext2thread(kproc->thread);
   
@@ -313,12 +326,12 @@ komp_parallel_start (
       
       task = kaapi_thread_toptask(thread);
       while (nb_pushed_tasks < tasks_per_thread[i])
-	    {
-	      komp_task_prepare (task, allarg, thread, fn, data, teaminfo, ctxt, task_id++);
-	      kaapi_thread_distribute_task (thread, i);
-	      task = kaapi_thread_nexttask(thread, task);      
-	      nb_pushed_tasks++;
-	    }
+      {
+        komp_task_prepare (task, allarg, thread, fn, data, teaminfo, ctxt, task_id++);
+        kaapi_thread_distribute_task (thread, i);
+        task = kaapi_thread_nexttask(thread, task);      
+        nb_pushed_tasks++;
+      }
     }
   } 
   else 
@@ -332,6 +345,12 @@ komp_parallel_start (
     }
     kaapi_thread_push_packedtasks(thread, num_threads-1);
   }
+
+#if KAAPI_KOMP_TRACE
+  t1 = kaapic_get_time();
+  kaapi_komp_start_parallel += t1 - t0;
+  ++kaapi_komp_start_parallel_count;
+#endif
 }
 
 
@@ -353,6 +372,11 @@ GOMP_parallel_end (void)
   kompctxt_t* ctxt = komp_get_ctxtkproc(kproc);
   komp_teaminfo_t* teaminfo = ctxt->teaminfo;
   kompctxt_t* old_ctxt;
+
+#if KAAPI_KOMP_TRACE
+  double t0, t1; 
+  t0 = kaapic_get_time();
+#endif
   
   /* implicit sync + implicit pop fame */
   ctxt->teaminfo->gwork = 0;
@@ -366,4 +390,9 @@ GOMP_parallel_end (void)
   
   /* free shared resource */
   komp_barrier_destroy(&teaminfo->barrier);
+#if KAAPI_KOMP_TRACE
+  t1 = kaapic_get_time();
+  kaapi_komp_end_parallel += t1-t0;
+  ++kaapi_komp_end_parallel_count;
+#endif
 }
