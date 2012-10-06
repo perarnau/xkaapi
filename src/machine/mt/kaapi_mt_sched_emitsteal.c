@@ -80,7 +80,7 @@ kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc->thread !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
-    
+
   if (kaapi_count_kprocessors <2) 
     return KAAPI_REQUEST_S_NOK;
 
@@ -105,9 +105,6 @@ redo_select:
   */
   while (!kaapi_sched_trylock( &victim.kproc->lock ))
   {
-    if (kaapi_request_status_test( &status )) 
-      goto return_value;
-
 #if defined(KAAPI_USE_NETWORK)
     kaapi_network_poll();
 #endif
