@@ -85,7 +85,11 @@ kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
     return KAAPI_REQUEST_S_NOK;
 
   /* nothing to do: first yield */
+#if defined(__linux__)
   pthread_yield();
+#elif defined(__APPLE__)
+  pthread_yield_np();
+#endif
     
 redo_select:
   /* select the victim processor */
