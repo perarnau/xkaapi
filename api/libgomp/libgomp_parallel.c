@@ -345,6 +345,7 @@ komp_parallel_start (
     }
     kaapi_thread_push_packedtasks(thread, num_threads-1);
   }
+
 #if KAAPI_KOMP_TRACE
   t1 = kaapic_get_time();
   kaapi_komp_start_parallel += t1 - t0;
