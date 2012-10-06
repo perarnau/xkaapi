@@ -49,12 +49,13 @@
  */
 void kaapi_sched_stealreadytasklist( 
                            kaapi_thread_context_t*       thread, 
-                           kaapi_readytasklist_t*        rtl, 
+                           kaapi_processor_t*            kproc,
                            kaapi_listrequest_t*          lrequests, 
                            kaapi_listrequest_iterator_t* lrrange
 )
 {
   int                         err;
+  kaapi_readytasklist_t*      rtl;
   kaapi_taskdescr_t*          td;
   kaapi_task_t*               tasksteal;
   kaapi_request_t*            request;
@@ -63,7 +64,31 @@ void kaapi_sched_stealreadytasklist(
   request = kaapi_listrequest_iterator_get( lrequests, lrrange );
   while( request !=0 )
   {
-    err  = kaapi_readylist_steal( kaapi_all_kprocessors[request->ident], rtl, &td );
+    if (kproc->mailbox.head != 0 )
+    {
+      kaapi_task_withlink_t* taskwl;
+
+      /* pop the first item at kproc->mailbox.head
+         lock free MPSC FIFO queue must be used here.
+      */
+      taskwl = kproc->mailbox.head;
+      if (kproc->mailbox.tail == taskwl)
+        kproc->mailbox.tail = 0;
+      kproc->mailbox.head = taskwl->next;
+      
+      /* push the task into local queue */
+      *kaapi_request_toptask(request) = taskwl->task;
+      kaapi_request_pushtask(request, 0);
+      kaapi_request_replytask( request, KAAPI_REQUEST_S_OK); /* success of steal */
+      KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( lrrange ) );
+      /* update next request to process */
+      kaapi_listrequest_iterator_next( lrequests, lrrange );    
+      request = kaapi_listrequest_iterator_get( lrequests, lrrange );
+      continue;
+    }
+
+    rtl = kproc->rtl_remote;
+    err = kaapi_readylist_steal( kproc, rtl, &td );
     if( err == 0 )
     {
       /* - create the task steal that will execute the stolen task

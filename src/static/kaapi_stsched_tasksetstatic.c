@@ -75,7 +75,7 @@ void kaapi_staticschedtask_body_gen(
   KAAPI_EVENT_PUSH0(thread->stack.proc, thread, KAAPI_EVT_STATIC_BEG );
   
   /* Push a new frame */
-  kaapi_thread_push_frame_(thread);
+  uthread = kaapi_thread_push_frame_(thread);
   
   /* unset steal capability and wait no more thief 
      lock the kproc: it ensure that no more thief has reference on it 

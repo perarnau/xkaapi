@@ -86,10 +86,10 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   
   kaapi_sched_initlock( &kproc->lock );
   
-#if 0
   kproc->mailbox.head   = 0;
   kproc->mailbox.tail   = 0;
-#endif
+  kproc->rtl_remote     = (kaapi_readytasklist_t*)malloc( sizeof (kaapi_readytasklist_t) );
+  kaapi_readytasklist_init( kproc->rtl_remote );
   
   kproc->isidle         = 1;
   kaapi_wsqueuectxt_init( &kproc->lsuspend );
@@ -151,9 +151,6 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   kaapi_setcontext(kproc, ctxt);
   
   kproc->libkomp_tls = 0;
-
-  kproc->rtl_remote = (kaapi_readytasklist_t*)malloc( sizeof (kaapi_readytasklist_t) );
-  kaapi_readytasklist_init( kproc->rtl_remote );
 
 #if defined(KAAPI_USE_CUDA)
   /* initialize cuda processor */

@@ -15,7 +15,7 @@ extern void kaapi_sched_stealtasklist(
 */
 extern void kaapi_sched_stealreadytasklist( 
                            kaapi_thread_context_t*       thread, 
-                           kaapi_readytasklist_t*        rtl, 
+                           kaapi_processor_t*            kproc,
                            kaapi_listrequest_t*          lrequests, 
                            kaapi_listrequest_iterator_t* lrrange
 );

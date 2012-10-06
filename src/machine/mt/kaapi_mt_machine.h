@@ -183,14 +183,20 @@ typedef struct kaapi_lfree
 
 struct kaapi_taskdescr_t;
 
-#if 0
+/** Mailbox for task, not td
+*/
+typedef struct kaapi_task_withlink_t {
+  struct kaapi_task_withlink_t* volatile next;
+  kaapi_task_t                           task;
+} kaapi_task_withlink_t;
+
 /** Mail box queue: remote thead may push stealtask into this queue.
 */
 typedef  struct {
   kaapi_task_withlink_t*         volatile head;
   kaapi_task_withlink_t*         volatile tail;
 }   __attribute__((aligned(KAAPI_CACHE_LINE))) kaapi_mailbox_queue_t;
-#endif
+
 
 /** \ingroup WS
     Higher level context manipulation.
@@ -476,6 +482,7 @@ typedef struct kaapi_processor_t {
   kaapi_lock_t             lock            /* all requests attached to each kprocessor ordered by increasing level */
     __attribute__((aligned(KAAPI_CACHE_LINE)));
 
+  kaapi_mailbox_queue_t    mailbox;                   /* readylist for task (not td) */
   struct kaapi_readytasklist_t* rtl_remote;           /* readylist of task descriptors (remote push) */
   
   int volatile             isidle;                    /* true if kproc is idle (active thread is empty) */
@@ -851,7 +858,7 @@ static inline unsigned int kaapi_processor_get_type(const kaapi_processor_t* kpr
 */
 static inline int kaapi_processor_has_nowork( const kaapi_processor_t* kproc )
 {
-  return (kproc->isidle !=0) && kaapi_wsqueuectxt_empty(kproc) && kaapi_readytasklist_isempty(kproc->rtl_remote);
+  return (kproc->isidle !=0) && kaapi_wsqueuectxt_empty(kproc) && kaapi_readytasklist_isempty(kproc->rtl_remote) && (kproc->mailbox.head ==0);
 }
 
 /**
