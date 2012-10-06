@@ -96,7 +96,7 @@ redo_select:
   /* JOAO: need to disable this code until a correct test for tasklist is
    * develpped
    */
-#if 1
+#if 0
   /* quick test to detect if thread has no work */
   if (kaapi_processor_has_nowork(victim.kproc))
   {
@@ -106,17 +106,8 @@ redo_select:
 #endif
   kaapi_assert_debug( (victim.kproc->kid >=0) && (victim.kproc->kid <kaapi_count_kprocessors));
 
-#if 0
-  fprintf(stdout, "[%s] kid=%lu kvictim=%lu\n", 
-	  __FUNCTION__,
-	    (long unsigned int)kaapi_get_current_kid(),
-	    (long unsigned int)victim.kproc->kid
-	  );
-  fflush(stdout);
-#endif
-
 #if !defined(KAAPI_USE_AGGREGATION)
-  /* If no aggregation: serialize thieves on the victim lock 
+  /* If no aggregation: serialize thieves on the victim lock before posting request
   */
   while (!kaapi_sched_trylock( &victim.kproc->lock ))
   {
@@ -181,12 +172,13 @@ redo_select:
 #endif
     kaapi_slowdown_cpu();
   }
+#endif /* defined aggregation */
+
 #if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_EVENT_PUSH2(kproc, 0, KAAPI_EVT_REQUESTS_BEG, 
                     (uintptr_t)victim.kproc->kid, serial );
 #endif
 
-#endif /* defined aggregation */
 
   /* here becomes an aggregator... the trylock has synchronized memory */
   kaapi_listrequest_iterator_init(&victim_stealctxt->lr, &lri);

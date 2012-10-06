@@ -482,11 +482,11 @@ typedef struct kaapi_processor_t {
   kaapi_lock_t             lock            /* all requests attached to each kprocessor ordered by increasing level */
     __attribute__((aligned(KAAPI_CACHE_LINE)));
 
+  int volatile             isidle;                    /* true if kproc is idle (active thread is empty) */
+
   kaapi_mailbox_queue_t    mailbox;                   /* readylist for task (not td) */
   struct kaapi_readytasklist_t* rtl_remote;           /* readylist of task descriptors (remote push) */
   
-  int volatile             isidle;                    /* true if kproc is idle (active thread is empty) */
-
   kaapi_wsqueuectxt_t      lsuspend                   /* list of suspended context */
       __attribute__((aligned(KAAPI_CACHE_LINE)));
 
@@ -514,21 +514,18 @@ typedef struct kaapi_processor_t {
   int                      numa_nodeid;               /* os index of the bounded physical memory ressource. See  kaapi_memory_id_t */
   kaapi_cpuhierarchy_t     hlevel;                    /* hierarchy */
 
-  /* performance register */
+  /* performance register used if library is configured with. Keep it for binary compatibility */
   kaapi_perf_counter_t	   perf_regs[2][KAAPI_PERF_ID_MAX];
   kaapi_perf_counter_t*	   curr_perf_regs;            /* either perf_regs[0], either perf_regs[1] */
-
   int	                     papi_event_set;
   unsigned int	           papi_event_count;
   kaapi_perf_counter_t     start_t[2];                /* [KAAPI_PERF_SCHEDULE_STATE]= T1 else = Tidle */
    
   double                   t_preempt;                 /* total idle time in second pass in the preemption */           
 
-  /* proc info */
-  const struct kaapi_procinfo_t* kpi;
+  const struct kaapi_procinfo_t* kpi;                 /* proc info */
   
-  /* event buffer */
-  struct kaapi_event_buffer_t* eventbuffer;
+  struct kaapi_event_buffer_t* eventbuffer;           /* event buffer */
 
 #if defined(KAAPI_USE_PERFCOUNTER)
   uintptr_t                serial;                    /* serial number of generated steal */
@@ -540,7 +537,9 @@ typedef struct kaapi_processor_t {
   unsigned int              seed_data;                /* seed for kproc random generator */
   kaapi_mem_host_map_t      mem_host_map;             /* memory map */
 
-  struct kaapi_processor_t* victim_kproc;
+  KAAPI_DEBUG_INST(
+    struct kaapi_processor_t* victim_kproc;             /* used for debug */
+  )
 
   void*                     libkomp_tls;
 
@@ -858,7 +857,7 @@ static inline unsigned int kaapi_processor_get_type(const kaapi_processor_t* kpr
 */
 static inline int kaapi_processor_has_nowork( const kaapi_processor_t* kproc )
 {
-  return (kproc->isidle !=0) && kaapi_wsqueuectxt_empty(kproc) && kaapi_readytasklist_isempty(kproc->rtl_remote) && (kproc->mailbox.head ==0);
+  return (kproc->isidle !=0) && (kproc->mailbox.head ==0) && kaapi_readytasklist_isempty(kproc->rtl_remote) && kaapi_wsqueuectxt_empty(kproc);
 }
 
 /**

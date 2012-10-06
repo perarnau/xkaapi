@@ -71,6 +71,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   KAAPI_EVENT_PUSH0(kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
 #endif
 
+  kaapi_assert(kproc->isidle == 1);
   do 
   {
 #if defined(KAAPI_USE_NETWORK)
@@ -119,7 +120,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
     if (ws_status != KAAPI_REQUEST_S_OK)
       continue;
 
-redo_execute:    
+redo_execute:
     kproc->isidle = 0;
     
 #if defined(KAAPI_USE_PERFCOUNTER)
