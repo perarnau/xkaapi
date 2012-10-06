@@ -65,7 +65,7 @@ int kaapi_thread_distribute_task (
     kid %= kaapi_getconcurrency();
   kproc = kaapi_get_current_processor();
   if (kproc->kid == kid)
-    return kaapi_thread_pushtask( kaapi_threadcontext2thread(kproc->thread) );
+    return kaapi_thread_pushtask( thread );
 
   kproc = kaapi_all_kprocessors[kid];
   
@@ -112,7 +112,7 @@ int kaapi_thread_distribute_task (
   
   /* mail box: FIFO push in tail */
   remote_task->next = 0;
-  kaapi_atomic_lock(&kproc->lock);
+  kaapi_sched_lock(&kproc->lock);
   {
     if (kproc->mailbox.tail ==0)
       kproc->mailbox.tail = kproc->mailbox.head = remote_task;
@@ -120,7 +120,7 @@ int kaapi_thread_distribute_task (
       kproc->mailbox.tail->next = remote_task;
     kproc->mailbox.tail = remote_task;
   }
-  kaapi_atomic_unlock(&kproc->lock);
+  kaapi_sched_unlock(&kproc->lock);
 #else
   kaapi_thread_pushtask(thread);
 #endif
