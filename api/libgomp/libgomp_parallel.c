@@ -264,12 +264,19 @@ komp_parallel_start (
   /* begin parallel region: also push a new frame that will be pop
    during call to kaapic_end_parallel
    */
+  double t0, t1;
+  double d0,d1,d2,d3;
+  
+  t0 = kaapic_get_time();
   kaapic_begin_parallel(KAAPIC_FLAG_DEFAULT);
+  t1 = kaapic_get_time();
+  d0 = kaapic_get_time()-t1;
   
   /* init the new context with team information and workshare construct 
    the method push a new context in the caller Kaapi' stack 
    and a call to komp_get_ctxtkproc must be done to retreive the new ctxt.
    */
+  t0 = kaapic_get_time();
   teaminfo = komp_init_parallel_start( kproc, num_threads );
   thread = kaapi_threadcontext2thread(kproc->thread);
   
@@ -332,6 +339,12 @@ komp_parallel_start (
     }
     kaapi_thread_push_packedtasks(thread, num_threads-1);
   }
+  t1 = kaapic_get_time();
+  d1 = kaapic_get_time()-t1;
+  extern double global_d0;
+  extern double global_d1;
+  global_d0 += d0;
+  global_d1 += d1;
 }
 
 
