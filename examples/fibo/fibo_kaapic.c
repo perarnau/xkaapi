@@ -48,6 +48,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+void sum(int* result1, int* result2, int* result)
+{
+  *result = *result1 + *result2;
+}
+
 void fibonacci(int n, int* result)
 {
   /* task user specific code */
@@ -55,18 +60,23 @@ void fibonacci(int n, int* result)
     *result = n;
   else
   {
-    int result1 = 0;
-    int result2 = 0;
+    int* result1 = kaapic_alloca(sizeof(int));
+    int* result2 = kaapic_alloca(sizeof(int));
     kaapic_spawn(0, 2, fibonacci, 
         KAAPIC_MODE_V, n-1, 1, KAAPIC_TYPE_INT,
-        KAAPIC_MODE_W, &result1, 1, KAAPIC_TYPE_INT);
+        KAAPIC_MODE_W, result1, 1, KAAPIC_TYPE_INT
+    );
 
     kaapic_spawn(0, 2, fibonacci, 
         KAAPIC_MODE_V, n-2, 1, KAAPIC_TYPE_INT,
-        KAAPIC_MODE_W, &result2, 1, KAAPIC_TYPE_INT);
+        KAAPIC_MODE_W, result2, 1, KAAPIC_TYPE_INT
+    );
 
-    kaapic_sync();
-    *result = result1 + result2;
+    kaapic_spawn(0, 3, sum,
+        KAAPIC_MODE_R, result1, 1, KAAPIC_TYPE_INT,
+        KAAPIC_MODE_R, result2, 1, KAAPIC_TYPE_INT,
+        KAAPIC_MODE_W, result, 1, KAAPIC_TYPE_INT
+    );
   }
 }
 
@@ -88,18 +98,18 @@ int main(int argc, char *argv[])
   kaapic_spawn_attr_t attr;
   kaapic_spawn_attr_init(&attr);
 
-  double start = kaapic_get_time();
-
   kaapic_begin_parallel (KAAPIC_FLAG_DEFAULT);
+
+  double start = kaapic_get_time();
 
   kaapic_spawn(&attr, 2, fibonacci, KAAPIC_MODE_V, n, 1, KAAPIC_TYPE_INT,
       KAAPIC_MODE_W, &result, 1, KAAPIC_TYPE_INT);
 
   kaapic_sync();
 
-  kaapic_end_parallel (KAAPIC_FLAG_DEFAULT);
-
   double stop = kaapic_get_time();
+
+  kaapic_end_parallel (KAAPIC_FLAG_DEFAULT);
 
   fprintf(stdout, "Fibo(%d) = %d\n", n, result);
 
