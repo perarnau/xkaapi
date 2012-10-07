@@ -3,7 +3,7 @@
  *  ckaapi
  *
  *  Created by TG on 18/02/09.
- *  Copyright 2009 INRIA. All rights reserved.
+ *  Copyright 2009,2010,2011,2012 INRIA. All rights reserved.
  *
  */
  

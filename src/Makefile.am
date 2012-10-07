@@ -3,7 +3,7 @@
 ##  xkaapi
 ##
 ##  Created by CL, TG and VD on 04/02/09.
-##  Copyright 2009 INRIA. All rights reserved.
+##  Copyright 2009,2010,2011,2012 INRIA. All rights reserved.
 ##
 
 lib_LTLIBRARIES= libkaapi.la
