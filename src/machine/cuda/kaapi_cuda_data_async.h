@@ -67,9 +67,7 @@ int kaapi_cuda_data_async_input_host_sync(kaapi_taskdescr_t* const td);
 int kaapi_cuda_data_async_recv(kaapi_cuda_stream_t * kstream,
 			       kaapi_taskdescr_t * td);
 
-#if	KAAPI_CUDA_MEM_ALLOC_MANAGER
 int kaapi_cuda_data_async_check(void);
-#endif
 
 /* ** Memory system **
     This method is called by a CUDA thread to synchronize the kdata parameter.

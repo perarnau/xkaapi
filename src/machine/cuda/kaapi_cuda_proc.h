@@ -57,15 +57,7 @@
 #define	KAAPI_CUDA_MAX_DEV	16
 
 #define KAAPI_CUDA_ASYNC	1
-#define KAAPI_CUDA_MEM_ALLOC_MANAGER	1
 #define KAAPI_CUDA_MEM_FREE_FACTOR	1
-//#define       KAAPI_CUDA_MODE_BASIC   1
-
-#define KAAPI_CUDA_MAX_STREAMS	4
-
-#define KAAPI_CUDA_KSTREAM	1
-
-#define	KAAPI_USE_WINDOW	1
 
 /* Write-through memory cache in the GPU */
 //#define KAAPI_CUDA_DATA_CACHE_WT 1
@@ -79,13 +71,6 @@ extern uint32_t kaapi_cuda_count_kprocessors;
 extern kaapi_atomic_t kaapi_cuda_synchronize_barrier;
 
 struct kaapi_cuda_stream_t;
-
-enum {
-  KAAPI_CUDA_STREAM_HTOD,
-  KAAPI_CUDA_STREAM_KERNEL,
-  KAAPI_CUDA_STREAM_DTOH,
-  KAAPI_CUDA_STREAM_DTOD
-};
 
 typedef struct kaapi_cuda_ctx {
   cublasHandle_t handle;

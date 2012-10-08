@@ -58,6 +58,7 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
   kaapi_request_status_t  ws_status;
   kaapi_thread_context_t* thread;
   kaapi_thread_context_t* tmp;
+  kaapi_taskdescr_t* td;
   int err;
   
   kaapi_assert_debug( kproc !=0 );
@@ -77,6 +78,13 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
 #if defined(KAAPI_USE_NETWORK)
     kaapi_network_poll();
 #endif
+#if defined(KAAPI_USE_CUDA)
+    if (kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA)
+    {
+      kaapi_cuda_proc_poll(kproc);
+    }
+#endif
+    
     if (kaapi_suspendflag)
       kaapi_mt_suspend_self(kproc);
     
@@ -130,12 +138,12 @@ redo_execute:
 #endif
 
 #if defined(KAAPI_USE_CUDA)
-    if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
+    if (kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA)
     {
-      if (kproc->thread->sfp->tasklist == 0)
-        err = kaapi_thread_execframe(&kproc->thread->stack);
+      if (kproc->thread->stack.sfp->tasklist == 0)
+        err = kaapi_stack_execframe(&kproc->thread->stack);
       else
-        err = kaapi_cuda_thread_execframe_tasklist(&kproc->thread->stack);
+        err = kaapi_cuda_thread_execframe_tasklist(kproc->thread);
     }
     else
 #endif /* KAAPI_USE_CUDA */

@@ -619,10 +619,10 @@ static inline int kaapi_readytasklist_pushready_td(
 
 /* TG: why to not do that for any kind of processor ?
 */
-  if ( kaapi_processor_get_type(curr_kproc) == KAAPI_PROC_TYPE_CUDA ) 
+  if ( kaapi_processor_get_type(curr_kproc) == KAAPI_PROC_TYPE_CUDA )
   {
     /* if td does not have GPU implementation, push it on master tasklist */
-    if ( (td->fmt !=0) && (kaapi_get_task_bodywh_by_arch( td, KAAPI_PROC_TYPE_CUDA ) == 0)) //(td->priority == KAAPI_TASKLIST_MIN_PRIORITY ) 
+    if ( (td->fmt !=0) && (kaapi_get_task_bodywh_by_arch( td, KAAPI_PROC_TYPE_CUDA ) == 0))
     {
       kaapi_assert_debug( td->tasklist != 0 );
       return kaapi_readylist_push( &td->tasklist->rtl, td );
