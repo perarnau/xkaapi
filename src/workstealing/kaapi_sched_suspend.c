@@ -161,6 +161,18 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc, int (*fcondition)(void* ), v
       kaapi_setcontext(kproc, thread);
     }
     
+    if( 0 == kaapi_readylist_pop( kproc->rtl_remote, &td ))
+    {
+      kaapi_thread_startexecwithtd( kproc, td );
+      goto redo_execution;
+    }
+    
+    if( 0 == kaapi_readylist_pop( kproc->rtl, &td ))
+    {
+      kaapi_thread_startexecwithtd( kproc, td );
+      goto redo_execution;
+    }
+    
     /* steal request */
     ws_status = kproc->emitsteal(kproc);
     if (ws_status != KAAPI_REQUEST_S_OK)
@@ -179,7 +191,7 @@ redo_execution:
       if (kproc->thread->stack.sfp->tasklist == 0)
         err = kaapi_stack_execframe(&kproc->thread->stack);
       else /* assumed kaapi_threadgroup_execframe */
-        err = kaapi_cuda_threadgroup_execframe(kproc->thread);
+        err = kaapi_cuda_thread_execframe_tasklist(kproc->thread);
     }
     else
 #endif /* KAAPI_USE_CUDA */

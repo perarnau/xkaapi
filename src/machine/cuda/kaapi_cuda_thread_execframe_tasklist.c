@@ -68,7 +68,7 @@ typedef void (*kaapi_cuda_task_body_t) (void *, cudaStream_t);
 static inline void
 kaapi_cuda_thread_tasklist_activate_deps(kaapi_taskdescr_t * td)
 {
-  kaapi_readytasklist_pushactivated(kaapi_get_current_processor()->rtl_remote,
+  kaapi_readytasklist_pushactivated(kaapi_get_current_processor()->rtl,
                                     td);
   KAAPI_ATOMIC_ADD(&td->tasklist->cnt_exec, 1);
 }
@@ -278,11 +278,16 @@ int kaapi_cuda_thread_execframe_tasklist(kaapi_thread_context_t * thread)
     
   }				/* while */
   
+  if (!kaapi_readytasklist_isempty(stack->proc->rtl)) {
+    if (kaapi_readylist_pop(stack->proc->rtl, &td) == 0)
+      goto execute_first;
+  }
+  
   if (!kaapi_readytasklist_isempty(stack->proc->rtl_remote)) {
     if (kaapi_readylist_pop(stack->proc->rtl_remote, &td) == 0)
       goto execute_first;
   }
-    
+  
   /* here... end execute frame tasklist */
   KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_FRAME_TL_END);
   

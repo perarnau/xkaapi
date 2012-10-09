@@ -89,7 +89,7 @@ void kaapi_sched_stealreadytasklist(
     }
 #endif
 
-    rtl = kproc->rtl_remote;
+    rtl = kproc->rtl;
     err = kaapi_readylist_steal( kproc, rtl, &td );
     if( err == 0 )
     {

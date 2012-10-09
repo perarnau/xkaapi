@@ -122,7 +122,19 @@ void kaapi_sched_idle ( kaapi_processor_t* kproc )
       
       kaapi_setcontext(kproc, thread);
     }
-
+    
+    if( 0 == kaapi_readylist_pop( kproc->rtl_remote, &td ))
+    {
+      kaapi_thread_startexecwithtd( kproc, td );
+      goto redo_execute;
+    }
+    
+    if( 0 == kaapi_readylist_pop( kproc->rtl, &td ))
+    {
+      kaapi_thread_startexecwithtd( kproc, td );
+      goto redo_execute;
+    }
+    
     /* steal request */
     ws_status = kproc->emitsteal(kproc);
     if (ws_status != KAAPI_REQUEST_S_OK)

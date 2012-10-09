@@ -604,6 +604,11 @@ static inline int kaapi_readytasklist_pushready_td(
     td->priority = (*kaapi_default_param.ctpriority)(td->tasklist->t_infinity, td);    
 #endif
   
+  if(td->fmt == 0)
+  {
+    return kaapi_readylist_push( rtl, td );
+  }
+  
   if (kaapi_task_get_site(td->task) !=0)
   {
     /* always take the first bit ==1 */
@@ -622,7 +627,8 @@ static inline int kaapi_readytasklist_pushready_td(
   if ( kaapi_processor_get_type(curr_kproc) == KAAPI_PROC_TYPE_CUDA )
   {
     /* if td does not have GPU implementation, push it on master tasklist */
-    if ( (td->fmt !=0) && (kaapi_get_task_bodywh_by_arch( td, KAAPI_PROC_TYPE_CUDA ) == 0))
+    if ( (kaapi_get_task_bodywh_by_arch(td, kaapi_processor_get_type(curr_kproc)) == 0) ||
+        (kaapi_task_has_arch(td->task, kaapi_processor_get_type(curr_kproc)) == 0) )
     {
       kaapi_assert_debug( td->tasklist != 0 );
       return kaapi_readylist_push( &td->tasklist->rtl, td );
@@ -636,6 +642,7 @@ static inline int kaapi_readytasklist_pushready_td(
   /* for test only: push on master list task with highest priority */
   if ((td->priority == KAAPI_TASKLIST_MAX_PRIORITY) && (curr_kproc->kid != 0))
     return kaapi_readylist_remote_push( rtl, td );
+  
   return kaapi_readylist_push( rtl, td );
 }
 

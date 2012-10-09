@@ -172,9 +172,14 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
     KAAPI_DEBUG_INST(save_tasklist = *tasklist;)
     
   } /* while */
+
+  if( !kaapi_readytasklist_isempty(stack->proc->rtl) ){
+    if( kaapi_readylist_pop(stack->proc->rtl, &td) == 0 )
+	    goto execute_first;
+  }
   
-  if( !kaapi_readytasklist_isempty( stack->proc->rtl_remote ) ){
-    if( kaapi_readylist_pop( stack->proc->rtl_remote, &td ) == 0 )
+  if( !kaapi_readytasklist_isempty(stack->proc->rtl_remote) ){
+    if( kaapi_readylist_pop(stack->proc->rtl_remote, &td) == 0 )
 	    goto execute_first;
   }
   

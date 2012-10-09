@@ -33,6 +33,7 @@ function run_test {
 
 #    export KAAPI_CPUSET="0"
     export KAAPI_CPUSET="4"
+#    export KAAPI_CPUSET="1,2,3,4,5,6,7"
 #    export KAAPI_CPUSET="4,5"
     export KAAPI_GPUSET="0~0"
 #    export KAAPI_GPUSET="0~0,1~1,2~2,3~3"
@@ -53,11 +54,12 @@ function run_test {
 
 #    export KAAPI_DISPLAY_PERF=1
 #
-    export KAAPI_PUSH_AFFINITY="writer"
+#    export KAAPI_PUSH_AFFINITY="writer"
 #    export KAAPI_STEAL_AFFINITY="writer"
 #    export KAAPI_PUSH_AFFINITY="locality"
 #    export KAAPI_STEAL_AFFINITY="locality"
 
+#    export KAAPI_DUMP_TASKLIST=1
 
 #    msizes="10240"
 #    msizes="4096"
@@ -66,10 +68,10 @@ function run_test {
     msizes="2048"
 #    msizes="40960"
 #    msizes="10240 21504 22528 23552 24576"
+    bsizes="512"
 #    bsizes="1024"
-    bsizes="1024"
     bloc_recursive="128"
-    niter=10
+    niter=1
 #    verif=1
     export KAAPI_WINDOW_SIZE=2
     for m in $msizes
