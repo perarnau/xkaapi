@@ -57,6 +57,7 @@ kaapi_cuda_mem_cache_insert_ro(kaapi_cuda_mem_cache_t * mem,
 {
   kaapi_cuda_mem_cache_insertlist_ro(mem, blk);
   blk->u.rc = 1;
+  blk->u.wc = 0;
 }
 
 static inline void
@@ -65,6 +66,7 @@ kaapi_cuda_mem_cache_insert_rw(kaapi_cuda_mem_cache_t * mem,
 {
   kaapi_cuda_mem_cache_insertlist_rw(mem, blk);
   blk->u.wc = 1;
+  blk->u.rc = 0;
 }
 
 int
@@ -74,7 +76,7 @@ kaapi_cuda_mem_cache_insert(kaapi_processor_t * proc,
 {
   kaapi_hashentries_t *entry;
   kaapi_cuda_mem_cache_t *cache = &proc->cuda_proc.cache;
-  kaapi_cuda_mem_cache_blk_t *blk = (kaapi_cuda_mem_cache_blk_t *) calloc(1, sizeof(kaapi_cuda_mem_cache_blk_t));
+  kaapi_cuda_mem_cache_blk_t *blk = (kaapi_cuda_mem_cache_blk_t *) malloc(sizeof(kaapi_cuda_mem_cache_blk_t));
   if (blk == NULL)
     return -1;
   
@@ -142,6 +144,7 @@ static inline void *kaapi_cuda_mem_cache_remove_ro(kaapi_processor_t * proc,
   uintptr_t ptr;
   kaapi_hashentries_t *entry;
   kaapi_cuda_mem_cache_blk_t *blk;
+  kaapi_cuda_mem_cache_blk_t *blk_next;
   kaapi_cuda_mem_cache_t *cache = &proc->cuda_proc.cache;
   size_t mem_free = 0;
   size_t ptr_size;
@@ -164,17 +167,22 @@ static inline void *kaapi_cuda_mem_cache_remove_ro(kaapi_processor_t * proc,
     kaapi_cuda_mem_cache_removefromlist_ro(cache, blk);
     ptr = blk->ptr;
     ptr_size = blk->size;
+    blk_next = blk->next;
     free(blk);
     entry = kaapi_big_hashmap_findinsert(&cache->kmem, (const void*)ptr);
     entry->u.block = NULL;
     if (ptr_size >= size) {
       devptr = (void*)ptr;
-    } else
+    } else {
       kaapi_cuda_mem_free_((void*)ptr);
+    }
     mem_free += ptr_size;
     if (mem_free >= (size * KAAPI_CUDA_MEM_FREE_FACTOR))
       break;
+    
+    blk = blk_next;
   }
+  
   if (cache->used < mem_free)
     cache->used = 0;
   else
@@ -223,6 +231,7 @@ static inline void *kaapi_cuda_mem_cache_remove_rw(kaapi_processor_t * proc,
   uintptr_t ptr;
   kaapi_hashentries_t *entry;
   kaapi_cuda_mem_cache_blk_t *blk;
+  kaapi_cuda_mem_cache_blk_t *blk_next;
   kaapi_cuda_mem_cache_t *cache = &proc->cuda_proc.cache;
   size_t mem_free = 0;
   size_t ptr_size;
@@ -246,6 +255,7 @@ static inline void *kaapi_cuda_mem_cache_remove_rw(kaapi_processor_t * proc,
 
     ptr = blk->ptr;
     ptr_size = blk->size;
+    blk_next = blk->next;
     free(blk);
     entry = kaapi_big_hashmap_findinsert(&cache->kmem, (const void*)ptr);
     entry->u.block = NULL;
@@ -259,7 +269,10 @@ static inline void *kaapi_cuda_mem_cache_remove_rw(kaapi_processor_t * proc,
     mem_free += ptr_size;
     if (mem_free >= (size * KAAPI_CUDA_MEM_FREE_FACTOR))
       break;
+    
+    blk = blk_next;
   }
+  
   if (cache->used < mem_free)
     cache->used = 0;
   else
@@ -368,6 +381,14 @@ kaapi_cuda_mem_cache_inc_use_ro(kaapi_cuda_mem_cache_t * mem,
 #endif
   
   blk->u.rc++;
+  
+#if defined(KAAPI_DEBUG)
+  if(blk->u.wc > 0){
+    fprintf(stdout, "[%s] warning: memory block RO with WR access (wc=%d,rc=%d)\n",
+            __FUNCTION__, blk->u.wc, blk->u.rc);
+    fflush(stdout);
+  }
+#endif
   
   if( blk->m != m ){
     kaapi_cuda_mem_cache_removefromlist_rw(mem, blk);
