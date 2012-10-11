@@ -78,6 +78,7 @@
     }{##4}%
   }%
   \api@newpart[synopsis]{Synopsis}{}{}%
+  \api@newpart[call]{Call}{}{}%
   \api@newpart[desc]{Description}{}{}%
   \api@newpart[params]{Parameters}{%
     \let\api@indesc\@empty
@@ -121,16 +122,14 @@
 
 %%
 \RRauthor{
-Fabien Le Mentec
-  \and
-Vincent Danjean
-  \and
 Thierry Gautier
+  \and
+Jo\~ao Lima
 }
- \RRNo{0417XX}
+% \RRNo{0417XX}
 
 \authorhead{Gautier \& Danjean \& Le Mentec}
-\RRtitle{\kaapi C programming interface}
+\RRtitle{\kaapi C programming interface for heterogeneous architecture}
 \RRetitle{\kaapi C programming interface}
 \titlehead{\kaapi C programming interface}
 
@@ -153,6 +152,12 @@ Thierry Gautier
 
 \tableofcontents
 \addtocontents{toc}{\protect\setcounter{tocdepth}{1}}
+
+\newpage
+\section*{Objectives}\label{sec:objectives}
+This report extends the previous C API interface described in the report~\cite{apic} to program multi-CPUs/multi-GPUs architecture using a C API. The API is compliant with the multi-CPUs API~\cite{apic} with addition of constants in place of integral values. Moreover, it adds few extensions to provide multi-versioning of task's implementation.\\
+
+This interface is an high level interface targeted to be used by end-users as a library.
 
 \newpage
 \section{Software installation}\label{sec:userinstall}
@@ -606,8 +611,9 @@ int kaapic_spawn_attr_destroy(kaapic_spawn_attr_t* attr)
 
   \begin{example}\label{fibo}
     \paragraph{}
-    Refer to examples/kaapif/dfg subdirectory in sources
+    Refer to examples/kaapic/dfg subdirectory in sources\\
     
+    The next example compute the $n$-th Fibonacci number.
     \begin{code}
   #include "kaapic.h"
 
@@ -651,6 +657,47 @@ int kaapic_spawn_attr_destroy(kaapic_spawn_attr_t* attr)
     kaapic_finalize();
   }
     \end{code}
+  \end{example}
+\pagebreak
+  \begin{example}\label{fibo}
+    \paragraph{}
+    The next example illustrates the Cholesky factorization subroutine extracted from the example in examples/kaapic/dfg subdirectory in sources.\\
+  \begin{code}
+    /* cholesky factorization */
+    for (int k=0; k < N; ++k)
+    {
+      kaapic_spawn( 0, 2, dpotrf_body, 
+      	KAAPIC_MODE_RW, A[k][k], NB*NB, KAAPIC_TYPE_DOUBLE,
+	KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT
+      );
+
+      for (int m=k+1; m < N; ++m)
+        kaapic_spawn( 0, 3, dtrsm_body, 
+          KAAPIC_MODE_R,  A[k][k], NB*NB, KAAPIC_TYPE_DOUBLE,
+          KAAPIC_MODE_RW, A[m][k], NB*NB, KAAPIC_TYPE_DOUBLE,
+          KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT
+        );
+
+      for (int m=k+1; m < N; ++m)
+      {
+        kaapic_spawn( 0, 3, dsyrk_body,
+          KAAPIC_MODE_R,  A[k][k], NB*NB, KAAPIC_TYPE_DOUBLE,
+          KAAPIC_MODE_RW, A[m][m], NB*NB, KAAPIC_TYPE_DOUBLE, 
+          KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT
+        );
+
+        for (int n=k+1; n < m; ++n)
+        {
+          kaapic_spawn( 0, 4, dgemm_body,
+            KAAPIC_MODE_R,  A[m][k], NB*NB, KAAPIC_TYPE_DOUBLE,
+            KAAPIC_MODE_R, A[n][k], NB*NB, KAAPIC_TYPE_DOUBLE, 
+            KAAPIC_MODE_RW, A[m][n], NB*NB, KAAPIC_TYPE_DOUBLE, 
+            KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT
+          );
+        }
+      }
+    }
+  \end{code}
   \end{example}
 \end{apisection}
 
@@ -729,6 +776,90 @@ void kaapic_sync(void)
     Refer to the Fibonacci example in section~\apirefp[example]{dataflow}.
   \end{example}
 \end{apisection}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{apisection}[gpus]{Multi-GPUs support}
+
+  \begin{synopsis}
+    \begin{code}
+#include "kaapic.h"
+
+kaapi_task_body_t kaapic_alternate_body( 
+    kaapi_arch_t type,
+    ...
+)
+    \end{code}
+  \end{synopsis}
+
+  \begin{call}
+    \begin{small}
+      \lstset{language=C}
+      \begin{lstlisting}[frame=tb]
+old_body = kaapic_alternate_body( 
+        arch,
+        body, 
+        body_alter 
+);
+      \end{lstlisting}
+    \end{small}
+  \end{call}
+
+  \begin{desc}
+  The support for multi-architecture platform only concerns the ability to define several implementations of task body defined at task creation time. The host machine creates a set of dependent tasks which are scheduled on the computing resources. 
+  
+The function \fn{kaapic\_alternate\_body} registers a new alternate version of the task body \textbf{body} to be \textbf{body\_alter} for the architecture \textbf{arch}. The body function is the CPU version used when CPU task is created.
+See \fn{kaapic\_spawn}. The C function \fn{body\_alter} has the same signature as \textbf{body}.
+The function body as well as its effective parameters are passrf in the optional parameter list of kaapic spawn. The format of the optional parameter list is:
+  \end{desc}
+  \begin{ret}
+    None.
+  \end{ret}
+  \begin{example}
+  \begin{code}
+    /* cholesky factorization */
+    for (int k=0; k < N; ++k)
+    {
+      kaapic_spawn( 0, 2, dpotrf_body, 
+      	KAAPIC_MODE_RW, A[k][k], NB*NB, KAAPIC_TYPE_DOUBLE,
+	KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT
+      );
+
+      for (int m=k+1; m < N; ++m)
+        kaapic_spawn( 0, 3, dtrsm_body, 
+          KAAPIC_MODE_R,  A[k][k], NB*NB, KAAPIC_TYPE_DOUBLE,
+          KAAPIC_MODE_RW, A[m][k], NB*NB, KAAPIC_TYPE_DOUBLE,
+          KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT
+        );
+
+      for (int m=k+1; m < N; ++m)
+      {
+        kaapic_spawn( 0, 3, dsyrk_body,
+          KAAPIC_MODE_R,  A[k][k], NB*NB, KAAPIC_TYPE_DOUBLE,
+          KAAPIC_MODE_RW, A[m][m], NB*NB, KAAPIC_TYPE_DOUBLE, 
+          KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT
+        );
+
+        for (int n=k+1; n < m; ++n)
+        {
+          kaapic_spawn( 0, 4, dgemm_body,
+            KAAPIC_MODE_R,  A[m][k], NB*NB, KAAPIC_TYPE_DOUBLE,
+            KAAPIC_MODE_R, A[n][k], NB*NB, KAAPIC_TYPE_DOUBLE, 
+            KAAPIC_MODE_RW, A[m][n], NB*NB, KAAPIC_TYPE_DOUBLE, 
+            KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT
+          );
+        }
+      }
+    }
+  \end{code}
+  \end{example}
+\end{apisection}
+
+\newpage
+\begin{thebibliography}{10}
+\bibitem{apic}
+F.~Lementec, V.~Danjean, and T.~Gautier, ``{X-Kaapi C programming interface}'', Technical Report RT-0417, INRIA, 2011.
+\end{thebibliography}
 
 \end{document}
 
