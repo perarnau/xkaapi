@@ -166,8 +166,7 @@ KAAPI_REGISTER_TASKFORMAT( print_format,
 void print_body( void* taskarg, kaapi_thread_t* thread )
 {
   print_arg_t* arg0 = (print_arg_t*)taskarg;
-  printf("Fibo(%i)=%i\n", 
-      arg0->n, 
+  printf("Res = %i\n", 
       *kaapi_data(int, &arg0->result)
   );
   printf("Time: %g\n", arg0->delay/arg0->niter);
