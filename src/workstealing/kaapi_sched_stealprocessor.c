@@ -63,7 +63,7 @@ int kaapi_sched_stealprocessor(
   
   /* 1/ steal in ready list : to add in the futur */
 #if 1 /* to disable steal in kproc ready list */
-  if ((kproc->mailbox.head != 0 ) || !kaapi_readytasklist_isempty( kproc->rtl_remote ))
+  if ((kproc->mailbox.head != 0 ) || !kaapi_readytasklist_isempty(kproc->rtl))
     kaapi_sched_stealreadytasklist( thread, kproc, lrequests, lrrange );
 #endif
 

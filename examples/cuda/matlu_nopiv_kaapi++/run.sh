@@ -1,8 +1,5 @@
 #!/bin/bash
 
-SCRATCH=$SCRATCH
-CUDADIR=$SCRATCH/install/cuda
-export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$HOME/install/xkaapi/default/lib:$LD_LIBRARY_PATH
 
 version="$(date +%s)"
@@ -12,8 +9,8 @@ function run_test {
 #    export KAAPI_CPUSET="0:1"
     export KAAPI_CPUSET="4"
 #    export KAAPI_CPUSET="4,5,10,11"
-#    export KAAPI_GPUSET="0~0"
-    export KAAPI_GPUSET="0~0,1~1,2~2,3~3"
+    export KAAPI_GPUSET="0~0"
+#    export KAAPI_GPUSET="0~0,1~1,2~2,3~3"
 #    export KAAPI_GPUSET="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
 
 #    export COMPUTE_PROFILE=1
@@ -38,15 +35,15 @@ function run_test {
 #    export KAAPI_STEAL_AFFINITY="locality"
 
 
-    msizes="10240"
+#    msizes="10240"
 #    msizes="1024"
-#    msizes="512"
+    msizes="2048"
 #    msizes="16384"
-#    bsizes="256"
+    bsizes="512"
 #    bsizes="128"
-    bsizes="1024"
+#    bsizes="1024"
     niter=1
-#    verif=1
+    verif=1
     export KAAPI_WINDOW_SIZE=2
     for m in $msizes ; do
 	    for b in $bsizes; do

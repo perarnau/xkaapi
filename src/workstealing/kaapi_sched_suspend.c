@@ -64,6 +64,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc, int (*fcondition)(void* ), v
   kaapi_thread_context_t* thread;
   kaapi_thread_context_t* thread_condition;
   kaapi_thread_context_t* tmp;
+  kaapi_taskdescr_t* td;
 
   kaapi_assert_debug( kproc !=0 );
   kaapi_assert_debug( kproc->thread !=0 );
@@ -102,7 +103,13 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc, int (*fcondition)(void* ), v
 #if defined(KAAPI_USE_NETWORK)
     kaapi_network_poll();
 #endif
-
+#if defined(KAAPI_USE_CUDA)
+    if (kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA)
+    {
+      kaapi_cuda_proc_poll(kproc);
+    }
+#endif
+    
     /* end of a parallel region ? */
     if (kaapi_suspendflag)
       kaapi_mt_suspend_self(kproc);
@@ -153,7 +160,19 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc, int (*fcondition)(void* ), v
       
       kaapi_setcontext(kproc, thread);
     }
-
+    
+    if( 0 == kaapi_readylist_pop( kproc->rtl_remote, &td ))
+    {
+      kaapi_thread_startexecwithtd( kproc, td );
+      goto redo_execution;
+    }
+    
+    if( 0 == kaapi_readylist_pop( kproc->rtl, &td ))
+    {
+      kaapi_thread_startexecwithtd( kproc, td );
+      goto redo_execution;
+    }
+    
     /* steal request */
     ws_status = kproc->emitsteal(kproc);
     if (ws_status != KAAPI_REQUEST_S_OK)
@@ -167,12 +186,12 @@ redo_execution:
 #endif
 
 #if defined(KAAPI_USE_CUDA)
-    if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
+    if (kaapi_processor_get_type(kproc) == KAAPI_PROC_TYPE_CUDA)
     {
-      if (kproc->thread->sfp->tasklist == 0)
-        err = kaapi_cuda_execframe( kproc->thread );
+      if (kproc->thread->stack.sfp->tasklist == 0)
+        err = kaapi_stack_execframe(&kproc->thread->stack);
       else /* assumed kaapi_threadgroup_execframe */
-        err = kaapi_cuda_threadgroup_execframe(kproc->thread);
+        err = kaapi_cuda_thread_execframe_tasklist(kproc->thread);
     }
     else
 #endif /* KAAPI_USE_CUDA */

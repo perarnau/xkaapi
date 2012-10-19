@@ -1,7 +1,7 @@
 /*
  ** kaapi_impl.h
  ** xkaapi
- ** 
+ **
  ** Created on Tue Mar 31 15:19:09 2009
  ** Copyright 2009 INRIA.
  **
@@ -9,23 +9,23 @@
  **
  ** thierry.gautier@inrialpes.fr
  ** Joao.Lima@imag.fr / joao.lima@inf.ufrgs.br
- ** 
+ **
  ** This software is a computer program whose purpose is to execute
  ** multithreaded computation with data flow synchronization between
  ** threads.
- ** 
+ **
  ** This software is governed by the CeCILL-C license under French law
  ** and abiding by the rules of distribution of free software.  You can
  ** use, modify and/ or redistribute the software under the terms of
  ** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
  ** following URL "http://www.cecill.info".
- ** 
+ **
  ** As a counterpart to the access to the source code and rights to
  ** copy, modify and redistribute granted by the license, users are
  ** provided only with a limited warranty and the software's author,
  ** the holder of the economic rights, and the successive licensors
  ** have only limited liability.
- ** 
+ **
  ** In this respect, the user's attention is drawn to the risks
  ** associated with loading, using, modifying and/or developing or
  ** reproducing the software by the user in light of its specific
@@ -37,11 +37,11 @@
  ** enabling the security of their systems and/or data to be ensured
  ** and, more generally, to use and operate it in the same conditions
  ** as regards security.
- ** 
+ **
  ** The fact that you are presently reading this means that you have
  ** had knowledge of the CeCILL-C license and that you accept its
  ** terms.
- ** 
+ **
  */
 #include <iostream>
 #include <iomanip>
@@ -61,8 +61,8 @@ typedef float double_type;
 #endif
 
 
-/* Generate a random matrix symetric definite positive matrix of size m x m 
- - it will be also interesting to generate symetric diagonally dominant 
+/* Generate a random matrix symetric definite positive matrix of size m x m
+ - it will be also interesting to generate symetric diagonally dominant
  matrices which are known to be definite postive.
  Based from MAGMA
  */
@@ -73,7 +73,7 @@ static void generate_blocked_matrix( T** A, size_t N, size_t bloc )
   for (size_t i = 0; i< N; i++) {
     int ibloc = i / bloc;
     int ipos = i % bloc;
-    A[ibloc*nb+ibloc][ipos*bloc+ipos] = A[ibloc*nb+ibloc][ipos*bloc+ibloc] + 1.*N; 
+    A[ibloc*nb+ibloc][ipos*bloc+ipos] = A[ibloc*nb+ibloc][ipos*bloc+ibloc] + 1.*N;
     for (size_t j = 0; j < i; j++){
       int jbloc = j / bloc;
       int jpos = j % bloc;
@@ -154,48 +154,48 @@ static size_t global_nbloc = 1;
 template<typename T>
 struct TaskParallelPOTRF: public ka::Task<3>::Signature
 <
-  CBLAS_ORDER,			      /* row / col */
-  CBLAS_UPLO,             /* upper / lower */
-  ka::RPWP<ka::range2d<T> > /* A */
+CBLAS_ORDER,			      /* row / col */
+CBLAS_UPLO,             /* upper / lower */
+ka::RPWP<ka::range2d<T> > /* A */
 >{};
 
 template<typename T>
 struct TaskBodyCPU<TaskParallelPOTRF<T> > {
-  void operator()( 
-    CBLAS_ORDER order, CBLAS_UPLO uplo, ka::range2d_rpwp<T> A 
-  )
+  void operator()(
+                  CBLAS_ORDER order, CBLAS_UPLO uplo, ka::range2d_rpwp<T> A
+                  )
   {
-    const int N     = A->dim(0); 
+    const int N     = A->dim(0);
     const int lda   = A->lda();
     T* const a = A->ptr();
     const int blocsize = global_recblocsize;
-
+    
     if( N > blocsize )
     {
       for (int k=0; k < N; k += blocsize) {
-	ka::rangeindex rk(k, k+blocsize);
-	ka::Spawn<TaskPOTRF<T> >( ka::SetArch(ka::ArchHost) )
+        ka::rangeindex rk(k, k+blocsize);
+        ka::Spawn<TaskPOTRF<T> >( ka::SetArch(ka::ArchHost) )
 	      ( order, uplo, A(rk,rk) );
-	
-	for (int m=k+blocsize; m < N; m += blocsize) {
-	  ka::rangeindex rm(m, m+blocsize);
-	  ka::Spawn<TaskTRSM<T> >(  ka::SetArch(ka::ArchHost) )
-	  ( order, CblasRight, uplo, CblasTrans, CblasNonUnit, (T)1.0, A(rk,rk), A(rk,rm));
-	}
-	
-	for (int m=k+blocsize; m < N; m += blocsize) {
-	  ka::rangeindex rm(m, m+blocsize);
-	  ka::Spawn<TaskSYRK<T> >(  ka::SetArch(ka::ArchHost) )
-	  ( order, uplo, CblasNoTrans, (T)-1.0, A(rk,rm), (T)1.0, A(rm,rm));
-	  
-	  for (int n=k+blocsize; n < m; n += blocsize) {
-	    ka::rangeindex rn(n, n+blocsize);
-	    ka::Spawn<TaskGEMM<T> >(  ka::SetArch(ka::ArchHost) )
-	    ( order, CblasNoTrans, CblasTrans, (T)-1.0, A(rk,rm), A(rk,rn), (T)1.0, A(rn,rm));
-	  }
-	}
+        
+        for (int m=k+blocsize; m < N; m += blocsize) {
+          ka::rangeindex rm(m, m+blocsize);
+          ka::Spawn<TaskTRSM<T> >(  ka::SetArch(ka::ArchHost) )
+          ( order, CblasRight, uplo, CblasTrans, CblasNonUnit, (T)1.0, A(rk,rk), A(rk,rm));
+        }
+        
+        for (int m=k+blocsize; m < N; m += blocsize) {
+          ka::rangeindex rm(m, m+blocsize);
+          ka::Spawn<TaskSYRK<T> >(  ka::SetArch(ka::ArchHost) )
+          ( order, uplo, CblasNoTrans, (T)-1.0, A(rk,rm), (T)1.0, A(rm,rm));
+          
+          for (int n=k+blocsize; n < m; n += blocsize) {
+            ka::rangeindex rn(n, n+blocsize);
+            ka::Spawn<TaskGEMM<T> >(  ka::SetArch(ka::ArchHost) )
+            ( order, CblasNoTrans, CblasTrans, (T)-1.0, A(rk,rm), A(rk,rn), (T)1.0, A(rn,rm));
+          }
+        }
       }
-    } 
+    }
     else
     {
       CLAPACK<T>::potrf( order, uplo, N, a, lda );
@@ -210,52 +210,51 @@ struct TaskBodyCPU<TaskParallelPOTRF<T> > {
 /* TODO: inverted indexes as XKaapi does not have ColMajor matrix */
 template<typename T>
 struct TaskCholesky: public ka::Task<2>::Signature<
-    uintptr_t,
-    CBLAS_UPLO
+uintptr_t,
+CBLAS_UPLO
 >{};
 
 template<typename T>
 struct TaskBodyCPU<TaskCholesky<T> > {
   void operator()(
-      const ka::StaticSchedInfo* info, 
-      uintptr_t pA,
-      const enum CBLAS_UPLO uplo
-  )
+                  const ka::StaticSchedInfo* info,
+                  uintptr_t pA,
+                  const enum CBLAS_UPLO uplo
+                  )
   {
-//    size_t N = A->dim(0);
+    //    size_t N = A->dim(0);
     size_t blocsize = global_blocsize;
     size_t nbloc = global_nbloc;
     double_type** a = (double_type**)pA;
     
-    if( uplo == CblasLower ) 
+    if( uplo == CblasLower )
     {
       for (size_t k=0; k < nbloc; k++) {
-	ka::array<2,double_type> Akk( a[k*nbloc+k], blocsize, blocsize, blocsize);
+        ka::array<2,double_type> Akk( a[k*nbloc+k], blocsize, blocsize, blocsize);
         ka::Spawn<TaskParallelPOTRF<T> >( ka::SetStaticSched() )
 	      ( CblasColMajor, CblasLower, Akk );
         
         for (size_t m=k+1; m < nbloc; m++) {
-	  ka::array<2,double_type> Amk( a[k*nbloc+m], blocsize, blocsize, blocsize);
+          ka::array<2,double_type> Amk( a[k*nbloc+m], blocsize, blocsize, blocsize);
           ka::Spawn<TaskTRSM<T> >( ka::SetArch(ka::ArchCUDA) )
-	    ( CblasColMajor, CblasRight, uplo, CblasTrans, CblasNonUnit, (T)1.0, Akk, Amk);
+          ( CblasColMajor, CblasRight, uplo, CblasTrans, CblasNonUnit, (T)1.0, Akk, Amk);
         }
         
         for (size_t m=k+1; m < nbloc; m++) {
-	  ka::array<2,double_type> Amk( a[k*nbloc+m], blocsize, blocsize, blocsize);
-	  ka::array<2,double_type> Amm( a[m*nbloc+m], blocsize, blocsize, blocsize);
+          ka::array<2,double_type> Amk( a[k*nbloc+m], blocsize, blocsize, blocsize);
+          ka::array<2,double_type> Amm( a[m*nbloc+m], blocsize, blocsize, blocsize);
           ka::Spawn<TaskSYRK<T> >( ka::SetArch(ka::ArchCUDA) )
-	    ( CblasColMajor, uplo, CblasNoTrans, (T)-1.0, Amk, (T)1.0, Amm);
+          ( CblasColMajor, uplo, CblasNoTrans, (T)-1.0, Amk, (T)1.0, Amm);
           
           for (size_t n=k+1; n < m; n++) {
-	    ka::array<2,double_type> Ank( a[k*nbloc+n], blocsize, blocsize, blocsize);
-	    ka::array<2,double_type> Amn( a[n*nbloc+m], blocsize, blocsize, blocsize);
-            //ka::Spawn<TaskParallelGEMM<T> >(ka::SetStaticSched())
+            ka::array<2,double_type> Ank( a[k*nbloc+n], blocsize, blocsize, blocsize);
+            ka::array<2,double_type> Amn( a[n*nbloc+m], blocsize, blocsize, blocsize);
             ka::Spawn<TaskGEMM<T> >( ka::SetArch(ka::ArchCUDA) )
-	      ( CblasColMajor, CblasNoTrans, CblasTrans, (T)-1.0, Amk, Ank, (T)1.0, Amn);
+            ( CblasColMajor, CblasNoTrans, CblasTrans, (T)-1.0, Amk, Ank, (T)1.0, Amn);
           }
         }
       }
-    } 
+    }
   }
 };
 
@@ -269,8 +268,8 @@ struct doit {
     global_recblocsize = rec_block_size;
     global_nbloc = nb;
     double t0, t1;
-
-
+    
+    
     double_type** dA = (double_type**) calloc(nb*nb, sizeof(double_type*));
     if (0 == dA) {
       std::cout << "Fatal Error. Cannot allocate matrice A "
@@ -280,40 +279,40 @@ struct doit {
     
     for(int i= 0; i < nb; i++){
       for(int j= 0; j < nb; j++){
-	dA[j*nb+i] = (double_type*)malloc(block_size*block_size*sizeof(double_type));
-	if(dA[j*nb+i] == 0){
-	  std::cout << "ERROR. Cannot allocate matrice A[" << j << "," << i << "]." << std::endl;
-	  abort();
-	}
-
-	ka::array<2,double_type> A(dA[j*nb+i], block_size, block_size, block_size);
-	TaskBodyCPU<TaskLARNV<double_type> >()( ka::range2d_w<double_type>(A) );
+        dA[j*nb+i] = (double_type*)malloc(block_size*block_size*sizeof(double_type));
+        if(dA[j*nb+i] == 0){
+          std::cout << "ERROR. Cannot allocate matrice A[" << j << "," << i << "]." << std::endl;
+          abort();
+        }
+        
+        ka::array<2,double_type> A(dA[j*nb+i], block_size, block_size, block_size);
+        TaskBodyCPU<TaskLARNV<double_type> >()( ka::range2d_w<double_type>(A) );
 #if CONFIG_USE_CUDA
-	ka::Memory::Register( A );
+        ka::Memory::Register( A );
 #endif
       }
     }
-    generate_blocked_matrix<double_type>(dA, n, block_size); 
+    generate_blocked_matrix<double_type>(dA, n, block_size);
     
     double_type* dAcopy = 0;
     if (verif) {
       dAcopy = (double_type*) calloc(n* n, sizeof(double_type));
       if (dAcopy ==0) {
         std::cout << "ERROR. Cannot allocate matrice Acopy" << std::endl;
-	abort();
+        abort();
       }
       for(int i= 0; i < n; i++){
-	for(int j= 0; j < n; j++){
-	  int ibloc = i/block_size;
-	  int ipos = i%block_size;
-	  int jbloc = j/block_size;
-	  int jpos = j%block_size;
-	  dAcopy[j*n+i] = dA[jbloc*nb+ibloc][jpos*block_size+ipos];
-	}
+        for(int j= 0; j < n; j++){
+          int ibloc = i/block_size;
+          int ipos = i%block_size;
+          int jbloc = j/block_size;
+          int jpos = j%block_size;
+          dAcopy[j*n+i] = dA[jbloc*nb+ibloc][jpos*block_size+ipos];
+        }
       }
     }
     
-    // Cholesky factorization of A 
+    // Cholesky factorization of A
     double sumt = 0.0;
     double sumgf = 0.0;
     double sumgf2 = 0.0;
@@ -328,7 +327,7 @@ struct doit {
     double fmuls = FMULS_POTRF(n);
     double fadds = FADDS_POTRF(n);
     
-    for (int i=0; i<niter; ++i) 
+    for (int i=0; i<niter; ++i)
     {
       t0 = kaapi_get_elapsedtime();
       ka::Spawn<TaskCholesky<double_type> >(ka::SetStaticSched())( (uintptr_t)dA, CblasLower );
@@ -346,21 +345,21 @@ struct doit {
       sumgf2 += gflops*gflops;
       
       if (verif) {
-	double_type* dAout = 0;
-	dAout = (double_type*) calloc(n* n, sizeof(double_type));
-	if (dAout ==0) {
-	  std::cout << "ERROR. Cannot allocate matrice Acopy" << std::endl;
-	  abort();
-	}
-	for(int i= 0; i < n; i++){
-	  for(int j= 0; j < n; j++){
-	    int ibloc = i/block_size;
-	    int ipos = i%block_size;
-	    int jbloc = j/block_size;
-	    int jpos = j%block_size;
-	    dAout[j*n+i] = dA[jbloc*nb+ibloc][jpos*block_size+ipos];
-	  }
-	}
+        double_type* dAout = 0;
+        dAout = (double_type*) calloc(n* n, sizeof(double_type));
+        if (dAout ==0) {
+          std::cout << "ERROR. Cannot allocate matrice Acopy" << std::endl;
+          abort();
+        }
+        for(int i= 0; i < n; i++){
+          for(int j= 0; j < n; j++){
+            int ibloc = i/block_size;
+            int ipos = i%block_size;
+            int jbloc = j/block_size;
+            int jpos = j%block_size;
+            dAout[j*n+i] = dA[jbloc*nb+ibloc][jpos*block_size+ipos];
+          }
+        }
         check_factorization<double_type>( n, dAcopy, dAout, n, CblasLower );
         free( dAout );
         free( dAcopy );
@@ -371,17 +370,17 @@ struct doit {
     printf("POTRF %6d %5d %5d %5d %9.10f %9.6f\n",
            (int)n,
            (int)global_blocsize,
-	   (int)global_recblocsize,
+           (int)global_recblocsize,
            (int)kaapi_getconcurrency(),
            sumt/niter, gflops );
     
     for(int i= 0; i < nb; i++){
       for(int j= 0; j < nb; j++){
-	ka::array<2,double_type> A(dA[j*nb+i], block_size, block_size, block_size);
+        ka::array<2,double_type> A(dA[j*nb+i], block_size, block_size, block_size);
 #if CONFIG_USE_CUDA
-	ka::Memory::Unregister( A );
+        ka::Memory::Unregister( A );
 #endif
-	free(dA[j*nb+i]);
+        free(dA[j*nb+i]);
       }
     }
     free(dA);
@@ -406,8 +405,8 @@ struct doit {
     
     // Number of iterations
     int niter = 1;
-//    if (argc > 4)
-//      niter = atoi(argv[4]);
+    //    if (argc > 4)
+    //      niter = atoi(argv[4]);
     
     // Make verification ?
     int verif = 0;

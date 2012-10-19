@@ -49,6 +49,12 @@ static inline int kaapi_onereadytasklist_push(
   kaapi_taskdescr_t* td 
 )
 {
+#if 0
+  if(td->fmt != 0){
+    fprintf(stdout,"td=%s\n", td->fmt->name);
+    fflush(stdout);
+  }
+#endif
   td->next = td->prev = NULL;
   kaapi_atomic_lock( &ortl->lock );
   td->next = ortl->head;
