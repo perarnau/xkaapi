@@ -167,12 +167,15 @@ initialize_lib (void)
   kaapi_komp_end_parallel_count= 0;
 
   kaapic_init (KAAPIC_START_ONLY_MAIN);
+  
+  printf("Gomp init\n"); fflush(stdout);
 }
 
 
 static void __attribute__ ((destructor))
 finalize_lib (void)
 {
+  printf("Gomp finalize\n"); fflush(stdout);
   kaapic_finalize ();
 #if KAAPI_KOMP_TRACE
   printf("KOMP: time start parallel: %f\n", 1e6*kaapi_komp_start_parallel/kaapi_komp_start_parallel_count); 
