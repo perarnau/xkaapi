@@ -129,6 +129,7 @@ void kaapi_taskwrite_body(
   else 
     kaapi_task_markaftersteal( arg->origin_task );
 
+//  printf("Task: pc:%p end steal\n", (void*)arg->origin_task); fflush(stdout);
   kaapi_task_unlock( arg->origin_task );
 }
 
