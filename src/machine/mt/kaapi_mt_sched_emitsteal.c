@@ -81,10 +81,10 @@ kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
   kaapi_assert_debug( kproc->thread !=0 );
   kaapi_assert_debug( kproc == kaapi_get_current_processor() );
 
+  if (kaapi_count_kprocessors <2) 
+    return KAAPI_REQUEST_S_NOK;
+
 #if 0
-  /* try to steal locally first on own mail box 
-     Seems to introduce concurrency. See push_distribute & stealreadytasklist
-  */
   if (kproc->mailbox.head != 0 )
   {
     kaapi_task_withlink_t* taskwl;
@@ -106,8 +106,6 @@ kaapi_request_status_t kaapi_sched_flat_emitsteal ( kaapi_processor_t* kproc )
   }
 #endif
 
-  if (kaapi_count_kprocessors <2) 
-    return KAAPI_REQUEST_S_NOK;
 
   /* nothing to do: first yield */
 #if defined(__linux__)
