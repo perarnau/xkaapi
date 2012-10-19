@@ -508,7 +508,7 @@ static inline int kaapi_atomic_initlock( kaapi_lock_t* lock )
   KAAPI_DEBUG_INST(lock->_magic = 123123123U;)
   KAAPI_DEBUG_INST(lock->_owner = -1U;)
   KAAPI_DEBUG_INST(lock->_unlocker = -1U;)
-  KAAPI_DEBUG_INST(lock->_sync = 0;)
+  lock->_sync = 0;
   KAAPI_ATOMIC_WRITE_BARRIER(lock,1);
   return 0;
 }

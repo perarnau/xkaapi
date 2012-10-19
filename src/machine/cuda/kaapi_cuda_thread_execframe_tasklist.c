@@ -91,14 +91,6 @@ kaapi_cuda_gpu_task_callback2_after_kernel(kaapi_cuda_stream_t * kstream,
                                            void *arg)
 {
   kaapi_taskdescr_t *const td = (kaapi_taskdescr_t *) arg;
-#if defined(KAAPI_VERBOSE)
-  fprintf(stdout, "[%s] END kid=%lu td=%p name=%s (counter=%d,wc=%d)\n",
-          __FUNCTION__,
-          (long unsigned int) kaapi_get_current_kid(),
-          (void *) td, td->fmt->name,
-          KAAPI_ATOMIC_READ(&td->counter), td->wc);
-  fflush(stdout);
-#endif
 #if !defined(KAAPI_CUDA_NO_H2D)
 #if defined(KAAPI_CUDA_DATA_CACHE_WT)
   /* write-through policy */
@@ -125,21 +117,9 @@ kaapi_cuda_gpu_task_callback1_exec_task(kaapi_cuda_stream_t * kstream,
   kaapi_format_get_task_bodywh_by_arch(td->fmt,
                                        KAAPI_PROC_TYPE_CUDA);
   kaapi_assert_debug(body != 0);
-#if defined(KAAPI_VERBOSE)
-  fprintf(stdout, "[%s] INIT kid=%lu td=%p name=%s (counter=%d,wc=%d)\n",
-          __FUNCTION__,
-          (long unsigned int) kaapi_get_current_kid(),
-          (void *) td, td->fmt->name,
-          KAAPI_ATOMIC_READ(&td->counter), td->wc);
-  fflush(stdout);
-#endif
   kaapi_assert_debug(td->task != 0);
   kaapi_cuda_ctx_push();
   body(kaapi_task_getargs(td->task), kaapi_cuda_kernel_stream());
-#if 0 // defined(KAAPI_DEBUG)
-  if (td->fmt !=0)
-    printf("[GPU:] execute task '%s'\n", td->fmt->name);
-#endif
 #ifndef	    KAAPI_CUDA_ASYNC	/* Synchronous execution */
   KAAPI_EVENT_PUSH0(kaapi_get_current_processor(),
                     kaapi_self_thread_context(),
@@ -179,10 +159,6 @@ kaapi_cuda_host_task_callback1_exec_task(kaapi_cuda_stream_t * kstream,
   kaapi_task_body_t body = kaapi_format_get_task_bodywh_by_arch(td->fmt, KAAPI_PROC_TYPE_HOST);
   kaapi_assert_debug(body != 0);
   body(kaapi_task_getargs(td->task), 0);
-#if 0//defined(KAAPI_DEBUG)
-  if (td->fmt !=0)
-    printf("[GPU:] execute task '%s'\n", td->fmt->name);
-#endif
   kaapi_cuda_thread_tasklist_activate_deps(td);
   return 0;
 }
@@ -225,9 +201,7 @@ kaapi_cuda_thread_exec_task(kaapi_cuda_stream_t * const kstream,
       kaapi_cuda_stream_push(kstream, KAAPI_CUDA_OP_H2D,
                              kaapi_cuda_gpu_task_callback0_sync_gpu,
                              (void *) td);
-#if defined(KAAPI_USE_WINDOW)
       kaapi_cuda_stream_window_test(kstream);
-#endif
     }
   
   return 0;
@@ -278,21 +252,7 @@ int kaapi_cuda_thread_execframe_tasklist(kaapi_thread_context_t * thread)
         kaapi_assert_debug((char *) fp->sp > (char *) fp->sp_data);
         kaapi_assert_debug(stack->sfp - stack->stackframe <
                            KAAPI_MAX_RECCALL);
-        
-#if 0
-        if (td->fmt != 0)
-          fprintf(stdout,
-                  "[%s] kid=%lu td=%p name=%s (counter=%d,wc=%d)\n",
-                  __FUNCTION__,
-                  (long unsigned int) kaapi_get_current_kid(), (void *) td,
-                  td->fmt->name, KAAPI_ATOMIC_READ(&td->counter), td->wc);
-        else
-          fprintf(stdout, "[%s] kid=%lu td=%p (counter=%d,wc=%d)\n",
-                  __FUNCTION__,
-                  (long unsigned int) kaapi_get_current_kid(),
-                  (void *) td, KAAPI_ATOMIC_READ(&td->counter), td->wc);
-        fflush(stdout);
-#endif
+
         /* start execution of the user body of the task */
         KAAPI_DEBUG_INST(kaapi_assert(td->u.acl.exec_date == 0));
         KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_BEG);
@@ -318,13 +278,13 @@ int kaapi_cuda_thread_execframe_tasklist(kaapi_thread_context_t * thread)
     
   }				/* while */
   
-  if (!kaapi_readytasklist_isempty(stack->proc->rtl_remote)) {
-    if (kaapi_readylist_pop(stack->proc->rtl_remote, &td) == 0)
+  if (!kaapi_readytasklist_isempty(stack->proc->rtl)) {
+    if (kaapi_readylist_pop(stack->proc->rtl, &td) == 0)
       goto execute_first;
   }
   
-  if (!kaapi_readytasklist_isempty(stack->proc->rtl)) {
-    if (kaapi_readylist_pop(stack->proc->rtl, &td) == 0)
+  if (!kaapi_readytasklist_isempty(stack->proc->rtl_remote)) {
+    if (kaapi_readylist_pop(stack->proc->rtl_remote, &td) == 0)
       goto execute_first;
   }
   

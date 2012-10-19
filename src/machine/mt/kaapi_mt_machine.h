@@ -486,6 +486,7 @@ typedef struct kaapi_processor_t {
 
   kaapi_mailbox_queue_t    mailbox;                   /* readylist for task (not td) */
   struct kaapi_readytasklist_t* rtl_remote;           /* readylist of task descriptors (remote push) */
+  struct kaapi_readytasklist_t* rtl;
   
   kaapi_wsqueuectxt_t      lsuspend                   /* list of suspended context */
       __attribute__((aligned(KAAPI_CACHE_LINE)));
@@ -857,7 +858,9 @@ static inline unsigned int kaapi_processor_get_type(const kaapi_processor_t* kpr
 */
 static inline int kaapi_processor_has_nowork( const kaapi_processor_t* kproc )
 {
-  return (kproc->isidle !=0) && (kproc->mailbox.head ==0) && kaapi_readytasklist_isempty(kproc->rtl_remote) && kaapi_wsqueuectxt_empty(kproc);
+  return (kproc->isidle !=0) && (kproc->mailbox.head ==0) && kaapi_readytasklist_isempty(kproc->rtl_remote)
+    && kaapi_readytasklist_isempty(kproc->rtl)
+    && kaapi_wsqueuectxt_empty(kproc);
 }
 
 /**

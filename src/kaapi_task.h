@@ -171,7 +171,7 @@ typedef struct kaapi_stack_t {
 
 
 /* experimental: to debug. Only call by libkomp */
-static inline void kaapi_push_frame( kaapi_stack_t* stack)
+static inline kaapi_frame_t* kaapi_push_frame( kaapi_stack_t* stack)
 {
   kaapi_frame_t* fp = (kaapi_frame_t*)stack->sfp;
   kaapi_task_t* sp = fp->sp;
@@ -185,6 +185,7 @@ static inline void kaapi_push_frame( kaapi_stack_t* stack)
   stack->sfp = ++fp;
   kaapi_assert_debug_fmt( stack->sfp - stack->stackframe <KAAPI_MAX_RECCALL,
        "reccall limit: %i\n", KAAPI_MAX_RECCALL);
+  return fp;
 }
 
 /* experimental: to debug. Only call by libkomp */
@@ -402,7 +403,8 @@ static inline uintptr_t kaapi_task_andstate(kaapi_task_t* task, uint32_t mask)
   return KAAPI_ATOMIC_AND_ORIG( &task->u.s.state, mask);
 }
 
-/* Return the 0 iff the task was marked first to be executed.
+/* Return the previous state before adding the exec state.
+   If the state returned is 0 then it means that the task was mark exec first.
    Else it returns the previous execution state (steal or term or merge).
    Should ensure excluive mark with respect to marksteal.
 */

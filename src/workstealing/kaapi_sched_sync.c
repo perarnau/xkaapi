@@ -132,20 +132,23 @@ redo:
   if (kaapi_processor_get_type( thread->stack.proc ) == KAAPI_PROC_TYPE_CUDA)
   {
     if (thread->stack.sfp->tasklist == 0) 
-      err = kaapi_cuda_thread_stack_execframe( &thread->stack );
+      err = kaapi_stack_execframe( &thread->stack );
     else
       err = kaapi_cuda_thread_execframe_tasklist(thread);
   }
-  else
+  else {
 #endif /* KAAPI_USE_CUDA */
-  if (thread->stack.sfp->tasklist == 0) 
-  {
-    err = kaapi_stack_execframe(&thread->stack);
-  } 
-  else
-  {
-    err = kaapi_thread_execframe_tasklist(thread);
+    if (thread->stack.sfp->tasklist == 0)
+    {
+      err = kaapi_stack_execframe(&thread->stack);
+    } 
+    else
+    {
+      err = kaapi_thread_execframe_tasklist(thread);
+    }
+#if defined(KAAPI_USE_CUDA)
   }
+#endif
   kaapi_assert_debug( kaapi_self_thread_context() == thread );
 
   if (err == EWOULDBLOCK)
@@ -163,7 +166,10 @@ redo:
   kaapi_cpuset_copy(&thread->affinity, &save_affinity);
   
   if (err) /* but do not restore anyting */
+  {
+    printf("sync: error: %i\n", err); fflush(stdout);
     goto returnvalue;
+  }
 
 #if defined(KAAPI_DEBUG)
   kaapi_assert_debug(save_fp == thread->stack.sfp);
@@ -182,6 +188,8 @@ returnvalue:
 int kaapi_sched_sync()
 {
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
-  return kaapi_sched_sync_(thread);
+  int err = kaapi_sched_sync_(thread);
+  kaapi_assert_debug(kaapi_frame_isempty(thread->stack.sfp));
+  return err;
 }
 

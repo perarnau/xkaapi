@@ -263,12 +263,10 @@ kaapi_cuda_data_async_output_dev_dec_use(kaapi_cuda_stream_t * kstream,
   return 0;
 }
 
-#if	KAAPI_CUDA_MEM_ALLOC_MANAGER
 int kaapi_cuda_data_async_check(void)
 {
   return kaapi_cuda_mem_mgmt_check(kaapi_get_current_processor());
 }
-#endif
 
 static inline int
 kaapi_cuda_async_sync_device_transfer_to_device(kaapi_mem_data_t *

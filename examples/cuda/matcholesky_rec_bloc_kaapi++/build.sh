@@ -1,7 +1,5 @@
 #!/bin/bash
 
-#SCRATCH=/tmp
-#XKAAPIDIR=/tmp/xkaapi
 XKAAPIDIR=$HOME/install/xkaapi/default
 
 CXX=g++
@@ -29,7 +27,7 @@ do_test "LAPACKE_LDFLAGS" "No LAPACKE_LDFLAGS found."
 CFLAGS="-DCONFIG_USE_DOUBLE=1 -I$XKAAPIDIR/include"
 #CFLAGS="-DCONFIG_USE_FLOAT=1 -I$XKAAPIDIR/include"
 #-DKAAPI_DEBUG=0 -DKAAPI_NDEBUG=1"
-LDFLAGS="-L$XKAAPIDIR/lib -lkaapi -lkaapi++ -lgfortran"
+LDFLAGS="-L$XKAAPIDIR/lib -lkaapi -lkaapi++"
 
 CUDA_CFLAGS="-DCONFIG_USE_CUDA=1 $CUDA_CFLAGS"
 CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"

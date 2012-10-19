@@ -55,9 +55,7 @@
 #include "kaapi_cuda_cublas.h"
 #include "kaapi_cuda_mem.h"
 
-#if defined(KAAPI_CUDA_KSTREAM)
 #include "kaapi_cuda_stream.h"
-#endif
 
 #if defined(KAAPI_USE_CUPTI)
 #include "kaapi_cuda_trace.h"
@@ -86,11 +84,9 @@ int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t * proc, unsigned int idev)
 
   kaapi_cuda_device_sync();
 
-#if defined(KAAPI_USE_WINDOW)
   if (kaapi_default_param.cudawindowsize > 0)
     kaapi_cuda_stream_init(kaapi_default_param.cudawindowsize * 3, proc);
   else
-#endif
     kaapi_cuda_stream_init(512, proc);
 
   /* pop the context to make it floating. doing

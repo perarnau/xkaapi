@@ -90,6 +90,10 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   kproc->mailbox.tail   = 0;
   kproc->rtl_remote     = (kaapi_readytasklist_t*)malloc( sizeof (kaapi_readytasklist_t) );
   kaapi_readytasklist_init( kproc->rtl_remote );
+
+  kproc->rtl     = (kaapi_readytasklist_t*)malloc( sizeof (kaapi_readytasklist_t) );
+  kaapi_readytasklist_init( kproc->rtl );
+
   
   kproc->isidle         = 1;
   kaapi_wsqueuectxt_init( &kproc->lsuspend );
