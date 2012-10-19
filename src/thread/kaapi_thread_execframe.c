@@ -146,18 +146,9 @@ redo_exec:
     }
     else 
     {
-#if defined(KAAPI_DEBUG)      
-      if (state & KAAPI_TASK_STATE_EXEC)
-      {
-        printf("Task: pc:%p already executed\n", (void*)pc); fflush(stdout);
-      }
-      else 
-      if (state & KAAPI_TASK_STATE_STEAL)
-      {
-//        printf("Task: pc:%p steal\n", (void*)pc); fflush(stdout);
-      }
-      else 
-#endif
+      /* be carrefull here: do not change the order of test, neither add other tests else
+         the merge operation may be incorrect
+      */
       if (state & KAAPI_TASK_STATE_TERM)
       {
       }
