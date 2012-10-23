@@ -146,6 +146,9 @@ redo_exec:
     }
     else 
     {
+      /* be carrefull here: do not change the order of test, neither add other tests else
+         the merge operation may be incorrect
+      */
       if (state & KAAPI_TASK_STATE_TERM)
       {
       }
