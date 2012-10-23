@@ -146,18 +146,6 @@ redo_exec:
     }
     else 
     {
-#if defined(KAAPI_DEBUG)      
-      if (state & KAAPI_TASK_STATE_EXEC)
-      {
-        printf("Task: pc:%p already executed\n", (void*)pc); fflush(stdout);
-      }
-      else 
-      if (state & KAAPI_TASK_STATE_STEAL)
-      {
-//        printf("Task: pc:%p steal\n", (void*)pc); fflush(stdout);
-      }
-      else 
-#endif
       if (state & KAAPI_TASK_STATE_TERM)
       {
       }

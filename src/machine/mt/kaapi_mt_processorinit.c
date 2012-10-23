@@ -154,8 +154,8 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   /* set new context to the kprocessor */
   kaapi_setcontext(kproc, ctxt);
   
-  memset(&kproc->data_specific, sizeof(void*), 16);
-  memset(&kproc->size_specific, sizeof(size_t), 16);
+  memset(&kproc->data_specific, 0, 16*sizeof(void*));
+  memset(&kproc->size_specific, 0, 16*sizeof(size_t));
   
   kproc->libkomp_tls = 0;
 

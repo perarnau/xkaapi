@@ -6,7 +6,7 @@
 ##
 
 if KAAPI_API_KAAPIC
-KAAPIC_PRGS=foreach_kaapic foreach_vtk foreach_double_kaapic
+KAAPIC_PRGS=foreach_kaapic foreach_vtk foreach_double_kaapic kaapic_spawn1 kaapic_spawn2
 endif
 
 check_PROGRAMS+=$(KAAPIC_PRGS)
@@ -16,6 +16,8 @@ all-kaapic: $(KAAPIC_PRGS)
 foreach_kaapic_SOURCES=kaapic/foreach_kaapic.c
 foreach_vtk_SOURCES=kaapic/foreach_vtk.c
 foreach_double_kaapic_SOURCES=kaapic/foreach_double_kaapic.c
+kaapic_spawn1_SOURCES=kaapic/kaapic_spawn1.c
+kaapic_spawn2_SOURCES=kaapic/kaapic_spawn2.c
 
 foreach_kaapic_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
 foreach_kaapic_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
@@ -31,3 +33,13 @@ foreach_double_kaapic_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
 foreach_double_kaapic_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
 foreach_double_kaapic_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
 foreach_double_kaapic_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm
+
+kaapic_spawn1_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
+kaapic_spawn1_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
+kaapic_spawn1_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
+kaapic_spawn1_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm
+
+kaapic_spawn2_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
+kaapic_spawn2_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
+kaapic_spawn2_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
+kaapic_spawn2_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm

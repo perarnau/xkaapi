@@ -110,7 +110,7 @@ void kaapic_dfg_body_scratch(void* p, kaapi_thread_t* t)
     {
       if (kproc == 0) kproc = kaapi_get_current_processor();
       size_t szarg = kaapi_memory_view_size(&ti->args[i].view);
-      ti->args[i].access.version = _kaapi_gettemporary_data(kproc, scratch_count, szarg);
+      ti->args[i].access.data = _kaapi_gettemporary_data(kproc, scratch_count, szarg);
       ++scratch_count;
     } 
   }
@@ -139,6 +139,29 @@ static void kaapic_dfg_body_wh
 
 #include "kaapic_dfg_wh_switch.h"
   KAAPIC_DFG_WH_SWITCH(ti);
+}
+
+/* same as kaapic_dfg_body_wh + process of scratch arguments */
+void kaapic_dfg_body_wh_scratch(void* p, kaapi_thread_t* t, kaapi_task_t* task)
+{
+  kaapic_task_info_t* const ti = (kaapic_task_info_t*)p;
+  int nargs = ti->nargs;
+  
+  /* process scratch mode */
+  int scratch_count        = 0;
+  kaapi_processor_t* kproc = 0;
+  for (int i=0; i<nargs; ++i)
+  {
+    if (ti->args[i].mode & KAAPI_ACCESS_MODE_S)
+    {
+      if (kproc == 0) kproc = kaapi_get_current_processor();
+      size_t szarg = kaapi_memory_view_size(&ti->args[i].view);
+      ti->args[i].access.data = _kaapi_gettemporary_data(kproc, scratch_count, szarg);
+      ++scratch_count;
+    } 
+  }
+
+  kaapic_dfg_body_wh(p, t, task);
 }
 
 /* format definition of C task */
@@ -286,6 +309,28 @@ void _kaapic_register_task_format(void)
     0, /* task binding */
     0  /* get_splitter */
   );
+
+  format = kaapi_format_allocate();
+  kaapi_format_taskregister_func
+  (
+    format,
+    kaapic_dfg_body_scratch, 
+    (kaapi_task_body_t)kaapic_dfg_body_wh_scratch,
+    "kaapic_dfg_task",
+    sizeof(kaapic_task_info_t),
+    kaapic_taskformat_get_count_params,
+    kaapic_taskformat_get_mode_param,
+    kaapic_taskformat_get_off_param,
+    kaapic_taskformat_get_access_param,
+    kaapic_taskformat_set_access_param,
+    kaapic_taskformat_get_fmt_param,
+    kaapic_taskformat_get_view_param,
+    kaapic_taskformat_set_view_param,
+    0, /* reducor */
+    0, /* redinit */
+    0, /* task binding */
+    0  /* get_splitter */
+  );
 }
 
 
@@ -315,6 +360,7 @@ int kaapic_spawn(const kaapic_spawn_attr_t* attr, int32_t nargs, ...)
   va_list va_args;
   size_t wordsize;
   unsigned int k;
+  int scratch_arg = 0;
 
   if (nargs > KAAPIC_MAX_ARGS) 
     return EINVAL;
@@ -345,17 +391,23 @@ int kaapic_spawn(const kaapic_spawn_attr_t* attr, int32_t nargs, ...)
     ai->format = format_type[type];
     
     kaapi_access_init( &ai->access, addr );
+
     if (mode == KAAPIC_MODE_V)
     {
       /* can only pass exactly by value the size of a uintptr_t */
       kaapi_assert_debug( wordsize*count <= sizeof(uintptr_t) );
       memcpy(&ai->access.version, &addr, wordsize*count );  /* but count == 1 here */
     }
+    if (mode == KAAPIC_MODE_S)
+      scratch_arg = 1;
 
     ai->view = kaapi_memory_view_make1d(count, wordsize);
   }
   va_end(va_args);
 
   /* spawn the task */
-  return kaapic_spawn_ti( thread, attr, kaapic_dfg_body, ti );
+  if (scratch_arg ==1)
+    return kaapic_spawn_ti( thread, attr, kaapic_dfg_body_scratch, ti );
+  else
+    return kaapic_spawn_ti( thread, attr, kaapic_dfg_body, ti );
 }

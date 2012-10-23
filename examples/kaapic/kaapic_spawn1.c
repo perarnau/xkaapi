@@ -1,13 +1,12 @@
 /*
 ** xkaapi
 ** 
-** 
-** Copyright 2010 INRIA.
+**
+** Copyright 2012 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
-** fabien.lementec@gmail.com / fabien.lementec@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -42,30 +41,41 @@
 ** terms.
 ** 
 */
-#include "kaapi_impl.h"
+#include <stdio.h>
+#include "kaapic.h"
 
-void* _kaapi_gettemporary_data(kaapi_processor_t*kproc, unsigned int id, size_t size)
+void body(int n, int* result)
 {
-  if (id >16) 
-  {
-    kaapi_assert_debug_m(1, "[kaapi] _kaapi_gettemporary_data, internal error: too many scratch arguments");
-    return 0;
-  }
-  if (kproc->size_specific[id] < size)
-  {
-    if (kproc->data_specific[id] !=0) 
-      free(kproc->data_specific[id]);
-#if defined(KAAPI_DEBUG)
-    kproc->data_specific[id] = calloc(1, size);
-#else
-    kproc->data_specific[id] = malloc(size);
-#endif
-    kproc->size_specific[id] = size;
-  }
-  return kproc->data_specific[id];
+  *result = n;
 }
 
-void* kaapi_gettemporary_data(unsigned int id, size_t size)
+
+int main()
 {
-  return _kaapi_gettemporary_data( kaapi_get_current_processor(), id, size);
+  int result;
+  kaapic_spawn_attr_t attr;
+  
+  kaapic_init(KAAPIC_START_ONLY_MAIN);
+
+  kaapic_begin_parallel (KAAPIC_FLAG_DEFAULT);
+
+  /* initialize default attribut */
+  kaapic_spawn_attr_init(&attr);
+  
+  /* spawn the task */
+  kaapic_spawn(&attr, 
+      2,     /* number of arguments */
+      body,  /* the entry point for the task */
+      KAAPIC_MODE_V, (int)129, 1, KAAPIC_TYPE_INT,
+      KAAPIC_MODE_W, &result, 1, KAAPIC_TYPE_INT
+  );
+
+  kaapic_sync();
+  
+  kaapic_end_parallel (KAAPIC_FLAG_DEFAULT);
+
+  printf("The result is : %i\n", result );
+  
+  kaapic_finalize();
+  return 0;
 }
