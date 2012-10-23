@@ -404,6 +404,7 @@ int kaapi_mt_finalize(void)
       kaapi_cuda_proc_cleanup(&kaapi_all_kprocessors[i]->cuda_proc);
 #endif /* KAAPI_USE_CUDA */
     kaapi_wsqueuectxt_destroy(&kaapi_all_kprocessors[i]->lsuspend);
+    kaapi_processor_destroy(kaapi_all_kprocessors[i]);
     kaapi_processor_free(kaapi_all_kprocessors[i]);
     kaapi_all_kprocessors[i]= 0;
   }

@@ -154,6 +154,9 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   /* set new context to the kprocessor */
   kaapi_setcontext(kproc, ctxt);
   
+  memset(&kproc->data_specific, sizeof(void*), 16);
+  memset(&kproc->size_specific, sizeof(size_t), 16);
+  
   kproc->libkomp_tls = 0;
 
 #if defined(KAAPI_USE_CUDA)
@@ -164,5 +167,29 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   }
 #endif
   
+  return 0;
+}
+
+
+
+int kaapi_processor_destroy(kaapi_processor_t* kproc)
+{
+  for (int i=0; i<16; ++i)
+  {
+    if (kproc->data_specific[i] !=0)
+      free(kproc->data_specific[i]);
+    kproc->data_specific[i] = 0;
+    kproc->size_specific[i] = 0;
+  }
+
+  if (kproc->rtl_remote !=0) 
+    free(kproc->rtl_remote);
+  kproc->rtl_remote = 0;
+  
+  if (kproc->rtl !=0) 
+    free(kproc->rtl);
+  kproc->rtl = 0;
+
+  kaapi_assert(0 == pthread_mutex_destroy(&kproc->suspend_lock) );
   return 0;
 }

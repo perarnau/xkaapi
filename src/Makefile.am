@@ -82,6 +82,7 @@ libkaapi_la_SOURCES=\
   misc/kaapi_wq_lock.c \
   misc/kaapi_wq_unlock.c \
   misc/kaapi_util.c \
+  misc/kaapi_dataspecific.c \
   task/kaapi_fmt_accessors.c \
   task/kaapi_fmt_initbasic.c \
   task/kaapi_fmt_register.c \

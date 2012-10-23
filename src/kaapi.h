@@ -407,6 +407,21 @@ extern struct kaapi_format_t* kaapi_float_format;
 extern struct kaapi_format_t* kaapi_double_format;
 extern struct kaapi_format_t* kaapi_longdouble_format;
 extern struct kaapi_format_t* kaapi_voidp_format;
+
+extern struct kaapi_format_t* get_kaapi_char_format();
+extern struct kaapi_format_t* get_kaapi_short_format();
+extern struct kaapi_format_t* get_kaapi_int_format();
+extern struct kaapi_format_t* get_kaapi_long_format();
+extern struct kaapi_format_t* get_kaapi_longlong_format();
+extern struct kaapi_format_t* get_kaapi_uchar_format();
+extern struct kaapi_format_t* get_kaapi_ushort_format();
+extern struct kaapi_format_t* get_kaapi_uint_format();
+extern struct kaapi_format_t* get_kaapi_ulong_format();
+extern struct kaapi_format_t* get_kaapi_ulonglong_format();
+extern struct kaapi_format_t* get_kaapi_float_format();
+extern struct kaapi_format_t* get_kaapi_double_format();
+extern struct kaapi_format_t* get_kaapi_longdouble_format();
+extern struct kaapi_format_t* get_kaapi_voidp_format();
 /*@}*/
 
 
@@ -772,6 +787,15 @@ static inline void* kaapi_alloca( kaapi_thread_t* thread, uint32_t count)
 { return kaapi_thread_pushdata(thread, count); }
 
 /** \ingroup TASK
+    The function kaapi_gettemporary_data returns a pointer to a temporary data of size at least size.
+    The scope of this pointer is the task execution. At the end of the task execution, the temporary data may
+    be reused for an other task, thus it cannot be passed as parameter.
+    \param id an identifier between 0 and 15
+    \param size the size of the request temporary data
+*/
+extern void* kaapi_gettemporary_data(unsigned int id, size_t size);
+
+/** \ingroup TASK
     The function kaapi_thread_pushdata() will return the pointer to the next top data.
     The top data is not yet into the stack.
     If successful, the kaapi_thread_pushdata() function will return a pointer to the next data to push.
@@ -779,6 +803,7 @@ static inline void* kaapi_alloca( kaapi_thread_t* thread, uint32_t count)
     \param frame INOUT a pointer to the kaapi_frame_t data structure where to push data
     \retval a pointer to the next task to push or 0.
 */
+__attribute__((deprecated))
 static inline void kaapi_thread_allocateshareddata(kaapi_access_t* a, kaapi_thread_t* thread, uint32_t count)
 {
   kaapi_assert_debug( thread !=0 );
