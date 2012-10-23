@@ -2,7 +2,7 @@
  ** xkaapi
  ** 
  ** Created on Tue Feb 23 16:56:43 2010
- ** Copyright 2009 INRIA.
+ ** Copyright 2009,2010,2011,2012 INRIA.
  **
  ** Contributors :
  **

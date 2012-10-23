@@ -3,7 +3,7 @@
 ** xkaapi
 ** 
 **
-** Copyright 2009 INRIA.
+** Copyright 2009,2010,2011,2012 INRIA.
 **
 ** Contributors :
 **
@@ -50,24 +50,5 @@ int kaapi_getcontext( kaapi_processor_t* proc, kaapi_thread_context_t* ctxt )
 {
   kaapi_assert_debug( proc == kaapi_get_current_processor() );
   *ctxt = *proc->thread;
-  return 0;
-#if 0  /* TODO: next version when also saving the stack context */
-  ctxt->flags        = proc->flags;
-  ctxt->dataspecific = proc->dataspecific;
-
-  if (ctxt->flags & KAAPI_CONTEXT_SAVE_KSTACK)
-  {
-    ctxt->kstack     = proc->kstack;
-  }
-
-  if (ctxt->flags & KAAPI_CONTEXT_SAVE_CSTACK)
-  {
-#if defined(KAAPI_USE_UCONTEXT)
-    getcontext( &ctxt->mcontext );
-#elif defined(KAAPI_USE_SETJMP)
-    _setjmp( ctxt->mcontext );
-#endif
-  }
-#endif  /* TODO: next version when also saving the stack context */
   return 0;
 }

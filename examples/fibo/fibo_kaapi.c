@@ -2,7 +2,7 @@
 ** xkaapi
 ** 
 **
-** Copyright 2009 INRIA.
+** Copyright 2009,2010,2011,2012 INRIA.
 **
 ** Contributors :
 **
@@ -70,10 +70,6 @@ KAAPI_REGISTER_TASKFORMAT( sum_format,
     0
 )
 
-void sum_body_wrapper( void* taskarg, kaapi_thread_t* thread )
-{
-  sum_body( taskarg, thread );
-}
 
 void sum_body( void* taskarg, kaapi_thread_t* thread )
 {
@@ -100,10 +96,6 @@ KAAPI_REGISTER_TASKFORMAT( fibo_format,
     0
 )
 
-void fibo_body_wrapper( void* taskarg, kaapi_thread_t* thread )
-{
-  fibo_body( taskarg, thread );
-}
 
 void fibo_body( void* taskarg, kaapi_thread_t* thread )
 {
@@ -121,21 +113,21 @@ void fibo_body( void* taskarg, kaapi_thread_t* thread )
     kaapi_task_t* task2;
 
     task1 = kaapi_thread_toptask(thread);
-    kaapi_task_init( task1, fibo_body_wrapper, kaapi_thread_pushdata(thread, sizeof(fibo_arg_t)) );
+    kaapi_task_init( task1, fibo_body, kaapi_thread_pushdata(thread, sizeof(fibo_arg_t)) );
     argf1 = kaapi_task_getargst( task1, fibo_arg_t );
     argf1->n = arg0->n - 1;
     kaapi_thread_allocateshareddata( &argf1->result, thread, sizeof(int) );
     kaapi_thread_pushtask(thread);
 
     task2 = kaapi_thread_toptask(thread);
-    kaapi_task_init( task2, fibo_body_wrapper, kaapi_thread_pushdata(thread, sizeof(fibo_arg_t)) );
+    kaapi_task_init( task2, fibo_body, kaapi_thread_pushdata(thread, sizeof(fibo_arg_t)) );
     argf2 = kaapi_task_getargst( task2, fibo_arg_t);
     argf2->n      = arg0->n - 2;
     kaapi_thread_allocateshareddata( &argf2->result, thread, sizeof(int) );
     kaapi_thread_pushtask(thread);
 
     task_sum = kaapi_thread_toptask(thread);
-    kaapi_task_init( task_sum, sum_body_wrapper, kaapi_thread_pushdata(thread, sizeof(sum_arg_t)) );
+    kaapi_task_init( task_sum, sum_body, kaapi_thread_pushdata(thread, sizeof(sum_arg_t)) );
     args = kaapi_task_getargst( task_sum, sum_arg_t);
     args->result.data     = arg0->result.data;
     args->subresult1.data = argf1->result.data;
