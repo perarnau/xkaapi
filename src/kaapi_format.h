@@ -304,6 +304,25 @@ kaapi_format_is_staticschedtask( const kaapi_format_t*	const	fmt )
 extern void kaapi_init_basicformat(void);
 
 
+#define KAAPI_DECLEXTERN_BASICTYPEFORMAT( formatobject ) \
+  extern kaapi_format_t formatobject##_object;
+
+KAAPI_DECLEXTERN_BASICTYPEFORMAT(kaapi_char_format)
+KAAPI_DECLEXTERN_BASICTYPEFORMAT(kaapi_short_format)
+KAAPI_DECLEXTERN_BASICTYPEFORMAT(kaapi_int_format)
+KAAPI_DECLEXTERN_BASICTYPEFORMAT(kaapi_long_format)
+KAAPI_DECLEXTERN_BASICTYPEFORMAT(kaapi_longlong_format)
+KAAPI_DECLEXTERN_BASICTYPEFORMAT(kaapi_uchar_format)
+KAAPI_DECLEXTERN_BASICTYPEFORMAT(kaapi_ushort_format)
+KAAPI_DECLEXTERN_BASICTYPEFORMAT(kaapi_uint_format)
+KAAPI_DECLEXTERN_BASICTYPEFORMAT(kaapi_ulong_format)
+KAAPI_DECLEXTERN_BASICTYPEFORMAT(kaapi_ulonglong_format)
+KAAPI_DECLEXTERN_BASICTYPEFORMAT(kaapi_float_format)
+KAAPI_DECLEXTERN_BASICTYPEFORMAT(kaapi_double_format)
+KAAPI_DECLEXTERN_BASICTYPEFORMAT(kaapi_longdouble_format)
+KAAPI_DECLEXTERN_BASICTYPEFORMAT(kaapi_voidp_format)
+
+
 #if defined(__cplusplus)
 }
 #endif

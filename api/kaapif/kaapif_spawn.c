@@ -154,11 +154,13 @@ int kaapif_spawn_
         break ;
 
       case KAAPIC_TYPE_ID:
-        if (mode == KAAPIC_MODE_V) return KAAPIF_ERR_EINVAL;
-	/* should not have any format... fix the runtime to handle this case */
-	wordsize = sizeof(void*);
-	ai->format = kaapi_voidp_format;
-	addr = *(void**)addr;
+        if (mode == KAAPIC_MODE_V) 
+          return KAAPIF_ERR_EINVAL;
+
+        /* should not have any format... fix the runtime to handle this case */
+        wordsize = sizeof(void*);
+        ai->format = kaapi_voidp_format;
+        addr = *(void**)addr;
         break ;
 
       default:
