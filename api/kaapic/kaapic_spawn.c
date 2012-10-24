@@ -361,6 +361,7 @@ int kaapic_spawn(const kaapic_spawn_attr_t* attr, int32_t nargs, ...)
   size_t wordsize;
   unsigned int k;
   int scratch_arg = 0;
+int d = 0;
 
   if (nargs > KAAPIC_MAX_ARGS) 
     return EINVAL;
@@ -378,7 +379,13 @@ int kaapic_spawn(const kaapic_spawn_attr_t* attr, int32_t nargs, ...)
     kaapic_arg_info_t* const ai = &ti->args[k];
 
     const uint32_t mode  = va_arg(va_args, int);
-    void* const addr     = va_arg(va_args, void*);
+    void* addr;
+    double value;
+    if (!d) addr = va_arg(va_args, void*);
+    else {
+      value = (double)va_arg(va_args, double);
+      addr = (void*)(uintptr_t)value;
+    }
     const uint32_t count = va_arg(va_args, int);
     const uint32_t type  = va_arg(va_args, int);
 
