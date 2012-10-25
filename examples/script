@@ -1,7 +1,7 @@
 #!/bin/sh
 
 
-nb_cores=8
+nb_cores=2
 nb_iterations=100
 launcher=""
 exec=""
@@ -43,8 +43,10 @@ function do_test_nqueens {
 }
 
 function nqueens {
-  #nqueens 16
-  valid_result=14772512
+  #nqueens 16 valid_result=14772512
+  #nqueens 14 valid_result=365596
+  #nqueens 12 
+  valid_result=14200
   exec=./nqueens_kaapi++
   do_test=do_test_nqueens
   current_time=$(date "+%d-%m-%Y %H:%M:%S")
@@ -100,6 +102,7 @@ function fibo {
 rm out.log
 rm error.log
 
+export KAAPI_CPUCOUNT=$nb_cores
 if [ $# -eq 0 ];
 then
     nqueens
