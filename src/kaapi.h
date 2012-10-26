@@ -2434,7 +2434,7 @@ static inline size_t kaapi_memory_view_size( const kaapi_memory_view_t* const km
 
 /** Return non null value iff the view is contiguous
 */
-static inline int kaapi_memory_view_iscontiguous( const kaapi_memory_view_t* kmv )
+static inline int kaapi_memory_view_iscontiguous( const kaapi_memory_view_t* const kmv )
 {
   switch (kmv->type) {
     case KAAPI_MEMORY_VIEW_1D: return 1;
