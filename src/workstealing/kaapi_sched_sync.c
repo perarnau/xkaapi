@@ -155,7 +155,7 @@ redo:
   {
     /* add assert: before thaht call kaapi_sched_suspend with kaapi_get_current_processor, but should be thread->proc */
     kaapi_assert_debug( kaapi_get_current_processor() == thread->stack.proc );
-    kaapi_sched_suspend( thread->stack.proc, _kaapi_condition_task_isready, thread );
+    kaapi_sched_suspend( kaapi_get_current_processor(), /*thread->stack.proc,*/ _kaapi_condition_task_isready, thread );
 
     kaapi_assert_debug( kaapi_self_thread_context() == thread );
     kaapi_assert_debug( thread->stack.proc == kaapi_get_current_processor() );
