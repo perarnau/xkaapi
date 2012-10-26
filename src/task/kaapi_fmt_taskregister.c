@@ -89,21 +89,26 @@ kaapi_task_body_t kaapi_format_taskregister_body(
   fmt->entrypoint[archi]    = body;
   fmt->entrypoint_wh[archi] = bodywithhandle;
   if (archi == KAAPI_PROC_TYPE_DEFAULT)
-  {
-    fmt->entrypoint[KAAPI_PROC_TYPE_DEFAULT]    = fmt->default_body = body;
-    fmt->entrypoint_wh[KAAPI_PROC_TYPE_DEFAULT] = bodywithhandle;
-  }
+    fmt->default_body = body;
   
 #if 0//defined(KAAPI_DEBUG)
   fprintf(stdout, "[registerbody] Body:%p registered to name:%s\n", (void*)(uintptr_t)body, fmt->name );
   fflush(stdout);
 #endif
 
-  /* register it into hashmap: body -> fmt */
-  entry = (uint8_t)kaapi_hash_ulong7((unsigned long)body);
-  head =  kaapi_all_format_bybody[entry];
-  fmt->next_bybody = head;
-  kaapi_all_format_bybody[entry] = fmt;
+  /* TG: if registration of different bodies for the same format 
+     in an entry of the hashmap with conflict, then it seems that 
+     some format object will be lost.
+     See bug 15020.
+  */
+  if (archi == KAAPI_PROC_TYPE_HOST)
+  {
+    /* register it into hashmap: body -> fmt */
+    entry = (uint8_t)kaapi_hash_ulong7((unsigned long)body);
+    head =  kaapi_all_format_bybody[entry];
+    fmt->next_bybody = head;
+    kaapi_all_format_bybody[entry] = fmt;
+  }
 
   /* already registered into hashmap: fmtid -> fmt */  
   return body;
