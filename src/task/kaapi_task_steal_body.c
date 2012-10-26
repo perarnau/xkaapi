@@ -104,9 +104,7 @@ void kaapi_taskwrite_body(
         (*fmt_param->dstor)(copy_data_param);
         continue;
       }
-if (KAAPI_ACCESS_IS_CUMULWRITE(mode_param))
-  printf("Task Write: cumul mode...\n"); fflush(stdout);
-  
+
       if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param) || (KAAPI_ACCESS_IS_CUMULWRITE(mode_param) && ((mode & KAAPI_ACCESS_MODE_IP) ==0)))
       {
         access_param      = kaapi_format_get_access_param(fmt, i, orig_task_args); 
@@ -141,8 +139,8 @@ if (KAAPI_ACCESS_IS_CUMULWRITE(mode_param))
 void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 {
 #if 0
-  kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
-  kaapi_processor_t* const self_proc = self_thread->proc;
+    kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
+    kaapi_processor_t* const self_proc = self_thread->proc;
 #endif
   unsigned int           i;
   size_t                 count_params;
@@ -215,7 +213,6 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   }
   else /* it exists at least one w parameter with war dependency or a cw_param: recopies the arguments */
   {
-printf("WAR...\n"); fflush(stdout);
     copy_task_args       = kaapi_thread_pushdata( thread, fmt->size);
     arg->copy_task_args  = copy_task_args;
     arg->origin_fmt      = fmt;
