@@ -5,7 +5,7 @@
 
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir) -I$(top_srcdir)/api/kaapic
 
-EXTRA_DIST=libgomp.map kaapi-gomp-wrapper.in
+EXTRA_DIST=libgomp.map libomp_ext.map kaapi-gomp-wrapper.in
 
 if KAAPI_LIBGOMP
 
