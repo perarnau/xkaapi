@@ -150,7 +150,7 @@ struct TaskBodyCPU<TaskGEMM<T> > {
     const int ldb = Akj->lda();
     const int ldc = Aij->lda();
 
-#if 0
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskCPU GEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", m, n, k, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
 #endif
     KAAPI_TIMING_BEGIN();
@@ -190,7 +190,7 @@ struct TaskBodyCPU<TaskGEMM2<T> > {
     const int ldb = Akj->lda();
     const int ldc = Aij->lda();
     
-#if 0
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskCPU GEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", m, n, k, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
 #endif
     KAAPI_TIMING_BEGIN();
@@ -226,7 +226,7 @@ struct TaskBodyCPU<TaskSYRK<T> > {
     const int ldc   = C->lda();
     T* const c = C->ptr();
 
-#if 0
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskCPU SYRK n=%d k=%d lda=%d A=%p ldc=%d C=%p\n",
 		n, k, lda, (void*)a, ldc, c ); fflush(stdout);
 #endif
@@ -267,7 +267,7 @@ struct TaskBodyCPU<TaskTRSM<T> > {
     //const int k = C->dim(1);
     const int k = (transA == CblasNoTrans ? A->dim(1) : A->dim(0) );
 
-#if 1
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskCPU DTRSM n=%d k=%d lda=%d A=%p ldc=%d C=%p\n",
 		n, k, lda, (void*)a, ldc, c ); fflush(stdout);
 #endif
@@ -352,13 +352,13 @@ struct TaskBodyCPU<TaskGETF2NoPiv<T> > {
     const int lda      = A->lda();
     T* const a    = A->ptr();
 
-#if 0
+#if defined(CONFIG_VERBOSE)
     int res =
 #endif 
     LAPACKE<T>::getf2_nopiv(
 	((order == CblasColMajor) ? LAPACK_COL_MAJOR : LAPACK_ROW_MAJOR),
 	m, n, a, lda );
-#if 0
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskGETF2NoPiv n=%d res=%d\n", m, res );
     fflush(stdout);
 #endif
@@ -382,7 +382,7 @@ struct TaskBodyCPU<TaskGETRFNoPiv<T> > {
     int* piv = (int*) calloc(m, sizeof(int));
 
     int res = CLAPACK<T>::getrf( order, m, n, a, lda, piv );
-#if 1
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskGETRFNoPiv n=%d res=%d\n", m, res );
     fflush(stdout);
 #endif
@@ -407,7 +407,7 @@ struct TaskBodyCPU<TaskPOTRF<T> > {
     T* const a = A->ptr();
 
     KAAPI_TIMING_BEGIN();
-#if 0
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskCPU TaskPOTRF n=%d lda=%d a=%p\n", n, lda, (void*)a);
     fflush(stdout);
 #endif
@@ -478,7 +478,7 @@ struct TaskBodyCPU<TaskLASWP<T> > {
     T* const a = A->ptr();
     int* const piv = ipiv->ptr();
     
-#if 1
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskCPU TaskLASWP n=%d lda=%d a=%p k1=%d k2=%d piv=%p inc=%d\n",
             n, lda, (void*)a, k1, k2, (void*)piv, inc);
     fflush(stdout);
@@ -506,7 +506,7 @@ struct TaskBodyCPU<TaskLASWP2<T> > {
     T* const a = A->ptr();
     int* const piv = ipiv->ptr();
     
-#if 1
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskCPU TaskLASWP2 n=%d lda=%d a=%p k1=%d k2=%d piv=%p inc=%d\n",
             n, lda, (void*)a, k1, k2, (void*)piv, inc);
     fflush(stdout);

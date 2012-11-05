@@ -114,7 +114,7 @@ struct TaskBodyGPU<TaskGEMM<T> >
     const int ldc = Aij->lda();
     
     
-#if 0
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskGPU GEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", m, n, k, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
 #endif
     
@@ -212,7 +212,7 @@ struct TaskBodyGPU<TaskGEMM2<T> >
     const int ldc = Aij->lda();
     
     
-#if 0
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskGPU GEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", m, n, k, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
 #endif
     
@@ -303,7 +303,7 @@ struct TaskBodyGPU<TaskSYRK<T> >
     const int ldc   = C->lda();
     T* const c = C->ptr();
     
-#if 0
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskGPU DSYRK n=%d k=%d lda=%d A=%p ldc=%d C=%p\n",
             n, k, lda, (void*)a, ldc, c ); fflush(stdout);
 #endif
@@ -354,7 +354,7 @@ struct TaskBodyGPU<TaskTRSM<T> >
     const int n = C->dim(1);
     const int k = (transA == CblasNoTrans ? A->dim(1) : A->dim(0) );
     
-#if 0
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskGPU DTRSM n=%d k=%d lda=%d A=%p ldc=%d C=%p\n",
             n, k, lda, (void*)a, ldc, c ); fflush(stdout);
 #endif
@@ -450,7 +450,7 @@ struct TaskBodyGPU<TaskPOTRF<T> >
     const int lda   = A->lda();
     T* const a = A->ptr();
     
-#if 1
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskGPU DPOTRF m=%d A=%p lda=%d\n", n, (void*)a, lda ); fflush(stdout);
 #endif
 #if CONFIG_USE_MAGMA
