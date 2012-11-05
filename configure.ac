@@ -635,14 +635,14 @@ dnl The "--with-cuda"
 dnl -----------------------------------------------------------------------
 KAAPI_PKGLIB_CHECK([GPU programming], [cuda], [CUDA], [no], [KAAPI_USE_CUDA],
   [build CUDA support [EXPERIMENTAL]],
-  [cuda], [], [cuda_runtime_api.h], [cuDeviceGetAttribute], [
+  [cudart], [], [cuda_runtime_api.h], [cudaDeviceGetAttribute], [
 dnl    CUDA is there
     AC_DEFINE([KAAPI_USE_CUDA],1,[Support for CUDA])
     HACK_USE_CUDA=yes
   ],
   [
   ],
-  [-lcublas])
+  [-lcublas -lcudart])
 AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$HACK_USE_CUDA" = x"yes"])
 ACX_LIB_LINK([KAAPILIB],[CUDA])
 

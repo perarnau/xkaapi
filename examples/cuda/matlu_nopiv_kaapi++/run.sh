@@ -6,6 +6,9 @@ version="$(date +%s)"
 dorun="yes"
 
 function run_test {
+#    export KAAPI_CPUSET="0,5,6,11"
+#    export KAAPI_GPUSET="0~1,1~2,2~3,3~4,4~7,5~8,6~9,7~10"
+
 #    export KAAPI_CPUSET="0:1"
     export KAAPI_CPUSET="4"
 #    export KAAPI_CPUSET="4,5,10,11"
@@ -28,13 +31,14 @@ function run_test {
 #    export KAAPI_DOT_NOLABEL=1
 
 #    export KAAPI_DISPLAY_PERF=1
+#    export KAAPI_DUMP_TASKLIST=1
 #
 #    export KAAPI_PUSH_AFFINITY="writer"
 #    export KAAPI_STEAL_AFFINITY="writer"
 #    export KAAPI_PUSH_AFFINITY="locality"
 #    export KAAPI_STEAL_AFFINITY="locality"
 
-
+#    msizes="40960"
 #    msizes="10240"
 #    msizes="1024"
     msizes="2048"
@@ -51,8 +55,8 @@ function run_test {
 	    do
 	    echo "$KAAPI_CPUSET $KAAPI_GPUSET \
 		    ./matlu_nopiv_kaapi++ $m $b $verif"
-	    KAAPI_STACKSIZE=536870912 ./matlu_nopiv_kaapi++ $m $b 1 $verif 
-#	    KAAPI_STACKSIZE=536870912 gdb ./matlu_nopiv_kaapi++ 
+	    KAAPI_STACKSIZE_MASTER=536870912 ./matlu_nopiv_kaapi++ $m $b 1 $verif 
+#	    KAAPI_STACKSIZE_MASTER=536870912 gdb ./matlu_nopiv_kaapi++ 
 	    done
 	done
     done

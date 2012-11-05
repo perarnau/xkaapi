@@ -382,14 +382,6 @@ kaapi_cuda_mem_cache_inc_use_ro(kaapi_cuda_mem_cache_t * mem,
   
   blk->u.rc++;
   
-#if defined(KAAPI_DEBUG)
-  if(blk->u.wc > 0){
-    fprintf(stdout, "[%s] warning: memory block RO with WR access (wc=%d,rc=%d)\n",
-            __FUNCTION__, blk->u.wc, blk->u.rc);
-    fflush(stdout);
-  }
-#endif
-  
   if( blk->m != m ){
     kaapi_cuda_mem_cache_removefromlist_rw(mem, blk);
     kaapi_cuda_mem_cache_insertlist_ro(mem, blk);
