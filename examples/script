@@ -1,0 +1,121 @@
+#!/bin/sh
+
+
+nb_cores=2
+nb_iterations=100
+launcher=""
+exec=""
+valid_result=""
+
+do_test=empty_test
+
+function empty_test {
+  echo "Empty test for $1!!!"
+}
+
+function run_ntimes {
+    for i in $(seq 1 $nb_iterations);
+    do
+        $launcher $@ > tmp.log 2>> error.log
+        cat tmp.log >> out.log 
+        if [ "$?" != "0" ];
+        then
+            current_time=$(date "+%d-%m-%Y %H:%M:%S")
+            echo "[$current_time] FAIL: $launcher $@" >> error.log
+        else
+          $do_test $exec tmp.log 
+        fi
+    done
+}
+
+
+
+# $1 = progname $2 = log file 
+function do_test_nqueens {
+     res=`grep total $2| cut -d: -f2` 
+     shift
+     if [ $res -ne $valid_result ];
+     then
+       current_time=$(date "+%d-%m-%Y %H:%M:%S")
+       echo "[$current_time] FAIL: $launcher $exec: bad result '$res'" >> error.log
+       echo "Failure... "
+     fi
+}
+
+function nqueens {
+  #nqueens 16 valid_result=14772512
+  #nqueens 14 valid_result=365596
+  #nqueens 12 
+  valid_result=14200
+  exec=./nqueens_kaapi++
+  do_test=do_test_nqueens
+  current_time=$(date "+%d-%m-%Y %H:%M:%S")
+  echo "[$current_time] [$nb_cores cores] Running $exec..."
+  echo "PrOgNaMe $exec:" >> out-$nb_cores.log
+  run_ntimes $exec 16
+  echo "" >> out-$nb_cores.log
+}
+
+
+
+# $1 = progname $2 = log file
+function do_test_fibo {
+     res=`grep Res $2| cut -d= -f2` 
+     shift
+     if [ $res -ne $valid_result ];
+     then
+       current_time=$(date "+%d-%m-%Y %H:%M:%S")
+       echo "[$current_time] FAIL: $launcher $exec: bad result '$res'" >> error.log
+       echo "Failure... "
+     else
+       echo "Ok "
+     fi
+}
+
+
+function fibo {
+  #fibo 32
+  valid_result=2178309
+  do_test=do_test_fibo
+
+  for i in fibo_kaapi fibo_kaapi++ fibo_kaapi++_alloca fibo_kaapi++_autopointer fibo_kaapi++_autovar fibo_kaapi++_bots fibo_kaapi++_bots_opt fibo_kaapi++_cumul fibo_kaapi++_cumul_opt fibo_kaapi++_cumul_userreduc fibo_kaapi++_opt fibo_kaapi++_opt_sync fibo_kaapi++_opt_thread fibo_kaapi++_sync;
+  do
+    exec=./$i
+    current_time=$(date "+%d-%m-%Y %H:%M:%S")
+    echo "[$current_time] [$nb_cores cores] Running $exec..."
+    echo "PrOgNaMe $exec:" >> out-$nb_cores.log
+    run_ntimes $exec 32
+    echo "" >> out-$nb_cores.log
+  done
+}
+
+
+
+
+
+
+##
+##
+## MAIN
+##
+##
+rm out.log
+rm error.log
+
+export KAAPI_CPUCOUNT=$nb_cores
+if [ $# -eq 0 ];
+then
+    nqueens
+    fibo
+
+    exit
+fi
+
+
+while [ $# -gt 0 ];
+do
+    $1
+    shift
+done
+
+

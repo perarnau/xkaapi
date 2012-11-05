@@ -2,7 +2,7 @@
 ** xkaapi
 ** 
 **
-** Copyright 2009 INRIA.
+** Copyright 2009,2010,2011,2012 INRIA.
 **
 ** Contributors :
 ** thierry.gautier@inrialpes.fr
@@ -73,7 +73,9 @@ struct TaskBodyCPU<TaskWork<T, OP> > {
 };
 
 /** Splitter for CPU implementation, call in concurrency with 
-    TaskBodyCPU<TaskWork<T, OP> >
+    TaskBodyCPU<TaskWork<T, OP> >.
+    The method is called with (nreq,beg,end) before the same 
+    arguments that the TaskWork instance.
 */
 template<typename T, typename OP>
 struct TaskSplitter<TaskWork<T, OP> > {

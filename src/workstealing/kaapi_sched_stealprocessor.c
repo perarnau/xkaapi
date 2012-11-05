@@ -3,11 +3,10 @@
 ** xkaapi
 ** 
 **
-** Copyright 2009 INRIA.
+** Copyright 2009,2010,2011,2012 INRIA.
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -64,7 +63,7 @@ int kaapi_sched_stealprocessor(
   /* 1/ steal in ready list : to add in the futur */
 #if 1 /* to disable steal in kproc ready list */
   if ((kproc->mailbox.head != 0 ) || !kaapi_readytasklist_isempty(kproc->rtl))
-    kaapi_sched_stealreadytasklist( thread, kproc, lrequests, lrrange );
+    kaapi_sched_stealreadytasklist( 0 /* thread: unused */, kproc, lrequests, lrrange );
 #endif
 
   /* 2/ steal in suspended threads */

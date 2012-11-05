@@ -2,7 +2,7 @@
 ** xkaapi
 ** 
 **
-** Copyright 2009 INRIA.
+** Copyright 2009,2010,2011,2012 INRIA.
 **
 ** Contributors :
 **
@@ -138,14 +138,17 @@ redo_exec:
     if (likely(state ==0))
     {
 #if 0
-	kaapi_format_t* fmt = kaapi_format_resolvebybody( pc->body );
-	if ( fmt != 0 )
-		kaapi_mem_host_map_sync_ptr( fmt, pc );
+      kaapi_format_t* fmt = kaapi_format_resolvebybody( pc->body );
+      if ( fmt != 0 )
+        kaapi_mem_host_map_sync_ptr( fmt, pc );
 #endif
       ((kaapi_task_body_internal_t)pc->body)( pc->sp, fp, pc );
     }
     else 
     {
+      /* be carrefull here: do not change the order of test, neither add other tests else
+         the merge operation may be incorrect
+      */
       if (state & KAAPI_TASK_STATE_TERM)
       {
       }
@@ -202,7 +205,6 @@ redo_exec:
   kaapi_assert_debug( fp >= eframe);
 
   /* pop frame */
-
 #if defined(KAAPI_USE_LOCKTOPOP_FRAME)
   /* lock based pop */
   int tolock = 0;
@@ -226,7 +228,7 @@ redo_exec:
           kaapi_sched_unlock(&stack->lock);
         goto push_frame; /* remains work do do */
       }
-    } 
+    }
     fp->sp = fp->pc;
   }
   stack->sfp = fp;

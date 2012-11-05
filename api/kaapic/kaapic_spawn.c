@@ -1,7 +1,7 @@
 /*
  ** xkaapi
  ** 
- ** Copyright 2009 INRIA.
+ ** Copyright 2009,2010,2011,2012 INRIA.
  **
  ** Contributors :
  ** thierry.gautier@inrialpes.fr
@@ -46,13 +46,76 @@
 #include <string.h>
 
 
+static size_t wordsize_type[] = 
+{ 
+  sizeof(char),           /* KAAPIC_TYPE_CHAR =0*/
+  sizeof(short),          /* KAAPIC_TYPE_SHORT */
+  sizeof(int),            /* KAAPIC_TYPE_INT */
+  sizeof(long),           /* KAAPIC_TYPE_LONG */
+  sizeof(unsigned char),  /* KAAPIC_TYPE_UCHAR*/
+  sizeof(unsigned short), /* KAAPIC_TYPE_USHORT*/
+  sizeof(unsigned int),   /* KAAPIC_TYPE_UINT*/
+  sizeof(unsigned long),  /* KAAPIC_TYPE_ULONG*/
+  sizeof(float),          /* KAAPIC_TYPE_REAL*/
+  sizeof(double),         /* KAAPIC_TYPE_DOUBLE*/
+  sizeof(void*)           /* KAAPIC_TYPE_PTR */
+};
+
+static const kaapi_format_t* format_type[] = 
+{ 
+  &kaapi_char_format_object,      /* KAAPIC_TYPE_CHAR =0*/
+  &kaapi_short_format_object,     /* KAAPIC_TYPE_SHORT */
+  &kaapi_int_format_object,       /* KAAPIC_TYPE_INT */
+  &kaapi_long_format_object,      /* KAAPIC_TYPE_LONG */
+  &kaapi_uchar_format_object,     /* KAAPIC_TYPE_UCHAR*/
+  &kaapi_ushort_format_object,    /* KAAPIC_TYPE_USHORT*/
+  &kaapi_uint_format_object,      /* KAAPIC_TYPE_UINT*/
+  &kaapi_ulong_format_object,     /* KAAPIC_TYPE_ULONG*/
+  &kaapi_float_format_object,     /* KAAPIC_TYPE_REAL*/
+  &kaapi_double_format_object,    /* KAAPIC_TYPE_DOUBLE*/
+  &kaapi_voidp_format_object      /* KAAPIC_TYPE_PTR */
+};
+
+static const kaapi_access_mode_t modec2modek[] =
+{
+  KAAPI_ACCESS_MODE_R,       /* KAAPIC_MODE_R*/
+  KAAPI_ACCESS_MODE_W,       /* KAAPIC_MODE_W */
+  KAAPI_ACCESS_MODE_RW,      /* KAAPIC_MODE_RW */
+  KAAPI_ACCESS_MODE_CW,      /* KAAPIC_MODE_CW */
+  KAAPI_ACCESS_MODE_V,       /* KAAPIC_MODE_V */
+  KAAPI_ACCESS_MODE_SCRATCH  /* KAAPIC_MODE_S */
+};
+
 /* extern function, required by kaapif_spawn */
 void kaapic_dfg_body(void* p, kaapi_thread_t* t)
 {
   kaapic_task_info_t* const ti = (kaapic_task_info_t*)p;
-
+  
 #include "kaapic_dfg_switch.h"
   KAAPIC_DFG_SWITCH(ti);
+}
+
+/* same as kaapic_dfg_body + process of scratch arguments */
+void kaapic_dfg_body_scratch(void* p, kaapi_thread_t* t)
+{
+  kaapic_task_info_t* const ti = (kaapic_task_info_t*)p;
+  int nargs = ti->nargs;
+  
+  /* process scratch mode */
+  int scratch_count        = 0;
+  kaapi_processor_t* kproc = 0;
+  for (int i=0; i<nargs; ++i)
+  {
+    if (ti->args[i].mode & KAAPI_ACCESS_MODE_S)
+    {
+      if (kproc == 0) kproc = kaapi_get_current_processor();
+      size_t szarg = kaapi_memory_view_size(&ti->args[i].view);
+      ti->args[i].access.data = _kaapi_gettemporary_data(kproc, scratch_count, szarg);
+      ++scratch_count;
+    } 
+  }
+
+  kaapic_dfg_body(p, t);
 }
 
 static void* get_arg_wh
@@ -76,6 +139,29 @@ static void kaapic_dfg_body_wh
 
 #include "kaapic_dfg_wh_switch.h"
   KAAPIC_DFG_WH_SWITCH(ti);
+}
+
+/* same as kaapic_dfg_body_wh + process of scratch arguments */
+void kaapic_dfg_body_wh_scratch(void* p, kaapi_thread_t* t, kaapi_task_t* task)
+{
+  kaapic_task_info_t* const ti = (kaapic_task_info_t*)p;
+  int nargs = ti->nargs;
+  
+  /* process scratch mode */
+  int scratch_count        = 0;
+  kaapi_processor_t* kproc = 0;
+  for (int i=0; i<nargs; ++i)
+  {
+    if (ti->args[i].mode & KAAPI_ACCESS_MODE_S)
+    {
+      if (kproc == 0) kproc = kaapi_get_current_processor();
+      size_t szarg = kaapi_memory_view_size(&ti->args[i].view);
+      ti->args[i].access.data = _kaapi_gettemporary_data(kproc, scratch_count, szarg);
+      ++scratch_count;
+    } 
+  }
+
+  kaapic_dfg_body_wh(p, t, task);
 }
 
 /* format definition of C task */
@@ -223,6 +309,28 @@ void _kaapic_register_task_format(void)
     0, /* task binding */
     0  /* get_splitter */
   );
+
+  format = kaapi_format_allocate();
+  kaapi_format_taskregister_func
+  (
+    format,
+    kaapic_dfg_body_scratch, 
+    (kaapi_task_body_t)kaapic_dfg_body_wh_scratch,
+    "kaapic_dfg_task",
+    sizeof(kaapic_task_info_t),
+    kaapic_taskformat_get_count_params,
+    kaapic_taskformat_get_mode_param,
+    kaapic_taskformat_get_off_param,
+    kaapic_taskformat_get_access_param,
+    kaapic_taskformat_set_access_param,
+    kaapic_taskformat_get_fmt_param,
+    kaapic_taskformat_get_view_param,
+    kaapic_taskformat_set_view_param,
+    0, /* reducor */
+    0, /* redinit */
+    0, /* task binding */
+    0  /* get_splitter */
+  );
 }
 
 
@@ -252,6 +360,8 @@ int kaapic_spawn(const kaapic_spawn_attr_t* attr, int32_t nargs, ...)
   va_list va_args;
   size_t wordsize;
   unsigned int k;
+  int scratch_arg = 0;
+int d = 0;
 
   if (nargs > KAAPIC_MAX_ARGS) 
     return EINVAL;
@@ -269,76 +379,42 @@ int kaapic_spawn(const kaapic_spawn_attr_t* attr, int32_t nargs, ...)
     kaapic_arg_info_t* const ai = &ti->args[k];
 
     const uint32_t mode  = va_arg(va_args, int);
-    void* const addr     = va_arg(va_args, void*);
+    void* addr;
+    double value;
+    if (!d) addr = va_arg(va_args, void*);
+    else {
+      value = (double)va_arg(va_args, double);
+      addr = (void*)(uintptr_t)value;
+    }
     const uint32_t count = va_arg(va_args, int);
     const uint32_t type  = va_arg(va_args, int);
 
-    switch (mode)
-    {
-      case KAAPIC_MODE_R:  
-        ai->mode = KAAPI_ACCESS_MODE_R; 
-        break;
-      case KAAPIC_MODE_W:  
-        ai->mode = KAAPI_ACCESS_MODE_W; 
-        break;
-      case KAAPIC_MODE_RW: 
-        ai->mode = KAAPI_ACCESS_MODE_RW; 
-        break;
-      case KAAPIC_MODE_CW: 
-        ai->mode = KAAPI_ACCESS_MODE_CW; 
-        break;
-      case KAAPIC_MODE_V:  
-        if (count >1) 
-          return EINVAL;
-        ai->mode = KAAPI_ACCESS_MODE_V; 
-        break;
-      default: 
-        return EINVAL;
-    }
+    /* guard */
+    if ((mode > KAAPIC_MODE_S) || (type >= KAAPIC_TYPE_ID))
+      return EINVAL;
 
-    switch (type)
-    {
-      case KAAPIC_TYPE_CHAR:
-        wordsize = sizeof(int);
-        ai->format = kaapi_char_format;
-        break ;
-
-      case KAAPIC_TYPE_INT:
-        wordsize = sizeof(int);
-        ai->format = kaapi_int_format;
-        break ;
-
-      case KAAPIC_TYPE_REAL:
-        wordsize = sizeof(float);
-        ai->format = kaapi_float_format;
-        break ;
-
-      case KAAPIC_TYPE_DOUBLE:
-        wordsize = sizeof(double);
-        ai->format = kaapi_double_format;
-        break ;
-
-      case KAAPIC_TYPE_PTR:
-        wordsize = sizeof(void*);
-        ai->format = kaapi_voidp_format;
-        break ;
-
-      default: 
-        return EINVAL;
-    }
+    ai->mode   = modec2modek[mode];
+    wordsize   = wordsize_type[type];
+    ai->format = format_type[type];
     
     kaapi_access_init( &ai->access, addr );
+
     if (mode == KAAPIC_MODE_V)
     {
       /* can only pass exactly by value the size of a uintptr_t */
       kaapi_assert_debug( wordsize*count <= sizeof(uintptr_t) );
       memcpy(&ai->access.version, &addr, wordsize*count );  /* but count == 1 here */
     }
+    if (mode == KAAPIC_MODE_S)
+      scratch_arg = 1;
 
     ai->view = kaapi_memory_view_make1d(count, wordsize);
   }
   va_end(va_args);
 
   /* spawn the task */
-  return kaapic_spawn_ti( thread, attr, kaapic_dfg_body, ti );
+  if (scratch_arg ==1)
+    return kaapic_spawn_ti( thread, attr, kaapic_dfg_body_scratch, ti );
+  else
+    return kaapic_spawn_ti( thread, attr, kaapic_dfg_body, ti );
 }

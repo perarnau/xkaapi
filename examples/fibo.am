@@ -5,12 +5,12 @@
 ##  Copyright 2010 INRIA. All rights reserved.
 ##
 
-FIBO_PRGS=fibo_seq fibo_kaapi
+FIBO_PRGS=fibo_seq fibo_kaapi fibo_kaapic fibo_kaapic_sync
 if KAAPI_API_ATHA
 FIBO_PRGS+=fibo_atha
 endif
 if KAAPI_API_KAAPIXX
-FIBO_PRGS+=fibo_kaapi++ fibo_kaapi++_autopointer fibo_kaapi++_autovar fibo_kaapi++_alloca fibo_kaapi++_opt fibo_kaapi++_opt_thread fibo_kaapi++_opt_sync fibo_kaapi++_sync fibo_kaapi++_cumul fibo_kaapi++_cumul_opt fibo_kaapi++_cumul_userreduc fibo_kaapi++_bots fibo_kaapi++_bots_opt
+FIBO_PRGS+=fibo_kaapi++ fibo_kaapi++_autopointer fibo_kaapi++_autovar fibo_kaapi++_alloca fibo_kaapi++_opt fibo_kaapi++_opt_thread fibo_kaapi++_opt_sync fibo_kaapi++_sync fibo_kaapi++_cumul fibo_kaapi++_cumul_opt fibo_kaapi++_cumul_userreduc fibo_kaapi++_bots fibo_kaapi++_bots_opt 
 endif
 
 check_PROGRAMS+=$(FIBO_PRGS)
@@ -18,6 +18,8 @@ all-fibo: $(FIBO_PRGS)
 
 fibo_seq_SOURCES=fibo/fibo_seq.c
 fibo_kaapi_SOURCES=fibo/fibo_kaapi.c
+fibo_kaapic_SOURCES=fibo/fibo_kaapic.c
+fibo_kaapic_sync_SOURCES=fibo/fibo_kaapic_sync.c
 fibo_atha_SOURCES=fibo/fibo_atha.cpp
 fibo_kaapi___SOURCES=    fibo/fibo_kaapi++.cpp
 fibo_kaapi___autopointer_SOURCES= fibo/fibo_kaapi++_autopointer.cpp
@@ -42,6 +44,16 @@ fibo_kaapi_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
 fibo_kaapi_CFLAGS  =$(AM_CFLAGS)   $(KAAPIPROGS_BUILD_CFLAGS) $(NESTED_FUNCTIONS_CFLAGS)
 fibo_kaapi_LDFLAGS =$(AM_LDFLAGS)  $(KAAPIPROGS_BUILD_LDFLAGS)
 fibo_kaapi_LDADD   =$(LIBS)        $(KAAPIPROGS_BUILD_LIBS)
+
+fibo_kaapic_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
+fibo_kaapic_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS) $(NESTED_FUNCTIONS_CFLAGS)
+fibo_kaapic_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
+fibo_kaapic_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS)
+
+fibo_kaapic_sync_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
+fibo_kaapic_sync_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS) $(NESTED_FUNCTIONS_CFLAGS)
+fibo_kaapic_sync_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
+fibo_kaapic_sync_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS)
 
 fibo_atha_CPPFLAGS=$(AM_CPPFLAGS) $(ATHAPROGS_BUILD_CPPFLAGS)
 fibo_atha_CXXFLAGS=$(AM_CXXFLAGS) $(ATHAPROGS_BUILD_CXXFLAGS)

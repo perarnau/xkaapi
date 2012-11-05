@@ -2,7 +2,7 @@
  ** xkaapi
  ** 
  **
- ** Copyright 2009 INRIA.
+ ** Copyright 2009,2010,2011,2012 INRIA.
  **
  ** Contributor :
  **
@@ -83,9 +83,11 @@ int kaapi_sched_stealstack
   /* try to steal in each frame */
   for (top_frame = thread->stack.stackframe;
        (top_frame <= thread->stack.sfp)
-       && !kaapi_listrequest_iterator_empty(lrrange); ++top_frame) {
+       && !kaapi_listrequest_iterator_empty(lrrange); ++top_frame) 
+  {
     /* TODO here: virtualization of the frame properties ? */
-    if (top_frame->tasklist == 0) {
+    if (top_frame->tasklist == 0) 
+    {
       thread->stack.thieffp = top_frame;
       if (top_frame->pc == top_frame->sp) continue;
       kaapi_sched_stealframe( thread, top_frame, &access_to_gd, lrequests, lrrange );

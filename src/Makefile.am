@@ -3,7 +3,7 @@
 ##  xkaapi
 ##
 ##  Created by CL, TG and VD on 04/02/09.
-##  Copyright 2009 INRIA. All rights reserved.
+##  Copyright 2009,2010,2011,2012 INRIA. All rights reserved.
 ##
 
 lib_LTLIBRARIES= libkaapi.la
@@ -48,6 +48,7 @@ libkaapi_la_SOURCES=\
   kaapi_memory.h \
   kaapi_cpuset.h\
   kaapi_util.h\
+  kaapi_sched.h\
   misc/kaapi_abort.c \
   misc/kaapi_allocator_allocate.c \
   misc/kaapi_cpuset2str.c \
@@ -82,6 +83,7 @@ libkaapi_la_SOURCES=\
   misc/kaapi_wq_lock.c \
   misc/kaapi_wq_unlock.c \
   misc/kaapi_util.c \
+  misc/kaapi_dataspecific.c \
   task/kaapi_fmt_accessors.c \
   task/kaapi_fmt_initbasic.c \
   task/kaapi_fmt_register.c \

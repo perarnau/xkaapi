@@ -2,7 +2,7 @@
  ** xkaapi
  ** 
  **
- ** Copyright 2009 INRIA.
+ ** Copyright 2009,2010,2011,2012 INRIA.
  **
  ** Contributors :
  **
@@ -98,6 +98,13 @@ komp_barrier_wait (kompctxt_t* ctxt, struct komp_barrier *barrier)
   /* _barrier_ call generated from a _single_ construct: Only the
    thread performing the single body (creating OpenMP tasks) is
    waiting for completion of created tasks. */
+#if 0
+  if (ctxt->icv.thread_id == 0)
+  {
+    kaapic_sync ();
+  }
+#endif
+
   if (ctxt->inside_single)
   {
     if (ctxt->icv.thread_id == 0)

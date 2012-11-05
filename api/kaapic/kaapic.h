@@ -1,7 +1,7 @@
 /*
  ** xkaapi
  ** 
- ** Copyright 2009 INRIA.
+ ** Copyright 2009,2010,2011,2012 INRIA.
  **
  ** Contributors :
  ** thierry.gautier@inrialpes.fr
@@ -55,22 +55,29 @@ extern "C" {
 /* This is the portable C interface the kaapi runtime */
 enum kaapic_type
 {
-  KAAPIC_TYPE_CHAR = 0,
-  KAAPIC_TYPE_INT,
-  KAAPIC_TYPE_REAL,
-  KAAPIC_TYPE_FLOAT=KAAPIC_TYPE_REAL,
-  KAAPIC_TYPE_DOUBLE,
-  KAAPIC_TYPE_PTR,
-  KAAPIC_TYPE_ID /* for FORTRAN only */
+  KAAPIC_TYPE_CHAR  = 0,
+  KAAPIC_TYPE_SHORT = 1,
+  KAAPIC_TYPE_INT   = 2,
+  KAAPIC_TYPE_LONG  = 3,
+  KAAPIC_TYPE_UCHAR = 4,
+  KAAPIC_TYPE_USHORT= 5,
+  KAAPIC_TYPE_UINT  = 6,
+  KAAPIC_TYPE_ULONG = 7,
+  KAAPIC_TYPE_REAL  = 8,
+  KAAPIC_TYPE_FLOAT = KAAPIC_TYPE_REAL,
+  KAAPIC_TYPE_DOUBLE= 9,
+  KAAPIC_TYPE_PTR   = 10,
+  KAAPIC_TYPE_ID    = 11/* for FORTRAN only */
 };
 
 enum kaapic_mode
 {
   KAAPIC_MODE_R = 0,
-  KAAPIC_MODE_W,
-  KAAPIC_MODE_RW,
-  KAAPIC_MODE_CW,
-  KAAPIC_MODE_V
+  KAAPIC_MODE_W = 1,
+  KAAPIC_MODE_RW= 2,
+  KAAPIC_MODE_CW= 3,
+  KAAPIC_MODE_V = 4,
+  KAAPIC_MODE_S = 5
 };
 
 enum kaapic_init_flag {

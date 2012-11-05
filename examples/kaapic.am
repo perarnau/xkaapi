@@ -4,18 +4,35 @@
 ##  Created by VD on 09/11/10.
 ##  Copyright 2010 INRIA. All rights reserved.
 ##
-
+CBLAS_WARNING2=
 if KAAPI_API_KAAPIC
-KAAPIC_PRGS=foreach_kaapic foreach_vtk foreach_double_kaapic
+KAAPIC_PRGS=foreach_kaapic foreach_vtk foreach_double_kaapic kaapic_spawn1 kaapic_spawn2 
+if KAAPI_HAVE_CBLAS
+KAAPIC_PRGS+=matcholesky_bloc_kaapic
+else
+CBLAS_WARNING2+= no-cblas2
+endif
 endif
 
+all-kaapic: $(CBLAS_WARNING2)
 check_PROGRAMS+=$(KAAPIC_PRGS)
 all-kaapic: $(KAAPIC_PRGS)
+
+no-cblas2:
+	@echo "******************************************************************************"
+	@echo "CBLAS_LDFLAGS was empty at configure time."
+	@echo "Examples requiring CBLAS libraries have been disabled"
+	@echo "Set CBLAS_LDFLAGS/CBLAS_CPPFLAGS in your environment if required"
+	@echo "See examples/matrix/README for more information"
+	@echo "******************************************************************************"
 
 #For each using C API kaapic_foreach
 foreach_kaapic_SOURCES=kaapic/foreach_kaapic.c
 foreach_vtk_SOURCES=kaapic/foreach_vtk.c
 foreach_double_kaapic_SOURCES=kaapic/foreach_double_kaapic.c
+kaapic_spawn1_SOURCES=kaapic/kaapic_spawn1.c
+kaapic_spawn2_SOURCES=kaapic/kaapic_spawn2.c
+matcholesky_bloc_kaapic_SOURCES=kaapic/matcholesky_bloc_kaapic.c
 
 foreach_kaapic_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
 foreach_kaapic_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
@@ -31,3 +48,18 @@ foreach_double_kaapic_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
 foreach_double_kaapic_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
 foreach_double_kaapic_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
 foreach_double_kaapic_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm
+
+kaapic_spawn1_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
+kaapic_spawn1_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
+kaapic_spawn1_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
+kaapic_spawn1_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm
+
+kaapic_spawn2_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
+kaapic_spawn2_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
+kaapic_spawn2_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
+kaapic_spawn2_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm
+
+matcholesky_bloc_kaapic_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS)
+matcholesky_bloc_kaapic_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
+matcholesky_bloc_kaapic_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS)
+matcholesky_bloc_kaapic_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm

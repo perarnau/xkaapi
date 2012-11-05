@@ -3,13 +3,12 @@
 ** xkaapi
 ** 
 **
-** Copyright 2009 INRIA.
+** Copyright 2009,2010,2011,2012 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
 ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
-** christophe.laferriere@imag.fr
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -539,8 +538,11 @@ typedef struct kaapi_processor_t {
   kaapi_mem_host_map_t      mem_host_map;             /* memory map */
 
   KAAPI_DEBUG_INST(
-    struct kaapi_processor_t* victim_kproc;             /* used for debug */
+    struct kaapi_processor_t* victim_kproc;           /* used for debug */
   )
+
+  void*                     data_specific[16];        /* thread data specific or scratch mode */
+  size_t                    size_specific[16];        /* size of data specific or scratch mode */
 
   void*                     libkomp_tls;
 
@@ -551,7 +553,8 @@ typedef struct kaapi_processor_t {
 
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_KPROCESSOR_ALIGNMENT_SIZE)));
 
-/*
+
+/* Initialize an allocated object kaapi_processor_t 
 */
 struct kaapi_procinfo;
 extern int kaapi_processor_init( 
@@ -559,6 +562,11 @@ extern int kaapi_processor_init(
     const struct kaapi_procinfo_t*,
     size_t stacksize
 );
+
+/* Destroy an allocated object kaapi_processor_t 
+*/
+extern int kaapi_processor_destroy(kaapi_processor_t* kproc);
+
 
 
 /** Initialize the topology information from each thread
@@ -901,6 +909,12 @@ static inline void kaapi_processor_set_self_workload
 {
   KAAPI_ATOMIC_WRITE(&kaapi_get_current_processor()->workload, workload);
 }
+
+/* Return a pointer to a memory region at least of the given size else return 0.
+   The id is a value between 0 and 16-1, where 16 is the maximal number of temporary.
+   This function is used to allocate temporary data for task execution.
+*/
+extern void* _kaapi_gettemporary_data(kaapi_processor_t*kproc, unsigned int id, size_t size);
 
 /* */
 extern void kaapi_mt_perf_init(void);

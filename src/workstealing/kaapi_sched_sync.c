@@ -3,7 +3,7 @@
 ** xkaapi
 ** 
 **
-** Copyright 2009 INRIA.
+** Copyright 2009,2010,2011,2012 INRIA.
 **
 ** Contributors :
 **
@@ -155,7 +155,7 @@ redo:
   {
     /* add assert: before thaht call kaapi_sched_suspend with kaapi_get_current_processor, but should be thread->proc */
     kaapi_assert_debug( kaapi_get_current_processor() == thread->stack.proc );
-    kaapi_sched_suspend( thread->stack.proc, _kaapi_condition_task_isready, thread );
+    kaapi_sched_suspend( kaapi_get_current_processor(), /*thread->stack.proc,*/ _kaapi_condition_task_isready, thread );
 
     kaapi_assert_debug( kaapi_self_thread_context() == thread );
     kaapi_assert_debug( thread->stack.proc == kaapi_get_current_processor() );
@@ -166,7 +166,10 @@ redo:
   kaapi_cpuset_copy(&thread->affinity, &save_affinity);
   
   if (err) /* but do not restore anyting */
+  {
+    printf("sync: error: %i\n", err); fflush(stdout);
     goto returnvalue;
+  }
 
 #if defined(KAAPI_DEBUG)
   kaapi_assert_debug(save_fp == thread->stack.sfp);
@@ -185,6 +188,8 @@ returnvalue:
 int kaapi_sched_sync()
 {
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
-  return kaapi_sched_sync_(thread);
+  int err = kaapi_sched_sync_(thread);
+  kaapi_assert_debug(kaapi_frame_isempty(thread->stack.sfp));
+  return err;
 }
 

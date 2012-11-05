@@ -2,7 +2,7 @@
  ** xkaapi
  ** 
  **
- ** Copyright 2009 INRIA.
+ ** Copyright 2009,2010,2011,2012 INRIA.
  **
  ** Contributors :
  **
@@ -166,8 +166,7 @@ komp_init_parallel_start (
   
   /* pseudo OpenMP spec algorithm to compute the number of threads */
   if ( (!ctxt->icv.nested_parallel && (ctxt->icv.nested_level >0)) 
-      ||  (ctxt->icv.nested_level >= omp_max_active_levels)
-      )
+      ||  (ctxt->icv.nested_level >= omp_max_active_levels) )
     num_threads = 1;
   else {
     if (num_threads == 0)
@@ -324,6 +323,7 @@ komp_parallel_start (
     {
       int nb_pushed_tasks = (i == 0) ? 1 : 0; /* The master thread calls fn (data) directly. */
       
+#if 0
       task = kaapi_thread_toptask(thread);
       while (nb_pushed_tasks < tasks_per_thread[i])
       {
@@ -332,6 +332,16 @@ komp_parallel_start (
         task = kaapi_thread_nexttask(thread, task);      
         nb_pushed_tasks++;
       }
+#else
+      while (nb_pushed_tasks < tasks_per_thread[i])
+      {
+        task = kaapi_thread_toptask(thread);
+        komp_task_prepare (task, allarg, thread, fn, data, teaminfo, ctxt, task_id++);
+        kaapi_thread_pushtask(thread);
+        nb_pushed_tasks++;
+      }
+#endif
+
     }
   } 
   else 
@@ -384,7 +394,7 @@ GOMP_parallel_end (void)
   old_ctxt = ctxt->save_ctxt;
   
   kaapic_end_parallel (KAAPI_SCHEDFLAG_DEFAULT);
-  
+
   /* restore old context */
   kproc->libkomp_tls = old_ctxt;
   

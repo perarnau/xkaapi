@@ -2,11 +2,10 @@
 ** xkaapi
 ** 
 **
-** Copyright 2009 INRIA.
+** Copyright 2009,2010,2011,2012 INRIA.
 **
 ** Contributors :
 **
-** christophe.laferriere@imag.fr
 ** thierry.gautier@inrialpes.fr
 ** 
 ** This software is a computer program whose purpose is to execute
@@ -56,24 +55,4 @@ int kaapi_setcontext( kaapi_processor_t* kproc, kaapi_thread_context_t* thread )
   kaapi_current_thread_key = (kaapi_thread_t**)thread;
 #endif
   return 0;
-
-#if 0  /* TODO: next version when also saving the stack context */
-  proc->flags        = ctxt->flags;
-  proc->dataspecific = ctxt->dataspecific;
-
-  if (ctxt->flags & KAAPI_CONTEXT_SAVE_KSTACK)
-  {
-    proc->kstack     = ctxt->kstack;
-  }
-
-  if (ctxt->flags & KAAPI_CONTEXT_SAVE_CSTACK)
-  {
-#if defined(KAAPI_USE_UCONTEXT)
-    setcontext( &proc->_ctxt );
-#elif defined(KAAPI_USE_SETJMP)
-    _longjmp( proc->_ctxt,  (int)(long)ctxt);
-#endif
-  }
-  return 0;
-#endif  /* TODO: next version when also saving the stack context */
 }

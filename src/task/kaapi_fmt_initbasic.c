@@ -2,7 +2,7 @@
 ** xkaapi
 ** 
 **
-** Copyright 2009 INRIA.
+** Copyright 2009,2010,2011,2012 INRIA.
 **
 ** Contributors :
 **
@@ -49,7 +49,7 @@
 /**
 */
 #define KAAPI_DECL_BASICTYPEFORMAT( formatobject, type, fmt ) \
-  static kaapi_format_t formatobject##_object;\
+  kaapi_format_t formatobject##_object;\
   kaapi_format_t* formatobject= &formatobject##_object;\
   static void formatobject##_cstor(void* dest)  { *(type*)dest = 0; }\
   static void formatobject##_dstor(void* dest) { *(type*)dest = 0; }\
@@ -57,13 +57,13 @@
   static void formatobject##_copy( void* dest, const void* src) { *(type*)dest = *(type*)src; } \
   static void formatobject##_assign( void* dest, const kaapi_memory_view_t* dview, const void* src, const kaapi_memory_view_t* sview) { *(type*)dest = *(type*)src; } \
   static void formatobject##_print( FILE* file, const void* src) { fprintf(file, fmt, *(type*)src); } \
-  static kaapi_format_t* fnc_##formatobject(void) \
+  kaapi_format_t* get_##formatobject(void) \
   {\
     return &formatobject##_object;\
   }
 
 #define KAAPI_REGISTER_BASICTYPEFORMAT( formatobject, type, fmt ) \
-  kaapi_format_structregister( &fnc_##formatobject, \
+  kaapi_format_structregister( &get_##formatobject, \
                                #type, sizeof(type), \
                                &formatobject##_cstor, &formatobject##_dstor, &formatobject##_cstorcopy, \
                                &formatobject##_copy, &formatobject##_assign, &formatobject##_print ); \
@@ -125,14 +125,14 @@ static void voidp_type_printf(FILE* fil, const void* addr)
   fprintf(fil, "0x%lx", (uintptr_t)addr);
 }
 
-static kaapi_format_t kaapi_voidp_object;
-static kaapi_format_t* voidp_type_fnc(void)
+kaapi_format_t kaapi_voidp_format_object;
+kaapi_format_t* get_kaapi_voidp_format(void)
 {
   /* printf("%s\n", __FUNCTION__); */
-  return &kaapi_voidp_object;
+  return &kaapi_voidp_format_object;
 }
 
-kaapi_format_t* kaapi_voidp_format = &kaapi_voidp_object;
+kaapi_format_t* kaapi_voidp_format = &kaapi_voidp_format_object;
 
 
 
@@ -156,7 +156,7 @@ void kaapi_init_basicformat(void)
 
   kaapi_format_structregister
   ( 
-   voidp_type_fnc,
+   get_kaapi_voidp_format,
    "kaapi_voidp_format",
    sizeof(void*),
    voidp_type_cstor,

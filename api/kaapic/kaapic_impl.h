@@ -1,7 +1,7 @@
 /*
  ** xkaapi
  ** 
- ** Copyright 2009 INRIA.
+ ** Copyright 2009,2010,2011,2012 INRIA.
  **
  ** Contributors :
  ** thierry.gautier@inrialpes.fr
@@ -170,11 +170,9 @@ typedef struct kaapic_arg_info_t
   kaapi_memory_view_t view;
   const struct kaapi_format_t* format;
 
-  /* kaapi versionning for shared pointer 
-     also used to store address of union 'value' 
-     for by-value argument.
-     Currenlty value are copied into the version field
-     of the access.
+  /* kaapi versionning for shared pointer also used to store 
+     address of union 'value' for by-value argument: the value is copied into 
+     the version field of the access and cannot be greather than sizeof(void*)
   */
   kaapi_access_t access;
 

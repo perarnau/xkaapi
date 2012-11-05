@@ -114,6 +114,7 @@ typedef struct quark_s {
 static XKaapi_Quark default_Quark[KAAPI_MAX_PROCESSOR];
 
 
+#if 0 /* to be used if scratch data is allocated in libquark with malloc */
 static void kaapi_quark_helper_delete_scratch( kaapi_quark_task_t* arg )
 {
   kaapi_bitmap_value32_t bits = { arg->scratchbit };
@@ -125,6 +126,7 @@ static void kaapi_quark_helper_delete_scratch( kaapi_quark_task_t* arg )
     if (param->addr.data !=0) free(param->addr.data);
   }
 }
+#endif
 
 /* trampoline to call Quark function */
 static void kaapi_wrapper_quark_function( void* a, kaapi_thread_t* thread, kaapi_task_t* task )
@@ -137,8 +139,10 @@ static void kaapi_wrapper_quark_function( void* a, kaapi_thread_t* thread, kaapi
   myquark->task            = arg; 
   arg->callitwith_handle   = 0;
   arg->function( myquark );
+#if 0
   if (arg->scratchbit)
     kaapi_quark_helper_delete_scratch( arg );
+#endif
 }
 
 /* trampoline to call Quark function */
@@ -152,8 +156,10 @@ static void kaapi_wrapper_wh_quark_function( void* a, kaapi_thread_t* thread, ka
   myquark->task            = arg; 
   arg->callitwith_handle   = 1;
   arg->function( myquark );
+#if 0
   if (arg->scratchbit)
     kaapi_quark_helper_delete_scratch( arg );
+#endif
 }
 
 
@@ -619,7 +625,8 @@ void *QUARK_Args_Pop( void *args_list, void **last_arg)
     /* allocate a scratch zone: freeed after task execution */
     if (arg2pop->addr.data ==0)
     {
-      arg2pop->addr.data = malloc(arg2pop->size);
+//      arg2pop->addr.data = malloc(arg2pop->size);
+      arg2pop->addr.data = kaapi_gettemporary_data( arg2pop-taskarg->param, arg2pop->size ); 
     }
     retval = &arg2pop->addr.data;
   }
@@ -807,8 +814,8 @@ printf("OUT %s\n", __PRETTY_FUNCTION__);  fflush(stdout);
 /* Called by worker, cancel any pending tasks, and mark sequence so that it does not accept any more tasks */
 int QUARK_Sequence_Cancel( Quark *quark, Quark_Sequence *sequence )
 {
-  int retval;
-  if ( quark==NULL || sequence==NULL ) return QUARK_ERR;
+  if ( quark==NULL || sequence==NULL ) 
+    return QUARK_ERR;
   return QUARK_SUCCESS;
 
 //printf("%s\n", __PRETTY_FUNCTION__);  

@@ -19,9 +19,9 @@
 
 int SOL;   /* SOL for debug */
 #if !defined(SIZE)
-int SIZEE;                /* SIZE -1 */
+int SIZEE;         /* SIZE -1 */
 int32_t TOPBIT;    /* 1 << SIZEE */
-int32_t MASK;      /*  MASK = ((1 << (SIZEE+1)) - 1); */
+int32_t MASK;      /* MASK = ((1 << (SIZEE+1)) - 1); */
 int32_t SIDEMASK;  /* SIDEMASK = ( ( 1 << SIZEE) | 1); */
 #else
 #define SIZEE     (SIZE-1)
@@ -39,7 +39,9 @@ struct res_t
 
   friend std::ostream& operator<< (std::ostream & out, const res_t & r);
 
-  res_t ():COUNT2(0),COUNT4(0), COUNT8(0)  {}
+  res_t ()
+   : COUNT2(0),COUNT4(0), COUNT8(0)  
+  {}
 
   res_t & operator+= (const res_t & r)
   {
@@ -76,7 +78,7 @@ struct Task_cumulinplace: ka::Task<2>::Signature<
 > {};
 template<>
 struct TaskBodyCPU<Task_cumulinplace> {
-  void operator()  (ka::pointer_rw<res_t> left, ka::pointer_r<res_t> right)
+  void operator()(ka::pointer_rw<res_t> left, ka::pointer_r<res_t> right)
   {
     *left += *right;
   }
@@ -87,14 +89,14 @@ struct Task_copy: ka::Task<2>::Signature<
   ka::W<res_t>,
   ka::R<res_t>
 > {};
-
 template<>
 struct TaskBodyCPU<Task_copy> {
-  void operator()  (ka::pointer_w<res_t> w, ka::pointer_r<res_t> r)
+  void operator()(ka::pointer_w<res_t> w, ka::pointer_r<res_t> r)
   {
     *w = *r;
   }
 };
+
 
 /*
  * display result and time
@@ -122,14 +124,14 @@ struct TaskBodyCPU<Task_display> {
 /*
  * store chess board
  */
-
 struct board
 {
   board () { }
 
   board (const board & b)
   {
-    for(int i=0; i<SIZEE;++i){ d[i]=b.d[i]; }
+    for(int i=0; i<SIZEE;++i)
+    { d[i]=b.d[i]; }
   }
   int32_t &operator[] (int i)
   {
@@ -169,7 +171,7 @@ a1::IStream & operator>> (a1::IStream & s_in, board & b)
 struct param_bt1
 {
   param_bt1(int32_t b1, board& b)
-    :BOUND1(b1),BOARD(b),TOTAL()
+   : BOUND1(b1),BOARD(b),TOTAL()
   {
   }
 
@@ -201,15 +203,15 @@ struct param_bt1
   }
 
   int32_t BOUND1;
-  board& BOARD;
-  res_t TOTAL;
+  board&  BOARD;
+  res_t   TOTAL;
 };
 
 
 struct param_bt2
 {
   param_bt2(board& b, int32_t lm, int32_t b1, int32_t eb)
-    :BOARD(b),LASTMASK(lm),BOUND1(b1),ENDBIT(eb), BOUND2(SIZEE-b1)
+   : BOARD(b),LASTMASK(lm),BOUND1(b1),ENDBIT(eb), BOUND2(SIZEE-b1)
   {
   }
 
@@ -262,10 +264,10 @@ struct param_bt2
         return;
       }
     }
+
     /*
      * 270-degree rotation 
      */
-
     if (BOARD[BOUND1] == TOPBIT)
     {
       int32_t own=1;
@@ -284,38 +286,38 @@ struct param_bt2
     ++TOTAL.COUNT8;
   }
 
-    void backtrack2 (int32_t y, int32_t left, int32_t down, int32_t right)
-    {
-      int32_t bitmap = MASK & ~(left | down | right);
-      if (y == SIZEE) {
-        if ( bitmap && !(bitmap & LASTMASK) )
-        {
-          BOARD[SIZEE] = bitmap;
-          check ();
-        }
-        return;
-      }
-      
-      if (y < BOUND1)
+  void backtrack2 (int32_t y, int32_t left, int32_t down, int32_t right)
+  {
+    int32_t bitmap = MASK & ~(left | down | right);
+    if (y == SIZEE) {
+      if ( bitmap && !(bitmap & LASTMASK) )
       {
-        bitmap |= SIDEMASK;
-        bitmap ^= SIDEMASK;
+        BOARD[SIZEE] = bitmap;
+        check ();
       }
-      else if (y == BOUND2)
-      {
-        if (!(down & SIDEMASK))
-          return;
-        if ((down & SIDEMASK) != SIDEMASK)
-          bitmap &= SIDEMASK;
-      }
-      while (bitmap)
-      {
-        int32_t bit = -bitmap & bitmap;
-        bitmap ^= BOARD[y] = bit;
-        backtrack2( y+1, (left | bit) << 1, down | bit,
-            (right | bit) >> 1);
-      }
+      return;
     }
+    
+    if (y < BOUND1)
+    {
+      bitmap |= SIDEMASK;
+      bitmap ^= SIDEMASK;
+    }
+    else if (y == BOUND2)
+    {
+      if (!(down & SIDEMASK))
+        return;
+      if ((down & SIDEMASK) != SIDEMASK)
+        bitmap &= SIDEMASK;
+    }
+    while (bitmap)
+    {
+      int32_t bit = -bitmap & bitmap;
+      bitmap ^= BOARD[y] = bit;
+      backtrack2( y+1, (left | bit) << 1, down | bit,
+          (right | bit) >> 1);
+    }
+  }
 
   board& BOARD;
   res_t TOTAL;
@@ -415,7 +417,7 @@ struct TaskBodyCPU<Task_bt1> {
       int32_t down, 
       int32_t right, 
       int32_t BOUND1, 
-      board BOARD, 
+      board   BOARD, 
       ka::pointer_w<res_t> a1TOTAL
   )
   {
