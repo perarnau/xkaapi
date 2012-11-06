@@ -224,6 +224,16 @@ intptr_t QUARK_Task_Flag_Get( Quark *quark, int flag );
 /* Enable and disable DAG generation via API.  Only makes sense after
  * a sync, such as QUARK_Barrier. */
 void QUARK_DOT_DAG_Enable( Quark *quark, int boolean_value );
+  
+#if defined(KAAPI_USE_CUDA)
+
+#define   QUARK_ARCH_DEFAULT     ((1U << KAAPI_PROC_TYPE_HOST) | (1U << KAAPI_PROC_TYPE_CUDA))
+#define   QUARK_ARCH_CPU_ONLY    (1U << KAAPI_PROC_TYPE_HOST)
+#define   QUARK_ARCH_GPU_ONLY    (1U << KAAPI_PROC_TYPE_CUDA)
+
+void QUARK_Task_Set_GPU_Function(void (*function_cpu) (Quark *), void (*function_gpu) (Quark *), uint8_t arch);
+
+#endif
 
 #if defined(c_plusplus) || defined(__cplusplus)
 }
