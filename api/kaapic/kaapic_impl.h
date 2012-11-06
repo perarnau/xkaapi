@@ -639,6 +639,7 @@ static inline int kaapic_local_workqueue_pop_withdatadistribution_ull(
 extern void kaapic_save_frame(void);
 extern void kaapic_restore_frame(void);
 extern void kaapic_dfg_body(void* p, kaapi_thread_t* t);
+extern void kaapic_dfg_body_scratch(void* p, kaapi_thread_t* t);
 
 #if defined(__cplusplus)
 }

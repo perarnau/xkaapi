@@ -99,7 +99,7 @@ void kaapic_dfg_body(void* p, kaapi_thread_t* t)
 void kaapic_dfg_body_scratch(void* p, kaapi_thread_t* t)
 {
   kaapic_task_info_t* const ti = (kaapic_task_info_t*)p;
-  int nargs = ti->nargs;
+  int nargs = (int)ti->nargs;
   
   /* process scratch mode */
   int scratch_count        = 0;
@@ -142,10 +142,10 @@ static void kaapic_dfg_body_wh
 }
 
 /* same as kaapic_dfg_body_wh + process of scratch arguments */
-void kaapic_dfg_body_wh_scratch(void* p, kaapi_thread_t* t, kaapi_task_t* task)
+static void kaapic_dfg_body_wh_scratch(void* p, kaapi_thread_t* t, kaapi_task_t* task)
 {
   kaapic_task_info_t* const ti = (kaapic_task_info_t*)p;
-  int nargs = ti->nargs;
+  int nargs = (int) ti->nargs;
   
   /* process scratch mode */
   int scratch_count        = 0;
@@ -352,7 +352,13 @@ int kaapic_spawn_ti(
   return 0;
 }
 
-/* dataflow interface */
+/* dataflow interface 
+   New parsing of arguments is :
+      - MODE, TYPE, count, data
+   The old one parse the type after the data which impose sever restriction for the
+   C API when pass by value argument are
+      
+*/
 int kaapic_spawn(const kaapic_spawn_attr_t* attr, int32_t nargs, ...)
 {
   kaapi_thread_t* thread = kaapi_self_thread();
