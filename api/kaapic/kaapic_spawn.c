@@ -46,6 +46,15 @@
 #include <string.h>
 
 
+
+/* Traitement des valeurs double:
+  - convention d'appel des fonctions => int, double passée différement, traitement possible lors de la construction du spawn
+  - appel body/task => user function : ici il faudrait faire un switch en fonction du type pour laisser le compilateur C
+  empiler correctement les arguments (...)
+  Voir si appel ... des fonctions (passage de va-arg au niveau user (mais pas top).
+  Voir si macro possible
+*/
+
 static size_t wordsize_type[] = 
 { 
   sizeof(char),           /* KAAPIC_TYPE_CHAR =0*/
@@ -367,7 +376,6 @@ int kaapic_spawn(const kaapic_spawn_attr_t* attr, int32_t nargs, ...)
   size_t wordsize;
   unsigned int k;
   int scratch_arg = 0;
-int d = 0;
 
   if (nargs > KAAPIC_MAX_ARGS) 
     return EINVAL;
@@ -382,23 +390,47 @@ int d = 0;
 
   for (k = 0; k < nargs; ++k)
   {
-    kaapic_arg_info_t* const ai = &ti->args[k];
-
-    const uint32_t mode  = va_arg(va_args, int);
     void* addr;
     double value;
-    if (!d) addr = va_arg(va_args, void*);
-    else {
-      value = (double)va_arg(va_args, double);
-      addr = (void*)(uintptr_t)value;
-    }
-    const uint32_t count = va_arg(va_args, int);
+    kaapic_arg_info_t* const ai = &ti->args[k];
+    const uint32_t mode  = va_arg(va_args, int);
     const uint32_t type  = va_arg(va_args, int);
+    const uint32_t count = va_arg(va_args, int);
 
     /* guard */
     if ((mode > KAAPIC_MODE_S) || (type >= KAAPIC_TYPE_ID))
       return EINVAL;
 
+    if (mode != KAAPIC_MODE_V)
+      addr = va_arg(va_args, void*);
+    else
+    {
+      switch (type) {
+        case KAAPIC_TYPE_SHORT:
+        case KAAPIC_TYPE_CHAR:
+        case KAAPIC_TYPE_INT:
+          addr = (void*)(uintptr_t)va_arg(va_args, int); break;
+        case KAAPIC_TYPE_LONG:
+          addr = (void*)(uintptr_t)va_arg(va_args, long); break;
+        case KAAPIC_TYPE_UCHAR:
+        case KAAPIC_TYPE_USHORT:
+        case KAAPIC_TYPE_UINT:
+          addr = (void*)(uintptr_t)va_arg(va_args, unsigned int); break;
+        case KAAPIC_TYPE_ULONG:
+          addr = (void*)(uintptr_t)va_arg(va_args, unsigned long); break;
+        case KAAPIC_TYPE_FLOAT:
+        case KAAPIC_TYPE_DOUBLE:
+          value = va_arg(va_args, double); 
+          addr = (void*)(uintptr_t)value;
+          break;
+        case KAAPIC_TYPE_PTR:
+        case KAAPIC_TYPE_ID:
+          addr = (void*)va_arg(va_args, void*); break;
+        default:
+          break;
+      }
+    }
+    
     ai->mode   = modec2modek[mode];
     wordsize   = wordsize_type[type];
     ai->format = format_type[type];

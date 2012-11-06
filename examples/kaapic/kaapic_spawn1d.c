@@ -44,7 +44,7 @@
 #include <stdio.h>
 #include "kaapic.h"
 
-void body(int n, int* result)
+void body(double n, double* result)
 {
   *result = n;
 }
@@ -52,7 +52,7 @@ void body(int n, int* result)
 
 int main()
 {
-  int result;
+  double result;
   kaapic_spawn_attr_t attr;
   
   kaapic_init(KAAPIC_START_ONLY_MAIN);
@@ -66,15 +66,15 @@ int main()
   kaapic_spawn(&attr, 
       2,     /* number of arguments */
       body,  /* the entry point for the task */
-      KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)129,
-      KAAPIC_MODE_W, KAAPIC_TYPE_INT, 1, &result
+      KAAPIC_MODE_V, KAAPIC_TYPE_DOUBLE, 1, (double)129,
+      KAAPIC_MODE_W, KAAPIC_TYPE_DOUBLE, 1, &result
   );
 
   kaapic_sync();
   
   kaapic_end_parallel (KAAPIC_FLAG_DEFAULT);
 
-  printf("The result is : %i\n", result );
+  printf("The result is : %f\n", result );
   
   kaapic_finalize();
   return 0;

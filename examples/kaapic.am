@@ -6,7 +6,7 @@
 ##
 CBLAS_WARNING2=
 if KAAPI_API_KAAPIC
-KAAPIC_PRGS=foreach_kaapic foreach_vtk foreach_double_kaapic kaapic_spawn1 kaapic_spawn2 
+KAAPIC_PRGS=foreach_kaapic foreach_vtk foreach_double_kaapic kaapic_spawn1 kaapic_spawn1d kaapic_spawn2 
 if KAAPI_HAVE_CBLAS
 KAAPIC_PRGS+=matcholesky_bloc_kaapic
 else
@@ -31,6 +31,7 @@ foreach_kaapic_SOURCES=kaapic/foreach_kaapic.c
 foreach_vtk_SOURCES=kaapic/foreach_vtk.c
 foreach_double_kaapic_SOURCES=kaapic/foreach_double_kaapic.c
 kaapic_spawn1_SOURCES=kaapic/kaapic_spawn1.c
+kaapic_spawn1d_SOURCES=kaapic/kaapic_spawn1d.c
 kaapic_spawn2_SOURCES=kaapic/kaapic_spawn2.c
 matcholesky_bloc_kaapic_SOURCES=kaapic/matcholesky_bloc_kaapic.c
 
@@ -53,6 +54,11 @@ kaapic_spawn1_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
 kaapic_spawn1_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
 kaapic_spawn1_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
 kaapic_spawn1_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm
+
+kaapic_spawn1d_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
+kaapic_spawn1d_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
+kaapic_spawn1d_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
+kaapic_spawn1d_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm
 
 kaapic_spawn2_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
 kaapic_spawn2_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
