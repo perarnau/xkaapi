@@ -52,7 +52,7 @@
 
 /* 
 */
-void kaapi_staticschedtask_body_gen( 
+static void kaapi_staticschedtask_body_gen( 
     void* sp, 
     kaapi_thread_t* uthread, 
     kaapi_task_t* pc,

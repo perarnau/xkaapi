@@ -407,20 +407,20 @@ extern struct kaapi_format_t* kaapi_double_format;
 extern struct kaapi_format_t* kaapi_longdouble_format;
 extern struct kaapi_format_t* kaapi_voidp_format;
 
-extern struct kaapi_format_t* get_kaapi_char_format();
-extern struct kaapi_format_t* get_kaapi_short_format();
-extern struct kaapi_format_t* get_kaapi_int_format();
-extern struct kaapi_format_t* get_kaapi_long_format();
-extern struct kaapi_format_t* get_kaapi_longlong_format();
-extern struct kaapi_format_t* get_kaapi_uchar_format();
-extern struct kaapi_format_t* get_kaapi_ushort_format();
-extern struct kaapi_format_t* get_kaapi_uint_format();
-extern struct kaapi_format_t* get_kaapi_ulong_format();
-extern struct kaapi_format_t* get_kaapi_ulonglong_format();
-extern struct kaapi_format_t* get_kaapi_float_format();
-extern struct kaapi_format_t* get_kaapi_double_format();
-extern struct kaapi_format_t* get_kaapi_longdouble_format();
-extern struct kaapi_format_t* get_kaapi_voidp_format();
+extern struct kaapi_format_t* get_kaapi_char_format(void);
+extern struct kaapi_format_t* get_kaapi_short_format(void);
+extern struct kaapi_format_t* get_kaapi_int_format(void);
+extern struct kaapi_format_t* get_kaapi_long_format(void);
+extern struct kaapi_format_t* get_kaapi_longlong_format(void);
+extern struct kaapi_format_t* get_kaapi_uchar_format(void);
+extern struct kaapi_format_t* get_kaapi_ushort_format(void);
+extern struct kaapi_format_t* get_kaapi_uint_format(void);
+extern struct kaapi_format_t* get_kaapi_ulong_format(void);
+extern struct kaapi_format_t* get_kaapi_ulonglong_format(void);
+extern struct kaapi_format_t* get_kaapi_float_format(void);
+extern struct kaapi_format_t* get_kaapi_double_format(void);
+extern struct kaapi_format_t* get_kaapi_longdouble_format(void);
+extern struct kaapi_format_t* get_kaapi_voidp_format(void);
 /*@}*/
 
 
