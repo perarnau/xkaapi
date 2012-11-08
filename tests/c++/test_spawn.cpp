@@ -41,30 +41,47 @@
 ** terms.
 ** 
 */
-#include "kaapi++"
 #include "test_main.h"
-#include <iostream>
-
-
-struct MyTask1 : public ka::Task<2>::Signature<unsigned long,double**>{};
-
-template<>
-struct TaskBodyCPU<MyTask1>
-{
-	void operator()(unsigned long a, double** b )
-	{ 
-    std::cout << "Ptr:" << b << " diff:" << ((char*)b) - ((char*)a) << std::endl;
-  }
-};
+#include "test_task.h"
+#include "kaapi++"
 
 /* Main of the program
 */
 void doit::operator()(int argc, char** argv )
 {
-  double** d;
-  int i;
-  
-  d = new double*[2];
-  
-  ka::Spawn<MyTask1>()( (unsigned long)d, d );
+   /* rpwp -> all other modes */
+   ka::pointer<int> p1 = ka::Alloca<int>(1);
+   ka::Spawn<TaskR<int> >()(p1);
+   ka::Spawn<TaskW<int> >()(p1);
+   ka::Spawn<TaskRW<int> >()(p1);
+   ka::Spawn<TaskRp<int> >()(p1);
+   ka::Spawn<TaskWp<int> >()(p1);
+   ka::Spawn<TaskRpWp<int> >()(p1);
+
+   /* rpwp -> all other modes */
+   ka::pointer_rpwp<int> p2 = ka::Alloca<int>(1);
+   ka::Spawn<TaskR<int> >()(p2);
+   ka::Spawn<TaskW<int> >()(p2);
+   ka::Spawn<TaskRW<int> >()(p2);
+   ka::Spawn<TaskRp<int> >()(p2);
+   ka::Spawn<TaskWp<int> >()(p2);
+   ka::Spawn<TaskRpWp<int> >()(p2);
+
+   /* rp -> r / rp */
+   ka::pointer_rp<int> p3 = ka::Alloca<int>(1);
+   ka::Spawn<TaskR<int> >()(p3);
+   ka::Spawn<TaskRp<int> >()(p3);
+
+   /* wp -> w / wp */
+   ka::pointer_wp<int> p4 = ka::Alloca<int>(1);
+   ka::Spawn<TaskW<int> >()(p4);
+   ka::Spawn<TaskWp<int> >()(p4);
+
+   /* r -> r */
+   ka::pointer_r<int> p5 = ka::Alloca<int>(1);
+   ka::Spawn<TaskR<int> >()(p5);
+
+   /* w -> w, only if terminal */ 
+   ka::pointer_w<int> p6 = ka::Alloca<int>(1);
+   ka::Spawn<TaskW<int> >()(p6);
 }
