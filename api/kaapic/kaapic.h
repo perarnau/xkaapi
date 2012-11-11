@@ -75,9 +75,27 @@ enum kaapic_mode
   KAAPIC_MODE_R = 0,
   KAAPIC_MODE_W = 1,
   KAAPIC_MODE_RW= 2,
+  KAAPIC_MODE_X = KAAPIC_MODE_RW,
   KAAPIC_MODE_CW= 3,
   KAAPIC_MODE_V = 4,
-  KAAPIC_MODE_S = 5
+  KAAPIC_MODE_T = 5,  /* temporary */
+  KAAPIC_MODE_S = 6   /* stack */
+};
+
+
+enum kaapic_reducop_t
+{
+  KAAPIC_REDOP_VOID = 0,
+  KAAPIC_REDOP_PLUS = 1,
+  KAAPIC_REDOP_MUL  = 2,
+  KAAPIC_REDOP_MINUS= 3,
+  KAAPIC_REDOP_AND  = 4, /* & */
+  KAAPIC_REDOP_OR   = 5, /* | */
+  KAAPIC_REDOP_XOR  = 6, /* ^ */
+  KAAPIC_REDOP_LAND = 7, /* && */
+  KAAPIC_REDOP_LOR  = 8, /* || */
+  KAAPIC_REDOP_MAX  = 9, 
+  KAAPIC_REDOP_MIN  = 10 
 };
 
 enum kaapic_init_flag {

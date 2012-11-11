@@ -44,6 +44,8 @@
 #include "kaapic_impl.h"
 #include <stdarg.h>
 #include <string.h>
+#include <limits.h>
+#include <float.h>
 
 
 
@@ -92,7 +94,8 @@ static const kaapi_access_mode_t modec2modek[] =
   KAAPI_ACCESS_MODE_RW,      /* KAAPIC_MODE_RW */
   KAAPI_ACCESS_MODE_CW,      /* KAAPIC_MODE_CW */
   KAAPI_ACCESS_MODE_V,       /* KAAPIC_MODE_V */
-  KAAPI_ACCESS_MODE_SCRATCH  /* KAAPIC_MODE_S */
+  KAAPI_ACCESS_MODE_SCRATCH, /* KAAPIC_MODE_T */
+  KAAPI_ACCESS_MODE_STACK    /* KAAPIC_MODE_S */
 };
 
 /* extern function, required by kaapif_spawn */
@@ -115,7 +118,7 @@ void kaapic_dfg_body_scratch(void* p, kaapi_thread_t* t)
   kaapi_processor_t* kproc = 0;
   for (int i=0; i<nargs; ++i)
   {
-    if (ti->args[i].mode & KAAPI_ACCESS_MODE_S)
+    if (ti->args[i].u.mode & KAAPI_ACCESS_MODE_T)
     {
       if (kproc == 0) kproc = kaapi_get_current_processor();
       size_t szarg = kaapi_memory_view_size(&ti->args[i].view);
@@ -132,7 +135,7 @@ static void* get_arg_wh
 {
   const kaapic_arg_info_t* const ai = &ti->args[i];
 
-  if (ai->mode != KAAPI_ACCESS_MODE_V)
+  if (ai->u.mode != KAAPI_ACCESS_MODE_V)
   {
     const kaapi_data_t* const gd = (kaapi_data_t*)ai->access.data;
     return (void*)gd->ptr.ptr;
@@ -161,7 +164,7 @@ static void kaapic_dfg_body_wh_scratch(void* p, kaapi_thread_t* t, kaapi_task_t*
   kaapi_processor_t* kproc = 0;
   for (int i=0; i<nargs; ++i)
   {
-    if (ti->args[i].mode & KAAPI_ACCESS_MODE_S)
+    if (ti->args[i].u.mode & KAAPI_ACCESS_MODE_T)
     {
       if (kproc == 0) kproc = kaapi_get_current_processor();
       size_t szarg = kaapi_memory_view_size(&ti->args[i].view);
@@ -174,7 +177,6 @@ static void kaapic_dfg_body_wh_scratch(void* p, kaapi_thread_t* t, kaapi_task_t*
 }
 
 /* format definition of C task */
-
 static size_t kaapic_taskformat_get_count_params(
  const struct kaapi_format_t* f,
  const void* p
@@ -191,7 +193,7 @@ static kaapi_access_mode_t kaapic_taskformat_get_mode_param(
 )
 {
   const kaapic_task_info_t* const ti = p;
-  const kaapi_access_mode_t m = ti->args[i].mode;
+  const kaapi_access_mode_t m = ti->args[i].u.mode;
   return m;
 }
 
@@ -202,7 +204,7 @@ static void* kaapic_taskformat_get_off_param(
 )
 {
   const kaapic_task_info_t* const ti = p;
-  void* off = ti->args[i].access.data;
+  void* off = (void*)&(ti->args[i].access.data);
   return off;
 }
 
@@ -260,6 +262,122 @@ static void kaapic_taskformat_set_view_param(
   ti->args[i].view = *v;
 }
 
+#define _KAAPIC_DECLNAME_REDOP(name,type) _kaapic_redop_##name
+#define _KAAPIC_DECLNAME_REDINIT(name,type) _kaapic_redinit_##name
+
+
+#define _KAAPIC_DECL_REDOP(name, type, LMAX, LMIN) \
+static void _KAAPIC_DECLNAME_REDOP(name,type)( int op, void* p, const void* q) \
+{\
+  type* r = (type*)p; \
+  const type* d = (const type*)q; \
+  switch (op) {\
+    case KAAPIC_REDOP_PLUS : *r += *d; break; \
+    case KAAPIC_REDOP_MUL  : *r *= *d; break; \
+    case KAAPIC_REDOP_MINUS: *r -= *d; break; \
+    case KAAPIC_REDOP_AND  : *r &= *d; break; \
+    case KAAPIC_REDOP_OR   : *r |= *d; break; \
+    case KAAPIC_REDOP_XOR  : *r ^= *d; break; \
+    case KAAPIC_REDOP_LAND : *r = *r && *d; break; \
+    case KAAPIC_REDOP_LOR  : *r = *r || *d; break; \
+    case KAAPIC_REDOP_MAX  : *r = (*r < *d ? *d : *r); break; \
+    case KAAPIC_REDOP_MIN  : *r = (*r > *d ? *d : *r); break; \
+    default:\
+      kaapi_assert_m(0, "[kaapic]: invalid reduction operator");\
+  };\
+}\
+static void _KAAPIC_DECLNAME_REDINIT(name,type)( int op, void* p)\
+{\
+  type* r = (type*)p; \
+  switch (op) {\
+    case KAAPIC_REDOP_PLUS : *r = 0; break; \
+    case KAAPIC_REDOP_MUL  : *r = 1; break; \
+    case KAAPIC_REDOP_MINUS: *r = 0; break; \
+    case KAAPIC_REDOP_AND  : *r = ~0; break; \
+    case KAAPIC_REDOP_OR   : *r = 0; break; \
+    case KAAPIC_REDOP_XOR  : *r = 0; break; \
+    case KAAPIC_REDOP_LAND : *r = 1; break; \
+    case KAAPIC_REDOP_LOR  : *r = 0; break; \
+    case KAAPIC_REDOP_MAX  : *r = LMIN; break; \
+    case KAAPIC_REDOP_MIN  : *r = LMAX; break; \
+    default:\
+      kaapi_assert_m(0, "[kaapic]: invalid reduction operator");\
+  };\
+}
+
+#define _KAAPIC_DECL_REDOPF(name, type, LMAX, LMIN) \
+static void _KAAPIC_DECLNAME_REDOP(name,type)( int op, void*p, const void* q) \
+{\
+  type* r = (type*)p; \
+  const type* d = (const type*)q; \
+  switch (op) {\
+    case KAAPIC_REDOP_PLUS : *r += *d; break; \
+    case KAAPIC_REDOP_MUL  : *r *= *d; break; \
+    case KAAPIC_REDOP_MINUS: *r -= *d; break; \
+    case KAAPIC_REDOP_LAND : *r = *r && *d; break; \
+    case KAAPIC_REDOP_LOR  : *r = *r || *d; break; \
+    case KAAPIC_REDOP_MAX  : *r = (*r < *d ? *d : *r); break; \
+    case KAAPIC_REDOP_MIN  : *r = (*r > *d ? *d : *r); break; \
+    default:\
+      kaapi_assert_m(0, "[kaapic]: invalid reduction operator");\
+  };\
+}\
+static void _KAAPIC_DECLNAME_REDINIT(name,type)( int op, void* p)\
+{\
+  type* r = (type*)p; \
+  switch (op) {\
+    case KAAPIC_REDOP_PLUS : *r = 0; break; \
+    case KAAPIC_REDOP_MUL  : *r = 1; break; \
+    case KAAPIC_REDOP_MINUS: *r = 0; break; \
+    case KAAPIC_REDOP_LAND : *r = 1; break; \
+    case KAAPIC_REDOP_LOR  : *r = 0; break; \
+    case KAAPIC_REDOP_MAX  : *r = LMIN; break; \
+    case KAAPIC_REDOP_MIN  : *r = LMAX; break; \
+    default:\
+      kaapi_assert_m(0, "[kaapic]: invalid reduction operator");\
+  };\
+}
+
+_KAAPIC_DECL_REDOP(char,char,CHAR_MAX,CHAR_MIN)
+_KAAPIC_DECL_REDOP(short,short,SHRT_MAX, SHRT_MIN)
+_KAAPIC_DECL_REDOP(int,int,INT_MAX, INT_MIN)
+_KAAPIC_DECL_REDOP(long,long,LONG_MAX, LONG_MIN)
+_KAAPIC_DECL_REDOP(uchar,unsigned char,UCHAR_MAX, 0)
+_KAAPIC_DECL_REDOP(ushort,unsigned short, USHRT_MAX, 0)
+_KAAPIC_DECL_REDOP(uint,unsigned int, UINT_MAX, 0)
+_KAAPIC_DECL_REDOP(ulong,unsigned long, ULONG_MAX, 0)
+_KAAPIC_DECL_REDOPF(float,float, FLT_MAX, FLT_MIN)
+_KAAPIC_DECL_REDOPF(double,double, DBL_MAX, DBL_MIN)
+
+typedef void (*_kaapic_redop_func_t)(int op, void*, const void*);
+
+_kaapic_redop_func_t all_redops[] = {
+  _KAAPIC_DECLNAME_REDOP(char,char),
+  _KAAPIC_DECLNAME_REDOP(short,short),
+  _KAAPIC_DECLNAME_REDOP(int,int),
+  _KAAPIC_DECLNAME_REDOP(long,long),
+  _KAAPIC_DECLNAME_REDOP(uchar,unsigned char),
+  _KAAPIC_DECLNAME_REDOP(ushort,unsigned short),
+  _KAAPIC_DECLNAME_REDOP(uint,unsigned int),
+  _KAAPIC_DECLNAME_REDOP(ulong,unsigned long),
+  _KAAPIC_DECLNAME_REDOP(float,float),
+  _KAAPIC_DECLNAME_REDOP(double,double)  
+};
+
+typedef void (*_kaapic_redinit_func_t)(int op, void*);
+_kaapic_redinit_func_t all_redinits[] = {
+  _KAAPIC_DECLNAME_REDINIT(char,char),
+  _KAAPIC_DECLNAME_REDINIT(short,short),
+  _KAAPIC_DECLNAME_REDINIT(int,int),
+  _KAAPIC_DECLNAME_REDINIT(long,long),
+  _KAAPIC_DECLNAME_REDINIT(uchar,unsigned char),
+  _KAAPIC_DECLNAME_REDINIT(ushort,unsigned short),
+  _KAAPIC_DECLNAME_REDINIT(uint,unsigned int),
+  _KAAPIC_DECLNAME_REDINIT(ulong,unsigned long),
+  _KAAPIC_DECLNAME_REDINIT(float,float),
+  _KAAPIC_DECLNAME_REDINIT(double,double)  
+};
+
 __attribute__((unused)) 
 static void kaapic_taskformat_reducor
 (
@@ -269,7 +387,11 @@ static void kaapic_taskformat_reducor
  const void* q
 )
 {
-  kaapi_abort();
+  const kaapic_task_info_t* const ti = p;
+  const kaapic_arg_info_t* argi = &ti->args[i];
+  kaapi_assert_debug( argi->u.type <= KAAPIC_TYPE_DOUBLE );
+  
+  (*all_redops[argi->u.type])(argi->u.redop, p, q);
 }
 
 __attribute__((unused)) 
@@ -281,7 +403,11 @@ static void kaapic_taskformat_redinit
  void* p
 )
 {
-  kaapi_abort();
+  const kaapic_task_info_t* const ti = p;
+  const kaapic_arg_info_t* argi = &ti->args[i];
+  kaapi_assert_debug( argi->u.type <= KAAPIC_TYPE_DOUBLE );
+  
+  (*all_redinits[argi->u.type])(argi->u.redop, p);
 }
 
 __attribute__((unused))
@@ -365,8 +491,10 @@ int kaapic_spawn_ti(
    New parsing of arguments is :
       - MODE, TYPE, count, data
    The old one parse the type after the data which impose sever restriction for the
-   C API when pass by value argument are
-      
+   C API when pass by value argument are floating point value.
+   
+   Because the task body call the user entry points, all access modes are the following:
+   -    
 */
 int kaapic_spawn(const kaapic_spawn_attr_t* attr, int32_t nargs, ...)
 {
@@ -375,10 +503,25 @@ int kaapic_spawn(const kaapic_spawn_attr_t* attr, int32_t nargs, ...)
   va_list va_args;
   size_t wordsize;
   unsigned int k;
+  int redop;
+  void* addr;
+  union {
+    int  i;
+    unsigned int ui;
+    long l;
+    unsigned long ul;
+    double d;
+    void* p;
+    uintptr_t uip;
+  } value;
+
   int scratch_arg = 0;
 
-  if (nargs > KAAPIC_MAX_ARGS) 
+  if (nargs > KAAPIC_MAX_ARGS)
+  {
+    KAAPI_DEBUG_INST(fprintf(stderr,"[kaapic_spawn] to many arguments\n");)
     return EINVAL;
+  }
 
   va_start(va_args, nargs);
     
@@ -390,16 +533,37 @@ int kaapic_spawn(const kaapic_spawn_attr_t* attr, int32_t nargs, ...)
 
   for (k = 0; k < nargs; ++k)
   {
-    void* addr;
-    double value;
+    value.uip = 0UL;
+    redop = KAAPIC_REDOP_VOID;
     kaapic_arg_info_t* const ai = &ti->args[k];
-    const uint32_t mode  = va_arg(va_args, int);
-    const uint32_t type  = va_arg(va_args, int);
-    const uint32_t count = va_arg(va_args, int);
 
-    /* guard */
-    if ((mode > KAAPIC_MODE_S) || (type >= KAAPIC_TYPE_ID))
+    /* parse arg */
+    const int mode  = va_arg(va_args, int);
+    if ((mode > KAAPIC_MODE_S) || (mode <0))
+    {
+      KAAPI_DEBUG_INST(fprintf(stderr,"[kaapic_spawn] invalid 'mode' argument\n");)
       return EINVAL;
+    }
+    
+    if (mode == KAAPIC_MODE_CW)
+    {
+      redop = va_arg(va_args, int);
+      if ((redop >KAAPIC_REDOP_MIN) || (redop <=0))
+      {
+        KAAPI_DEBUG_INST(fprintf(stderr,"[kaapic_spawn] invalid reduction operator\n");)
+        return EINVAL;
+      }
+    }
+
+    const int type  = va_arg(va_args, int);
+    if ((type >= KAAPIC_TYPE_ID) || (type <0))
+    {
+      KAAPI_DEBUG_INST(fprintf(stderr,"[kaapic_spawn] invalid 'type' argument\n");)
+      return EINVAL;
+    }
+
+    const int count = va_arg(va_args, int);
+
 
     if (mode != KAAPIC_MODE_V)
       addr = va_arg(va_args, void*);
@@ -409,42 +573,52 @@ int kaapic_spawn(const kaapic_spawn_attr_t* attr, int32_t nargs, ...)
         case KAAPIC_TYPE_SHORT:
         case KAAPIC_TYPE_CHAR:
         case KAAPIC_TYPE_INT:
-          addr = (void*)(uintptr_t)va_arg(va_args, int); break;
+          value.i  = va_arg(va_args, int); 
+          break;
         case KAAPIC_TYPE_LONG:
-          addr = (void*)(uintptr_t)va_arg(va_args, long); break;
+          value.l = va_arg(va_args, long); 
+          break;
         case KAAPIC_TYPE_UCHAR:
         case KAAPIC_TYPE_USHORT:
         case KAAPIC_TYPE_UINT:
-          addr = (void*)(uintptr_t)va_arg(va_args, unsigned int); break;
+          value.ui = va_arg(va_args, unsigned int); 
+          break;
         case KAAPIC_TYPE_ULONG:
-          addr = (void*)(uintptr_t)va_arg(va_args, unsigned long); break;
-        case KAAPIC_TYPE_FLOAT:
+          value.ul = va_arg(va_args, unsigned long);
+          break;
+        case KAAPIC_TYPE_FLOAT: /* the callee will receive a pointer to the value for double value */
         case KAAPIC_TYPE_DOUBLE:
-          value = va_arg(va_args, double); 
-          addr = (void*)(uintptr_t)value;
+          value.d = va_arg(va_args, double);
           break;
         case KAAPIC_TYPE_PTR:
         case KAAPIC_TYPE_ID:
-          addr = (void*)va_arg(va_args, void*); break;
+          value.p = (void*)va_arg(va_args, void*); break;
         default:
           break;
       }
     }
     
-    ai->mode   = modec2modek[mode];
+    ai->u.mode   = modec2modek[mode];
+    ai->u.type   = type;
+    ai->u.redop  = redop;
     wordsize   = wordsize_type[type];
     ai->format = format_type[type];
     
-    kaapi_access_init( &ai->access, addr );
-
     if (mode == KAAPIC_MODE_V)
     {
-      /* can only pass exactly by value the size of a uintptr_t */
+      /* can only pass exactly by value the size of a uintptr_t 
+         - should be extended to recopy into the thread stack
+      */
       kaapi_assert_debug( wordsize*count <= sizeof(uintptr_t) );
-      memcpy(&ai->access.version, &addr, wordsize*count );  /* but count == 1 here */
+      addr = &ai->access.version; 
+      kaapi_access_init( &ai->access, addr );
+      memcpy(addr, &value, wordsize*count );  /* but count == 1 here */
     }
-    if (mode == KAAPIC_MODE_S)
-      scratch_arg = 1;
+    else {
+      kaapi_access_init( &ai->access, addr );
+      if (mode == KAAPIC_MODE_T)
+        scratch_arg = 1;
+    }
 
     ai->view = kaapi_memory_view_make1d(count, wordsize);
   }
