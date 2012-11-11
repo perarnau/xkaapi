@@ -43,7 +43,7 @@
 */
 #include "kaapi_impl.h"
 
-#define KAAPI_USE_AGGREGATION
+///#define KAAPI_USE_AGGREGATION
 
 #if 0
 

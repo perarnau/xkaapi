@@ -47,6 +47,6 @@ int main(int argc, char** argv)
     }
   }
   t1 = kaapi_get_elapsedtime();
-  printf("Fibo(%i) = %li *** Time(s): %e\n", n, result/niter, (t1-t0)/(double)niter );
+  printf("Fibo(%i) = %li \n *** Time(s): %e\n", n, result/niter, (t1-t0)/(double)niter );
   return 0;
 }
