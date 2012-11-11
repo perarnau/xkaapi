@@ -42,28 +42,36 @@
 ** 
 */
 #include "test_main.h"
+#include "test_task.h"
 #include "kaapi++"
-#include <iostream>
 
 
-struct MyTask1 : public ka::Task<2>::Signature<unsigned long,double**>{};
+/* */
+template<class T>
+struct TaskS : public ka::Task<2>::Signature<int, ka::ST<T> > {};
 
-template<>
-struct TaskBodyCPU<MyTask1>
-{
-	void operator()(unsigned long a, double** b )
-	{ 
-    std::cout << "Ptr:" << b << " diff:" << ((char*)b) - ((char*)a) << std::endl;
+template<class T>
+struct TaskBodyCPU<TaskS<T> >  {
+  void operator() ( int level, ka::pointer_stack<T> s )
+  { 
+    if (level >0)
+    {
+      /* simulate do recursive computation on s */
+      ka::Spawn<TaskS<int> >()(level -1, s);
+
+      /* simulate do recursive computation on s */
+      ka::Spawn<TaskS<int> >()(level -1, s);
+    }
   }
 };
+
+
 
 /* Main of the program
 */
 void doit::operator()(int argc, char** argv )
 {
-  double** d;
-  
-  d = new double*[2];
-  
-  ka::Spawn<MyTask1>()( (unsigned long)d, d );
+   /* rpwp -> all other modes */
+   ka::pointer<int> p1 = 0;
+   ka::Spawn<TaskS<int> >()(20, p1);
 }

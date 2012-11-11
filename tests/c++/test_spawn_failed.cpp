@@ -50,13 +50,13 @@
 */
 void doit::operator()(int argc, char** argv )
 {
-   ka::pointer<int> p1;
-   ka::pointer_rpwp<int> p2;
-   ka::pointer_rp<int> p3;
-   ka::pointer_wp<int> p4;
-   ka::pointer_r<int> p5;
-   ka::pointer_w<int> p6;
-   ka::pointer_rw<int> p7;
+   ka::pointer<int> p1 = 0;
+   ka::pointer_rpwp<int> p2 = 0;
+   ka::pointer_rp<int> p3 = 0;
+   ka::pointer_wp<int> p4 = 0;
+   ka::pointer_r<int> p5 = 0;
+   ka::pointer_w<int> p6 = 0;
+   ka::pointer_rw<int> p7 = 0;
 
    /* failed Rp,R -> W*/
    ka::Spawn<TaskW<int> >()(p2);
