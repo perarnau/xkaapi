@@ -11,14 +11,18 @@
 
       typedef KAAPI_FORMATCLOSURE(KAAPI_NUMBER_PARAMS)<TASK, M4_PARAM(`TraitFormalParam$1_t ', `', `,')> KaapiFormatTask_t;
       
+/* Comment this line that disable verification when compiled with --enable_mode=release 
 #if !defined(KAAPI_NDEBUG)
+*/
       M4_PARAM(`typedef typename TraitFormalParam$1_t::mode_t mode_formal$1_t;
       ', `', `')
       M4_PARAM(`typedef typename TraitFormalParam<E$1>::mode_t mode_effective$1_t;
       ', `', `')
       M4_PARAM(`WARNING_UNDEFINED_PASSING_RULE<mode_effective$1_t, mode_formal$1_t, E$1, F$1, FOR_ARG<$1>, FOR_TASKNAME<TASK> >::IS_COMPATIBLE();
       ', `', `')
+/* See above
 #endif
+*/
 
       kaapi_task_t* clo = kaapi_thread_toptask( _thread );
       if (KaapiFormatTask_t::default_bodies.cpu_body != 0)

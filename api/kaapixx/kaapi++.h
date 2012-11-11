@@ -423,6 +423,8 @@ namespace ka {
   struct READWRITE_P { enum {value = KAAPI_ACCESS_MODE_RW |KAAPI_ACCESS_MASK_MODE_P}; };
   struct C_WRITE_P   { enum {value = KAAPI_ACCESS_MODE_CW |KAAPI_ACCESS_MASK_MODE_P}; };
   struct IC_WRITE_P  { enum {value = KAAPI_ACCESS_MODE_ICW|KAAPI_ACCESS_MASK_MODE_P}; };
+  struct TMP_MODE    { enum {value = KAAPI_ACCESS_MODE_SCRATCH}; };
+  struct STACK_MODE  { enum {value = KAAPI_ACCESS_MODE_STACK}; };
 
   /* internal name */
   typedef VALUE_MODE  ACCESS_MODE_V;
@@ -435,20 +437,24 @@ namespace ka {
   typedef WRITE_P     ACCESS_MODE_WP;
   typedef C_WRITE_P   ACCESS_MODE_CWP;
   typedef READWRITE_P ACCESS_MODE_RPWP;
+  typedef TMP_MODE    ACCESS_MODE_SCRATCH;
+  typedef STACK_MODE  ACCESS_MODE_STACK;
   
   template<class Mode>
   struct TYPEMODE2VALUE{};
   
-  template<> struct TYPEMODE2VALUE<ACCESS_MODE_V>    { enum { value = ACCESS_MODE_V::value}; };
-  template<> struct TYPEMODE2VALUE<ACCESS_MODE_R>    { enum { value = ACCESS_MODE_R::value}; };
-  template<> struct TYPEMODE2VALUE<ACCESS_MODE_W>    { enum { value = ACCESS_MODE_W::value}; };
-  template<> struct TYPEMODE2VALUE<ACCESS_MODE_RW>   { enum { value = ACCESS_MODE_RW::value}; };
-  template<> struct TYPEMODE2VALUE<ACCESS_MODE_CW>   { enum { value = ACCESS_MODE_CW::value}; };
-  template<> struct TYPEMODE2VALUE<ACCESS_MODE_ICW>  { enum { value = ACCESS_MODE_ICW::value}; };
-  template<> struct TYPEMODE2VALUE<ACCESS_MODE_RP>   { enum { value = ACCESS_MODE_RP::value}; };
-  template<> struct TYPEMODE2VALUE<ACCESS_MODE_WP>   { enum { value = ACCESS_MODE_WP::value}; };
-  template<> struct TYPEMODE2VALUE<ACCESS_MODE_RPWP> { enum { value = ACCESS_MODE_RPWP::value}; };
-  template<> struct TYPEMODE2VALUE<ACCESS_MODE_CWP>  { enum { value = ACCESS_MODE_CWP::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_V>      { enum { value = ACCESS_MODE_V::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_R>      { enum { value = ACCESS_MODE_R::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_W>      { enum { value = ACCESS_MODE_W::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_RW>     { enum { value = ACCESS_MODE_RW::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_CW>     { enum { value = ACCESS_MODE_CW::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_ICW>    { enum { value = ACCESS_MODE_ICW::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_RP>     { enum { value = ACCESS_MODE_RP::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_WP>     { enum { value = ACCESS_MODE_WP::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_RPWP>   { enum { value = ACCESS_MODE_RPWP::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_CWP>    { enum { value = ACCESS_MODE_CWP::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_STACK>  { enum { value = ACCESS_MODE_STACK::value}; };
+  template<> struct TYPEMODE2VALUE<ACCESS_MODE_SCRATCH>{ enum { value = ACCESS_MODE_SCRATCH::value}; };
   
   template<class Mode> 
   struct IsAccessMode { static const bool value = true; };
@@ -730,6 +736,10 @@ namespace ka {
   class pointer_cw;
   template<class T, typename OP=DefaultAdd<T> >
   class pointer_icw;
+  template<class T>
+  class pointer_t;
+  template<class T>
+  class pointer_stack;
 
   // --------------------------------------------------------------------
   template<class T> 
@@ -905,7 +915,7 @@ namespace ka {
     typedef pointer_r<T> Self_t;
     
     pointer_r() : base_pointer<T>() {}
-    pointer_r( value_type* ptr ) : base_pointer<T>(ptr) {}
+//    pointer_r( value_type* ptr ) : base_pointer<T>(ptr) {}
     pointer_r( const value_type* ptr ) : base_pointer<T>((T*)ptr) {}
     explicit pointer_r( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
     pointer_r( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
@@ -1053,6 +1063,31 @@ namespace ka {
   }
   
   
+  
+  // --------------------------------------------------------------------
+  template<class T>
+  class pointer_stack: public base_pointer<T> {
+  public:
+    typedef T value_type;
+    typedef size_t difference_type;
+    typedef pointer_stack<T> Self_t;
+    
+    pointer_stack() : base_pointer<T>() {}
+    pointer_stack( value_type* ptr ) : base_pointer<T>(ptr) {}
+    explicit pointer_stack( kaapi_access_t& ptr ) : base_pointer<T>(kaapi_data(value_type, &ptr)) {}
+    pointer_stack( const pointer_rpwp<T>& ptr ) : base_pointer<T>(ptr) {}
+    pointer_stack( const pointer<T>& ptr ) : base_pointer<T>(ptr) {}
+    operator value_type*() { return base_pointer<T>::ptr(); }
+    T* operator->() { return base_pointer<T>::ptr(); }
+    value_type& operator*() { return *base_pointer<T>::ptr(); }
+    value_type& operator[](int i) { return base_pointer<T>::ptr()[i]; }
+    value_type& operator[](long i) { return base_pointer<T>::ptr()[i]; }
+    value_type& operator[](difference_type i) { return base_pointer<T>::ptr()[i]; }
+    
+    KAAPI_POINTER_ARITHMETIC_METHODS
+  };
+
+
   // --------------------------------------------------------------------  
   /* here requires to distinguish pointer to object from pointer to function */
   template<class R> struct __kaapi_is_function { enum { value = false }; };
@@ -1198,6 +1233,8 @@ namespace ka {
   template<typename UserType=void, typename OpCumul = DefaultAdd<UserType> > struct CW {};
   template<typename UserType=void, typename OpCumul = DefaultAdd<UserType> > struct ICW {};
   template<typename UserType=void> struct CWP {};
+  template<typename UserType=void> struct SCRATCH {};
+  template<typename UserType=void> struct ST {};
   
   
   // --------------------------------------------------------------------
@@ -1468,7 +1505,7 @@ namespace ka {
     static void              reducor_fnc(void*, const void*) {}
     static void              redinit_fnc(void*) {}
   };
-  
+
   template<typename T>
   struct TraitFormalParam<pointer_rpwp<T> > {
     typedef T                type_t; 
@@ -1559,7 +1596,6 @@ namespace ka {
     }
   };
 
-
   template<typename T>
   struct TraitFormalParam<pointer_cwp<T> > {
     typedef T                type_t; 
@@ -1583,7 +1619,56 @@ namespace ka {
     static void              reducor_fnc(void*, const void*) {}
     static void              redinit_fnc(void* value) { }
   }; 
-  
+
+  template<typename T>
+  struct TraitFormalParam<pointer_stack<T> > { 
+    typedef T                type_t; 
+    typedef ST<T>            signature_t; 
+    typedef pointer_stack<T> formal_t; 
+    typedef ACCESS_MODE_STACK mode_t; 
+    typedef Access           type_inclosure_t;  /* could be only one pointer without version */
+    static const bool        is_static = TraitIsStatic<T>::value;
+    static const void*       ptr( const pointer_stack<T>* a ) { return a->ptr(); }
+    static pointer_stack<T>  handle2data( type_inclosure_t* a) 
+    { return (T*)__kaapi_pointer2void((kaapi_handle_t(a->data))->ptr); }
+    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
+    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static kaapi_memory_view_t get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return kaapi_memory_view_make1d( 1, sizeof(type_inclosure_t) ); }
+    static void              set_view_param( type_inclosure_t* a, unsigned int i, const kaapi_memory_view_t*  view ) 
+    { }
+    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
+    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
+    static void              reducor_fnc(void*, const void*) {}
+    static void              redinit_fnc(void*) {}
+  };
+
+
+  template<typename T>
+  struct TraitFormalParam<pointer_t<T> > { 
+    typedef T                type_t; 
+    typedef SCRATCH<T>       signature_t; 
+    typedef pointer_t<T>     formal_t; 
+    typedef ACCESS_MODE_SCRATCH mode_t; 
+    typedef Access           type_inclosure_t;  /* could be only one pointer without version */
+    static const bool        is_static = TraitIsStatic<T>::value;
+    static const void*       ptr( const pointer_t<T>* a ) { return a->ptr(); }
+    static pointer_t<T>      handle2data( type_inclosure_t* a) 
+    { return (T*)__kaapi_pointer2void((kaapi_handle_t(a->data))->ptr); }
+    static const void*       get_data   ( const type_inclosure_t* a, unsigned int i ) { return &a->data; }
+    static const void*       get_version( const type_inclosure_t* a, unsigned int i ) { return &a->version; }
+    static size_t            get_nparam ( const type_inclosure_t* a ) { return 1; }
+    static kaapi_memory_view_t get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return kaapi_memory_view_make1d( 1, sizeof(type_inclosure_t) ); }
+    static void              set_view_param( type_inclosure_t* a, unsigned int i, const kaapi_memory_view_t*  view ) 
+    { }
+    static void              get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) { *r = *a; }
+    static void              set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) { *a = *r; }
+    static void              reducor_fnc(void*, const void*) {}
+    static void              redinit_fnc(void*) {}
+  };
+    
   template<typename T>
   struct TraitFormalParam<W<T> > : public TraitFormalParam<pointer_w<T> > { };
   template<typename T>
@@ -1602,6 +1687,10 @@ namespace ka {
   struct TraitFormalParam<CW<T,OP> > : public TraitFormalParam<pointer_cw<T,OP> > { };
   template<typename T, typename OP>
   struct TraitFormalParam<ICW<T,OP> > : public TraitFormalParam<pointer_icw<T,OP> > { };
+  template<typename T>
+  struct TraitFormalParam<ST<T> > : public TraitFormalParam<pointer_stack<T> > { };
+  template<typename T>
+  struct TraitFormalParam<SCRATCH<T> > : public TraitFormalParam<pointer_t<T> > { };
 
 
   /* ------ rep of range of contiguous array of data: pointer_XX<array<dim, T> >
@@ -1949,6 +2038,69 @@ namespace ka {
   };
 
 
+  template<typename T>
+  class pointer_stack<array<1,T> > : protected array<1,T> {
+    friend class array_inclosure_t<1,T,RowMajor>;
+  public:
+    typedef T                        value_type;
+    typedef size_t                   difference_type;
+    typedef pointer_stack<array<1,T> > Self_t;
+    
+    pointer_stack() : array<1,T>() {}
+    pointer_stack( const array<1,T>& a ) : array<1,T>(a) {}
+    /* cstor call on closure creation */
+    explicit pointer_stack( array_inclosure_t<1,T,RowMajor>& a ) : array<1,T>(a) {}
+    /* use in spawn effective -> in closure */
+    operator array_inclosure_t<1,T,RowMajor>() const { return array_inclosure_t<1,T,RowMajor>(*this); }
+    
+    /* public interface */
+    array<1,T>& operator*() { return *this; }
+    array<1,T>* operator->() { return this; }
+    const array<1,T>& operator*() const { return *this; }
+    const array<1,T>* operator->() const { return this; }
+    
+    size_t size() const { return array<1,T>::size(); }
+    T* ptr() { return array<1,T>::ptr(); }
+    T* begin() { return array<1,T>::ptr(); }
+    T* end() { return array<1,T>::ptr()+array<1,T>::size(); }
+    
+    T& operator[](int i) { return array<1,T>::operator[](i); }
+    T& operator[](unsigned i)  { return array<1,T>::operator[](i); }
+    T& operator[](long i) { return array<1,T>::operator[](i); }
+    T& operator[](unsigned long i) { return array<1,T>::operator[](i); }
+    
+    T& operator()(int i)  { return array<1,T>::operator[](i); }
+    T& operator()(unsigned i)  { return array<1,T>::operator[](i); }
+    T& operator()(long i) { return array<1,T>::operator[](i); }
+    T& operator()(unsigned long i) { return array<1,T>::operator[](i); }
+    
+    Self_t operator[] (const rangeindex& r) const 
+    { return pointer_stack( array<1,T>::operator()(r) ); }
+    Self_t operator() (const rangeindex& r) const 
+    { return pointer_stack( array<1,T>::operator()(r) ); }
+  };
+  
+  /* alias: ka::range1d_cw<T> in place of pointer_cw<array<1,T> > */
+  template<typename T>
+  struct range1d_stack : public pointer_stack<array<1,T> > {
+    typedef range1d_stack<T>             Self_t;
+    
+    range1d_stack( range1d<T>& a ) : pointer_stack<array<1,T> >(a) {}
+    explicit range1d_stack( array<1,T>& a ) : pointer_stack<array<1,T> >(a) {}
+
+    /* cannot access to this operators except with full qualification ? */
+    T& operator[](int i) { return pointer_stack<array<1,T> >::operator[](i); }
+    T& operator[](unsigned i)  { return pointer_stack<array<1,T> >::operator[](i); }
+    T& operator[](long i) { return pointer_stack<array<1,T> >::operator[](i); }
+    T& operator[](unsigned long i) { return pointer_stack<array<1,T> >::operator[](i); }
+    
+    Self_t operator[] (const rangeindex& r) const 
+    { return Self_t( array<1,T>::operator()(r) ); }
+    Self_t operator() (const rangeindex& r) const 
+    { return Self_t( array<1,T>::operator()(r) ); }
+  };
+
+
   /* same for 2d range */
   /* ------ formal parameter of type _r, _w and _rw and rpwp over array */
   template<typename T, Storage2DClass S>
@@ -2277,13 +2429,13 @@ namespace ka {
 
     /* move deprecated all method on arrar rep: must use syntax range-> to 
        have access to the correct representation interface */
-__attribute__((deprecated))    
+    __attribute__((deprecated))    
     T* ptr() { return array_rep<2,T,S>::ptr(); }
-__attribute__((deprecated))    
+    __attribute__((deprecated))    
     const T* ptr() const { return array_rep<2,T,S>::ptr(); }
-__attribute__((deprecated))    
+    __attribute__((deprecated))    
     size_t dim(int i) const { return array_rep<2,T,S>::dim(i); }
-__attribute__((deprecated))    
+    __attribute__((deprecated))    
     size_t lda() const { return array_rep<2,T,S>::lda(); }
 
     range2d_icw<T,S> operator() (const rangeindex& ri, const rangeindex& rj) const 
@@ -2478,6 +2630,36 @@ __attribute__((deprecated))
     static void                         redinit_fnc(void*) {}
   };   
   
+  template<int dim, typename T, Storage2DClass S>
+  struct TraitFormalParam<pointer_stack<array<dim,T,S> > > { 
+    typedef array_inclosure_t<dim,T,S>  type_inclosure_t;
+    typedef ST<array<dim,T,S> >         signature_t; 
+    typedef pointer_stack<array<dim,T,S> > formal_t; 
+    typedef ACCESS_MODE_STACK           mode_t; 
+    typedef T                           type_t;
+    static const bool                   is_static = false;
+    static const void*                  ptr( const pointer_stack<array<dim,T,S> >* a ) { return a->ptr(); }
+    static formal_t                     handle2data( type_inclosure_t* a) 
+    { array<dim,T,S> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                            &(kaapi_handle_t(a->ptr()))->view);
+      return (formal_t)retval; 
+    }
+    static const void*                  get_data   ( const type_inclosure_t* a, unsigned int i ) { return 0; }
+    static void                         get_access ( const type_inclosure_t* a, unsigned int i, kaapi_access_t* r ) 
+    { r->data = a->ptr(); r->version = a->version; }
+    static void                         set_access ( type_inclosure_t* a, unsigned int i, const kaapi_access_t* r ) 
+    { a->setptr( (T*)r->data ); a->version = r->version; }
+    static size_t                       get_nparam( const type_inclosure_t* a ) 
+    { return 1; }
+    static kaapi_memory_view_t          get_view_param( const type_inclosure_t* a, unsigned int i ) 
+    { return a->get_view(); }
+    static void                         set_view_param( type_inclosure_t* a, unsigned int i, const kaapi_memory_view_t*  view ) 
+    { a->set_view(view); }
+    static void                         reducor_fnc(void*, const void*) {}
+    static void                         redinit_fnc(void*) {}
+  };   
+
+
   
   template<int dim, typename T, Storage2DClass S>
   struct TraitFormalParam< R<array<dim,T,S> > > : public TraitFormalParam<pointer_r<array<dim,T,S> > > {};
@@ -2491,7 +2673,8 @@ __attribute__((deprecated))
   struct TraitFormalParam< CW<array<dim,T,S> > > : public TraitFormalParam<pointer_cw<array<dim,T,S> > > {};
   template<int dim, typename T, Storage2DClass S>
   struct TraitFormalParam< ICW<array<dim,T,S> > > : public TraitFormalParam<pointer_icw<array<dim,T,S> > > {};
-  
+  template<int dim, typename T, Storage2DClass S>
+  struct TraitFormalParam< ST<array<dim,T,S> > > : public TraitFormalParam<pointer_stack<array<dim,T,S> > > {};
   template<typename T>
   struct TraitFormalParam<range1d<T> > : public TraitFormalParam<array<1,T> > { 
     typedef ACCESS_MODE_RPWP   mode_t; 
@@ -2573,6 +2756,18 @@ __attribute__((deprecated))
       return (formal_t)retval; 
     }
   };
+  template<typename T>
+  struct TraitFormalParam<range1d_stack<T> > : public TraitFormalParam<pointer_stack<array<1,T> > > {
+    typedef TraitFormalParam<pointer_stack<array<1,T> > > inherited_t;
+    typedef typename inherited_t::type_inclosure_t type_inclosure_t;
+    typedef range1d_stack<T>  formal_t; 
+    typedef ST<range1d<T> >   signature_t; 
+    static formal_t           handle2data( type_inclosure_t* a) 
+    { array<1,T> retval((T*)__kaapi_pointer2void(kaapi_handle_t(a->ptr())->ptr), 
+                          &(kaapi_handle_t(a->ptr()))->view);
+      return (formal_t)retval; 
+    }
+  };
 
   template<typename T>
   struct TraitFormalParam< R<range1d<T> > > : public TraitFormalParam<range1d_r<T> > {};
@@ -2586,6 +2781,8 @@ __attribute__((deprecated))
   struct TraitFormalParam< CW<range1d<T> > > : public TraitFormalParam<range1d_cw<T> > {};
   template<typename T>
   struct TraitFormalParam< ICW<range1d<T> > > : public TraitFormalParam<range1d_icw<T> > {};
+  template<typename T>
+  struct TraitFormalParam< ST<range1d<T> > > : public TraitFormalParam<range1d_stack<T> > {};
 
 
   template<typename T, Storage2DClass S>
@@ -3133,6 +3330,15 @@ __attribute__((deprecated))
   };
   template<class E, class F, class PARAM, class TASK>
   struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_CWP, ACCESS_MODE_CWP, E, F, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_RPWP, ACCESS_MODE_STACK, E, F, PARAM, TASK> {
+    static void IS_COMPATIBLE(){}
+  };
+  template<class E, class F, class PARAM, class TASK>
+  struct WARNING_UNDEFINED_PASSING_RULE<ACCESS_MODE_STACK, ACCESS_MODE_STACK, E, F, PARAM, TASK> {
     static void IS_COMPATIBLE(){}
   };
   

@@ -620,7 +620,7 @@ void *QUARK_Args_Pop( void *args_list, void **last_arg)
   if (arg2pop ==0) 
     arg2pop = taskarg->param;
 
-  if (arg2pop->mode & KAAPI_ACCESS_MODE_S)
+  if (arg2pop->mode & KAAPI_ACCESS_MODE_T)
   {
     /* allocate a scratch zone: freeed after task execution */
     if (arg2pop->addr.data ==0)
@@ -984,7 +984,7 @@ kaapi_access_mode_t kaapi_quark_task_format_get_mode_param(
 { 
   kaapi_quark_task_t* arg = (kaapi_quark_task_t*)sp;
 #if 0
-  if (arg->param[i].mode & KAAPI_ACCESS_MODE_S)
+  if (arg->param[i].mode & KAAPI_ACCESS_MODE_T)
     return KAAPI_ACCESS_MODE_V;
 #endif
   return arg->param[i].mode;

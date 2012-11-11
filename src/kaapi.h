@@ -317,18 +317,14 @@ extern uint64_t kaapi_get_elapsedns(void);
 /* ========================================================================= */
 /* Shared object and access mode                                             */
 /* ========================================================================= */
-/** Kaapi access mode mask
-    \ingroup DFG
-*/
-#define KAAPI_ACCESS_MASK_RIGHT_MODE   0x1f   /* 5 bits, ie bit 0, 1, 2, 3, 4, including P mode */
-#define KAAPI_ACCESS_MASK_MODE         0xf    /* without P mode */
-#define KAAPI_ACCESS_MASK_MODE_P       0x10   /* only P mode */
-#define KAAPI_ACCESS_MASK_MODE_F       0x20   /* only Fifo mode */
-
 #define KAAPI_ACCESS_MASK_MEMORY       0x20   /* memory location for the data:  */
 #define KAAPI_ACCESS_MEMORY_STACK      0x00   /* data is in the Kaapi stack */
 #define KAAPI_ACCESS_MEMORY_HEAP       0x20   /* data is in the heap */
 
+
+/** Kaapi access mode mask
+    \ingroup DFG
+*/
 /*@{*/
 typedef enum kaapi_access_mode_t {
   KAAPI_ACCESS_MODE_VOID= 0,        /* 0000 0000 : */
@@ -336,15 +332,21 @@ typedef enum kaapi_access_mode_t {
   KAAPI_ACCESS_MODE_R   = 2,        /* 0000 0010 : */
   KAAPI_ACCESS_MODE_W   = 4,        /* 0000 0100 : */
   KAAPI_ACCESS_MODE_CW  = 8,        /* 0000 1000 : */
-  KAAPI_ACCESS_MODE_P   = 16,       /* 0001 0000 : */
-  KAAPI_ACCESS_MODE_F   = 32,       /* 0010 0000 : only valid with _W or _R */
-  KAAPI_ACCESS_MODE_S   = 64,       /* 0100 0000 : for Quark support: scratch mode */
+  KAAPI_ACCESS_MODE_S   = 16,       /* 0001 0000 : stack data */
+  KAAPI_ACCESS_MODE_T   = 32,       /* 0010 0000 : for Quark support: scratch mode or temporary */
+  KAAPI_ACCESS_MODE_P   = 64,       /* 0100 0000 : */
   KAAPI_ACCESS_MODE_IP  = 128,      /* 1000 0000 : in place, for CW only */
   KAAPI_ACCESS_MODE_RW  = KAAPI_ACCESS_MODE_R|KAAPI_ACCESS_MODE_W,
-  KAAPI_ACCESS_MODE_SCRATCH = KAAPI_ACCESS_MODE_S|KAAPI_ACCESS_MODE_V,
+  KAAPI_ACCESS_MODE_SCRATCH = KAAPI_ACCESS_MODE_T|KAAPI_ACCESS_MODE_V,
+  KAAPI_ACCESS_MODE_STACK = KAAPI_ACCESS_MODE_S|KAAPI_ACCESS_MODE_P|KAAPI_ACCESS_MODE_RW,
   KAAPI_ACCESS_MODE_CWP = KAAPI_ACCESS_MODE_P|KAAPI_ACCESS_MODE_CW,
   KAAPI_ACCESS_MODE_ICW = KAAPI_ACCESS_MODE_IP|KAAPI_ACCESS_MODE_CW
 } kaapi_access_mode_t;
+
+#define KAAPI_ACCESS_MASK_RIGHT_MODE   0x7F   /* 5 bits, ie bit 0, 1, 2, 3, 4, including P mode */
+#define KAAPI_ACCESS_MASK_MODE         0x3F   /* without P mode */
+#define KAAPI_ACCESS_MASK_MODE_P       0x80   /* only P mode */
+
 /*@}*/
 
 
@@ -364,11 +366,11 @@ typedef enum kaapi_access_mode_t {
 #define KAAPI_ACCESS_IS_CUMULWRITE( m ) \
   ((m) & KAAPI_ACCESS_MODE_CW)
 
+#define KAAPI_ACCESS_IS_STACK( m ) \
+  ((m) & KAAPI_ACCESS_MODE_S)
+
 #define KAAPI_ACCESS_IS_POSTPONED( m ) \
   ((m) & KAAPI_ACCESS_MASK_MODE_P)
-
-#define KAAPI_ACCESS_IS_FIFO( m ) \
-  ((m) & KAAPI_ACCESS_MASK_MODE_F)
 
 /* W and CW */
 #define KAAPI_ACCESS_IS_ONLYWRITE( m ) \
