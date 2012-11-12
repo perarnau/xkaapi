@@ -47,6 +47,7 @@
 #include "kaapi.h"
 #include "ka_error.h"
 #include "ka_timer.h"
+#include <string.h>
 #include <vector>
 #include <typeinfo>
 #include <iterator>
