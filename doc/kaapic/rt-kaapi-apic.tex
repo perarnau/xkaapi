@@ -631,9 +631,9 @@ int kaapic_spawn_attr_destroy(kaapic_spawn_attr_t* attr)
       \noalign{\hrule height 0.1pt}
       KAAPIC\_REDOP\_LOR  & 8 & \verb+r = a || b+\\
       \noalign{\hrule height 0.1pt}
-      KAAPIC\_REDOP\_MAX  & 9 & \verb+(a<b ? b : a)+\\
+      KAAPIC\_REDOP\_MAX  & 9 & \verb+r = (a<b ? b : a)+\\
       \noalign{\hrule height 0.1pt}
-      KAAPIC\_REDOP\_MIN  & 10 & \verb+(a<b ? a : b)+\\
+      KAAPIC\_REDOP\_MIN  & 10 & \verb+r = (a<b ? a : b)+\\
       \hline
     \end{tabular}
     \end{center}
@@ -717,21 +717,23 @@ KAAPIC\_MODE\_V & \verb+type+ &   \verb+type*+ or \verb+const type*+\\
   #include "kaapic.h"
 
   /* computation task entry point */
-  void fibonacci(int n, int* result)
+  void fibonacci(int* n, int* result)
   {
     /* task user specific code */
-    if (n <2)
-      *result = n;
+    if (*n <2)
+      *result = *n;
      else 
      {
+        /* temporary data for recursive calls */
         int result1, result2;
+
         kaapic_spawn( 2, fibonacci, 
-          KAAPIC_MODE_V, n-1, 1, KAAPIC_TYPE_INT
-          KAAPIC_MODE_W, &result1, 1,  KAAPIC_TYPE_INT
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, *n-1, 
+          KAAPIC_MODE_W, KAAPIC_TYPE_INT, 1, &result1
         );
         kaapic_spawn( 2, fibonacci, 
-          KAAPIC_MODE_V, n-2, 1, KAAPIC_TYPE_INT
-          KAAPIC_MODE_W, &result2, 1,  KAAPIC_TYPE_INT
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, *n-2,
+          KAAPIC_MODE_W, KAAPIC_TYPE_INT, 1, &result2
         );
         kaapic_sync();
         *result = result1 + result2;
@@ -744,21 +746,66 @@ KAAPIC\_MODE\_V & \verb+type+ &   \verb+type*+ or \verb+const type*+\\
     int result= 0;
     int err = kaapic_init(KAAPIC_START_ONLY_MAIN);
 
-    start = kaapi_get_time(); 
-    /* apply body on array[0..size-1] */
     kaapic_spawn( 2, fibonacci, 
-        KAAPIC_MODE_V, n, 1, KAAPIC_TYPE_INT
-        KAAPIC_MODE_W, &result, 1,  KAAPIC_TYPE_INT
+        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, n,
+        KAAPIC_MODE_W, KAAPIC_TYPE_INT, 1, &result
     );
-    stop = kaapi_get_time(); 
-
-    printf("Time : %f (s)\n", stop-start );
+    kaapic_sync();
     kaapic_finalize();
   }
     \end{code}
   \end{example}
 \pagebreak
-  \begin{example}\label{fibo}
+
+  \begin{example}\label{fibo_cw}
+    \paragraph{}
+    Refer to examples/kaapic/dfg subdirectory in sources\\
+    
+    The next example compute the $n$-th Fibonacci number using cumulative write access.
+    \begin{code}
+  #include "kaapic.h"
+
+  /* computation task entry point */
+  void fibonacci(int* n, int* result)
+  {
+    /* task user specific code */
+    if (*n <2)
+      *result += *n;
+     else 
+     {
+        kaapic_spawn(0, 2, fibonacci, 
+           KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, *n-1, 
+           KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, 
+                 KAAPIC_TYPE_INT, 1, result
+        );
+	
+        kaapic_spawn(0, 2, fibonacci, 
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, *n-2,
+          KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, 
+                 KAAPIC_TYPE_INT, 1, result
+        );
+     }
+  }
+
+  int main()
+  {
+    int n = 30;
+    int result= 0;
+    int err = kaapic_init(KAAPIC_START_ONLY_MAIN);
+
+    kaapic_spawn( 2, fibonacci, 
+      KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, n,
+      KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, 
+            KAAPIC_TYPE_INT, 1, &result
+    );
+    kaapic_sync();
+    kaapic_finalize();
+  }
+    \end{code}
+  \end{example}
+\pagebreak
+
+  \begin{example}\label{cholesky}
     \paragraph{}
     The next example illustrates the Cholesky factorization subroutine extracted from the example in examples/kaapic/dfg subdirectory in sources.\\
   \begin{code}
