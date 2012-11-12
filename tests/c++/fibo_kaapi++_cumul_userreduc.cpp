@@ -43,6 +43,16 @@
 */
 #include <iostream>
 #include "kaapi++" // this is the new C++ interface for Kaapi
+#include "fib_verify.h"
+#include "test_main.h"
+
+
+struct MyReductionOperator {
+  void operator()( long& result, const long& value)
+  { 
+    result += value; 
+  }
+};
 
 
 /* Kaapi Fibo task.
@@ -50,7 +60,7 @@
    and the type and access mode for each parameters.
    Here the first parameter is declared with a write mode. The second is passed by value.
  */
-struct TaskFibo : public ka::Task<2>::Signature<ka::CW<long>, const long > {};
+struct TaskFibo : public ka::Task<2>::Signature<ka::CW<long,MyReductionOperator>, const long > {};
 
 
 /* Implementation for CPU machine 
@@ -58,8 +68,8 @@ struct TaskFibo : public ka::Task<2>::Signature<ka::CW<long>, const long > {};
 template<>
 struct TaskBodyCPU<TaskFibo>
 {
-  /* default global reduction: += */
-  void operator() ( ka::pointer_cw<long> res, const long n )
+  /* explicit global reduction: MyReductionOperator */
+  void operator() ( ka::pointer_cw<long,MyReductionOperator> res, const long n )
   {  
     if (n < 2){ 
       *res += n; 
@@ -74,3 +84,30 @@ struct TaskBodyCPU<TaskFibo>
     }
   }
 };
+
+
+/* Main of the program
+*/
+void doit::operator()(int argc, char** argv )
+{
+  unsigned int n = 30;
+  if (argc > 1) n = atoi(argv[1]);
+  
+  double start_time;
+  double stop_time;
+
+  long res_value = 0;
+  ka::pointer<long> res = &res_value;
+
+  start_time= ka::WallTimer::gettime();
+  ka::Spawn<TaskFibo>()( res, n );
+  ka::Sync();
+  stop_time= ka::WallTimer::gettime();
+
+  kaapi_assert( res_value == fiboseq_verify(n) );
+  
+  ka::logfile() << ": -----------------------------------------" << std::endl;
+  ka::logfile() << ": Res  = " << res_value << std::endl;
+  ka::logfile() << ": Time(s): " << (stop_time-start_time) << std::endl;
+  ka::logfile() << ": -----------------------------------------" << std::endl;
+}

@@ -52,14 +52,13 @@
  */
 struct TaskFibo : public ka::Task<2>::Signature<ka::CW<long>, const long > {};
 
-
 /* Implementation for CPU machine 
 */
 template<>
 struct TaskBodyCPU<TaskFibo>
 {
   /* default global reduction: += */
-  void operator() ( ka::pointer_cw<long> res, const long n )
+  void operator() ( ka::Thread* thread, ka::pointer_cw<long> res, const long n )
   {  
     if (n < 2){ 
       *res += n; 
@@ -69,8 +68,8 @@ struct TaskBodyCPU<TaskFibo>
       /* the Spawn keyword is used to spawn new task
        * new tasks are executed in parallel as long as dependencies are respected
        */
-      ka::Spawn<TaskFibo>() ( res, n-1 );
-      ka::Spawn<TaskFibo>() ( res, n-2 );
+      thread->Spawn<TaskFibo>() ( res, n-1 );
+      (*this) ( thread, res, n-2 );
     }
   }
 };

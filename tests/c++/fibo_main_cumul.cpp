@@ -43,6 +43,8 @@
 */
 #include <iostream>
 #include "kaapi++" // this is the new C++ interface for Kaapi
+#include "fib_verify.h"
+#include "test_main.h"
 
 
 /* Kaapi Fibo task.
@@ -53,24 +55,28 @@
 struct TaskFibo : public ka::Task<2>::Signature<ka::CW<long>, const long > {};
 
 
-/* Implementation for CPU machine 
+/* Main of the program
 */
-template<>
-struct TaskBodyCPU<TaskFibo>
+void doit::operator()(int argc, char** argv )
 {
-  /* default global reduction: += */
-  void operator() ( ka::pointer_cw<long> res, const long n )
-  {  
-    if (n < 2){ 
-      *res += n; 
-      return;
-    }
-    else {
-      /* the Spawn keyword is used to spawn new task
-       * new tasks are executed in parallel as long as dependencies are respected
-       */
-      ka::Spawn<TaskFibo>() ( res, n-1 );
-      ka::Spawn<TaskFibo>() ( res, n-2 );
-    }
-  }
-};
+  unsigned int n = 30;
+  if (argc > 1) n = atoi(argv[1]);
+  
+  double start_time;
+  double stop_time;
+
+  long res_value = 0;
+  ka::pointer<long> res = &res_value;
+
+  start_time= ka::WallTimer::gettime();
+  ka::Spawn<TaskFibo>()( res, n );
+  ka::Sync();
+  stop_time= ka::WallTimer::gettime();
+
+  kaapi_assert( res_value == fiboseq_verify(n) );
+  
+  ka::logfile() << ": -----------------------------------------" << std::endl;
+  ka::logfile() << ": Res  = " << res_value << std::endl;
+  ka::logfile() << ": Time(s): " << (stop_time-start_time) << std::endl;
+  ka::logfile() << ": -----------------------------------------" << std::endl;
+}

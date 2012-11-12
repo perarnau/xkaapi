@@ -50,7 +50,7 @@
    and the type and access mode for each parameters.
    Here the first parameter is declared with a write mode. The second is passed by value.
  */
-struct TaskFibo : public ka::Task<2>::Signature<ka::CW<long>, const long > {};
+struct TaskFibo : public ka::Task<2>::Signature<ka::W<long>, const long > {};
 
 
 /* Implementation for CPU machine 
@@ -58,19 +58,28 @@ struct TaskFibo : public ka::Task<2>::Signature<ka::CW<long>, const long > {};
 template<>
 struct TaskBodyCPU<TaskFibo>
 {
-  /* default global reduction: += */
-  void operator() ( ka::pointer_cw<long> res, const long n )
+  void operator() ( ka::Thread* thread, ka::pointer_w<long> res, const long n )
   {  
-    if (n < 2){ 
-      *res += n; 
-      return;
+    if (n < 2) {
+      *res = n;
     }
     else {
+      long res1;
+      long res2;
+
       /* the Spawn keyword is used to spawn new task
-       * new tasks are executed in parallel as long as dependencies are respected
+       * new task is executed in parallel as long as dependencies are respected
        */
-      ka::Spawn<TaskFibo>() ( res, n-1 );
-      ka::Spawn<TaskFibo>() ( res, n-2 );
+      thread->Spawn<TaskFibo>() ( &res1, n-1);
+      
+      /* here call in sequential the second recursive call
+      */
+      (*this) ( thread, &res2, n-2);
+
+      /* the Sum after sync
+       */
+      ka::Sync();
+      *res = res1 + res2;
     }
   }
 };

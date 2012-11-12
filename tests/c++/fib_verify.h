@@ -1,5 +1,6 @@
 /*
 ** xkaapi
+** fibonacci with spawn
 ** 
 **
 ** Copyright 2009,2010,2011,2012 INRIA.
@@ -41,36 +42,22 @@
 ** terms.
 ** 
 */
-#include <iostream>
-#include "kaapi++" // this is the new C++ interface for Kaapi
 
+static long fiboseq_verify(const long n){
+  if(n<2){
+    return n;
+  }else{
 
-/* Kaapi Fibo task.
-   A Task is a type with respect a given signature. The signature specifies the number of arguments (2),
-   and the type and access mode for each parameters.
-   Here the first parameter is declared with a write mode. The second is passed by value.
- */
-struct TaskFibo : public ka::Task<2>::Signature<ka::CW<long>, const long > {};
-
-
-/* Implementation for CPU machine 
-*/
-template<>
-struct TaskBodyCPU<TaskFibo>
-{
-  /* default global reduction: += */
-  void operator() ( ka::pointer_cw<long> res, const long n )
-  {  
-    if (n < 2){ 
-      *res += n; 
-      return;
+    long fibo=1;
+    long fibo_p=1;
+    long tmp=0;
+    int i=0;
+    for( i=0;i<n-2;i++){
+      tmp = fibo+fibo_p;
+      fibo_p=fibo;
+      fibo=tmp;
     }
-    else {
-      /* the Spawn keyword is used to spawn new task
-       * new tasks are executed in parallel as long as dependencies are respected
-       */
-      ka::Spawn<TaskFibo>() ( res, n-1 );
-      ka::Spawn<TaskFibo>() ( res, n-2 );
-    }
+    return fibo;
   }
-};
+}
+
