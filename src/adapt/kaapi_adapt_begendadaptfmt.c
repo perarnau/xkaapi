@@ -52,6 +52,16 @@
 static kaapi_format_t kaapi_format_task_begendadapt_body;
 
 
+static size_t _kaapi_begendadaptbody_get_size(const struct kaapi_format_t* fmt, const void* sp)
+{
+  return sizeof(kaapi_taskbegendadaptive_arg_t);
+}
+
+static void _kaapi_begendadaptbody_task_copy(const struct kaapi_format_t* fmt, void* sp_dest, const void* sp_src)
+{
+  memcpy( sp_dest, sp_src, sizeof(kaapi_taskbegendadaptive_arg_t) );
+}
+
 static size_t 
 _kaapi_begendadaptbody_get_count_params(const kaapi_format_t* fmt, const void* sp)
 { return 1 ; }
@@ -117,7 +127,8 @@ void kaapi_init_begendadapfmt(void)
     (kaapi_task_body_t)kaapi_taskbegendadapt_body,
     0,
     "kaapi_taskbegendadapt_body",
-    sizeof(kaapi_taskbegendadaptive_arg_t),
+    _kaapi_begendadaptbody_get_size,
+    _kaapi_begendadaptbody_task_copy,
     _kaapi_begendadaptbody_get_count_params,
     _kaapi_begendadaptbody_get_mode_param,
     0  /* (*get_off_param) */,

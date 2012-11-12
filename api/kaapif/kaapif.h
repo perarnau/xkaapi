@@ -46,7 +46,6 @@
 #ifndef KAAPIF_H_INCLUDED
 # define KAAPIF_H_INCLUDED
 
-
 #include <stdint.h>
 
 
@@ -124,4 +123,3 @@ extern int64_t kaapif_get_id2_col_(int64_t* id, int64_t* ld);
 
 
 #endif /* ! KAAPIF_H_INCLUDED */
-extern

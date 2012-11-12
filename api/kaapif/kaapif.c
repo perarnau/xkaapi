@@ -46,8 +46,6 @@
 #include "kaapif.h"
 
 
-extern void _kaapif_register_task_format(void);
-
 long xxx_seq_grain;
 long xxx_par_grain;
 

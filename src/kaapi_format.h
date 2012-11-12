@@ -100,7 +100,7 @@ typedef struct kaapi_format_t {
   kaapi_task_body_t          default_body;                            /* iff a task used on current node */
   kaapi_task_body_t          entrypoint[KAAPI_PROC_TYPE_MAX];         /* maximum architecture considered in the configuration */
   kaapi_task_body_t          entrypoint_wh[KAAPI_PROC_TYPE_MAX];      /* same as entrypoint, except that shared params are handle to memory location */
-  kaapi_task_body_t	     alpha_body;				/* alpha function of acceleration */
+  kaapi_task_body_t          alpha_body;				/* alpha function of acceleration */
 
   /* case of format for a structure or for a task with flag= KAAPI_FORMAT_STATIC_FIELD */
   int                         _count_params;                          /* number of parameters */
@@ -117,6 +117,8 @@ typedef struct kaapi_format_t {
      - the unsigned int argument is the index of the parameter 
      - the last argument is the pointer to the sp data of the task
   */
+  size_t                (*get_size)(const struct kaapi_format_t*, const void*);
+  void                  (*task_copy)(const struct kaapi_format_t*, void*, const void*);
   size_t                (*get_count_params)(const struct kaapi_format_t*, const void*);
   kaapi_access_mode_t   (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*);
   void*                 (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*);
@@ -128,7 +130,7 @@ typedef struct kaapi_format_t {
 
   void                  (*reducor )        (const struct kaapi_format_t*, unsigned int, void* sp, const void* value);
   void                  (*redinit )        (const struct kaapi_format_t*, unsigned int, const void* sp, void* value );
-  void			        (*get_task_binding)(const struct kaapi_format_t*, const void* sp, kaapi_task_binding_t*);
+  void			            (*get_task_binding)(const struct kaapi_format_t*, const void* sp, kaapi_task_binding_t*);
   kaapi_adaptivetask_splitter_t	(*get_splitter)(const struct kaapi_format_t*, const void* sp);
 
   /* fields to link the format is the internal tables */
@@ -144,6 +146,27 @@ typedef struct kaapi_format_t {
 
 /* Helper to interpret the format 
 */
+static inline 
+size_t                kaapi_format_get_size(const struct kaapi_format_t* fmt, const void* sp)
+{
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) return fmt->size;
+  kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+  return (*fmt->get_size)(fmt, sp);
+}
+
+static inline 
+void                kaapi_format_task_copy(const struct kaapi_format_t* fmt, void* sp_dest, const void* sp_src)
+{
+  if (fmt->flag == KAAPI_FORMAT_STATIC_FIELD) 
+  {
+    memcpy(sp_dest, sp_src,  fmt->size);
+  }
+  else {
+    kaapi_assert_debug( fmt->flag == KAAPI_FORMAT_DYNAMIC_FIELD );
+    (*fmt->task_copy)(fmt, sp_dest, sp_src);
+  }
+}
+
 static inline 
 size_t                kaapi_format_get_count_params(const struct kaapi_format_t* fmt, const void* sp)
 {

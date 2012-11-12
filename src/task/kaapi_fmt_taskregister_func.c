@@ -56,7 +56,8 @@ kaapi_format_id_t kaapi_format_taskregister_func(
     kaapi_task_body_t             body,
     kaapi_task_body_t             bodywh,
     const char*                   name,
-    size_t                        size,
+    size_t                      (*get_size)(const struct kaapi_format_t*, const void*),
+    void                        (*task_copy)(const struct kaapi_format_t*, void*, const void*),
     size_t                      (*get_count_params)(const struct kaapi_format_t*, const void*),
     kaapi_access_mode_t         (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
     void*                       (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
@@ -76,8 +77,8 @@ kaapi_format_id_t kaapi_format_taskregister_func(
 
   fmt->flag = KAAPI_FORMAT_DYNAMIC_FIELD;
   
-  fmt->size = (uint32_t)size;
-
+  fmt->get_size         = get_size;
+  fmt->task_copy        = task_copy;
   fmt->get_count_params = get_count_params;
   fmt->get_mode_param   = get_mode_param;
   fmt->get_off_param    = get_off_param;

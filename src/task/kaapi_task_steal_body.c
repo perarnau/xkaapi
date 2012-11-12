@@ -218,13 +218,15 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   }
   else /* it exists at least one w parameter with war dependency or a cw_param: recopies the arguments */
   {
-    copy_task_args       = kaapi_thread_pushdata( thread, fmt->size);
+    size_t task_size = kaapi_format_get_size( fmt, orig_task_args );
+    copy_task_args       = kaapi_thread_pushdata( thread, (uint32_t)task_size);
     arg->copy_task_args  = copy_task_args;
     arg->origin_fmt      = fmt;
 
     /* WARNING there are possibly non formated params */
     /* ERROR: do not work if variable size task: to be virtualized through the format object */
-    memcpy(copy_task_args, orig_task_args, fmt->size);
+    kaapi_format_task_copy( fmt, copy_task_args, orig_task_args );
+//    memcpy(copy_task_args, orig_task_args, fmt->size);
 
     for (i=0; i<count_params; ++i)
     {
