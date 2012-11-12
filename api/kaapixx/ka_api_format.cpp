@@ -59,6 +59,7 @@ Format::Format(
         void             (*assign)( void*, const kaapi_memory_view_t*, const void*, const kaapi_memory_view_t*),
         void             (*print)( FILE*, const void*)
 )
+ : fmt(0) /* should be set to 0 ! */
 {
   std::string fmt_name = std::string("__Z4TypeI")+name;
   if (fmt ==0) 
