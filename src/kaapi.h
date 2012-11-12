@@ -2521,7 +2521,8 @@ extern kaapi_format_id_t kaapi_format_taskregister_func(
   kaapi_task_body_t             body,
   kaapi_task_body_t             bodywh,
   const char*                   name,
-  size_t                        size,
+  size_t                      (*get_size)(const struct kaapi_format_t*, const void*),
+  void                        (*task_copy)(const struct kaapi_format_t*, void*, const void*),
   size_t                      (*get_count_params)(const struct kaapi_format_t*, const void*),
   kaapi_access_mode_t         (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
 //DEPRECATED

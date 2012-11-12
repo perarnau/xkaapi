@@ -152,7 +152,8 @@ FormatTask::FormatTask(
 // --------------------------------------------------------------------------
 FormatTask::FormatTask( 
   const char*                 name,
-  size_t                      size,
+  size_t                    (*get_size)(const struct kaapi_format_t*, const void*),
+  void                      (*task_copy)(const struct kaapi_format_t*, void*, const void*),
   size_t                    (*get_count_params)(const struct kaapi_format_t*, const void*),
   kaapi_access_mode_t       (*get_mode_param)  (const struct kaapi_format_t*, unsigned int, const void*),
   void*                     (*get_off_param)   (const struct kaapi_format_t*, unsigned int, const void*),
@@ -174,7 +175,8 @@ FormatTask::FormatTask(
           fmt,
           0, 0,
           strdup(fmt_name.c_str()),
-          size,
+          get_size,
+          task_copy,
           get_count_params,
           get_mode_param,
           get_off_param,

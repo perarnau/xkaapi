@@ -970,6 +970,18 @@ void QUARK_DOT_DAG_Enable( Quark *quark, int boolean_value )
 }
 
 /* format definition for any QUARK task */
+static size_t 
+kaapi_quark_task_format_get_size(const struct kaapi_format_t* fmt, const void* sp)
+{
+  return sizeof(kaapi_quark_task_t);
+}
+
+static void 
+kaapi_quark_task_format_task_copy(const struct kaapi_format_t* fmt, void* sp_dest, const void* sp_src)
+{
+  memcpy( sp_dest, sp_src, sizeof(kaapi_quark_task_t) );
+}
+
 static
 size_t kaapi_quark_task_format_get_count_params(const struct kaapi_format_t* fmt, const void* sp)
 { 
@@ -1083,7 +1095,8 @@ static void kaapi_quark_task_format_constructor(void)
     (kaapi_task_body_t)kaapi_wrapper_quark_function,
     (kaapi_task_body_t)kaapi_wrapper_wh_quark_function,
     "kaapi_quark_task_format",
-    sizeof(kaapi_quark_task_t),
+    kaapi_quark_task_format_get_size,
+    kaapi_quark_task_format_task_copy,
     kaapi_quark_task_format_get_count_params,
     kaapi_quark_task_format_get_mode_param,
     kaapi_quark_task_format_get_off_param,

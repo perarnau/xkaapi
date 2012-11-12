@@ -188,8 +188,8 @@ typedef struct kaapic_arg_info_t
 typedef struct kaapic_task_info
 {
   void             (*body)();
-  uintptr_t         nargs;
-  kaapic_arg_info_t args[1];
+  uintptr_t          nargs;
+  kaapic_arg_info_t* args;
 } kaapic_task_info_t;
 
 

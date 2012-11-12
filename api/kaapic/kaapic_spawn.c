@@ -177,6 +177,23 @@ static void kaapic_dfg_body_wh_scratch(void* p, kaapi_thread_t* t, kaapi_task_t*
 }
 
 /* format definition of C task */
+static size_t kaapic_taskformat_get_size(const struct kaapi_format_t* fmt, const void* sp)
+{
+  const kaapic_task_info_t* const ti = (const kaapic_task_info_t*)sp;
+  return sizeof(kaapic_task_info_t)+ti->nargs*sizeof(kaapic_arg_info_t);
+}
+
+static void kaapic_taskformat_task_copy(const struct kaapi_format_t* fmt, void* sp_dest, const void* sp_src)
+{
+  kaapic_task_info_t* const ti_dest = (kaapic_task_info_t*)sp_dest;
+  const kaapic_task_info_t* const ti_src = (const kaapic_task_info_t*)sp_src;
+  ti_dest->body  = ti_src->body;
+  ti_dest->nargs = ti_src->nargs;
+  ti_dest->args  = (kaapic_arg_info_t*)(ti_dest+1);
+  for (int i=0; i<ti_src->nargs; ++i)
+    ti_dest->args[i] = ti_src->args[i];
+}
+
 static size_t kaapic_taskformat_get_count_params(
  const struct kaapi_format_t* f,
  const void* p
@@ -383,15 +400,15 @@ static void kaapic_taskformat_reducor
 (
  const struct kaapi_format_t* f,
  unsigned int i,
- void* p,
+ void* sp,
  const void* q
 )
 {
-  const kaapic_task_info_t* const ti = p;
+  const kaapic_task_info_t* const ti = sp;
   const kaapic_arg_info_t* argi = &ti->args[i];
   kaapi_assert_debug( argi->u.type <= KAAPIC_TYPE_DOUBLE );
   
-  (*all_redops[argi->u.type])(argi->u.redop, p, q);
+  (*all_redops[argi->u.type])(argi->u.redop, argi->access.data, q);
 }
 
 __attribute__((unused)) 
@@ -403,7 +420,7 @@ static void kaapic_taskformat_redinit
  void* p
 )
 {
-  const kaapic_task_info_t* const ti = p;
+  const kaapic_task_info_t* const ti = sp;
   const kaapic_arg_info_t* argi = &ti->args[i];
   kaapi_assert_debug( argi->u.type <= KAAPIC_TYPE_DOUBLE );
   
@@ -430,7 +447,8 @@ void _kaapic_register_task_format(void)
     kaapic_dfg_body, 
     (kaapi_task_body_t)kaapic_dfg_body_wh,
     "kaapic_dfg_task",
-    sizeof(kaapic_task_info_t),
+    kaapic_taskformat_get_size,
+    kaapic_taskformat_task_copy,
     kaapic_taskformat_get_count_params,
     kaapic_taskformat_get_mode_param,
     kaapic_taskformat_get_off_param,
@@ -439,8 +457,8 @@ void _kaapic_register_task_format(void)
     kaapic_taskformat_get_fmt_param,
     kaapic_taskformat_get_view_param,
     kaapic_taskformat_set_view_param,
-    0, /* reducor */
-    0, /* redinit */
+    kaapic_taskformat_reducor, /* reducor */
+    kaapic_taskformat_redinit, /* redinit */
     0, /* task binding */
     0  /* get_splitter */
   );
@@ -452,7 +470,8 @@ void _kaapic_register_task_format(void)
     kaapic_dfg_body_scratch, 
     (kaapi_task_body_t)kaapic_dfg_body_wh_scratch,
     "kaapic_dfg_task",
-    sizeof(kaapic_task_info_t),
+    kaapic_taskformat_get_size,
+    kaapic_taskformat_task_copy,
     kaapic_taskformat_get_count_params,
     kaapic_taskformat_get_mode_param,
     kaapic_taskformat_get_off_param,
@@ -461,8 +480,8 @@ void _kaapic_register_task_format(void)
     kaapic_taskformat_get_fmt_param,
     kaapic_taskformat_get_view_param,
     kaapic_taskformat_set_view_param,
-    0, /* reducor */
-    0, /* redinit */
+    kaapic_taskformat_reducor, /* reducor */
+    kaapic_taskformat_redinit, /* redinit */
     0, /* task binding */
     0  /* get_splitter */
   );
@@ -528,8 +547,9 @@ int kaapic_spawn(const kaapic_spawn_attr_t* attr, int32_t nargs, ...)
   ti = kaapi_thread_pushdata_align(
     thread, sizeof(kaapic_task_info_t)+nargs*sizeof(kaapic_arg_info_t), sizeof(void*)
   );
-  ti->body = va_arg(va_args, void (*)());
+  ti->body  = va_arg(va_args, void (*)());
   ti->nargs = nargs;
+  ti->args  = (kaapic_arg_info_t*)(ti+1);
 
   for (k = 0; k < nargs; ++k)
   {
