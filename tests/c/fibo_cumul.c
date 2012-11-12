@@ -48,10 +48,6 @@
 #include <stdlib.h>
 #include "fib_verify.h"
 
-void sum(int* result1, int* result2, int* result)
-{
-  *result = *result1 + *result2;
-}
 
 void fibonacci(const int* n, int* result)
 {
@@ -61,13 +57,13 @@ void fibonacci(const int* n, int* result)
   else
   {
     kaapic_spawn(0, 2, fibonacci, 
-        KAAPIC_MODE_V, KAAPIC_TYPE_INT, *n-1, 1, 
-        KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, KAAPIC_TYPE_INT, result, 1
+        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, *n-1, 
+        KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, KAAPIC_TYPE_INT, 1, result
     );
 
     kaapic_spawn(0, 2, fibonacci, 
-        KAAPIC_MODE_V, *n-2, 1, KAAPIC_TYPE_INT,
-        KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, KAAPIC_TYPE_INT, result, 1
+        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, *n-2,
+        KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, KAAPIC_TYPE_INT, 1, result
     );
   }
 }
@@ -76,9 +72,9 @@ int main(int argc, char *argv[])
 {
   int n = 30;
   int result = 0;
-  int err = kaapic_init( KAAPIC_START_ONLY_MAIN );
 
-  fprintf(stdout, "err %d\n", err);
+  int err = kaapic_init( KAAPIC_START_ONLY_MAIN );
+  kaapi_assert(err == 0);
 
   if (argc > 1)
   {
@@ -88,173 +84,32 @@ int main(int argc, char *argv[])
 
   /* example of attribut for spawn, not used */
   kaapic_spawn_attr_t attr;
-  kaapic_spawn_attr_init(&attr);
+  err = kaapic_spawn_attr_init(&attr);
+  kaapi_assert(err == 0);
 
-  kaapic_begin_parallel (KAAPIC_FLAG_DEFAULT);
+  err = kaapic_begin_parallel (KAAPIC_FLAG_DEFAULT);
+  kaapi_assert(err == 0);
 
   double start = kaapic_get_time();
 
-  kaapic_spawn(&attr, 2, fibonacci, 
-      KAAPIC_MODE_V, KAAPIC_TYPE_INT, n, 1, 
-      KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, KAAPIC_TYPE_INT, &result, 1
+  err = kaapic_spawn(&attr, 2, fibonacci, 
+      KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, n,
+      KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, KAAPIC_TYPE_INT, 1, &result
   );
+  kaapi_assert(err == 0);
 
   kaapic_sync();
 
   double stop = kaapic_get_time();
 
-  kaapic_end_parallel (KAAPIC_FLAG_DEFAULT);
+  err = kaapic_end_parallel (KAAPIC_FLAG_DEFAULT);
+  kaapi_assert(err == 0);
 
   fprintf(stdout, "Fibo(%d) = %d\n", n, result);
   kaapi_assert( result == (int)fiboseq_verify(n) );
 
   fprintf(stdout, "Time : %f (s)\n", stop-start);
 
-  kaapic_finalize();
-}
-
-
-long cutoff;
-
-// --------------------------------------------------------------------
-/* Sequential fibo function
- */
-long fiboseq_On(const long n){
-  if(n<2){
-    return n;
-  }else{
-
-    long fibo=1;
-    long fibo_p=1;
-    long tmp=0;
-    int i=0;
-    for( i=0;i<n-2;i++){
-      tmp = fibo+fibo_p;
-      fibo_p=fibo;
-      fibo=tmp;
-    }
-    return fibo;
-  }
-}
-
-
-/* Kaapi Fibo task.
-   A Task is a type with respect a given signature. The signature specifies the number of arguments (2),
-   and the type and access mode for each parameters.
-   Here the first parameter is declared with a write mode. The second is passed by value.
- */
-struct TaskFibo : public ka::Task<2>::Signature<ka::CW<long>, const long > {};
-
-
-/* Implementation for CPU machine 
-*/
-template<>
-struct TaskBodyCPU<TaskFibo>
-{
-  /* default global reduction: += */
-  void operator() ( ka::pointer_cw<long> res, const long n )
-  {  
-    if (n < 2){ 
-      *res += n; 
-      return;
-    }
-    else {
-      /* the Spawn keyword is used to spawn new task
-       * new tasks are executed in parallel as long as dependencies are respected
-       */
-      ka::Spawn<TaskFibo>() ( res, n-1 );
-      ka::Spawn<TaskFibo>() ( res, n-2 );
-    }
-  }
-};
-
-
-/* Main of the program
-*/
-struct doit {
-
-  void do_experiment(unsigned int n, unsigned int iter )
-  {
-    double start_time;
-    double stop_time;
-    double t = ka::WallTimer::gettime();
-    int ref_value = fiboseq_On(n);
-    double delay = ka::WallTimer::gettime() - t;
-    ka::logfile() << "[fibo] Sequential value for n = " << n << " : " << ref_value 
-                    << " (computed in " << delay << " s)" << std::endl;
-      
-    long* res_value = ka::Alloca<long>(1);
-    *res_value = rand();
-    ka::pointer<long> res = res_value;
-
-    long* res2_value = ka::Alloca<long>(1);
-    ka::pointer<long> res2 = res2_value;
-
-    for (cutoff=2; cutoff<3; ++cutoff)
-    {
-      *res2_value = 0;
-      ka::Spawn<TaskFibo>()( res2, n );
-      /* */
-      ka::Sync();
-      start_time= ka::WallTimer::gettime();
-      for (unsigned int i = 0 ; i < iter ; ++i)
-      {   
-        *res_value = 0;
-        ka::Spawn<TaskFibo>()( res, n );
-        /* */
-        ka::Sync();
-      }
-      stop_time= ka::WallTimer::gettime();
-
-      ka::logfile() << ": -----------------------------------------" << std::endl;
-      ka::logfile() << ": Res  = " << *res_value << std::endl;
-      ka::logfile() << ": Time(s): " << (stop_time-start_time)/iter << std::endl;
-      ka::logfile() << ": -----------------------------------------" << std::endl;
-    }
-  }
-
-  void operator()(int argc, char** argv )
-  {
-    unsigned int n = 30;
-    if (argc > 1) n = atoi(argv[1]);
-    unsigned int iter = 1;
-    if (argc > 2) iter = atoi(argv[2]);
-    cutoff = 2;
-    if (argc > 3) cutoff = atoi(argv[3]);
-    
-    ka::logfile() << "In main: n = " << n << ", iter = " << iter << ", cutoff = " << cutoff << std::endl;
-    do_experiment( n, iter );
-  }
-};
-
-
-/* main entry point : Kaapi initialization
-*/
-int main(int argc, char** argv)
-{
-  try {
-    /* Join the initial group of computation : it is defining
-       when launching the program by a1run.
-    */
-    ka::Community com = ka::System::join_community( argc, argv );
-    
-    /* Start computation by forking the main task */
-    ka::SpawnMain<doit>()(argc, argv); 
-    
-    /* Leave the community: at return to this call no more athapascan
-       tasks or shared could be created.
-    */
-    com.leave();
-
-    /* */
-    ka::System::terminate();
-  }
-  catch (const std::exception& E) {
-    ka::logfile() << "Catch : " << E.what() << std::endl;
-  }
-  catch (...) {
-    ka::logfile() << "Catch unknown exception: " << std::endl;
-  }
-  
-  return 0;
+  err = kaapic_finalize();
+  kaapi_assert(err == 0);
 }

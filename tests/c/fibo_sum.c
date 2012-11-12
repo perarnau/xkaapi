@@ -62,23 +62,27 @@ void fibonacci(const int* n, int* result)
     *result = *n;
   else
   {
+    int err;
     int* result1 = kaapic_alloca(sizeof(int));
     int* result2 = kaapic_alloca(sizeof(int));
-    kaapic_spawn(0, 2, fibonacci, 
+    err = kaapic_spawn(0, 2, fibonacci, 
         KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, *n-1,
         KAAPIC_MODE_W, KAAPIC_TYPE_INT, 1, result1
     );
+    kaapi_assert(err==0);
 
-    kaapic_spawn(0, 2, fibonacci, 
+    err = kaapic_spawn(0, 2, fibonacci, 
         KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, *n-2,
         KAAPIC_MODE_W, KAAPIC_TYPE_INT, 1, result2
     );
+    kaapi_assert(err==0);
 
-    kaapic_spawn(0, 3, sum,
+    err = kaapic_spawn(0, 3, sum,
         KAAPIC_MODE_R, KAAPIC_TYPE_INT, 1, result1,
         KAAPIC_MODE_R, KAAPIC_TYPE_INT, 1, result2,
         KAAPIC_MODE_W, KAAPIC_TYPE_INT, 1, result
     );
+    kaapi_assert(err==0);
   }
 }
 
@@ -86,9 +90,9 @@ int main(int argc, char *argv[])
 {
   int n = 30;
   int result = 0;
-  int err = kaapic_init( KAAPIC_START_ONLY_MAIN );
 
-  fprintf(stdout, "err %d\n", err);
+  int err = kaapic_init( KAAPIC_START_ONLY_MAIN );
+  kaapi_assert(err == 0);
 
   if (argc > 1)
   {
@@ -98,27 +102,32 @@ int main(int argc, char *argv[])
 
   /* example of attribut for spawn, not used */
   kaapic_spawn_attr_t attr;
-  kaapic_spawn_attr_init(&attr);
+  err = kaapic_spawn_attr_init(&attr);
+  kaapi_assert(err == 0);
 
-  kaapic_begin_parallel (KAAPIC_FLAG_DEFAULT);
+  err = kaapic_begin_parallel (KAAPIC_FLAG_DEFAULT);
+  kaapi_assert(err == 0);
 
   double start = kaapic_get_time();
 
-  kaapic_spawn(&attr, 2, fibonacci, 
+  err = kaapic_spawn(&attr, 2, fibonacci, 
       KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, n,
       KAAPIC_MODE_W, KAAPIC_TYPE_INT, 1, &result
   );
+  kaapi_assert(err == 0);
 
   kaapic_sync();
 
   double stop = kaapic_get_time();
 
-  kaapic_end_parallel (KAAPIC_FLAG_DEFAULT);
+  err = kaapic_end_parallel (KAAPIC_FLAG_DEFAULT);
+  kaapi_assert(err == 0);
 
   fprintf(stdout, "Fibo(%d) = %d\n", n, result);
   kaapi_assert( result == (int)fiboseq_verify(n) );
 
   fprintf(stdout, "Time : %f (s)\n", stop-start);
 
-  kaapic_finalize();
+  err = kaapic_finalize();
+  kaapi_assert(err == 0);
 }
