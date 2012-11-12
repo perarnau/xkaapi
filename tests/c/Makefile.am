@@ -19,7 +19,8 @@ check_PROGRAMS=   \
   test_spawn3 \
   test_nqueens_stackpointer\
   fibo_sync \
-  fibo_sum
+  fibo_sum \
+  fibo_cumul
 endif
 
 
@@ -32,6 +33,7 @@ test_spawn2_SOURCES=test_spawn2.c
 test_spawn3_SOURCES=test_spawn3.c
 fibo_sync_SOURCES=fibo_sync.c
 fibo_sum_SOURCES=fibo_sum.c
+fibo_cumul_SOURCES=fibo_cumul.c
 
 
 test_begend_parallel_CPPFLAGS=$(AM_CPPFLAGS)  $(KAAPICPROGS_BUILD_CPPFLAGS)  
@@ -68,3 +70,8 @@ fibo_sum_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
 fibo_sum_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
 fibo_sum_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
 fibo_sum_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm
+
+fibo_cumul_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPICPROGS_BUILD_CPPFLAGS)
+fibo_cumul_CFLAGS  =$(AM_CFLAGS)   $(KAAPICPROGS_BUILD_CFLAGS)
+fibo_cumul_LDFLAGS =$(AM_LDFLAGS)  $(KAAPICPROGS_BUILD_LDFLAGS)
+fibo_cumul_LDADD   =$(LIBS)        $(KAAPICPROGS_BUILD_LIBS) -lm
