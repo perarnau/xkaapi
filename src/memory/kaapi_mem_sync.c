@@ -41,3 +41,24 @@ int kaapi_memory_synchronize_pointer( void *ptr )
     /* TODO */
     return 0;
 }
+
+void* kaapi_memory_get_host_pointer(void* const gpu_ptr)
+{
+  kaapi_mem_host_map_t* const host_map =
+    kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
+  const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
+  kaapi_mem_host_map_t *cuda_map = kaapi_get_current_mem_host_map();  
+  kaapi_mem_data_t *kmd;
+  
+#if 1
+  /* register to host memory mapping */
+  kaapi_mem_host_map_find_or_insert( cuda_map,
+                                    kaapi_mem_host_map_generate_id(gpu_ptr, 0),
+                                    &kmd );
+  if (kaapi_mem_data_has_addr(kmd, host_asid)) {
+    kaapi_data_t* kdata = (kaapi_data_t *) kaapi_mem_data_get_addr(kmd, host_asid);
+    return kaapi_pointer2void(kdata->ptr);
+  }
+#endif
+  return NULL;
+}

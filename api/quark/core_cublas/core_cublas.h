@@ -17,12 +17,25 @@
 
 #include "plasma.h"
 #include "core_blas.h"
+
 #include "core_dcublas.h"
 
 #include "kaapi.h"
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+  
+#ifndef max
+#define max(a, b) ((a) > (b) ? (a) : (b))
+#endif
+  
+#ifndef min
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#endif
+  
+#ifndef roundup
+#define roundup(a, b) (b <= 0) ? (a) : (((a) + (b)-1) & ~((b)-1))
 #endif
   
 extern cublasHandle_t kaapi_cuda_cublas_handle( void );
@@ -84,7 +97,7 @@ static inline cublasSideMode_t PLASMA_CUBLAS_convertToSideMode( PLASMA_enum side
 
 #define PLASMA_CUBLAS_ASSERT(status) \
   if (CUBLAS_STATUS_SUCCESS != status) {\
-  fprintf(stderr,"%s:: CUBLAS Error:%i\n",__FUNCTION__,status);\
+  fprintf(stderr,"%s:: CUBLAS Error: %i (file '%s' line %d)\n",__FUNCTION__,status,__FILE__,__LINE__);\
   }
   
 #ifdef __cplusplus

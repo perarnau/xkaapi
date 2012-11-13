@@ -60,16 +60,21 @@ kaapi_mem_host_map_sync( struct kaapi_taskdescr_t* const );
 static inline kaapi_mem_addr_t
 kaapi_mem_host_map_generate_id( void* const ptr, const size_t size )
 {
-  return (kaapi_mem_addr_t)( ((kaapi_mem_addr_t)ptr) + (kaapi_mem_addr_t)size );
+  /* TODO: change here */
+//  return (kaapi_mem_addr_t)( ((kaapi_mem_addr_t)ptr) + (kaapi_mem_addr_t)size );
+  return ((kaapi_mem_addr_t)ptr);
 }
 
 static inline kaapi_mem_addr_t
 kaapi_mem_host_map_generate_id_by_data( kaapi_data_t* const kdata )
 {
+#if 0
   return (kaapi_mem_addr_t)(
       ((kaapi_mem_addr_t)kaapi_pointer2void(kdata->ptr)) + 
 	(kaapi_mem_addr_t)kaapi_memory_view_size(&kdata->view)
       );
+#endif
+  return ((kaapi_mem_addr_t)kaapi_pointer2void(kdata->ptr));
 }
 
 extern kaapi_mem_data_t* kaapi_mem_host_map_register_to_host(

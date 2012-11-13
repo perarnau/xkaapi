@@ -1,8 +1,5 @@
 #!/bin/bash
 
-SCRATCH=$SCRATCH
-CUDADIR=$SCRATCH/install/cuda
-export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$HOME/install/xkaapi/default/lib:$LD_LIBRARY_PATH
 
 version="$(date +%s)"

@@ -27,7 +27,7 @@ void CORE_dgemm_cublas(int transA, int transB,
                                          B, ldb,
                                          &beta, C, ldc);
   PLASMA_CUBLAS_ASSERT(status);
-#if 0
+#if CONFIG_VERBOSE
   fprintf(stdout,"%s: a=%p b=%p c=%p m=%d n=%d k=%d\n", __FUNCTION__,
           A, B, C, m, n, k);
   fflush(stdout);

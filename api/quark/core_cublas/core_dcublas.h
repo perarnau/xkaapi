@@ -45,22 +45,15 @@ void CORE_dtrsm_cublas(int side, int uplo,
                        double alpha, const double *A, int LDA,
                        double *B, int LDB);
 void CORE_dtrsm_quark_cublas(Quark *quark);
-
-#if 0
-/***************************************************************************
- *   register CUBLAS equiv. functions
- **/
-CUBLAS_QUARK_FUNCTION(CORE_dplgsy_quark, 0, CUQUARK_CPU_ONLY);
-
-/* dgemm related */
-CUBLAS_QUARK_FUNCTION(CORE_dgemm_quark, CORE_dgemm_quark_cublas, CUQUARK_GPU_ONLY);
-CUBLAS_QUARK_FUNCTION(CORE_dgemm_f2_quark, CORE_dgemm_f2_quark_cublas, CUQUARK_GPU_ONLY);
-CUBLAS_QUARK_FUNCTION(CORE_dgemm_p2_quark, CORE_dgemm_p2_quark_cublas, CUQUARK_GPU_ONLY);
-CUBLAS_QUARK_FUNCTION(CORE_dgemm_p3_quark, CORE_dgemm_p3_quark_cublas, CUQUARK_GPU_ONLY);
-CUBLAS_QUARK_FUNCTION(CORE_dgemm_p2f1_quark, CORE_dgemm_p2f1_quark_cublas, CUQUARK_GPU_ONLY);
-CUBLAS_QUARK_FUNCTION(CORE_dsyrk_quark, CORE_dsyrk_quark_cublas, CUQUARK_GPU_ONLY);
-CUBLAS_QUARK_FUNCTION(CORE_dtrsm_quark, CORE_dtrsm_quark_cublas, CUQUARK_GPU_ONLY);
-#endif
+  
+int CORE_dssssm_cublas(int M1, int N1, int M2, int N2, int K, int IB,
+                       double *A1, int LDA1,
+                       double *A2, int LDA2,
+                       double *L1, int LDL1,
+                       double *L2, int LDL2,
+                       int *IPIV);
+void CORE_dssssm_quark_cublas(Quark *quark);
+  
 
 #ifdef __cplusplus
 }

@@ -29,7 +29,7 @@ void CORE_dtrsm_cublas(int side, int uplo,
          B, LDB);
   
   PLASMA_CUBLAS_ASSERT(status);
-#if 0
+#if CONFIG_VERBOSE
   fprintf(stdout,"%s: a=%p b=%p m=%d n=%d\n", __FUNCTION__,
           A, B, M, N);
   fflush(stdout);

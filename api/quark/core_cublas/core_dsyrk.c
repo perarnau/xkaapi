@@ -25,7 +25,7 @@ void CORE_dsyrk_cublas(int uplo, int trans,
                                          &alpha, A, LDA,
                                          &beta, C, LDC);
   PLASMA_CUBLAS_ASSERT(status);
-#if 0
+#if CONFIG_VERBOSE
   fprintf(stdout,"%s: a=%p c=%p n=%d k=%d\n", __FUNCTION__,
           A, C, n, k);
   fflush(stdout);

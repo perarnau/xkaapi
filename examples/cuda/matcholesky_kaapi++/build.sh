@@ -1,7 +1,5 @@
 #!/bin/bash
 
-#SCRATCH=/tmp
-#XKAAPIDIR=/tmp/xkaapi
 XKAAPIDIR=$HOME/install/xkaapi/default
 
 CXX=g++
@@ -14,11 +12,6 @@ function do_test() {
 	exit 0
     fi
 }
- 
-#CBLAS_CFLAGS="-I/usr/local/atlas/include"
-#CBLAS_LDFLAGS="/usr/local/atlas/lib/libcblas.a /usr/local/atlas/lib/liblapack.a /usr/local/atlas/lib/libatlas.a"
-#LAPACKE_CFLAGS="-I/usr/local/include"
-#LAPACKE_LDFLAGS="-L/usr/local/lib -llapacke -llapack"
 
 do_test "CBLAS_CFLAGS" "No CBLAS_CFLAGS found."
 do_test "CBLAS_LDFLAGS" "No CBLAS_LDFLAGS found."
@@ -36,14 +29,18 @@ CFLAGS="-DCONFIG_USE_DOUBLE=1 -I$XKAAPIDIR/include"
 #-DKAAPI_DEBUG=0 -DKAAPI_NDEBUG=1"
 LDFLAGS="-L$XKAAPIDIR/lib -lkaapi -lkaapi++ -lgfortran"
 
-CUDA_CFLAGS="-I/usr/local/cuda/include -DCONFIG_USE_CUDA=1 $CUDA_CFLAGS"
+CUDA_CFLAGS="-DCONFIG_USE_CUDA=1 $CUDA_CFLAGS"
 CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"
-CUBLAS_LDFLAGS="-L/usr/local/cuda/lib -lcublas -lcuda -lcudart"
+CUBLAS_LDFLAGS="-lcublas"
+
+PLASMA_CFLAGS="-DCONFIG_USE_PLASMA=1 $PLASMA_CFLAGS"
+PLASMA_LDFLAGS="$PLASMA_LDFLAGS -lplasma"
 
 #MAGMA_CFLAGS="-DCONFIG_USE_MAGMA=1 $MAGMA_CFLAGS"
 
 $CXX -g -Wall \
     $CFLAGS \
+    $PLASMA_CFLAGS \
     $CUDA_CFLAGS \
     $CBLAS_CFLAGS \
     $CUBLAS_CFLAGS \
@@ -57,6 +54,7 @@ $CXX -g \
     -o matcholesky_kaapi++ \
     matcholesky_kaapi++.o \
     $LDFLAGS \
+    $PLASMA_LDFLAGS \
     $MAGMA_LDFLAGS \
     $CUDA_LDFLAGS \
     $CUBLAS_LDFLAGS \

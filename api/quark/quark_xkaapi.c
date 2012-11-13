@@ -631,6 +631,9 @@ printf("IN %s\n", __PRETTY_FUNCTION__);
 printf("OUT %s\n", __PRETTY_FUNCTION__);  
   fflush(stdout);
 #endif
+#if defined(KAAPI_USE_CUDA)
+  kaapi_memory_synchronize();
+#endif
   kaapi_finalize();
 }
 
@@ -641,6 +644,10 @@ void QUARK_Free(Quark * quark)
 printf("IN/OUT %s\n", __PRETTY_FUNCTION__);  
   fflush(stdout);
 #endif
+#if defined(KAAPI_USE_CUDA)
+  kaapi_memory_synchronize();
+#endif
+//  kaapi_finalize();
 }
 
 /* Cancel a specific task */

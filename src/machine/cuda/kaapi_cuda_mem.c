@@ -256,7 +256,11 @@ kaapi_cuda_mem_1dcopy_htod_(kaapi_pointer_t dest,
                                      cudaMemcpyHostToDevice);
 #endif
   if (res != cudaSuccess) {
-    fprintf(stdout, "%s: ERROR %d\n", __FUNCTION__, res);
+    fprintf(stdout, "%s:%d:%s: ERROR %s (%d) kid=%lu src=%p dst=%p size=%lu\n",
+            __FILE__, __LINE__, __FUNCTION__, cudaGetErrorString(res), res,
+            (long unsigned int) kaapi_get_current_kid(),
+            __kaapi_pointer2void(src),
+            __kaapi_pointer2void(dest), kaapi_memory_view_size(view_src));
     fflush(stdout);
     abort();
   }
@@ -286,7 +290,11 @@ kaapi_cuda_mem_1dcopy_dtoh_(kaapi_pointer_t dest,
                                      cudaMemcpyDeviceToHost);
 #endif
   if (res != cudaSuccess) {
-    fprintf(stdout, "%s: ERROR %d\n", __FUNCTION__, res);
+    fprintf(stdout, "%s:%d:%s: ERROR %s (%d) kid=%lu src=%p dst=%p size=%lu\n",
+            __FILE__, __LINE__, __FUNCTION__, cudaGetErrorString(res), res,
+            (long unsigned int) kaapi_get_current_kid(),
+            __kaapi_pointer2void(src),
+            __kaapi_pointer2void(dest), kaapi_memory_view_size(view_src));
     fflush(stdout);
     abort();
   }
@@ -331,8 +339,8 @@ kaapi_cuda_mem_2dcopy_htod_(kaapi_pointer_t dest,
                      view_dest->size[0], cudaMemcpyHostToDevice);
 #endif
   if (res != cudaSuccess) {
-    fprintf(stdout, "%s: ERROR (%d) kid=%lu src=%p dst=%p size=%lu\n",
-            __FUNCTION__, res,
+    fprintf(stdout, "%s:%d:%s: ERROR %s (%d) kid=%lu src=%p dst=%p size=%lu\n",
+            __FILE__, __LINE__, __FUNCTION__, cudaGetErrorString(res), res,
             (long unsigned int) kaapi_get_current_kid(),
             __kaapi_pointer2void(src),
             __kaapi_pointer2void(dest), kaapi_memory_view_size(view_src));
@@ -380,8 +388,8 @@ kaapi_cuda_mem_2dcopy_dtoh_(kaapi_pointer_t dest,
                      view_src->size[0], cudaMemcpyDeviceToHost);
 #endif
   if (res != cudaSuccess) {
-    fprintf(stdout, "%s: ERROR (%d) kid=%lu src=%p dst=%p size=%lu\n",
-            __FUNCTION__, res,
+    fprintf(stdout, "%s:%d:%s: ERROR %s (%d) kid=%lu src=%p dst=%p size=%lu\n",
+            __FILE__, __LINE__, __FUNCTION__, cudaGetErrorString(res), res,
             (long unsigned int) kaapi_get_current_kid(),
             __kaapi_pointer2void(src),
             __kaapi_pointer2void(dest), kaapi_memory_view_size(view_src));
@@ -437,8 +445,11 @@ kaapi_cuda_mem_copy_dtod_peer(kaapi_pointer_t dest,
                             kaapi_memory_view_size(view_src),
                             kaapi_cuda_HtoD_stream());
   if (res != cudaSuccess) {
-    fprintf(stdout, "%s: cudaMemcpyPeerAsync ERROR %d\n", __FUNCTION__,
-            res);
+    fprintf(stdout, "%s:%d:%s: ERROR %s (%d) kid=%lu src=%p dst=%p size=%lu\n",
+            __FILE__, __LINE__, __FUNCTION__, cudaGetErrorString(res), res,
+            (long unsigned int) kaapi_get_current_kid(),
+            __kaapi_pointer2void(src),
+            __kaapi_pointer2void(dest), kaapi_memory_view_size(view_src));
     fflush(stdout);
     abort();
   }
