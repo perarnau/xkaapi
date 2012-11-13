@@ -29,7 +29,7 @@ include kaapic.am
 include listranking.am
 include matrix.am
 include mergesort.am
-include net.am
+#include net.am
 include nqueens.am
 include poisson3D.am
 #include prefix.am
@@ -46,7 +46,6 @@ USER_MAKEFILES=\
 	hello/Makefile \
 	matrix/Makefile \
 	mergesort/Makefile \
-	net/Makefile \
 	nqueens/Makefile \
 	poisson3D/Makefile \
 	papi/Makefile
