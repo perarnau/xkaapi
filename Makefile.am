@@ -3,7 +3,7 @@
 ACLOCAL_AMFLAGS=-I acinclude
 
 # add bin for building tools when cuda dependcy resolved
-SUBDIRS=. src bin api examples tests/static 
+SUBDIRS=. src bin api examples
 
 BUILT_SOURCES= gitlastcommit
 
