@@ -225,15 +225,11 @@ intptr_t QUARK_Task_Flag_Get( Quark *quark, int flag );
  * a sync, such as QUARK_Barrier. */
 void QUARK_DOT_DAG_Enable( Quark *quark, int boolean_value );
   
-#if defined(KAAPI_USE_CUDA)
-
 #define   QUARK_ARCH_DEFAULT     ((1U << KAAPI_PROC_TYPE_HOST) | (1U << KAAPI_PROC_TYPE_CUDA))
 #define   QUARK_ARCH_CPU_ONLY    (1U << KAAPI_PROC_TYPE_HOST)
 #define   QUARK_ARCH_GPU_ONLY    (1U << KAAPI_PROC_TYPE_CUDA)
 
 void QUARK_Task_Set_Function_Params(void (*function_cpu) (Quark *), void (*function_gpu) (Quark *), uint8_t arch, uint8_t prio);
-
-#endif
 
 #if defined(c_plusplus) || defined(__cplusplus)
 }
