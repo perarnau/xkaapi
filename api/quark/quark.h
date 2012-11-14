@@ -229,7 +229,14 @@ void QUARK_DOT_DAG_Enable( Quark *quark, int boolean_value );
 #define   QUARK_ARCH_CPU_ONLY    (1U << KAAPI_PROC_TYPE_HOST)
 #define   QUARK_ARCH_GPU_ONLY    (1U << KAAPI_PROC_TYPE_CUDA)
 
-void QUARK_Task_Set_Function_Params(void (*function_cpu) (Quark *), void (*function_gpu) (Quark *), uint8_t arch, uint8_t prio);
+/*
+ XKAAPI extension to set parameters for a specific PLASMA function (function_plasma).
+ This method allows an alternative CPU version of a specific PLASMA method with runtime parameters like
+ architecture target and priority.
+*/
+void QUARK_Task_Set_Function_Params(void (*function_plasma) (Quark *),
+                                    void (*function_cpu) (Quark *), void (*function_gpu) (Quark *),
+                                    uint8_t arch, uint8_t prio);
 
 #if defined(c_plusplus) || defined(__cplusplus)
 }
