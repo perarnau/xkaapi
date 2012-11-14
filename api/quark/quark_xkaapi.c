@@ -56,13 +56,12 @@
 static kaapi_hashmap_t hash_funcptr;
 #endif
 
-#if defined(KAAPI_USE_CUDA)
 struct Quark_task_fmt_body {
   void                 (*body_gpu) (Quark *);
   uint8_t               arch;
+  uint8_t               prio;
 };
-static kaapi_hashmap_t hash_funcptr_gpu;
-#endif
+static kaapi_hashmap_t hash_funcptr_params;
 
 //#define TRACE 1
 #define STATIC 1
@@ -152,7 +151,7 @@ static void kaapi_wrapper_quark_function( void* a, kaapi_thread_t* thread, kaapi
 #if defined(KAAPI_USE_CUDA)
   if ( kaapi_processor_get_type(kaapi_get_current_processor()) == KAAPI_PROC_TYPE_CUDA )
   {
-    kaapi_hashentries_t* entry = kaapi_hashmap_find(&hash_funcptr_gpu, arg->function);
+    kaapi_hashentries_t* entry = kaapi_hashmap_find(&hash_funcptr_params, arg->function);
     if( entry != NULL )
     {
       struct Quark_task_fmt_body* quark_task_fmt = (struct Quark_task_fmt_body*) entry->u.version;
@@ -190,7 +189,7 @@ static void kaapi_wrapper_wh_quark_function( void* a, kaapi_thread_t* thread, ka
 #if defined(KAAPI_USE_CUDA)
   if ( kaapi_processor_get_type(kaapi_get_current_processor()) == KAAPI_PROC_TYPE_CUDA )
   {
-    kaapi_hashentries_t* entry = kaapi_hashmap_find(&hash_funcptr_gpu, arg->function);
+    kaapi_hashentries_t* entry = kaapi_hashmap_find(&hash_funcptr_params, arg->function);
     if( entry != NULL )
     {
       struct Quark_task_fmt_body* quark_task_fmt = (struct Quark_task_fmt_body*) entry->u.version;
@@ -270,9 +269,7 @@ printf("Setup environment KAAPI_CPUCOUNT:%s\n", tmp); fflush(stdout);
   default_Quark[kproc->kid].sequence = 0;
   kaapi_begin_parallel(KAAPI_SCHEDFLAG_DEFAULT);
 
-#if defined(KAAPI_USE_CUDA)
-  kaapi_hashmap_init(&hash_funcptr_gpu, 0);
-#endif
+  kaapi_hashmap_init(&hash_funcptr_params, 0);
   
 #if defined(KAAPI_DEBUG)
 {
@@ -539,18 +536,17 @@ fflush(stdout);
   if (task_flags->task_priority)
     kaapi_task_set_priority(task, KAAPI_TASK_MAX_PRIORITY);
   
-#if defined(KAAPI_USE_CUDA)
-  kaapi_hashentries_t* entry = kaapi_hashmap_find(&hash_funcptr_gpu, function);
+  kaapi_hashentries_t* entry = kaapi_hashmap_find(&hash_funcptr_params, function);
   if( entry != NULL )
   {
     struct Quark_task_fmt_body* quark_task_fmt = (struct Quark_task_fmt_body*)entry->u.version;
     kaapi_task_set_arch_mask(task, quark_task_fmt->arch);
+    kaapi_task_set_priority(task, quark_task_fmt->prio);
   }
   else
   {
     kaapi_task_set_arch_mask(task, QUARK_ARCH_CPU_ONLY);    
   }
-#endif
 
   /* next parameters must follows in the stack */
   if (task_flags->task_sequence != 0)
@@ -607,8 +603,10 @@ void QUARK_Waitall(Quark * quark)
 printf("IN %s\n", __PRETTY_FUNCTION__);  
   fflush(stdout);
 #endif
-  if (quark->sequence !=0)
+  if (quark->sequence !=0) {
     QUARK_Sequence_Wait(quark, quark->sequence);
+    kaapi_memory_synchronize();
+  }
   else {
     kaapi_sched_sync();
 //    kaapi_assert_debug( quark->thread == kaapi_self_thread_context() );
@@ -631,9 +629,7 @@ printf("IN %s\n", __PRETTY_FUNCTION__);
 printf("OUT %s\n", __PRETTY_FUNCTION__);  
   fflush(stdout);
 #endif
-#if defined(KAAPI_USE_CUDA)
   kaapi_memory_synchronize();
-#endif
   kaapi_finalize();
 }
 
@@ -644,9 +640,7 @@ void QUARK_Free(Quark * quark)
 printf("IN/OUT %s\n", __PRETTY_FUNCTION__);  
   fflush(stdout);
 #endif
-#if defined(KAAPI_USE_CUDA)
   kaapi_memory_synchronize();
-#endif
 //  kaapi_finalize();
 }
 
@@ -1185,18 +1179,18 @@ static void kaapi_quark_task_format_constructor(void)
 #endif
 }
 
-#if defined(KAAPI_USE_CUDA)
-void QUARK_Task_Set_GPU_Function(void (*function_cpu) (Quark *), void (*function_gpu) (Quark *), uint8_t arch)
+void QUARK_Task_Set_Function_Params(void (*function_cpu) (Quark *), void (*function_gpu) (Quark *), uint8_t arch,
+                              uint8_t prio)
 {
   kaapi_hashentries_t* entry;
   struct Quark_task_fmt_body* quark_task_fmt;
   quark_task_fmt = (struct Quark_task_fmt_body*)malloc(sizeof(struct Quark_task_fmt_body));
   quark_task_fmt->arch = arch;
+  quark_task_fmt->prio = prio;
   quark_task_fmt->body_gpu = function_gpu;
 //  fprintf(stdout,"%s: insert entry cpu=%p gpu=%p\n", __FUNCTION__, function_cpu, function_gpu);
 //  fflush(stdout);
-  entry = kaapi_hashmap_findinsert(&hash_funcptr_gpu, function_cpu);
+  entry = kaapi_hashmap_findinsert(&hash_funcptr_params, function_cpu);
   entry->u.version = (kaapi_version_t*)quark_task_fmt;
 }
-#endif
 

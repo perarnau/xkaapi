@@ -1,5 +1,6 @@
 
 CC := gcc
+NVCC := nvcc
 CFLAGS := -g -DKAAPI_USE_CUDA -I.. -I$(HOME)/install/xkaapi/default/include \
 	  $(CBLAS_CFLAGS) \
 	  $(LAPACKE_CFLAGS) \
@@ -7,12 +8,15 @@ CFLAGS := -g -DKAAPI_USE_CUDA -I.. -I$(HOME)/install/xkaapi/default/include \
 	  $(CUDA_CFLAGS) \
 	# -DCONFIG_VERBOSE
 
-SRC := core_dgemm.c core_dsyrk.c core_dtrsm.c core_dssssm.c core_init.c
-OBJS := $(SRC:.c=.o)
+SRC := core_dgemm.c core_dsyrk.c core_dtrsm.c core_dssssm.c core_dgessm.c core_init.c
+OBJS := $(SRC:.c=.o) magmablas.o
 LIB_a := libcore_cublas.a
 LIB_la := libcore_cublas.la
 
 all: $(LIB_la)
+
+magmablas.o: magmablas.cu
+	$(NVCC) -arch=sm_20 $(CFLAGS) -c $< -o $@
 
 .c.o: 
 	$(CC) $(CFLAGS) -c $< -o $@

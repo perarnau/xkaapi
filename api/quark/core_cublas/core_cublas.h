@@ -19,6 +19,7 @@
 #include "core_blas.h"
 
 #include "core_dcublas.h"
+#include "core_scublas.h"
 
 #include "kaapi.h"
 

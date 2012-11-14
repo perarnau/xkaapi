@@ -19,13 +19,13 @@ void CORE_dgemm_cublas(int transA, int transB,
                 double beta, double *C, int ldc)
 {
   cublasStatus_t status = cublasDgemm_v2(
-                                         kaapi_cuda_cublas_handle(),
-                                         transA,
-                                         transB,
-                                         m, n, k,
-                                         &alpha, A, lda,
-                                         B, ldb,
-                                         &beta, C, ldc);
+                                     kaapi_cuda_cublas_handle(),
+                                     transA,
+                                     transB,
+                                     m, n, k,
+                                     &alpha, A, lda,
+                                     B, ldb,
+                                     &beta, C, ldc);
   PLASMA_CUBLAS_ASSERT(status);
 #if CONFIG_VERBOSE
   fprintf(stdout,"%s: a=%p b=%p c=%p m=%d n=%d k=%d\n", __FUNCTION__,

@@ -54,6 +54,12 @@ int CORE_dssssm_cublas(int M1, int N1, int M2, int N2, int K, int IB,
                        int *IPIV);
 void CORE_dssssm_quark_cublas(Quark *quark);
   
+int CORE_dgessm_cublas(int M, int N, int K, int IB,
+                       int *IPIV,
+                       double *L, int LDL,
+                       double *A, int LDA);
+void CORE_dgessm_quark_cublas(Quark *quark);
+  
 
 #ifdef __cplusplus
 }
