@@ -8,7 +8,15 @@ CFLAGS := -g -DKAAPI_USE_CUDA -I.. -I$(HOME)/install/xkaapi/default/include \
 	  $(CUDA_CFLAGS) \
 	# -DCONFIG_VERBOSE
 
-SRC := core_dgemm.c core_dsyrk.c core_dtrsm.c core_dssssm.c core_dgessm.c core_init.c
+SRC := \
+    core_dgemm.c \
+    core_sgemm.c \
+    core_dsyrk.c \
+    core_dtrsm.c \
+    core_dssssm.c \
+    core_dgessm.c \
+    core_init.c
+
 OBJS := $(SRC:.c=.o) magmablas.o
 LIB_a := libcore_cublas.a
 LIB_la := libcore_cublas.la
