@@ -173,9 +173,6 @@ ACX_LIB_ADD_PUBLIC_FLAGS([KAAPIXXLIB], [-I\${includedir}])
 ACX_LIB_NEW_LIB([KASTLLIB], [-L\${libdir}], [kastl])
 ACX_LIB_ADD_PUBLIC_FLAGS([KASTLLIB], [-I\${includedir}])
 
-ACX_LIB_NEW_LIB([ATHALIB], [-L\${libdir} -latha], [atha])
-ACX_LIB_ADD_PUBLIC_FLAGS([ATHALIB], [-I\${includedir}])
-
 ACX_LIB_NEW_LIB([KAAPICLIB], [-L\${libdir} -lkaapic], [kaapic])
 ACX_LIB_ADD_PUBLIC_FLAGS([KAAPICLIB], [-I\${includedir}])
 
@@ -189,7 +186,6 @@ ACX_LIB_NEW_PRG([KAAPIXXPROGS])
 ACX_LIB_NEW_PRG([KAAPICPROGS])
 ACX_LIB_NEW_PRG([KAAPIFPROGS])
 ACX_LIB_NEW_PRG([KASTLPROGS])
-ACX_LIB_NEW_PRG([ATHAPROGS])
 
 default_experimental=no
 
@@ -290,24 +286,6 @@ KAAPI_FEATURE([api-quark], [compile Quark API used by PLASMA library],
   [],
   [],
   [KAAPI_API_QUARK])
-
-
-dnl -----------------------------------------------------------------------
-dnl The "--enable-api-atha"
-dnl -----------------------------------------------------------------------
-KAAPI_FEATURE([api-atha], [compile Athapascan-1 API, [[DEPRECATED]] ],
-  [Athapascan-1 API compiled], [no],
-  [],
-  [],
-  [KAAPI_API_ATHA],
-  [
-    if test "$enable_api_kaapixx" != yes ; then
-      AC_MSG_NOTICE([Kaapi++ API is required for Athapascan-1 API])
-      FEATURE_DISABLE
-    else
-      FEATURE_ENABLE
-    fi
-  ])
 
 
 dnl -----------------------------------------------------------------------
@@ -884,11 +862,6 @@ ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUPTI])
 dnl ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [HWLOC])
 
-ACX_LIB_LINK([ATHALIB], [PUBLIC], [KAAPIXXLIB])
-ACX_LIB_LINK([ATHALIB], [PRIVATE], [CUDA])
-ACX_LIB_LINK([ATHALIB], [PRIVATE], [CUPTI])
-dnl ACX_LIB_LINK([ATHALIB], [PRIVATE], [HWLOC])
-
 ACX_LIB_LINK([KASTLLIB], [PUBLIC], [KAAPIXXLIB])
 ACX_LIB_LINK([KASTLLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([KASTLLIB], [PRIVATE], [CUPTI])
@@ -928,11 +901,6 @@ ACX_LIB_ADD_BUILD_FLAGS([KAAPIXXPROGS],
 	[-I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
 	[\$(top_builddir)/api/kaapixx/libkaapi++.la \$(top_builddir)/src/libkaapi.la])
 
-ACX_LIB_LINK([ATHAPROGS], [ATHALIB])
-ACX_LIB_ADD_BUILD_FLAGS([ATHAPROGS],
-	[-I\$(top_srcdir)/api/atha -I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/api/atha/libatha.la \$(top_builddir)/api/kaapixx/libkaapi++.la \$(top_builddir)/src/libkaapi.la])
-
 ACX_LIB_LINK([KASTLPROGS], [KASTLLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KASTLPROGS],
 	[-I\$(top_srcdir)/api/kastl -I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
@@ -952,7 +920,6 @@ dnl Then   alphabetic order of other files
 AC_CONFIG_FILES([
 	Makefile
 	api/Makefile
-	api/atha/Makefile
 	api/kaapixx/Makefile
 	api/kaapic/Makefile
 	api/kaapif/Makefile
@@ -976,7 +943,6 @@ AC_CONFIG_FILES([
 	kaapif.pc
 	kaapi++.pc
 	kastl.pc
-	atha.pc
 ])
 AC_OUTPUT
 
