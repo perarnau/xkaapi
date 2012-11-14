@@ -270,7 +270,7 @@ specify it
 kaapish(1)
 
 
-File: kaapi.info,  Node: compile with pkg-config,  Next: compile with environment variables,  Prev: setting environment,  Up: compile
+File: kaapi.info,  Node: compile with pkg-config,  Prev: setting environment,  Up: compile
 
 3.1.2 Using the pkg-config tool
 -------------------------------
@@ -280,19 +280,8 @@ system directories (usually if you use the `--prefix=/usr' with the
 configure script), you can compile and link with the correct flags by
 requesting them to `pkg-config' as for any other library managed by
 `pkg-config':
-     $ g++ -c atha_test.cpp `pkg-config --cflags kaapi` # compiling step
-     $ g++ -o atha_test atha_test.o `pkg-config --libs kaapi` # linking step
-
-
-File: kaapi.info,  Node: compile with environment variables,  Prev: compile with pkg-config,  Up: compile
-
-3.1.3 Using environment variables
----------------------------------
-
-Once you setup an correct environment, you can compile and link with the
-correct flags by using the new defined environment variables:
-     $ g++ -c atha_test.cpp $ATHAPASCAN1_CPPFLAGS # compiling step
-     $ g++ -o atha_test atha_test.o $ATHAPASCAN1_LDFLAGS # linking step
+     $ g++ -c kaapi_test.cpp `pkg-config --cflags kaapi` # compiling step
+     $ g++ -o kaapi_test kaapi_test.o `pkg-config --libs kaapi` # linking step
 
 
 File: kaapi.info,  Node: run,  Prev: compile,  Up: compile and run
@@ -316,14 +305,14 @@ File: kaapi.info,  Node: single instance,  Next: multiple instance,  Up: run
 ----------------------------------------------
 
 You can run the program directly:
-     $ $HOME/kaapi/bin/kaapish ./atha_test
+     $ $HOME/kaapi/bin/kaapish ./kaapi_test
      $ # replace $HOME/kaapi by the prefix used with the configure script
 
    Or you can update environment variables in your shell to be able to
 run your program:
      $ eval `$HOME/kaapi/bin/kaapish --shell --mode=run`
      $ # replace $HOME/kaapi by the prefix used with the configure script
-     $ ./atha_test
+     $ ./kaapi_test
 
    *NOTE*: in case you already setup an environment to compile KAAPI
 program or if you installed KAAPI in system directories (usually if you
@@ -332,9 +321,9 @@ correct environment to run Athapascan programs. So you can run it
 immediately (the last line of the previous example)
 
    Of cause, you can use a more featured program, for example
-`fibo_apiatha' (in this example, no running environment is previously
+`fibo_kaapi' (in this example, no running environment is previously
 setup, so `kaapish' is used)
-     $ $HOME/kaapi/bin/kaapish ./fibo_apiatha 30 15
+     $ $HOME/kaapi/bin/kaapish ./fibo_kaapi 30 15
                                #30: the 30-th fibonacci number
                                #15: threshold to stop recursive
 
@@ -344,7 +333,7 @@ accept this option.
 
    For instance:
      $ $HOME/kaapi/bin/kaapish --help
-     $ $HOME/kaapi/bin/kaapish ./fibo_apiatha --help
+     $ $HOME/kaapi/bin/kaapish ./fibo_kaapi --help
 
    One particular option is `--dumprc' in order to dump default value of
 properties into the file `dump.rc' in order to change them for next
@@ -360,13 +349,13 @@ File: kaapi.info,  Node: multiple instance,  Prev: single instance,  Up: run
 To run the same program on several machines, the user may use the
 `karun' command:
 
-     $ $HOME/kaapi/bin/karun --np <#processes> -f <hostnames> ./fibo_apiatha 30 15
+     $ $HOME/kaapi/bin/karun --np <#processes> -f <hostnames> ./fibo_kaapi 30 15
 
    Note that if `kaapish' is not in you `$PATH' when executing an `ssh'
 on remote machines (check with `ssh <machine> which kaapish'), you will
 need to specify it to `karun':
      $ $HOME/kaapi/bin/karun --wrapper-binary kaapish=/path/on/remote/node/kaapish \
-         --np <#processes> -f <hostnames> ./fibo_apiatha 30 15
+         --np <#processes> -f <hostnames> ./fibo_kaapi 30 15
 
    more detail about this command can be found in the man page karun(1)
 
