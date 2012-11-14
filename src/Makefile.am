@@ -106,6 +106,7 @@ libkaapi_la_SOURCES=\
   tasklist/kaapi_tasklist.c \
   tasklist/kaapi_readytasklist_init.c\
   tasklist/kaapi_readytasklist_destroy.c\
+  tasklist/kaapi_readytasklist_prio.c\
   tasklist/kaapi_readytasklist_push.c\
   tasklist/kaapi_readytasklist_pop.c\
   tasklist/kaapi_readytasklist_rpush.c\

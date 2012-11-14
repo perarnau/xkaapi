@@ -51,19 +51,22 @@ kaapi_cuda_mem_alloc(kaapi_pointer_t * ptr,
   if (__kaapi_cuda_mem_is_full(proc, size))
     devptr = kaapi_cuda_mem_cache_remove(proc, size);
   
-out_of_memory:
+//out_of_memory:
   if (devptr == NULL) {
     res = cudaMalloc(&devptr, size);
-    if (res == cudaErrorLaunchFailure) {
-      fprintf(stdout, "%s: ERROR cudaMalloc (%d) size=%lu kid=%lu\n",
-              __FUNCTION__, res, size,
-              (long unsigned int) kaapi_get_current_kid());
-      fflush(stdout);
-      abort();
-    }
-    if (res != cudaSuccess) {
+#if 0
+    if (res == cudaErrorMemoryAllocation) {
       devptr = kaapi_cuda_mem_cache_remove(proc, size);
       goto out_of_memory;
+    }
+#endif
+    if (res != cudaSuccess) {
+      fprintf(stdout, "%s:%d:%s: ERROR %s (%d) kid=%lu size=%lu\n",
+              __FILE__, __LINE__, __FUNCTION__, cudaGetErrorString(res), res,
+              (long unsigned int)kaapi_get_current_kid(),
+              size );
+      fflush(stdout);
+      abort();
     }
   }
   
