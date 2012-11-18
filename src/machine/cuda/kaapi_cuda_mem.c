@@ -11,16 +11,6 @@
 #include "kaapi_cuda_ctx.h"
 #include "kaapi_cuda_mem_cache.h"
 
-static inline int
-__kaapi_cuda_mem_is_full(kaapi_processor_t * proc, const size_t size)
-{
-  if ((proc->cuda_proc.cache.used + size) >=
-      (proc->cuda_proc.cache.total))
-    return 1;
-  else
-    return 0;
-}
-
 int kaapi_cuda_mem_alloc_(kaapi_mem_addr_t * addr, const size_t size)
 {
   void *devptr = NULL;
@@ -48,8 +38,8 @@ kaapi_cuda_mem_alloc(kaapi_pointer_t * ptr,
   cudaError_t res = cudaSuccess;
   kaapi_processor_t *const proc = kaapi_get_current_processor();
   
-  if (__kaapi_cuda_mem_is_full(proc, size))
-    devptr = kaapi_cuda_mem_cache_remove(proc, size);
+  if (proc->cuda_proc.cache.is_full(proc->cuda_proc.cache.data, size))
+    devptr = proc->cuda_proc.cache.remove(proc->cuda_proc.cache.data, size);
   
 //out_of_memory:
   if (devptr == NULL) {
@@ -72,7 +62,7 @@ kaapi_cuda_mem_alloc(kaapi_pointer_t * ptr,
   
   ptr->ptr = (uintptr_t) devptr;
   ptr->asid = kasid;
-  kaapi_cuda_mem_cache_insert(proc, (uintptr_t)devptr, size, m);
+  proc->cuda_proc.cache.insert(proc->cuda_proc.cache.data, (uintptr_t)devptr, size, m);
   
 #if KAAPI_VERBOSE
   fprintf(stdout, "[%s] kid=%lu %p\n",
@@ -115,13 +105,15 @@ int
 kaapi_cuda_mem_inc_use(kaapi_pointer_t * ptr, kaapi_memory_view_t* const view,
     const kaapi_access_mode_t m)
 {
-  return kaapi_cuda_mem_cache_inc_use(ptr, view, m);
+  kaapi_processor_t* const kproc = kaapi_get_current_processor();
+  return kproc->cuda_proc.cache.inc_use( kproc->cuda_proc.cache.data, ptr->ptr, view, m);
 }
 
 int
 kaapi_cuda_mem_dec_use(kaapi_pointer_t * ptr, kaapi_memory_view_t* const view, const kaapi_access_mode_t m)
 {
-  return kaapi_cuda_mem_cache_dec_use(ptr, view, m);
+  kaapi_processor_t* const kproc = kaapi_get_current_processor();
+  return kproc->cuda_proc.cache.dec_use(kproc->cuda_proc.cache.data, ptr->ptr, view, m);
 }
 
 int
@@ -460,8 +452,8 @@ kaapi_cuda_mem_copy_dtod_peer(kaapi_pointer_t dest,
   return 0;
 }
 
-int kaapi_cuda_mem_destroy(kaapi_cuda_proc_t * proc)
+void kaapi_cuda_mem_destroy(kaapi_cuda_proc_t * proc)
 {
-  return kaapi_cuda_mem_cache_destroy(proc);
+  proc->cache.destroy(proc->cache.data);
 }
 

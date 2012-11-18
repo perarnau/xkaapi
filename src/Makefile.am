@@ -273,6 +273,8 @@ libkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda_data_async.c \
   machine/cuda/kaapi_cuda_mem_cache.h \
   machine/cuda/kaapi_cuda_mem_cache.c \
+  machine/cuda/kaapi_cuda_mem_cache_lru_double_fifo.h \
+  machine/cuda/kaapi_cuda_mem_cache_lru_double_fifo.c \
   machine/cuda/kaapi_cuda_mem.h \
   machine/cuda/kaapi_cuda_mem.c \
   machine/cuda/kaapi_cuda_stream.h \

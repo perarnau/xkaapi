@@ -54,6 +54,7 @@
 #include "kaapi_cuda_ctx.h"
 #include "kaapi_cuda_cublas.h"
 #include "kaapi_cuda_mem.h"
+#include "kaapi_cuda_mem_cache.h"
 
 #include "kaapi_cuda_stream.h"
 
@@ -104,7 +105,8 @@ int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t * proc, unsigned int idev)
     kaapi_cuda_trace_thread_init();
   }
 #endif
-
+  
+  kaapi_cuda_mem_cache_init(proc);
   kaapi_cuda_device_sync();
 
 #if KAAPI_VERBOSE
