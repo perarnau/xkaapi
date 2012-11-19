@@ -110,7 +110,7 @@ kaapi_cuda_mem_cache_lru_double_fifo_insert(void *data,
     kaapi_cuda_mem_cache_lru_double_fifo_insert_ro(cache, blk);
   
   entry = kaapi_big_hashmap_findinsert(&cache->kmem, (const void*)ptr);
-  entry->u.block = blk;
+  entry->u.block = (kaapi_cuda_mem_cache_double_blk_t*)blk;
   cache->used += size;
 
 #if 0
@@ -596,3 +596,4 @@ int kaapi_cuda_mem_cache_lru_double_fifo_is_full(void* data, const size_t size)
   else
     return 0;
 }
+
