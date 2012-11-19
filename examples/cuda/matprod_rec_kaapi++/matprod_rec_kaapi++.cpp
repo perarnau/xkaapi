@@ -133,8 +133,8 @@ struct TaskBodyCPU<TaskParallelGEMM<T> > {
 	  for (size_t k=0; k<K; k += bloc)
 	  {
 	    ka::rangeindex rk(k, k+bloc);
-//	      ka::Spawn<TaskGEMM<T> >(ka::SetArch(ka::ArchHost))
-	      ka::Spawn<TaskGEMM<T> >()
+	      ka::Spawn<TaskGEMM<T> >(ka::SetArch(ka::ArchHost))
+//	      ka::Spawn<TaskGEMM<T> >()
 		(
 		 order, transA, transB,
 		 alpha, A(rk,ri), B(rj,rk), beta, C(rj,ri)
