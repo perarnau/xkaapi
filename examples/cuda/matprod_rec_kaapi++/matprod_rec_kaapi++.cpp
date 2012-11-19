@@ -134,7 +134,6 @@ struct TaskBodyCPU<TaskParallelGEMM<T> > {
 	  {
 	    ka::rangeindex rk(k, k+bloc);
 	      ka::Spawn<TaskGEMM<T> >(ka::SetArch(ka::ArchHost))
-//	      ka::Spawn<TaskGEMM<T> >()
 		(
 		 order, transA, transB,
 		 alpha, A(rk,ri), B(rj,rk), beta, C(rj,ri)
@@ -153,7 +152,6 @@ struct TaskBodyCPU<TaskParallelGEMM<T> > {
   }
 };
 
-#if defined(KAAPI_USE_CUDA)
 template<typename T> 
 struct TaskBodyGPU<TaskParallelGEMM<T> >
 {
@@ -220,8 +218,6 @@ struct TaskBodyGPU<TaskParallelGEMM<T> >
 #endif
   }
 };
-
-#endif
 
 template<typename T>
 struct TaskMatProduct: public ka::Task<3>::Signature<

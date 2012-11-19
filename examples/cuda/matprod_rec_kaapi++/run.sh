@@ -42,15 +42,15 @@ function run_test {
 #   export KAAPI_STEAL_AFFINITY="locality"
 #   export KAAPI_STEAL_AFFINITY="writer"
  
-#    msizes="20480"
+    msizes="2048"
 #     msizes="16384"
 #    msizes="$(seq 512 512 2048)"
 #    msizes="8192"
-    msizes="4096"
+#    msizes="4096"
 #    msizes="1024"
 #    bsizes="2048"
-#    bsizes="1024"
-    bsizes="512"
+    bsizes="1024"
+#    bsizes="512"
     nwindow="2"
     niter=1
     verif=1

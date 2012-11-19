@@ -61,12 +61,13 @@ typedef unsigned int kaapi_mem_asid_t;
 
 #define KAAPI_MEM_ASID_MAX 32
 typedef struct kaapi_mem_data_t {
-    kaapi_mem_addr_t addr[KAAPI_MEM_ASID_MAX];
+  kaapi_mem_addr_t addr[KAAPI_MEM_ASID_MAX];
 
-    struct kaapi_mem_data_t* parent;
-    kaapi_bitmap64_t  valid_bits;
-    kaapi_bitmap64_t  dirty_bits;
-    kaapi_bitmap64_t  addr_bits;
+  kaapi_bitmap64_t  valid_bits;
+  kaapi_bitmap64_t  dirty_bits;
+  kaapi_bitmap64_t  addr_bits;
+
+  struct kaapi_mem_data_t* next; /* Next block of this pointer */
 } kaapi_mem_data_t;
 
 typedef struct kaapi_mem_host_map_t {
