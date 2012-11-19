@@ -5,8 +5,10 @@
 ##  Copyright 2010 INRIA. All rights reserved.
 ##
 
-if KAAPI_API_ATHA
-BB_PRGS=branchbound_atha
+BB_PRGS=
+if KAAPI_API_KAAPIXX
+# not yet fully converted from the Athapascan1 interface
+#BB_PRGS+=branchbound_kaapi++
 endif
 
 check_PROGRAMS+=$(BB_PRGS)
@@ -14,9 +16,9 @@ check_PROGRAMS+=$(BB_PRGS)
 all-bb: $(BB_PRGS)
 
 # Based on Cilk example
-branchbound_atha_SOURCES=branchbound/branchbound_atha.cpp
+branchbound_kaapi___SOURCES=branchbound/branchbound_kaapi++.cpp
 
-branchbound_atha_CPPFLAGS=$(AM_CPPFLAGS) $(ATHAPROGS_BUILD_CPPFLAGS)
-branchbound_atha_CXXFLAGS=$(AM_CXXFLAGS) $(ATHAPROGS_BUILD_CXXFLAGS)
-branchbound_atha_LDFLAGS =$(AM_LDFLAGS)  $(ATHAPROGS_BUILD_LDFLAGS)
-branchbound_atha_LDADD   =$(LIBS)        $(ATHAPROGS_BUILD_LIBS)
+branchbound_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+branchbound_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+branchbound_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+branchbound_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)

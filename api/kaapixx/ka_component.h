@@ -42,8 +42,8 @@
 ** terms.
 ** 
 */
-#ifndef _ATHA_COMPONENT_H_
-#define _ATHA_COMPONENT_H_
+#ifndef _KA_COMPONENT_H_
+#define _KA_COMPONENT_H_
 
 #include "kaapi.h"
 #include "ka_parser.h"

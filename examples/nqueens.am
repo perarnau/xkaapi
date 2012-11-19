@@ -6,9 +6,6 @@
 ##
 
 NQUEENS_PRGS=
-if KAAPI_API_ATHA
-NQUEENS_PRGS+=nqueens_atha
-endif
 if KAAPI_API_KAAPIXX
 NQUEENS_PRGS+=nqueens_kaapi++
 endif
@@ -17,13 +14,7 @@ check_PROGRAMS+=$(NQUEENS_PRGS)
 all-nqueens: $(NQUEENS_PRGS)
 
 #Nqueens program.
-nqueens_atha_SOURCES=nqueens/nqueens_atha.cpp
 nqueens_kaapi___SOURCES=nqueens/nqueens_kaapi++.cpp
-
-nqueens_atha_CPPFLAGS=$(AM_CPPFLAGS) $(ATHAPROGS_BUILD_CPPFLAGS)
-nqueens_atha_CXXFLAGS=$(AM_CXXFLAGS) $(ATHAPROGS_BUILD_CXXFLAGS)
-nqueens_atha_LDFLAGS =$(AM_LDFLAGS)  $(ATHAPROGS_BUILD_LDFLAGS)
-nqueens_atha_LDADD   =$(LIBS)        $(ATHAPROGS_BUILD_LIBS)
 
 nqueens_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 nqueens_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)

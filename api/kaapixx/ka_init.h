@@ -41,8 +41,8 @@
 ** terms.
 ** 
 */
-#ifndef _ATHA_INIT_H
-#define _ATHA_INIT_H
+#ifndef _KA_INIT_H
+#define _KA_INIT_H
 
 #include "ka_types.h"
 #include "ka_properties.h"

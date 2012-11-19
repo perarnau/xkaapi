@@ -41,8 +41,8 @@
 ** terms.
 ** 
 */
-#ifndef _ATHA_PARSER_H_
-#define _ATHA_PARSER_H_
+#ifndef _KA_PARSER_H_
+#define _KA_PARSER_H_
 
 #include "ka_properties.h"
 #include <stdint.h>
