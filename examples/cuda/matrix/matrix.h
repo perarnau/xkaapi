@@ -171,13 +171,8 @@ ka::R<int> /* fake */
 
 #if CONFIG_USE_CUDA
 # include "matrix_gpu.inl"
-#include "magmablas/magmablas.h"
-//# include "matrix_alpha.inl"
 #endif
 
 #include "kblas.inl"
-#if defined(CONFIG_USE_PLASMA)
-#include "kplasma.inl"
-#endif
 
 #endif // MATRIX_H_INCLUDED
