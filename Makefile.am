@@ -8,7 +8,7 @@ SUBDIRS=. src bin api examples
 BUILT_SOURCES= gitlastcommit
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA= kaapi.pc kaapic.pc kaapif.pc kaapi++.pc atha.pc kastl.pc
+pkgconfig_DATA= kaapi.pc kaapic.pc kaapif.pc kaapi++.pc kastl.pc
 
 # Add support for configure with gasnet
 EXTRA_DIST=acinclude/gasnet_cppflags.mk
