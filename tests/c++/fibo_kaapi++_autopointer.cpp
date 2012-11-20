@@ -41,30 +41,65 @@
 ** terms.
 ** 
 */
-#include "kaapi++"
-#include "test_main.h"
 #include <iostream>
+#include "kaapi++" // this is the new C++ interface for Kaapi
 
 
-struct MyTask1 : public ka::Task<2>::Signature<unsigned long,double**>{};
+/* Sum two integers
+ * this task reads a and b (read acces mode) and write their sum to res (write access mode)
+ * it will wait until previous write to a and b are done
+ * once finished, further read of res will be possible
+ */
+struct TaskSum : public ka::Task<3>::Signature<ka::W<long>, ka::R<long>, ka::R<long> > {};
 
 template<>
-struct TaskBodyCPU<MyTask1>
+struct TaskBodyCPU<TaskSum>
 {
-	void operator()(unsigned long a, double** b )
-	{ 
-    std::cout << "Ptr:" << b << " diff:" << ((char*)b) - ((char*)a) << std::endl;
+  void operator() ( ka::pointer_w<long> r, 
+                    ka::pointer_r<long> a, 
+                    ka::pointer_r<long> b ) 
+  {
+    /* write is used to write data to a Shared_w
+     * read is used to read data from a Shared_r
+     */
+    *r = *a + *b;
   }
 };
 
-/* Main of the program
+
+/* Kaapi Fibo task.
+   A Task is a type with respect a given signature. The signature specifies the number of arguments (2),
+   and the type and access mode for each parameters.
+   Here the first parameter is declared with a write mode. The second is passed by value.
+ */
+struct TaskFibo : public ka::Task<2>::Signature<ka::W<long>, const long > {};
+
+
+/* Implementation for CPU machine 
 */
-void doit::operator()(int argc, char** argv )
+template<>
+struct TaskBodyCPU<TaskFibo>
 {
-  double** d;
-  int i;
-  
-  d = new double*[2];
-  
-  ka::Spawn<MyTask1>()( (unsigned long)d, d );
-}
+  void operator() ( ka::pointer_w<long> ptr, const long n )
+  {  
+    if (n < 2){ 
+      *ptr = n; 
+      return;
+    }
+    else {
+      ka::auto_pointer<long> ptr1 = new long;
+      ka::auto_pointer<long> ptr2 = new long;
+
+      /* the Spawn keyword is used to spawn new task
+       * new tasks are executed in parallel as long as dependencies are respected
+       */
+      ka::Spawn<TaskFibo>() ( ptr1, n-1 );
+      ka::Spawn<TaskFibo>() ( ptr2, n-2 );
+
+      /* the Sum task depends on res1 and res2 which are written by previous tasks
+       * it must wait until thoses tasks are finished
+       */
+      ka::Spawn<TaskSum>() ( ptr, ptr1, ptr2 );      
+    }
+  }
+};

@@ -46,7 +46,6 @@
 #ifndef KAAPIF_H_INCLUDED
 # define KAAPIF_H_INCLUDED
 
-
 #include <stdint.h>
 
 
@@ -106,6 +105,17 @@ extern int kaapif_end_parallel_tasklist_(void);
 
 extern void kaapif_get_version_(uint8_t* s);
 
+/* addr to dim conversion
+   make and get addresses from i, j, ld
+   dataflow programming requires data to be identified
+   by a unique address. from this address, the runtime
+   can compute data dependencies. in this algorithm,
+   we choose i * n4 + j as a factice address.
+ */
+
+extern int64_t kaapif_make_id2_(int64_t* i, int64_t* j, int64_t* ld);
+extern int64_t kaapif_get_id2_row_(int64_t* id, int64_t* ld);
+extern int64_t kaapif_get_id2_col_(int64_t* id, int64_t* ld);
 
 #if defined(__cplusplus)
 }

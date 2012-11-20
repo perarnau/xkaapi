@@ -73,30 +73,49 @@ static int kaapi_memory_write_view
       if (view_dest->size[0] != view_src->size[0]) 
         return EINVAL;
 
-      //error = kaapi_cuda_mem_1dcopy_dtoh( dest, view_dest, src, view_src );
+      error = write_fn(write_arg, kaapi_pointer2void(dest), kaapi_pointer2void(src), view_src->size[0]*view_src->wordsize );
       break;
     } 
       
     case KAAPI_MEMORY_VIEW_2D:
     {
-      //error = kaapi_cuda_mem_2dcopy_dtoh( dest, view_dest, src, view_src );
-
-#if KAAPI_VERBOSE
-  kaapi_processor_t* const proc = kaapi_get_current_processor();
-  printf("[%s]: [%u:%u] (%lx:%lx -> %lx:%lx) src lda=%lu %lux%lu dst lda=%lu %lux%lu\n",
-	 __FUNCTION__,
-	 proc->kid, proc->proc_type,
-	 src.asid, (uintptr_t)src.ptr,
-	 dest.asid, (uintptr_t)dest.ptr,
-	view_src->lda,
-	view_src->size[0],
-	view_src->size[1],
-	view_dest->lda,
-	view_dest->size[0],
-	view_dest->size[1]
-	 );
-#endif 
-	      break;
+      const char* laddr;
+      char* raddr;
+      size_t size;
+      
+      kaapi_assert(view_dest->type == KAAPI_MEMORY_VIEW_2D);
+      if (view_dest->size[0] != view_src->size[0]) 
+        /* this case may be implemented */
+        return EINVAL;
+      
+      size = view_src->size[0] * view_src->size[1];
+      if (view_src->size[1] != view_dest->size[1]) 
+        return EINVAL;
+      
+      laddr = kaapi_pointer2void(src);
+      raddr = (char*)kaapi_pointer2void(dest);
+      
+      if (kaapi_memory_view_iscontiguous(view_src) &&
+          kaapi_memory_view_iscontiguous(view_dest))
+      {
+        error = write_fn(write_arg, raddr, laddr, size * view_src->wordsize);
+      }
+      else 
+      {
+        size_t i;
+        size_t size_row = view_src->size[1]*view_src->wordsize;
+        size_t llda = view_src->lda * view_src->wordsize;
+        size_t rlda = view_dest->lda * view_src->wordsize;
+        
+        kaapi_assert_debug( view_dest->size[1] == view_src->size[1] );
+        
+        for (i=0; i<view_src->size[0]; ++i, laddr += llda, raddr += rlda)
+        {
+          error = write_fn(write_arg, raddr, laddr, size_row);
+          if (error) break;
+        }
+      }
+      break;
     }
       
     default: 
@@ -286,7 +305,8 @@ int kaapi_memory_write_cpu2cpu
   const kaapi_memory_view_t* view_src
 )
 {
-  if (kaapi_pointer_isnull(dest) || (kaapi_pointer_isnull(src) == 0)) return EINVAL;
+  if (kaapi_pointer_isnull(dest) || kaapi_pointer_isnull(src)) 
+    return EINVAL;
   return 
     kaapi_memory_write_view
       (dest, view_dest, src, view_src, memcpy_wrapper, NULL);

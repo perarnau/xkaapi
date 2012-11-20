@@ -77,22 +77,27 @@ size_t kaapi_task_computeready(
     /* */
     kaapi_gd_t* gd = &kaapi_hashmap_findinsert( map, access.data )->u.value;
     
-    /* compute readyness of access */
+    /* compute readyness of access
+       - note that stack access, even if it as R|W flag is always concurrent
+    */
     if (   KAAPI_ACCESS_IS_ONLYWRITE(m)
         || (gd->last_mode == KAAPI_ACCESS_MODE_VOID)
+        || (KAAPI_ACCESS_IS_STACK(m))
         || (KAAPI_ACCESS_IS_CONCURRENT(m, gd->last_mode))
-        )
+       )
     {
       --wc;
       if (  (KAAPI_ACCESS_IS_ONLYWRITE(m) && KAAPI_ACCESS_IS_READ(gd->last_mode))
-         || (KAAPI_ACCESS_IS_CUMULWRITE(m) && KAAPI_ACCESS_IS_CONCURRENT(m,gd->last_mode)) )
+         || (KAAPI_ACCESS_IS_CUMULWRITE(m) && KAAPI_ACCESS_IS_CONCURRENT(m,gd->last_mode)) 
+         || (KAAPI_ACCESS_IS_STACK(m))
+      )
       {
+        /* stack data are reused through recursive task execution and copied on steal but never merged */
         *war_param |= 1<<i;
       }
       if (KAAPI_ACCESS_IS_CUMULWRITE(m))
         *cw_param |= 1<<i;
     }
-    /* optimization: break from enclosest loop here */
     
     /* update map information for next access if no set */
     if (gd->last_mode == KAAPI_ACCESS_MODE_VOID)

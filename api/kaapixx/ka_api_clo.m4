@@ -367,6 +367,16 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
   typedef KAAPI_TASKARG(KAAPI_NUMBER_PARAMS) ifelse(KAAPI_NUMBER_PARAMS,0,`',`<M4_PARAM(`TraitFormalParam$1', `', `,')>') TaskArg_t;
   
 
+  static size_t get_size(const struct kaapi_format_t*, const void* _taskarg)
+  {
+    return sizeof(TaskArg_t);
+  }
+
+  static void task_copy(const struct kaapi_format_t*, void* _taskarg_dest, const void* _taskarg_src)
+  {
+    memcpy( _taskarg_dest, _taskarg_src, sizeof(TaskArg_t));
+  }
+
   static size_t get_count_params(const struct kaapi_format_t*, const void* _taskarg)
   {
     const TaskArg_t* taskarg = static_cast<const TaskArg_t*>(_taskarg);
@@ -505,7 +515,8 @@ struct KAAPI_FORMATCLOSURE_SD(KAAPI_NUMBER_PARAMS)<TASK  M4_PARAM(`,TraitFormalP
     // here we assume no concurrency during startup calls of the library that initialize format objects
     static FormatTask task_fmt(
           typeid(TASK).name(),
-          sizeof(TaskArg_t),
+          &get_size,
+          &task_copy,
           &get_count_params,
           &get_mode_param,
           &get_off_param,

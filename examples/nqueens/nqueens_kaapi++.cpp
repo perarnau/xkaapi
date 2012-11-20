@@ -10,9 +10,11 @@
 
 /*
  * globals
+ * Note the threshold value = 5 is good for chessboard >= 9. Solution of chessboard <9 must used 
+ * a smaller threshold value
  */
 #if !defined(THRESHOLD)
-#define THRESHOLD 5
+#define THRESHOLD 4
 #endif
 
 #define MAXSIZE 24
@@ -52,26 +54,10 @@ struct res_t
   }
 };
 
-#if 0
-/*
- * communicate res_t content
- */
-a1::OStream & operator<< (a1::OStream & s_out, const res_t & b)
-{
-  return s_out << b.COUNT2 << b.COUNT4 << b.COUNT8;
-}
-
-a1::IStream & operator>> (a1::IStream & s_in, res_t & b)
-{
-  return s_in >> b.COUNT2 >> b.COUNT4 >> b.COUNT8;
-}
-#endif
 
 /*
- * various small functor
+ * various small functors
  */
-
-
 struct Task_cumulinplace: ka::Task<2>::Signature<
   ka::RW<res_t>,
   ka::R<res_t>
@@ -146,22 +132,6 @@ struct board
   int32_t d[MAXSIZE];
 };
 
-/*
- * communicate board
- */
-#if 0 // TODO 
-a1::OStream & operator<< (a1::OStream & s_out, const board & b)
-{
-  s_out.write ( ka::WrapperFormat<uint32_t>::format, a1::OStream::DA, &b, SIZEE+1);
-  return s_out;
-}
-
-a1::IStream & operator>> (a1::IStream & s_in, board & b)
-{
-  s_in.read (Util::WrapperFormat<uint32_t>::format, a1::OStream::DA, &b, SIZEE+1);
-  return s_in;
-}
-#endif
 
 /***************************************************************
  *

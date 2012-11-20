@@ -69,6 +69,16 @@ static inline const void* __constget_usersp( const void* sp )
   return arg->user_sp;
 }
 
+static size_t _kaapi_adaptbody_get_size(const struct kaapi_format_t* fmt, const void* sp)
+{
+  return sizeof(kaapi_taskadaptive_arg_t);
+}
+
+static void _kaapi_adaptbody_task_copy(const struct kaapi_format_t* fmt, void* sp_dest, const void* sp_src)
+{
+  memcpy( sp_dest, sp_src, sizeof(kaapi_taskadaptive_arg_t) );
+}
+
 static size_t 
 _kaapi_adaptbody_get_count_params(const kaapi_format_t* fmt, const void* sp)
 { 
@@ -176,7 +186,8 @@ void kaapi_init_adapfmt(void)
     (kaapi_task_body_t)kaapi_taskadapt_body,
     0,
     "kaapi_taskadapt_body",
-    sizeof(kaapi_taskadaptive_arg_t),
+    _kaapi_adaptbody_get_size,
+    _kaapi_adaptbody_task_copy,
     _kaapi_adaptbody_get_count_params,
     _kaapi_adaptbody_get_mode_param,
     0  /* (*get_off_param) */,

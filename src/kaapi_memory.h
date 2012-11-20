@@ -282,6 +282,9 @@ extern int kaapi_memory_asyncopy(
 static inline kaapi_pointer_t kaapi_make_pointer( kaapi_address_space_id_t asid, void* ptr)
 { kaapi_pointer_t p; p.asid = asid; p.ptr = (uintptr_t)ptr; return p; }
 
+static inline kaapi_pointer_t kaapi_make_localpointer( void* ptr)
+{ kaapi_pointer_t p; p.asid = 0; p.ptr = (uintptr_t)ptr; return p; }
+
 /** Make a null pointer object
 */
 static inline kaapi_pointer_t kaapi_make_nullpointer(void)
