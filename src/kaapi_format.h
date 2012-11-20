@@ -52,7 +52,7 @@ extern "C" {
 #include "kaapi_error.h"
 #include "kaapi_defs.h"
 #include "kaapi.h"
-
+#include <string.h>
 
 struct kaapi_taskdescr_t;
 struct kaapi_format_t;
