@@ -7,7 +7,6 @@
 
 BB_PRGS=
 if KAAPI_API_KAAPIXX
-# not yet fully converted from the Athapascan1 interface
 #BB_PRGS+=branchbound_kaapi++
 endif
 

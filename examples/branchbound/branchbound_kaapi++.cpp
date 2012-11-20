@@ -144,7 +144,7 @@ struct maximum{
 
 /** Define a global valable which can be read/written by any task,
  n_max is the node who has the maximus value currently*/
-a1::MonotonicBound<node,maximum> n_max;
+ka::MonotonicBound<node,maximum> n_max;
 
 
 /** main task */
