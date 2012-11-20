@@ -84,6 +84,7 @@ int kaapif_spawn_
 
   ti->body  = body;
   ti->nargs = *nargs;
+  ti->args  = (kaapic_arg_info_t*)(ti+1);
 
   va_start(va_args, body);
   for (k = 0; k < *nargs; ++k)
@@ -98,29 +99,29 @@ int kaapif_spawn_
     switch (mode)
     {
       case KAAPIC_MODE_R:  
-        ai->mode = KAAPI_ACCESS_MODE_R; 
+        ai->u.mode = KAAPI_ACCESS_MODE_R; 
         break;
       case KAAPIC_MODE_W:  
-        ai->mode = KAAPI_ACCESS_MODE_W; 
+        ai->u.mode = KAAPI_ACCESS_MODE_W; 
         break;
       case KAAPIC_MODE_RW: 
-        ai->mode = KAAPI_ACCESS_MODE_RW; 
+        ai->u.mode = KAAPI_ACCESS_MODE_RW; 
         break;
       case KAAPIC_MODE_V:  
         if (count >1) return KAAPIF_ERR_EINVAL;
-	if (type != KAAPIC_TYPE_PTR)
-	{
-	  /* save into value space and change to TYPE_PTR */
-	  values[k] = *(uintptr_t*)addr;
-	  type = KAAPIC_TYPE_PTR;
-	}
-	else
-	{
-	  /* FORTRAN pointer is passed, but &ptr must be given to task */
-	  values[k] = (uintptr_t)addr;
-	}
-	addr = (void*)(values + k);
-	ai->mode = KAAPI_ACCESS_MODE_V;
+        if (type != KAAPIC_TYPE_PTR)
+        {
+          /* save into value space and change to TYPE_PTR */
+          values[k] = *(uintptr_t*)addr;
+          type = KAAPIC_TYPE_PTR;
+        }
+        else
+        {
+          /* FORTRAN pointer is passed, but &ptr must be given to task */
+          values[k] = (uintptr_t)addr;
+        }
+        addr = (void*)(values + k);
+        ai->u.mode = KAAPI_ACCESS_MODE_V;
         break;
       default: 
         return KAAPIF_ERR_EINVAL;

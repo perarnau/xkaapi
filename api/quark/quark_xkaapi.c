@@ -704,7 +704,7 @@ void *QUARK_Args_Pop( void *args_list, void **last_arg)
   if (arg2pop ==0) 
     arg2pop = taskarg->param;
 
-  if (arg2pop->mode & KAAPI_ACCESS_MODE_S)
+  if (arg2pop->mode & KAAPI_ACCESS_MODE_T)
   {
     /* allocate a scratch zone: freeed after task execution */
     if (arg2pop->addr.data ==0)
@@ -1054,6 +1054,18 @@ void QUARK_DOT_DAG_Enable( Quark *quark, int boolean_value )
 }
 
 /* format definition for any QUARK task */
+static size_t 
+kaapi_quark_task_format_get_size(const struct kaapi_format_t* fmt, const void* sp)
+{
+  return sizeof(kaapi_quark_task_t);
+}
+
+static void 
+kaapi_quark_task_format_task_copy(const struct kaapi_format_t* fmt, void* sp_dest, const void* sp_src)
+{
+  memcpy( sp_dest, sp_src, sizeof(kaapi_quark_task_t) );
+}
+
 static
 size_t kaapi_quark_task_format_get_count_params(const struct kaapi_format_t* fmt, const void* sp)
 { 
@@ -1068,7 +1080,7 @@ kaapi_access_mode_t kaapi_quark_task_format_get_mode_param(
 { 
   kaapi_quark_task_t* arg = (kaapi_quark_task_t*)sp;
 #if 0
-  if (arg->param[i].mode & KAAPI_ACCESS_MODE_S)
+  if (arg->param[i].mode & KAAPI_ACCESS_MODE_T)
     return KAAPI_ACCESS_MODE_V;
 #endif
   return arg->param[i].mode;
@@ -1167,7 +1179,8 @@ static void kaapi_quark_task_format_constructor(void)
     (kaapi_task_body_t)kaapi_wrapper_quark_function,
     (kaapi_task_body_t)kaapi_wrapper_wh_quark_function,
     "kaapi_quark_task_format",
-    sizeof(kaapi_quark_task_t),
+    kaapi_quark_task_format_get_size,
+    kaapi_quark_task_format_task_copy,
     kaapi_quark_task_format_get_count_params,
     kaapi_quark_task_format_get_mode_param,
     kaapi_quark_task_format_get_off_param,

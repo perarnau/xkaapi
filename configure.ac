@@ -1005,6 +1005,8 @@ AC_CONFIG_FILES([
 	bin/kaapi_event_reader/Makefile
 	bin/kacc/kacc.cpp
 	tests/static/Makefile
+	tests/c/Makefile
+	tests/c++/Makefile
 
 	src/misc/kaapi_version.c
 	kaapi.pc

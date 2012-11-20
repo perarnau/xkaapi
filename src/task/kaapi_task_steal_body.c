@@ -105,7 +105,8 @@ void kaapi_taskwrite_body(
         continue;
       }
 
-      if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param) || (KAAPI_ACCESS_IS_CUMULWRITE(mode_param) && ((mode & KAAPI_ACCESS_MODE_IP) ==0)))
+      if ( KAAPI_ACCESS_IS_ONLYWRITE(mode_param) 
+       || (KAAPI_ACCESS_IS_CUMULWRITE(mode_param) && ((mode & KAAPI_ACCESS_MODE_IP) ==0)))
       {
         access_param      = kaapi_format_get_access_param(fmt, i, orig_task_args); 
         copy_access_param = kaapi_format_get_access_param(fmt, i, copy_task_args); 
@@ -114,16 +115,29 @@ void kaapi_taskwrite_body(
         access_param.version = copy_access_param.data;
         kaapi_format_set_access_param(fmt, i, orig_task_args, &access_param );
       }
+      else if (KAAPI_ACCESS_IS_STACK(mode_param))
+      { /* never merge result here */
+        copy_access_param = kaapi_format_get_access_param(fmt, i, copy_task_args);
+//Temporary delete free(copy_access_param.data);
+        copy_access_param.data = 0;
+
+        /* suppress war_param bit to avoid pushing a merge task */
+        war_param &= ~(1<<i);
+#if 0
+kaapi_memory_view_t view = kaapi_format_get_view_param(fmt, i, copy_task_args);
+printf("Delete temporary stack object: size=%i\n",(int)kaapi_memory_view_size(&view) );
+#endif
+      }
     }
   }
 
   /* order write to the memory before changing the origin task' state */
   kaapi_writemem_barrier();
 
-  /* lock the task to ensure exclusive access between preemption & end of task */
+  /* lock the original task to ensure exclusive access between preemption & end of task */
   kaapi_task_lock( arg->origin_task );
 
-  /* signal the task : mark it as executed, the old returned body should have steal flag */
+  /* signal the original task : mark it as executed, the old returned body should have steal flag */
   if ((war_param ==0) && (cw_param ==0))
     kaapi_task_markterm( arg->origin_task );
   else 
@@ -138,10 +152,6 @@ void kaapi_taskwrite_body(
 */
 void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 {
-#if 0
-    kaapi_thread_context_t* const self_thread = kaapi_self_thread_context();
-    kaapi_processor_t* const self_proc = self_thread->proc;
-#endif
   unsigned int           i;
   size_t                 count_params;
   kaapi_task_t*          task;
@@ -201,11 +211,6 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     else
 #endif
     {
-#if 0
-    fprintf( stdout, "[%s] task=%s stack=%p kid=%i\n", __FUNCTION__,
-	    fmt->name, (void*)orig_task_args, (int)kaapi_get_current_kid() );
-    fflush(stdout);
-#endif
 //	if ( fmt != 0 )
 //		kaapi_mem_host_map_sync_ptr( fmt, orig_task_args );
       body( orig_task_args, thread );
@@ -213,13 +218,15 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
   }
   else /* it exists at least one w parameter with war dependency or a cw_param: recopies the arguments */
   {
-    copy_task_args       = kaapi_thread_pushdata( thread, fmt->size);
+    size_t task_size = kaapi_format_get_size( fmt, orig_task_args );
+    copy_task_args       = kaapi_thread_pushdata( thread, (uint32_t)task_size);
     arg->copy_task_args  = copy_task_args;
     arg->origin_fmt      = fmt;
 
     /* WARNING there are possibly non formated params */
-    /* ERROR: do not work is tasks are variable sized */
-    memcpy(copy_task_args, orig_task_args, fmt->size);
+    /* ERROR: do not work if variable size task: to be virtualized through the format object */
+    kaapi_format_task_copy( fmt, copy_task_args, orig_task_args );
+//    memcpy(copy_task_args, orig_task_args, fmt->size);
 
     for (i=0; i<count_params; ++i)
     {
@@ -241,25 +248,63 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
       copy_access_param.data    = access_param.data;
       copy_access_param.version = 0; /*access_param->version; / * not required... * / */
       
-      /* allocate new data for the war or cw param, else points to the original data
+      if (KAAPI_ACCESS_IS_STACK(mode_param))
+      {
+        copy_access_param.data = 0;
+        kaapi_memory_view_t view = kaapi_format_get_view_param(fmt, i, orig_task_args);
+        if (kaapi_memory_view_size(&view) < 1024 )
+        { /* try to do stack allocation */
+          copy_access_param.data = kaapi_thread_pushdata(thread, (int)kaapi_memory_view_size(&view));
+        }
+        if (copy_access_param.data ==0)
+        {
+#if defined(KAAPI_DEBUG)
+          copy_access_param.data   = calloc(1, kaapi_memory_view_size(&view));
+#else
+          copy_access_param.data   = malloc(kaapi_memory_view_size(&view));
+#endif
+printf("Bad: heap allocation\n");
+        }
+        kaapi_assert_debug( copy_access_param.data != 0 );
+        
+        if (fmt_param->cstor !=0) 
+          (*fmt_param->cstor)(copy_access_param.data);
+
+        kaapi_memory_view_t view_dest = view;
+        kaapi_memory_view_reallocated( &view_dest );
+        (*fmt_param->assign)(copy_access_param.data, &view_dest, access_param.data, &view );
+        
+        /* set new data to copy with new view */
+        kaapi_format_set_access_param(fmt, i, copy_task_args, &copy_access_param );
+        kaapi_format_set_view_param( fmt, i, copy_task_args, &view_dest );
+      }
+      /* allocate new data for the war or cw param or stack data, else points to the original data
          if mode is CW and Inplace flag is set, then do not copy data.
       */
-      if (KAAPI_ACCESS_IS_ONLYWRITE(mode_param) || (KAAPI_ACCESS_IS_CUMULWRITE(mode_param) && ((mode & KAAPI_ACCESS_MODE_IP) ==0)) )
+      else if ( KAAPI_ACCESS_IS_ONLYWRITE(mode_param) 
+            || (KAAPI_ACCESS_IS_CUMULWRITE(mode_param) && ((mode & KAAPI_ACCESS_MODE_IP) ==0)) 
+      )
       {
         if (((war_param & (1<<i)) !=0) || ((cw_param & (1<<i)) !=0))
         { 
           kaapi_memory_view_t view = kaapi_format_get_view_param(fmt, i, orig_task_args);
 #if defined(KAAPI_DEBUG)
-          copy_access_param.data    = calloc(1, kaapi_memory_view_size(&view));
+          copy_access_param.data   = calloc(1, kaapi_memory_view_size(&view));
 #else
-          copy_access_param.data    = malloc(kaapi_memory_view_size(&view));
+          copy_access_param.data   = malloc(kaapi_memory_view_size(&view));
 #endif
           if (fmt_param->cstor !=0) 
             (*fmt_param->cstor)(copy_access_param.data);
-            
-          /* if cw: init with neutral element with respect to the reduction */
-          if ((cw_param & (1<<i)) !=0)
-            kaapi_format_redinit_neutral(fmt, i, copy_task_args, copy_access_param.data );
+          if (KAAPI_ACCESS_IS_STACK(mode_param))
+          {
+            kaapi_memory_view_t view_dest = view;
+            kaapi_memory_view_reallocated( &view_dest );
+            (*fmt_param->assign)(copy_access_param.data, &view_dest, access_param.data, &view );
+          }
+          else
+            /* if cw: init with neutral element with respect to the reduction */
+            if ((cw_param & (1<<i)) !=0)
+              kaapi_format_redinit_neutral(fmt, i, copy_task_args, copy_access_param.data );
           
           /* set new data to copy with new view */
           kaapi_format_set_access_param(fmt, i, copy_task_args, &copy_access_param );
@@ -271,22 +316,9 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
 
 
     /* call directly the stolen body function */
-#if 0
-//#if defined(KAAPI_USE_CUDA)
-    if (kaapi_get_current_processor()->proc_type == KAAPI_PROC_TYPE_CUDA)
-    {
-      if (fmt->entrypoint[KAAPI_PROC_TYPE_CUDA] == 0)
-        body( copy_task_args, thread );
-      else
-        kaapi_cuda_task_steal_body( thread, fmt, copy_task_args );
-    }
-    else
-#endif
-    {
 //	if ( fmt != 0 )
 //		kaapi_mem_host_map_sync_ptr( fmt, copy_task_args );
-        body( copy_task_args, thread);
-    }
+      body( copy_task_args, thread);
   }
 
   /* push task that will be executed after all created tasks spawned

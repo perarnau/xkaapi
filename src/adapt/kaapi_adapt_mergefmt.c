@@ -51,6 +51,16 @@
 */
 static kaapi_format_t kaapi_format_task_adaptmerge_body;
 
+static size_t _kaapi_mergebody_get_size(const struct kaapi_format_t* fmt, const void* sp)
+{
+  return sizeof(kaapi_taskmerge_arg_t);
+}
+
+static void _kaapi_mergebody_task_copy(const struct kaapi_format_t* fmt, void* sp_dest, const void* sp_src)
+{
+  memcpy( sp_dest, sp_src, sizeof(kaapi_taskmerge_arg_t) );
+}
+
 static size_t 
 _kaapi_mergebody_get_count_params(const kaapi_format_t* fmt, const void* sp)
 { return 1 ; }
@@ -109,7 +119,8 @@ void kaapi_init_adaptmergefmt(void)
     kaapi_taskadaptmerge_body,
     0,
     "kaapi_taskadaptmerge_body",
-    sizeof(kaapi_taskmerge_arg_t),
+    _kaapi_mergebody_get_size,
+    _kaapi_mergebody_task_copy,
     _kaapi_mergebody_get_count_params,
     _kaapi_mergebody_get_mode_param,
     0  /* (*get_off_param) */,

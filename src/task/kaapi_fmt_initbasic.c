@@ -55,7 +55,9 @@
   static void formatobject##_dstor(void* dest) { *(type*)dest = 0; }\
   static void formatobject##_cstorcopy( void* dest, const void* src) { *(type*)dest = *(type*)src; } \
   static void formatobject##_copy( void* dest, const void* src) { *(type*)dest = *(type*)src; } \
-  static void formatobject##_assign( void* dest, const kaapi_memory_view_t* dview, const void* src, const kaapi_memory_view_t* sview) { *(type*)dest = *(type*)src; } \
+  static void formatobject##_assign( void* dest, const kaapi_memory_view_t* dview, const void* src, const kaapi_memory_view_t* sview) { \
+    kaapi_memory_write_cpu2cpu( kaapi_make_localpointer(dest), dview, kaapi_make_localpointer((void*)src), sview); \
+  } \
   static void formatobject##_print( FILE* file, const void* src) { fprintf(file, fmt, *(type*)src); } \
   kaapi_format_t* get_##formatobject(void) \
   {\

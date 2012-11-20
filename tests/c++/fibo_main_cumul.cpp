@@ -41,50 +41,42 @@
 ** terms.
 ** 
 */
+#include <iostream>
+#include "kaapi++" // this is the new C++ interface for Kaapi
+#include "fib_verify.h"
 #include "test_main.h"
-#include "test_task.h"
-#include "kaapi++"
+
+
+/* Kaapi Fibo task.
+   A Task is a type with respect a given signature. The signature specifies the number of arguments (2),
+   and the type and access mode for each parameters.
+   Here the first parameter is declared with a write mode. The second is passed by value.
+ */
+struct TaskFibo : public ka::Task<2>::Signature<ka::CW<long>, const long > {};
 
 
 /* Main of the program
 */
 void doit::operator()(int argc, char** argv )
 {
-   ka::pointer<int> p1;
-   ka::pointer_rpwp<int> p2;
-   ka::pointer_rp<int> p3;
-   ka::pointer_wp<int> p4;
-   ka::pointer_r<int> p5;
-   ka::pointer_w<int> p6;
-   ka::pointer_rw<int> p7;
+  unsigned int n = 30;
+  if (argc > 1) n = atoi(argv[1]);
+  
+  double start_time;
+  double stop_time;
 
-   /* failed Rp,R -> W*/
-   ka::Spawn<TaskW<int> >()(p2);
-   ka::Spawn<TaskW<int> >()(p5);
+  long res_value = 0;
+  ka::pointer<long> res = &res_value;
 
-   /* failed Rp,R -> Wp*/
-   ka::Spawn<TaskWp<int> >()(p2);
-   ka::Spawn<TaskWp<int> >()(p5);
+  start_time= ka::WallTimer::gettime();
+  ka::Spawn<TaskFibo>()( res, n );
+  ka::Sync();
+  stop_time= ka::WallTimer::gettime();
 
-   /* failed Wp,W -> R*/
-   ka::Spawn<TaskR<int> >()(p4);
-   ka::Spawn<TaskR<int> >()(p6);
-
-   /* failed Wp,W -> R*/
-   ka::Spawn<TaskRp<int> >()(p4);
-   ka::Spawn<TaskRp<int> >()(p6);
-
-   /* failed Rp,R,Wp,W,RW -> RW*/
-   ka::Spawn<TaskRW<int> >()(p3);
-   ka::Spawn<TaskRW<int> >()(p5);
-   ka::Spawn<TaskRW<int> >()(p4);
-   ka::Spawn<TaskRW<int> >()(p6);
-   ka::Spawn<TaskRW<int> >()(p7);
-
-   /* failed Rp,R,Wp,W,RW -> RpWp*/
-   ka::Spawn<TaskRpWp<int> >()(p3);
-   ka::Spawn<TaskRpWp<int> >()(p5);
-   ka::Spawn<TaskRpWp<int> >()(p4);
-   ka::Spawn<TaskRpWp<int> >()(p6);
-   ka::Spawn<TaskRpWp<int> >()(p7);
+  kaapi_assert( res_value == fiboseq_verify(n) );
+  
+  ka::logfile() << ": -----------------------------------------" << std::endl;
+  ka::logfile() << ": Res  = " << res_value << std::endl;
+  ka::logfile() << ": Time(s): " << (stop_time-start_time) << std::endl;
+  ka::logfile() << ": -----------------------------------------" << std::endl;
 }

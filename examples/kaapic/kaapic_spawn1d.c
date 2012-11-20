@@ -2,7 +2,7 @@
 ** xkaapi
 ** 
 **
-** Copyright 2009,2010,2011,2012 INRIA.
+** Copyright 2012 INRIA.
 **
 ** Contributors :
 **
@@ -41,47 +41,41 @@
 ** terms.
 ** 
 */
-#include "test_main.h"
-#include "test_task.h"
-#include "kaapi++"
+#include <stdio.h>
+#include "kaapic.h"
 
-/* Main of the program
-*/
-void doit::operator()(int argc, char** argv )
+void body(double n, double* result)
 {
-   /* rpwp -> all other modes */
-   ka::pointer<int> p1;
-   ka::Spawn<TaskR<int> >()(p1);
-   ka::Spawn<TaskW<int> >()(p1);
-   ka::Spawn<TaskRW<int> >()(p1);
-   ka::Spawn<TaskRp<int> >()(p1);
-   ka::Spawn<TaskWp<int> >()(p1);
-   ka::Spawn<TaskRpWp<int> >()(p1);
+  *result = n;
+}
 
-   /* rpwp -> all other modes */
-   ka::pointer_rpwp<int> p2;
-   ka::Spawn<TaskR<int> >()(p2);
-   ka::Spawn<TaskW<int> >()(p2);
-   ka::Spawn<TaskRW<int> >()(p2);
-   ka::Spawn<TaskRp<int> >()(p2);
-   ka::Spawn<TaskWp<int> >()(p2);
-   ka::Spawn<TaskRpWp<int> >()(p2);
 
-   /* rp -> r / rp */
-   ka::pointer_rp<int> p3;
-   ka::Spawn<TaskR<int> >()(p3);
-   ka::Spawn<TaskRp<int> >()(p3);
+int main()
+{
+  double result;
+  kaapic_spawn_attr_t attr;
+  
+  kaapic_init(KAAPIC_START_ONLY_MAIN);
 
-   /* wp -> w / wp */
-   ka::pointer_wp<int> p4;
-   ka::Spawn<TaskW<int> >()(p4);
-   ka::Spawn<TaskWp<int> >()(p4);
+  kaapic_begin_parallel (KAAPIC_FLAG_DEFAULT);
 
-   /* r -> r */
-   ka::pointer_r<int> p5;
-   ka::Spawn<TaskR<int> >()(p5);
+  /* initialize default attribut */
+  kaapic_spawn_attr_init(&attr);
+  
+  /* spawn the task */
+  kaapic_spawn(&attr, 
+      2,     /* number of arguments */
+      body,  /* the entry point for the task */
+      KAAPIC_MODE_V, KAAPIC_TYPE_DOUBLE, 1, (double)129,
+      KAAPIC_MODE_W, KAAPIC_TYPE_DOUBLE, 1, &result
+  );
 
-   /* w -> w, only if terminal */ 
-   ka::pointer_w<int> p6;
-   ka::Spawn<TaskW<int> >()(p6);
+  kaapic_sync();
+  
+  kaapic_end_parallel (KAAPIC_FLAG_DEFAULT);
+
+  printf("The result is : %f\n", result );
+  
+  kaapic_finalize();
+  return 0;
 }

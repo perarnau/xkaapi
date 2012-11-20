@@ -116,14 +116,14 @@ void fibo_body( void* taskarg, kaapi_thread_t* thread )
     kaapi_task_init( task1, fibo_body, kaapi_thread_pushdata(thread, sizeof(fibo_arg_t)) );
     argf1 = kaapi_task_getargst( task1, fibo_arg_t );
     argf1->n = arg0->n - 1;
-    kaapi_thread_allocateshareddata( &argf1->result, thread, sizeof(int) );
+    kaapi_access_init( &argf1->result, kaapi_thread_pushdata(thread, sizeof(int)) );
     kaapi_thread_pushtask(thread);
 
     task2 = kaapi_thread_toptask(thread);
     kaapi_task_init( task2, fibo_body, kaapi_thread_pushdata(thread, sizeof(fibo_arg_t)) );
     argf2 = kaapi_task_getargst( task2, fibo_arg_t);
     argf2->n      = arg0->n - 2;
-    kaapi_thread_allocateshareddata( &argf2->result, thread, sizeof(int) );
+    kaapi_access_init( &argf2->result, kaapi_thread_pushdata(thread, sizeof(int)) );
     kaapi_thread_pushtask(thread);
 
     task_sum = kaapi_thread_toptask(thread);

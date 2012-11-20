@@ -52,7 +52,7 @@
 
 /* 
 */
-void kaapi_staticschedtask_body_gen( 
+static void kaapi_staticschedtask_body_gen( 
     void* sp, 
     kaapi_thread_t* uthread, 
     kaapi_task_t* pc,
@@ -273,6 +273,16 @@ static void kaapi_staticschedtask_body_gpu_wh( void* sp, kaapi_gpustream_t strea
 /* --------- format for task SetStatic --------- 
    - same format as the embedded task
 */
+static size_t kaapi_taskformat_get_size(const struct kaapi_format_t* fmt, const void* sp)
+{
+  return sizeof(kaapi_staticschedtask_arg_t);
+}
+
+static void kaapi_taskformat_task_copy(const struct kaapi_format_t* fmt, void* sp_dest, const void* sp_src)
+{
+  memcpy( sp_dest, sp_src, sizeof(kaapi_staticschedtask_arg_t) );
+}
+
 static size_t kaapi_taskformat_get_count_params(
  const struct kaapi_format_t* f,
  const void* sp
@@ -424,7 +434,8 @@ void kaapi_register_staticschedtask_format(void)
     (kaapi_task_body_t)kaapi_staticschedtask_body, 
     (kaapi_task_body_t)kaapi_staticschedtask_body_wh,
     "kaapi_staticschedtask_body",
-    sizeof(kaapi_staticschedtask_arg_t),
+    kaapi_taskformat_get_size,
+    kaapi_taskformat_task_copy,
     kaapi_taskformat_get_count_params,
     kaapi_taskformat_get_mode_param,
     kaapi_taskformat_get_off_param,

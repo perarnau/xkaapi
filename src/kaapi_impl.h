@@ -101,6 +101,7 @@ extern "C" {
 /** This is the new version on top of X-Kaapi
 */
 extern const char* get_kaapi_version(void);
+extern const char* get_kaapi_git_hash(void);
 
 /* ========================================================================= */
 /** Flag to move all threads into suspend state

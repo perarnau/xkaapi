@@ -8,6 +8,8 @@
 \usepackage[utf8]{inputenc}
 \usepackage{RR}
 \usepackage{hyperref}
+\usepackage{array}
+\usepackage{arydshln}
 
 %%\usepackage[frenchb]{babel} % optionnel
 %%
@@ -122,13 +124,17 @@
 
 %%
 \RRauthor{
+Vincent Danjean
+  \and
 Thierry Gautier
+  \and
+Fabien Lementec
   \and
 Jo\~ao Lima
 }
 % \RRNo{0417XX}
 
-\authorhead{Gautier \& Danjean \& Le Mentec}
+\authorhead{Gautier \& Lementec \& Lima }
 \RRtitle{\kaapi C programming interface for heterogeneous architecture}
 \RRetitle{\kaapi C programming interface}
 \titlehead{\kaapi C programming interface}
@@ -155,9 +161,9 @@ Jo\~ao Lima
 
 \newpage
 \section*{Objectives}\label{sec:objectives}
-This report extends the previous C API interface described in the report~\cite{apic} to program multi-CPUs/multi-GPUs architecture using a C API. The API is compliant with the multi-CPUs API~\cite{apic} with addition of constants in place of integral values. Moreover, it adds few extensions to provide multi-versioning of task's implementation.\\
+This document extends the previous C API interface described in the report~\cite{apic} in order to program multi-CPUs/multi-GPUs architecture using a C API. The API is compliant with the multi-CPUs API~\cite{apic}. Moreover, it adds few extensions to provide multi-versioning of task's implementation and it provides new access mode to shared data.\\
 
-This interface is an high level interface targeted to be used by end-users as a library.
+This interface is an high level interface targeted to be used by end-users.
 
 \newpage
 \section{Software installation}\label{sec:userinstall}
@@ -437,11 +443,11 @@ int kaapic_foreach_attr_destroy(
       \item a scalar value with size equal to the size of a pointer.
       \end{itemize}
       
-    \param{mode, $e_0$, count, type} access mode, first effective
+    \param{mode, type, $e_0$, count, } access mode, first effective
       parameter passed to \fn{body}, the number of type elements pointed
       by $e_0$ and the type of each element.
     \param{\ldots}
-    \param{mode, $e_{nparam-1}$, count, type} access mode, last
+    \param{mode, type, $e_{nparam-1}$, count} access mode, last
       effective parameter passed to \fn{body}, the number of type
       elements pointed by $e_{nparam-1}$ and the type of each element.
     \end{parameters}
@@ -492,7 +498,7 @@ int kaapic_foreach_attr_destroy(
 
   /* loop body */
   static void body(
-    int i, int j, int tid, double* array, double* value
+    int i, int j, int tid, double* array, const double* value
   ) 
   {
     for (int k = i; k < j; ++k)
@@ -507,8 +513,8 @@ int kaapic_foreach_attr_destroy(
     start = kaapi_get_time(); 
     /* apply body on array[0..size-1] */
     kaapic_foreach_with_format( 0, size, 0 /* attr */, 2, body, 
-        KAAPIC_MODE_RW, array, size, KAAPIC_TYPE_DOUBLE
-        KAAPIC_MODE_V, &value, 1,  KAAPIC_TYPE_DOUBLE
+        KAAPIC_MODE_RW, KAAPIC_TYPE_DOUBLE, array, size, 
+        KAAPIC_MODE_V, KAAPIC_TYPE_DOUBLE, value, 1,  
     );
     stop = kaapi_get_time(); 
 
@@ -534,73 +540,166 @@ int kaapic_spawn_attr_destroy(kaapic_spawn_attr_t* attr)
     \end{code}
   \end{synopsis}
   \begin{desc}
-    Create a new computation task implemented by a call to a function
-    \fn{body} with effective parameters \textit{e$_i$}.
+    The call to \fn{kaapic\_spawn} follows the form \texttt{kaapic\_spawn( n, body, ..., $m_i,type_i, e_i, c_i$, ...)}: it
+    creates a new computation task implemented by a call to a function
+    \fn{body} with effective parameters \textit{e$_i$}. Each parameter is described by the parameter information tuple "$m_i,type_i, e_i, c_i$".
 
     The function \fn{body} as well as its effective parameters are pass in the optional parameter list of \fn{kaapic\_spawn}.
-    The format of the optional parameter list is:
-    \begin{description}
-    \item[attr] is a pointer to an attribute that can be
-    pass tuning parameter to the runtime. It should be null for now.
-
-    \item [body]: the function with signature\\
-      \hspace*{5ex}\textit{void (*)([type$_0$, .., type$_{nparam-1}$])}.\\
-      Each type \textit{type$_i$} could be:
-      \begin{itemize}
-      \item a pointer to a memory data
-      \item a scalar value with size equal to the size of a pointer.
-      \end{itemize}
-    \end{description}
-    
-    \fn{body} is called with the user specified arguments, there is no argument added by \kaapi:\\
-    \begin{small}
-      \lstset{language=C}
-      \begin{lstlisting}[frame=tb]
-        body(e0, e1, ..., )
-      \end{lstlisting}
-    \end{small}
+%    The format of the optional parameter list is:
+%    \begin{description}
+%    \item[attr] is a pointer to an attribute that can be
+%    pass tuning parameter to the runtime. It should be null for now.
+%
+%    \item [body]: the function with signature\\
+%      \hspace*{5ex}\textit{void (*)([type$_0$, .., type$_{nparam-1}$])}.\\
+%      Each type \textit{type$_i$} is a pointer to a memory data.
+%%      could be:
+%%      \begin{itemize}
+%%      \item a pointer to a memory data
+%%      \item a scalar value with size equal to the size of a pointer.
+%%      \end{itemize}
+%    \end{description}
+%    
+%    \fn{body} is called with the user specified arguments, there is no argument added by \kaapi:\\
+%    \begin{small}
+%      \lstset{language=C}
+%      \begin{lstlisting}[frame=tb]
+%        body(e0, e1, ..., )
+%      \end{lstlisting}
+%    \end{small}
   \end{desc}
 
   \begin{params}    
     \begin{parameters}
+    \param{attr} is a pointer to an attribute that can be pass tuning parameter to the runtime. 
     \param{nargs} the argument count;
-    \param{...} the \fn{body} followed by a list of groups of 4
-    arguments (\textit{mode}, \textit{value}, \textit{count}, \textit{type}).
+    \param{body}: the function with signature\\
+      \hspace*{5ex}\textit{void (*)([type$_0$, .., type$_{nparam-1}$])}.\\
+      Each type \textit{type$_i$} is a pointer to a memory data.
+    \param{\textit{mode}, \textit{value}, \textit{count}, \textit{type} 
+    } the \fn{body} is followed by a \textit{nargs} groups 
+    parameter information arguments (\textit{mode}, \textit{value}, \textit{count}, \textit{type}) or 
+    (\textit{mode}, \textit{redo}, \textit{value}, \textit{count}, \textit{type}) if \textit{mode} is a cumulative write access mode
     \end{parameters}
 
-    \subsubsection{Format of each 4 successive arguments}
+    \subsubsection{Format of parameter information arguments}
 
-    Each task parameter is described by 4 successive arguments including:
-    \begin{itemize}
-    \item the access \textit{mode}.
-    \item the argument \textit{value},
-    \item the element \textit{cound},
-    \item the parameter \textit{type}
-    \end{itemize}
+    Each task parameter is described by a successive arguments in this following formats:
+    \textit{(mode, type, buffer, count)} or \textit{(mode, redop, type, buffer, count)} if mode is a cumulative write access mode.
+    \begin{enumerate}
+    \item \textit{mode} is the access mode the task is expected to made on the data. This access mode encode read or write access to the data with some variations.
+    \item \textit{redop}: only required to be defined if and only if mode is a cumulative write. It specifies the reduction operator to use on internal reduction of partial results. 
+    \item \textit{type} if the type of each element accessed by the task and specified by the next arguments \textit{(buffer,count)},
+    \item \textit{buffer} is the data of the first element accessed by the task,
+    \item \textit{count} is the number of elements accessed by the task.
+    \end{enumerate}
     
     \subsubsection{Mode information}
     \paragraph{}
     The parameter \textit{mode} is one of the following:
-    \begin{itemize}
-    \item KAAPIC\_MODE\_R for a read access,
-    \item KAAPIC\_MODE\_W for a write access,
-    \item KAAPIC\_MODE\_RW for a read write access,
-    \item KAAPIC\_MODE\_V for a parameter passed by value.
-    \end{itemize}
+    \begin{description}
+    \item [KAAPIC\_MODE\_R] for a read access: the task is assumed to read the memory region pointed by the buffer. On task execution, the callee body function receives in its parameter the value of a pointer to a memory region of \textit{count} elements of type \textit{type}. If the task write data in the memory region, then behavior of the program is undefined.
+    \item [KAAPIC\_MODE\_W] for a write access: the task is assumed to write the memory region pointed by the buffer. On task execution, the callee body function receives in its parameter the value of a pointer to a memory region of \textit{count} elements of type \textit{type}. If the task tries to read data in the memory region, then the returned value is undefined.
+    \item [KAAPIC\_MODE\_RW] for a read write access: the task can read and write the memory region pointer by the buffer. On task execution, the callee body function receives in its parameter the value of a pointer to a memory region of \textit{count} elements of type \textit{type}.
+    \item [KAAPIC\_MODE\_CW] for a cumulative write access: the task can read and write the memory region pointer by the buffer. On task execution, the callee body function receives in its parameter the value of a pointer to a memory region of \textit{count} elements of type \textit{type}.
+    \item [KAAPIC\_MODE\_V] for a parameter passed by value.
+    \item [KAAPIC\_MODE\_T] for runtime allocated temporary data. Such access mode allows the task to receive a temporary memory region with read and write accesses for it execution. On task execution, the callee body function receives in its parameter the value of a pointer to a memory region of \textit{count} elements of type \textit{type}. On exit, any modification on the memory region is assumed to be lost: it is to the responsibility of the user to copy values from the temporary memory region.
+    \item [KAAPIC\_MODE\_S] for stack data. \textbf{TODO}. On task execution, the callee body function receives in its parameter the value of a pointer to a memory region of \textit{count} elements of type \textit{type}. On exit, any modification on the memory region is assumed to lost: it is to the responsibility of the user to copy value from temporary memory region.
+    \end{description}
     
+    \subsubsection{Reduction operator}
+    \paragraph{}
+    The \textit{redop} is one of the following constants in the table: let us note by \verb+r+ the result of the operation and by \verb+a+ and \verb+b+ the operands.
+    \begin{center}
+    \begin{tabular}{|l|c|c|}
+      \hline
+      \textit{constant}  & \textit{integer value} & \textit{equivalence to C operator} \\
+      \noalign{\hrule height 2pt}
+      KAAPIC\_REDOP\_PLUS & 1 & \verb|r = a + b| \\
+      \noalign{\hrule height 0.1pt}
+      KAAPIC\_REDOP\_MUL  & 2 & \verb+r = a * b+ \\
+      \noalign{\hrule height 0.1pt}
+      KAAPIC\_REDOP\_MINUS & 3 & \verb+r = a - b+ \\
+      \noalign{\hrule height 0.1pt}
+      KAAPIC\_REDOP\_AND  & 4 & \verb+r = a & b+ \\
+      \noalign{\hrule height 0.1pt}
+      KAAPIC\_REDOP\_OR   & 5 & \verb+r = a | b+ \\
+      \noalign{\hrule height 0.1pt}
+      KAAPIC\_REDOP\_XOR  & 6 & \verb+r = a ^ b+ \\
+      \noalign{\hrule height 0.1pt}
+      KAAPIC\_REDOP\_LAND & 7 & \verb+r = a && b+ \\
+      \noalign{\hrule height 0.1pt}
+      KAAPIC\_REDOP\_LOR  & 8 & \verb+r = a || b+\\
+      \noalign{\hrule height 0.1pt}
+      KAAPIC\_REDOP\_MAX  & 9 & \verb+r = (a<b ? b : a)+\\
+      \noalign{\hrule height 0.1pt}
+      KAAPIC\_REDOP\_MIN  & 10 & \verb+r = (a<b ? a : b)+\\
+      \hline
+    \end{tabular}
+    \end{center}
+The operands (and result) have the same type which is defined by the spawn argument \textit{type} (see next section). Bit operators \texttt{KAAPIC\_REDOP\_AND, KAAPIC\_REDOP\_OR} and \texttt{KAAPIC\_REDOP\_XOR} are not defined for floating point types.
+
     \subsubsection{Type information}
     \paragraph{}
-    The \textit{type} is one of the following:
-    \begin{itemize}
-    \item KAAPIC\_TYPE\_CHAR,
-    \item KAAPIC\_TYPE\_INT,
-    \item KAAPIC\_TYPE\_REAL,
-    \item KAAPIC\_TYPE\_DOUBLE.
-    \end{itemize}
+    The \textit{type} is one of the following constant in the next table.
+    \begin{center}
+    \begin{tabular}{|l|c|c|}
+      \hline
+      \textit{constant}  & \textit{integer value} & \textit{equivalence to C type} \\
+      \noalign{\hrule height 2pt}
+      KAAPIC\_TYPE\_CHAR & 0 & \verb|char| \\
+      \noalign{\hrule height 0.1pt}
+      KAAPIC\_TYPE\_SHORT  & 1 & \verb|short| \\
+      \noalign{\hrule height 0.1pt}
+      KAAPIC\_TYPE\_INT & 2 & \verb|int| \\
+      \noalign{\hrule height 0.1pt}
+      KAAPIC\_TYPE\_LONG  & 3 & \verb|long| \\
+      \noalign{\hrule height 0.1pt}
+      KAAPIC\_TYPE\_UCHAR   & 4 & \verb|unsigned char| \\
+      \noalign{\hrule height 0.1pt}
+      KAAPIC\_TYPE\_USHORT  & 5 & \verb|unsigned short| \\
+      \noalign{\hrule height 0.1pt}
+      KAAPIC\_TYPE\_UINT & 6 & \verb|unsigned int| \\
+      \noalign{\hrule height 0.1pt}
+      KAAPIC\_TYPE\_ULONG  & 7 & \verb|unsigned long| \\
+      \noalign{\hrule height 0.1pt}
+      \multirow{2}{4cm}{KAAPIC\_TYPE\_FLOAT (or~KAAPIC\_TYPE\_REAL)}  & 8 & \verb|float| \\
+      & & \\
+      \noalign{\hrule height 0.1pt}
+      KAAPIC\_TYPE\_DOUBLE  & 9 & \verb|double| \\
+      \hline
+    \end{tabular}
+    \end{center}
     
     \paragraph{}
     If a parameter is an array, \textit{count} must be set to the number of the element of the array.
     For a scalar value, it must be set to 1.
+
+    \subsubsection{Argument passing rules}
+    Let assume \texttt{(mode,type,buffer,count)} the information for the $i$-th task parameter in a call to \texttt{kaapic\_spawn}.
+    The $i$-th parameter will be bind to the $i$-th formal parameter of the body function.
+    The following table resumes the C type required for each involved parameters during a task creation: the effective parameter \texttt{buffer} and the formal parameter of the task body.
+\newpage
+    \begin{center}
+    \begin{tabular}{|l|c|c|}
+      \hline
+      \textit{access mode}  & \textit{C type of} \texttt{buffer} & \textit{C type of formal parameter}\\
+      \noalign{\hrule height 2pt}
+\multirow{5}{4cm}{KAAPIC\_MODE\_R 
+KAAPIC\_MODE\_W
+KAAPIC\_MODE\_RW
+KAAPIC\_MODE\_CW
+KAAPIC\_MODE\_T
+KAAPIC\_MODE\_S} & &\\
+& \verb+type*+ & \verb+type*+  \\
+& or \verb+const type*+ & or \verb+const type*+ \\
+& & \\
+& & \\
+\hline
+KAAPIC\_MODE\_V & \verb+type+ &   \verb+type*+ or \verb+const type*+\\
+      \hline
+    \end{tabular}
+    \end{center}
     
   \end{params}
     
@@ -618,21 +717,23 @@ int kaapic_spawn_attr_destroy(kaapic_spawn_attr_t* attr)
   #include "kaapic.h"
 
   /* computation task entry point */
-  void fibonacci(int n, int* result)
+  void fibonacci(int* n, int* result)
   {
     /* task user specific code */
-    if (n <2)
-      *result = n;
+    if (*n <2)
+      *result = *n;
      else 
      {
+        /* temporary data for recursive calls */
         int result1, result2;
+
         kaapic_spawn( 2, fibonacci, 
-          KAAPIC_MODE_V, n-1, 1, KAAPIC_TYPE_INT
-          KAAPIC_MODE_W, &result1, 1,  KAAPIC_TYPE_INT
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, *n-1, 
+          KAAPIC_MODE_W, KAAPIC_TYPE_INT, 1, &result1
         );
         kaapic_spawn( 2, fibonacci, 
-          KAAPIC_MODE_V, n-2, 1, KAAPIC_TYPE_INT
-          KAAPIC_MODE_W, &result2, 1,  KAAPIC_TYPE_INT
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, *n-2,
+          KAAPIC_MODE_W, KAAPIC_TYPE_INT, 1, &result2
         );
         kaapic_sync();
         *result = result1 + result2;
@@ -645,21 +746,66 @@ int kaapic_spawn_attr_destroy(kaapic_spawn_attr_t* attr)
     int result= 0;
     int err = kaapic_init(KAAPIC_START_ONLY_MAIN);
 
-    start = kaapi_get_time(); 
-    /* apply body on array[0..size-1] */
     kaapic_spawn( 2, fibonacci, 
-        KAAPIC_MODE_V, n, 1, KAAPIC_TYPE_INT
-        KAAPIC_MODE_W, &result, 1,  KAAPIC_TYPE_INT
+        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, n,
+        KAAPIC_MODE_W, KAAPIC_TYPE_INT, 1, &result
     );
-    stop = kaapi_get_time(); 
-
-    printf("Time : %f (s)\n", stop-start );
+    kaapic_sync();
     kaapic_finalize();
   }
     \end{code}
   \end{example}
 \pagebreak
-  \begin{example}\label{fibo}
+
+  \begin{example}\label{fibo_cw}
+    \paragraph{}
+    Refer to examples/kaapic/dfg subdirectory in sources\\
+    
+    The next example compute the $n$-th Fibonacci number using cumulative write access.
+    \begin{code}
+  #include "kaapic.h"
+
+  /* computation task entry point */
+  void fibonacci(int* n, int* result)
+  {
+    /* task user specific code */
+    if (*n <2)
+      *result += *n;
+     else 
+     {
+        kaapic_spawn(0, 2, fibonacci, 
+           KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, *n-1, 
+           KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, 
+                 KAAPIC_TYPE_INT, 1, result
+        );
+	
+        kaapic_spawn(0, 2, fibonacci, 
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, *n-2,
+          KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, 
+                 KAAPIC_TYPE_INT, 1, result
+        );
+     }
+  }
+
+  int main()
+  {
+    int n = 30;
+    int result= 0;
+    int err = kaapic_init(KAAPIC_START_ONLY_MAIN);
+
+    kaapic_spawn( 2, fibonacci, 
+      KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, n,
+      KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, 
+            KAAPIC_TYPE_INT, 1, &result
+    );
+    kaapic_sync();
+    kaapic_finalize();
+  }
+    \end{code}
+  \end{example}
+\pagebreak
+
+  \begin{example}\label{cholesky}
     \paragraph{}
     The next example illustrates the Cholesky factorization subroutine extracted from the example in examples/kaapic/dfg subdirectory in sources.\\
   \begin{code}
