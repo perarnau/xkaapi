@@ -55,13 +55,10 @@ static inline kaapi_data_t
     kaapi_mem_data_set_dirty(kmd, asid);
     dest->kmd = kmd;
     kaapi_mem_host_map_find_or_insert_(cuda_map,
-				      kaapi_mem_host_map_generate_id_by_data(dest),
-                                       &kmd
-				       );
+				      kaapi_mem_host_map_generate_id_by_data(dest), &kmd);
     return dest;
   } else {
-    kaapi_data_t *dest = (kaapi_data_t *) kaapi_mem_data_get_addr(kmd,
-                                                                  asid);
+    kaapi_data_t *dest = (kaapi_data_t *) kaapi_mem_data_get_addr(kmd, asid);
     kaapi_cuda_mem_inc_use(&dest->ptr, &dest->view, m);
     return dest;
   }

@@ -225,9 +225,7 @@ static inline void kaapi_cuda_mem_cache_lru_double_fifo_check_host(uintptr_t ptr
   kaapi_mem_data_t *kmd;
   
   kaapi_mem_host_map_find_or_insert(cuda_map,
-                                    kaapi_mem_host_map_generate_id((void*)ptr, size),
-				    &kmd
-				  );
+                                    kaapi_mem_host_map_generate_id((void*)ptr, size), &kmd);
   
   /* valid on host ? */
   if (kaapi_mem_data_has_addr(kmd, host_asid) &&

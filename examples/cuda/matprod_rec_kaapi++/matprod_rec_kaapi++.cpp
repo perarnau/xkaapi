@@ -88,7 +88,7 @@ struct TaskParallelGEMM: public ka::Task<8>::Signature
   ka::R<ka::range2d<T> >, /* Aik   */
   ka::R<ka::range2d<T> >, /* Akj   */
   T,                      /* beta */
-  ka::RW<ka::range2d<T> > /* Aij   */
+  ka::RPWP<ka::range2d<T> > /* Aij   */
 >{};
 
 #define TASK_GEMM_THRESHOLD	  512
@@ -103,7 +103,7 @@ struct TaskBodyCPU<TaskParallelGEMM<T> > {
     ka::range2d_r<T> A,
     ka::range2d_r<T> B,
     T beta,
-    ka::range2d_rw<T> C
+    ka::range2d_rpwp<T> C
   )
   {
     const T* const a = A->ptr();
@@ -119,7 +119,7 @@ struct TaskBodyCPU<TaskParallelGEMM<T> > {
     const int ldc = C->lda();
     const int bloc = TASK_GEMM_THRESHOLD;
 
-#if 0
+#if CONFIG_VERBOSE
     fprintf(stdout, "TaskCPU ParallelGEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", M, N, K, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
 #endif
     if( M > TASK_GEMM_THRESHOLD )
@@ -133,7 +133,7 @@ struct TaskBodyCPU<TaskParallelGEMM<T> > {
 	  for (size_t k=0; k<K; k += bloc)
 	  {
 	    ka::rangeindex rk(k, k+bloc);
-	      ka::Spawn<TaskGEMM<T> >(ka::SetArch(ka::ArchHost))
+	      ka::Spawn<TaskGEMM<T> >(ka::SetArch(ka::ArchCUDA))
 		(
 		 order, transA, transB,
 		 alpha, A(rk,ri), B(rj,rk), beta, C(rj,ri)
@@ -152,6 +152,7 @@ struct TaskBodyCPU<TaskParallelGEMM<T> > {
   }
 };
 
+#if 0
 template<typename T> 
 struct TaskBodyGPU<TaskParallelGEMM<T> >
 {
@@ -165,7 +166,7 @@ struct TaskBodyGPU<TaskParallelGEMM<T> >
    ka::range2d_r<T> A,
    ka::range2d_r<T> B,
    T beta,
-   ka::range2d_rw<T> C
+   ka::range2d_rpwp<T> C
   )
   {
     const T* const a = A->ptr();
@@ -182,7 +183,7 @@ struct TaskBodyGPU<TaskParallelGEMM<T> >
     const int ldc = C->lda();
 
 
-#if 0
+#if CONFIG_VERBOSE
     fprintf(stdout, "TaskGPU RecursiveGEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", m, n, k, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
 #endif
 
@@ -218,6 +219,7 @@ struct TaskBodyGPU<TaskParallelGEMM<T> >
 #endif
   }
 };
+#endif
 
 template<typename T>
 struct TaskMatProduct: public ka::Task<3>::Signature<

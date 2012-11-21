@@ -88,8 +88,8 @@ kaapi_cuda_task_steal_body(kaapi_thread_t * thread,
     kaapi_format_set_access_param(task_fmt, i, task->sp, &access);
 
     kaapi_data_t *src = kaapi_data(kaapi_data_t, &access);
-    kaapi_mem_host_map_find_or_insert(host_map, (kaapi_mem_addr_t)
-				      kaapi_pointer2void(src->ptr), &kmd);
+    kaapi_mem_host_map_find_or_insert(host_map,
+				      kaapi_mem_host_map_generate_id_by_data(src), &kmd);
     if (!kaapi_mem_data_has_addr(kmd, host_asid))
       kaapi_mem_data_set_addr(kmd, host_asid, (kaapi_mem_addr_t) src);
 
