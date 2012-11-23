@@ -113,7 +113,7 @@ kaapi_cuda_mem_cache_lru_double_fifo_insert(void *data,
   entry->u.block = (kaapi_cuda_mem_cache_double_blk_t*)blk;
   cache->used += size;
 
-#if 0
+#if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_PERF_REG_SYS(kaapi_get_current_processor(),
                      KAAPI_PERF_ID_CACHE_MISS) += 1;
 #endif
@@ -460,7 +460,7 @@ int kaapi_cuda_mem_cache_lru_double_fifo_inc_use(
     return -1;
   blk = (kaapi_cuda_mem_cache_double_blk_t *) entry->u.block;
 
-#if 0
+#if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_PERF_REG_SYS(kaapi_get_current_processor(),
                      KAAPI_PERF_ID_CACHE_HIT) += 1;
 #endif

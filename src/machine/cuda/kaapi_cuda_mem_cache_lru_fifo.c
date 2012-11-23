@@ -87,7 +87,7 @@ int kaapi_cuda_mem_cache_lru_fifo_insert(void* data,
   entry->u.block = (kaapi_cuda_mem_cache_blk_t *) blk;
   cache->used += size;
   
-#if 0
+#if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_PERF_REG_SYS(kaapi_get_current_processor(),
                      KAAPI_PERF_ID_CACHE_MISS) += 1;
 #endif
@@ -241,7 +241,7 @@ int kaapi_cuda_mem_cache_lru_fifo_inc_use(void* data,
     return -1;
   blk = (kaapi_cuda_mem_cache_blk_t *) entry->u.block;
   
-#if 0
+#if defined(KAAPI_USE_PERFCOUNTER)
   KAAPI_PERF_REG_SYS(kaapi_get_current_processor(),
                      KAAPI_PERF_ID_CACHE_HIT) += 1;
 #endif
@@ -265,12 +265,7 @@ int kaapi_cuda_mem_cache_lru_fifo_dec_use(void* data,
   if (entry->u.block == 0)
     return -1;
   blk = (kaapi_cuda_mem_cache_blk_t *) entry->u.block;
-  
-#if 0
-  KAAPI_PERF_REG_SYS(kaapi_get_current_processor(),
-                     KAAPI_PERF_ID_CACHE_HIT) += 1;
-#endif
-  
+    
 #if defined(KAAPI_DEBUG)
   if (blk->u.count == 0) {
     fprintf(stdout, "%s:%d:%s: (kid=%lu) ERROR double free ptr=%p (count=%llu)\n",
