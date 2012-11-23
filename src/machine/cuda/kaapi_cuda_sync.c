@@ -7,7 +7,6 @@
 #include "memory/kaapi_mem_data.h"
 #include "memory/kaapi_mem_host_map.h"
 #include "kaapi_cuda_proc.h"
-#include "kaapi_cuda_kasid.h"
 #include "kaapi_cuda_dev.h"
 #include "kaapi_cuda_ctx.h"
 #include "kaapi_cuda_cublas.h"

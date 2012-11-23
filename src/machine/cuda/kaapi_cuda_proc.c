@@ -49,7 +49,6 @@
 
 #include "kaapi_impl.h"
 #include "kaapi_cuda_proc.h"
-#include "kaapi_cuda_kasid.h"
 #include "kaapi_cuda_dev.h"
 #include "kaapi_cuda_ctx.h"
 #include "kaapi_cuda_cublas.h"
@@ -116,11 +115,9 @@ int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t * proc, unsigned int idev)
 #endif
 
   KAAPI_ATOMIC_WRITE(&proc->synchronize_flag, 0);
-  proc->kasid_user = KAAPI_CUDA_KASID_USER_BASE + idev;
   proc->is_initialized = 1;
-  proc->asid = kaapi_memory_address_space_create
-      (idev, KAAPI_MEM_TYPE_CUDA, 0x100000000UL);
-
+  proc->kasid = kaapi_memory_address_space_create(kaapi_network_get_current_globalid(), KAAPI_MEM_TYPE_CUDA, 0x100000000UL);
+  
   kaapi_cuda_all_kprocessors[idev] = kaapi_get_current_processor();
   kaapi_cuda_count_kprocessors++;
 
@@ -213,4 +210,9 @@ void kaapi_cuda_proc_destroy(kaapi_processor_t* const kproc)
   kaapi_cuda_mem_destroy(&kproc->cuda_proc);
   kaapi_cuda_dev_close(&kproc->cuda_proc);
 #endif
+}
+
+kaapi_address_space_id_t kaapi_cuda_proc_get_kasid(kaapi_processor_t* const kproc)
+{
+  return kproc->cuda_proc.kasid;
 }

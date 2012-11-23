@@ -292,8 +292,7 @@ libkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda_event.h \
   machine/cuda/kaapi_cuda_trace.h \
   machine/cuda/kaapi_cuda_trace.c \
-  machine/cuda/kaapi_sched_select_victim_with_cuda_tasks.c \
-  machine/cuda/kaapi_cuda_kasid.c
+  machine/cuda/kaapi_sched_select_victim_with_cuda_tasks.c 
 endif
 
 include_HEADERS=\
