@@ -136,7 +136,7 @@ kaapi_version_t** _kaapi_metadata_info_bind_data(
     void* ptr, const kaapi_memory_view_t* view
 )
 {
-  uint16_t lid = _kaapi_memory_address_space_getlid( kasid );
+  uint16_t lid = kaapi_memory_address_space_getlid( kasid );
   kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
   kmdi->data[lid].ptr  = kaapi_make_pointer(kasid, ptr);
   kmdi->data[lid].view = *view;
@@ -165,7 +165,7 @@ kaapi_metadata_info_t* kaapi_memory_bind(
   if (entry->u.mdi ==0)
     entry->u.mdi = _kaapi_memory_allocate_mdi();
 
-  kaapi_assert_debug( entry->u.mdi->data[_kaapi_memory_address_space_getlid( kasid )].ptr.ptr == 0 );
+  kaapi_assert_debug( entry->u.mdi->data[kaapi_memory_address_space_getlid( kasid )].ptr.ptr == 0 );
   kaapi_memory_view_t view = kaapi_memory_view_make1d(size, 1);
   _kaapi_metadata_info_bind_data( entry->u.mdi, kasid, ptr, &view );
   return entry->u.mdi;
@@ -191,7 +191,7 @@ kaapi_metadata_info_t* kaapi_memory_bind_view(
   if (entry->u.mdi ==0)
     entry->u.mdi = _kaapi_memory_allocate_mdi();
 
-  kaapi_assert_debug( entry->u.mdi->data[_kaapi_memory_address_space_getlid( kasid )].ptr.ptr == 0 );
+  kaapi_assert_debug( entry->u.mdi->data[kaapi_memory_address_space_getlid( kasid )].ptr.ptr == 0 );
   _kaapi_metadata_info_bind_data( entry->u.mdi, kasid, ptr, view );
   return entry->u.mdi;
 }

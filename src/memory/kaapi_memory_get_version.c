@@ -51,7 +51,7 @@ kaapi_version_t* _kaapi_metadata_info_get_version(
     kaapi_address_space_id_t kasid
 )
 {
-  uint16_t lid = _kaapi_memory_address_space_getlid( kasid );
+  uint16_t lid = kaapi_memory_address_space_getlid( kasid );
   kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
 
   kaapi_version_t* version = kmdi->version[lid];

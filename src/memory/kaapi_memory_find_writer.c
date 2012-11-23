@@ -51,7 +51,7 @@ kaapi_version_t* _kaapi_metadata_info_find_onewriter(
     kaapi_address_space_id_t kasid
 )
 {
-  uint16_t lid = _kaapi_memory_address_space_getlid( kasid );
+  uint16_t lid = kaapi_memory_address_space_getlid( kasid );
   kaapi_assert( lid < KAAPI_MAX_ADDRESS_SPACE );
 
   int idx = __builtin_ffsll( kmdi->validbits );
