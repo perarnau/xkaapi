@@ -10,7 +10,8 @@ extern "C" {
 #include "lapacke.h"
 }
 
-#define	    CONFIG_IB	    128
+#define	    CONFIG_IB_CPU	    64 /* from PLASMA (control/auxiliary.c) */
+#define	    CONFIG_IB_GPU	    128  /* from MAGMA (control/get_nb_fermi.cpp) */
 
 // task signatures
 template<typename T>
@@ -37,6 +38,20 @@ struct TaskGEMM: public ka::Task<8>::Signature
   ka::R<ka::range2d<T> >, /* Akj   */
   T,                      /* beta */
   ka::RW<ka::range2d<T> > /* Aij   */
+>{};
+
+template<typename T>
+struct TaskGEMM2: public ka::Task<9>::Signature
+<
+CBLAS_ORDER,			      /* row / col */
+CBLAS_TRANSPOSE,        /* NoTrans/Trans for A */
+CBLAS_TRANSPOSE,        /* NoTrans/Trans for B */
+T,                      /* alpha */
+ka::R<ka::range2d<T> >, /* Aik   */
+ka::R<ka::range2d<T> >, /* Akj   */
+T,                      /* beta */
+ka::RW<ka::range2d<T> >, /* Aij   */
+ka::W<int> /* fake */
 >{};
 
 template<typename T>
@@ -71,7 +86,16 @@ struct TaskGETRF: public ka::Task<3>::Signature
 <
   CBLAS_ORDER,               /* row / col */
   ka::RW<ka::range2d<T> >,   /* A */
-  ka::RPWP<ka::range1d <int> >  /* pivot */
+  ka::W<ka::range1d<int> >  /* pivot */
+>{};
+
+template<typename T>
+struct TaskGETF2: public ka::Task<4>::Signature
+<
+CBLAS_ORDER,               /* row / col */
+ka::RW<ka::range2d<T> >,   /* A */
+ka::W<ka::range1d<int> >,  /* pivot */
+ka::W<int>                  /* info */
 >{};
 
 template<typename T>
@@ -126,6 +150,18 @@ struct TaskLASWP: public ka::Task<6>::Signature
   int				/* INC */
 >{};
 
+template<typename T>
+struct TaskLASWP2: public ka::Task<7>::Signature
+<
+CBLAS_ORDER,			       /* row / col */
+ka::RW<ka::range2d<T> >,		/* A */
+int,				/* K1 */
+int,				/* K2 */
+ka::R<ka::range1d<int> > ,		/* IPIV */
+int,				/* INC */
+ka::R<int> /* fake */
+>{};
+
 #include "timing.inl"
 
 // task definitions
@@ -135,13 +171,8 @@ struct TaskLASWP: public ka::Task<6>::Signature
 
 #if CONFIG_USE_CUDA
 # include "matrix_gpu.inl"
-#include "magmablas/magmablas.h"
-//# include "matrix_alpha.inl"
 #endif
 
 #include "kblas.inl"
-#if defined(CONFIG_USE_PLASMA)
-#include "kplasma.inl"
-#endif
 
 #endif // MATRIX_H_INCLUDED

@@ -56,6 +56,12 @@ struct PLASMA {
   static int getrf(int m, int n, int ib,
 		      value_type *a, int lda,
 		      int *ipiv, int *info);
+  
+  static void plrnt(int m, int n, value_type *A, int lda,
+          int bigM, int m0, int n0, unsigned long long int seed);
+  
+  static void plgsy(value_type bump, int m, int n, value_type *A, int lda,
+                    int bigM, int m0, int n0, unsigned long long int seed );
 };
 
 static inline int
@@ -163,6 +169,18 @@ struct PLASMA<double> {
   {
     return CORE_dgetrf_incpiv(m, n, ib, a, lda, ipiv, info);
   }
+  
+  static void plrnt(int m, int n, value_type *A, int lda,
+                    int bigM, int m0, int n0, unsigned long long int seed)
+  {
+    CORE_dplrnt(m, n, A, lda, bigM, m0, n0, seed);
+  }
+  
+  static void plgsy(value_type bump, int m, int n, value_type *A, int lda,
+                    int bigM, int m0, int n0, unsigned long long int seed)
+  {
+    CORE_dplgsy(bump, m, n, A, lda, bigM, m0, n0, seed);
+  }
 };
 
 template<>
@@ -242,6 +260,18 @@ struct PLASMA<float> {
 		      int *ipiv, int *info)
   {
     return CORE_sgetrf_incpiv(m, n, ib, a, lda, ipiv, info);
+  }
+  
+  static void plrnt(int m, int n, value_type *A, int lda,
+                    int bigM, int m0, int n0, unsigned long long int seed)
+  {
+    CORE_splrnt(m, n, A, lda, bigM, m0, n0, seed);
+  }
+  
+  static void plgsy(value_type bump, int m, int n, value_type *A, int lda,
+                    int bigM, int m0, int n0, unsigned long long int seed)
+  {
+    CORE_splgsy(bump, m, n, A, lda, bigM, m0, n0, seed);
   }
 };
 

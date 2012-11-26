@@ -1,14 +1,13 @@
-#!/usr/bin/env sh
+#!/bin/bash
 
 XKAAPIDIR=$HOME/install/xkaapi/default
-CUDADIR=$CUDA_HOME
+ARCH_GPU="sm_20" # Fermi GPUs
+#ARCH_GPU="sm_30" # Kepler GPUs
 
-$CUDADIR/bin/nvcc -w -g \
-    -I$XKAAPIDIR/include \
-    -I$CUDADIR/include \
-    -DKAAPI_NDEBUG=1 \
-    -DKAAPI_DEBUG=0 \
+CFLAGS="-I$XKAAPIDIR/include -DKAAPI_DEBUG=0 -DKAAPI_NDEBUG=1"
+LDFLAGS="-L$XKAAPIDIR/lib -lkaapi -lkaapi++ -lcudart"
+
+nvcc -w -g --machine 64 -arch $ARCH_GPU --compiler-options "$CFLAGS" \
     transform_static.cu \
     -o transform_static \
-    -L$XKAAPIDIR/lib -lkaapi -lkaapi++ \
-    -L$CUDADIR/lib64 -lcuda -lcublas
+    $LDFLAGS 

@@ -2,20 +2,9 @@
 
 export LD_LIBRARY_PATH=$HOME/install/xkaapi/default/lib:$LD_LIBRARY_PATH
 
-version="$(date +%s)"
-dorun="yes"
-
 function run_test {
-#    export KAAPI_CPUSET="0:1"
-    export KAAPI_CPUSET="4"
-#    export KAAPI_CPUSET="4,5,10,11"
-    export KAAPI_GPUSET="0~0"
-#    export KAAPI_GPUSET="0~0,1~1,2~2,3~3"
-#    export KAAPI_GPUSET="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
-
-#    export COMPUTE_PROFILE=1
-#    export COMPUTE_PROFILE_CSV=1
-#    export COMPUTE_PROFILE_CONFIG="$HOME/compute_profile_config.txt"
+    export KAAPI_CPUSET="0"
+    export KAAPI_GPUSET="0~1"
 
 #    export KAAPI_RECORD_TRACE=1
 #    export KAAPI_RECORD_MASK="COMPUTE,IDLE"
@@ -35,13 +24,9 @@ function run_test {
 #    export KAAPI_STEAL_AFFINITY="locality"
 
 
-#    msizes="10240"
-#    msizes="1024"
-    msizes="2048"
-#    msizes="16384"
+    execfile="./matlu_nopiv_kaapi++"
+    msizes="4096"
     bsizes="512"
-#    bsizes="128"
-#    bsizes="1024"
     niter=1
     verif=1
     export KAAPI_WINDOW_SIZE=2
@@ -50,9 +35,8 @@ function run_test {
 	    for i in `seq 1 $niter`
 	    do
 	    echo "$KAAPI_CPUSET $KAAPI_GPUSET \
-		    ./matlu_nopiv_kaapi++ $m $b $verif"
-	    KAAPI_STACKSIZE=536870912 ./matlu_nopiv_kaapi++ $m $b 1 $verif 
-#	    KAAPI_STACKSIZE=536870912 gdb ./matlu_nopiv_kaapi++ 
+		    $execfile $m $b $verif"
+	    KAAPI_STACKSIZE_MASTER=536870912 $execfile $m $b 1 $verif 
 	    done
 	done
     done
@@ -60,4 +44,3 @@ function run_test {
 
 run_test
 exit 0
-

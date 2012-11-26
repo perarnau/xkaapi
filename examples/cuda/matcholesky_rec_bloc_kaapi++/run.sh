@@ -1,46 +1,10 @@
 #!/bin/bash
 
-export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$HOME/install/xkaapi/default/lib:$LD_LIBRARY_PATH
 
-version="$(date +%s)"
-dorun="yes"
-
 function run_test {
-#    export KAAPI_CPUSET="1,3,4,5,7,8,9,10,11"
-#    export KAAPI_GPUSET="0~0,2~2,4~6"
-
-#    export KAAPI_CPUSET="0,5,6,11"
-#    export KAAPI_GPUSET="0~1,1~2,2~3,3~4,4~7,5~8,6~9,7~10"
-
-    # grimage
-#    export KAAPI_CPUSET="1,2,3,4,5,6,7"
-#    export KAAPI_GPUSET="0~0"
-
-#    export KAAPI_CPUSET="4,5,10,11"
-#    export KAAPI_GPUSET="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"
-#    export KAAPI_CPUSET="2,3,4,5,8,9,10,11"
-#    export KAAPI_GPUSET="0~0,1~0,2~1,3~1,4~6,5~6,6~7,7~7"
-
-#    export KAAPI_CPUSET="1,2,3,4,5,7,8,9,10,11"
-#    export KAAPI_GPUSET="0~0,1~0,2~0,3~0,4~6,5~6,6~6,7~6"
-
-#    export KAAPI_CPUSET="1,4,5,8,10,11"
-#    export KAAPI_GPUSET="0~0,2~2,3~3,4~6,5~7,7~9"
-
-#    export KAAPI_CPUSET="4,5,6,7,8,9,10,11"
-#    export KAAPI_GPUSET="0~0,1~1,2~2,3~3"
-
-#    export KAAPI_CPUSET="0"
-    export KAAPI_CPUSET="4"
-#    export KAAPI_CPUSET="1,2,3,4,5,6,7"
-#    export KAAPI_CPUSET="4,5"
-    export KAAPI_GPUSET="0~0"
-#    export KAAPI_GPUSET="0~0,1~1,2~2,3~3"
-
-#    export COMPUTE_PROFILE=1
-#    export COMPUTE_PROFILE_CSV=1
-#    export COMPUTE_PROFILE_CONFIG="$HOME/compute_profile_config.txt"
+    export KAAPI_CPUSET="0"
+    export KAAPI_GPUSET="0~1"
 
 #    export KAAPI_RECORD_TRACE=1
 #    export KAAPI_RECORD_MASK="COMPUTE,IDLE"
@@ -59,39 +23,25 @@ function run_test {
 #    export KAAPI_PUSH_AFFINITY="locality"
 #    export KAAPI_STEAL_AFFINITY="locality"
 
-#    export KAAPI_DUMP_TASKLIST=1
 
-#    msizes="10240"
-#    msizes="4096"
-#    msizes="32768"
-#    msizes="20480"
-    msizes="2048"
-#    msizes="40960"
-#    msizes="10240 21504 22528 23552 24576"
+    execfile="./matcholesky_rec_bloc_kaapi++"
+    msizes="4096"
     bsizes="512"
-#    bsizes="1024"
-    bloc_recursive="128"
+    subblock="128"
     niter=1
-#    verif=1
+    verif=1
     export KAAPI_WINDOW_SIZE=2
-    for m in $msizes
-    do
-      for b in $bsizes
-      do
-	for brec in $bloc_recursive
-	do
-	  for i in `seq 1 $niter`
-	  do
-	  echo "$KAAPI_CPUSET $KAAPI_GPUSET \
-		  ./matcholesky_rec_bloc_kaapi++ $m $b $brec $verif"
-	  KAAPI_STACKSIZE_MASTER=536870912 ./matcholesky_rec_bloc_kaapi++ $m $b $brec $verif 
-#	  KAAPI_STACKSIZE_MASTER=536870912 gdb ./matcholesky_rec_bloc_kaapi++
-	  done
+    for m in $msizes ; do
+	    for b in $bsizes; do
+	    for i in `seq 1 $niter`
+	    do
+	    echo "$KAAPI_CPUSET $KAAPI_GPUSET \
+		    $execfile $m $b  $subblock 1 $verif"
+	    KAAPI_STACKSIZE_MASTER=536870912 $execfile $m $b $subblock 1 $verif 
+	    done
 	done
-      done
     done
 }
 
 run_test
 exit 0
-

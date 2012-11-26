@@ -24,24 +24,26 @@ do_test "LAPACKE_LDFLAGS" "No LAPACKE_LDFLAGS found."
 #do_test "MAGMA_CFLAGS" "No MAGMA_CFLAGS found."
 #do_test "MAGMA_LDFLAGS" "No MAGMA_LDFLAGS found."
 
-CFLAGS="-DCONFIG_USE_DOUBLE=1 -I$XKAAPIDIR/include"
-#CFLAGS="-DCONFIG_USE_FLOAT=1 -I$XKAAPIDIR/include"
-#-DKAAPI_DEBUG=0 -DKAAPI_NDEBUG=1"
+CFLAGS="-DCONFIG_USE_FLOAT=1 -I$XKAAPIDIR/include"
 LDFLAGS="-L$XKAAPIDIR/lib -lkaapi -lkaapi++"
 
 CUDA_CFLAGS="-DCONFIG_USE_CUDA=1 $CUDA_CFLAGS"
 CUBLAS_CFLAGS="-DCONFIG_USE_CUBLAS=1"
 CUBLAS_LDFLAGS="-lcublas"
+
+PLASMA_CFLAGS="-DCONFIG_USE_PLASMA=1 $PLASMA_CFLAGS"
+PLASMA_LDFLAGS="$PLASMA_LDFLAGS -lplasma"
  
 #MAGMA_CFLAGS="-DCONFIG_USE_MAGMA=1 $MAGMA_CFLAGS"
 
 $CXX -g -Wall \
     $CFLAGS \
+    $PLASMA_CFLAGS \
     $CUDA_CFLAGS \
     $CBLAS_CFLAGS \
     $CUBLAS_CFLAGS \
-    $LAPACK_CLAGS \
     $LAPACKE_CFLAGS \
+    $LAPACK_CFLAGS \
     -c matcholesky_rec_bloc_kaapi++.cpp 
 
 
@@ -49,6 +51,7 @@ $CXX -g \
     -o matcholesky_rec_bloc_kaapi++ \
     matcholesky_rec_bloc_kaapi++.o \
     $LDFLAGS \
+    $PLASMA_LDFLAGS \
     $CUDA_LDFLAGS \
     $CUBLAS_LDFLAGS \
     $LAPACKE_LDFLAGS \
