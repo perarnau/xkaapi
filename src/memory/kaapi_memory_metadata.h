@@ -64,7 +64,6 @@ typedef struct kaapi_metadata_info_t {
   struct kaapi_version_t*  version[KAAPI_MAX_ADDRESS_SPACE];          /* opaque */
   
   kaapi_bitmap64_t  valid_bits;
-  kaapi_bitmap64_t  dirty_bits;
   kaapi_bitmap64_t  addr_bits;
 } kaapi_metadata_info_t;
 
@@ -295,6 +294,15 @@ static inline struct kaapi_version_t** _kaapi_metadata_info_copy_data(
   kaapi_memory_view_reallocated(&kmdi->data[lid].view);
   kaapi_metadata_info_clear_dirty(kmdi, kasid);
   return kaapi_metadata_info_get_version_(kmdi, kasid);
+}
+
+static inline kaapi_metadata_info_t* kaapi_metadata_info_alloc(void)
+{
+  kaapi_metadata_info_t* kmdi = (kaapi_metadata_info_t*)malloc( sizeof(kaapi_metadata_info_t) );
+  if (kmdi == 0) return 0;
+  kaapi_bitmap_clear_64( &kmdi->valid_bits );
+  kaapi_bitmap_clear_64( &kmdi->addr_bits );
+  return kmdi;
 }
 
 #endif /* _KAAPI_MEMORY_METADATA_H_ */

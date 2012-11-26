@@ -97,7 +97,7 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, ka
     kaapi_access_t access = kaapi_format_get_access_param(fmt, i, sp);
 
     /* find the version info of the data using the hash map */
-    all_mdi[i] = mdi = kaapi_mem_findinsert_metadata( access.data );
+    all_mdi[i] = mdi = kaapi_memory_find_metadata( access.data );
     if (kaapi_metadata_info_is_novalid(mdi))
     {
       kaapi_version_t** ptrversion;

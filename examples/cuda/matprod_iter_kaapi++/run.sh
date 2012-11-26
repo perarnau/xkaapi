@@ -8,8 +8,8 @@ version="$(date +%s)"
 #export KAAPI_DUMP_GRAPH='1'
 
 function run_test {
-    export KAAPI_CPUSET="4"
-#    export KAAPI_CPUSET="0:1"
+#    export KAAPI_CPUSET="4"
+    export KAAPI_CPUSET="0:1"
 #    export KAAPI_CPUSET="4,5,10,11"
     export KAAPI_GPUSET="0~0"
 #    export KAAPI_GPUSET="0~0,1~1,2~2,3~3,4~6,5~7,6~8,7~9"

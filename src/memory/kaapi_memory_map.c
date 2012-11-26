@@ -113,3 +113,31 @@ kaapi_address_space_id_t kaapi_memory_map_get_current_asid( void )
 {
   return kaapi_memory_map_kid2asid(kaapi_get_self_kid());
 }
+
+kaapi_memory_map_t* kaapi_memory_map_get_current( kaapi_processor_id_t kid )
+{
+  kaapi_assert_debug( (kid >= 0) && (kid < KAAPI_MAX_PROCESSOR) );
+  const kaapi_address_space_id_t kasid = kaapi_memory_map_kid2asid(kid);
+  return &kaapi_memory_all_local_maps[kaapi_memory_address_space_getlid(kasid)];
+}
+
+kaapi_metadata_info_t* kaapi_memory_map_find_or_insert( kaapi_memory_map_t* kmap, void* ptr )
+{
+  kaapi_hashentries_t *entry;
+  
+  entry = kaapi_big_hashmap_findinsert(&kmap->hmap, (void *)ptr);
+  if (entry->u.mdi == 0)
+    entry->u.mdi = kaapi_metadata_info_alloc();
+  
+  return entry->u.mdi;
+}
+
+kaapi_metadata_info_t* kaapi_memory_map_find( kaapi_memory_map_t* kmap, void* ptr )
+{
+  kaapi_hashentries_t *entry;
+  
+  entry = kaapi_big_hashmap_find(&kmap->hmap, (void *)ptr);  
+  return entry->u.mdi;
+}
+
+

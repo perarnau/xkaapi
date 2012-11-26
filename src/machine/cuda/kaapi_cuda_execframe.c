@@ -1015,7 +1015,7 @@ int kaapi_cuda_exectask
     access = kaapi_format_get_access_param(format, i, sp);
     kaapi_assert_debug(access != NULL);
 
-    mdi = kaapi_mem_findinsert_metadata(access.data);
+    mdi = kaapi_memory_find_metadata(access.data);
     kaapi_assert_debug(mdi != NULL);
 
     if (!kaapi_metadata_info_is_valid(mdi, thread->asid)) {

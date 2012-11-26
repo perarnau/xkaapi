@@ -105,7 +105,7 @@ typedef struct kaapi_hashentries_t {
     kaapi_pair_ptrint_t           data;        /* used for print tasklist */
     struct kaapi_metadata_info_t* mdi;         /* store of metadata info */
     struct kaapi_taskdescr_t*     td;          /* */
-    struct kaapi_mem_data_t*    kmd;
+    struct kaapi_mem_data_t*    kmd;            /* TODO: to remove */
     void*                       block;         /* GPU memory blocks */
   } u;
   const void*                     key;

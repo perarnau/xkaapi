@@ -41,65 +41,28 @@
  ** terms.
  ** 
  */
+
 #include "kaapi_impl.h"
 
-/**
-*/
 kaapi_metadata_info_t* kaapi_memory_find_metadata( void* ptr )
 {
-#if 0
-  kaapi_hashentries_t* entry;
+  kaapi_memory_map_t* const kmap = kaapi_memory_map_get_current(kaapi_get_self_kid());
+  kaapi_metadata_info_t* kmdi;
   
-  entry = kaapi_big_hashmap_find(&kmdi_hm, ptr);
-  if (entry ==0) return 0;
-  return entry->u.mdi;
-#endif
-  return 0;
-}
-
-
-/**
-*/
-static inline kaapi_metadata_info_t* _kaapi_memory_allocate_mdi()
-{
-//  kaapi_metadata_info_t* mdi = numa_alloc_local( sizeof(kaapi_metadata_info_t) );
-#if 0
-  kaapi_metadata_info_t* mdi = malloc( sizeof(kaapi_metadata_info_t) );
-  if (mdi ==0) return 0;
-  mdi->validbits = 0;
-#if defined(KAAPI_DEBUG)
-  memset(mdi->data, 0, sizeof(kaapi_data_t)*KAAPI_MAX_ADDRESS_SPACE );
-  memset(mdi->version, 0, sizeof(kaapi_version_t*)*KAAPI_MAX_ADDRESS_SPACE );
-#endif
-  return mdi;
-#endif
-  return 0;
-}
-
-
-/**
-*/
-kaapi_metadata_info_t* kaapi_mem_findinsert_metadata( void* ptr )
-{
-#if 0
-  kaapi_hashentries_t* entry;
+  kmdi = kaapi_memory_map_find_or_insert(kmap, ptr);
   
-  entry = kaapi_big_hashmap_findinsert(&kmdi_hm, ptr);
-  if (entry->u.mdi ==0)
-    entry->u.mdi = _kaapi_memory_allocate_mdi();
-  return entry->u.mdi;
+#if 0
+  kaapi_memory_address_space_fprintf(stdout, kaapi_memory_map_get_current_asid());
 #endif
-  return 0;
+  
+  return kmdi;
 }
 
-
-/**
-*/
-kaapi_version_t** kaapi_metadata_info_bind_data( 
-    kaapi_metadata_info_t* kmdi, 
-    kaapi_address_space_id_t kasid, 
-    void* ptr, const kaapi_memory_view_t* view
-)
+kaapi_version_t** kaapi_metadata_info_bind_data(
+                                                kaapi_metadata_info_t* kmdi,
+                                                kaapi_address_space_id_t kasid,
+                                                void* ptr, const kaapi_memory_view_t* view
+                                                )
 {
   uint16_t lid = kaapi_memory_address_space_getlid( kasid );
   kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
@@ -110,62 +73,36 @@ kaapi_version_t** kaapi_metadata_info_bind_data(
   return kaapi_metadata_info_get_version_by_lid_(kmdi, lid);
 }
 
-
-/**
-*/
-kaapi_metadata_info_t* kaapi_memory_bind( 
-  kaapi_address_space_id_t kasid, 
-  int flag, 
-  void* ptr, 
-  size_t size 
-)
+kaapi_metadata_info_t* kaapi_memory_bind(
+                                         kaapi_address_space_id_t kasid,
+                                         int flag,
+                                         void* ptr,
+                                         size_t size
+                                         )
 {
-#if 0
-  kaapi_hashentries_t* entry;
-  
-  entry = kaapi_big_hashmap_findinsert(&kmdi_hm, ptr);
-  if (entry->u.mdi ==0)
-    entry->u.mdi = _kaapi_memory_allocate_mdi();
-
-  kaapi_assert_debug( entry->u.mdi->data[kaapi_memory_address_space_getlid( kasid )].ptr.ptr == 0 );
+  kaapi_metadata_info_t* const kmdi = kaapi_memory_find_metadata(ptr);
   kaapi_memory_view_t view = kaapi_memory_view_make1d(size, 1);
-  _kaapi_metadata_info_bind_data( entry->u.mdi, kasid, ptr, &view );
-  return entry->u.mdi;
-#endif
-  return 0;
-}
-
-
-/**
-*/
-kaapi_metadata_info_t* kaapi_memory_bind_view( 
-  kaapi_address_space_id_t kasid, 
-  int flag, 
-  void* ptr, 
-  const kaapi_memory_view_t* view 
-)
-{
-#if 0
-  kaapi_hashentries_t* entry;
+  kaapi_metadata_info_bind_data(kmdi, kasid, ptr, &view);
   
-  entry = kaapi_big_hashmap_findinsert(&kmdi_hm, ptr);
-
-  if (entry->u.mdi ==0)
-    entry->u.mdi = _kaapi_memory_allocate_mdi();
-
-  kaapi_assert_debug( entry->u.mdi->data[kaapi_memory_address_space_getlid( kasid )].ptr.ptr == 0 );
-  _kaapi_metadata_info_bind_data( entry->u.mdi, kasid, ptr, view );
-  return entry->u.mdi;
-#endif
-  return 0;
+  return kmdi;
 }
 
+kaapi_metadata_info_t* kaapi_memory_bind_view(
+                                              kaapi_address_space_id_t kasid, 
+                                              int flag, 
+                                              void* ptr, 
+                                              const kaapi_memory_view_t* view 
+                                              )
+{
+  kaapi_metadata_info_t* const kmdi = kaapi_memory_find_metadata(ptr);
+  kaapi_metadata_info_bind_data(kmdi, kasid, ptr, view);
+  return kmdi;
+}
 
-/** 
-*/
 void* kaapi_memory_unbind( kaapi_metadata_info_t* kmdi )
 {
   kaapi_assert(0); // TODO
   void* retval = 0;
+//  kaapi_metadata_info_unbind_alldata(kmdi); TODO
   return retval;
 }
