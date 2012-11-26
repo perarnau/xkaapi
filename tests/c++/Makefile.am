@@ -29,6 +29,7 @@ check_PROGRAMS=             \
   fibo_kaapi++_cumul \
   fibo_kaapi++_cumul_opt \
   fibo_kaapi++_cumul_userreduc\
+  test_perfcounter1 \
   test_spawn_failed 
 endif
 
@@ -41,6 +42,7 @@ test_pointer_SOURCES=test_pointer.cpp test_main.cpp test_main.h test_task.h
 test_stackpointer_SOURCES=test_stackpointer.cpp test_main.cpp test_main.h test_task.h
 test_nqueens_stackpointer_SOURCES=test_nqueens_stackpointer.cpp test_main.cpp test_main.h
 test_multipleleave_SOURCES=test_multipleleave.cpp
+test_perfcounter1_SOURCES=test_perfcounter1.cpp test_main.cpp
 
 fibo_kaapi___SOURCES=    fibo_kaapi++.cpp test_main.cpp test_main.h fibo_main.cpp
 fibo_kaapi___autopointer_SOURCES= fibo_kaapi++_autopointer.cpp test_main.cpp test_main.h fibo_main.cpp
@@ -84,6 +86,11 @@ test_multipleleave_CPPFLAGS=$(AM_CPPFLAGS)  $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 test_multipleleave_CXXFLAGS=$(AM_CXXFLAGS)  $(KAAPIXXPROGS_BUILD_CXXFLAGS)
 test_multipleleave_LDFLAGS =$(AM_LDFLAGS)   $(KAAPIXXPROGS_BUILD_LDFLAGS)
 test_multipleleave_LDADD   =$(LIBS)         $(KAAPIXXPROGS_BUILD_LIBS)
+
+test_perfcounter1_CPPFLAGS=$(AM_CPPFLAGS)  $(KAAPIXXPROGS_BUILD_CPPFLAGS)  
+test_perfcounter1_CXXFLAGS=$(AM_CXXFLAGS)  $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+test_perfcounter1_LDFLAGS =$(AM_LDFLAGS)   $(KAAPIXXPROGS_BUILD_LDFLAGS)
+test_perfcounter1_LDADD   =$(LIBS)         $(KAAPIXXPROGS_BUILD_LIBS)
 
 fibo_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS)
 fibo_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
