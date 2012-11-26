@@ -64,7 +64,7 @@ Format::Format(
   std::string fmt_name = std::string("__Z4TypeI")+name;
   if (fmt ==0) 
     fmt = new kaapi_format_t;
-  kaapi_format_register( fmt, strdup(fmt_name.c_str()));
+  kaapi_format_register( fmt, fmt_name.c_str());
   fmt->size      = (uint32_t)size;
   fmt->cstor     = cstor;
   fmt->dstor     = dstor;
@@ -135,7 +135,7 @@ FormatTask::FormatTask(
     kaapi_format_taskregister_static( 
           fmt,
           0, 0,
-          strdup(fmt_name.c_str()),
+          fmt_name.c_str(),
           size,
           count,
           mode_param,
@@ -175,7 +175,7 @@ FormatTask::FormatTask(
     kaapi_format_taskregister_func( 
           fmt,
           0, 0,
-          strdup(fmt_name.c_str()),
+          fmt_name.c_str(),
           get_size,
           task_copy,
           get_count_params,

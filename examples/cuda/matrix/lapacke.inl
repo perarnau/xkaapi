@@ -28,6 +28,9 @@ struct LAPACKE {
   static lapack_int getf2_nopiv( int matrix_order, lapack_int m, lapack_int n,
 			     value_type * a, lapack_int lda );
 
+  static void getf2( lapack_int* m, lapack_int* n, value_type* a, lapack_int* lda,
+                     lapack_int* ipiv, lapack_int *info );
+  
   static lapack_int geqrt( int matrix_order, lapack_int m, lapack_int n,
 			    lapack_int nb, value_type* a, lapack_int lda,
 			    value_type* t, lapack_int ldt, value_type* work );
@@ -75,6 +78,12 @@ struct LAPACKE<double> {
 			    value_type* t, lapack_int ldt, value_type* work )
   {
     return LAPACKE_dgeqrt_work( matrix_order, m, n, nb, a, lda, t, ldt, work);
+  }
+  
+  static void getf2( lapack_int* m, lapack_int* n, value_type* a, lapack_int* lda,
+                    lapack_int* ipiv, lapack_int *info )
+  {
+    return LAPACK_dgetf2(m, n, a, lda, ipiv, info);
   }
 
   static lapack_int getf2_nopiv( int matrix_order, lapack_int m, lapack_int n,
@@ -199,6 +208,12 @@ struct LAPACKE<float> {
                                 value_type* a, lapack_int lda, lapack_int* ipiv )
   {
     return LAPACKE_sgetrf_work(matrix_order, m, n, a, lda, ipiv);
+  }
+  
+  static void getf2( lapack_int* m, lapack_int* n, value_type* a, lapack_int* lda,
+                    lapack_int* ipiv, lapack_int *info )
+  {
+    return LAPACK_sgetf2(m, n, a, lda, ipiv, info);
   }
   
   static lapack_int getf2_nopiv( int matrix_order, lapack_int m, lapack_int n,

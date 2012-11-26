@@ -1121,26 +1121,30 @@ namespace ka {
   
   // --------------------------------------------------------------------
   template<class T>
-  struct TraitNoDeleteTask {
+  struct TraitNoDestroyTask {
     enum { value = false };
   };
   
   /* user may specialize this trait to avoid spawn of delete for some object */
-  template<> struct TraitNoDeleteTask<char> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<short> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<int> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<long> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<unsigned char> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<unsigned short> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<unsigned int> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<unsigned long> { enum { value = true}; };
+  template<> struct TraitNoDestroyTask<char> { enum { value = true}; };
+  template<> struct TraitNoDestroyTask<short> { enum { value = true}; };
+  template<> struct TraitNoDestroyTask<int> { enum { value = true}; };
+  template<> struct TraitNoDestroyTask<long> { enum { value = true}; };
+  template<> struct TraitNoDestroyTask<unsigned char> { enum { value = true}; };
+  template<> struct TraitNoDestroyTask<unsigned short> { enum { value = true}; };
+  template<> struct TraitNoDestroyTask<unsigned int> { enum { value = true}; };
+  template<> struct TraitNoDestroyTask<unsigned long> { enum { value = true}; };
 #if defined(__APPLE__) && defined(__ppc__) && defined(__GNUC__)
 #else  
-  template<> struct TraitNoDeleteTask<unsigned long long> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<long long> { enum { value = true}; };
+  template<> struct TraitNoDestroyTask<unsigned long long> { enum { value = true}; };
+  template<> struct TraitNoDestroyTask<long long> { enum { value = true}; };
 #endif
-  template<> struct TraitNoDeleteTask<float> { enum { value = true}; };
-  template<> struct TraitNoDeleteTask<double> { enum { value = true}; };
+  template<> struct TraitNoDestroyTask<float> { enum { value = true}; };
+  template<> struct TraitNoDestroyTask<double> { enum { value = true}; };
+  
+  /* case of pointer_XX to pointer to object */
+  template<typename T> struct TraitNoDestroyTask<const T*> { enum { value = true}; };
+  template<typename T> struct TraitNoDestroyTask<T*> { enum { value = true}; };
   
   /* autopointer: like a pointer, except that it spawn delete task
    at the end of the definition cope
@@ -4656,9 +4660,12 @@ namespace ka {
   }
   
   // --------------------------------------------------------------------
+  // Call delete on the pointer
   template<class T>
   struct TaskDelete : public Task<1>::Signature<RW<T> > { };
+
   // --------------------------------------------------------------------
+  // Only call the destructor. Not necessary for POD type.
   template<class T>
   struct TaskDestroy : public Task<1>::Signature<RW<T> > { };
   
@@ -4687,18 +4694,14 @@ namespace ka {
     template<class T> static void doit( pointer<T>& ap ) 
     { 
       Spawn<TaskDelete<T> >()(ap); 
-#if !defined(KAAPI_NDEBUG)
-      ap.ptr(0); 
-#endif
+      /* could not set to 0 the poiner, because may be used for spawned tasks */
     }
   };
   template<>
   struct SpawnDelete<true> {
     template<class T> static void doit( auto_pointer<T>& ap ) 
     { 
-#if !defined(KAAPI_NDEBUG)
-      ap.ptr(0);
-#endif
+      /* could not set to 0 the poiner, because may be used for spawned tasks */
     }
   };
   
@@ -4707,29 +4710,24 @@ namespace ka {
     template<class T> static void doit( auto_variable<T>& av ) 
     { 
       Spawn<TaskDestroy<T> >()(&av); 
-#if !defined(KAAPI_NDEBUG)
-      av.clear(); 
-#endif
+      /* could not clear the variable, because may be used for spawned tasks */
     }
   };
   template<>
   struct SpawnDestroy<true> {
     template<class T> static void doit( auto_variable<T>& av ) 
     { 
-#if !defined(KAAPI_NDEBUG)
-      av.clear();
-#endif
+      /* could not clear the variable, because may be used for spawned tasks */
     }
   };
   
-  
   template<class T>
   auto_pointer<T>::~auto_pointer()
-  { SpawnDelete<>::doit(*this); }
+  { SpawnDelete<false>::doit(*this); }
   
   template<class T>
   auto_variable<T>::~auto_variable()
-  { SpawnDestroy<TraitNoDeleteTask<T>::value>::doit(*this); }
+  { SpawnDestroy<TraitNoDestroyTask<T>::value>::doit(*this); }
   
   
   // --------------------------------------------------------------------

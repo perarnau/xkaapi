@@ -219,7 +219,7 @@ struct TaskBodyCPU<TaskCholesky<T> > {
   void operator()(
                   const ka::StaticSchedInfo* info,
                   uintptr_t pA,
-                  const enum CBLAS_UPLO uplo
+                  const CBLAS_UPLO uplo
                   )
   {
     //    size_t N = A->dim(0);
@@ -286,13 +286,20 @@ struct doit {
         }
         
         ka::array<2,double_type> A(dA[j*nb+i], block_size, block_size, block_size);
+#if defined(CONFIG_USE_PLASMA)
+        PLASMA<double_type>::plgsy((double_type)n, block_size, block_size, dA[j*nb+i], block_size, n,
+                                   i*block_size, j*block_size, 51);
+#else
         TaskBodyCPU<TaskLARNV<double_type> >()( ka::range2d_w<double_type>(A) );
+#endif
 #if CONFIG_USE_CUDA
         ka::Memory::Register( A );
 #endif
       }
     }
+#if !defined(CONFIG_USE_PLASMA)
     generate_blocked_matrix<double_type>(dA, n, block_size);
+#endif
     
     double_type* dAcopy = 0;
     if (verif) {

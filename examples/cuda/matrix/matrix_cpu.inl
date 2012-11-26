@@ -150,7 +150,7 @@ struct TaskBodyCPU<TaskGEMM<T> > {
     const int ldb = Akj->lda();
     const int ldc = Aij->lda();
 
-#if 0
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskCPU GEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", m, n, k, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
 #endif
     KAAPI_TIMING_BEGIN();
@@ -162,6 +162,47 @@ struct TaskBodyCPU<TaskGEMM<T> > {
     KAAPI_TIMING_END("CPU DGEMM", n);
   }
 };
+
+template<typename T>
+struct TaskBodyCPU<TaskGEMM2<T> > {
+  void operator()
+  (
+   CBLAS_ORDER		   order,
+   CBLAS_TRANSPOSE transA,
+   CBLAS_TRANSPOSE transB,
+   T alpha,
+   ka::range2d_r<T> Aik,
+   ka::range2d_r<T> Akj,
+   T beta,
+   ka::range2d_rw<T> Aij,
+   ka::pointer_w<int> fake
+   )
+  {
+    const T* const a = Aik->ptr();
+    const T* const b = Akj->ptr();
+    T* const c       = Aij->ptr();
+    
+    const int m = Aik->dim(0);
+    const int n = Aik->dim(1); // eq. to Akj->rows();
+    const int k = Akj->dim(1);
+    
+    const int lda = Aik->lda();
+    const int ldb = Akj->lda();
+    const int ldc = Aij->lda();
+    
+#if defined(CONFIG_VERBOSE)
+    fprintf(stdout, "TaskCPU GEMM m=%d n=%d k=%d A=%p alpha=%.2f B=%p beta=%.2f C=%p lda=%d ldb=%d ldc=%d\n", m, n, k, (void*)a, alpha, (void*)b, beta, (void*)c, lda, ldb, ldc ); fflush(stdout);
+#endif
+    KAAPI_TIMING_BEGIN();
+    CBLAS<T>::gemm
+    (
+     order, transA, transB,
+     m, n, k, alpha, a, lda, b, ldb, beta, c, ldc
+     );
+    KAAPI_TIMING_END("CPU DGEMM", n);
+  }
+};
+
 
 /* Rank k update
 */
@@ -185,7 +226,7 @@ struct TaskBodyCPU<TaskSYRK<T> > {
     const int ldc   = C->lda();
     T* const c = C->ptr();
 
-#if 0
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskCPU SYRK n=%d k=%d lda=%d A=%p ldc=%d C=%p\n",
 		n, k, lda, (void*)a, ldc, c ); fflush(stdout);
 #endif
@@ -226,7 +267,7 @@ struct TaskBodyCPU<TaskTRSM<T> > {
     //const int k = C->dim(1);
     const int k = (transA == CblasNoTrans ? A->dim(1) : A->dim(0) );
 
-#if 0
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskCPU DTRSM n=%d k=%d lda=%d A=%p ldc=%d C=%p\n",
 		n, k, lda, (void*)a, ldc, c ); fflush(stdout);
 #endif
@@ -249,27 +290,51 @@ template<typename T>
 struct TaskBodyCPU<TaskGETRF<T> > {
   void operator()( 
     CBLAS_ORDER order, 
-    ka::range2d_rw<T> A, 
-    ka::range1d_rpwp<int> piv
+    ka::range2d_rw<T> A,
+    ka::range1d_w<int> piv
   )
   {
     const int m     = A->dim(0); 
     const int n     = A->dim(1); 
     const int lda   = A->lda();
     T* const a      = A->ptr();
-    int* const ipiv = piv->ptr();
+    int* const ipiv = (int*)piv->ptr();
 
-#if 0
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskCPU DGETRF m=%d n=%d lda=%d A=%p ipiv=%p\n",
 		m, n, lda, (void*)a, (void*)ipiv ); fflush(stdout);
 #endif
+    /* TODO */
 #if defined(CONFIG_USE_PLASMA)
-    const int ib = CONFIG_IB; // from PLASMA
+    const int ib = CONFIG_IB_CPU;
     int info;
     PLASMA<T>::getrf(m, n, ib, a, lda, ipiv, &info);
 #else
     CLAPACK<T>::getrf(order, m, n, a, lda, ipiv);
 #endif
+  }
+};
+
+template<typename T>
+struct TaskBodyCPU<TaskGETF2<T> > {
+  void operator()(
+                  CBLAS_ORDER order,
+                  ka::range2d_rw<T> A,
+                  ka::range1d_w<int> piv,
+                  ka::pointer_w<int> info
+                  )
+  {
+    const int m     = A->dim(0);
+    const int n     = A->dim(1);
+    const int lda   = A->lda();
+    T* const a      = A->ptr();
+    int* const ipiv = (int*)piv->ptr();
+    
+#if defined(CONFIG_VERBOSE)
+    fprintf(stdout, "TaskCPU DGETF2 m=%d n=%d lda=%d A=%p ipiv=%p\n",
+            m, n, lda, (void*)a, (void*)ipiv ); fflush(stdout);
+#endif
+    *info = CLAPACK<T>::getrf(order, m, n, a, lda, ipiv);
   }
 };
 
@@ -287,13 +352,13 @@ struct TaskBodyCPU<TaskGETF2NoPiv<T> > {
     const int lda      = A->lda();
     T* const a    = A->ptr();
 
-#if 0
+#if defined(CONFIG_VERBOSE)
     int res =
 #endif 
     LAPACKE<T>::getf2_nopiv(
 	((order == CblasColMajor) ? LAPACK_COL_MAJOR : LAPACK_ROW_MAJOR),
 	m, n, a, lda );
-#if 0
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskGETF2NoPiv n=%d res=%d\n", m, res );
     fflush(stdout);
 #endif
@@ -317,13 +382,12 @@ struct TaskBodyCPU<TaskGETRFNoPiv<T> > {
     int* piv = (int*) calloc(m, sizeof(int));
 
     int res = CLAPACK<T>::getrf( order, m, n, a, lda, piv );
-#if 1
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskGETRFNoPiv n=%d res=%d\n", m, res );
     fflush(stdout);
 #endif
-    LAPACKE<T>::laswp_work( 
-	((order == CblasColMajor) ? LAPACK_COL_MAJOR : LAPACK_ROW_MAJOR),
-	m, a, lda, ione, n, piv, ione);
+    LAPACKE<T>::laswp_work(((order == CblasColMajor) ? LAPACK_COL_MAJOR : LAPACK_ROW_MAJOR),
+                           m, a, lda, ione, n, piv, ione);
     free( piv );
   }
 };
@@ -343,7 +407,7 @@ struct TaskBodyCPU<TaskPOTRF<T> > {
     T* const a = A->ptr();
 
     KAAPI_TIMING_BEGIN();
-#if 0
+#if defined(CONFIG_VERBOSE)
     fprintf(stdout, "TaskCPU TaskPOTRF n=%d lda=%d a=%p\n", n, lda, (void*)a);
     fflush(stdout);
 #endif
@@ -413,11 +477,46 @@ struct TaskBodyCPU<TaskLASWP<T> > {
     const int lda   = A->lda();
     T* const a = A->ptr();
     int* const piv = ipiv->ptr();
+    
+#if defined(CONFIG_VERBOSE)
+    fprintf(stdout, "TaskCPU TaskLASWP n=%d lda=%d a=%p k1=%d k2=%d piv=%p inc=%d\n",
+            n, lda, (void*)a, k1, k2, (void*)piv, inc);
+    fflush(stdout);
+#endif
 
-    LAPACKE<T>::laswp_work(
-	((order == CblasColMajor) ? LAPACK_COL_MAJOR : LAPACK_ROW_MAJOR),
+    LAPACKE<T>::laswp_work( ((order == CblasColMajor) ? LAPACK_COL_MAJOR : LAPACK_ROW_MAJOR),
        	n, a, lda, k1, k2, piv, inc);
   }
 };
+
+template<typename T>
+struct TaskBodyCPU<TaskLASWP2<T> > {
+  void operator()(
+                  CBLAS_ORDER order,
+                  ka::range2d_rw<T> A,
+                  int k1,
+                  int k2,
+                  ka::range1d_r<int> ipiv,
+                  int inc,
+                  ka::pointer_r<int> fake
+                  )
+  {
+    const int n = A->dim(1);
+    const int lda   = A->lda();
+    T* const a = A->ptr();
+    int* const piv = ipiv->ptr();
+    
+#if defined(CONFIG_VERBOSE)
+    fprintf(stdout, "TaskCPU TaskLASWP2 n=%d lda=%d a=%p k1=%d k2=%d piv=%p inc=%d\n",
+            n, lda, (void*)a, k1, k2, (void*)piv, inc);
+    fflush(stdout);
+#endif
+    
+    LAPACKE<T>::laswp_work( ((order == CblasColMajor) ? LAPACK_COL_MAJOR : LAPACK_ROW_MAJOR),
+                           n, a, lda, k1, k2, piv, inc);
+  }
+};
+
+
 
 #endif /* ! MATRIX_CPU_INL_INCLUDED */

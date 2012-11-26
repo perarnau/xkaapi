@@ -5,11 +5,41 @@
 
 #define THRESHOLD 5
 
+/* last entry i in solution[i] */
+#define MAX_CHESSBOARD_SIZE  23 
+
+long solution[] = {
+0, /* chessboard size = 0 */
+1,
+0,
+0,
+2,
+10,
+4,
+40,
+92,
+352,
+724,
+2680,
+14200,
+73712,
+365596,
+2279184,
+14772512,
+95815104,
+666090624,
+4968057848,
+39029188884,
+314666222712,
+2691008701644,
+24233937684440
+};
+
 /* */
-void solve(int* n, int* val, int* col, int* hist, int* count)
+void solve(int* n, int* val, int* col, int* hist, unsigned long* count)
 {
   if (*col == *n) {
-    *count += 1;
+    *count += 1UL;
     return;
   }
 
@@ -30,7 +60,7 @@ void solve(int* n, int* val, int* col, int* hist, int* count)
                    KAAPIC_MODE_V,  KAAPIC_TYPE_INT, 1, i, 
                    KAAPIC_MODE_V,  KAAPIC_TYPE_INT, 1, *col + 1, 
                    KAAPIC_MODE_S,  KAAPIC_TYPE_INT, *n, hist, 
-                   KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, KAAPIC_TYPE_INT, 1, count
+                   KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, KAAPIC_TYPE_ULONG, 1, count
       );
     else {
       int c = *col+1;
@@ -44,7 +74,7 @@ void solve(int* n, int* val, int* col, int* hist, int* count)
 */
 int main(int argc, char** argv )
 {
-  int n;
+  unsigned long n;
 	if (argc <= 1 || (n = atoi(argv[1])) <= 0) 
     n = 8;
 
@@ -63,13 +93,17 @@ int main(int argc, char** argv )
                KAAPIC_MODE_V,  KAAPIC_TYPE_INT, 1, 0, 
                KAAPIC_MODE_V,  KAAPIC_TYPE_INT, 1, 0, 
                KAAPIC_MODE_S,  KAAPIC_TYPE_INT, n, hist, 
-               KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, KAAPIC_TYPE_INT, 1, &count
+               KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, KAAPIC_TYPE_ULONG, 1, &count
   );
 
   kaapic_sync();
   kaapic_end_parallel (KAAPIC_FLAG_DEFAULT);
 
   printf("Total number of solutions: %i\n", count);
+  if (n <MAX_CHESSBOARD_SIZE)
+  {
+    kaapi_assert( count == solution[n] );
+  }
   kaapic_finalize();
 }
 
