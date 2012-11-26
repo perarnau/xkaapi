@@ -316,7 +316,7 @@ int kaapi_init(int flag, int* argc, char*** argv)
   if (KAAPI_ATOMIC_INCR(&kaapi_count_init) !=1) 
     return EALREADY;
 
-  kaapi_init_basicformat();
+  kaapi_format_init();
   kaapi_init_adaptive();
   
   /* set up runtime parameters */
@@ -350,6 +350,9 @@ int kaapi_finalize(void)
   kaapi_memory_destroy();
   
   kaapi_mt_finalize();
+  
+  /* reclaim format' names allocations */
+  kaapi_format_finalize();
 
 #if defined(KAAPI_USE_NETWORK)
   kaapi_network_finalize();
