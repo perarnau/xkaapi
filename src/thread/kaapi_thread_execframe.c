@@ -162,6 +162,10 @@ redo_exec:
         {
           fp[-1].pc = pc;  
           stack->sfp = fp-1;
+#if defined(KAAPI_USE_PERFCOUNTER)
+          KAAPI_PERF_REG(stack->proc, KAAPI_PERF_ID_TASKS) += cnt_tasks;
+          cnt_tasks = 0;
+#endif
           return EWOULDBLOCK;
         }
         if (retval == EINTR) 
