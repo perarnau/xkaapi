@@ -164,7 +164,7 @@ get_cu_context( void )
 static kaapi_processor_t*
 xxx_get_cu_context( kaapi_address_space_id_t asid )
 {
-	kaapi_processor_t* proc = kaapi_cuda_get_proc_by_asid( asid );
+	kaapi_processor_t* proc =  kaapi_all_kprocessors[kaapi_memory_map_asid2kid(asid)];
 	return proc;
 }
 

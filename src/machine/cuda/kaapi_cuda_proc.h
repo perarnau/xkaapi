@@ -110,8 +110,6 @@ typedef struct kaapi_cuda_proc_t {
 
   int is_initialized;
 
-  kaapi_address_space_id_t kasid;
-
   unsigned int peers[KAAPI_CUDA_MAX_DEV];	/* enabled access peer */
 
 } kaapi_cuda_proc_t;
@@ -169,7 +167,5 @@ extern int kaapi_cuda_sync(struct kaapi_processor_t *const);
 extern int kaapi_cuda_proc_all_isvalid(void);
 
 extern void kaapi_cuda_proc_destroy(struct kaapi_processor_t *const);
-
-extern kaapi_address_space_id_t kaapi_cuda_proc_get_kasid(struct kaapi_processor_t *const);
 
 #endif				/* ! KAAPI_CUDA_PROC_H_INCLUDED */

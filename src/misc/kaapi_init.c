@@ -326,7 +326,7 @@ int kaapi_init(int flag, int* argc, char*** argv)
   kaapi_network_init(argc, argv);
 #endif
 
-  kaapi_memory_init(); /* TODO: not necessary */
+  kaapi_memory_init();
   int err = kaapi_mt_init();
 
 #if defined(KAAPI_USE_CUDA)

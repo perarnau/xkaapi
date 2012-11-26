@@ -46,6 +46,10 @@
 #ifndef _KAAPI_MEMORY_METADATA_H_
 #define _KAAPI_MEMORY_METADATA_H_
 
+#include "kaapi_impl.h"
+
+#include "machine/mt/kaapi_mt_bitmap.h"
+
 /** Meta data attached to a pointer and its remote copies on a set of address spaces.
  The data structure store information for at most 64 address spaces.
  This data structure stores all the valid and invalid copies of the data.
@@ -56,9 +60,12 @@
  The view of each allocated block of data is stored in the kaapi_data_t structure.
  */
 typedef struct kaapi_metadata_info_t {
-  uint64_t                 validbits;
   kaapi_data_t             data[KAAPI_MAX_ADDRESS_SPACE];
   struct kaapi_version_t*  version[KAAPI_MAX_ADDRESS_SPACE];          /* opaque */
+  
+  kaapi_bitmap64_t  valid_bits;
+  kaapi_bitmap64_t  dirty_bits;
+  kaapi_bitmap64_t  addr_bits;
 } kaapi_metadata_info_t;
 
 
@@ -71,12 +78,12 @@ extern kaapi_metadata_info_t* kaapi_memory_find_metadata( void* ptr );
  Return a new allocated data_info if no meta data is attached.
  The newly created data info structure has no
  */
-extern kaapi_metadata_info_t* kaapi_mem_findinsert_metadata( void* ptr );
+extern kaapi_metadata_info_t* kaapi_memory_findinsert_metadata( void* ptr );
 
 /** Get a copy to the local address space...
  TODO
  */
-extern kaapi_pointer_t kaapi_memory_synchronize_( kaapi_metadata_info_t* kdmi );
+extern kaapi_pointer_t kaapi_memory_synchronize_metadata( kaapi_metadata_info_t* kdmi );
 
 /** Bind an address of the calling virtual space of the process in the address space data structure kasid.
  Once binded the memory will be deallocated if the sticky flag is not set in flag.
@@ -109,77 +116,170 @@ extern void* kaapi_memory_unbind( kaapi_metadata_info_t* kmdi );
 
 
 /**/
-extern struct kaapi_version_t** _kaapi_metadata_info_bind_data(
+extern struct kaapi_version_t** kaapi_metadata_info_bind_data(
                                                                kaapi_metadata_info_t* kmdi,
                                                                kaapi_address_space_id_t kasid,
                                                                void* ptr, const kaapi_memory_view_t* view
                                                                );
 
+/*********************************************************************************/
+/** WARNING: below there are all low level functions for kaapi_metadata_info_t. **/
+/*********************************************************************************/
 
 /**/
-static inline void _kaapi_metadata_info_unbind_alldata(
-                                                       kaapi_metadata_info_t* kmdi
-                                                       )
+static inline void kaapi_metadata_info_unbind_alldata(kaapi_metadata_info_t* kmdi)
 {
-  kmdi->validbits = 0UL;
+  kaapi_bitmap_clear_64( &kmdi->valid_bits );
+  kaapi_bitmap_clear_64( &kmdi->addr_bits );
 }
 
 
+static inline void kaapi_metadata_info_unbind( kaapi_metadata_info_t* kmdi, kaapi_address_space_id_t kasid )
+{
+  kaapi_bitmap_unset_64( &kmdi->addr_bits, kasid );
+}
+
+static inline int kaapi_metadata_info_clear_data(
+                                               kaapi_metadata_info_t* kmdi,
+                                               kaapi_address_space_id_t kasid
+                                               )
+{
+  return kaapi_bitmap_unset_64( &kmdi->addr_bits, kaapi_memory_address_space_getlid(kasid) );
+}
+
+static inline int kaapi_metadata_info_has_data(
+                                               kaapi_metadata_info_t* kmdi,
+                                               kaapi_address_space_id_t kasid
+                                               )
+{
+  return kaapi_bitmap_get_64( &kmdi->addr_bits, kaapi_memory_address_space_getlid(kasid) );
+}
+
 /**/
-static inline kaapi_data_t* _kaapi_metadata_info_get_data(
+static inline kaapi_data_t* kaapi_metadata_info_get_data(
                                                           kaapi_metadata_info_t* kmdi,
                                                           kaapi_address_space_id_t kasid
                                                           )
 {
-  uint16_t lid = kaapi_memory_address_space_getlid( kasid );
-  kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
-  return &kmdi->data[lid];
+  kaapi_assert_debug(kaapi_memory_address_space_getlid(kasid) < KAAPI_MAX_ADDRESS_SPACE);
+  kaapi_assert_debug(kaapi_metadata_info_has_data(kmdi, kasid));
+  return &kmdi->data[kaapi_memory_address_space_getlid(kasid)];
 }
 
 /**/
-static inline int _kaapi_metadata_info_is_valid(
+static inline int kaapi_metadata_info_is_valid(
                                                 kaapi_metadata_info_t* kmdi,
                                                 kaapi_address_space_id_t kasid
                                                 )
 {
-  uint16_t lid = kaapi_memory_address_space_getlid( kasid );
-  kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
-  return (kmdi->validbits & (1UL<<lid)) !=0;
+  kaapi_assert_debug(kaapi_memory_address_space_getlid(kasid) < KAAPI_MAX_ADDRESS_SPACE);
+  return kaapi_bitmap_get_64( &kmdi->valid_bits, kaapi_memory_address_space_getlid(kasid));
 }
 
-/**/
-static inline int _kaapi_metadata_info_is_novalid(
-                                                  kaapi_metadata_info_t* kmdi
-                                                  )
+static inline void kaapi_metadata_info_clear_dirty(
+                                               kaapi_metadata_info_t* kmdi,
+                                               kaapi_address_space_id_t kasid
+                                               )
 {
-  return (kmdi->validbits == 0UL);
+  kaapi_assert_debug(kaapi_memory_address_space_getlid(kasid) < KAAPI_MAX_ADDRESS_SPACE);
+  kaapi_bitmap_set_64(&kmdi->valid_bits, kaapi_memory_address_space_getlid(kasid));
 }
 
-/**/
-static inline void _kaapi_metadata_info_set_writer( 
+static inline void kaapi_metadata_info_set_dirty(
                                                    kaapi_metadata_info_t* kmdi,
                                                    kaapi_address_space_id_t kasid
                                                    )
-{ 
-  uint16_t lid = kaapi_memory_address_space_getlid( kasid );
-  kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
-  kmdi->validbits = 1UL << lid;
+{
+  kaapi_assert_debug(kaapi_memory_address_space_getlid(kasid) < KAAPI_MAX_ADDRESS_SPACE);
+  kaapi_bitmap_unset_64(&kmdi->valid_bits, kaapi_memory_address_space_getlid(kasid));
 }
 
-#if 0
+static inline void kaapi_metadata_info_set_all_dirty_except(
+                                                 kaapi_metadata_info_t* kmdi,
+                                                 kaapi_address_space_id_t kasid
+                                                 )
+{
+  kaapi_assert_debug(kaapi_memory_address_space_getlid(kasid) < KAAPI_MAX_ADDRESS_SPACE);
+  kaapi_bitmap_clear_64(&kmdi->valid_bits);
+  kaapi_bitmap_set_64(&kmdi->valid_bits, kaapi_memory_address_space_getlid(kasid));
+}
+
+static inline int kaapi_metadata_info_clear_dirty_and_check(
+                                                            kaapi_metadata_info_t* kmdi,
+                                                            kaapi_address_space_id_t kasid
+                                                            )
+{
+  kaapi_assert_debug(kaapi_memory_address_space_getlid(kasid) < KAAPI_MAX_ADDRESS_SPACE);
+  return (kaapi_bitmap_fetch_and_set_64(&kmdi->valid_bits, kaapi_memory_address_space_getlid(kasid)) == 0);
+}
+
 /**/
-extern struct kaapi_version_t* _kaapi_metadata_info_get_version( 
+static inline int kaapi_metadata_info_is_novalid(
+                                                  kaapi_metadata_info_t* kmdi
+                                                  )
+{
+  return kaapi_bitmap_empty_64(&kmdi->valid_bits);
+}
+
+/**/
+static inline void kaapi_metadata_info_set_writer( 
+                                                   kaapi_metadata_info_t* kmdi,
+                                                   kaapi_address_space_id_t kasid
+                                                   )
+{
+  kaapi_assert_debug(kaapi_memory_address_space_getlid(kasid) < KAAPI_MAX_ADDRESS_SPACE);
+  kaapi_bitmap_unset_64(&kmdi->valid_bits, kaapi_memory_address_space_getlid(kasid));
+}
+
+static inline struct kaapi_version_t* kaapi_metadata_info_get_version(
                                                                 kaapi_metadata_info_t* kmdi,
                                                                 kaapi_address_space_id_t kasid
-                                                                );
-#endif
+                                                                )
+{
+  kaapi_assert_debug(kaapi_memory_address_space_getlid(kasid) < KAAPI_MAX_ADDRESS_SPACE);
+  return kmdi->version[kaapi_memory_address_space_getlid(kasid)];
+}
+
+static inline struct kaapi_version_t** kaapi_metadata_info_get_version_(
+                                                                      kaapi_metadata_info_t* kmdi,
+                                                                      kaapi_address_space_id_t kasid
+                                                                      )
+{
+  kaapi_assert_debug(kaapi_memory_address_space_getlid(kasid) < KAAPI_MAX_ADDRESS_SPACE);
+  return &kmdi->version[kaapi_memory_address_space_getlid(kasid)];
+}
+
+static inline struct kaapi_version_t* kaapi_metadata_info_get_version_by_lid(
+                                                                               kaapi_metadata_info_t* kmdi,
+                                                                               uint16_t lid
+                                                                               )
+{
+  kaapi_assert_debug(lid < KAAPI_MAX_ADDRESS_SPACE);
+  return kmdi->version[lid];
+}
+
+static inline struct kaapi_version_t** kaapi_metadata_info_get_version_by_lid_(
+                                                                      kaapi_metadata_info_t* kmdi,
+                                                                      uint16_t lid
+                                                                      )
+{
+  kaapi_assert_debug(lid < KAAPI_MAX_ADDRESS_SPACE);
+  return &kmdi->version[lid];
+}
+
+static inline uint16_t kaapi_metadata_info_first_valid( kaapi_metadata_info_t* kmdi )
+{
+  return ( kaapi_bitmap_first1_64(&kmdi->valid_bits) - 1);
+}
 
 /** Return a version that handle a valid copy in order to make a copy to kasid 
  */
-extern struct kaapi_version_t* _kaapi_metadata_info_find_onewriter(
-                                                                   kaapi_metadata_info_t* kmdi,
-                                                                   kaapi_address_space_id_t kasid
-                                                                   );
+static inline struct kaapi_version_t* kaapi_metadata_info_find_onewriter( kaapi_metadata_info_t* kmdi )
+{
+  uint16_t lid = kaapi_metadata_info_first_valid( kmdi );
+  kaapi_assert_debug(lid < KAAPI_MAX_ADDRESS_SPACE);
+  return kaapi_metadata_info_get_version_by_lid(kmdi, lid);
+}
 
 /* Make a copy of the data into kasid
  */
@@ -190,11 +290,11 @@ static inline struct kaapi_version_t** _kaapi_metadata_info_copy_data(
                                                                       )
 {
   uint16_t lid = kaapi_memory_address_space_getlid( kasid );
-  kmdi->validbits |= 1UL << lid;
   kmdi->data[lid].ptr  = kaapi_make_pointer(kasid, 0);
   kmdi->data[lid].view = *view;
   kaapi_memory_view_reallocated(&kmdi->data[lid].view);
-  return &kmdi->version[lid];
+  kaapi_metadata_info_clear_dirty(kmdi, kasid);
+  return kaapi_metadata_info_get_version_(kmdi, kasid);
 }
 
 #endif /* _KAAPI_MEMORY_METADATA_H_ */

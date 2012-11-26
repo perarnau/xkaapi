@@ -98,13 +98,13 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, ka
 
     /* find the version info of the data using the hash map */
     all_mdi[i] = mdi = kaapi_mem_findinsert_metadata( access.data );
-    if ( _kaapi_metadata_info_is_novalid(mdi))
+    if (kaapi_metadata_info_is_novalid(mdi))
     {
       kaapi_version_t** ptrversion;
       kaapi_memory_view_t view = kaapi_format_get_view_param(fmt, i, task->sp);
       /* no version -> new version object: the writer will be put by the first task... 
       */
-      ptrversion  = _kaapi_metadata_info_bind_data( mdi, thgrp->tid2asid[-1], access.data, &view );
+      ptrversion  = kaapi_metadata_info_bind_data( mdi, thgrp->tid2asid[-1], access.data, &view );
       *ptrversion = version = kaapi_thread_newversion( mdi, thgrp->tid2asid[-1], access.data, &view );
       version->writer_tasklist = thread->sfp->tasklist;
       
@@ -113,10 +113,10 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, ka
         kaapi_threadgroup_create_initialtask( thgrp->threadctxts[-1]->sfp->tasklist, version, m );
       version->writer_asid = thgrp->tid2asid[-1];
     }
-    if (_kaapi_metadata_info_is_valid(mdi, thread->asid) )
+    if (kaapi_metadata_info_is_valid(mdi, thread->asid) )
     {
       /* have a already a valid version in this asid */
-      version = _kaapi_metadata_info_get_version(mdi, thread->asid);
+      version = kaapi_metadata_info_get_version(mdi, thread->asid);
       
       /* reused the standard local computeready access */
       kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
@@ -129,7 +129,7 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, ka
       if (KAAPI_ACCESS_IS_READ(m))
       {
         /* find one of the writers (which has a valid copy of the data) */
-        kaapi_version_t* version_writer = _kaapi_metadata_info_find_onewriter(mdi, thread->asid);
+        kaapi_version_t* version_writer = kaapi_metadata_info_find_onewriter(mdi, thread->asid);
 
         /* create a new version on receiver thread */
         kaapi_version_t** ptrversion 
@@ -219,7 +219,7 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, ka
         version->last_mode    = m;
         version->last_task    = taskdescr;
 
-        /* invalidate old copies _kaapi_metadata_info_set_writer( mdi, thread->asid ); */
+        /* invalidate old copies kaapi_metadata_info_set_writer( mdi, thread->asid ); */
       }
       else 
       {
@@ -228,8 +228,8 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, ka
         */
         kaapi_version_t** ptrversion;
         kaapi_memory_view_t view = kaapi_format_get_view_param(fmt, i, task->sp);
-        _kaapi_metadata_info_unbind_alldata( mdi );
-        ptrversion = _kaapi_metadata_info_bind_data( mdi, thread->asid, access.data, &view );
+        kaapi_metadata_info_unbind_alldata( mdi );
+        ptrversion = kaapi_metadata_info_bind_data( mdi, thread->asid, access.data, &view );
 
         /* no version -> new version object: the writer will be put by the first task... 
         */
@@ -260,7 +260,7 @@ int kaapi_threadgroup_computedependencies(kaapi_threadgroup_t thgrp, int tid, ka
       version->writer_asid     = thread->asid;
       version->writer_task     = taskdescr;
       version->writer_tasklist = tasklist;
-      _kaapi_metadata_info_set_writer( mdi, thread->asid );
+      kaapi_metadata_info_set_writer( mdi, thread->asid );
 #pragma message ("warning: delete all copies")
     }
 

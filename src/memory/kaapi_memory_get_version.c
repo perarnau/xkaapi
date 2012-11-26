@@ -43,9 +43,12 @@
  */
 #include "kaapi_impl.h"
 
+/** TODO remove **/
 
 /*
 */
+
+#if 0
 kaapi_version_t* _kaapi_metadata_info_get_version( 
     kaapi_metadata_info_t* kmdi,
     kaapi_address_space_id_t kasid
@@ -58,3 +61,4 @@ kaapi_version_t* _kaapi_metadata_info_get_version(
   return version;
 }
 
+#endif

@@ -66,16 +66,19 @@
 #  define KAAPI_KPROCESSOR_ALIGNMENT_SIZE KAAPI_CACHE_LINE
 #endif
 
-#if defined(KAAPI_USE_CUDA)
-#  include "../cuda/kaapi_cuda_proc.h"
-#endif
 
 #include "kaapi_mt_bitmap.h"
 
+#if 1
+#include "../cuda/kaapi_cuda_proc.h"
+#include "../../tasklist/kaapi_readytasklist.h"
+#endif
+
+#if 1
 #include "../../memory/kaapi_mem.h"
 #include "../../memory/kaapi_mem_data.h"
 #include "../../memory/kaapi_mem_host_map.h"
-#include "../../tasklist/kaapi_readytasklist.h"
+#endif
 
 /* ========================================================================== */
 struct kaapi_procinfo_t;
@@ -733,6 +736,7 @@ static inline kaapi_thread_context_t* kaapi_self_thread_context(void)
 static inline kaapi_processor_id_t kaapi_get_current_kid(void)
 { return kaapi_get_current_processor()->kid; }
 
+#if 1
 static inline kaapi_mem_host_map_t*
 kaapi_get_current_mem_host_map(void)
 { return &kaapi_get_current_processor()->mem_host_map; }
@@ -740,7 +744,7 @@ kaapi_get_current_mem_host_map(void)
 static inline kaapi_mem_host_map_t*
 kaapi_processor_get_mem_host_map( kaapi_processor_t* kproc )
 { return &kproc->mem_host_map; }
-
+#endif
 
 /* ========================================================================== */
 /** Termination dectecting barrier

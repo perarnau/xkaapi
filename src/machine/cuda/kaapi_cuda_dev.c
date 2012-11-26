@@ -56,20 +56,6 @@ kaapi_processor_t *kaapi_cuda_mem_get_proc(void)
   return NULL;
 }
 
-kaapi_processor_t *kaapi_cuda_get_proc_by_asid(kaapi_address_space_id_t asid)
-{
-  unsigned int i;
-  
-  for (i = 0; i < kaapi_count_kprocessors; ++i) {
-    if ((kaapi_all_kprocessors[i]->proc_type == KAAPI_PROC_TYPE_CUDA) &&
-        (kaapi_all_kprocessors[i]->cuda_proc.kasid == asid)) {
-      return kaapi_all_kprocessors[i];
-    }
-  }
-  
-  return NULL;
-}
-
 int kaapi_cuda_dev_enable_peer_access(kaapi_cuda_proc_t * const proc)
 {
   int dev_count;

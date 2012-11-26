@@ -1018,9 +1018,9 @@ int kaapi_cuda_exectask
     mdi = kaapi_mem_findinsert_metadata(access.data);
     kaapi_assert_debug(mdi != NULL);
 
-    if (!_kaapi_metadata_info_is_valid(mdi, thread->asid)) {
+    if (!kaapi_metadata_info_is_valid(mdi, thread->asid)) {
       view = kaapi_format_get_view_param(format, i, task->sp);
-      _kaapi_metadata_info_bind_data(mdi, thread->asid, access.data,
+      kaapi_metadata_info_bind_data(mdi, thread->asid, access.data,
 				     &view);
       mdi->version[0] =
 	  kaapi_thread_newversion(mdi, thread->asid, access.data, &view);

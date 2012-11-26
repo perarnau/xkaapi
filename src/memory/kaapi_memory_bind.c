@@ -42,53 +42,19 @@
  ** 
  */
 #include "kaapi_impl.h"
-//#include "kaapi_memory.h"
-
-/** Global Hash map of all mapping
-*/
-#ifdef SMALL_HASH
-static kaapi_hashmap_t kmdi_hm;
-#else
-static kaapi_big_hashmap_t kmdi_hm;
-#endif
-
-
-/*
-*/
-void kaapi_memory_init(void)
-{
-#ifdef SMALL_HASH
-  kaapi_hashmap_init( &kmdi_hm, 0 );  
-#else
-  kaapi_big_hashmap_init( &kmdi_hm, 0 );  
-#endif
-}
-
-
-/*
-*/
-void kaapi_memory_destroy(void)
-{
-#ifdef SMALL_HASH
-  kaapi_hashmap_destroy( &kmdi_hm );
-#else
-  kaapi_big_hashmap_destroy( &kmdi_hm );
-#endif
-}
 
 /**
 */
 kaapi_metadata_info_t* kaapi_memory_find_metadata( void* ptr )
 {
+#if 0
   kaapi_hashentries_t* entry;
   
-#ifdef SMALL_HASH
-  entry = kaapi_hashmap_find(&kmdi_hm, ptr);
-#else
   entry = kaapi_big_hashmap_find(&kmdi_hm, ptr);
-#endif
   if (entry ==0) return 0;
   return entry->u.mdi;
+#endif
+  return 0;
 }
 
 
@@ -96,11 +62,9 @@ kaapi_metadata_info_t* kaapi_memory_find_metadata( void* ptr )
 */
 static inline kaapi_metadata_info_t* _kaapi_memory_allocate_mdi()
 {
-#if 0//defined(KAAPI_USE_NUMA)
-  kaapi_metadata_info_t* mdi = numa_alloc_local( sizeof(kaapi_metadata_info_t) );
-#else
+//  kaapi_metadata_info_t* mdi = numa_alloc_local( sizeof(kaapi_metadata_info_t) );
+#if 0
   kaapi_metadata_info_t* mdi = malloc( sizeof(kaapi_metadata_info_t) );
-#endif
   if (mdi ==0) return 0;
   mdi->validbits = 0;
 #if defined(KAAPI_DEBUG)
@@ -108,6 +72,8 @@ static inline kaapi_metadata_info_t* _kaapi_memory_allocate_mdi()
   memset(mdi->version, 0, sizeof(kaapi_version_t*)*KAAPI_MAX_ADDRESS_SPACE );
 #endif
   return mdi;
+#endif
+  return 0;
 }
 
 
@@ -115,22 +81,21 @@ static inline kaapi_metadata_info_t* _kaapi_memory_allocate_mdi()
 */
 kaapi_metadata_info_t* kaapi_mem_findinsert_metadata( void* ptr )
 {
+#if 0
   kaapi_hashentries_t* entry;
   
-#ifdef SMALL_HASH
-  entry = kaapi_hashmap_findinsert(&kmdi_hm, ptr);
-#else
   entry = kaapi_big_hashmap_findinsert(&kmdi_hm, ptr);
-#endif
   if (entry->u.mdi ==0)
     entry->u.mdi = _kaapi_memory_allocate_mdi();
   return entry->u.mdi;
+#endif
+  return 0;
 }
 
 
 /**
 */
-kaapi_version_t** _kaapi_metadata_info_bind_data( 
+kaapi_version_t** kaapi_metadata_info_bind_data( 
     kaapi_metadata_info_t* kmdi, 
     kaapi_address_space_id_t kasid, 
     void* ptr, const kaapi_memory_view_t* view
@@ -140,9 +105,9 @@ kaapi_version_t** _kaapi_metadata_info_bind_data(
   kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
   kmdi->data[lid].ptr  = kaapi_make_pointer(kasid, ptr);
   kmdi->data[lid].view = *view;
-  kmdi->data[lid].mdi = kmdi; 
-  kmdi->validbits |= (1UL << lid);
-  return &kmdi->version[lid];
+  kmdi->data[lid].mdi = kmdi;
+  kaapi_metadata_info_clear_dirty(kmdi, kasid);
+  return kaapi_metadata_info_get_version_by_lid_(kmdi, lid);
 }
 
 
@@ -155,13 +120,10 @@ kaapi_metadata_info_t* kaapi_memory_bind(
   size_t size 
 )
 {
+#if 0
   kaapi_hashentries_t* entry;
   
-#ifdef SMALL_HASH
-  entry = kaapi_hashmap_findinsert(&kmdi_hm, ptr);
-#else
   entry = kaapi_big_hashmap_findinsert(&kmdi_hm, ptr);
-#endif
   if (entry->u.mdi ==0)
     entry->u.mdi = _kaapi_memory_allocate_mdi();
 
@@ -169,6 +131,8 @@ kaapi_metadata_info_t* kaapi_memory_bind(
   kaapi_memory_view_t view = kaapi_memory_view_make1d(size, 1);
   _kaapi_metadata_info_bind_data( entry->u.mdi, kasid, ptr, &view );
   return entry->u.mdi;
+#endif
+  return 0;
 }
 
 
@@ -181,19 +145,19 @@ kaapi_metadata_info_t* kaapi_memory_bind_view(
   const kaapi_memory_view_t* view 
 )
 {
+#if 0
   kaapi_hashentries_t* entry;
   
-#ifdef SMALL_HASH
-  entry = kaapi_hashmap_findinsert(&kmdi_hm, ptr);
-#else
   entry = kaapi_big_hashmap_findinsert(&kmdi_hm, ptr);
-#endif
+
   if (entry->u.mdi ==0)
     entry->u.mdi = _kaapi_memory_allocate_mdi();
 
   kaapi_assert_debug( entry->u.mdi->data[kaapi_memory_address_space_getlid( kasid )].ptr.ptr == 0 );
   _kaapi_metadata_info_bind_data( entry->u.mdi, kasid, ptr, view );
   return entry->u.mdi;
+#endif
+  return 0;
 }
 
 

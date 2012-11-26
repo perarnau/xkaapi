@@ -83,6 +83,7 @@ extern "C" {
 #include "kaapi_hashmap.h"
 #include "kaapi_memory.h"
 #include "memory/kaapi_memory_metadata.h"
+#include "memory/kaapi_memory_map.h"  
 #include "kaapi_task.h"
 #include "kaapi_format.h"
 #include "kaapi_event.h"
@@ -90,8 +91,6 @@ extern "C" {
 #include <string.h>
 
 #include "kaapi_defs.h"
-
-
 
 /** Current implementation relies on isoaddress allocation to avoid
     communication during synchronization at the end of partitionning.

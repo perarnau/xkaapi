@@ -29,18 +29,6 @@ kaapi_mem_host_map_destroy( kaapi_mem_host_map_t* map )
   kaapi_big_hashmap_destroy( &map->hmap );
 }
 
-static inline kaapi_mem_asid_t
-kaapi_mem_host_map_get_asid( const kaapi_mem_host_map_t* map )
-{ return map->asid; }
-
-static inline kaapi_processor_id_t
-kaapi_mem_asid2kid( kaapi_mem_asid_t asid )
-{
-    if( asid == 0 )
-	return (kaapi_processor_id_t)0;
-    return kaapi_all_asid2kid[asid];
-}
-
 int
 kaapi_mem_host_map_find( kaapi_mem_host_map_t*, kaapi_mem_addr_t, kaapi_mem_data_t** );
 
@@ -75,5 +63,19 @@ extern kaapi_mem_data_t* kaapi_mem_host_map_register_to_host(
       void* ptr,
       kaapi_memory_view_t* const view
     );
+
+#if 1
+static inline kaapi_mem_asid_t
+kaapi_mem_host_map_get_asid( const kaapi_mem_host_map_t* map )
+{ return map->asid; }
+
+static inline kaapi_processor_id_t
+kaapi_mem_asid2kid( kaapi_mem_asid_t asid )
+{
+  if( asid == 0 )
+    return (kaapi_processor_id_t)0;
+  return kaapi_all_asid2kid[asid];
+}
+#endif
 
 #endif /* KAAPI_MEM_HOST_MAP_H_INCLUDED */

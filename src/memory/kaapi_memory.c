@@ -108,4 +108,16 @@ int kaapi_memory_address_space_fprintf( FILE* file, kaapi_address_space_id_t kas
   );
 }
 
+/*
+ */
+void kaapi_memory_init(void)
+{
+  kaapi_memory_map_init();
+}
 
+
+/*
+ */
+void kaapi_memory_destroy(void)
+{
+}

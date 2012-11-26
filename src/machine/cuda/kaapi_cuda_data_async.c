@@ -49,7 +49,7 @@ static inline kaapi_data_t
   if (!kaapi_mem_data_has_addr(kmd, asid)) 
   {
     kaapi_data_t *dest = (kaapi_data_t *) calloc(1, sizeof(kaapi_data_t));
-    kaapi_cuda_mem_alloc(&dest->ptr, kaapi_cuda_proc_get_kasid(kaapi_get_current_processor()),
+    kaapi_cuda_mem_alloc(&dest->ptr, kaapi_memory_map_get_current_asid(),
                          kaapi_memory_view_size(&src->view), m);
     kaapi_cuda_data_async_view_convert(&dest->view, &src->view);
     kaapi_mem_data_set_addr(kmd, asid, (kaapi_mem_addr_t) dest);

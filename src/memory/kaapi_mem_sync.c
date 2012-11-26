@@ -62,3 +62,8 @@ void* kaapi_memory_get_host_pointer(void* const gpu_ptr)
 #endif
   return NULL;
 }
+
+kaapi_pointer_t kaapi_memory_synchronize_metadata( kaapi_metadata_info_t* kdmi )
+{
+  return kaapi_make_nullpointer();
+}
