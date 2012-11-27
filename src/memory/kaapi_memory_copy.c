@@ -323,11 +323,13 @@ int kaapi_memory_copy(
   
 #if 0
   //#if KAAPI_VERBOSE
-  fprintf(stdout, "[%s] kid=%d copy dest=@%p, src=@%p, size=%lu dst_gid=%d src_gid=%d (%d -> %d)\n",
+  fprintf(stdout, "[%s] kid=%d copy dest=@%p, src=@%p, size=%lu (%d:%d <- %d:%d)\n",
           __FUNCTION__,
           kaapi_get_self_kid(),
-          (void*)dest.ptr, (void*)src.ptr, kaapi_memory_view_size(view_src), kaapi_pointer2gid(dest), kaapi_pointer2gid(src),
-          type_src, type_dest);
+          (void*)dest.ptr, (void*)src.ptr, kaapi_memory_view_size(view_src),
+          kaapi_pointer2gid(dest), kaapi_memory_address_space_getlid(kaapi_pointer2asid(dest)),
+          kaapi_pointer2gid(src), kaapi_memory_address_space_getlid(kaapi_pointer2asid(src))
+        );
   fflush(stdout);
 #endif
   

@@ -86,25 +86,39 @@ static inline int kaapi_memory_taskdescr_prologue_transfer(
   if(kaapi_metadata_info_is_valid(kmdi, kaapi_pointer2asid(dest)))
     return 0;
   
-  if(kaapi_pointer2asid(dest) == kaapi_pointer2asid(src))
+  if( (kaapi_pointer2asid(dest) == kaapi_pointer2asid(src))         ||
+      (!kaapi_metadata_info_is_valid(kmdi, kaapi_pointer2asid(src)))
+     )
   {
     uint16_t lid = kaapi_metadata_info_first_valid(kmdi);
     kaapi_data_t* kdata = kaapi_metadata_info_get_data_by_lid(kmdi, lid);
     kaapi_memory_copy(dest, view_dest, kdata->ptr, &kdata->view);
+#if 0
+    fprintf(stdout, "[%s] kid=%d kmdi=@%p dest=@%p(%d) src=@%p(%d) valid=@%p(%d) size=%lu\n",
+            __FUNCTION__, kaapi_get_self_kid(), (void*)kmdi,
+            kaapi_pointer2void(dest), kaapi_memory_address_space_getlid(kaapi_pointer2asid(dest)),
+            kaapi_pointer2void(src), kaapi_memory_address_space_getlid(kaapi_pointer2asid(src)),
+            kaapi_pointer2void(kdata->ptr), lid,
+            kaapi_memory_view_size(view_src)
+          );
+    fflush(stdout);
+#endif
   }
   else
   {
       kaapi_memory_copy(dest, view_dest, src, view_src);
+#if 0
+    fprintf(stdout, "[%s] kid=%d kmdi=@%p dest=@%p(%d) src=@%p(%d) size=%lu\n",
+            __FUNCTION__, kaapi_get_self_kid(), (void*)kmdi,
+            kaapi_pointer2void(dest), kaapi_memory_address_space_getlid(kaapi_pointer2asid(dest)),
+            kaapi_pointer2void(src), kaapi_memory_address_space_getlid(kaapi_pointer2asid(src)),
+            kaapi_memory_view_size(view_src)
+            );
+    fflush(stdout);
+#endif
+    
   }
   kaapi_metadata_info_clear_dirty(kmdi, kaapi_pointer2asid(dest));
-  
-#if 0
-  fprintf(stdout, "[%s] kid=%d kmdi=@%p dest=@%p src=@%p size=%lu\n",
-          __FUNCTION__, kaapi_get_self_kid(), (void*)kmdi,
-          kaapi_pointer2void(dest), kaapi_pointer2void(src),
-          kaapi_memory_view_size(view_src));
-  fflush(stdout);
-#endif
   
   return 0;
 }
