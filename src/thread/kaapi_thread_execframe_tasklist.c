@@ -139,6 +139,8 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
           kaapi_mem_host_map_sync( td );
 #endif
         
+        kaapi_memory_taskdescr_prologue(td);
+        
         /* start execution of the user body of the task */
         KAAPI_DEBUG_INST(kaapi_assert( td->u.acl.exec_date == 0 ));
         KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_BEG );
@@ -146,6 +148,8 @@ int kaapi_thread_execframe_tasklist( kaapi_thread_context_t* thread )
         KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_END );
         KAAPI_DEBUG_INST( td->u.acl.exec_date = kaapi_get_elapsedns() );
         ++cnt_exec;
+        
+        kaapi_memory_taskdescr_prologue(td);
         
         /* new tasks created ? */
         if (unlikely(fp->sp > stack->sfp->sp))

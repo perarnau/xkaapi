@@ -73,38 +73,16 @@ kaapi_cuda_thread_tasklist_activate_deps(kaapi_taskdescr_t * td)
   KAAPI_ATOMIC_ADD(&td->tasklist->cnt_exec, 1);
 }
 
-#if defined(KAAPI_CUDA_DATA_CACHE_WT)
-static int
-kaapi_cuda_gpu_task_callback3_sync_host(kaapi_cuda_stream_t * kstream,
-                                        void *arg)
-{
-  kaapi_taskdescr_t *const td = (kaapi_taskdescr_t *) arg;
-  kaapi_cuda_data_output_dev_dec_use(kstream, td);
-  kaapi_cuda_thread_tasklist_activate_deps(td);
-  return 0;
-}
-#endif
-
 /* call back to push ready task into the tasklist after terminaison of a task */
 static int
 kaapi_cuda_gpu_task_callback2_after_kernel(kaapi_cuda_stream_t * kstream,
                                            void *arg)
 {
   kaapi_taskdescr_t *const td = (kaapi_taskdescr_t *) arg;
-#if !defined(KAAPI_CUDA_NO_H2D)
-#if defined(KAAPI_CUDA_DATA_CACHE_WT)
-  /* write-through policy */
-  kaapi_cuda_data_async_recv(kstream, td);
-  kaapi_cuda_stream_push(kstream, KAAPI_CUDA_OP_D2H,
-                         kaapi_cuda_gpu_task_callback3_sync_host, arg);
-#else				/* KAAPI_CUDA_DATA_CACHE_WT */
+//  kaapi_memory_taskdescr_epilogue(td);
   /* default write-back policy (lazy) */
   kaapi_cuda_data_output_dev_dec_use(kstream, td);
   kaapi_cuda_thread_tasklist_activate_deps(td);
-#endif				/* KAAPI_CUDA_DATA_CACHE_WT */
-#else				/* !KAAPI_CUDA_NO_H2D */
-  kaapi_cuda_thread_tasklist_activate_deps(td);
-#endif				/* !KAAPI_CUDA_NO_H2D */
   return 0;
 }
 
@@ -120,15 +98,6 @@ kaapi_cuda_gpu_task_callback1_exec_task(kaapi_cuda_stream_t * kstream,
   kaapi_assert_debug(td->task != 0);
   kaapi_cuda_ctx_push();
   body(kaapi_task_getargs(td->task), kaapi_cuda_kernel_stream());
-#ifndef	    KAAPI_CUDA_ASYNC	/* Synchronous execution */
-  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(),
-                    kaapi_self_thread_context(),
-                    KAAPI_EVT_CUDA_CPU_SYNC_BEG);
-  kaapi_cuda_device_sync();
-  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(),
-                    kaapi_self_thread_context(),
-                    KAAPI_EVT_CUDA_CPU_SYNC_END);
-#endif
   kaapi_cuda_ctx_pop();
   kaapi_cuda_stream_push(kstream, KAAPI_CUDA_OP_KER,
                          kaapi_cuda_gpu_task_callback2_after_kernel, arg);
@@ -140,12 +109,11 @@ kaapi_cuda_gpu_task_callback0_sync_gpu(kaapi_cuda_stream_t * kstream,
                                        void *arg)
 {
   kaapi_taskdescr_t *const td = (kaapi_taskdescr_t *) arg;
-#if !defined(KAAPI_CUDA_NO_H2D)
   kaapi_cuda_ctx_push();
+//  kaapi_memory_taskdescr_prologue(td);
   kaapi_cuda_data_input_alloc(kstream, td);
   kaapi_cuda_data_input_dev_sync(kstream, td);
   kaapi_cuda_ctx_pop();
-#endif
   kaapi_cuda_stream_push(kstream, KAAPI_CUDA_OP_H2D,
                          kaapi_cuda_gpu_task_callback1_exec_task, arg);
   return 0;

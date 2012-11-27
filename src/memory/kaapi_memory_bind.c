@@ -7,6 +7,7 @@
  **
  ** thierry.gautier@inrialpes.fr
  ** fabien.lementec@imag.fr
+ ** Joao.Lima@imagf.r / joao.lima@inf.ufrgs.br
  ** 
  ** This software is a computer program whose purpose is to execute
  ** multithreaded computation with data flow synchronization between
@@ -64,13 +65,9 @@ kaapi_version_t** kaapi_metadata_info_bind_data(
                                                 void* ptr, const kaapi_memory_view_t* view
                                                 )
 {
-  uint16_t lid = kaapi_memory_address_space_getlid( kasid );
-  kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
-  kmdi->data[lid].ptr  = kaapi_make_pointer(kasid, ptr);
-  kmdi->data[lid].view = *view;
-  kmdi->data[lid].mdi = kmdi;
-  kaapi_metadata_info_clear_dirty(kmdi, kasid);
-  return kaapi_metadata_info_get_version_by_lid_(kmdi, lid);
+  kaapi_metadata_info_set_data(kmdi, kasid, ptr, view);
+  kaapi_metadata_info_clear_dirty(kmdi, kasid); /* TODO check */
+  return kaapi_metadata_info_get_version_by_lid_(kmdi, kaapi_memory_address_space_getlid(kasid));
 }
 
 kaapi_metadata_info_t* kaapi_memory_bind(
@@ -87,14 +84,44 @@ kaapi_metadata_info_t* kaapi_memory_bind(
   return kmdi;
 }
 
+kaapi_metadata_info_t* kaapi_memory_bind_with_metadata(
+                                                       kaapi_address_space_id_t kasid,
+                                                       kaapi_metadata_info_t* const kmdi,
+                                                       int flag,
+                                                       void* ptr,
+                                                       size_t size
+                                                       )
+{
+  kaapi_memory_map_t* const kmap = kaapi_memory_map_get_current(kaapi_get_self_kid());
+  kaapi_memory_map_find_and_insert(kmap, ptr, kmdi);
+  kaapi_memory_view_t view = kaapi_memory_view_make1d(size, 1);
+  kaapi_metadata_info_bind_data(kmdi, kasid, ptr, &view);
+  
+  return kmdi;
+}
+
 kaapi_metadata_info_t* kaapi_memory_bind_view(
-                                              kaapi_address_space_id_t kasid, 
-                                              int flag, 
-                                              void* ptr, 
-                                              const kaapi_memory_view_t* view 
+                                              kaapi_address_space_id_t kasid,
+                                              int flag,
+                                              void* ptr,
+                                              const kaapi_memory_view_t* view
                                               )
 {
   kaapi_metadata_info_t* const kmdi = kaapi_memory_find_metadata(ptr);
+  kaapi_metadata_info_bind_data(kmdi, kasid, ptr, view);
+  return kmdi;
+}
+
+kaapi_metadata_info_t* kaapi_memory_bind_view_with_metadata(
+                                                            kaapi_address_space_id_t kasid,
+                                                            kaapi_metadata_info_t* const kmdi,
+                                                            int flag,
+                                                            void* ptr,
+                                                            const kaapi_memory_view_t* view
+                                                            )
+{
+  kaapi_memory_map_t* const kmap = kaapi_memory_map_get_current(kaapi_get_self_kid());
+  kaapi_memory_map_find_and_insert(kmap, ptr, kmdi);
   kaapi_metadata_info_bind_data(kmdi, kasid, ptr, view);
   return kmdi;
 }
@@ -103,6 +130,6 @@ void* kaapi_memory_unbind( kaapi_metadata_info_t* kmdi )
 {
   kaapi_assert(0); // TODO
   void* retval = 0;
-//  kaapi_metadata_info_unbind_alldata(kmdi); TODO
+  //  kaapi_metadata_info_unbind_alldata(kmdi); TODO
   return retval;
 }

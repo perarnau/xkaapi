@@ -132,6 +132,17 @@ kaapi_metadata_info_t* kaapi_memory_map_find_or_insert( kaapi_memory_map_t* kmap
   return entry->u.mdi;
 }
 
+kaapi_metadata_info_t* kaapi_memory_map_find_and_insert( kaapi_memory_map_t* kmap, void* ptr,
+                                                        kaapi_metadata_info_t* kmdi)
+{
+  kaapi_hashentries_t *entry;
+  
+  entry = kaapi_big_hashmap_findinsert(&kmap->hmap, (void *)ptr);
+  entry->u.mdi = kmdi;
+  
+  return entry->u.mdi;
+}
+
 kaapi_metadata_info_t* kaapi_memory_map_find( kaapi_memory_map_t* kmap, void* ptr )
 {
   kaapi_hashentries_t *entry;

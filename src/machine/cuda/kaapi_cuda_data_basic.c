@@ -40,7 +40,7 @@ static inline kaapi_data_t
   const kaapi_mem_asid_t asid = kaapi_mem_host_map_get_asid(cuda_map);
   kaapi_data_t *dest = (kaapi_data_t *) calloc(1, sizeof(kaapi_data_t));
   kaapi_mem_addr_t addr;
-  kaapi_cuda_mem_alloc_(&addr, kaapi_memory_view_size(&src->view));
+  addr = (kaapi_mem_addr_t)kaapi_cuda_mem_alloc_(kaapi_memory_view_size(&src->view));
   dest->ptr = kaapi_make_pointer(0, (void *) addr);
   kaapi_cuda_data_basic_view_convert(&dest->view, &src->view);
   kaapi_mem_data_set_addr(kmd, asid, (kaapi_mem_addr_t) dest);
@@ -178,7 +178,7 @@ int kaapi_cuda_data_basic_recv(kaapi_format_t * fmt, void *sp)
                                dev_data->ptr, &dev_data->view);
     }
     kaapi_mem_data_clear_addr(kmd, cuda_asid);
-    kaapi_cuda_mem_free(&dev_data->ptr);
+    kaapi_cuda_mem_free(dev_data->ptr);
     free(dev_data);
   }
   

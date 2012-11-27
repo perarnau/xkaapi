@@ -6,7 +6,6 @@
  ** Contributors :
  **
  ** thierry.gautier@inrialpes.fr
- ** fabien.lementec@imag.fr
  ** Joao.Lima@imagf.r / joao.lima@inf.ufrgs.br
  **
  ** This software is a computer program whose purpose is to execute
@@ -43,43 +42,15 @@
  **
  */
 
-#ifndef _KAAPI_MEMORY_MAP_H_
-#define _KAAPI_MEMORY_MAP_H_
+#ifndef _KAAPI_MEMORY_TASKDESCR_H_
+#define _KAAPI_MEMORY_TASKDESCR_H_
 
 #include "kaapi_impl.h"
 
-typedef struct kaapi_memory_map_t {
-  kaapi_address_space_id_t    asid;
-  kaapi_big_hashmap_t         hmap;
-} kaapi_memory_map_t;
+struct kaapi_taskdescr_t;
 
-void kaapi_memory_map_init( void );
+int kaapi_memory_taskdescr_prologue(struct kaapi_taskdescr_t * td);
 
-void kaapi_memory_map_destroy( void );
+int kaapi_memory_taskdescr_epilogue(struct kaapi_taskdescr_t * td);
 
-int kaapi_memory_map_create( kaapi_processor_id_t kid, kaapi_address_space_id_t kasid );
-
-kaapi_address_space_id_t kaapi_memory_map_kid2asid(  kaapi_processor_id_t kid );
-
-kaapi_processor_id_t kaapi_memory_map_asid2kid( kaapi_address_space_id_t kasid );
-
-kaapi_address_space_id_t kaapi_memory_map_get_current_asid( void );
-
-kaapi_memory_map_t* kaapi_memory_map_get_current( kaapi_processor_id_t kid );
-
-/** Find or create the metadata info for ptr in kmap. */
-kaapi_metadata_info_t* kaapi_memory_map_find_or_insert( kaapi_memory_map_t* kmap, void* ptr );
-
-/** Insert into kmap the kmdi using as key ptr. */
-kaapi_metadata_info_t* kaapi_memory_map_find_and_insert( kaapi_memory_map_t* kmap, void* ptr,
-                                                        kaapi_metadata_info_t* kmdi);
-
-/** Find into kmap metadata info associated with ptr. */
-kaapi_metadata_info_t* kaapi_memory_map_find( kaapi_memory_map_t* kmap, void* ptr );
-
-static inline kaapi_address_space_id_t kaapi_memory_map_get_asid( const kaapi_memory_map_t* kmap )
-{
-  return kmap->asid;
-}
-
-#endif /* _KAAPI_MEMORY_MAP_H_ */
+#endif /* _KAAPI_MEMORY_TASKDESCR_H_ */

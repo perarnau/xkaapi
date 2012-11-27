@@ -95,6 +95,16 @@ extern kaapi_metadata_info_t* kaapi_memory_bind(
                                                 size_t                   size
                                                 );
 
+/** Same as the previous call, except that it does not allocate a new kmdi.
+ */
+extern kaapi_metadata_info_t* kaapi_memory_bind_with_metadata(
+                                                       kaapi_address_space_id_t kasid,
+                                                       kaapi_metadata_info_t* const kmdi,
+                                                       int flag,
+                                                       void* ptr,
+                                                       size_t size
+                                                       );
+
 /** Bind an address of the calling virtual space of the process in the address space data structure kasid.
  Once binded the memory will be deallocated if the sticky flag is not set in flag.
  Return the pointer.
@@ -105,6 +115,16 @@ extern kaapi_metadata_info_t* kaapi_memory_bind_view(
                                                      void*                      ptr,
                                                      const kaapi_memory_view_t* view
                                                      );
+
+/** Same as the previous call, except that it does not allocate a new kmdi.
+ */
+extern kaapi_metadata_info_t* kaapi_memory_bind_view_with_metadata(
+                                                                   kaapi_address_space_id_t kasid,
+                                                                   kaapi_metadata_info_t* const kmdi,
+                                                                   int flag,
+                                                                   void* ptr,
+                                                                   const kaapi_memory_view_t* view
+                                                                   );
 
 /** Unbind the address from the address space kasid.
  If the data exist in kasid, then the caller takes the owner ship of the data.
@@ -144,6 +164,20 @@ static inline int kaapi_metadata_info_clear_data(
                                                )
 {
   return kaapi_bitmap_unset_64( &kmdi->addr_bits, kaapi_memory_address_space_getlid(kasid) );
+}
+
+static inline void kaapi_metadata_info_set_data(
+                                               kaapi_metadata_info_t* kmdi,
+                                               kaapi_address_space_id_t kasid,
+                                                void* ptr, const kaapi_memory_view_t* view
+                                               )
+{
+  const uint16_t lid = kaapi_memory_address_space_getlid( kasid );
+  kaapi_assert_debug(lid < KAAPI_MAX_ADDRESS_SPACE);
+  kmdi->data[lid].ptr  = kaapi_make_pointer(kasid, ptr);
+  kmdi->data[lid].view = *view;
+  kmdi->data[lid].mdi = kmdi;
+  kaapi_bitmap_set_64(&kmdi->addr_bits, kaapi_memory_address_space_getlid(kasid));
 }
 
 static inline int kaapi_metadata_info_has_data(

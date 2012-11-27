@@ -7,6 +7,7 @@
 **
 ** thierry.gautier@inrialpes.fr
 ** fabien.lementec@imag.fr
+** Joao.Lima@imagf.r / joao.lima@inf.ufrgs.br 
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -41,48 +42,19 @@
 ** terms.
 ** 
 */
+
 #include "kaapi_impl.h"
-
-#if defined(KAAPI_USE_CUDA)
-
-#include <cuda.h>
-
-/* in kaapi_memory_copy.c */
-
-extern kaapi_cuda_proc_t* get_cu_context(const kaapi_address_space_id_t*);
-extern void put_cu_context(kaapi_cuda_proc_t*);
-
-static inline int allocate_cu_mem(CUdeviceptr* devptr, size_t size)
-{
-#if 0
-  const CUresult res = cuMemAlloc(devptr, size);
-  if (res != CUDA_SUCCESS)
-  {
-//    kaapi_cuda_error("cuMemAlloc", res);
-    return -1;
-  }
-#endif
-  
-  return 0;
-}
-
-static inline void free_cu_mem(CUdeviceptr devptr)
-{
-//  cuMemFree(devptr);
-}
-#endif
 
 /**
 */
 kaapi_pointer_t kaapi_memory_allocate( 
-    kaapi_address_space_id_t kasid, 
-    size_t size, 
-    int flag 
+    const kaapi_address_space_id_t kasid,
+    const size_t size,
+    const int flag
 )
 {
-  kaapi_pointer_t retval;
-  retval.asid = kasid;
-  retval.ptr  = 0;
+  kaapi_pointer_t retval = kaapi_make_pointer(kasid, 0);
+  
   switch (kaapi_memory_address_space_gettype(kasid))
   {
     case KAAPI_MEM_TYPE_CPU:
@@ -122,34 +94,20 @@ kaapi_pointer_t kaapi_memory_allocate(
       if (flag & KAAPI_MEM_SHARABLE)
         return kaapi_make_pointer(kasid, malloc(size) );
 #endif
-    } break;
+    }
+      break;
 
 #if defined(KAAPI_USE_CUDA)
     case KAAPI_MEM_TYPE_CUDA:
     {
-      /* todo: wont work on multigpu, need asid to proc */
-
-      kaapi_cuda_proc_t* const cu_proc = get_cu_context(&kasid);
-      CUdeviceptr devptr;
-      int error;
-
-      if (cu_proc == NULL) return kaapi_make_nullpointer();
-
-      error = allocate_cu_mem(&devptr, size);
-      put_cu_context(cu_proc);
-
-      if (error == -1) return kaapi_make_nullpointer();
-
-      retval.ptr = (uintptr_t)devptr;
-      return retval;
-
-    } break;
+      retval.ptr = kaapi_cuda_mem_alloc(kasid, size, (kaapi_access_mode_t)flag);
+    }
+      break;
 #endif /* KAAPI_USE_CUDA */
 
     default:
     {
-      retval.asid = 0;
-      retval.ptr  = 0;
+      retval = kaapi_make_nullpointer();
       return retval;
     }
   }
@@ -160,9 +118,9 @@ kaapi_pointer_t kaapi_memory_allocate(
 /** 
 */
 kaapi_pointer_t kaapi_memory_allocate_view( 
-  kaapi_address_space_id_t kasid, 
+  const kaapi_address_space_id_t kasid,
   kaapi_memory_view_t* view, 
-  int flag 
+  const int flag
 )
 {
   size_t size = kaapi_memory_view_size( view );
@@ -214,7 +172,7 @@ int kaapi_memory_deallocate(
 #if defined(KAAPI_USE_CUDA)
     case KAAPI_MEM_TYPE_CUDA:
     {
-      free_cu_mem( (CUdeviceptr) ptr.ptr );
+      kaapi_cuda_mem_free(ptr);
       return 0;
     }
 #endif
@@ -225,3 +183,31 @@ int kaapi_memory_deallocate(
   return 0;
 }
 
+int kaapi_memory_access_view(
+                             const kaapi_address_space_id_t kasid,
+                             kaapi_pointer_t* const ptr,
+                             kaapi_memory_view_t* const view,
+                             const int flag
+                             )
+{
+  switch (kaapi_memory_address_space_gettype(kasid))
+  {
+    case KAAPI_MEM_TYPE_CPU:
+    {
+      /* do nothing for now */
+    };
+      
+#if defined(KAAPI_USE_CUDA)
+    case KAAPI_MEM_TYPE_CUDA:
+    {
+      kaapi_cuda_mem_inc_use(ptr, view, (kaapi_access_mode_t)flag);
+    }
+#endif
+      
+    default:
+    {
+    }
+  }
+  
+  return 0;
+}

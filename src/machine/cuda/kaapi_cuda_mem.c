@@ -11,7 +11,7 @@
 #include "kaapi_cuda_ctx.h"
 #include "kaapi_cuda_mem_cache.h"
 
-int kaapi_cuda_mem_alloc_(kaapi_mem_addr_t * addr, const size_t size)
+uintptr_t kaapi_cuda_mem_alloc_(const size_t size)
 {
   void *devptr = NULL;
   cudaError_t res;
@@ -24,15 +24,16 @@ int kaapi_cuda_mem_alloc_(kaapi_mem_addr_t * addr, const size_t size)
     fflush(stdout);
     abort();
   }
-  *addr = (kaapi_mem_addr_t) devptr;
   
-  return res;
+  return (uintptr_t)devptr;
 }
 
-int
-kaapi_cuda_mem_alloc(kaapi_pointer_t * ptr,
+uintptr_t
+kaapi_cuda_mem_alloc(
                      const kaapi_address_space_id_t kasid,
-                     const size_t size, const kaapi_access_mode_t m)
+                     const size_t size,
+                     const kaapi_access_mode_t m
+                     )
 {
   void *devptr = NULL;
   cudaError_t res = cudaSuccess;
@@ -41,7 +42,6 @@ kaapi_cuda_mem_alloc(kaapi_pointer_t * ptr,
   if (proc->cuda_proc.cache.is_full(proc->cuda_proc.cache.data, size))
     devptr = proc->cuda_proc.cache.remove(proc->cuda_proc.cache.data, size);
   
-//out_of_memory:
   if (devptr == NULL) {
     res = cudaMalloc(&devptr, size);
 #if 0
@@ -60,18 +60,16 @@ kaapi_cuda_mem_alloc(kaapi_pointer_t * ptr,
     }
   }
   
-  ptr->ptr = (uintptr_t) devptr;
-  ptr->asid = kasid;
   proc->cuda_proc.cache.insert(proc->cuda_proc.cache.data, (uintptr_t)devptr, size, m);
   
 #if KAAPI_VERBOSE
-  fprintf(stdout, "[%s] kid=%lu %p\n",
+  fprintf(stdout, "[%s] kid=%lu dev=%d ptr=%p size=%lu\n",
           __FUNCTION__,
-          (unsigned long) kaapi_get_current_kid(), (void *) devptr);
+          (unsigned long) kaapi_get_current_kid(), kaapi_cuda_self_device(), (void *)devptr, size);
   fflush(stdout);
 #endif
   
-  return res;
+  return (uintptr_t)devptr;
 }
 
 int kaapi_cuda_mem_free_(void* ptr)
@@ -86,18 +84,16 @@ int kaapi_cuda_mem_free_(void* ptr)
   return 0;
 }
 
-int kaapi_cuda_mem_free(kaapi_pointer_t * ptr)
+int kaapi_cuda_mem_free(kaapi_pointer_t ptr)
 {
 #if KAAPI_VERBOSE
   fprintf(stdout, "[%s] kid=%lu %p\n",
           __FUNCTION__,
           (unsigned long) kaapi_get_current_kid(),
-          __kaapi_pointer2void(*ptr));
+          __kaapi_pointer2void(ptr));
   fflush(stdout);
 #endif
-  cudaFree(__kaapi_pointer2void(*ptr));
-  ptr->ptr = 0;
-  ptr->asid = 0;
+  cudaFree(__kaapi_pointer2void(ptr));
   return 0;
 }
 

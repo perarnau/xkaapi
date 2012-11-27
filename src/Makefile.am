@@ -162,6 +162,8 @@ libkaapi_la_SOURCES=\
   machine/common/kaapi_hwtopo.c \
   machine/common/kaapi_hw_selftopo.c \
   memory/kaapi_memory.c \
+  memory/kaapi_memory_taskdescr.h \
+  memory/kaapi_memory_taskdescr.c \
   memory/kaapi_memory_map.h \
   memory/kaapi_memory_map.c \
   memory/kaapi_memory_copy.c \

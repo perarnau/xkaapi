@@ -59,9 +59,6 @@
 #define KAAPI_CUDA_ASYNC	1
 #define KAAPI_CUDA_MEM_FREE_FACTOR	1
 
-/* Write-through memory cache in the GPU */
-//#define KAAPI_CUDA_DATA_CACHE_WT 1
-
 /* all CUDA kprocs indexed by device Id */
 extern struct kaapi_processor_t
 *kaapi_cuda_all_kprocessors[KAAPI_CUDA_MAX_DEV];
@@ -167,5 +164,7 @@ extern int kaapi_cuda_sync(struct kaapi_processor_t *const);
 extern int kaapi_cuda_proc_all_isvalid(void);
 
 extern void kaapi_cuda_proc_destroy(struct kaapi_processor_t *const);
+
+extern int kaapi_cuda_self_device(void);
 
 #endif				/* ! KAAPI_CUDA_PROC_H_INCLUDED */

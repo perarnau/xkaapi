@@ -203,9 +203,9 @@ extern int kaapi_memory_address_space_fprintf( FILE* file, kaapi_address_space_i
 #define KAAPI_MEM_LOCAL      0x1
 #define KAAPI_MEM_SHARABLE   0x2
 extern kaapi_pointer_t kaapi_memory_allocate( 
-    kaapi_address_space_id_t kasid, 
-    size_t                   size, 
-    int                      flag 
+    const kaapi_address_space_id_t kasid,
+    const size_t                   size,
+    const int                      flag
 );
 
 
@@ -219,9 +219,9 @@ extern kaapi_pointer_t kaapi_memory_allocate(
     \retval the pointer into the address space or null pointer if the allocation failed.
 */
 extern kaapi_pointer_t kaapi_memory_allocate_view( 
-    kaapi_address_space_id_t kasid, 
-    kaapi_memory_view_t*     view, 
-    int                      flag 
+    const kaapi_address_space_id_t kasid,
+    kaapi_memory_view_t*           view, 
+    const int                      flag
 );
 
 
@@ -242,6 +242,15 @@ extern void kaapi_memory_global_barrier(void);
 */
 extern int kaapi_memory_deallocate( 
   kaapi_pointer_t ptr 
+);
+
+/** Increase memory access to this pointer in a specific kasid.
+ */
+int kaapi_memory_access_view(
+                             const kaapi_address_space_id_t kasid,
+                             kaapi_pointer_t* const ptr,
+                             kaapi_memory_view_t* const view,
+                             const int flag
 );
 
 

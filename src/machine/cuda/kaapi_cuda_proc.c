@@ -210,3 +210,14 @@ void kaapi_cuda_proc_destroy(kaapi_processor_t* const kproc)
   kaapi_cuda_dev_close(&kproc->cuda_proc);
 #endif
 }
+
+int kaapi_cuda_self_device(void)
+{
+  kaapi_processor_t* const kproc = kaapi_get_current_processor();
+  
+#if defined(KAAPI_DEBUG)
+  if( kaapi_processor_get_type(kproc) !=  KAAPI_PROC_TYPE_CUDA)
+    return -1;
+#endif
+  return kproc->cuda_proc.index;
+}

@@ -2,19 +2,20 @@
 #ifndef KAAPI_CUDA_MEM_H_INCLUDED
 #define KAAPI_CUDA_MEM_H_INCLUDED
 
-#include "../../kaapi.h"
+#include "kaapi_impl.h"
 #include "kaapi_cuda_proc.h"
 #include <cuda_runtime_api.h>
 
-int kaapi_cuda_mem_free(kaapi_pointer_t * ptr);
+int kaapi_cuda_mem_free(kaapi_pointer_t ptr);
 
 int kaapi_cuda_mem_free_(void* ptr);
 
-int kaapi_cuda_mem_alloc(kaapi_pointer_t * ptr,
-			 const kaapi_address_space_id_t kasid,
-			 const size_t size, const kaapi_access_mode_t m);
+uintptr_t kaapi_cuda_mem_alloc( const kaapi_address_space_id_t kasid,
+                              const size_t size,
+                              const kaapi_access_mode_t m
+                              );
 
-int kaapi_cuda_mem_alloc_(kaapi_mem_addr_t * addr, const size_t size);
+uintptr_t kaapi_cuda_mem_alloc_(const size_t size);
 
 int kaapi_cuda_mem_register(kaapi_pointer_t ptr,
 			    const kaapi_memory_view_t * view);
@@ -136,14 +137,7 @@ kaapi_cuda_mem_2dcopy_dtoh(kaapi_pointer_t dest,
 
 /*****************************************************************************/
 
-int kaapi_cuda_mem_sync_params(kaapi_thread_context_t * thread,
-			       kaapi_taskdescr_t * td, kaapi_task_t * pc);
-
-int kaapi_cuda_mem_sync_params_dtoh(kaapi_thread_context_t * thread,
-				    kaapi_taskdescr_t * td,
-				    kaapi_task_t * pc);
-
-int kaapi_cuda_mem_mgmt_check(kaapi_processor_t * proc);
+int kaapi_cuda_mem_mgmt_check(struct kaapi_processor_t * proc);
 
 void kaapi_cuda_mem_destroy(kaapi_cuda_proc_t * proc);
 
