@@ -305,14 +305,14 @@ kaapi_cuda_async_sync_device_transfer_to_device(kaapi_mem_data_t *
   }
   
   /* GPU-CPU-GPU copy by buffer */
-  const int res =
-  kaapi_cuda_mem_copy_dtod_buffer(dest->ptr, &dest->view, dest_dev,
-                                  src->ptr, &src->view, src_dev,
-                                  host_data->ptr, &host_data->view);
+//  const int res =
+//  kaapi_cuda_mem_copy_dtod_buffer(dest->ptr, &dest->view, dest_dev,
+//                                  src->ptr, &src->view, src_dev,
+//                                  host_data->ptr, &host_data->view);
   /* Since we use the host version as buffer, validate it */
   kaapi_mem_data_clear_dirty(kmd, host_asid);
   
-  return res;
+  return 0;
 }
 
 /* Function verifies the asid destination and switch between CPU-to-GPU or

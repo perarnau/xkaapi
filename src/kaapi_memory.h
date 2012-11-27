@@ -278,11 +278,10 @@ extern int kaapi_memory_copy(
 
 /** Expose copy from cpu2cpu
 */
-extern int kaapi_memory_write_cpu2cpu
+extern int kaapi_memory_copy_cpu2cpu
 (
   kaapi_pointer_t dest,
   const kaapi_memory_view_t* view_dest,
-//  const void* src,
   kaapi_pointer_t src,
   const kaapi_memory_view_t* view_src
 );

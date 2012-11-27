@@ -394,26 +394,27 @@ kaapi_cuda_mem_2dcopy_dtoh_(kaapi_pointer_t dest,
 int
 kaapi_cuda_mem_copy_dtod_buffer(kaapi_pointer_t dest,
                                 const kaapi_memory_view_t * view_dest,
-                                const int dest_dev,
                                 const kaapi_pointer_t src,
                                 const kaapi_memory_view_t * view_src,
-                                const int src_dev,
                                 const kaapi_pointer_t host,
-                                const kaapi_memory_view_t * view_host)
+                                const kaapi_memory_view_t * view_host
+                                )
 {
   cudaError_t res;
   cudaStream_t stream;
+  kaapi_processor_t* const kproc_src = kaapi_all_kprocessors[kaapi_memory_map_asid2kid(kaapi_pointer2asid(src))];
+  kaapi_processor_t* const kproc_dest = kaapi_all_kprocessors[kaapi_memory_map_asid2kid(kaapi_pointer2asid(dest))];
+  const int src_dev = kproc_src->cuda_proc.index;
+  const int dest_dev = kproc_dest->cuda_proc.index;
 
   kaapi_cuda_ctx_set(src_dev);
   res = cudaStreamCreate(&stream);
   kaapi_assert_debug( res == cudaSuccess );
   res = kaapi_cuda_mem_copy_dtoh_(host, view_host, src, view_src, stream );
   kaapi_assert_debug( res == cudaSuccess );
-  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(),
-		    kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG);
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG);
   res = cudaStreamSynchronize(stream);
-  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(),
-		    kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END);
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END);
   kaapi_assert_debug( res == cudaSuccess );
   cudaStreamDestroy(stream);
   kaapi_cuda_ctx_set(dest_dev);

@@ -161,16 +161,37 @@ static int kaapi_memory_copy_cuda2cuda
  const kaapi_memory_view_t* view_src
  )
 {
-  fprintf(stdout, "%s:%d:%s: ERROR kid=%d src=@%p dst=@%p size=%lu: not implemented\n",
-          __FILE__, __LINE__, __FUNCTION__,
-          kaapi_get_self_kid(),
-          kaapi_pointer2void(dest),
-          kaapi_pointer2void(src),
-          kaapi_memory_view_size(view_src)
-          );
-  fflush(stdout);
-  kaapi_abort();
-  return -1;
+  kaapi_metadata_info_t* kmdi = kaapi_memory_find_metadata(kaapi_pointer2void(dest));
+  kaapi_data_t *const host_data = kaapi_metadata_info_get_data(kmdi, KAAPI_EMPTY_ADDRESS_SPACE_ID);
+
+  /* host version is already valid ? */
+  if (kaapi_metadata_info_is_valid(kmdi, KAAPI_EMPTY_ADDRESS_SPACE_ID))
+  {
+    return kaapi_cuda_mem_copy_htod(dest, view_dest, host_data->ptr, &host_data->view);
+  }
+  
+#if 0
+  /* try Peer-to-Peer GPU-GPU transfer */
+  if (kaapi_default_param.cudapeertopeer) {
+    if (kaapi_cuda_dev_has_peer_access(src_dev)) {
+      /* TODO */
+      return kaapi_cuda_mem_copy_dtod_peer(dest, view_dest,
+                                           dest_dev, src->ptr,
+                                           &src->view, src_dev);
+    }
+  }
+#endif
+  
+  /* GPU-CPU-GPU copy by buffer */
+  const int res = kaapi_cuda_mem_copy_dtod_buffer(
+                                                  dest, view_dest,
+                                                  src, view_src,
+                                                  host_data->ptr, &host_data->view
+                                                  );
+  /* Since we use the host version as buffer, validate it */
+  kaapi_metadata_info_clear_dirty(kmdi, kaapi_pointer2asid(host_data->ptr));
+  
+  return res;
 }
 
 #endif /* KAAPI_USE_CUDA */
@@ -186,7 +207,7 @@ static int memcpy_wrapper( void* arg, void* dest, const void* src, size_t size )
 
 /* CPU to CPU copy
  */
-static int kaapi_memory_copy_cpu2cpu
+int kaapi_memory_copy_cpu2cpu
 (
  kaapi_pointer_t dest,
  const kaapi_memory_view_t* view_dest,
@@ -217,9 +238,9 @@ typedef int (*kaapi_signature_memcpy_func_t)(
                                              );
 
 #if !defined(KAAPI_USE_CUDA)
-#define kaapi_memory_write_cpu2cuda 0
-#define kaapi_memory_write_cuda2cpu 0
-#define kaapi_memory_write_cuda2cuda  0
+#define kaapi_memory_copy_cpu2cuda  0
+#define kaapi_memory_copy_cuda2cpu  0
+#define kaapi_memory_copy_cuda2cuda 0
 #endif
 
 #if !defined(KAAPI_USE_NETWORK)

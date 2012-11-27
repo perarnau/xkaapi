@@ -175,15 +175,19 @@ static inline void kaapi_cuda_mem_unregister_(void *ptr)
 #endif
 }
 
+/**
+  Transfer memory from src to dest using the host copy version.
+  It assumes that the current thread is GPU and owns pointer dest.
+ */
 int
-kaapi_cuda_mem_copy_dtod_buffer(kaapi_pointer_t dest,
-				const kaapi_memory_view_t * view_dest,
-				const int dest_dev,
-				const kaapi_pointer_t src,
-				const kaapi_memory_view_t * view_src,
-				const int src_dev,
-				const kaapi_pointer_t host,
-				const kaapi_memory_view_t * view_host);
+kaapi_cuda_mem_copy_dtod_buffer(
+                                kaapi_pointer_t dest,
+                                const kaapi_memory_view_t * view_dest,
+                                const kaapi_pointer_t src,
+                                const kaapi_memory_view_t * view_src,
+                                const kaapi_pointer_t host,
+                                const kaapi_memory_view_t * view_host
+                                );
 
 int
 kaapi_cuda_mem_copy_dtod_peer(kaapi_pointer_t dest,
