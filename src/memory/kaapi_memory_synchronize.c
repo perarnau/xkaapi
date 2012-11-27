@@ -73,6 +73,7 @@ void kaapi_memory_address_space_synchronize_peer2peer(kaapi_address_space_id_t d
 /* TODO: to remove */
 void* kaapi_memory_get_host_pointer(void* const gpu_ptr)
 {
+#if 0
   kaapi_mem_host_map_t* const host_map =
   kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
   const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
@@ -88,6 +89,7 @@ void* kaapi_memory_get_host_pointer(void* const gpu_ptr)
     kaapi_data_t* kdata = (kaapi_data_t *) kaapi_mem_data_get_addr(kmd, host_asid);
     return kaapi_pointer2void(kdata->ptr);
   }
+#endif
 #endif
   return NULL;
 }

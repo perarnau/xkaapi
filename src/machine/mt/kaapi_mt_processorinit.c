@@ -153,13 +153,6 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   
   kproc->libkomp_tls = 0;
   
-#if 1
-  /* memory: as[0] for cpu, as[1 + gpuindex] for gpu */
-  if ( kpi->proc_type == KAAPI_PROC_TYPE_CPU )
-    kaapi_mem_host_map_init( &kproc->mem_host_map, kproc->kid, 0 );
-  else
-    kaapi_mem_host_map_init( &kproc->mem_host_map, kproc->kid, 1 + kpi->proc_index );
-#endif
   kaapi_address_space_id_t kasid = kaapi_memory_address_space_create(kaapi_network_get_current_globalid(), kpi->proc_type, 0x100000000UL);
   kaapi_memory_map_create(kproc->kid, kasid);
   

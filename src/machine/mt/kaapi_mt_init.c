@@ -391,10 +391,6 @@ int kaapi_mt_finalize(void)
   kaapi_perf_global_fini();
 #endif
 
-#if defined(KAAPI_USE_CUDA)
-  kaapi_mem_host_map_destroy_all(kaapi_get_current_mem_host_map());
-#endif
-
   for (i=0; i<kaapi_count_kprocessors; ++i)
   {
 #if defined(KAAPI_USE_CUDA)

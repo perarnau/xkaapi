@@ -217,6 +217,8 @@ static inline void *kaapi_cuda_mem_cache_lru_double_fifo_remove_ro(
 
 static inline void kaapi_cuda_mem_cache_lru_double_fifo_check_host(uintptr_t ptr, size_t size)
 {
+  /* TODO */
+#if 0
   const kaapi_mem_host_map_t *host_map =
   kaapi_processor_get_mem_host_map(kaapi_all_kprocessors[0]);
   const kaapi_mem_asid_t host_asid = kaapi_mem_host_map_get_asid(host_map);
@@ -245,6 +247,7 @@ static inline void kaapi_cuda_mem_cache_lru_double_fifo_check_host(uintptr_t ptr
     }
   }
   kaapi_mem_data_clear_addr(kmd, cuda_asid);
+#endif
 }
 
 static inline void *kaapi_cuda_mem_cache_lru_double_fifo_remove_rw(

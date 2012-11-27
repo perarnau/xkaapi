@@ -62,6 +62,8 @@ kaapi_processor_t *kaapi_push_by_affinity_locality(
                                              kaapi_taskdescr_t * td
 )
 {
+  /* TODO */
+#if 0
   int i;
   kaapi_mem_data_t *kmd;
   void *sp;
@@ -124,6 +126,8 @@ kaapi_processor_t *kaapi_push_by_affinity_locality(
     return kaapi_all_kprocessors[kaapi_mem_asid2kid(current_dev)];
   }
   return kproc;
+#endif
+  return kproc;
 }
 
 kaapi_processor_t *kaapi_push_by_affinity_rand(kaapi_processor_t * kproc,
@@ -149,6 +153,8 @@ redo_select:
 kaapi_processor_t *kaapi_push_by_affinity_writer(kaapi_processor_t * kproc,
 					      kaapi_taskdescr_t * td)
 {
+  /* TODO */
+#if 0
   int i;
   kaapi_mem_data_t *kmd;
   void *sp;
@@ -195,11 +201,15 @@ kaapi_processor_t *kaapi_push_by_affinity_writer(kaapi_processor_t * kproc,
   }
 
   return kproc;
+#endif
+  return kproc;
 }
 
 int kaapi_data_get_affinity_is_valid_writer(
      const kaapi_processor_t * kproc, kaapi_taskdescr_t * td)
 {
+  /* TODO */
+#if 0
   int i;
   kaapi_mem_data_t *kmd;
   void *sp;
@@ -233,6 +243,7 @@ int kaapi_data_get_affinity_is_valid_writer(
       }
     }
   }
+#endif
 
   return 0;
 }

@@ -55,6 +55,8 @@ uint64_t kaapi_data_get_affinity_hit_size(
        kaapi_taskdescr_t * td
 )
 {
+  /* TODO */
+#if 0
   int i;
   kaapi_mem_data_t *kmd;
   uint64_t hit = 0;
@@ -94,4 +96,6 @@ uint64_t kaapi_data_get_affinity_hit_size(
   }
   
   return hit;
+#endif
+  return 0;
 }

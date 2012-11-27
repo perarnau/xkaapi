@@ -299,7 +299,6 @@ void* kaapi_sched_run_processor( void* arg )
   if ( kproc->proc_type == KAAPI_PROC_TYPE_CUDA ){
     kaapi_cuda_proc_destroy( kproc );
   }
-  kaapi_mem_host_map_destroy(kaapi_get_current_mem_host_map());
 #endif
 
   /* kprocessor correctly initialize */

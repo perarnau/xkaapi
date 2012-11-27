@@ -147,9 +147,6 @@ int kaapi_thread_computedep_task(
     handle = kaapi_thread_computeready_access( tasklist, version, taskdescr, m );
 
     /* register to kaapi memory system */
-    /* TODO remove */
-    handle->kmd = kaapi_mem_host_map_register_to_host(access.data, &handle->view);
-
     handle->mdi = kaapi_memory_bind_view(kaapi_memory_map_get_current_asid(),
                                          0, access.data, &handle->view);
     
