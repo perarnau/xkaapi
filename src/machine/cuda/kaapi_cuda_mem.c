@@ -448,6 +448,36 @@ kaapi_cuda_mem_copy_dtod_peer(kaapi_pointer_t dest,
   return 0;
 }
 
+int
+kaapi_cuda_mem_copy_dtoh_from_host(kaapi_pointer_t dest,
+                                   const kaapi_memory_view_t * view_dest,
+                                   const kaapi_pointer_t src,
+                                   const kaapi_memory_view_t * view_src,
+                                   kaapi_processor_id_t kid_src )
+{
+  cudaError_t res;
+  kaapi_processor_t *const kproc = kaapi_all_kprocessors[kid_src];
+  const int src_dev = kproc->cuda_proc.index;
+  cudaStream_t stream;
+  
+  kaapi_cuda_ctx_set(src_dev);
+  res = cudaStreamCreate(&stream);
+  if (res != cudaSuccess) {
+    fprintf(stdout, "%s: ERROR cudaStreamCreate %d\n", __FUNCTION__, res);
+    fflush(stdout);
+    abort();
+  }
+  kaapi_cuda_mem_copy_dtoh_(dest, view_dest, src, view_src, stream);
+  res = cudaStreamSynchronize(stream);
+  if (res != cudaSuccess) {
+    fprintf(stdout, "%s: ERROR cudaStreamSynchronize %d\n", __FUNCTION__, res);
+    fflush(stdout);
+    abort();
+  }
+  
+  return 0;
+}
+
 void kaapi_cuda_mem_destroy(kaapi_cuda_proc_t * proc)
 {
   proc->cache.destroy(proc->cache.data);

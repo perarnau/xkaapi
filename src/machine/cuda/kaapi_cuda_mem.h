@@ -91,6 +91,13 @@ kaapi_cuda_mem_copy_dtoh(kaapi_pointer_t dest,
 				   kaapi_cuda_DtoH_stream());
 }
 
+int
+kaapi_cuda_mem_copy_dtoh_from_host(kaapi_pointer_t dest,
+                         const kaapi_memory_view_t * view_dest,
+                         const kaapi_pointer_t src,
+                         const kaapi_memory_view_t * view_src,
+                         kaapi_processor_id_t kid_src );
+
 static inline int
 kaapi_cuda_mem_1dcopy_htod(kaapi_pointer_t dest,
 			   const kaapi_memory_view_t * view_dest,

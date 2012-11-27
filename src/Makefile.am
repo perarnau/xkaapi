@@ -170,11 +170,11 @@ libkaapi_la_SOURCES=\
   memory/kaapi_memory_allocate.c \
   memory/kaapi_memory_bind.c \
   memory/kaapi_memory_register.c \
+  memory/kaapi_memory_synchronize.c \
   memory/kaapi_numa.c \
   memory/kaapi_mem_init.c \
   memory/kaapi_mem_destroy.c \
   memory/kaapi_mem_data.c \
-  memory/kaapi_mem_sync.c \
   memory/kaapi_mem_host_map.c \
   memory/kaapi_mem.c \
   memory/kaapi_mem.h \

@@ -188,6 +188,14 @@ static inline int kaapi_metadata_info_has_data(
   return kaapi_bitmap_get_64( &kmdi->addr_bits, kaapi_memory_address_space_getlid(kasid) );
 }
 
+static inline int kaapi_metadata_info_has_data_by_lid(
+                                               kaapi_metadata_info_t* kmdi,
+                                               uint16_t lid
+                                               )
+{
+  return kaapi_bitmap_get_64( &kmdi->addr_bits, lid );
+}
+
 /**/
 static inline kaapi_data_t* kaapi_metadata_info_get_data(
                                                           kaapi_metadata_info_t* kmdi,
@@ -197,6 +205,17 @@ static inline kaapi_data_t* kaapi_metadata_info_get_data(
   kaapi_assert_debug(kaapi_memory_address_space_getlid(kasid) < KAAPI_MAX_ADDRESS_SPACE);
   kaapi_assert_debug(kaapi_metadata_info_has_data(kmdi, kasid));
   return &kmdi->data[kaapi_memory_address_space_getlid(kasid)];
+}
+
+/**/
+static inline kaapi_data_t* kaapi_metadata_info_get_data_by_lid(
+                                                         kaapi_metadata_info_t* kmdi,
+                                                         uint16_t lid
+                                                         )
+{
+  kaapi_assert_debug(lid < KAAPI_MAX_ADDRESS_SPACE);
+  kaapi_assert_debug(kaapi_metadata_info_has_data_by_lid(kmdi, lid));
+  return &kmdi->data[lid];
 }
 
 /**/

@@ -1,7 +1,7 @@
 /*
  ** xkaapi
  ** 
- ** Copyright 2010 INRIA.
+ ** Copyright 2009,2010,2011,2012 INRIA.
  **
  ** Contributors :
  **
@@ -66,7 +66,7 @@ kaapi_version_t** kaapi_metadata_info_bind_data(
                                                 )
 {
   kaapi_metadata_info_set_data(kmdi, kasid, ptr, view);
-  kaapi_metadata_info_clear_dirty(kmdi, kasid); /* TODO check */
+  kaapi_metadata_info_clear_dirty(kmdi, kasid);
   return kaapi_metadata_info_get_version_by_lid_(kmdi, kaapi_memory_address_space_getlid(kasid));
 }
 

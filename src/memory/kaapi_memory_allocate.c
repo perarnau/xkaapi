@@ -1,7 +1,7 @@
 /*
 ** xkaapi
 ** 
-** Copyright 2010 INRIA.
+** Copyright 2009,2010,2011,2012 INRIA.
 **
 ** Contributors :
 **
@@ -183,7 +183,7 @@ int kaapi_memory_deallocate(
   return 0;
 }
 
-int kaapi_memory_access_view(
+int kaapi_memory_increase_access_view(
                              const kaapi_address_space_id_t kasid,
                              kaapi_pointer_t* const ptr,
                              kaapi_memory_view_t* const view,
@@ -201,6 +201,35 @@ int kaapi_memory_access_view(
     case KAAPI_MEM_TYPE_CUDA:
     {
       kaapi_cuda_mem_inc_use(ptr, view, (kaapi_access_mode_t)flag);
+    }
+#endif
+      
+    default:
+    {
+    }
+  }
+  
+  return 0;
+}
+
+int kaapi_memory_decrease_access_view(
+                                      const kaapi_address_space_id_t kasid,
+                                      kaapi_pointer_t* const ptr,
+                                      kaapi_memory_view_t* const view,
+                                      const int flag
+                                      )
+{
+  switch (kaapi_memory_address_space_gettype(kasid))
+  {
+    case KAAPI_MEM_TYPE_CPU:
+    {
+      /* do nothing for now */
+    };
+      
+#if defined(KAAPI_USE_CUDA)
+    case KAAPI_MEM_TYPE_CUDA:
+    {
+      kaapi_cuda_mem_dec_use(ptr, view, (kaapi_access_mode_t)flag);
     }
 #endif
       

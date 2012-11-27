@@ -54,6 +54,7 @@ static inline kaapi_data_t* kaapi_memory_taskdescr_prologue_alloc(
   kaapi_memory_view_t view = kdata->view;
   kaapi_pointer_t ptr = kaapi_memory_allocate_view(kasid, &view, (int)m);
   kaapi_memory_bind_view_with_metadata(kasid, kmdi, 0, kaapi_pointer2void(ptr), &view);
+  kaapi_metadata_info_set_dirty(kmdi, kasid);
 
   return kaapi_metadata_info_get_data(kmdi, kasid);
 }
@@ -66,9 +67,46 @@ static inline kaapi_data_t* kaapi_memory_taskdescr_prologue_access(
                                                                   )
 {
   kaapi_data_t* kdest = kaapi_metadata_info_get_data(kmdi, kasid);
-  kaapi_memory_access_view(kasid, &kdest->ptr, &kdest->view, (int)m);
+  kaapi_memory_increase_access_view(kasid, &kdest->ptr, &kdest->view, (int)m);
   
   return kdest;
+}
+
+/**
+  Returns 0 if no data was transfered, 1 otherwise.
+ */
+static inline int kaapi_memory_taskdescr_prologue_transfer(
+                                                            kaapi_metadata_info_t* const kmdi,
+                                                            kaapi_pointer_t dest,
+                                                            kaapi_memory_view_t* const view_dest,
+                                                            kaapi_pointer_t const src,
+                                                            kaapi_memory_view_t* const view_src
+                                                            )
+{
+  if(kaapi_metadata_info_is_valid(kmdi, kaapi_pointer2asid(dest)))
+    return 0;
+  
+  if(kaapi_pointer2asid(dest) == kaapi_pointer2asid(src))
+  {
+    uint16_t lid = kaapi_metadata_info_first_valid(kmdi);
+    kaapi_data_t* kdata = kaapi_metadata_info_get_data_by_lid(kmdi, lid);
+    kaapi_memory_copy(dest, view_dest, kdata->ptr, &kdata->view);
+  }
+  else
+  {
+      kaapi_memory_copy(dest, view_dest, src, view_src);
+  }
+  kaapi_metadata_info_clear_dirty(kmdi, kaapi_pointer2asid(dest));
+  
+#if 0
+  fprintf(stdout, "[%s] kid=%d kmdi=@%p dest=@%p src=@%p size=%lu\n",
+          __FUNCTION__, kaapi_get_self_kid(), (void*)kmdi,
+          kaapi_pointer2void(dest), kaapi_pointer2void(src),
+          kaapi_memory_view_size(view_src));
+  fflush(stdout);
+#endif
+  
+  return 0;
 }
 
 static inline void kaapi_memory_taskdescr_prologue_validate(
@@ -93,6 +131,11 @@ static inline void kaapi_memory_taskdescr_prologue_validate(
     /* increment pointer usage */
     kdest = kaapi_memory_taskdescr_prologue_access(kmdi, kasid, ksrc, m);
   }
+
+  if (KAAPI_ACCESS_IS_READ(m))
+  {
+    kaapi_memory_taskdescr_prologue_transfer(kmdi, kdest->ptr, &kdest->view, ksrc->ptr, &ksrc->view);
+  }
   
   if (KAAPI_ACCESS_IS_WRITE(m))
   {
@@ -105,6 +148,20 @@ static inline void kaapi_memory_taskdescr_prologue_validate(
     access.data = kdest;
     kaapi_format_set_access_param(td->fmt, i, sp, &access);
   }
+}
+
+static inline void kaapi_memory_taskdescr_epilogue_validate(
+                                                            kaapi_taskdescr_t* td,
+                                                            const int i,
+                                                            const kaapi_access_mode_t m
+                                                            )
+{
+  void* sp = td->task->sp;
+  kaapi_access_t access = kaapi_format_get_access_param(td->fmt, i, sp);
+  kaapi_data_t* ksrc = kaapi_data(kaapi_data_t, &access);
+  kaapi_address_space_id_t kasid = kaapi_memory_map_get_current_asid();
+  
+  kaapi_memory_decrease_access_view(kasid, &ksrc->ptr, &ksrc->view, (int)m);
 }
 
 int kaapi_memory_taskdescr_prologue(kaapi_taskdescr_t * td)
@@ -163,14 +220,8 @@ int kaapi_memory_taskdescr_epilogue(kaapi_taskdescr_t * td)
     m = KAAPI_ACCESS_GET_MODE(m);
     if (m == KAAPI_ACCESS_MODE_V)
       continue;
-    
-    kaapi_access_t access = kaapi_format_get_access_param(td->fmt, i, sp);
-    kaapi_data_t *kdata = kaapi_data(kaapi_data_t, &access);
-    
-    if (KAAPI_ACCESS_IS_WRITE(m))
-    {
-      //
-    }
+
+    kaapi_memory_taskdescr_epilogue_validate(td, i, m);
   }
   
   return 0;

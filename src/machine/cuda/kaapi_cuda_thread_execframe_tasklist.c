@@ -79,9 +79,8 @@ kaapi_cuda_gpu_task_callback2_after_kernel(kaapi_cuda_stream_t * kstream,
                                            void *arg)
 {
   kaapi_taskdescr_t *const td = (kaapi_taskdescr_t *) arg;
-//  kaapi_memory_taskdescr_epilogue(td);
+  kaapi_memory_taskdescr_epilogue(td);
   /* default write-back policy (lazy) */
-  kaapi_cuda_data_output_dev_dec_use(kstream, td);
   kaapi_cuda_thread_tasklist_activate_deps(td);
   return 0;
 }
@@ -110,9 +109,7 @@ kaapi_cuda_gpu_task_callback0_sync_gpu(kaapi_cuda_stream_t * kstream,
 {
   kaapi_taskdescr_t *const td = (kaapi_taskdescr_t *) arg;
   kaapi_cuda_ctx_push();
-//  kaapi_memory_taskdescr_prologue(td);
-  kaapi_cuda_data_input_alloc(kstream, td);
-  kaapi_cuda_data_input_dev_sync(kstream, td);
+  kaapi_memory_taskdescr_prologue(td);
   kaapi_cuda_ctx_pop();
   kaapi_cuda_stream_push(kstream, KAAPI_CUDA_OP_H2D,
                          kaapi_cuda_gpu_task_callback1_exec_task, arg);

@@ -91,18 +91,18 @@ int kaapi_cuda_sync(kaapi_processor_t * const kproc)
 {
   kaapi_cuda_stream_t *const kstream = kproc->cuda_proc.kstream;
   
-  KAAPI_EVENT_PUSH0(kproc, kaapi_self_thread(),
-                    KAAPI_EVT_CUDA_CPU_SYNC_BEG);
+  KAAPI_EVENT_PUSH0(kproc, kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG);
   
   /* wait all kstream operations */
   kaapi_cuda_stream_waitall(kstream);
   
-  kaapi_cuda_sync_memory(kproc);
+  /* Sync to host (KAAPI_EMPTY_ADDRESS_SPACE_ID) */
+  kaapi_memory_address_space_synchronize_peer2peer(KAAPI_EMPTY_ADDRESS_SPACE_ID, kaapi_memory_map_get_current_asid());
+  cudaStreamSynchronize(kaapi_cuda_DtoH_stream());
   
   KAAPI_ATOMIC_ADD(&kaapi_cuda_synchronize_barrier, 1);
   
-  KAAPI_EVENT_PUSH0(kproc, kaapi_self_thread(),
-                    KAAPI_EVT_CUDA_CPU_SYNC_END);
+  KAAPI_EVENT_PUSH0(kproc, kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END);
   
   return 0;
 }

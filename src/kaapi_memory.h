@@ -230,6 +230,11 @@ extern kaapi_pointer_t kaapi_memory_allocate_view(
 */
 extern void kaapi_memory_global_barrier(void);
 
+/** Peer to peer synchronization between two address spaces.
+    It verifies if there are valid pointers in src to be transfered to dest.
+ */
+extern void kaapi_memory_address_space_synchronize_peer2peer(kaapi_address_space_id_t dest, kaapi_address_space_id_t src);
+
 
 /** Deallocate the data pointed by the pointer
     The function can only deallocated pointer allocated on the local process.
@@ -246,13 +251,21 @@ extern int kaapi_memory_deallocate(
 
 /** Increase memory access to this pointer in a specific kasid.
  */
-int kaapi_memory_access_view(
+extern int kaapi_memory_increase_access_view(
                              const kaapi_address_space_id_t kasid,
                              kaapi_pointer_t* const ptr,
                              kaapi_memory_view_t* const view,
                              const int flag
 );
 
+/** Decrease memory access to this pointer in a specific kasid.
+ */
+extern int kaapi_memory_decrease_access_view(
+                                      const kaapi_address_space_id_t kasid,
+                                      kaapi_pointer_t* const ptr,
+                                      kaapi_memory_view_t* const view,
+                                      const int flag
+                                      );
 
 /** Copy a view of a data to an other view in a remote address space.
     Source and destination memory region cannot overlap.
