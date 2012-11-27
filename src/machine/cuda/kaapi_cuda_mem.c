@@ -4,9 +4,7 @@
 
 #include "kaapi_impl.h"
 #include "machine/mt/kaapi_mt_machine.h"
-#include "memory/kaapi_mem.h"
-#include "memory/kaapi_mem_data.h"
-#include "memory/kaapi_mem_host_map.h"
+
 #include "kaapi_cuda_mem.h"
 #include "kaapi_cuda_ctx.h"
 #include "kaapi_cuda_mem_cache.h"

@@ -1,5 +1,4 @@
 /*
-** kaapi_cuda_data_async.h
 ** xkaapi
 ** 
 ** Created on Jan 2012

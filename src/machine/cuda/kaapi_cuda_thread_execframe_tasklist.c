@@ -55,11 +55,8 @@
 #include "kaapi_tasklist.h"
 
 #include "kaapi_cuda_ctx.h"
-#include "kaapi_cuda_data.h"
 #include "kaapi_cuda_cublas.h"
-
 #include "kaapi_cuda_event.h"
-
 #include "kaapi_cuda_stream.h"
 
 /* cuda task body */
@@ -131,12 +128,8 @@ kaapi_cuda_host_task_callback1_exec_task(kaapi_cuda_stream_t * kstream,
 static int
 kaapi_cuda_host_task_callback0_sync_host(kaapi_cuda_stream_t * kstream, void *arg)
 {
-  kaapi_taskdescr_t *const td = (kaapi_taskdescr_t *) arg;
-#if !defined(KAAPI_CUDA_NO_D2H)
-  kaapi_cuda_ctx_push();
-  kaapi_cuda_data_input_host_sync_from_dev(kstream, td);
-  kaapi_cuda_ctx_pop();
-#endif
+//  kaapi_taskdescr_t *const td = (kaapi_taskdescr_t *) arg;
+  kaapi_assert(0); /* TODO */
   kaapi_cuda_stream_push( kstream, KAAPI_CUDA_OP_D2H,
                           kaapi_cuda_host_task_callback1_exec_task, arg);
   return 0;

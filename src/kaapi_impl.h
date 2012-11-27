@@ -95,6 +95,7 @@ extern "C" {
   
 #if defined(KAAPI_USE_CUDA)
 #include "machine/cuda/kaapi_cuda_mem.h"
+#include "machine/cuda/kaapi_cuda_taskmovealloc.h"
 #endif
 
 /** Current implementation relies on isoaddress allocation to avoid

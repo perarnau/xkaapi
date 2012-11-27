@@ -172,14 +172,6 @@ libkaapi_la_SOURCES=\
   memory/kaapi_memory_register.c \
   memory/kaapi_memory_synchronize.c \
   memory/kaapi_numa.c \
-  memory/kaapi_mem_init.c \
-  memory/kaapi_mem_destroy.c \
-  memory/kaapi_mem_data.c \
-  memory/kaapi_mem_host_map.c \
-  memory/kaapi_mem.c \
-  memory/kaapi_mem.h \
-  memory/kaapi_mem_host_map.h \
-  memory/kaapi_mem_data.h \
   memory/kaapi_memory_metadata.h \
   workstealing/kaapi_sched_select_rand.c \
   workstealing/kaapi_sched_select_rand_f0.c \
@@ -269,11 +261,6 @@ libkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda_threadgroup_execframe.c \
   machine/cuda/kaapi_cuda_cublas.h \
   machine/cuda/kaapi_cuda_cublas.c \
-  machine/cuda/kaapi_cuda_data.h \
-  machine/cuda/kaapi_cuda_data_basic.h \
-  machine/cuda/kaapi_cuda_data_basic.c \
-  machine/cuda/kaapi_cuda_data_async.h \
-  machine/cuda/kaapi_cuda_data_async.c \
   machine/cuda/kaapi_cuda_mem_cache.h \
   machine/cuda/kaapi_cuda_mem_cache.c \
   machine/cuda/kaapi_cuda_mem_cache_lru_double_fifo.h \

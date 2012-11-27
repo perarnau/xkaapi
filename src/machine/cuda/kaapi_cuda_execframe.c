@@ -49,9 +49,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <cuda.h>
+
 #include "kaapi_impl.h"
-//#include "kaapi_cuda_error.h"
-#include "../../memory/kaapi_mem.h"
 
 #if 0
 

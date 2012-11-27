@@ -4,7 +4,6 @@
 #include "kaapi_impl.h"
 #include "kaapi_cuda_proc.h"
 #include "kaapi_cuda_ctx.h"
-#include "kaapi_cuda_data.h"
 #include "kaapi_cuda_task_steal_body.h"
 #include "kaapi_cuda_execframe.h"
 

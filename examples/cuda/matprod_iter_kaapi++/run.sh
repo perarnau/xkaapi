@@ -49,8 +49,8 @@ function run_test {
 #    msizes="4096"
 #    msizes="1024"
     msizes="2048"
-    bsizes="1024"
-#    bsizes="512"
+#    bsizes="1024"
+    bsizes="512"
 #    bsizes="256"
     nwindow="2"
     niter=1
