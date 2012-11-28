@@ -736,21 +736,6 @@ static inline kaapi_thread_context_t* kaapi_self_thread_context(void)
 static inline kaapi_processor_id_t kaapi_get_current_kid(void)
 { return kaapi_get_current_processor()->kid; }
 
-#if 1
-
-#define kaapi_get_current_mem_host_map()      (0)
-#define kaapi_processor_get_mem_host_map(a)   (0)
-
-/* TODO remove */
-//static inline kaapi_mem_host_map_t*
-//kaapi_get_current_mem_host_map(void)
-//{ return &kaapi_get_current_processor()->mem_host_map; }
-
-//static inline kaapi_mem_host_map_t*
-//kaapi_processor_get_mem_host_map( kaapi_processor_t* kproc )
-//{ return &kproc->mem_host_map; }
-#endif
-
 /* ========================================================================== */
 /** Termination dectecting barrier
 */

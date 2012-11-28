@@ -6,7 +6,7 @@
  **
  ** Contributors :
  **
- ** joao.lima@imag.fr
+ ** Joao.Lima@imag.fr / joao.lima@inf.ufrgs.br
  ** 
  ** This software is a computer program whose purpose is to execute
  ** multithreaded computation with data flow synchronization between

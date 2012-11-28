@@ -240,3 +240,33 @@ int kaapi_memory_taskdescr_epilogue(kaapi_taskdescr_t * td)
   
   return 0;
 }
+
+int kaapi_memory_taskdescr_has_valid_writer(const kaapi_processor_t* kproc, kaapi_taskdescr_t* const td)
+{
+  size_t i;
+  void* sp = td->task->sp;
+  const size_t count_params = kaapi_format_get_count_params(td->fmt, sp);
+
+  for (i = 0; i < count_params; i++) {
+    kaapi_access_mode_t m = kaapi_format_get_mode_param(td->fmt, i, sp);
+    
+    m = KAAPI_ACCESS_GET_MODE(m);
+    if (m == KAAPI_ACCESS_MODE_V)
+      continue;
+    
+    if (KAAPI_ACCESS_IS_WRITE(m))
+    {
+      kaapi_access_t access = kaapi_format_get_access_param(td->fmt, i, sp);
+      kaapi_data_t* kdata = kaapi_data(kaapi_data_t, &access);
+      kaapi_metadata_info_t* kmdi = kdata->mdi;
+      kaapi_assert_debug(kmdi != 0);
+      kaapi_address_space_id_t kasid = kaapi_memory_map_kid2asid(kproc->kid);
+      if(kaapi_metadata_info_is_valid(kmdi, kasid))
+      {
+        return 1;
+      }
+    }
+  }
+  
+  return 0;
+}

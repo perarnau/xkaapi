@@ -87,9 +87,8 @@ extern uint64_t kaapi_data_get_affinity_hit_size(
 
 /* return true if td has an WR parameter valid in kproc
 */
-extern int kaapi_data_get_affinity_is_valid_writer(
-     const kaapi_processor_t * kproc,
-     struct kaapi_taskdescr_t * td
+extern int kaapi_memory_taskdescr_has_valid_writer(
+     const kaapi_processor_t* kproc, struct kaapi_taskdescr_t * td
 );
 
 /*
