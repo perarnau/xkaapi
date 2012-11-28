@@ -297,6 +297,13 @@ extern int kaapi_memory_asyncopy(
   void (*callback)(void*), void* argcallback
 );
 
+/**
+  Verify if pointer ptr is valid on current address space. If not,
+  it transfers to host memory. Then, it removes any references to
+  the current address space.
+  Mainly use in GPU context.
+ */
+extern void kaapi_memory_evict_pointer(uintptr_t ptr, size_t size);
 
 /** Make a new pointer object
 */
