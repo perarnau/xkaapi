@@ -321,3 +321,68 @@ kaapi_processor_t *kaapi_memory_taskdescr_affinity_find_valid_wr(
   
   return kproc;
 }
+
+kaapi_processor_t *kaapi_memory_taskdescr_affinity_find_reduce_transfer(
+                                                                 kaapi_processor_t * kproc,
+                                                                 kaapi_taskdescr_t * td
+                                                                 )
+{
+  size_t i;
+  void* sp = td->task->sp;
+  const size_t count_params = kaapi_format_get_count_params(td->fmt, sp);
+  kaapi_address_space_id_t kasid = kaapi_memory_map_kid2asid(kproc->kid);
+  
+  size_t devices[KAAPI_MAX_ADDRESS_SPACE];
+  kaapi_bitmap_value64_t lid_bitmap;
+  int lid;
+  int current_lid = 0;
+  size_t current_lid_size = 0;
+
+  memset(devices, 0, KAAPI_MAX_ADDRESS_SPACE * sizeof(size_t));
+  
+  for (i = 0; i < count_params; i++) {
+    kaapi_access_mode_t m = kaapi_format_get_mode_param(td->fmt, i, sp);
+    
+    m = KAAPI_ACCESS_GET_MODE(m);
+    if (m == KAAPI_ACCESS_MODE_V)
+      continue;
+    
+    kaapi_access_t access = kaapi_format_get_access_param(td->fmt, i, sp);
+    kaapi_data_t* kdata = kaapi_data(kaapi_data_t, &access);
+    kaapi_metadata_info_t* kmdi = kdata->mdi;
+    kaapi_assert_debug(kmdi != 0);
+    kaapi_bitmap_copy_64(&lid_bitmap, &kmdi->valid_bits);
+
+    while ((lid = kaapi_bitmap_value_first1_and_zero_64(&lid_bitmap)) != 0)
+    {
+      lid--;
+      kaapi_data_t *const kdev = kaapi_metadata_info_get_data_by_lid(kmdi, lid);
+      devices[lid] += kaapi_memory_view_size(&kdev->view);
+      if (devices[lid] > current_lid_size) {
+        current_lid = lid;
+        current_lid_size = devices[lid];
+      }
+    }     
+  }
+  
+  if ((current_lid != 0) && (current_lid != kaapi_memory_address_space_getlid(kasid)))
+  {
+#if 0
+    fprintf(stdout, "[%s] kid=%lu td=%p(name=%s) "
+            "src_asid=%lu (kid=%lu) to dest_asid=%lu (kid=%lu) size=%lu\n",
+            __FUNCTION__,
+            (long unsigned int) kproc->kid,
+            (void *) td, td->fmt->name,
+            (long unsigned int) kaapi_memory_address_space_getlid(kasid),
+            (long unsigned int) kaapi_memory_map_asid2kid(kasid),
+            (long unsigned int) current_lid,
+            (long unsigned int) kaapi_memory_map_lid2kid(current_lid),
+            current_lid_size
+            );
+    fflush(stdout);
+#endif
+    return kaapi_all_kprocessors[kaapi_memory_map_lid2kid(current_lid)];
+  }
+  
+  return kproc;
+}
