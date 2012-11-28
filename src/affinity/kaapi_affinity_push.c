@@ -155,55 +155,9 @@ kaapi_processor_t *kaapi_push_by_affinity_writer(
                                                  kaapi_taskdescr_t * td
                                                  )
 {
-  /* TODO */
-#if 0
-  int i;
-  kaapi_mem_data_t *kmd;
-  void *sp;
-  sp = td->task->sp;
-  if (td->fmt == NULL)
+  if (td->fmt == 0)
     return kproc;
-
-  kaapi_mem_host_map_t *local_map = kaapi_get_current_mem_host_map();
-  kaapi_mem_asid_t local_asid = kaapi_mem_host_map_get_asid(local_map);
-  kaapi_mem_asid_t valid_asid;
-  const size_t count_params = kaapi_format_get_count_params(td->fmt, sp);
-
-  for (i = 0; i < count_params; i++) {
-    kaapi_access_mode_t m =
-	KAAPI_ACCESS_GET_MODE(kaapi_format_get_mode_param(td->fmt, i, sp));
-    if (m == KAAPI_ACCESS_MODE_V)
-      continue;
-
-    if (KAAPI_ACCESS_IS_WRITE(m)) {
-      kaapi_access_t access = kaapi_format_get_access_param(td->fmt, i, sp);
-      kaapi_data_t *data = kaapi_data(kaapi_data_t, &access);
-      kmd = data->kmd;
-      kaapi_assert_debug(kmd != 0);
-      if (kaapi_mem_data_is_dirty(kmd, local_asid)) {
-	valid_asid = kaapi_mem_data_get_nondirty_asid(kmd);
-	if ((valid_asid != 0) && (valid_asid != local_asid)) {
-#if 0
-	  fprintf(stdout, "[%s] kid=%lu td=%p(name=%s) "
-		  "src_asid=%lu (kid=%lu) to dest_asid=%lu (kid=%lu)\n",
-		  __FUNCTION__,
-		  (long unsigned int) kproc->kid,
-		  (void *) td, td->fmt->name,
-		  (long unsigned int) local_asid,
-		  (long unsigned int) kaapi_mem_asid2kid(local_asid),
-		  (long unsigned int) valid_asid,
-		  (long unsigned int) kaapi_mem_asid2kid(valid_asid),
-		  valid_asid);
-	  fflush(stdout);
-#endif
-	  return kaapi_all_kprocessors[kaapi_mem_asid2kid(valid_asid)];
-	}
-      }
-    }
-  }
-
-  return kproc;
-#endif
-  return kproc;
+  
+  return kaapi_memory_taskdescr_affinity_find_valid_wr(kproc, td);
 }
 

@@ -63,6 +63,8 @@ kaapi_address_space_id_t kaapi_memory_map_kid2asid(  kaapi_processor_id_t kid );
 
 kaapi_processor_id_t kaapi_memory_map_asid2kid( kaapi_address_space_id_t kasid );
 
+kaapi_processor_id_t kaapi_memory_map_lid2kid( uint16_t lid );
+
 kaapi_address_space_id_t kaapi_memory_map_get_current_asid( void );
 
 kaapi_memory_map_t* kaapi_memory_map_get_current( kaapi_processor_id_t kid );

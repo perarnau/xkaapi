@@ -109,6 +109,11 @@ kaapi_processor_id_t kaapi_memory_map_asid2kid( kaapi_address_space_id_t kasid )
   return kaapi_memory_all_asid2kid[kaapi_memory_address_space_getlid(kasid)];
 }
 
+kaapi_processor_id_t kaapi_memory_map_lid2kid( uint16_t lid )
+{
+  return kaapi_memory_all_asid2kid[lid];
+}
+
 kaapi_address_space_id_t kaapi_memory_map_get_current_asid( void )
 {
   return kaapi_memory_map_kid2asid(kaapi_get_self_kid());

@@ -270,3 +270,54 @@ int kaapi_memory_taskdescr_has_valid_writer(const kaapi_processor_t* kproc, kaap
   
   return 0;
 }
+
+kaapi_processor_t *kaapi_memory_taskdescr_affinity_find_valid_wr(
+                                                 kaapi_processor_t * kproc,
+                                                 kaapi_taskdescr_t * td
+                                                 )
+{
+  size_t i;
+  void* sp = td->task->sp;
+  const size_t count_params = kaapi_format_get_count_params(td->fmt, sp);
+  kaapi_address_space_id_t kasid = kaapi_memory_map_kid2asid(kproc->kid);
+  
+  for (i = 0; i < count_params; i++) {
+    kaapi_access_mode_t m = kaapi_format_get_mode_param(td->fmt, i, sp);
+    
+    m = KAAPI_ACCESS_GET_MODE(m);
+    if (m == KAAPI_ACCESS_MODE_V)
+      continue;
+    
+    if (KAAPI_ACCESS_IS_WRITE(m))
+    {
+      kaapi_access_t access = kaapi_format_get_access_param(td->fmt, i, sp);
+      kaapi_data_t* kdata = kaapi_data(kaapi_data_t, &access);
+      kaapi_metadata_info_t* kmdi = kdata->mdi;
+      kaapi_assert_debug(kmdi != 0);
+      if(!kaapi_metadata_info_is_valid(kmdi, kasid))
+      {
+        uint16_t valid_lid = kaapi_metadata_info_first_valid(kmdi);
+        if((valid_lid != 0) && (valid_lid < KAAPI_MAX_ADDRESS_SPACE)){
+          /* TODO: check if valid_lid(target) can execute this task. */
+#if 0
+          fprintf(stdout, "[%s] (kid=%d) kid=%lu td=%p(name=%s) "
+                  "src_asid=%lu (kid=%lu) to dest_asid=%lu (kid=%lu)\n",
+                  __FUNCTION__,
+                  kaapi_get_self_kid(),
+                  (long unsigned int) kproc->kid,
+                  (void *) td, td->fmt->name,
+                  (long unsigned int) kaapi_memory_address_space_getlid(kasid),
+                  (long unsigned int) kaapi_memory_map_asid2kid(kasid),
+                  (long unsigned int) valid_lid,
+                  (long unsigned int) kaapi_memory_map_lid2kid(valid_lid)
+                  );
+          fflush(stdout);
+#endif
+          return kaapi_all_kprocessors[kaapi_memory_map_lid2kid(valid_lid)];
+        }
+      }
+    }
+  }
+  
+  return kproc;
+}

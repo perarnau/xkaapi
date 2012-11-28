@@ -91,6 +91,15 @@ extern int kaapi_memory_taskdescr_has_valid_writer(
      const kaapi_processor_t* kproc, struct kaapi_taskdescr_t * td
 );
 
+/**
+  Return a processor were a W/WR parameter of the task is valid.
+  Otherwise, return kproc.
+ */
+extern kaapi_processor_t *kaapi_memory_taskdescr_affinity_find_valid_wr(
+                                                                 kaapi_processor_t * kproc,
+                                                                 struct kaapi_taskdescr_t * td
+                                                                 );
+
 /*
 */
 extern struct kaapi_taskdescr_t* kaapi_steal_by_affinity_first( const kaapi_processor_t* thief, struct kaapi_taskdescr_t* tail );
