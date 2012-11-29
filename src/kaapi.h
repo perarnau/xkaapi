@@ -344,7 +344,7 @@ typedef enum kaapi_access_mode_t {
 } kaapi_access_mode_t;
 
 #define KAAPI_ACCESS_MASK_RIGHT_MODE   0x7F   /* 5 bits, ie bit 0, 1, 2, 3, 4, including P mode */
-#define KAAPI_ACCESS_MASK_MODE         0x3F   /* without P mode */
+#define KAAPI_ACCESS_MASK_MODE         0x1F   /* without P mode */
 #define KAAPI_ACCESS_MASK_MODE_P       0x80   /* only P mode */
 
 /*@}*/
