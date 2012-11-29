@@ -43,8 +43,8 @@
 ** terms.
 ** 
 */
-#ifndef _ATHA_DEBUG_H_
-#define _ATHA_DEBUG_H_
+#ifndef _KA_DEBUG_H_
+#define _KA_DEBUG_H_
 
 #ifdef KAAPI_COMPILE_SOURCE
    // Only include kaapi_config.h when building kaapi itself

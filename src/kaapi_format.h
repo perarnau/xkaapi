@@ -54,7 +54,7 @@ extern "C" {
 #include "kaapi_error.h"
 #include "kaapi_defs.h"
 #include "kaapi.h"
-
+#include <string.h>
 
 struct kaapi_taskdescr_t;
 struct kaapi_format_t;
@@ -82,7 +82,7 @@ typedef enum kaapi_format_flag_t {
 typedef struct kaapi_format_t {
   kaapi_format_id_t          fmtid;                                   /* identifier of the format */
   short                      isinit;                                  /* ==1 iff initialize */
-  const char*                name;                                    /* debug information */
+  char*                      name;                                    /* debug information */
   const char*                name_dot;                                /* name for DOT */
   const char*                color_dot;                               /* color for DOT */
   
@@ -326,7 +326,11 @@ kaapi_format_is_staticschedtask( const kaapi_format_t*	const	fmt )
 
 /** Initialise default formats
 */
-extern void kaapi_init_basicformat(void);
+extern void kaapi_format_init(void);
+
+/** Finalize format module
+*/
+extern void kaapi_format_finalize(void);
 
 
 #define KAAPI_DECLEXTERN_BASICTYPEFORMAT( formatobject ) \

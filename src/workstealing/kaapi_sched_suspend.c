@@ -147,7 +147,6 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc, int (*fcondition)(void* ), v
       if (tmp !=0)
         kaapi_context_free( kproc, tmp );
 
-
       goto redo_execution;
     }
 

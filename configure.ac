@@ -170,14 +170,8 @@ ACX_LIB_ADD_PUBLIC_FLAGS([KAAPILIB], [-I\${includedir}])
 ACX_LIB_NEW_LIB([KAAPIXXLIB], [-L\${libdir} -lkaapi++], [kaapi++])
 ACX_LIB_ADD_PUBLIC_FLAGS([KAAPIXXLIB], [-I\${includedir}])
 
-ACX_LIB_NEW_LIB([KANETLIB], [-L\${libdir} -lkanet], [kanet])
-ACX_LIB_ADD_PUBLIC_FLAGS([KANETLIB], [-I\${includedir}])
-
 ACX_LIB_NEW_LIB([KASTLLIB], [-L\${libdir}], [kastl])
 ACX_LIB_ADD_PUBLIC_FLAGS([KASTLLIB], [-I\${includedir}])
-
-ACX_LIB_NEW_LIB([ATHALIB], [-L\${libdir} -latha], [atha])
-ACX_LIB_ADD_PUBLIC_FLAGS([ATHALIB], [-I\${includedir}])
 
 ACX_LIB_NEW_LIB([KAAPICLIB], [-L\${libdir} -lkaapic], [kaapic])
 ACX_LIB_ADD_PUBLIC_FLAGS([KAAPICLIB], [-I\${includedir}])
@@ -191,9 +185,7 @@ ACX_LIB_NEW_PRG([KAAPIPROGS])
 ACX_LIB_NEW_PRG([KAAPIXXPROGS])
 ACX_LIB_NEW_PRG([KAAPICPROGS])
 ACX_LIB_NEW_PRG([KAAPIFPROGS])
-ACX_LIB_NEW_PRG([KANETPROGS])
 ACX_LIB_NEW_PRG([KASTLPROGS])
-ACX_LIB_NEW_PRG([ATHAPROGS])
 
 default_experimental=no
 
@@ -294,24 +286,6 @@ KAAPI_FEATURE([api-quark], [compile Quark API used by PLASMA library],
   [],
   [],
   [KAAPI_API_QUARK])
-
-
-dnl -----------------------------------------------------------------------
-dnl The "--enable-api-atha"
-dnl -----------------------------------------------------------------------
-KAAPI_FEATURE([api-atha], [compile Athapascan-1 API, [[DEPRECATED]] ],
-  [Athapascan-1 API compiled], [no],
-  [],
-  [],
-  [KAAPI_API_ATHA],
-  [
-    if test "$enable_api_kaapixx" != yes ; then
-      AC_MSG_NOTICE([Kaapi++ API is required for Athapascan-1 API])
-      FEATURE_DISABLE
-    else
-      FEATURE_ENABLE
-    fi
-  ])
 
 
 dnl -----------------------------------------------------------------------
@@ -687,21 +661,9 @@ ACX_LIB_LINK([KAAPILIB],[HWLOC])
 dnl -----------------------------------------------------------------------
 dnl The "--enable-network"
 dnl -----------------------------------------------------------------------
-# Select compilation of network support as part of the library
-# Default is to not compile it until it works
-KAAPI_FEATURE([network], [allow distributed Kaapi programs],
-  [Network support compiled], [no],
-  [
-    AC_DEFINE([KAAPI_USE_NETWORK],1,[defined to 1 when compiling with network support])
-    KAAPI_USE_NETWORK=yes
-  ],
-  [],
-  [KAAPI_TARGET_KANET],
-  [
-    ## Ici, il faudrait tester les r√seaux possibles et les souhait
-    # de l'utilisateur.
-    FEATURE_ENABLE
-  ])
+# No more network for now
+KAAPI_USE_NETWORK=no
+AM_CONDITIONAL([KAAPI_TARGET_KANET], [false])
 
 ## ICI il faudrait preciser le reseau dans le commande --with-network=...
 ## sinon choix par d√©faut
@@ -712,11 +674,7 @@ AM_CONDITIONAL([KAAPI_TARGET_MPINET],[test x"$KAAPI_USE_NETWORK" = x"yes"])
 dnl -----------------------------------------------------------------------
 dnl The "--with-gasnet"
 dnl -----------------------------------------------------------------------
-AC_ARG_WITH([gasnet],[AS_HELP_STRING([--with-gasnet=<conduit>],
-		 [choose gasnet support and specify the conduit to use])],
-     [],
-     [with_gasnet=no]
-)
+with_gasnet=no
 
 AS_CASE([$with_gasnet],
   [no], [dnl
@@ -751,11 +709,7 @@ AM_CONDITIONAL([KAAPI_TARGET_GASNET],[test x"$KAAPI_USE_GASNET" = x"yes"])
 dnl -----------------------------------------------------------------------
 dnl The "--with-taknet"
 dnl -----------------------------------------------------------------------
-AC_ARG_WITH([taknet],[AS_HELP_STRING([--with-taknet=<conduit>],
-		 [choose taknet Network support based on TakTuk])],
-     [],
-     [with_taknet=no]
-)
+with_taknet=no
 
 AS_CASE([$with_taknet],
   [no], [dnl
@@ -909,14 +863,6 @@ ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [CUPTI])
 dnl ACX_LIB_LINK([KAAPIXXLIB], [PRIVATE], [HWLOC])
 
-dnl ACX_LIB_LINK([KANETLIB], [PUBLIC], [KAAPIXXLIB])
-ACX_LIB_LINK([KANETLIB], [PRIVATE], [KAAPIXXLIB])
-
-ACX_LIB_LINK([ATHALIB], [PUBLIC], [KAAPIXXLIB])
-ACX_LIB_LINK([ATHALIB], [PRIVATE], [CUDA])
-ACX_LIB_LINK([ATHALIB], [PRIVATE], [CUPTI])
-dnl ACX_LIB_LINK([ATHALIB], [PRIVATE], [HWLOC])
-
 ACX_LIB_LINK([KASTLLIB], [PUBLIC], [KAAPIXXLIB])
 ACX_LIB_LINK([KASTLLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([KASTLLIB], [PRIVATE], [CUPTI])
@@ -958,16 +904,6 @@ ACX_LIB_ADD_BUILD_FLAGS([KAAPIXXPROGS],
 ACX_LIB_LINK([KAAPIXXPROGS], [CUDA])
 ACX_LIB_LINK([KAAPIXXPROGS], [CUPTI])
 
-ACX_LIB_LINK([KANETPROGS], [KANETLIB])
-ACX_LIB_ADD_BUILD_FLAGS([KANETPROGS],
-	[-I\$(top_srcdir)/network -I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/network/libkanet.la \$(top_builddir)/api/kaapixx/libkaapi++.la \$(top_builddir)/src/libkaapi.la])
-
-ACX_LIB_LINK([ATHAPROGS], [ATHALIB])
-ACX_LIB_ADD_BUILD_FLAGS([ATHAPROGS],
-	[-I\$(top_srcdir)/api/atha -I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/api/atha/libatha.la \$(top_builddir)/api/kaapixx/libkaapi++.la \$(top_builddir)/src/libkaapi.la])
-
 ACX_LIB_LINK([KASTLPROGS], [KASTLLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KASTLPROGS],
 	[-I\$(top_srcdir)/api/kastl -I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
@@ -987,7 +923,6 @@ dnl Then   alphabetic order of other files
 AC_CONFIG_FILES([
 	Makefile
 	api/Makefile
-	api/atha/Makefile
 	api/kaapixx/Makefile
 	api/kaapic/Makefile
 	api/kaapif/Makefile
@@ -997,9 +932,6 @@ AC_CONFIG_FILES([
 	api/libgomp/testsuite/Makefile
 	api/quark/Makefile
 	examples/Makefile
-	network/Makefile
-	network/gasnet/Makefile
-	network/taknet/Makefile
 	src/Makefile
 	bin/Makefile
 	bin/kacc/Makefile
@@ -1007,9 +939,6 @@ AC_CONFIG_FILES([
 	bin/kaapi_f2f/Makefile
 	bin/kaapi_event_reader/Makefile
 	bin/kacc/kacc.cpp
-	tests/static/Makefile
-	tests/c/Makefile
-	tests/c++/Makefile
 
 	src/misc/kaapi_version.c
 	kaapi.pc
@@ -1017,7 +946,6 @@ AC_CONFIG_FILES([
 	kaapif.pc
 	kaapi++.pc
 	kastl.pc
-	atha.pc
 ])
 AC_OUTPUT
 

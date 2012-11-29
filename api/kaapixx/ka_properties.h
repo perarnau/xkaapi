@@ -43,8 +43,8 @@
 ** terms.
 ** 
 */
-#ifndef _ATHA_PROPERTIES_H_
-#define _ATHA_PROPERTIES_H_
+#ifndef _KA_PROPERTIES_H_
+#define _KA_PROPERTIES_H_
 
 #include <fstream>
 #include <string>

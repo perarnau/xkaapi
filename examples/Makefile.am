@@ -29,7 +29,7 @@ include kaapic.am
 include listranking.am
 include matrix.am
 include mergesort.am
-include net.am
+#include net.am
 include nqueens.am
 include poisson3D.am
 #include prefix.am
@@ -47,7 +47,6 @@ USER_MAKEFILES=\
 	hello/Makefile \
 	matrix/Makefile \
 	mergesort/Makefile \
-	net/Makefile \
 	nqueens/Makefile \
 	poisson3D/Makefile \
 	papi/Makefile \
@@ -137,8 +136,6 @@ gen-%.am.m4: gen-%.am.m4.info Makefile
 		VALUE="$$VALUE kaapic" ;; esac ; \
 	    case " $$EQ " in *'$$(KAAPIFPROGS_BUILD_LIBS)'*) \
 		VALUE="$$VALUE kaapif" ;; esac ; \
-	    case " $$EQ " in *'$$(ATHAPROGS_BUILD_LIBS)'*) \
-		VALUE="$$VALUE atha" ;; esac ; \
 	    case " $$EQ " in *'$$(KASTLPROGS_BUILD_LIBS)'*) \
 		VALUE="$$VALUE kastl" ;; esac ; \
 	    echo "define([$${VAR}_PKGLIBS],[$$VALUE])dnl" ; \

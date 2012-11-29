@@ -140,7 +140,7 @@ kaapi_format_t* kaapi_voidp_format = &kaapi_voidp_format_object;
 
 /**
 */
-void kaapi_init_basicformat(void)
+void kaapi_format_init(void)
 {
   KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_char_format, char, "%hhi")
   KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_short_format, short, "%hi")
@@ -158,17 +158,37 @@ void kaapi_init_basicformat(void)
 
   kaapi_format_structregister
   ( 
-   get_kaapi_voidp_format,
-   "kaapi_voidp_format",
-   sizeof(void*),
-   voidp_type_cstor,
-   voidp_type_dstor,
-   voidp_type_cstorcopy,
-   voidp_type_copy,
-   voidp_type_assign,
-   voidp_type_printf
+    get_kaapi_voidp_format,
+    "kaapi_voidp_format",
+    sizeof(void*),
+    voidp_type_cstor,
+    voidp_type_dstor,
+    voidp_type_cstorcopy,
+    voidp_type_copy,
+    voidp_type_assign,
+    voidp_type_printf
   );
   
   /* register format for some internal tasks */
   kaapi_register_staticschedtask_format();
+}
+
+
+void kaapi_format_finalize(void)
+{
+  size_t i;
+  size_t nfmt = sizeof(kaapi_all_format_bybody)/sizeof(kaapi_format_t*);
+  for (i=0; i<nfmt; ++i)
+  {
+    kaapi_format_t* head =  kaapi_all_format_byfmtid[i];
+
+    for (; head; head = head->next_byfmtid)
+    {
+      if (head->name !=0) 
+      { 
+        free((char*)head->name); 
+        head->name = 0; 
+      }
+    }
+  }
 }

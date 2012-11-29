@@ -3,12 +3,12 @@
 ACLOCAL_AMFLAGS=-I acinclude
 
 # add bin for building tools when cuda dependcy resolved
-SUBDIRS=. src bin api network examples tests/static 
+SUBDIRS=. src bin api examples
 
 BUILT_SOURCES= gitlastcommit
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA= kaapi.pc kaapic.pc kaapif.pc kaapi++.pc atha.pc kastl.pc
+pkgconfig_DATA= kaapi.pc kaapic.pc kaapif.pc kaapi++.pc kastl.pc
 
 # Add support for configure with gasnet
 EXTRA_DIST=acinclude/gasnet_cppflags.mk
