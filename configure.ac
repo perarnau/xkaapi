@@ -650,8 +650,8 @@ dnl -----------------------------------------------------------------------
 dnl The "--with-cupti"
 dnl -----------------------------------------------------------------------
 KAAPI_PKGLIB_CHECK([GPU programming], [cupti], [CUPTI], [no], [KAAPI_USE_CUPTI],
-  [build CUDA profiler support [EXPERIMENTAL]],
-  [cupti], [], [cuda_runtime_api.h], [cuDeviceGetAttribute], [
+  [build CUDA CUPTI profiler support [EXPERIMENTAL]],
+  [cupti], [], [cuda_runtime_api.h], [cuptiGetVersion], [
 dnl    CUPTI is there
     AC_DEFINE([KAAPI_USE_CUPTI],1,[Support for CUDA profiler])
     HACK_USE_CUPTI=yes

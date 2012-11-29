@@ -49,7 +49,7 @@
 
 #if defined(KAAPI_USE_CUDA)
 
-# include "../cuda/kaapi_cuda_proc.h"
+//# include "../cuda/kaapi_cuda_proc.h"
 
 /* todo: move somewhere else */
 extern int kaapi_sched_select_victim_with_cuda_tasks
@@ -140,13 +140,7 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   /* seed */
   kproc->seed_data = rand();
 
-  /* memory: as[0] for cpu, as[1 + gpuindex] for gpu */
-  if ( kpi->proc_type == KAAPI_PROC_TYPE_CPU )
-    kaapi_mem_host_map_init( &kproc->mem_host_map, kproc->kid, 0 );
-  else
-    kaapi_mem_host_map_init( &kproc->mem_host_map, kproc->kid, 1 + kpi->proc_index );
-  
-  kaapi_processor_computetopo( kproc );  
+  kaapi_processor_computetopo( kproc );
 
   ctxt = (kaapi_thread_context_t*)kaapi_context_alloc( kproc, stacksize );
   kaapi_assert(ctxt !=0);
@@ -158,7 +152,10 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
   memset(&kproc->size_specific, 0, 16*sizeof(size_t));
   
   kproc->libkomp_tls = 0;
-
+  
+  kaapi_address_space_id_t kasid = kaapi_memory_address_space_create(kaapi_network_get_current_globalid(), kpi->proc_type, 0x100000000UL);
+  kaapi_memory_map_create(kproc->kid, kasid);
+  
 #if defined(KAAPI_USE_CUDA)
   /* initialize cuda processor */
   if (kpi->proc_type == KAAPI_PROC_TYPE_CUDA) {

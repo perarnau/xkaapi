@@ -106,6 +106,7 @@ libkaapi_la_SOURCES=\
   tasklist/kaapi_tasklist.c \
   tasklist/kaapi_readytasklist_init.c\
   tasklist/kaapi_readytasklist_destroy.c\
+  tasklist/kaapi_readytasklist_prio.c\
   tasklist/kaapi_readytasklist_push.c\
   tasklist/kaapi_readytasklist_pop.c\
   tasklist/kaapi_readytasklist_rpush.c\
@@ -161,21 +162,17 @@ libkaapi_la_SOURCES=\
   machine/common/kaapi_hwtopo.c \
   machine/common/kaapi_hw_selftopo.c \
   memory/kaapi_memory.c \
+  memory/kaapi_memory_taskdescr.h \
+  memory/kaapi_memory_taskdescr.c \
+  memory/kaapi_memory_map.h \
+  memory/kaapi_memory_map.c \
   memory/kaapi_memory_copy.c \
   memory/kaapi_memory_allocate.c \
   memory/kaapi_memory_bind.c \
-  memory/kaapi_memory_find_writer.c \
   memory/kaapi_memory_register.c \
+  memory/kaapi_memory_synchronize.c \
   memory/kaapi_numa.c \
-  memory/kaapi_mem_init.c \
-  memory/kaapi_mem_destroy.c \
-  memory/kaapi_mem_data.c \
-  memory/kaapi_mem_sync.c \
-  memory/kaapi_mem_host_map.c \
-  memory/kaapi_mem.c \
-  memory/kaapi_mem.h \
-  memory/kaapi_mem_host_map.h \
-  memory/kaapi_mem_data.h \
+  memory/kaapi_memory_metadata.h \
   workstealing/kaapi_sched_select_rand.c \
   workstealing/kaapi_sched_select_rand_f0.c \
   workstealing/kaapi_sched_select_workload_rand.c \
@@ -203,7 +200,6 @@ libkaapi_la_SOURCES=\
 if KAAPI_TARGET_STATICSCHED
 #Partitionning
 libkaapi_la_SOURCES+=\
-  memory/kaapi_memory_get_version.c \
   kaapi_partition.h\
   static/kaapi_stsched_create.c\
   static/kaapi_stsched_destroy.c\
@@ -265,13 +261,12 @@ libkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda_threadgroup_execframe.c \
   machine/cuda/kaapi_cuda_cublas.h \
   machine/cuda/kaapi_cuda_cublas.c \
-  machine/cuda/kaapi_cuda_data.h \
-  machine/cuda/kaapi_cuda_data_basic.h \
-  machine/cuda/kaapi_cuda_data_basic.c \
-  machine/cuda/kaapi_cuda_data_async.h \
-  machine/cuda/kaapi_cuda_data_async.c \
   machine/cuda/kaapi_cuda_mem_cache.h \
   machine/cuda/kaapi_cuda_mem_cache.c \
+  machine/cuda/kaapi_cuda_mem_cache_lru_double_fifo.h \
+  machine/cuda/kaapi_cuda_mem_cache_lru_double_fifo.c \
+  machine/cuda/kaapi_cuda_mem_cache_lru_fifo.h \
+  machine/cuda/kaapi_cuda_mem_cache_lru_fifo.c \
   machine/cuda/kaapi_cuda_mem.h \
   machine/cuda/kaapi_cuda_mem.c \
   machine/cuda/kaapi_cuda_stream.h \
@@ -287,8 +282,7 @@ libkaapi_la_SOURCES+=\
   machine/cuda/kaapi_cuda_event.h \
   machine/cuda/kaapi_cuda_trace.h \
   machine/cuda/kaapi_cuda_trace.c \
-  machine/cuda/kaapi_sched_select_victim_with_cuda_tasks.c \
-  machine/cuda/kaapi_cuda_kasid.c
+  machine/cuda/kaapi_sched_select_victim_with_cuda_tasks.c 
 endif
 
 include_HEADERS=\

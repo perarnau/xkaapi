@@ -6,7 +6,7 @@
  **
  ** Contributors :
  **
- ** joao.lima@imag.fr
+ ** Joao.Lima@imag.fr / joao.lima@inf.ufrgs.br
  ** 
  ** This software is a computer program whose purpose is to execute
  ** multithreaded computation with data flow synchronization between
@@ -43,11 +43,6 @@
  */
 
 #include "kaapi_impl.h"
-#include "kaapi_tasklist.h"
-
-
-//#undef KAAPI_DEBUG_INST
-//#define KAAPI_DEBUG_INST(x) x
 
 /* return the first td that can be executed on arch 
 */
@@ -175,8 +170,8 @@ kaapi_taskdescr_t* kaapi_steal_by_affinity_writer( const kaapi_processor_t* thie
   {
     if ((td->fmt != 0) && kaapi_task_has_arch(td->task,arch) && (kaapi_get_task_body_by_arch(td, arch) !=0))
     {
-      if(kaapi_data_get_affinity_is_valid_writer(thief,td)) {
-	return td;
+      if(kaapi_memory_taskdescr_has_valid_writer(thief, td)) {
+        return td;
       }
     }
     td = td->prev;

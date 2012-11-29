@@ -82,6 +82,9 @@ extern "C" {
 #include "kaapi_allocator.h"
 #include "kaapi_hashmap.h"
 #include "kaapi_memory.h"
+#include "memory/kaapi_memory_metadata.h"
+#include "memory/kaapi_memory_map.h"
+#include "memory/kaapi_memory_taskdescr.h"
 #include "kaapi_task.h"
 #include "kaapi_format.h"
 #include "kaapi_event.h"
@@ -89,8 +92,11 @@ extern "C" {
 #include <string.h>
 
 #include "kaapi_defs.h"
-
-
+  
+#if defined(KAAPI_USE_CUDA)
+#include "machine/cuda/kaapi_cuda_mem.h"
+#include "machine/cuda/kaapi_cuda_taskmovealloc.h"
+#endif
 
 /** Current implementation relies on isoaddress allocation to avoid
     communication during synchronization at the end of partitionning.

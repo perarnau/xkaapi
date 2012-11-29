@@ -87,10 +87,26 @@ extern uint64_t kaapi_data_get_affinity_hit_size(
 
 /* return true if td has an WR parameter valid in kproc
 */
-extern int kaapi_data_get_affinity_is_valid_writer(
-     const kaapi_processor_t * kproc,
-     struct kaapi_taskdescr_t * td
+extern int kaapi_memory_taskdescr_has_valid_writer(
+     const kaapi_processor_t* kproc, struct kaapi_taskdescr_t * td
 );
+
+/**
+  Return a processor where a W/WR parameter of the task is valid.
+  Otherwise, return kproc.
+ */
+extern kaapi_processor_t *kaapi_memory_taskdescr_affinity_find_valid_wr(
+                                                                 kaapi_processor_t * kproc,
+                                                                 struct kaapi_taskdescr_t * td
+                                                                 );
+/**
+ Return a processor that reduces memory transfers to execute this task.
+ Otherwise, return kproc.
+ */
+extern kaapi_processor_t *kaapi_memory_taskdescr_affinity_find_reduce_transfer(
+                                                                        kaapi_processor_t * kproc,
+                                                                        struct kaapi_taskdescr_t * td
+                                                                        );
 
 /*
 */

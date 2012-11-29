@@ -10,8 +10,6 @@ void kaapi_cuda_dev_close(kaapi_cuda_proc_t *);
 
 kaapi_processor_t *kaapi_cuda_mem_get_proc(void);
 
-kaapi_processor_t *kaapi_cuda_get_proc_by_asid(kaapi_address_space_id_t);
-
 int kaapi_cuda_dev_enable_peer_access(kaapi_cuda_proc_t * const);
 
 static inline int kaapi_cuda_dev_has_peer_access(unsigned int peer)

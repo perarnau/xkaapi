@@ -170,7 +170,7 @@ static inline kaapi_globalid_t kaapi_memory_address_space_getgid( kaapi_address_
     \param kasid [IN] an address space identifier
     \return the local index of the address space identifier
 */
-static inline uint16_t _kaapi_memory_address_space_getlid( kaapi_address_space_id_t kasid )
+static inline uint16_t kaapi_memory_address_space_getlid( kaapi_address_space_id_t kasid )
 { return (kasid & KAAPI_ASID_MASK_LID); }
 
 
@@ -203,9 +203,9 @@ extern int kaapi_memory_address_space_fprintf( FILE* file, kaapi_address_space_i
 #define KAAPI_MEM_LOCAL      0x1
 #define KAAPI_MEM_SHARABLE   0x2
 extern kaapi_pointer_t kaapi_memory_allocate( 
-    kaapi_address_space_id_t kasid, 
-    size_t                   size, 
-    int                      flag 
+    const kaapi_address_space_id_t kasid,
+    const size_t                   size,
+    const int                      flag
 );
 
 
@@ -219,9 +219,9 @@ extern kaapi_pointer_t kaapi_memory_allocate(
     \retval the pointer into the address space or null pointer if the allocation failed.
 */
 extern kaapi_pointer_t kaapi_memory_allocate_view( 
-    kaapi_address_space_id_t kasid, 
-    kaapi_memory_view_t*     view, 
-    int                      flag 
+    const kaapi_address_space_id_t kasid,
+    kaapi_memory_view_t*           view, 
+    const int                      flag
 );
 
 
@@ -229,6 +229,11 @@ extern kaapi_pointer_t kaapi_memory_allocate_view(
     - after this barrier, all nodes are able to read or writer memory location of remote node
 */
 extern void kaapi_memory_global_barrier(void);
+
+/** Peer to peer synchronization between two address spaces.
+    It verifies if there are valid pointers in src to be transfered to dest.
+ */
+extern void kaapi_memory_address_space_synchronize_peer2peer(kaapi_address_space_id_t dest, kaapi_address_space_id_t src);
 
 
 /** Deallocate the data pointed by the pointer
@@ -244,6 +249,23 @@ extern int kaapi_memory_deallocate(
   kaapi_pointer_t ptr 
 );
 
+/** Increase memory access to this pointer in a specific kasid.
+ */
+extern int kaapi_memory_increase_access_view(
+                             const kaapi_address_space_id_t kasid,
+                             kaapi_pointer_t* const ptr,
+                             kaapi_memory_view_t* const view,
+                             const int flag
+);
+
+/** Decrease memory access to this pointer in a specific kasid.
+ */
+extern int kaapi_memory_decrease_access_view(
+                                      const kaapi_address_space_id_t kasid,
+                                      kaapi_pointer_t* const ptr,
+                                      kaapi_memory_view_t* const view,
+                                      const int flag
+                                      );
 
 /** Copy a view of a data to an other view in a remote address space.
     Source and destination memory region cannot overlap.
@@ -256,11 +278,10 @@ extern int kaapi_memory_copy(
 
 /** Expose copy from cpu2cpu
 */
-extern int kaapi_memory_write_cpu2cpu
+extern int kaapi_memory_copy_cpu2cpu
 (
   kaapi_pointer_t dest,
   const kaapi_memory_view_t* view_dest,
-//  const void* src,
   kaapi_pointer_t src,
   const kaapi_memory_view_t* view_src
 );
@@ -276,6 +297,13 @@ extern int kaapi_memory_asyncopy(
   void (*callback)(void*), void* argcallback
 );
 
+/**
+  Verify if pointer ptr is valid on current address space. If not,
+  it transfers to host memory. Then, it removes any references to
+  the current address space.
+  Mainly use in GPU context.
+ */
+extern void kaapi_memory_evict_pointer(uintptr_t ptr, size_t size);
 
 /** Make a new pointer object
 */
@@ -351,157 +379,6 @@ static inline void kaapi_memory_view_reallocated( kaapi_memory_view_t* kmv )
       kaapi_assert(0);
       break;
   }
-}
-
-/** Meta data attached to a pointer and its remote copies on a set of address spaces.
-    The data structure store information for at most 64 address spaces.
-    This data structure stores all the valid and invalid copies of the data.
-    data[i] is valid iff validbits & (1<<i) is not null.
-    data[i] is not valid but yet allocated if dirtybits & ( 1<<i) is not null.
-    If data[i] is 0, then no data has been allocated in the i-th local
-    memory, and both validbits & (1<<i) and dirtybits & (1<<i) are nul.
-    The view of each allocated block of data is stored in the kaapi_data_t structure.
-*/
-typedef struct kaapi_metadata_info_t {
-  uint64_t                 validbits;
-  kaapi_data_t             data[KAAPI_MAX_ADDRESS_SPACE];
-  struct kaapi_version_t*  version[KAAPI_MAX_ADDRESS_SPACE];          /* opaque */
-} kaapi_metadata_info_t;
-
-
-/** Return the meta data associated to a virtual address @ in the host.
-    Return 0 if no meta data is attached.
-*/
-extern kaapi_metadata_info_t* kaapi_memory_find_metadata( void* ptr );
-
-/** Return the meta data associated to a virtual address @ in the host.
-    Return a new allocated data_info if no meta data is attached.
-    The newly created data info structure has no
-*/
-extern kaapi_metadata_info_t* kaapi_mem_findinsert_metadata( void* ptr );
-
-/** Get a copy to the local address space...
-TODO 
-*/
-extern kaapi_pointer_t kaapi_memory_synchronize_( kaapi_metadata_info_t* kdmi );
-
-/** Bind an address of the calling virtual space of the process in the address space data structure kasid.
-    Once binded the memory will be deallocated if the sticky flag is not set in flag.
-    Return the pointer.
-*/
-extern kaapi_metadata_info_t* kaapi_memory_bind( 
-  kaapi_address_space_id_t kasid, 
-  int                      flag, 
-  void*                    ptr, 
-  size_t                   size 
-);
-
-/** Bind an address of the calling virtual space of the process in the address space data structure kasid.
-    Once binded the memory will be deallocated if the sticky flag is not set in flag.
-    Return the pointer.
-*/
-extern kaapi_metadata_info_t* kaapi_memory_bind_view( 
-  kaapi_address_space_id_t   kasid, 
-  int                        flag, 
-  void*                      ptr, 
-  const kaapi_memory_view_t* view 
-);
-
-/** Unbind the address from the address space kasid.
-    If the data exist in kasid, then the caller takes the owner ship of the data.
-    If the data does not exist in the address space kasid, then the method do nothing, even if the data
-    resides in other address spaces. 
-*/
-extern void* kaapi_memory_unbind( kaapi_metadata_info_t* kmdi );
-
-
-/**/
-extern struct kaapi_version_t** _kaapi_metadata_info_bind_data( 
-    kaapi_metadata_info_t* kmdi, 
-    kaapi_address_space_id_t kasid, 
-    void* ptr, const kaapi_memory_view_t* view
-);
-
-
-/**/
-static inline void _kaapi_metadata_info_unbind_alldata( 
-    kaapi_metadata_info_t* kmdi
-)
-{
-  kmdi->validbits = 0UL;
-}
-
-
-/**/
-static inline kaapi_data_t* _kaapi_metadata_info_get_data( 
-    kaapi_metadata_info_t* kmdi, 
-    kaapi_address_space_id_t kasid
-)
-{
-  uint16_t lid = _kaapi_memory_address_space_getlid( kasid );
-  kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
-  return &kmdi->data[lid];
-}
-
-/**/
-static inline int _kaapi_metadata_info_is_valid( 
-    kaapi_metadata_info_t* kmdi, 
-    kaapi_address_space_id_t kasid
-)
-{ 
-  uint16_t lid = _kaapi_memory_address_space_getlid( kasid );
-  kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
-  return (kmdi->validbits & (1UL<<lid)) !=0;
-}
-
-/**/
-static inline int _kaapi_metadata_info_is_novalid( 
-    kaapi_metadata_info_t* kmdi
-)
-{ 
-  return (kmdi->validbits == 0UL);
-}
-
-/**/
-static inline void _kaapi_metadata_info_set_writer( 
-    kaapi_metadata_info_t* kmdi,
-    kaapi_address_space_id_t kasid
-)
-{ 
-  uint16_t lid = _kaapi_memory_address_space_getlid( kasid );
-  kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
-  kmdi->validbits = 1UL << lid;
-}
-
-#if 0
-/**/
-extern struct kaapi_version_t* _kaapi_metadata_info_get_version( 
-    kaapi_metadata_info_t* kmdi,
-    kaapi_address_space_id_t kasid
-);
-#endif
-
-/** Return a version that handle a valid copy in order to make a copy to kasid 
-*/
-extern struct kaapi_version_t* _kaapi_metadata_info_find_onewriter(
-    kaapi_metadata_info_t* kmdi,
-    kaapi_address_space_id_t kasid
-);
-
-/* Make a copy of the data into kasid
-*/
-static inline struct kaapi_version_t** _kaapi_metadata_info_copy_data(
-    kaapi_metadata_info_t* kmdi,
-    kaapi_address_space_id_t kasid,
-    const kaapi_memory_view_t* view    
-)
-{
-  uint16_t lid = _kaapi_memory_address_space_getlid( kasid );
-  kmdi->validbits |= 1UL << lid;
-  kmdi->data[lid].ptr  = kaapi_make_pointer(kasid, 0);
-  kmdi->data[lid].view = *view;
-  kaapi_memory_view_reallocated(&kmdi->data[lid].view);
-  return &kmdi->version[lid];
 }
 
 #endif /*_KAAPI_DATA_H_*/

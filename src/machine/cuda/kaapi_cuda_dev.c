@@ -33,23 +33,7 @@ int kaapi_cuda_dev_open(kaapi_cuda_proc_t * proc, unsigned int index)
     fflush(stdout);
     abort();
   }
-  
-  /* 80% of total memory */
-  proc->cache.total = 0.8 * proc->deviceProp.totalGlobalMem;
-  proc->cache.used = 0;
-  proc->cache.ro.beg = proc->cache.ro.end = NULL;
-  proc->cache.rw.beg = proc->cache.rw.end = NULL;
-  kaapi_big_hashmap_init(&proc->cache.kmem, 0);
-  res =
-  cudaEventCreateWithFlags(&proc->cache.event,
-                           cudaEventDisableTiming);
-  if (res != cudaSuccess) {
-    fprintf(stdout, "%s: cudaEventCreateWithFlags ERROR %d\n",
-            __FUNCTION__, res);
-    fflush(stdout);
-    abort();
-  }
-  
+
   return 0;
 }
 
@@ -65,21 +49,6 @@ kaapi_processor_t *kaapi_cuda_mem_get_proc(void)
   
   for (i = 0; i < kaapi_count_kprocessors; ++i) {
     if (kaapi_all_kprocessors[i]->proc_type == KAAPI_PROC_TYPE_CUDA) {
-      return kaapi_all_kprocessors[i];
-    }
-  }
-  
-  return NULL;
-}
-
-kaapi_processor_t *kaapi_cuda_get_proc_by_asid(kaapi_address_space_id_t
-                                               asid)
-{
-  unsigned int i;
-  
-  for (i = 0; i < kaapi_count_kprocessors; ++i) {
-    if ((kaapi_all_kprocessors[i]->proc_type == KAAPI_PROC_TYPE_CUDA) &&
-        (kaapi_all_kprocessors[i]->cuda_proc.asid == asid)) {
       return kaapi_all_kprocessors[i];
     }
   }
