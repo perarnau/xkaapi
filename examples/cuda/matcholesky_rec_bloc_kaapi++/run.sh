@@ -36,8 +36,8 @@ function run_test {
 	    for i in `seq 1 $niter`
 	    do
 	    echo "$KAAPI_CPUSET $KAAPI_GPUSET \
-		    $execfile $m $b  $subblock 1 $verif"
-	    KAAPI_STACKSIZE_MASTER=536870912 $execfile $m $b $subblock 1 $verif 
+		    $execfile $m $b  $subblock $verif"
+	    KAAPI_STACKSIZE_MASTER=536870912 $execfile $m $b $subblock $verif 
 	    done
 	done
     done

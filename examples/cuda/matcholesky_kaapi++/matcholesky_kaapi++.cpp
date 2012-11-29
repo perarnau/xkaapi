@@ -273,6 +273,7 @@ struct doit {
     {
       /* based on MAGMA */
 #if defined(CONFIG_USE_PLASMA)
+      int nb = n / block_size;
       for(int i= 0; i < nb; i++){
         for(int j= 0; j < nb; j++){
           PLASMA<double_type>::plgsy((double_type)n, block_size, block_size, dA+j*nb+i, n, n,
@@ -335,13 +336,11 @@ struct doit {
     
     // Number of iterations
     int niter = 1;
-    if (argc >3)
-      niter = atoi(argv[3]);
     
     // Make verification ?
     int verif = 0;
-    if (argc >4)
-      verif = atoi(argv[4]);
+    if (argc > 3)
+      verif = atoi(argv[3]);
     
     printf("# size  blocksize  #threads   time      GFlop/s\n");
     for (int k=0; k<1; ++k, ++n )

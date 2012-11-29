@@ -36,7 +36,7 @@ function run_test {
 	    do
 	    echo "$KAAPI_CPUSET $KAAPI_GPUSET \
 		    $execfile $m $b $verif"
-	    KAAPI_STACKSIZE_MASTER=536870912 $execfile $m $b 1 $verif 
+	    KAAPI_STACKSIZE_MASTER=536870912 $execfile $m $b $verif 
 	    done
 	done
     done
