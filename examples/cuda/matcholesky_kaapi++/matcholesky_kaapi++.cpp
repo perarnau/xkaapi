@@ -1,9 +1,7 @@
 /*
- ** kaapi_impl.h
  ** xkaapi
- ** 
- ** Created on Tue Mar 31 15:19:09 2009
- ** Copyright 2009,2010,2011,2012 INRIA.
+ **
+ ** Copyright 2009, 2010, 2011, 2012 INRIA.
  **
  ** Contributors :
  **
@@ -44,6 +42,7 @@
  ** terms.
  ** 
  */
+
 #include <iostream>
 #include <iomanip>
 #include <string>
@@ -224,7 +223,6 @@ struct doit {
   void doone_exp( int n, int block_size, int niter, int verif )
   {
     global_blocsize = block_size;
-    const int nb = n / block_size;
     double t0, t1;
     double_type* dA = (double_type*) calloc(n* n, sizeof(double_type));
     if (0 == dA) {

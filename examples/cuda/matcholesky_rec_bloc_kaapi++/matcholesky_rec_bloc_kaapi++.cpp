@@ -1,13 +1,12 @@
 /*
- ** kaapi_impl.h
  ** xkaapi
  **
- ** Created on Tue Mar 31 15:19:09 2009
- ** Copyright 2009 INRIA.
+ ** Copyright 2009, 2010, 2011, 2012 INRIA.
  **
  ** Contributors :
  **
  ** thierry.gautier@inrialpes.fr
+ ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
  ** Joao.Lima@imag.fr / joao.lima@inf.ufrgs.br
  **
  ** This software is a computer program whose purpose is to execute
@@ -43,6 +42,7 @@
  ** terms.
  **
  */
+
 #include <iostream>
 #include <iomanip>
 #include <string>

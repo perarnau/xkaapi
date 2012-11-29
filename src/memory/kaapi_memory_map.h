@@ -6,7 +6,6 @@
  ** Contributors :
  **
  ** thierry.gautier@inrialpes.fr
- ** fabien.lementec@imag.fr
  ** Joao.Lima@imagf.r / joao.lima@inf.ufrgs.br
  **
  ** This software is a computer program whose purpose is to execute

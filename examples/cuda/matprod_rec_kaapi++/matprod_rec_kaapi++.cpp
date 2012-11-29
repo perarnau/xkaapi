@@ -1,29 +1,46 @@
 /*
- * matrix-mulitpy.cilk
- *
- * An implementation of matrix multiply based on Cilk parallelization (matrix_multiply.cilk) 
- * but using Kaapi C++ construction
-
- * First of five matrix multiply examples to compare dense matrix multiplication 
- * algorithms using Cilk parallelization.
- *   Example 1: Straightforward loop parallelization of matrix multiplication.
- *
- * Copyright (c) 2007-2008 Cilk Arts, Inc.  55 Cambridge Street,
- * Burlington, MA 01803.  Patents pending.  All rights reserved. You may
- * freely use the sample code to guide development of your own works,
- * provided that you reproduce this notice in any works you make that
- * use the sample code.  This sample code is provided "AS IS" without
- * warranty of any kind, either express or implied, including but not
- * limited to any implied warranty of non-infringement, merchantability
- * or fitness for a particular purpose.  In no event shall Cilk Arts,
- * Inc. be liable for any direct, indirect, special, or consequential
- * damages, or any other damages whatsoever, for any use of or reliance
- * on this sample code, including, without limitation, any lost
- * opportunity, lost profits, business interruption, loss of programs or
- * data, even if expressly advised of or otherwise aware of the
- * possibility of such damages, whether in an action of contract,
- * negligence, tort, or otherwise.
- *
+ ** xkaapi
+ **
+ ** Copyright 2009, 2010, 2011, 2012 INRIA.
+ **
+ ** Contributors :
+ **
+ ** thierry.gautier@inrialpes.fr
+ ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+ ** Joao.Lima@imag.fr / joao.lima@inf.ufrgs.br
+ **
+ ** This software is a computer program whose purpose is to execute
+ ** multithreaded computation with data flow synchronization between
+ ** threads.
+ **
+ ** This software is governed by the CeCILL-C license under French law
+ ** and abiding by the rules of distribution of free software.  You can
+ ** use, modify and/ or redistribute the software under the terms of
+ ** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
+ ** following URL "http://www.cecill.info".
+ **
+ ** As a counterpart to the access to the source code and rights to
+ ** copy, modify and redistribute granted by the license, users are
+ ** provided only with a limited warranty and the software's author,
+ ** the holder of the economic rights, and the successive licensors
+ ** have only limited liability.
+ **
+ ** In this respect, the user's attention is drawn to the risks
+ ** associated with loading, using, modifying and/or developing or
+ ** reproducing the software by the user in light of its specific
+ ** status of free software, that may mean that it is complicated to
+ ** manipulate, and that also therefore means that it is reserved for
+ ** developers and experienced professionals having in-depth computer
+ ** knowledge. Users are therefore encouraged to load and test the
+ ** software's suitability as regards their requirements in conditions
+ ** enabling the security of their systems and/or data to be ensured
+ ** and, more generally, to use and operate it in the same conditions
+ ** as regards security.
+ **
+ ** The fact that you are presently reading this means that you have
+ ** had knowledge of the CeCILL-C license and that you accept its
+ ** terms.
+ **
  */
 
 #include <iostream>
@@ -33,7 +50,13 @@
 #include <math.h>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
+#if defined(CONFIG_USE_DOUBLE)
 typedef double double_type;
+#elif defined(CONFIG_USE_FLOAT)
+typedef float double_type;
+#endif
+
+
 
 #include "../matrix/matrix.h"
 

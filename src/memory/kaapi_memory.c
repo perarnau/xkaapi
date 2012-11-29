@@ -1,12 +1,13 @@
 /*
 ** xkaapi
 ** 
-** Copyright 2010 INRIA.
+** Copyright 2009,2010,2011,2012 INRIA.
 **
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
 ** fabien.lementec@imag.fr
+** Joao.Lima@imagf.r / joao.lima@inf.ufrgs.br 
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between

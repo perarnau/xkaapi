@@ -899,6 +899,7 @@ AM_CONDITIONAL([KAAPI_TARGET_KACC],[test x"$KAAPI_USE_KACC" = x"yes"])
 
 
 AM_CONDITIONAL([KAAPI_HAVE_CBLAS],[test x"$CBLAS_LDFLAGS" != x])
+AM_CONDITIONAL([KAAPI_HAVE_LAPACKE],[test x"$LAPACKE_LDFLAGS" != x])
 
 dnl -----------------------------------------------------------------------
 dnl Dependencies between libs
@@ -954,6 +955,8 @@ ACX_LIB_LINK([KAAPIXXPROGS], [KAAPIXXLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIXXPROGS],
 	[-I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
 	[\$(top_builddir)/api/kaapixx/libkaapi++.la \$(top_builddir)/src/libkaapi.la])
+ACX_LIB_LINK([KAAPIXXPROGS], [CUDA])
+ACX_LIB_LINK([KAAPIXXPROGS], [CUPTI])
 
 ACX_LIB_LINK([KANETPROGS], [KANETLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KANETPROGS],
