@@ -105,8 +105,16 @@ void kaapi_memory_address_space_synchronize_peer2peer(kaapi_address_space_id_t d
 
 void* kaapi_memory_get_host_pointer(void* const gpu_ptr)
 {
-  /* TODO */
-  kaapi_assert(0);
+  kaapi_metadata_info_t* kmdi = kaapi_memory_find_metadata(gpu_ptr);
+  const kaapi_address_space_id_t host_kasid = KAAPI_EMPTY_ADDRESS_SPACE_ID;
+
+  if(kaapi_metadata_info_has_data(kmdi, host_kasid))
+  {
+    kaapi_data_t* kdata = kaapi_metadata_info_get_data(kmdi, host_kasid);
+    kaapi_assert_debug(kdata != 0);
+    return kaapi_pointer2void(kdata->ptr);
+  }
+  
   return NULL;
 }
 
