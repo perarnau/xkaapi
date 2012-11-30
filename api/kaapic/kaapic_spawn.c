@@ -168,9 +168,9 @@
 typedef struct kaapic_arg_sig
 {
   struct {
-    kaapi_access_mode_t        mode : 8;
+    kaapi_access_mode_t        mode : 16;
     int                        type : 8;
-    int                        redop: 16;
+    int                        redop: 8;
   } /* anonymous */;
   kaapi_memory_view_t          view;
   const struct kaapi_format_t* format;
