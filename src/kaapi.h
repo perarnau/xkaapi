@@ -99,7 +99,9 @@ extern "C" {
 #elif defined(__APPLE__)
 #endif
 
-#ifdef __GNUC__
+#ifdef __BIGGEST_ALIGNMENT__
+#  define KAAPI_MAX_DATA_ALIGNMENT __BIGGEST_ALIGNMENT__
+#elif defined(__GNUC__)
 #  define KAAPI_MAX_DATA_ALIGNMENT (__alignof__(void*))
 #else
 #  define KAAPI_MAX_DATA_ALIGNMENT 8
@@ -775,11 +777,10 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, uint32_t coun
 */
 static inline void* kaapi_thread_pushdata_align(kaapi_thread_t* thread, uint32_t count, uintptr_t align)
 {
-  kaapi_assert_debug( (align !=0) && ((align == 8) || (align == 4) || (align == 2)));
+  kaapi_assert_debug( (align !=0) && (KAAPI_MAX_DATA_ALIGNMENT >= align) && ((align & (align - 1)) == 0));
   const uintptr_t mask = align - (uintptr_t)1;
 
-  if ((uintptr_t)thread->sp_data & mask)
-    thread->sp_data = (char*)((uintptr_t)(thread->sp_data + align) & ~mask);
+  thread->sp_data = (char*)((uintptr_t)(thread->sp_data + mask) & ~mask);
 
   return kaapi_thread_pushdata(thread, count);
 }
