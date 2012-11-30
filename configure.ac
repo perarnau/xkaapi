@@ -74,9 +74,8 @@ AC_LANG_POP([C++])
 AC_MSG_RESULT([$have_cxx])
 AM_CONDITIONAL([HAVE_CXX],[test $have_cxx = yes])
 
-# if next line is comented out, we can create only dynamic libraries be default
-# AC_DISABLE_STATIC
-LT_INIT
+# by default, only build shared libraries
+LT_INIT([disable-static])
 AC_SUBST(LIBTOOL_DEPS)
 
 AC_PROG_MKDIR_P
