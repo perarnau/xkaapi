@@ -49,20 +49,20 @@
 #include "fib_verify.h"
 
 
-void fibonacci(const int* n, int* result)
+void fibonacci(const int n, int* result)
 {
   /* task user specific code */
-  if (*n<2)
-    *result += *n;
+  if (n<2)
+    *result += n;
   else
   {
     kaapic_spawn(0, 2, fibonacci, 
-        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, *n-1, 
+        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, n-1,
         KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, KAAPIC_TYPE_INT, 1, result
     );
 
     kaapic_spawn(0, 2, fibonacci, 
-        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, *n-2,
+        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, n-2,
         KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, KAAPIC_TYPE_INT, 1, result
     );
   }

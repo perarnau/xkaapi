@@ -44,9 +44,9 @@
 #include <stdio.h>
 #include "kaapic.h"
 
-void body(const int* n, int* result)
+void body(const int n, int* result)
 {
-  *result = *n;
+  *result = n;
 }
 
 

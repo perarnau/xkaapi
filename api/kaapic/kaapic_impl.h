@@ -161,48 +161,6 @@ extern void kaapic_foreach_body2user_ull(
   kaapic_body_arg_t* arg 
 );
 
-
-/*
-*/
-typedef struct kaapic_arg_info_t
-{
-  struct {
-    kaapi_access_mode_t        mode : 8;
-    int                        type : 8;
-    int                        redop: 16;
-  } u;
-  kaapi_memory_view_t          view;
-  const struct kaapi_format_t* format;
-
-  /* kaapi versionning for shared pointer also used to store 
-     address of union 'value' for by-value argument: the value is copied into 
-     the version field of the access and cannot be greather than sizeof(void*)
-  */
-  kaapi_access_t                access;
-
-} kaapic_arg_info_t;
-
-
-/*
-*/
-typedef struct kaapic_task_info
-{
-  void             (*body)();
-  uintptr_t          nargs;
-  kaapic_arg_info_t* args;
-} kaapic_task_info_t;
-
-
-/*
-*/
-extern int kaapic_spawn_ti(
-  kaapi_thread_t* thread,
-  const kaapic_spawn_attr_t* attr,
-  kaapi_task_body_t body, 
-  kaapic_task_info_t* ti
-);
-
-
 /* work array distribution. allow for random access. 
    The thread tid has a reserved slice [first, last)
    iff map[tid] != 0.
@@ -642,8 +600,6 @@ static inline int kaapic_local_workqueue_pop_withdatadistribution_ull(
 /* misc: for API F */
 extern void kaapic_save_frame(void);
 extern void kaapic_restore_frame(void);
-extern void kaapic_dfg_body(void* p, kaapi_thread_t* t);
-extern void kaapic_dfg_body_scratch(void* p, kaapi_thread_t* t);
 
 #if defined(__cplusplus)
 }

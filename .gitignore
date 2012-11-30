@@ -12,9 +12,7 @@
 /api/kaapic/kaapic_adaptive_switch.h
 /api/kaapic/kaapic_adaptive_switch_ull.h
 /api/kaapic/kaapic_dfg_switch.h
-/api/kaapic/kaapic_dfg_wh_switch.h
 /api/kaapif/kaapif_adaptive_switch.h
-/api/kaapif/kaapif_dfg_switch.h
 /api/kaapif/kaapif.inc
 /api/kaapif/kaapif.inc.f90
 /api/kaapif/kaapif.inc.f95

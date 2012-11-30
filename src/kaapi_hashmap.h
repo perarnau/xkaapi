@@ -69,6 +69,7 @@ struct kaapi_version_t;
 struct kaapi_metadata_info_t;
 struct kaapi_mem_data_t;
 struct kaapi_cuda_mem_cache_blk_t;
+struct kaapic_task_sig;
 
 /** pair of pointer,int 
     Used to display tasklist
@@ -108,6 +109,7 @@ typedef struct kaapi_hashentries_t {
     struct kaapi_taskdescr_t*     td;          /* */
     struct kaapi_mem_data_t*	 kmd;
     struct kaapi_cuda_mem_cache_blk_t*    block;
+    struct kaapic_task_sig*       ts;
   } u;
   const void*                     key;
   struct kaapi_hashentries_t*     next; 

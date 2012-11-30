@@ -17,7 +17,6 @@ libkaapif_la_LIBADD=../../src/libkaapi.la $(KAAPILIB_BUILD_LIBS)
 
 
 M4_BUILT_FILES=\
-  kaapif_dfg_switch.h \
   kaapif_inc.h \
   kaapif.inc \
   kaapif.inc.f90 \
@@ -25,7 +24,6 @@ M4_BUILT_FILES=\
   kaapif_adaptive_switch.h
 
 M4_SRCS=\
-  kaapif_dfg_switch.m4 \
   kaapif_adaptive_switch.m4 \
   kaapif_inc.m4 \
   m4_generator \
@@ -52,7 +50,6 @@ libkaapif_la_SOURCES=\
 	kaapif_foreach.c \
 	kaapif_spawn.c \
 	kaapif_inc.h \
-	kaapif_dfg_switch.h \
 	kaapif_adaptive_switch.h
 
 endif

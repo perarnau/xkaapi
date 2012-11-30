@@ -88,22 +88,18 @@ COUNTER=$1
 MAX_NUMBER_PARAMS=$1
 ## `expr $1 + 1`
 
-makeheader "/*" " *" " */"> kaapif_dfg_switch.h
 makeheader "/*" " *" " */"> kaapif_adaptive_switch.h
 
-makeswitchdfg >> kaapif_dfg_switch.h
 makeswitchadaptative >> kaapif_adaptive_switch.h
 
 while [ $COUNTER -ge 0 ]
 do
-      m4 -DKAAPI_NUMBER_PARAMS=$NUMBER -DKAAPI_MAX_NUMBER_PARAMS=$MAX_NUMBER_PARAMS m4_macros  kaapif_dfg_switch.m4 >> kaapif_dfg_switch.h
       m4 -DKAAPI_NUMBER_PARAMS=$NUMBER -DKAAPI_MAX_NUMBER_PARAMS=$MAX_NUMBER_PARAMS m4_macros  kaapif_adaptive_switch.m4 >> kaapif_adaptive_switch.h
       echo "Generating file: $file step $NUMBER :-)"
       NUMBER=`expr $NUMBER + 1`
       COUNTER=`expr $COUNTER - 1`
 done
 
-makeendswitch >> kaapif_dfg_switch.h
 makeendswitch >> kaapif_adaptive_switch.h
 
 #############################################################

@@ -45,7 +45,7 @@
 #include <stdint.h>
 #include "kaapic.h"
 
-void body(const int* n, int* result, int* tmp)
+void body(const int n, int* result, int* tmp)
 {
   *result = (int)(uintptr_t)tmp;
 }
