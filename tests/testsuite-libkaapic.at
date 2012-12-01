@@ -49,3 +49,11 @@ dnl checking nqueen implementations
 KAT_ABIC_CHECK_PROG([nqueens_stackpointer],[checking nqueens],[nqueens],[],[],
 [Total number of solutions: 92
 ])
+
+dnl ******************************************************
+dnl checking implementation details
+
+KAT_ABIC_CHECK_PROG([test_begend_parallel],[checking iteration of parallel sections],[],[],[|sed -e 's/Time: .*/Time:/'],
+[Time:
+])
+
