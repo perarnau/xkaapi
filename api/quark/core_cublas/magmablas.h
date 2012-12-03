@@ -32,6 +32,10 @@ void magmablas_dswapblk_kaapixx(cudaStream_t stream, int n,
                     double *dA2T, int lda2,
                     int i1, int i2, int *ipiv, int inci, int offset);
   
+void magmablas_dlacpy_kaapixx(cudaStream_t stream, char uplo, int m, int n,
+                                double *a, int lda,
+                              double *b, int ldb );
+  
 void magmablas_slaswp_kaapixx(cudaStream_t stream, int n, float *dAT, int lda,
                               int i1, int i2, int *ipiv, int inci);
 

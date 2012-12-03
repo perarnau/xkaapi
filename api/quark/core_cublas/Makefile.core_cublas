@@ -4,9 +4,9 @@ NVCC := nvcc
 CFLAGS := -g -DKAAPI_USE_CUDA -I.. -I$(HOME)/install/xkaapi/default/include \
 	  $(CBLAS_CFLAGS) \
 	  $(LAPACKE_CFLAGS) \
-	  -I$(HOME)/progs/plasma/plasma_2.4.2/include \
+	  -I$(HOME)/plasma_2.4.2/include \
 	  $(CUDA_CFLAGS) \
-	# -DCONFIG_VERBOSE
+	 #-DCONFIG_VERBOSE
 
 SRC := \
     core_dgemm.c \
@@ -15,6 +15,10 @@ SRC := \
     core_dtrsm.c \
     core_dssssm.c \
     core_dgessm.c \
+    core_dtsmqr.c \
+    core_dtsrfb.c \
+    core_dormqr.c \
+    core_dlarfb_gemm.c \
     core_init.c
 
 OBJS := $(SRC:.c=.o) magmablas.o
@@ -24,7 +28,7 @@ LIB_la := libcore_cublas.la
 all: $(LIB_la)
 
 magmablas.o: magmablas.cu
-	$(NVCC) -arch=sm_20 $(CFLAGS) -c $< -o $@
+	$(NVCC) --machine 64 -arch=sm_20 $(CFLAGS) -c $< -o $@
 
 .c.o: 
 	$(CC) $(CFLAGS) -c $< -o $@

@@ -36,4 +36,30 @@ void core_cublas_init(void)
   QUARK_Task_Set_Function_Params(CORE_dgessm_quark, NULL, CORE_dgessm_quark_cublas,
                                  QUARK_ARCH_DEFAULT,
                                  KAAPI_TASK_MIN_PRIORITY);
+
+  QUARK_Task_Set_Function_Params(CORE_dgeqrt_quark, NULL, NULL,
+                                 QUARK_ARCH_CPU_ONLY,
+                                 KAAPI_TASK_MAX_PRIORITY);
+
+  QUARK_Task_Set_Function_Params(CORE_dormqr_quark, NULL, CORE_dormqr_quark_cublas,
+                                 QUARK_ARCH_DEFAULT,
+                                 KAAPI_TASK_MIN_PRIORITY);
+  
+  QUARK_Task_Set_Function_Params(CORE_dtsqrt_quark, NULL, NULL,
+                                 QUARK_ARCH_CPU_ONLY,
+                                 KAAPI_TASK_MAX_PRIORITY);
+  
+  QUARK_Task_Set_Function_Params(CORE_dtsmqr_quark, NULL, CORE_dtsmqr_quark_cublas,
+                                 QUARK_ARCH_DEFAULT,
+                                 KAAPI_TASK_MIN_PRIORITY);
+  
+  /* Tile CAQR */
+  QUARK_Task_Set_Function_Params(CORE_dttqrt_quark, NULL, NULL,
+                                 QUARK_ARCH_CPU_ONLY,
+                                 KAAPI_TASK_MAX_PRIORITY);
+  
+  /* Tile CAQR */
+  QUARK_Task_Set_Function_Params(CORE_dttmqr_quark, NULL, NULL,
+                                 QUARK_ARCH_CPU_ONLY,
+                                 KAAPI_TASK_MAX_PRIORITY);
 }

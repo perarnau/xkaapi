@@ -158,10 +158,11 @@ static kaapi_cuda_request_t
 #if CONFIG_USE_EVENT
   res = cudaEventCreateWithFlags(&req->event, cudaEventDisableTiming);
   if (res != cudaSuccess) {
-    fprintf(stdout, "%s: cudaEventCreateWithFlags ERROR %d\n",
-	    __FUNCTION__, res);
+    fprintf(stdout, "%s:%d:%s: ERROR %s (%d) kid=%d\n",
+            __FILE__, __LINE__, __FUNCTION__, cudaGetErrorString(res), res,
+            kaapi_get_self_kid() );
     fflush(stdout);
-    abort();
+    abort();    
   }
 #endif
 

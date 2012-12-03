@@ -226,136 +226,203 @@ __global__ void magmagpu_sswapblkcm_kaapixx( kaapixx_magmagpu_sswapblk_params_t 
   __syncthreads();
 }
 
+__global__ void magmagpu_dlacpy_kaapixx_kernel_LU(int m, int n,
+                                                  double *a, int lda,
+                                                  double *b, int ldb )
+{
+  const int i = blockIdx.x*64 + threadIdx.x;
+  int j;
+  
+  if( i >= n )
+    return;
+  
+  for (j = 0; j < m; j++) {
+    b[i + j * ldb] = a[i + j * lda];
+  }
+}
+
+__global__ void magmagpu_dlacpy_kaapixx_kernel_U(int m, int n,
+                                                 double *a, int lda,
+                                                 double *b, int ldb )
+{
+  const int i = blockIdx.x*64 + threadIdx.x;
+  int j;
+  
+  if( i >= m )
+    return;
+  
+  const int i__ = min(i, n);
+  
+  for (j = 0; j < i__; j++) {
+    b[j + i * ldb] = a[j + i * lda];
+  }
+}
+
+__global__ void magmagpu_dlacpy_kaapixx_kernel_L(int m, int n,
+                                                 double *a, int lda,
+                                                 double *b, int ldb )
+{
+  const int i = blockIdx.x*64 + threadIdx.x;
+  int j;
+  
+  if( i >= m )
+    return;
+  
+  for (j = i; j < n; j++) {
+    b[j + i * ldb] = a[j + i * lda];
+  }
+}
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
   
 #include <stdio.h>
   
-  void dlaswp3_kaapixx( cudaStream_t stream, kaapixx_dlaswp_params_t2 &params )
-  {
-    int blocksize = 64;
-    dim3 blocks = (params.n+blocksize-1) / blocksize;
-    mydlaswp2_kaapixx<<< blocks, blocksize, 0, stream >>>( params );
+void dlaswp3_kaapixx( cudaStream_t stream, kaapixx_dlaswp_params_t2 &params )
+{
+  int blocksize = 64;
+  dim3 blocks = (params.n+blocksize-1) / blocksize;
+  mydlaswp2_kaapixx<<< blocks, blocksize, 0, stream >>>( params );
 #if defined(CONFIG_DEBUG)
-    cudaError_t res = cudaGetLastError();
-    if(res != cudaSuccess){
-      fprintf(stdout, "ERROR in %s: %s\n", __FUNCTION__, cudaGetErrorString(res));
-      fflush(stdout);
-    }
-#endif
+  cudaError_t res = cudaGetLastError();
+  if(res != cudaSuccess){
+    fprintf(stdout, "ERROR in %s: %s\n", __FUNCTION__, cudaGetErrorString(res));
+    fflush(stdout);
   }
+#endif
+}
 
-  void slaswp3_kaapixx( cudaStream_t stream, kaapixx_slaswp_params_t2 &params )
-  {
-    int blocksize = 64;
-    dim3 blocks = (params.n+blocksize-1) / blocksize;
-    myslaswp2_kaapixx<<< blocks, blocksize, 0, stream >>>( params );
+void slaswp3_kaapixx( cudaStream_t stream, kaapixx_slaswp_params_t2 &params )
+{
+  int blocksize = 64;
+  dim3 blocks = (params.n+blocksize-1) / blocksize;
+  myslaswp2_kaapixx<<< blocks, blocksize, 0, stream >>>( params );
 #if defined(CONFIG_DEBUG)
-    cudaError_t res = cudaGetLastError();
-    if(res != cudaSuccess){
-      fprintf(stdout, "ERROR in %s: %s\n", __FUNCTION__, cudaGetErrorString(res));
-      fflush(stdout);
-    }
+  cudaError_t res = cudaGetLastError();
+  if(res != cudaSuccess){
+    fprintf(stdout, "ERROR in %s: %s\n", __FUNCTION__, cudaGetErrorString(res));
+    fflush(stdout);
+  }
 #endif
-  }
-  
-  void
-  magmablas_dlaswp_kaapixx( cudaStream_t stream, int n, double *dAT, int lda,
-                   int i1, int i2, int *ipiv, int inci )
-  {
-    int k;
-    
-    for( k=(i1-1); k<i2; k+=BLOCK_SIZE )
-    {
-      int sb = min(BLOCK_SIZE, i2-k);
-      //dlaswp_params_t params = { dAT, lda, lda, ind + k };
-      kaapixx_dlaswp_params_t2 params = { dAT+k*lda, n, lda, 0, sb };
-      for( int j = 0; j < sb; j++ )
-      {
-        params.ipiv[j] = ipiv[(k+j)*inci] - k - 1;
-      }
-      dlaswp3_kaapixx( stream, params );
-    }
-  }
+}
 
-  void
-  magmablas_slaswp_kaapixx( cudaStream_t stream, int n, float *dAT, int lda,
-                           int i1, int i2, int *ipiv, int inci )
-  {
-    int k;
-    
-    for( k=(i1-1); k<i2; k+=BLOCK_SIZE )
-    {
-      int sb = min(BLOCK_SIZE, i2-k);
-      //dlaswp_params_t params = { dAT, lda, lda, ind + k };
-      kaapixx_slaswp_params_t2 params = { dAT+k*lda, n, lda, 0, sb };
-      for( int j = 0; j < sb; j++ )
-      {
-        params.ipiv[j] = ipiv[(k+j)*inci] - k - 1;
-      }
-      slaswp3_kaapixx( stream, params );
-    }
-  }
+void
+magmablas_dlaswp_kaapixx( cudaStream_t stream, int n, double *dAT, int lda,
+                 int i1, int i2, int *ipiv, int inci )
+{
+  int k;
   
-  void magmablas_dtranspose_kaapixx(cudaStream_t stream, double *odata, int ldo,
-                            double *idata, int ldi,
-                            int m, int n )
+  for( k=(i1-1); k<i2; k+=BLOCK_SIZE )
   {
-    dim3 threads( DSIZE_1SHARED, 8, 1 );
-    dim3 grid( m/32, n/32, 1 );
-    dtranspose_32_kaapixx<<<grid, threads, 0, stream>>>( odata, ldo, idata, ldi );
-  }
-  
-  void magmablas_dswapblk_kaapixx(cudaStream_t stream, int n,
-                          double *dA1T, int lda1,
-                          double *dA2T, int lda2,
-                          int i1, int i2, int *ipiv, int inci, int offset)
-  {
-    int  blocksize = 64;
-    dim3 blocks( (n+blocksize-1) / blocksize, 1, 1);
-    int  k, im;
-    
-    for( k=(i1-1); k<i2; k+=BLOCK_SIZE )
+    int sb = min(BLOCK_SIZE, i2-k);
+    //dlaswp_params_t params = { dAT, lda, lda, ind + k };
+    kaapixx_dlaswp_params_t2 params = { dAT+k*lda, n, lda, 0, sb };
+    for( int j = 0; j < sb; j++ )
     {
-      int sb = min(BLOCK_SIZE, i2-k);
-      kaapixx_magmagpu_dswapblk_params_t params = { dA1T+k*lda1, dA2T, n, lda1, lda2, sb };
-      for( int j = 0; j < sb; j++ )
-      {
-        im = ipiv[(k+j)*inci] - 1;
-        if ( (k+j) == im)
-          params.ipiv[j] = -1;
-        else
-          params.ipiv[j] = im - offset;
-      }
-      magmagpu_dswapblkrm_kaapixx<<< blocks, blocksize, 0, stream >>>( params );
+      params.ipiv[j] = ipiv[(k+j)*inci] - k - 1;
     }
+    dlaswp3_kaapixx( stream, params );
   }
+}
+
+void
+magmablas_slaswp_kaapixx( cudaStream_t stream, int n, float *dAT, int lda,
+                         int i1, int i2, int *ipiv, int inci )
+{
+  int k;
   
-  void magmablas_sswapblk_kaapixx(cudaStream_t stream, int n,
-                                  float *dA1T, int lda1,
-                                  float *dA2T, int lda2,
-                                  int i1, int i2, int *ipiv, int inci, int offset)
+  for( k=(i1-1); k<i2; k+=BLOCK_SIZE )
   {
-    int  blocksize = 64;
-    dim3 blocks( (n+blocksize-1) / blocksize, 1, 1);
-    int  k, im;
-    
-    for( k=(i1-1); k<i2; k+=BLOCK_SIZE )
+    int sb = min(BLOCK_SIZE, i2-k);
+    //dlaswp_params_t params = { dAT, lda, lda, ind + k };
+    kaapixx_slaswp_params_t2 params = { dAT+k*lda, n, lda, 0, sb };
+    for( int j = 0; j < sb; j++ )
     {
-      int sb = min(BLOCK_SIZE, i2-k);
-      kaapixx_magmagpu_sswapblk_params_t params = { dA1T+k*lda1, dA2T, n, lda1, lda2, sb };
-      for( int j = 0; j < sb; j++ )
-      {
-        im = ipiv[(k+j)*inci] - 1;
-        if ( (k+j) == im)
-          params.ipiv[j] = -1;
-        else
-          params.ipiv[j] = im - offset;
-      }
-      magmagpu_sswapblkrm_kaapixx<<< blocks, blocksize, 0, stream >>>( params );
+      params.ipiv[j] = ipiv[(k+j)*inci] - k - 1;
     }
+    slaswp3_kaapixx( stream, params );
   }
+}
+
+void magmablas_dtranspose_kaapixx(cudaStream_t stream, double *odata, int ldo,
+                          double *idata, int ldi,
+                          int m, int n )
+{
+  dim3 threads( DSIZE_1SHARED, 8, 1 );
+  dim3 grid( m/32, n/32, 1 );
+  dtranspose_32_kaapixx<<<grid, threads, 0, stream>>>( odata, ldo, idata, ldi );
+}
+
+void magmablas_dswapblk_kaapixx(cudaStream_t stream, int n,
+                        double *dA1T, int lda1,
+                        double *dA2T, int lda2,
+                        int i1, int i2, int *ipiv, int inci, int offset)
+{
+  int  blocksize = 64;
+  dim3 blocks( (n+blocksize-1) / blocksize, 1, 1);
+  int  k, im;
+  
+  for( k=(i1-1); k<i2; k+=BLOCK_SIZE )
+  {
+    int sb = min(BLOCK_SIZE, i2-k);
+    kaapixx_magmagpu_dswapblk_params_t params = { dA1T+k*lda1, dA2T, n, lda1, lda2, sb };
+    for( int j = 0; j < sb; j++ )
+    {
+      im = ipiv[(k+j)*inci] - 1;
+      if ( (k+j) == im)
+        params.ipiv[j] = -1;
+      else
+        params.ipiv[j] = im - offset;
+    }
+    magmagpu_dswapblkrm_kaapixx<<< blocks, blocksize, 0, stream >>>( params );
+  }
+}
+
+void magmablas_sswapblk_kaapixx(cudaStream_t stream, int n,
+                                float *dA1T, int lda1,
+                                float *dA2T, int lda2,
+                                int i1, int i2, int *ipiv, int inci, int offset)
+{
+  int  blocksize = 64;
+  dim3 blocks( (n+blocksize-1) / blocksize, 1, 1);
+  int  k, im;
+  
+  for( k=(i1-1); k<i2; k+=BLOCK_SIZE )
+  {
+    int sb = min(BLOCK_SIZE, i2-k);
+    kaapixx_magmagpu_sswapblk_params_t params = { dA1T+k*lda1, dA2T, n, lda1, lda2, sb };
+    for( int j = 0; j < sb; j++ )
+    {
+      im = ipiv[(k+j)*inci] - 1;
+      if ( (k+j) == im)
+        params.ipiv[j] = -1;
+      else
+        params.ipiv[j] = im - offset;
+    }
+    magmagpu_sswapblkrm_kaapixx<<< blocks, blocksize, 0, stream >>>( params );
+  }
+}
+
+void magmablas_dlacpy_kaapixx(cudaStream_t stream, char uplo, int m, int n,
+                              double *a, int lda,
+                              double *b, int ldb )
+{
+  dim3 threads( 64 );
+  dim3 grid( m/64 + (m%64 != 0) );
+  
+  if ( m == 0 || n == 0 )
+    return;
+
+  if ( (uplo == 'U') || (uplo == 'u') ) {
+    magmagpu_dlacpy_kaapixx_kernel_U<<< grid, threads, 0, stream >>> ( m, n, a, lda, b, ldb );
+  } else if ( (uplo == 'L') || (uplo == 'l') ) {
+    magmagpu_dlacpy_kaapixx_kernel_L<<< grid, threads, 0, stream >>> ( m, n, a, lda, b, ldb );
+  } else {
+    magmagpu_dlacpy_kaapixx_kernel_LU<<< grid, threads, 0, stream >>> ( m, n, a, lda, b, ldb );
+  }
+}
+  
   
 #if defined(__cplusplus)
 }

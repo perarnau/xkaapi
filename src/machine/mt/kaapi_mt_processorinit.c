@@ -174,7 +174,14 @@ int kaapi_processor_destroy(kaapi_processor_t* kproc)
   for (int i=0; i<16; ++i)
   {
     if (kproc->data_specific[i] !=0)
-      free(kproc->data_specific[i]);
+    {
+#if defined(KAAPI_USE_CUDA)
+      if (kproc->proc_type == KAAPI_PROC_TYPE_CUDA)
+        kaapi_cuda_mem_free(kaapi_make_localpointer(kproc->data_specific[i]));
+      else
+#endif
+        free(kproc->data_specific[i]);
+    }
     kproc->data_specific[i] = 0;
     kproc->size_specific[i] = 0;
   }

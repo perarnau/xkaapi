@@ -60,6 +60,38 @@ int CORE_dgessm_cublas(int M, int N, int K, int IB,
                        double *A, int LDA);
 void CORE_dgessm_quark_cublas(Quark *quark);
   
+int CORE_dtsmqr_cublas(int side, int trans,
+                       int M1, int N1, int M2, int N2, int K, int IB,
+                       double *A1, int LDA1,
+                       double *A2, int LDA2,
+                       double *V, int LDV,
+                       double *T, int LDT,
+                       double *WORK, int LDWORK);
+void CORE_dtsmqr_quark_cublas(Quark *quark);
+  
+int CORE_dtsrfb_cublas(int side, int trans, int direct, int storev,
+                       int M1, int N1, int M2, int N2, int K,
+                       double *A1, int LDA1,
+                       double *A2, int LDA2,
+                       double *V, int LDV,
+                       double *T, int LDT,
+                       double *WORK, int LDWORK);
+  
+int CORE_dormqr_cublas(int side, int trans,
+                       int M, int N, int K, int IB,
+                       double *A, int LDA,
+                       double *T, int LDT,
+                       double *C, int LDC,
+                       double *WORK, int LDWORK);
+  
+void CORE_dormqr_quark_cublas(Quark *quark);
+  
+int CORE_dlarfb_gemm_cublas(PLASMA_enum side, PLASMA_enum trans, int direct, int storev,
+                            int M, int N, int K,
+                            const double *V, int LDV,
+                            const double *T, int LDT,
+                            double *C, int LDC,
+                            double *WORK, int LDWORK);
 
 #ifdef __cplusplus
 }
