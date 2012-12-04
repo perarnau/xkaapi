@@ -234,7 +234,7 @@ Quark *QUARK_Setup(int num_threads)
 {
   static kaapi_atomic_t isinit = {0};
   
-  if (KAAPI_ATOMIC_INCR(&isinit) > 1) 
+  if (KAAPI_ATOMIC_INCR(&isinit) > 1)
   {
     /* already initialized */
     kaapi_processor_t* kproc = kaapi_get_current_processor();
@@ -597,14 +597,6 @@ void QUARK_Worker_Loop(Quark *quark, int thread_rank)
 /* Finish work and return.  Workers do not exit */
 void QUARK_Barrier(Quark * quark)
 {
-#if defined(TRACE)
-printf("IN %s\n", __PRETTY_FUNCTION__);  
-  fflush(stdout);
-#endif
-#if defined(TRACE)
-printf("OUT %s\n", __PRETTY_FUNCTION__);  
-  fflush(stdout);
-#endif
 }
 
 /* Just wait for current tasks to complete, the scheduler and
@@ -612,37 +604,19 @@ printf("OUT %s\n", __PRETTY_FUNCTION__);
  * scheduler.  The workers return from their loops.*/
 void QUARK_Waitall(Quark * quark)
 {
-//  kaapi_assert_debug( quark->thread == kaapi_self_thread_context() );
-#if defined(TRACE)
-printf("IN %s\n", __PRETTY_FUNCTION__);  
-  fflush(stdout);
-#endif
   if (quark->sequence !=0) {
     QUARK_Sequence_Wait(quark, quark->sequence);
     kaapi_memory_synchronize();
   }
   else {
     kaapi_sched_sync();
-//    kaapi_assert_debug( quark->thread == kaapi_self_thread_context() );
   }
-#if defined(TRACE)
-printf("OUT %s\n", __PRETTY_FUNCTION__);  
-  fflush(stdout);
-#endif
 }
 
 /* Delete scheduler, shutdown threads, finish everything, free structures */
 void QUARK_Delete(Quark * quark)
 {
-#if defined(TRACE)
-printf("IN %s\n", __PRETTY_FUNCTION__);  
-  fflush(stdout);
-#endif
   kaapi_end_parallel(0);
-#if defined(TRACE)
-printf("OUT %s\n", __PRETTY_FUNCTION__);  
-  fflush(stdout);
-#endif
   kaapi_memory_synchronize();
   kaapi_finalize();
 }
@@ -650,10 +624,6 @@ printf("OUT %s\n", __PRETTY_FUNCTION__);
 /* Free scheduling data structures */
 void QUARK_Free(Quark * quark)
 {
-#if defined(TRACE)
-printf("IN/OUT %s\n", __PRETTY_FUNCTION__);  
-  fflush(stdout);
-#endif
   kaapi_memory_synchronize();
 //  kaapi_finalize();
 }
@@ -846,10 +816,6 @@ static Quark_Sequence* last_qs_free = 0;
 /* Create a seqeuence structure, to hold sequences of tasks */
 Quark_Sequence *QUARK_Sequence_Create( Quark *quark )
 {
-#if defined(TRACE)
-printf("IN %s\n", __PRETTY_FUNCTION__);  fflush(stdout);
-#endif
-//  kaapi_assert( quark->thread == kaapi_self_thread_context() );
   kaapi_thread_context_t* thread = kaapi_self_thread_context();
   
   /* activate static schedule */
@@ -873,25 +839,10 @@ printf("IN %s\n", __PRETTY_FUNCTION__);  fflush(stdout);
 
   /* push new frame for task */
   qs->save_fp = *(kaapi_frame_t*)thread->stack.sfp;
-  thread->stack.sfp[1] = qs->save_fp;
-  kaapi_writemem_barrier();
-  ++thread->stack.sfp;
+  kaapi_thread_push_frame_(thread);
 
-#if defined(TRACE)
-  printf("Push Frame, in static sched: thread:%p, sfp:%p = {pc:%p, sp:%p, spdata:%p}\n", 
-      thread, 
-      thread->stack.sfp,
-      thread->stack.sfp->pc,
-      thread->stack.sfp->sp,
-      thread->stack.sfp->sp_data
-  );
-  fflush(stdout);
-#endif
   quark->sequence = qs;
   qs->state_init |= QUARK_SEQUENCE_INIT;
-#if defined(TRACE)
-printf("OUT %s\n", __PRETTY_FUNCTION__);  fflush(stdout);
-#endif
   return qs;
 }
 
@@ -970,7 +921,6 @@ printf("IN %s\n", __PRETTY_FUNCTION__);  fflush(stdout);
   kaapi_thread_tasklistready_push_init( &sequence->frame_tasklist.tasklist, &sequence->frame_tasklist.readylist);
 
   thread->stack.sfp->tasklist = &sequence->frame_tasklist.tasklist;
-  
 
   if (quark_dump_dot)
   {
@@ -995,30 +945,11 @@ printf("IN %s\n", __PRETTY_FUNCTION__);  fflush(stdout);
   /* real execution of tasks: here */
   kaapi_sched_sync_(thread);
 
-  /* Pop & restore the frame: should use popframe */
-  kaapi_sched_lock(&thread->stack.lock);
   thread->stack.sfp->tasklist = 0;
+  kaapi_thread_pop_frame_(thread);
   
-  --thread->stack.sfp;
-  *thread->stack.sfp = sequence->save_fp;
-  kaapi_sched_unlock(&thread->stack.lock);
-
 #if defined(STATIC)
   kaapi_frame_tasklist_destroy( &sequence->frame_tasklist );
-#endif
-  
-#if defined(TRACE)
-  printf("Pop Frame, in static sched: thread:%p, sfp:%p = {pc:%p, sp:%p, spdata:%p}\n", 
-      thread, 
-      thread->stack.sfp,
-      thread->stack.sfp->pc,
-      thread->stack.sfp->sp,
-      thread->stack.sfp->sp_data
-  );
-  fflush(stdout);
-#endif
-#if defined(TRACE)
-printf("OUT %s\n", __PRETTY_FUNCTION__);  fflush(stdout);
 #endif
   
   return 1;

@@ -5,10 +5,12 @@ CFLAGS := -g -DKAAPI_USE_CUDA -I.. -I$(HOME)/install/xkaapi/default/include \
 	  $(CBLAS_CFLAGS) \
 	  $(LAPACKE_CFLAGS) \
 	  -I$(HOME)/plasma_2.4.2/include \
+	  -I$(HOME)/plasma_2.4.2 \
 	  $(CUDA_CFLAGS) \
 	 #-DCONFIG_VERBOSE
 
 SRC := \
+    core_dpotrf.c \
     core_dgemm.c \
     core_sgemm.c \
     core_dsyrk.c \

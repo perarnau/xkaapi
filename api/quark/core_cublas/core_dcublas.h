@@ -22,6 +22,8 @@
 extern "C" {
 #endif
   
+void CORE_dpotrf_quark_cpu(Quark *quark);
+  
 void CORE_dgemm_cublas(int transA, int transB,
                        int m, int n, int k,
                        double alpha, const double *A, int lda,
