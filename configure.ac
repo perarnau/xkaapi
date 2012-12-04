@@ -20,6 +20,7 @@ AM_INIT_AUTOMAKE([gnu 1.9 tar-pax subdir-objects])
 dnl silent-rules option is not required as it has been introduced in automake 1.11
 dnl The AMX_SILENT_RULES macro enables it if it exists
 
+AC_CONFIG_TESTDIR([tests], [tests])
 
 AC_CONFIG_HEADERS([config.h])
 
@@ -205,12 +206,15 @@ dnl -----------------------------------------------------------------------
 dnl -----------------------------------------------------------------------
 dnl -----------------------------------------------------------------------
 
+KAT_TESTSUITES="core"
+AC_SUBST([KAT_TESTSUITES])
+
 dnl -----------------------------------------------------------------------
 dnl The "--enable-api-kaapic"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([api-kaapic], [compile C API],
   [C API compiled], [yes],
-  [],
+  [KAT_TESTSUITES="$KAT_TESTSUITES libkaapic"],
   [],
   [KAAPI_API_KAAPIC])
 
@@ -928,16 +932,20 @@ AC_CONFIG_FILES([
 	api/libgomp/tests/Makefile
 	api/libgomp/testsuite/Makefile
 	api/quark/Makefile
-	examples/Makefile
-	src/Makefile
 	bin/Makefile
 	bin/kacc/Makefile
 	bin/kaapi_c2c/Makefile
 	bin/kaapi_f2f/Makefile
 	bin/kaapi_event_reader/Makefile
-	bin/kacc/kacc.cpp
+	examples/Makefile
+	src/Makefile
+	tests/Makefile
+	tests/c/Makefile
 
+	bin/kacc/kacc.cpp
 	src/misc/kaapi_version.c
+	tests/atlocal
+
 	kaapi.pc
 	kaapic.pc
 	kaapif.pc
