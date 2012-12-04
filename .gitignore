@@ -9,8 +9,6 @@
 ###################
 # Generated files #
 ###################
-/api/atha/athapascan_closure.h
-/api/atha/athapascan_fork.h
 /api/kaapic/kaapic_adaptive_switch.h
 /api/kaapic/kaapic_adaptive_switch_ull.h
 /api/kaapic/kaapic_dfg_switch.h
