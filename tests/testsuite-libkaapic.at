@@ -30,6 +30,22 @@ KAT_ABIC_CHECK_PROG([test_spawn1],[int as a V-mode argument],[],[],[],
 [The result is : 129
 ])
 
-dnl AT_SETUP([Spawn a task with a V mode argument of type double])
-dnl AT_CHECK([make -C ])
+dnl ******************************************************
+dnl checking fibo implementations
 
+m4_define([KAT_ABIC_CHECK_FIBO],[
+  KAT_ABIC_CHECK_PROG([fibo_$1],[checking Fibo(25), implemented with $2],[fibo],[],[25 | grep Fibo],
+[Fibo(25) = 75025
+])
+])
+
+KAT_ABIC_CHECK_FIBO([sync],[kaapic_sync()])
+KAT_ABIC_CHECK_FIBO([sum],[a sum task])
+KAT_ABIC_CHECK_FIBO([cumul],[an accumulator])
+
+dnl ******************************************************
+dnl checking nqueen implementations
+
+KAT_ABIC_CHECK_PROG([nqueens_stackpointer],[checking nqueens],[nqueens],[],[],
+[Total number of solutions: 92
+])

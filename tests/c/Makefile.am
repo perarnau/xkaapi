@@ -17,7 +17,7 @@ noinst_PROGRAMS=   \
   test_spawn1 \
   test_spawn2 \
   test_spawn3 \
-  test_nqueens_stackpointer\
+  nqueens_stackpointer\
   fibo_sync \
   fibo_sum \
   fibo_cumul
@@ -27,11 +27,8 @@ endif
 TESTS=
 
 test_begend_parallel_SOURCES=test_begend_parallel.c
-test_nqueens_stackpointer_SOURCES=test_nqueens_stackpointer.c
-test_spawn1_SOURCES=test_spawn1.c
-test_spawn2_SOURCES=test_spawn2.c
-test_spawn3_SOURCES=test_spawn3.c
 fibo_sync_SOURCES=fibo_sync.c
 fibo_sum_SOURCES=fibo_sum.c
 fibo_cumul_SOURCES=fibo_cumul.c
+nqueens_stackpointer_SOURCES=nqueens_stackpointer.c
 
