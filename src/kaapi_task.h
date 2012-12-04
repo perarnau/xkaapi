@@ -225,6 +225,10 @@ extern void kaapi_init_adaptive(void);
 
 /* ===================== Default internal task body ==================================== */
 
+#if defined (KAAPI_DEBUG)
+extern void _kaapi_task_execute_with_control( kaapi_task_body_internal_t body, void* sp, kaapi_frame_t* fp, kaapi_task_t* pc );
+#endif
+
 /** Body of the task used to mark a thread suspend in its execution
     \ingroup TASK
 */

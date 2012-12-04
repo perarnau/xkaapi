@@ -101,16 +101,16 @@ typedef struct NAME {\
 */
 typedef struct kaapi_hashentries_t {
   union { /* depending of the kind of hash table... */
-    kaapi_gd_t                    value;
-    struct kaapi_version_t*       version;     /* for static scheduling */
-    kaapi_pair_ptrint_t           data;        /* used for print tasklist */
-    struct kaapi_metadata_info_t* mdi;         /* store of metadata info */
-    struct kaapi_taskdescr_t*     td;          /* */
-    struct kaapi_mem_data_t*	 kmd;
-    struct kaapi_cuda_mem_cache_blk_t*    block;
+    kaapi_gd_t                         value;
+    struct kaapi_version_t*            version;     /* for static scheduling */
+    kaapi_pair_ptrint_t                data;        /* used for print tasklist */
+    struct kaapi_metadata_info_t*      mdi;         /* store of metadata info */
+    struct kaapi_taskdescr_t*          td;          /* */
+    struct kaapi_mem_data_t*	         kmd;
+    struct kaapi_cuda_mem_cache_blk_t* block;
   } u;
-  const void*                     key;
-  struct kaapi_hashentries_t*     next; 
+  const void*                          key;
+  struct kaapi_hashentries_t*          next; 
 } kaapi_hashentries_t;
 
 KAAPI_DECLARE_BLOCENTRIES(kaapi_hashentries_bloc_t, kaapi_hashentries_t);

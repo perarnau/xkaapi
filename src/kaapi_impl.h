@@ -893,6 +893,9 @@ static inline int kaapi_thread_isready( kaapi_thread_context_t* thread )
 
 /* ======================== MACHINE DEPENDENT FUNCTION THAT SHOULD BE DEFINED ========================*/
 /* ........................................ PUBLIC INTERFACE ........................................*/
+extern void* kaapi_alloc_protect( size_t size );
+extern void kaapi_free_protect( void* p );
+extern void* kaapi_realloc_protect(void *ptr, size_t size);
 
 /* Signal handler to dump the state of the internal kprocessors
    This signal handler is attached to SIGALARM when KAAPI_DUMP_PERIOD env. var. is defined.
