@@ -47,6 +47,10 @@
 #include <sys/mman.h>
 
 #if 1// !defined (KAAPI_DEBUG)
+
+/* the method should be redesigned in order to keep pre-processing before execution and post-processing after sub-tasks 
+finish their executions
+*/
 void _kaapi_task_execute_with_control( kaapi_task_body_internal_t body, void* sp, kaapi_frame_t* fp, kaapi_task_t* pc )
 {
   body(sp, fp, pc);
