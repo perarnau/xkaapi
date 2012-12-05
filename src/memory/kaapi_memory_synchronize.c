@@ -118,6 +118,22 @@ void* kaapi_memory_get_host_pointer(void* const gpu_ptr)
   return NULL;
 }
 
+void* kaapi_memory_get_host_pointer_and_validate(void* const gpu_ptr)
+{
+  kaapi_metadata_info_t* kmdi = kaapi_memory_find_metadata(gpu_ptr);
+  const kaapi_address_space_id_t host_kasid = KAAPI_EMPTY_ADDRESS_SPACE_ID;
+  
+  if(kaapi_metadata_info_has_data(kmdi, host_kasid))
+  {
+    kaapi_data_t* kdata = kaapi_metadata_info_get_data(kmdi, host_kasid);
+    kaapi_assert_debug(kdata != 0);
+    kaapi_metadata_info_clear_dirty(kmdi, host_kasid);
+    return kaapi_pointer2void(kdata->ptr);
+  }
+  
+  return NULL;
+}
+
 void kaapi_memory_evict_pointer(uintptr_t ptr, size_t size)
 {
   kaapi_metadata_info_t* kmdi = kaapi_memory_find_metadata((void*)ptr);

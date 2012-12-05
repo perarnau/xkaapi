@@ -1623,6 +1623,9 @@ extern void kaapi_memory_unregister( void* ptr );
 /* Return the host pointer from a GPU pointer (called from GPU task). */
 extern void* kaapi_memory_get_host_pointer( void* const gpu_ptr );
 
+/* Return the host pointer from a GPU pointer and validate host copy (called from GPU task). */
+extern void* kaapi_memory_get_host_pointer_and_validate( void* const gpu_ptr );
+  
 /** Create a thread group with size threads. 
     Mapping function should be set at creation step. 
     For each thread tid of the group, the function mapping is called with:

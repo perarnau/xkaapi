@@ -1,13 +1,13 @@
 
 CC := gcc
 NVCC := nvcc
-CFLAGS := -g -DKAAPI_USE_CUDA -I.. -I$(HOME)/install/xkaapi/default/include \
+CFLAGS = -g -DKAAPI_USE_CUDA -I.. -I$(HOME)/install/xkaapi/default/include \
 	  $(CBLAS_CFLAGS) \
 	  $(LAPACKE_CFLAGS) \
 	  -I$(HOME)/plasma_2.4.2/include \
 	  -I$(HOME)/plasma_2.4.2 \
-	  $(CUDA_CFLAGS) \
-	 #-DCONFIG_VERBOSE
+	  $(CUDA_CFLAGS) 
+#CFLAGS += -DCONFIG_VERBOSE
 
 SRC := \
     core_dpotrf.c \
@@ -20,16 +20,20 @@ SRC := \
     core_dtsmqr.c \
     core_dtsrfb.c \
     core_dormqr.c \
+    core_dtstrf.c \
     core_dlarfb_gemm.c \
     core_init.c
 
-OBJS := $(SRC:.c=.o) magmablas.o
+OBJS := $(SRC:.c=.o) magmablas.o core_dtstrf_kernel.o
 LIB_a := libcore_cublas.a
 LIB_la := libcore_cublas.la
 
 all: $(LIB_la)
 
 magmablas.o: magmablas.cu
+	$(NVCC) --machine 64 -arch=sm_20 $(CFLAGS) -c $< -o $@
+
+core_dtstrf_kernel.o: core_dtstrf_kernel.cu
 	$(NVCC) --machine 64 -arch=sm_20 $(CFLAGS) -c $< -o $@
 
 .c.o: 

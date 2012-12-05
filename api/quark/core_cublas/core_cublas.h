@@ -101,6 +101,12 @@ static inline cublasSideMode_t PLASMA_CUBLAS_convertToSideMode( PLASMA_enum side
   fprintf(stderr,"%s:: CUBLAS Error: %i (file '%s' line %d)\n",__FUNCTION__,status,__FILE__,__LINE__);\
   }
   
+#define PLASMA_CUDA_ASSERT(status) \
+if (cudaSuccess != status) {\
+  fprintf(stderr,"%s:: CUDA Error: %i '%s' (file '%s' line %d)\n",\
+    __FUNCTION__, status, cudaGetErrorString(status),__FILE__, __LINE__);\
+}
+  
 #ifdef __cplusplus
 }
 #endif

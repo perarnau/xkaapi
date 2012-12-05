@@ -47,13 +47,21 @@ void CORE_dtrsm_cublas(int side, int uplo,
                        double alpha, const double *A, int LDA,
                        double *B, int LDB);
 void CORE_dtrsm_quark_cublas(Quark *quark);
-  
+
+  /* IPIV is on the GPU */
 int CORE_dssssm_cublas(int M1, int N1, int M2, int N2, int K, int IB,
                        double *A1, int LDA1,
                        double *A2, int LDA2,
                        double *L1, int LDL1,
                        double *L2, int LDL2,
                        int *IPIV);
+/* piv is on the host memory */
+int CORE_dssssm_cublas_v2(int M1, int N1, int M2, int N2, int K, int IB,
+                          double *A1, int LDA1,
+                          double *A2, int LDA2,
+                          double *L1, int LDL1,
+                          double *L2, int LDL2,
+                          int *piv);
 void CORE_dssssm_quark_cublas(Quark *quark);
   
 int CORE_dgessm_cublas(int M, int N, int K, int IB,
@@ -94,6 +102,16 @@ int CORE_dlarfb_gemm_cublas(PLASMA_enum side, PLASMA_enum trans, int direct, int
                             const double *T, int LDT,
                             double *C, int LDC,
                             double *WORK, int LDWORK);
+  
+void CORE_dtstrf_quark_cublas(Quark *quark);
+int CORE_dtstrf_cublas(int M, int N, int IB, int NB,
+                       double *U, int LDU,
+                       double *A, int LDA,
+                       double *L, int LDL,
+                       int *IPIV,
+                       double *WORK, int LDWORK,
+                       int *INFO);
+  
 
 #ifdef __cplusplus
 }
