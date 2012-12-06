@@ -47,6 +47,27 @@ Makefile.in
 # Should not be needed anymore with recent libtool
 /libtool
 
+/imported-soft/libffi/aclocal.m4
+/imported-soft/libffi/autom4te.cache/
+/imported-soft/libffi/configure
+/imported-soft/libffi/ltmain.sh
+/imported-soft/libffi/m4/libtool.m4
+/imported-soft/libffi/m4/lt*.m4
+/imported-soft/libffi/fficonfig.h.in
+/imported-soft/libffi/fficonfig.h.in~
+
+/imported-soft/libffi/compile
+/imported-soft/libffi/config.guess
+/imported-soft/libffi/config.sub
+/imported-soft/libffi/depcomp
+/imported-soft/libffi/install-sh
+/imported-soft/libffi/mdate-sh
+/imported-soft/libffi/missing
+/imported-soft/libffi/texinfo.tex
+
+/imported-soft/libffi/doc/libffi.info
+/imported-soft/libffi/doc/stamp-vti
+
 ##########################
 # Files from compilation #
 ##########################
