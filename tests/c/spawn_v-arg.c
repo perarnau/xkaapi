@@ -51,9 +51,18 @@
 #define KAAPIC_TYPE(s) _KAAPIC_TYPE(s)
 #define _KAAPIC_TYPE(s) KAAPIC_TYPE_##s
 
-void body(T const n, T* result)
+void body(T const n1, T const n2, T const n3, T const n4,
+	  T const n5, T const n6, T const n7, T const n8,
+	  T* result)
 {
-  *result = n;
+#define PTR 1
+#if KT == PTR
+  *result = (void*)((uintptr_t)n1 + (uintptr_t)n2 + (uintptr_t)n3 + (uintptr_t)n4
+		+ (uintptr_t)n5 + (uintptr_t)n6 + (uintptr_t)n7 + (uintptr_t)n8);
+#else
+  *result = n1+n2+n3+n4+n5+n6+n7+n8;
+#endif
+#undef PTR
 }
 
 
@@ -71,9 +80,16 @@ int main()
   
   /* spawn the task */
   kaapic_spawn(&attr, 
-      2,                /* number of arguments */
+      9,                /* number of arguments */
       (void(*)())body,  /* the entry point for the task */
-      KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)125,
+      KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)32,
+      KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)32,
+      KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)32,
+      KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)16,
+      KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)8,
+      KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)4,
+      KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)2,
+      KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)1,
       KAAPIC_MODE_W, KAAPIC_TYPE(KT), 1, &result
   );
 
@@ -84,7 +100,7 @@ int main()
   printf("The result is : %i/%f\n", (int)(uintptr_t)result, (double)(uintptr_t)result );
   kaapic_finalize();
 
-  if (result == (T)125) {
+  if (result == (T)127) {
     printf("Success\n");
   }
   
