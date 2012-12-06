@@ -5,6 +5,8 @@
 ##  Copyright 2012 INRIA.
 ##
 
+DIST_SUBDIRS=c
+
 # The `:;' works around a Bash 3.2 bug when the output is not writable.
 $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 	:;{ \
