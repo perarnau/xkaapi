@@ -103,7 +103,7 @@ if test x"$1" = x"--clean"; then
 
 else
 	set -x
-	autoreconf -vi -Wall "$@"
+	autoreconf -vi -Wall -Wno-obsolete "$@" .
 	set +x
 fi
 
