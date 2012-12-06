@@ -1,0 +1,3 @@
+KAT_TESTSUITES="@KAT_TESTSUITES@"
+
+# scripts sourced in all tests
