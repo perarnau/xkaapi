@@ -576,7 +576,9 @@ dnl The "--with-poti"
 dnl -----------------------------------------------------------------------
 KAAPI_PKGLIB_CHECK([POTI], [poti], [POTI], [no], [KAAPI_USE_EXTERNAL_POTI],
   [use POTI library to produce Paje traces],
-  [poti], [], [poti.h], [pajeOpen])
+  [poti], [], [poti.h], [poti_open], [
+    AC_DEFINE(KAAPI_USE_POTI, 1, [Support for POTI])
+  ])
 
 dnl -----------------------------------------------------------------------
 dnl The "--with-papi"

@@ -76,7 +76,7 @@ int kaapi_sched_suspend ( kaapi_processor_t* kproc, int (*fcondition)(void* ), v
 #if defined(KAAPI_USE_PERFCOUNTER)
   kaapi_perf_thread_stopswapstart(kproc, KAAPI_PERF_SCHEDULE_STATE );
   ++KAAPI_PERF_REG(kproc, KAAPI_PERF_ID_SUSPEND);
-  KAAPI_EVENT_PUSH0( kproc, 0, KAAPI_EVT_TASK_END );  
+//  KAAPI_EVENT_PUSH0( kproc, 0, KAAPI_EVT_TASK_END );
   KAAPI_EVENT_PUSH0( kproc, 0, KAAPI_EVT_SCHED_IDLE_BEG );
 #endif
 
