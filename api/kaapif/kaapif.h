@@ -54,10 +54,7 @@ extern "C" {
 #endif
 
 /* kaapi fortran interface */
-#define KAAPIF_SUCCESS 0
-#define KAAPIF_ERR_FAILURE -1
-#define KAAPIF_ERR_EINVAL -2
-#define KAAPIF_ERR_UNIMPL -3
+#include "kaapif_inc.h"
 
 extern long xxx_seq_grain;
 extern long xxx_par_grain;

@@ -15,6 +15,10 @@
 /api/kaapic/kaapic_dfg_wh_switch.h
 /api/kaapif/kaapif_adaptive_switch.h
 /api/kaapif/kaapif_dfg_switch.h
+/api/kaapif/kaapif.inc
+/api/kaapif/kaapif.inc.f90
+/api/kaapif/kaapif.inc.f95
+/api/kaapif/kaapif_inc.h
 /api/kaapixx/ka_api_tuple.h
 /api/kaapixx/ka_api_clo.h
 /api/kaapixx/ka_api_spawn.h
