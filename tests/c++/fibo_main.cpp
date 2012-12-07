@@ -75,9 +75,10 @@ void doit::operator()(int argc, char** argv )
   stop_time= ka::WallTimer::gettime();
 
   kaapi_assert( res_value == fiboseq_verify(n) );
-  
-  ka::logfile() << ": -----------------------------------------" << std::endl;
-  ka::logfile() << ": Res  = " << res_value << std::endl;
-  ka::logfile() << ": Time(s): " << (stop_time-start_time) << std::endl;
-  ka::logfile() << ": -----------------------------------------" << std::endl;
+
+res_value =10;  
+  std::cout << ": -----------------------------------------" << std::endl;
+  std::cout << ": Res  = " << res_value << std::endl;
+  std::cout << ": Time(s): " << (stop_time-start_time) << std::endl;
+  std::cout << ": -----------------------------------------" << std::endl;
 }

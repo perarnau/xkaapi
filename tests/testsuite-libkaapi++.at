@@ -1,0 +1,107 @@
+AT_BANNER([libkaapi++ - C++ API for XKaapi])
+ 
+dnl KAT_ABIC_SETUP(name, extra_keywords) 
+m4_define([KAT_ABIC_SETUP],[
+  AT_SETUP([$1])
+  AT_KEYWORDS([libkaapi++ api-c++ $2])
+  echo $KAT_TESTSUITES > /tmp/log
+dnl Je n'ai pas compris à quoi sert ça:
+dnl   AT_SKIP_IF([AS_CASE([" $KAT_TESTSUITES "],[*" libkaapi++ "*],[false],[:])])
+])
+
+dnl KAT_ABIC_CHECK_BUILD(name, extra build cmd)
+m4_define([KAT_ABIC_CHECK_BUILD],[
+  AT_CHECK([make $1 -C ${abs_top_builddir}/tests/c++ 2>&1 ], 0, [ignore])
+])
+
+dnl KAT_ABIC_CHECK_BUILDFAILED(name, extra build cmd)
+m4_define([KAT_ABIC_CHECK_BUILDFAILED],[
+  AT_CHECK([make $1 -C ${abs_top_builddir}/tests/c++ 2>&1 ], 2, [ignore])
+])
+
+dnl KAT_ABIC_CHECK_RUN(name, stdout)
+m4_define([KAT_ABIC_CHECK_RUN],[
+  m4_if([$3],[dnl
+    AT_CHECK([$abs_top_builddir/tests/c++/$1 $2], 0, [stdout],[])
+    AT_CHECK([$3], 0, [$4], [])
+  ],[
+    AT_CHECK([$abs_top_builddir/tests/c++/$1 $2], 0,[$4],[])
+  ])
+])
+
+m4_define([KAT_ABIC_CHECK_PROG],[
+  KAT_ABIC_SETUP([$2],[$3 $1])
+  KAT_ABIC_CHECK_BUILD([$1],[$4])
+  KAT_ABIC_CHECK_RUN([$1],[$5],[$6],[$7])
+  AT_CLEANUP
+])
+
+m4_define([KAT_ABIC_CHECK_FAILEDCOMPIL],[
+  KAT_ABIC_SETUP([$2],[$3 $1])
+  KAT_ABIC_CHECK_BUILDFAILED([$1],[$4])
+  AT_CLEANUP
+])
+
+
+dnl ******************************************************
+dnl checking fibo implementations
+KAT_ABIC_CHECK_PROG([test_spawn],[all valid access mode],[],[],[],[],
+[])
+
+KAT_ABIC_CHECK_PROG([test_pointer],[passing pointer by value],[],[],[],[],
+[ diff:0
+])
+
+KAT_ABIC_CHECK_PROG([test_multipleleave],[multiple init/leave],[],[],[],[],
+[Rien ne va plus.
+Tout va bien !
+Rien ne va plus.
+Tout va bien !
+])
+
+KAT_ABIC_CHECK_PROG([test_stackpointer],[stack pointer],[],[],[],[],
+[])
+
+dnl ******************************************************
+dnl checking nqueen implementations
+
+KAT_ABIC_CHECK_PROG([test_nqueens_stackpointer],[checking nqueens],[nqueens],[],[12 ],
+[Total number of solutions: 142000
+])
+
+ 
+dnl ******************************************************
+dnl checking fibo implementations
+
+m4_define([KAT_ABIC_CHECK_FIBO],[
+  KAT_ABIC_CHECK_PROG([fibo_kaapi++$1],[checking Fibo(30), $2],[fibo],[],[30], [grep Res],
+[: Res  = 832040
+])
+])
+
+KAT_ABIC_CHECK_FIBO([],[])
+KAT_ABIC_CHECK_FIBO([_autopointer],[using autopointer])
+KAT_ABIC_CHECK_FIBO([_autovar],[using autovar])
+KAT_ABIC_CHECK_FIBO([_alloca],[using alloca])
+KAT_ABIC_CHECK_FIBO([_opt],[using optimisation])
+KAT_ABIC_CHECK_FIBO([_opt_thread],[using optimisation/thread])
+KAT_ABIC_CHECK_FIBO([_opt_sync],[using optimisation])
+KAT_ABIC_CHECK_FIBO([_sync],[using ka::Sync])
+KAT_ABIC_CHECK_FIBO([_cumul],[using cumulative operation])
+KAT_ABIC_CHECK_FIBO([_cumul_opt],[using cumulative operation with optimisation])
+KAT_ABIC_CHECK_FIBO([_cumul_userreduc],[using user defined cumulative operation])
+KAT_ABIC_CHECK_FIBO([_cumul],[using cumulative operation])
+
+
+dnl ******************************************************
+dnl checking implementation details
+
+KAT_ABIC_CHECK_PROG([test_perfcounter1],[checking perf counter],[],[],[],[sed -e 's/Time: .*/Time:/' stdout],
+[Time:
+])
+
+
+
+
+dnl ******************************************************
+dnl checking nqueen implementations

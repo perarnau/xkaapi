@@ -50,7 +50,7 @@ KAT_ABIC_CHECK_FIBO([cumul],[an accumulator])
 dnl ******************************************************
 dnl checking nqueen implementations
 
-KAT_ABIC_CHECK_PROG([nqueens_stackpointer],[checking nqueens],[nqueens],[],[12 ],
+KAT_ABIC_CHECK_PROG([nqueens_stackpointer],[checking nqueens],[nqueens],[],[12],
 [Total number of solutions: 14200
 ])
 
