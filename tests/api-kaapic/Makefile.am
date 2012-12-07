@@ -11,8 +11,20 @@ AM_CXXFLAGS=@AM_CXXFLAGS@ $(STD_CXX0X_FLAGS) $(KAAPICPROGS_BUILD_CXXFLAGS)
 AM_LDFLAGS=@AM_LDFLAGS@ $(KAAPICPROGS_BUILD_LDFLAGS)
 AM_LIBS=@AM_LIBS@ $(KAAPICPROGS_BUILD_LIBS)
 
+check_headers_c_headers_SRC=  check-headers/c/kaapic.h.c
+check_headers_cxx_headers_SRC=check-headers/c++/kaapic.h.c++
+check_headers_cppflags=@AM_CPPFLAGS@ $(KAAPICPROGS_BUILD_CPPFLAGS)
+check_headers_cflags=  @AM_CFLAGS@   $(KAAPICPROGS_BUILD_CFLAGS)
+check_headers_cxxflags=@AM_CXXFLAGS@ $(KAAPICPROGS_BUILD_CXXFLAGS)
+check_headers_ldflags= @AM_LDFLAGS@  $(KAAPICPROGS_BUILD_LDFLAGS)
+check_headers_libs=                  $(KAAPICPROGS_BUILD_LIBS)
+
 if  KAAPI_API_KAAPIC
-noinst_PROGRAMS=   \
+
+include ../check-headers/check-headers.am
+
+noinst_PROGRAMS+=   \
+  $(check_headers_prgs) \
   test_begend_parallel \
   spawn_s-arg \
   spawn_v-arg_char \
@@ -43,9 +55,6 @@ noinst_PROGRAMS=   \
   fibo_sum \
   fibo_cumul
 endif
-
-
-TESTS=
 
 test_begend_parallel_SOURCES=test_begend_parallel.c
 fibo_sync_SOURCES=fibo_sync.c fib_verify.h

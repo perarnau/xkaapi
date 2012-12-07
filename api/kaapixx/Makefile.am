@@ -83,12 +83,4 @@ libkaapi___la_SOURCES=\
 	ka_types.h\
 	$(include_HEADERS)
 
-check_headers_SRC_C=
-check_headers_SRC_CXX=\
-	check/kaapixx.cpp \
-	check/kaapixx_h.cpp
-check_headers_LIBS=$(KAAPIXXPROGS_BUILD_LDFLAGS) $(KAAPIXXPROGS_BUILD_LIBS)
-
-include ../check-headers.am
-
 endif

@@ -1,0 +1,52 @@
+
+noinst_PROGRAMS=check_header check_header_strict
+
+check_headers_common_SRC=\
+        check-headers/main.c
+
+BUILT_SOURCES=$(check_headers_c_headers_SRC) $(check_headers_cxx_headers_SRC)
+
+$(check_headers_c_headers_SRC): check-headers/c/%.c:
+	@mkdir -p $(srcdir)/check-headers/c
+	$(AM_V_GEN) echo '#include <$*>' > $(srcdir)/$@
+
+$(check_headers_cxx_headers_SRC): check-headers/c++/%.c++:
+	@mkdir -p $(srcdir)/check-headers/c++
+	$(AM_V_GEN) echo '#include <$*>' > $(srcdir)/$@
+
+check-headers/main.c: ../check-headers/main.c
+	@mkdir -p $(srcdir)/check-headers
+	$(AM_V_GEN) cp $< $(srcdir)/$@
+
+check_header_SOURCES=\
+	$(check_headers_common_SRC) $(check_headers_c_headers_SRC)
+check_header_strict_SOURCES=\
+	$(check_headers_common_SRC)
+if STD_C99
+check_header_strict_SOURCES+=\
+	$(check_headers_c_headers_SRC)
+endif
+if HAVE_CXX
+check_header_SOURCES+=\
+	$(check_headers_cxx_headers_SRC)
+if STD_CXX0X
+check_header_strict_SOURCES+=\
+	$(check_headers_cxx_headers_SRC)
+endif
+endif
+
+EXTRA_DIST=$(check_headers_c_headers_SRC) $(check_headers_cxx_headers_SRC)
+
+check_header_strict_CPPFLAGS=$(check_headers_cppflags) -Werror
+check_header_strict_CXXFLAGS=$(check_headers_cxxflags) $(STD_CXX0X_FLAGS)
+check_header_strict_CFLAGS=  $(check_headers_cflags)   $(STD_C99_FLAGS)
+check_header_strict_LDFLAGS= $(check_headers_ldflags)
+check_header_strict_LDADD=   $(check_headers_libs)
+
+# No -pedantic here...
+check_header_CPPFLAGS=$(check_headers_cppflags) -Werror -D_KAAPI_DISABLE_WARNINGS
+check_header_CXXFLAGS=$(check_headers_cxxflags) $(STD_CXX0X_FLAGS)
+check_header_CFLAGS=  $(check_headers_cflags)   $(STD_C99_FLAGS)
+check_header_LDFLAGS= $(check_headers_ldflags)
+check_header_LDADD=   $(check_headers_libs)
+

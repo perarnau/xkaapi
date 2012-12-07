@@ -5,7 +5,7 @@
 ##  Copyright 2012 INRIA.
 ##
 
-DIST_SUBDIRS=api-kaapic
+DIST_SUBDIRS=api-kaapic api-kaapixx kaapi
 
 # The `:;' works around a Bash 3.2 bug when the output is not writable.
 $(srcdir)/package.m4: $(top_srcdir)/configure.ac
@@ -26,8 +26,10 @@ $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 	} >'$(srcdir)/package.m4'
 
 TESTSUITES_SRC = testsuite.at testsuite-api-kaapic.at testsuite-api-kaapixx.at \
-	testsuite-examples.at testsuite-examples-inc.at
-EXTRA_DIST = $(TESTSUITES_SRC) $(srcdir)/package.m4 $(TESTSUITE) atlocal.in atenv.m4
+	testsuite-examples.at testsuite-examples-inc.at \
+	atenv.m4 check-headers/check-headers.m4
+EXTRA_DIST = $(TESTSUITES_SRC) $(srcdir)/package.m4 $(TESTSUITE) atlocal.in
+EXTRA_DIST += check-headers/main.c
 TESTSUITE = $(srcdir)/testsuite
 DISTCLEANFILES = atconfig
 

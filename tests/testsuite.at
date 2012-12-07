@@ -1,11 +1,13 @@
 # Testsuite for ocl-icd
 
 m4_include([atenv.m4])
+m4_include([check-headers/check-headers.m4])
 
 AT_INIT()
 AT_COPYRIGHT ([Copyright (c) 2012 Vincent Danjean <Vincent.Danjean@ens-lyon.org>])
 AT_COLOR_TESTS
 
+m4_include([testsuite-kaapi.at])
 m4_include([testsuite-api-kaapic.at])
 m4_include([testsuite-api-kaapixx.at])
 m4_include([testsuite-examples.at])

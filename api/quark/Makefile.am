@@ -23,10 +23,4 @@ libquark_la_SOURCES=\
     quark_xkaapi.c \
 	$(include_HEADERS)
 
-check_headers_SRC_C=
-check_headers_SRC_CXX=
-check_headers_LIBS=$(KAAPIPROGS_BUILD_LDFLAGS) $(KAAPIPROGS_BUILD_LIBS)
-
-include ../check-headers.am
-
 endif

@@ -967,6 +967,8 @@ AC_CONFIG_FILES([
 	src/Makefile
 	tests/Makefile
 	tests/api-kaapic/Makefile
+	tests/api-kaapixx/Makefile
+	tests/kaapi/Makefile
 
 	bin/kacc/kacc.cpp
 	src/misc/kaapi_version.c
