@@ -226,7 +226,7 @@ AS_CASE(["$use_ffi"],
   [no],[],
   [internal],[
     ACX_LIB_CHECK_PLAIN([FFI],[],[ACX_LIB_FOUND(
-	[CppFlags="-I\$(top_srcdir)/imported-soft/libffi/include"],
+	[CppFlags="-I\$(top_builddir)/imported-soft/libffi/include"],
 	[LdFlags="-L\$(top_builddir)/imported-soft/libffi"],
 	[Libs="-lffi_convenience"])]) 
   ],
