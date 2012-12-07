@@ -1,0 +1,62 @@
+AT_BANNER([libkaapic - C ABI for XKaapi])
+
+dnl ATX_DEFPROG([spawn_vtype],[Spawn a task with a V mode argument of type t],)
+ 
+dnl KAT_ABIC_SETUP(name, extra_keywords) 
+m4_define([KAT_ABIC_SETUP],[
+  AT_SETUP([$1])
+  AT_KEYWORDS([libkaapic api-c $2])
+  AT_SKIP_IF([AS_CASE([" $KAT_TESTSUITES "],[*" libkaapic "*],[false],[:])])
+])
+dnl KAT_ABIC_CHECK_BUILD(name, extra build cmd)
+m4_define([KAT_ABIC_CHECK_BUILD],[
+  AT_CHECK([make $1 -C ${abs_top_builddir}/tests/c 2>&1 ], 0, [ignore])
+])
+dnl KAT_ABIC_CHECK_RUN(name, stdout)
+m4_define([KAT_ABIC_CHECK_RUN],[
+  m4_if([$3],[],[dnl
+    AT_CHECK([$abs_top_builddir/tests/c/$1 $2], 0,[$4],[])
+  ],[
+    AT_CHECK([$abs_top_builddir/tests/c/$1 $2], 0,[stdout],[])
+    AT_CHECK([$3], 0, [$4], [])
+  ])
+])
+
+m4_define([KAT_ABIC_CHECK_PROG],[
+  KAT_ABIC_SETUP([$2],[$3 $1])
+  KAT_ABIC_CHECK_BUILD([$1],[$4])
+  KAT_ABIC_CHECK_RUN([$1],[$5],[$6],[$7])
+  AT_CLEANUP
+])
+
+KAT_ABIC_CHECK_PROG([test_spawn1],[int as a V-mode argument],[],[],[],[],
+[The result is : 129
+])
+
+dnl ******************************************************
+dnl checking fibo implementations
+
+m4_define([KAT_ABIC_CHECK_FIBO],[
+  KAT_ABIC_CHECK_PROG([fibo_$1],[checking Fibo(25), implemented with $2],[fibo],[],[25],[grep Fibo stdout],
+[Fibo(25) = 75025
+])
+])
+
+KAT_ABIC_CHECK_FIBO([sync],[kaapic_sync()])
+KAT_ABIC_CHECK_FIBO([sum],[a sum task])
+KAT_ABIC_CHECK_FIBO([cumul],[an accumulator])
+
+dnl ******************************************************
+dnl checking nqueen implementations
+
+KAT_ABIC_CHECK_PROG([nqueens_stackpointer],[checking nqueens],[nqueens],[],[],[],
+[Total number of solutions: 92
+])
+
+dnl ******************************************************
+dnl checking implementation details
+
+KAT_ABIC_CHECK_PROG([test_begend_parallel],[checking iteration of parallel sections],[],[],[],[sed -e 's/Time: .*/Time:/' stdout],
+[Time:
+])
+

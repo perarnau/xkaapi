@@ -24,6 +24,8 @@
 /api/kaapixx/ka_api_execforeach.h
 /api/kaapixx/ka_api_execgraph.h
 /gitlastcommit
+/tests/package.m4
+/tests/testsuite
 
 
 ########################
