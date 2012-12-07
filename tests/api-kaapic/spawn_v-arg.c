@@ -82,6 +82,7 @@ int main()
   kaapic_spawn(&attr, 
       9,                /* number of arguments */
       (void(*)())body,  /* the entry point for the task */
+#if 0
       KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)32,
       KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)32,
       KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)32,
@@ -91,6 +92,17 @@ int main()
       KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)2,
       KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)1,
       KAAPIC_MODE_W, KAAPIC_TYPE(KT), 1, &result
+#else
+      KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)0x10,
+      KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)0x20,
+      KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)0x30,
+      KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)0x40,
+      KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)0x50,
+      KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)0x60,
+      KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)0x70,
+      KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)0x80,
+      KAAPIC_MODE_W, KAAPIC_TYPE(KT), 1, &result
+#endif
   );
 
   kaapic_sync();
@@ -100,9 +112,14 @@ int main()
   printf("The result is : %i/%f\n", (int)(uintptr_t)result, (double)(uintptr_t)result );
   kaapic_finalize();
 
+#if 0
   if (result == (T)127) {
     printf("Success\n");
   }
-  
+#else
+  if (result == (T)576) {
+    printf("Success\n");
+  }
+#endif  
   return 0;
 }
