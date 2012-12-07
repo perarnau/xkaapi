@@ -15,6 +15,7 @@ if  KAAPI_API_KAAPIC
 noinst_PROGRAMS=   \
   test_begend_parallel \
   spawn_s-arg \
+  spawn_s5-arg \
   spawn_v-arg_char \
   spawn_v-arg_schar \
   spawn_v-arg_shrt \
@@ -53,6 +54,7 @@ fibo_sum_SOURCES=fibo_sum.c fib_verify.h
 fibo_cumul_SOURCES=fibo_cumul.c fib_verify.h
 nqueens_stackpointer_SOURCES=nqueens_stackpointer.c
 spawn_s_arg_SOURCES=spawn_s-arg.c
+spawn_s5_arg_SOURCES=spawn_s5-arg.c
 spawn_v_arg_char_SOURCES=spawn_v-arg.c
 spawn_v_arg_char_CPPFLAGS=$(AM_CPPFLAGS) -DT="char" -DKT="CHAR"
 spawn_v_arg_schar_SOURCES=spawn_v-arg.c
