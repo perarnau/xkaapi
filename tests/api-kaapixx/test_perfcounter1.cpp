@@ -165,11 +165,11 @@ void doit::operator()(int argc, char** argv )
   kaapi_perf_idset_add(&idset, KAAPI_PERF_ID_TASKS );
   kaapi_perf_read_counters( &idset, &internal_counter );
   
-  ka::logfile() << ": -----------------------------------------" << std::endl;
-  ka::logfile() << ": Res  = " << res_value << std::endl;
-  ka::logfile() << ": Time(s): " << (stop_time-start_time) << std::endl;
-  ka::logfile() << ": #task  : " << KAAPI_ATOMIC_READ(&counter_task) << std::endl;
-  ka::logfile() << ": #internal task counter:" << internal_counter << ", " << kaapi_perf_id_to_name(KAAPI_PERF_ID_TASKS) << std::endl;
-  ka::logfile() << ": -----------------------------------------" << std::endl;
+  std::cout << ": -----------------------------------------" << std::endl;
+  std::cout << ": Res  = " << res_value << std::endl;
+  std::cout << ": Time(s): " << (stop_time-start_time) << std::endl;
+  std::cout << ": #task  : " << KAAPI_ATOMIC_READ(&counter_task) << std::endl;
+  std::cout << ": #internal task counter:" << internal_counter << ", " << kaapi_perf_id_to_name(KAAPI_PERF_ID_TASKS) << std::endl;
+  std::cout << ": -----------------------------------------" << std::endl;
 }
 

@@ -52,6 +52,12 @@ m4_define([KAT_TEST_PROG],[
   KAT_CHECK_RUN([$1],[$5],[$6],[$7])
   AT_CLEANUP
 ])
+dnl KAT_TEST_BUILD_FAILED(prog-name, test-name, keywords)
+m4_define([KAT_TEST_BUILD_FAILED],[
+  KAT_SETUP([$2],[$3 $1])
+  KAT_CHECK_BUILD([$1], [], [1])
+  AT_CLEANUP
+])
 
 AT_INIT()
 AT_COPYRIGHT ([Copyright (c) 2012 Vincent Danjean <Vincent.Danjean@ens-lyon.org>])

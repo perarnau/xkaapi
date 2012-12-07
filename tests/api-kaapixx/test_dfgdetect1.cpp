@@ -16,6 +16,7 @@ struct TaskBodyCPU<TaskWrite> {
   void operator()(int s, int n, ka::pointer_w<int> data)
   {
     if (s >0) sleep(s);
+    std::cout << "Write: " << n << std::endl;
     *data = n;
   }
 };
@@ -30,7 +31,7 @@ template<>
 struct TaskBodyCPU<TaskReadWrite> {
   void operator()(int n, ka::pointer_rw<int> data)
   {
-    std::cout << "Read:" << *data << ", should be:" << n << std::endl;
+    std::cout << "Read: " << *data << ", should be:" << n << std::endl;
     if (n != *data)
     {
       std::cout << "Fail" << std::endl;
@@ -44,7 +45,7 @@ struct TaskBodyCPU<TaskReadWrite> {
 void doit::operator()(int argc, char** argv )
 {
 	int data = 0;
-	ka::Spawn<TaskWrite>()( 1, 1, &data );
+	ka::Spawn<TaskWrite>()( 5, 1, &data );
 	ka::Spawn<TaskReadWrite>()( 1, &data );
 	ka::Spawn<TaskWrite>()( 0, 2, &data );
 	ka::Spawn<TaskReadWrite>()( 2, &data );

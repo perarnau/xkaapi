@@ -53,7 +53,7 @@ struct TaskBodyCPU<MyTask1>
 {
 	void operator()(unsigned long a, double** b )
 	{ 
-    std::cout << "Ptr:" << b << " diff:" << ((char*)b) - ((char*)a) << std::endl;
+    std::cout << " diff:" << ((char*)b) - ((char*)a) << std::endl;
   }
 };
 
