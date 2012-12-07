@@ -34,7 +34,7 @@ dnl checking spawn arguments
 
 m4_define([KAT_ABIC_CHECK_VARG],[
   KAT_ABIC_CHECK_PROG([spawn_v-arg_$1],[checking V-mode argument with type '$2'],[spawn],[],[],[],
-[The result is : 127/127.000000
+[The result is : 576/576.000000
 Success
 ])
 ])
