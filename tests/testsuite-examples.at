@@ -1,0 +1,39 @@
+AT_BANNER([Checking in-tree compilation of provided examples])
+
+m4_define([KAT_EX_FAILING],[branchbound_kaapi++ poisson3d_kaapi++])
+m4_define([KAT_EX_noWerror],[matprod_rec_kaapi++])
+
+dnl KAT_EX_SETUP(name, extra_keywords) 
+m4_define([KAT_EX_SETUP],[
+  AT_SETUP([$1])
+  AT_KEYWORDS([examples $2])
+  AT_SKIP_IF([AS_CASE([" $KAT_EX_CURRENT_LIST "],[*" $3 "*],[false],[:])])
+])
+dnl KAT_EX_CHECK_BUILD(name, extra build cmd)
+m4_define([KAT_EX_CHECK_BUILD],[
+  AT_XFAIL_IF([AS_CASE([" KAT_EX_FAILING "],[*" $1 "*],[:],[false])])
+  AS_CASE([" KAT_EX_noWerror "],[*" $1 "*],[
+    AT_CHECK([make $1 -C ${abs_top_builddir}/examples 2>&1 ], 0, [ignore])
+  ],[
+    AT_CHECK([make CPPFLAGS=-Werror $1 -C ${abs_top_builddir}/examples 2>&1 ], 0, [ignore])
+  ])
+])
+dnl KAT_EX_CHECK_RUN(name, stdout)
+m4_define([KAT_EX_CHECK_RUN],[
+  m4_if([$3],[],[dnl
+    AT_CHECK([$abs_top_builddir/examples/$1 $2], 0,[$4],[])
+  ],[
+    AT_CHECK([$abs_top_builddir/examples/$1 $2], 0,[stdout],[])
+    AT_CHECK([$3], 0, [$4], [])
+  ])
+])
+
+m4_define([KAT_EX_CHECK_PROG],[
+  KAT_EX_SETUP([m4_if([$2],[],[$1],[$1: $2])],[$3 $1],[$1])
+  KAT_EX_CHECK_BUILD([$1],[$4])
+  AT_CLEANUP
+])
+
+dnl ******************************************************
+
+m4_include([testsuite-examples-inc.at])

@@ -16,11 +16,10 @@ LISTRANKING_PRGS+=lr_jaja_seq lr_jaja_seq_opt1
 endif
 
 #if KAAPI_API_KASTL
-#LISTRANKING_PRGS+=\
-#	listranking_opt1_kaapi++
+#LISTRANKING_PRGS+=listranking_opt1_kaapi++
 #endif
 
-check_PROGRAMS+=$(LISTRANKING_PRGS)
+examples_PRGS+=$(LISTRANKING_PRGS)
 all-list_ranking: $(LISTRANKING_PRGS)
 
 #For each variation

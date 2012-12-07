@@ -22,7 +22,7 @@ endif
   
 all-matrix: $(CBLAS_WARNING)
 
-check_PROGRAMS+=$(MATPROG_PRGS)
+examples_PRGS+=$(MATPROG_PRGS)
 all-matrix: $(MATPROG_PRGS)
 
 no-cblas:

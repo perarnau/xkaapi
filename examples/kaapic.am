@@ -15,7 +15,7 @@ endif
 endif
 
 all-kaapic: $(CBLAS_WARNING2)
-check_PROGRAMS+=$(KAAPIC_PRGS)
+examples_PRGS+=$(KAAPIC_PRGS)
 all-kaapic: $(KAAPIC_PRGS)
 
 no-cblas2:

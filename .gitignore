@@ -26,6 +26,7 @@
 /gitlastcommit
 /tests/package.m4
 /tests/testsuite
+/tests/testsuite-examples-inc.at
 
 
 ########################

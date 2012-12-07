@@ -6,7 +6,7 @@
 ##
 
 FIND_PRGS=find_kaapi
-check_PROGRAMS+=$(FIND_PRGS)
+examples_PRGS+=$(FIND_PRGS)
 all-find: $(FIND_PRGS)
 
 #Find STL algorithm

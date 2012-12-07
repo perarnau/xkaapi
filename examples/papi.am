@@ -6,7 +6,7 @@
 ##
 
 PAPI_PRGS=papi_kaapi
-check_PROGRAMS+=$(PAPI_PRGS)
+examples_PRGS+=$(PAPI_PRGS)
 all-papi: $(PAPI_PRGS)
 
 papi_kaapi_SOURCES=papi/papi_kaapi.c

@@ -7,7 +7,7 @@
 
 PREFIX_PRGS=prefix_kaapi
 # need kaapi_adapt.h: prefix_kaapi++ and others
-check_PROGRAMS+=$(PREFIX_PRGS)
+examples_PRGS+=$(PREFIX_PRGS)
 all-prefix: $(PREFIX_PRGS)
 
 #Find STL algorithm

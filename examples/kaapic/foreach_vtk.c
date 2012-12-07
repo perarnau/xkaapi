@@ -27,17 +27,6 @@ static inline void Matvect( Point* dest, const Point* src, const Matrix* m)
   dest->p[2] = m->m[2][0] * src->p[0] + m->m[2][1]* src->p[1] + m->m[2][2]* src->p[2];
 }
 
-static void Matbody_inplace (
-  int32_t i, int32_t j, int32_t tid, 
-  Point* array, const Matrix* mat
-)
-{
-  int k;
-  for (k = i; k < j; ++k)
-    Matvect_inplace(&array[k], mat);  
-}
-
-
 static void Matbody(
   int32_t i, int32_t j, int32_t tid, 
   Point* array, const Point* src, const Matrix* mat

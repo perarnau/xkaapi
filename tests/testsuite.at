@@ -8,4 +8,5 @@ AT_COLOR_TESTS
 
 m4_include([testsuite-api-kaapic.at])
 m4_include([testsuite-api-kaapixx.at])
+m4_include([testsuite-examples.at])
 

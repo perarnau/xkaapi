@@ -25,7 +25,8 @@ $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 	  echo '  [$(PACKAGE_URL)])'; \
 	} >'$(srcdir)/package.m4'
 
-TESTSUITES_SRC = testsuite.at testsuite-api-kaapic.at testsuite-api-kaapixx.at
+TESTSUITES_SRC = testsuite.at testsuite-api-kaapic.at testsuite-api-kaapixx.at \
+	testsuite-examples.at testsuite-examples-inc.at
 EXTRA_DIST = $(TESTSUITES_SRC) $(srcdir)/package.m4 $(TESTSUITE) atlocal.in atenv.m4
 TESTSUITE = $(srcdir)/testsuite
 DISTCLEANFILES = atconfig
@@ -47,4 +48,9 @@ $(TESTSUITE): $(TESTSUITES_SRC) $(srcdir)/package.m4 $(srcdir)/atenv.m4
 	$(AUTOTEST) -I '$(srcdir)' -o $@.tmp $@.at
 	mv $@.tmp $@
 
-
+testsuite-examples-inc.at: Makefile.am
+	for e in $$( (cd $(top_srcdir)/examples ; grep -h  _PRG $$(ls *.am | grep -v Makefile)) \
+		| grep -v examples_PRGS | grep -v '^#\|all-' \
+		| sed -e 's/^[A-Z0-9_]*+\?=//'); do \
+	    echo "KAT_EX_CHECK_PROG([$$e])" ; \
+	done > $(srcdir)/testsuite-examples-inc.at

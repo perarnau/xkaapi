@@ -1,3 +1,7 @@
 KAT_TESTSUITES="@KAT_TESTSUITES@"
 
-# scripts sourced in all tests
+KAT_EX_CURRENT_LIST=
+for i in $(make -C ${abs_top_builddir}/examples list_examples | \
+	sed -e '/^[*]\{59\}$/,/^[*]\{59\}$/{s/^ [*] //p;d};d' ) ; do 
+  KAT_EX_CURRENT_LIST="$KAT_EX_CURRENT_LIST $i"
+done
