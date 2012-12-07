@@ -7,6 +7,7 @@
 ** Contributors :
 **
 ** thierry.gautier@inrialpes.fr
+** Vincent.Danjean@ens-lyon.org
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -42,18 +43,23 @@
 ** 
 */
 #include <stdio.h>
-#include <stdint.h>
 #include "kaapic.h"
 
-void body(const int n, int* result, int* tmp)
+#ifndef T
+#  error T not defined
+#endif
+#define KAAPIC_TYPE(s) _KAAPIC_TYPE(s)
+#define _KAAPIC_TYPE(s) KAAPIC_TYPE_##s
+
+void body(T const n, T* result)
 {
-  *result = (int)(uintptr_t)tmp;
+  *result = n;
 }
 
 
 int main()
 {
-  int result;
+  T result;
   kaapic_spawn_attr_t attr;
   
   kaapic_init(KAAPIC_START_ONLY_MAIN);
@@ -65,19 +71,22 @@ int main()
   
   /* spawn the task */
   kaapic_spawn(&attr, 
-      3,     /* number of arguments */
-      body,  /* the entry point for the task */
-      KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)129,
-      KAAPIC_MODE_W, KAAPIC_TYPE_INT, 1, &result,
-      KAAPIC_MODE_S, KAAPIC_TYPE_INT, 10, 0
+      2,                /* number of arguments */
+      (void(*)())body,  /* the entry point for the task */
+      KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)125,
+      KAAPIC_MODE_W, KAAPIC_TYPE(KT), 1, &result
   );
 
   kaapic_sync();
   
   kaapic_end_parallel (KAAPIC_FLAG_DEFAULT);
 
-  printf("The result is : %i\n", result );
-  
+  printf("The result is : %i/%f\n", (int)(uintptr_t)result, (double)(uintptr_t)result );
   kaapic_finalize();
+
+  if (result == (T)125) {
+    printf("Success\n");
+  }
+  
   return 0;
 }
