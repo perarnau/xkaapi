@@ -144,6 +144,7 @@ gen-%.am.m4: gen-%.am.m4.info Makefile
 
 clean-local:
 	$(RM) gen-*.am.m4 gen-*.am.m4.info */Makefile
+	$(RM) $(EXTRA_PROGRAMS)
 
 .get-var:
 	@echo '$($(VAR))'
