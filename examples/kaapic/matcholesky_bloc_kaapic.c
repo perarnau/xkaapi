@@ -85,7 +85,7 @@ static void convert_to_blocks(long NB, long N, double *Alin, double* A[DIM][DIM]
 */
 void TaskCholesky( int N, int NB, double* ptr )
 {
-  kaapic_begin_parallel(KAAPIC_FLAG_STATIC_SCHED);
+  //kaapic_begin_parallel(KAAPIC_FLAG_STATIC_SCHED);
   typedef double* TYPE[DIM][DIM]; 
   TYPE* A = (TYPE*)ptr;
 
@@ -107,7 +107,7 @@ void TaskCholesky( int N, int NB, double* ptr )
           KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)CblasLower,
           KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)CblasTrans,
           KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)CblasNonUnit,
-          KAAPIC_MODE_V, KAAPIC_TYPE_DBL, (double)1.0,
+          KAAPIC_MODE_V, KAAPIC_TYPE_DBL, 1, (double)1.0,
           KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, NB,
           KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, NB,
           KAAPIC_MODE_R, KAAPIC_TYPE_DBL, NB*NB, (*A)[k][k],
@@ -153,7 +153,7 @@ void TaskCholesky( int N, int NB, double* ptr )
       }
     }
   }
-  kaapic_end_parallel(KAAPIC_FLAG_STATIC_SCHED);
+  //kaapic_end_parallel(KAAPIC_FLAG_STATIC_SCHED);
 }
 
 

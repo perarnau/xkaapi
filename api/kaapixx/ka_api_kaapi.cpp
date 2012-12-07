@@ -86,13 +86,14 @@ void Community::leave()
   Sync();
 }
 
+static kaapi_atomic_t count_init = {0};
 
 // --------------------------------------------------------------------
 Community System::initialize_community( int& argc, char**& argv )
   throw (std::runtime_error)
 {
-  static bool is_called = false; if (is_called) return Community(0); is_called = true;
-    
+  if (KAAPI_ATOMIC_INCR(&count_init)!=1) return Community(0);
+
   System::saved_argc = argc;
   System::saved_argv = new char*[argc];
   for (int i=0; i<argc; ++i)
@@ -170,6 +171,8 @@ Community System::join_community( )
 void System::terminate()
 {
   Sync();
+  if (KAAPI_ATOMIC_DECR(&count_init)!=0) 
+    return;
   kaapi_finalize();
   KaapiComponentManager::terminate();
 }
