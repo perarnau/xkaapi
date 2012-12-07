@@ -103,6 +103,8 @@ if test x"$1" = x"--clean"; then
 
 else
 	set -x
+	ACLOCAL_AMFLAGS="-I $(pwd)/acinclude"
+	export ACLOCAL_AMFLAGS
 	autoreconf -vi -Wall -Wno-obsolete "$@" .
 	set +x
 fi
