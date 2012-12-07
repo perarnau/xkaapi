@@ -58,12 +58,12 @@ void fibonacci(int n, int* result)
     int result1 = 0;
     int result2 = 0;
     kaapic_spawn(0, 2, fibonacci, 
-        KAAPIC_MODE_V, n-1, 1, KAAPIC_TYPE_INT,
-        KAAPIC_MODE_W, &result1, 1, KAAPIC_TYPE_INT);
+        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, n-1,
+        KAAPIC_MODE_W, KAAPIC_TYPE_INT, 1, &result1);
 
     kaapic_spawn(0, 2, fibonacci, 
-        KAAPIC_MODE_V, n-2, 1, KAAPIC_TYPE_INT,
-        KAAPIC_MODE_W, &result2, 1, KAAPIC_TYPE_INT);
+        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, n-2,
+        KAAPIC_MODE_W, KAAPIC_TYPE_INT, 1, &result2);
 
     kaapic_sync();
     *result = result1 + result2;
@@ -92,8 +92,9 @@ int main(int argc, char *argv[])
 
   kaapic_begin_parallel (KAAPIC_FLAG_DEFAULT);
 
-  kaapic_spawn(&attr, 2, fibonacci, KAAPIC_MODE_V, n, 1, KAAPIC_TYPE_INT,
-      KAAPIC_MODE_W, &result, 1, KAAPIC_TYPE_INT);
+  kaapic_spawn(&attr, 2, fibonacci, 
+      KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, n,
+      KAAPIC_MODE_W, KAAPIC_TYPE_INT, 1, &result );
 
   kaapic_sync();
 
