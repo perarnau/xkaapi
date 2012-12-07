@@ -161,6 +161,7 @@ extern void kaapi_mt_resume_threads(void);
 /** initialize suspend/resume sub-functionnalities 
 */
 extern void kaapi_mt_suspendresume_init(void);
+extern void kaapi_mt_suspendresume_finalize(void);
 
 /**
 */

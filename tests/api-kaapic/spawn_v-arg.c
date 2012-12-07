@@ -117,7 +117,7 @@ int main()
     printf("Success\n");
   }
 #else
-  if (result == (T)576) {
+  if (result == (T)((T)0x10+(T)0x20+(T)0x30+(T)0x40+(T)0x50+(T)0x60+(T)0x70+(T)0x80) {
     printf("Success\n");
   }
 #endif  

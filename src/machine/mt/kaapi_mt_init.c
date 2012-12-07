@@ -152,7 +152,10 @@ int kaapi_mt_init(void)
       * memory
    */
   kaapi_hw_init();
-  
+
+  /* Need before thread creation */
+  kaapi_mt_suspendresume_init();
+     
 #if 0 // DEPRECATED_ATTRIBUTE
   /* Build global scheduling queue on the hierarchy */
   kaapi_sched_affinity_initialize();  
@@ -409,6 +412,9 @@ int kaapi_mt_finalize(void)
   }
   free( kaapi_all_kprocessors );
   kaapi_all_kprocessors =0;
+
+  /* Need */
+  kaapi_mt_suspendresume_finalize();
 
   /* TODO: destroy topology data structure */
   return 0;

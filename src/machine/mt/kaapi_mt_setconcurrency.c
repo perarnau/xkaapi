@@ -90,9 +90,6 @@ int kaapi_setconcurrency(void)
     return EINVAL;
   isinit = 1;
  
-  /* Need before thread creation */
-  kaapi_mt_suspendresume_init();
-   
   kpl = kaapi_default_param.kproc_list;
 
   if ((!kpl->count) || (kpl->count > KAAPI_MAX_PROCESSOR_LIMIT))
