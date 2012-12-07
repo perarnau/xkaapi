@@ -13,7 +13,7 @@ KAAPI_GPUSET:
 
 KAAPI_STACKSIZE: 
   Stack size to store tasks and task' arguments.
-  Unit: Byte 
+  Unit: Byte
 
 KAAPI_NETWORK:
   Name of the network to used.
@@ -30,7 +30,6 @@ KAAPI_NETWORK_SEGMENT:
 KAAPI_NETWORK_BASE_ADDR:
     - Address where all processus will try to map segment.
     - Used currently only in the taknet network.
-
 
 KAAPI_DISPLAY_PERF: 1, full, resume 
 

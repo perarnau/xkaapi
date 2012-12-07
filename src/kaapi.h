@@ -346,7 +346,7 @@ typedef enum kaapi_access_mode_t {
 } kaapi_access_mode_t;
 
 #define KAAPI_ACCESS_MASK_RIGHT_MODE   0x7F   /* 5 bits, ie bit 0, 1, 2, 3, 4, including P mode */
-#define KAAPI_ACCESS_MASK_MODE         0x3F   /* without P mode */
+#define KAAPI_ACCESS_MASK_MODE         0x1F   /* without T, P, IP mode */
 #define KAAPI_ACCESS_MASK_MODE_P       0x80   /* only P mode */
 
 /*@}*/
@@ -379,7 +379,7 @@ typedef enum kaapi_access_mode_t {
   (KAAPI_ACCESS_IS_WRITE(m) && !KAAPI_ACCESS_IS_READ(m))
 
 #define KAAPI_ACCESS_IS_READWRITE( m ) \
-  ( ((m) & KAAPI_ACCESS_MASK_RIGHT_MODE) == (KAAPI_ACCESS_MODE_W|KAAPI_ACCESS_MODE_R))
+  ( ((m) & KAAPI_ACCESS_MASK_MODE) == (KAAPI_ACCESS_MODE_W|KAAPI_ACCESS_MODE_R))
 
 /** Return true if two modes are concurrents
     a == b and a or b is R or CW

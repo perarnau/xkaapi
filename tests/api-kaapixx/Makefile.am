@@ -39,6 +39,7 @@ noinst_PROGRAMS+=           \
   fibo_kaapi++_cumul_opt \
   fibo_kaapi++_cumul_userreduc\
   test_perfcounter1 \
+  test_dfgdetect1 \
   test_spawn_failed 
 endif
 
@@ -49,6 +50,7 @@ test_stackpointer_SOURCES=test_stackpointer.cpp test_main.cpp test_main.h test_t
 test_nqueens_stackpointer_SOURCES=test_nqueens_stackpointer.cpp test_main.cpp test_main.h
 test_multipleleave_SOURCES=test_multipleleave.cpp
 test_perfcounter1_SOURCES=test_perfcounter1.cpp test_main.cpp
+test_dfgdetect1_SOURCES=test_dfgdetect1.cpp test_main.cpp test_main.h
 
 fibo_kaapi___SOURCES=    fibo_kaapi++.cpp test_main.cpp test_main.h fibo_main.cpp
 fibo_kaapi___autopointer_SOURCES= fibo_kaapi++_autopointer.cpp test_main.cpp test_main.h fibo_main.cpp
@@ -86,6 +88,11 @@ test_nqueens_stackpointer_CPPFLAGS=$(AM_CPPFLAGS)  $(KAAPIXXPROGS_BUILD_CPPFLAGS
 test_nqueens_stackpointer_CXXFLAGS=$(AM_CXXFLAGS)  $(KAAPIXXPROGS_BUILD_CXXFLAGS)
 test_nqueens_stackpointer_LDFLAGS =$(AM_LDFLAGS)   $(KAAPIXXPROGS_BUILD_LDFLAGS)
 test_nqueens_stackpointer_LDADD   =$(LIBS)         $(KAAPIXXPROGS_BUILD_LIBS)
+
+test_dfgdetect1_CPPFLAGS=$(AM_CPPFLAGS)  $(KAAPIXXPROGS_BUILD_CPPFLAGS)  
+test_dfgdetect1_CXXFLAGS=$(AM_CXXFLAGS)  $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+test_dfgdetect1_LDFLAGS =$(AM_LDFLAGS)   $(KAAPIXXPROGS_BUILD_LDFLAGS)
+test_dfgdetect1_LDADD   =$(LIBS)         $(KAAPIXXPROGS_BUILD_LIBS)
 
 test_multipleleave_CPPFLAGS=$(AM_CPPFLAGS)  $(KAAPIXXPROGS_BUILD_CPPFLAGS)  
 test_multipleleave_CXXFLAGS=$(AM_CXXFLAGS)  $(KAAPIXXPROGS_BUILD_CXXFLAGS)

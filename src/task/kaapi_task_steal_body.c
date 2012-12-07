@@ -112,6 +112,7 @@ void kaapi_taskwrite_body(
         copy_access_param = kaapi_format_get_access_param(fmt, i, copy_task_args); 
 
         /* write the value as the version */
+        kaapi_assert_debug( access_param.version == 0);
         access_param.version = copy_access_param.data;
         kaapi_format_set_access_param(fmt, i, orig_task_args, &access_param );
       }
@@ -223,10 +224,7 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
     arg->copy_task_args  = copy_task_args;
     arg->origin_fmt      = fmt;
 
-    /* WARNING there are possibly non formated params */
-    /* ERROR: do not work if variable size task: to be virtualized through the format object */
     kaapi_format_task_copy( fmt, copy_task_args, orig_task_args );
-//    memcpy(copy_task_args, orig_task_args, fmt->size);
 
     for (i=0; i<count_params; ++i)
     {
@@ -246,7 +244,9 @@ void kaapi_tasksteal_body( void* taskarg, kaapi_thread_t* thread  )
       access_param              = kaapi_format_get_access_param(fmt, i, orig_task_args);
       copy_access_param         = kaapi_format_get_access_param(fmt, i, copy_task_args);
       copy_access_param.data    = access_param.data;
-      copy_access_param.version = 0; /*access_param->version; / * not required... * / */
+      copy_access_param.version = 0; /*access_param->version; not required... */
+
+     KAAPI_DEBUG_INST(access_param.version = 0;)
       
       if (KAAPI_ACCESS_IS_STACK(mode_param))
       {
