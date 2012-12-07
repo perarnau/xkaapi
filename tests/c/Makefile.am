@@ -27,8 +27,8 @@ endif
 TESTS=
 
 test_begend_parallel_SOURCES=test_begend_parallel.c
-fibo_sync_SOURCES=fibo_sync.c
-fibo_sum_SOURCES=fibo_sum.c
-fibo_cumul_SOURCES=fibo_cumul.c
+fibo_sync_SOURCES=fibo_sync.c fib_verify.h
+fibo_sum_SOURCES=fibo_sum.c fib_verify.h
+fibo_cumul_SOURCES=fibo_cumul.c fib_verify.h
 nqueens_stackpointer_SOURCES=nqueens_stackpointer.c
 
