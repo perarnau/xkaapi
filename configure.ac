@@ -237,7 +237,7 @@ dnl The "--enable-api-kaapif"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([api-kaapif], [compile fortran API],
   [Fortran API compiled], [check],
-  [],
+  [KAT_TESTSUITES="$KAT_TESTSUITES libkaapif"],
   [],
   [KAAPI_API_KAAPIF],
   [
@@ -283,7 +283,7 @@ dnl The "--enable-api-kaapixx"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([api-kaapixx], [compile Kaapi++ API],
   [Kaapi++ API compiled], [check],
-  [],
+  [KAT_TESTSUITES="$KAT_TESTSUITES libkaapi++"],
   [],
   [KAAPI_API_KAAPIXX],
   [
@@ -301,7 +301,7 @@ dnl The "--enable-api-quark"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([api-quark], [compile Quark API used by PLASMA library],
   [Quark API compiled], [yes],
-  [],
+  [KAT_TESTSUITES="$KAT_TESTSUITES libquark"],
   [],
   [KAAPI_API_QUARK])
 
@@ -311,7 +311,7 @@ dnl The "--enable-api-kastl"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([api-kastl], [compile KaSTL API],
   [KaSTL API compiled], [no],
-  [],
+  [KAT_TESTSUITES="$KAT_TESTSUITES kastl"],
   [],
   [KAAPI_API_KASTL],
   [
@@ -328,7 +328,7 @@ dnl The "--enable-libgomp"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([libgomp], [compile OpenMP libgomp library],
   [OpenMP libgomp compiled], [check],
-  [],
+  [KAT_TESTSUITES="$KAT_TESTSUITES libgomp"],
   [],
   [KAAPI_LIBGOMP],
   [
