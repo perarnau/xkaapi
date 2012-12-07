@@ -1,1 +1,32 @@
-define(`M4_TMP1',`ifelse($1,1,define(`M4_TMP',`$2')M4_TMP($1),`M4_TMP1(decr($1),`$2',`$3')'`$3'define(`M4_TMP',`$2')M4_TMP($1))') define(`M4_PARAM',`ifelse(KAAPI_NUMBER_PARAMS,0,,`$2M4_TMP1(KAAPI_NUMBER_PARAMS,``$1'',``$3'')$4')')
+define(`M4_TMP1',`ifelse($1,1,define(`M4_TMP',`$2')M4_TMP($1),`M4_TMP1(decr($1),`$2',`$3')'`$3'define(`M4_TMP',`$2')M4_TMP($1))')dnl
+define(`M4_PARAM',`ifelse(KAAPI_NUMBER_PARAMS,0,,`$2M4_TMP1(KAAPI_NUMBER_PARAMS,``$1'',``$3'')$4')')dnl
+dnl ************************************************
+ifelse(MODE,`C',
+  `define(`KAF_GROUP',`
+/* $1 */
+
+$2')dnl
+define(`KAF_INT',`#define $1 $2
+')')dnl
+dnl ************************************************
+ifelse(MODE,`F90',
+  `define(`KAF_GROUP',`C
+C $1
+C
+$2')dnl
+define(`KAF_INT',`	INTEGER*4 $1
+	PARAMETER ($1=$2)
+')')dnl
+dnl ************************************************
+ifelse(MODE,`F95',
+  `define(`KAF_GROUP',`!
+! $1
+!
+$2')dnl
+define(`KAF_INT',`	INTEGER(4), PARAMETER :: $1=$2
+')')dnl
+dnl ************************************************
+ifelse(MODE,`C',
+  `define(`KAF_INT_H',`#define $1 $2
+')',
+  `define(`KAF_INT_H',`')')dnl

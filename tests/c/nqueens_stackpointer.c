@@ -36,35 +36,35 @@ long solution[] = {
 };
 
 /* */
-void solve(int* n, int* val, int* col, int* hist, unsigned long* count)
+void solve(int n, int val, int col, int* hist, unsigned long* count)
 {
-  if (*col == *n) {
+  if (col == n) {
     *count += 1UL;
     return;
   }
 
-  if (*col >0)
-    hist[*col-1] = *val;    
+  if (col >0)
+    hist[col-1] = val;
  
-#	define attack(i, j) (hist[j] == i || abs(hist[j] - i) == *col - j)
-  for (int i = 0, j = 0; i < *n; i++) 
+#	define attack(i, j) (hist[j] == i || abs(hist[j] - i) == col - j)
+  for (int i = 0, j = 0; i < n; i++)
   {
-    for (j = 0; j < *col && !attack(i, j); j++);
-    if (j < *col) continue;
+    for (j = 0; j < col && !attack(i, j); j++);
+    if (j < col) continue;
  
-    if (*col < THRESHOLD)
+    if (col < THRESHOLD)
       kaapic_spawn(0,
                    5,
                    solve,
-                   KAAPIC_MODE_V,  KAAPIC_TYPE_INT, 1, *n, 
-                   KAAPIC_MODE_V,  KAAPIC_TYPE_INT, 1, i, 
-                   KAAPIC_MODE_V,  KAAPIC_TYPE_INT, 1, *col + 1, 
-                   KAAPIC_MODE_S,  KAAPIC_TYPE_INT, *n, hist, 
+                   KAAPIC_MODE_V,  KAAPIC_TYPE_INT, 1, n,
+                   KAAPIC_MODE_V,  KAAPIC_TYPE_INT, 1, i,
+                   KAAPIC_MODE_V,  KAAPIC_TYPE_INT, 1, col + 1,
+                   KAAPIC_MODE_S,  KAAPIC_TYPE_INT, n, hist,
                    KAAPIC_MODE_CW, KAAPIC_REDOP_PLUS, KAAPIC_TYPE_ULONG, 1, count
       );
     else {
-      int c = *col+1;
-      solve(n, &i, &c, hist, count);
+      int c = col+1;
+      solve(n, i, c, hist, count);
     }
   }
 }

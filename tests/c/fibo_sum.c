@@ -55,24 +55,24 @@ void sum(int* result1, int* result2, int* result)
   *result = *result1 + *result2;
 }
 
-void fibonacci(const int* n, int* result)
+void fibonacci(const int n, int* result)
 {
   /* task user specific code */
-  if (*n<2)
-    *result = *n;
+  if (n<2)
+    *result = n;
   else
   {
     int err;
     int* result1 = kaapic_alloca(sizeof(int));
     int* result2 = kaapic_alloca(sizeof(int));
     err = kaapic_spawn(0, 2, fibonacci, 
-        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, *n-1,
+        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, n-1,
         KAAPIC_MODE_W, KAAPIC_TYPE_INT, 1, result1
     );
     kaapi_assert(err==0);
 
     err = kaapic_spawn(0, 2, fibonacci, 
-        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, *n-2,
+        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, n-2,
         KAAPIC_MODE_W, KAAPIC_TYPE_INT, 1, result2
     );
     kaapi_assert(err==0);

@@ -217,6 +217,21 @@ KAAPI_FEATURE([api-kaapic], [compile C API],
   [],
   [KAAPI_API_KAAPIC])
 
+#TODO: add a --with-libffi options and allow to use external libffi
+AS_IF([test x"$enable_api_kaapic" = xyes],
+  [use_ffi=internal],
+  [use_ffi=no])
+
+AS_CASE(["$use_ffi"],
+  [no],[],
+  [internal],[
+    ACX_LIB_CHECK_PLAIN([FFI],[],[ACX_LIB_FOUND(
+	[CppFlags="-I\$(top_srcdir)/imported-soft/libffi/include"],
+	[LdFlags="-L\$(top_builddir)/imported-soft/libffi"],
+	[Libs="-lffi_convenience"])]) 
+  ],
+  [AC_MSG_ERROR([Internal error in configure.ac])])
+
 dnl -----------------------------------------------------------------------
 dnl The "--enable-api-kaapif"
 dnl -----------------------------------------------------------------------
@@ -858,6 +873,16 @@ AM_CONDITIONAL([KAAPI_TARGET_KACC],[test x"$KAAPI_USE_KACC" = x"yes"])
 AM_CONDITIONAL([KAAPI_HAVE_CBLAS],[test x"$CBLAS_LDFLAGS" != x])
 
 dnl -----------------------------------------------------------------------
+dnl sub configure for external (but imported) projects
+dnl -----------------------------------------------------------------------
+
+use_ffi=internal
+if test x"$use_ffi" = xinternal; then
+  mkdir -p "imported-soft/libffi"
+  AC_CONFIG_SUBDIRS([imported-soft/libffi])
+fi
+
+dnl -----------------------------------------------------------------------
 dnl Dependencies between libs
 dnl -----------------------------------------------------------------------
 ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [KAAPILIB])
@@ -873,6 +898,7 @@ dnl ACX_LIB_LINK([KASTLLIB], [PRIVATE], [HWLOC])
 ACX_LIB_LINK([KAAPICLIB], [PUBLIC], [KAAPILIB])
 ACX_LIB_LINK([KAAPICLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([KAAPICLIB], [PRIVATE], [CUPTI])
+ACX_LIB_LINK([KAAPICLIB], [PRIVATE], [FFI])
 
 ACX_LIB_LINK([KAAPIFLIB], [PUBLIC], [KAAPICLIB])
 ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [CUDA])
@@ -937,6 +963,7 @@ AC_CONFIG_FILES([
 	bin/kaapi_f2f/Makefile
 	bin/kaapi_event_reader/Makefile
 	examples/Makefile
+	imported-soft/Makefile
 	src/Makefile
 	tests/Makefile
 	tests/c/Makefile

@@ -90,15 +90,15 @@ InitKaapiCXX::InitKaapiCXX()
   if (iscalled !=0) return;
     
   WrapperFormat<char>::format.reinit(kaapi_char_format);
-  WrapperFormat<short>::format.reinit(kaapi_short_format);
+  WrapperFormat<short>::format.reinit(kaapi_shrt_format);
   WrapperFormat<int>::format.reinit(kaapi_int_format);
   WrapperFormat<long>::format.reinit(kaapi_long_format);
   WrapperFormat<unsigned char>::format.reinit(kaapi_uchar_format);
-  WrapperFormat<unsigned short>::format.reinit(kaapi_ushort_format);
+  WrapperFormat<unsigned short>::format.reinit(kaapi_ushrt_format);
   WrapperFormat<unsigned int>::format.reinit(kaapi_uint_format);
   WrapperFormat<unsigned long>::format.reinit(kaapi_ulong_format);
-  WrapperFormat<float>::format.reinit(kaapi_float_format);
-  WrapperFormat<double>::format.reinit(kaapi_double_format);
+  WrapperFormat<float>::format.reinit(kaapi_flt_format);
+  WrapperFormat<double>::format.reinit(kaapi_dbl_format);
 }
 
 

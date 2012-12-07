@@ -17,22 +17,27 @@ libkaapic_la_LIBADD=../../src/libkaapi.la $(KAAPICLIB_BUILD_LIBS)
 
 M4_BUILT_FILES=\
   kaapic_dfg_switch.h \
-  kaapic_dfg_wh_switch.h \
   kaapic_adaptive_switch.h \
   kaapic_adaptive_switch_ull.h
 
 M4_SRCS=\
   kaapic_dfg_switch.m4 \
-  kaapic_dfg_wh_switch.m4 \
   kaapic_adaptive_switch.m4 \
   kaapic_adaptive_switch_ull.m4 \
   m4_generator \
   m4_macros
 
-BUILT_SOURCES = $(M4_BUILT_FILES)
+BUILT_SOURCES = $(M4_BUILT_FILES) $(srcdir)/../kaapif/kaapif_inc.h
 EXTRA_DIST = $(M4_SRCS)
 
 $(M4_BUILT_FILES): stamp-m4_generator
+
+# We do not track here dependencies of kaapif_inc.h itself
+# We will need to build the project two times if
+# - this is not the first build (ie kaapif_inc.h already exists)
+# - and a dependency of kaapif_inc.h changed
+$(srcdir)/../kaapif/kaapif_inc.h:
+	$(MAKE) -C ../kaapif kaapif_inc.h
 
 .INTERMEDIATE: stamp-m4_generator
 stamp-m4_generator: $(M4_SRCS)
