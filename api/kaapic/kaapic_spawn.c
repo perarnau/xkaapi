@@ -78,56 +78,56 @@
  */
 
 #define _KAAPIC_TYPE_ITER_INTEGERS(m, sep)				\
-  m(CHAR, char, char, int,						\
-    1, schar) sep							\
-  m(SCHAR, schar, signed char, int,					\
-    1, schar) sep							\
-  m(SHRT, shrt, short, int,						\
-    1, sshort) sep							\
-  m(INT, int, int, int,							\
-    1, sint) sep							\
-  m(LONG, long, long, long,						\
-    1, slong) sep							\
-  m(LLONG, llong, long long, long long,					\
-    1, sint64) sep							\
-  m(INT8, int8, int8_t, int,						\
-    1, sint8) sep							\
-  m(INT16, int16, int16_t, int,						\
-    1, sint16) sep							\
-  m(INT32, int32, int32_t, int32_t,					\
-    1, sint32) sep							\
-  m(INT64, int64, int64_t, int64_t,					\
-    1, sint64) sep							\
-  m(UCHAR, uchar, unsigned char, unsigned,				\
-    1, uchar) sep							\
-  m(USHRT, ushrt, unsigned short, unsigned,				\
-    1, ushort) sep							\
-  m(UINT, uint, unsigned int, unsigned int,				\
-    1, uint) sep							\
-  m(ULONG, ulong, unsigned long, unsigned long,				\
-    1, ulong) sep							\
-  m(ULLONG, ullong, unsigned long long, unsigned long long,		\
-    1, uint64) sep							\
-  m(UINT8, uint8, uint8_t, unsigned,					\
-    1, uint8) sep							\
-  m(UINT16, uint16, uint16_t, unsigned,					\
-    1, uint16) sep							\
-  m(UINT32, uint32, uint32_t, uint32_t,					\
-    1, uint32) sep							\
-  m(UINT64, uint64, uint64_t, uint64_t,					\
-    1, uint64)
+m(CHAR, char, char, int,						\
+1, schar) sep							\
+m(SCHAR, schar, signed char, int,					\
+1, schar) sep							\
+m(SHRT, shrt, short, int,						\
+1, sshort) sep							\
+m(INT, int, int, int,							\
+1, sint) sep							\
+m(LONG, long, long, long,						\
+1, slong) sep							\
+m(LLONG, llong, long long, long long,					\
+1, sint64) sep							\
+m(INT8, int8, int8_t, int,						\
+1, sint8) sep							\
+m(INT16, int16, int16_t, int,						\
+1, sint16) sep							\
+m(INT32, int32, int32_t, int32_t,					\
+1, sint32) sep							\
+m(INT64, int64, int64_t, int64_t,					\
+1, sint64) sep							\
+m(UCHAR, uchar, unsigned char, unsigned,				\
+1, uchar) sep							\
+m(USHRT, ushrt, unsigned short, unsigned,				\
+1, ushort) sep							\
+m(UINT, uint, unsigned int, unsigned int,				\
+1, uint) sep							\
+m(ULONG, ulong, unsigned long, unsigned long,				\
+1, ulong) sep							\
+m(ULLONG, ullong, unsigned long long, unsigned long long,		\
+1, uint64) sep							\
+m(UINT8, uint8, uint8_t, unsigned,					\
+1, uint8) sep							\
+m(UINT16, uint16, uint16_t, unsigned,					\
+1, uint16) sep							\
+m(UINT32, uint32, uint32_t, uint32_t,					\
+1, uint32) sep							\
+m(UINT64, uint64, uint64_t, uint64_t,					\
+1, uint64)
 
 #define _KAAPIC_TYPE_ITER_FLOATS(m, sep)				\
-  m(FLT, flt, float, double,						\
-    2, float) sep							\
-  m(DBL, dbl, double, double,						\
-    2, double) sep							\
-  m(LDBL, ldbl, long double, long double,				\
-    2, longdouble)
+m(FLT, flt, float, double,						\
+2, float) sep							\
+m(DBL, dbl, double, double,						\
+2, double) sep							\
+m(LDBL, ldbl, long double, long double,				\
+2, longdouble)
 
 #define _KAAPIC_TYPE_ITER_OTHERS(m, sep)				\
-  m(PTR, voidp, void*, void*,						\
-    0, pointer)
+m(PTR, voidp, void*, void*,						\
+0, pointer)
 
 /* Defining the min macro for unsigned type so that code can be
  * generated with the same macro for signed and unsigned types
@@ -143,28 +143,28 @@
 #define UINT64_MIN 0
 
 #define _KAAPIC_TYPE_ITER(m, sep)					\
-  _KAAPIC_TYPE_ITER_INTEGERS(m, sep) sep				\
-  _KAAPIC_TYPE_ITER_FLOATS(m, sep) sep					\
-				   _KAAPIC_TYPE_ITER_OTHERS(m, sep)
+_KAAPIC_TYPE_ITER_INTEGERS(m, sep) sep				\
+_KAAPIC_TYPE_ITER_FLOATS(m, sep) sep					\
+_KAAPIC_TYPE_ITER_OTHERS(m, sep)
 
 #define _KAAPIC_COMMA ,
 
 #define _KAAPIC_TYPE_ITER_INTEGERS_COMMA(m)	\
-  _KAAPIC_TYPE_ITER_INTEGERS(m, _KAAPIC_COMMA)
+_KAAPIC_TYPE_ITER_INTEGERS(m, _KAAPIC_COMMA)
 
 #define _KAAPIC_TYPE_ITER_FLOATS_COMMA(m)	\
-    _KAAPIC_TYPE_ITER_FLOATS(m, _KAAPIC_COMMA)
+_KAAPIC_TYPE_ITER_FLOATS(m, _KAAPIC_COMMA)
 
 #define _KAAPIC_TYPE_ITER_OTHERS_COMMA(m)	\
-    _KAAPIC_TYPE_ITER_OTHERS(m, _KAAPIC_COMMA)
+_KAAPIC_TYPE_ITER_OTHERS(m, _KAAPIC_COMMA)
 
 #define _KAAPIC_TYPE_ITER_COMMA(m)					\
-  _KAAPIC_TYPE_ITER_INTEGERS(m, _KAAPIC_COMMA) ,			\
-    _KAAPIC_TYPE_ITER_FLOATS(m, _KAAPIC_COMMA) ,			\
-    _KAAPIC_TYPE_ITER_OTHERS(m, _KAAPIC_COMMA)
+_KAAPIC_TYPE_ITER_INTEGERS(m, _KAAPIC_COMMA) ,			\
+_KAAPIC_TYPE_ITER_FLOATS(m, _KAAPIC_COMMA) ,			\
+_KAAPIC_TYPE_ITER_OTHERS(m, _KAAPIC_COMMA)
 
 /*
-*/
+ */
 typedef struct kaapic_arg_sig
 {
   struct {
@@ -193,7 +193,7 @@ typedef struct kaapic_arg_sig
 #define _KAAPIC_TS_FORTRAN_ABI (1<<3)
 
 #define KAAPIC_TS(ts, name)			\
-  ((ts)->flags & _KAAPIC_TS_##name)
+((ts)->flags & _KAAPIC_TS_##name)
 #define _KAAPIC_USE_FFI(ts) KAAPIC_TS(ts, USE_FFI)
 
 typedef struct kaapic_task_sig
@@ -209,17 +209,17 @@ typedef struct kaapic_task_sig
 typedef struct kaapic_arg_info_t
 {
   kaapi_memory_view_t          view;
-
+  
   /* kaapi versionning for shared pointer also used to store
-     address of  the value for by-value argument it its size is
-     small enought
-  */
+   address of  the value for by-value argument it its size is
+   small enought
+   */
   kaapi_access_t              access;
-
+  
 } kaapic_arg_info_t;
 
 /*
-*/
+ */
 typedef struct kaapic_task_info
 {
   void             (*body)();
@@ -263,7 +263,7 @@ static const enum kaapic_mode typef2typec[KAAPIF_TYPE_MAX] =
 #define _KAAPIC_DFG_BODY_FORTRAN_ABI (1<<2)
 
 #define _FEATURE(name) \
-  (inline_mode & _KAAPIC_DFG_BODY_##name)
+(inline_mode & _KAAPIC_DFG_BODY_##name)
 
 /* generic get_arg function
  * This function will always be inlined
@@ -273,20 +273,20 @@ static const enum kaapic_mode typef2typec[KAAPIF_TYPE_MAX] =
  * impact on the performance of the real functions
  */
 static inline void* get_arg(
-  int inline_mode,
-  kaapic_task_info_t* ti,
-  const kaapic_task_sig_t* const ts,
-  unsigned int i) __attribute__((always_inline));
+                            int inline_mode,
+                            kaapic_task_info_t* ti,
+                            const kaapic_task_sig_t* const ts,
+                            unsigned int i) __attribute__((always_inline));
 static inline void* get_arg(
-  int inline_mode,
-  kaapic_task_info_t* ti,
-  const kaapic_task_sig_t* const ts,
-  unsigned int i)
+                            int inline_mode,
+                            kaapic_task_info_t* ti,
+                            const kaapic_task_sig_t* const ts,
+                            unsigned int i)
 {
   kaapic_arg_info_t* const ai = &ti->args[i];
   const kaapic_arg_sig_t* const as = &ts->args[i];
   void* pdata;
-
+  
   if (as->mode == KAAPI_ACCESS_MODE_V) {
     if (_FEATURE(FORTRAN_ABI)) {
       /* In fortran, values are passed by reference */
@@ -313,16 +313,16 @@ static inline void* get_arg(
  * impact on the performance of the real functions
  */
 static inline void __kaapic_dfg_body(
-  int inline_mode,
-  void* p) __attribute__((always_inline));
+                                     int inline_mode,
+                                     void* p) __attribute__((always_inline));
 static inline void __kaapic_dfg_body(
-  int inline_mode,
-  void* p)
+                                     int inline_mode,
+                                     void* p)
 {
   kaapic_task_info_t* const ti = (kaapic_task_info_t*)p;
   kaapic_task_sig_t* const ts = ti->sig;
   const unsigned int nargs = ts->nargs;
-
+  
   if (KAAPIC_TS(ts, HAS_SCRATCH)) {
     /* process scratch mode */
     int scratch_count        = 0;
@@ -331,25 +331,27 @@ static inline void __kaapic_dfg_body(
     {
       if (ts->args[i].mode & KAAPI_ACCESS_MODE_T)
       {
-	if (kproc == 0) kproc = kaapi_get_current_processor();
-	size_t szarg = kaapi_memory_view_size(&ts->args[i].view);
-	// TODO: PB with get_arg_wh ?
-	ti->args[i].access.data = _kaapi_gettemporary_data(kproc, scratch_count, szarg);
-	++scratch_count;
+        if (kproc == 0) kproc = kaapi_get_current_processor();
+        size_t szarg = kaapi_memory_view_size(&ts->args[i].view);
+        // TODO: PB with get_arg_wh ?
+        ti->args[i].access.data = _kaapi_gettemporary_data(kproc, scratch_count, szarg);
+        ++scratch_count;
       }
     }
   }
-
-  if (KAAPIC_TS(ts, USE_FFI)) {
+  
+  if (KAAPIC_TS(ts, USE_FFI)) 
+  {
     unsigned int nargs = ts->nargs;
     void* pvalues[nargs];
-    for (unsigned int i=0; i<nargs; ++i) {
+    for (unsigned int i=0; i<nargs; ++i) 
+    {
       pvalues[i]= get_arg(inline_mode,ti, ts, i) ;
     }
     ffi_call(&ts->cif, ti->body, NULL, pvalues);
     return;
   }
-
+  
 #include "kaapic_dfg_switch.h"
   KAAPIC_DFG_SWITCH(*(void**)get_arg,inline_mode,ti,ts);
 }
@@ -398,9 +400,9 @@ static void kaapic_taskformat_task_copy(const struct kaapi_format_t* fmt, void* 
 }
 
 static size_t kaapic_taskformat_get_count_params(
- const struct kaapi_format_t* f,
- const void* p
-)
+                                                 const struct kaapi_format_t* f,
+                                                 const void* p
+                                                 )
 {
   const kaapic_task_info_t* const ti = p;
   const kaapic_task_sig_t* const ts = ti->sig;
@@ -408,10 +410,10 @@ static size_t kaapic_taskformat_get_count_params(
 }
 
 static kaapi_access_mode_t kaapic_taskformat_get_mode_param(
- const struct kaapi_format_t* f,
- unsigned int i,
- const void* p
-)
+                                                            const struct kaapi_format_t* f,
+                                                            unsigned int i,
+                                                            const void* p
+                                                            )
 {
   const kaapic_task_info_t* const ti = p;
   const kaapic_task_sig_t* const ts = ti->sig;
@@ -420,10 +422,10 @@ static kaapi_access_mode_t kaapic_taskformat_get_mode_param(
 }
 
 static void* kaapic_taskformat_get_off_param(
- const struct kaapi_format_t* f,
- unsigned int i,
- const void* p
-)
+                                             const struct kaapi_format_t* f,
+                                             unsigned int i,
+                                             const void* p
+                                             )
 {
   const kaapic_task_info_t* const ti = p;
   void* off = (void*)&(ti->args[i].access.data);
@@ -431,31 +433,31 @@ static void* kaapic_taskformat_get_off_param(
 }
 
 static kaapi_access_t kaapic_taskformat_get_access_param(
- const struct kaapi_format_t* f,
- unsigned int i,
- const void* p
-)
+                                                         const struct kaapi_format_t* f,
+                                                         unsigned int i,
+                                                         const void* p
+                                                         )
 {
   const kaapic_task_info_t* const ti = p;
   return ti->args[i].access;
 }
 
 static void kaapic_taskformat_set_access_param(
- const struct kaapi_format_t* f,
- unsigned int i,
- void* p,
- const kaapi_access_t* a
-)
+                                               const struct kaapi_format_t* f,
+                                               unsigned int i,
+                                               void* p,
+                                               const kaapi_access_t* a
+                                               )
 {
   kaapic_task_info_t* const ti = p;
   ti->args[i].access = *a;
 }
 
 static const struct kaapi_format_t* kaapic_taskformat_get_fmt_param(
- const struct kaapi_format_t* f,
- unsigned int i,
- const void* p
-)
+                                                                    const struct kaapi_format_t* f,
+                                                                    unsigned int i,
+                                                                    const void* p
+                                                                    )
 {
   const kaapic_task_info_t* const ti = p;
   const kaapic_task_sig_t* const ts = ti->sig;
@@ -464,10 +466,10 @@ static const struct kaapi_format_t* kaapic_taskformat_get_fmt_param(
 }
 
 static kaapi_memory_view_t kaapic_taskformat_get_view_param(
- const struct kaapi_format_t* f,
- unsigned int i,
- const void* p
-)
+                                                            const struct kaapi_format_t* f,
+                                                            unsigned int i,
+                                                            const void* p
+                                                            )
 {
   const kaapic_task_info_t* const ti = p;
   const kaapic_task_sig_t* const ts = ti->sig;
@@ -475,11 +477,11 @@ static kaapi_memory_view_t kaapic_taskformat_get_view_param(
 }
 
 static void kaapic_taskformat_set_view_param(
- const struct kaapi_format_t* f,
- unsigned int i,
- void* p,
- const kaapi_memory_view_t* v
-)
+                                             const struct kaapi_format_t* f,
+                                             unsigned int i,
+                                             void* p,
+                                             const kaapi_memory_view_t* v
+                                             )
 {
   /* do nothing here if only 1-D view */
   kaapic_task_info_t* const ti = p;
@@ -491,54 +493,54 @@ static void kaapic_taskformat_set_view_param(
 #define _KAAPIC_DECLNAME_REDINIT(name,type) _kaapic_redinit_##name
 
 #define _KAAPIC_DECL_REDOP_FLOATS(C, name, type, ...)	\
-  _KAAPIC_DECL_REDOP_BASE(C, name, type, , )
+_KAAPIC_DECL_REDOP_BASE(C, name, type, , )
 #define _KAAPIC_DECL_REDOP_INTEGERS(C, name, type, ...)			\
-  _KAAPIC_DECL_REDOP_BASE(C, name, type, _KAAPIC_DECL_REDOP_EXT1, _KAAPIC_DECL_REDOP_EXT2)
+_KAAPIC_DECL_REDOP_BASE(C, name, type, _KAAPIC_DECL_REDOP_EXT1, _KAAPIC_DECL_REDOP_EXT2)
 
 #define _KAAPIC_DECL_REDOP_EXT1						\
-  case KAAPIC_REDOP_AND  : *r &= *d; break;				\
-  case KAAPIC_REDOP_OR   : *r |= *d; break;				\
-  case KAAPIC_REDOP_XOR  : *r ^= *d; break;				\
+case KAAPIC_REDOP_AND  : *r &= *d; break;				\
+case KAAPIC_REDOP_OR   : *r |= *d; break;				\
+case KAAPIC_REDOP_XOR  : *r ^= *d; break;				\
 
 #define _KAAPIC_DECL_REDOP_EXT2						\
-  case KAAPIC_REDOP_AND  : *r = ~0; break;				\
-  case KAAPIC_REDOP_OR   : *r = 0; break;				\
-  case KAAPIC_REDOP_XOR  : *r = 0; break;				\
+case KAAPIC_REDOP_AND  : *r = ~0; break;				\
+case KAAPIC_REDOP_OR   : *r = 0; break;				\
+case KAAPIC_REDOP_XOR  : *r = 0; break;				\
 
 #define _KAAPIC_DECL_REDOP_BASE(C, name, type, ext1, ext2)			\
-  static void _KAAPIC_DECLNAME_REDOP(name,type)( int op, void* p, const void* q) \
-  {									\
-    type* r = (type*)p;							\
-    const type* d = (const type*)q;					\
-    switch (op) {							\
-    case KAAPIC_REDOP_PLUS : *r += *d; break;				\
-    case KAAPIC_REDOP_MUL  : *r *= *d; break;				\
-    case KAAPIC_REDOP_MINUS: *r -= *d; break;				\
-      ext1								\
-    case KAAPIC_REDOP_LAND : *r = *r && *d; break;			\
-    case KAAPIC_REDOP_LOR  : *r = *r || *d; break;			\
-    case KAAPIC_REDOP_MAX  : *r = (*r < *d ? *d : *r); break;		\
-    case KAAPIC_REDOP_MIN  : *r = (*r > *d ? *d : *r); break;		\
-    default:								\
-      kaapi_assert_m(0, "[kaapic]: invalid reduction operator");	\
-    };									\
-  }									\
-  static void _KAAPIC_DECLNAME_REDINIT(name,type)( int op, void* p)	\
-  {									\
-    type* r = (type*)p;							\
-    switch (op) {							\
-    case KAAPIC_REDOP_PLUS : *r = 0; break;				\
-    case KAAPIC_REDOP_MUL  : *r = 1; break;				\
-    case KAAPIC_REDOP_MINUS: *r = 0; break;				\
-      ext2								\
-    case KAAPIC_REDOP_LAND : *r = 1; break;				\
-    case KAAPIC_REDOP_LOR  : *r = 0; break;				\
-    case KAAPIC_REDOP_MAX  : *r = C##_MIN; break;			\
-    case KAAPIC_REDOP_MIN  : *r = C##_MAX; break;			\
-    default:								\
-      kaapi_assert_m(0, "[kaapic]: invalid reduction operator");	\
-    };									\
-  }
+static void _KAAPIC_DECLNAME_REDOP(name,type)( int op, void* p, const void* q) \
+{									\
+type* r = (type*)p;							\
+const type* d = (const type*)q;					\
+switch (op) {							\
+case KAAPIC_REDOP_PLUS : *r += *d; break;				\
+case KAAPIC_REDOP_MUL  : *r *= *d; break;				\
+case KAAPIC_REDOP_MINUS: *r -= *d; break;				\
+ext1								\
+case KAAPIC_REDOP_LAND : *r = *r && *d; break;			\
+case KAAPIC_REDOP_LOR  : *r = *r || *d; break;			\
+case KAAPIC_REDOP_MAX  : *r = (*r < *d ? *d : *r); break;		\
+case KAAPIC_REDOP_MIN  : *r = (*r > *d ? *d : *r); break;		\
+default:								\
+kaapi_assert_m(0, "[kaapic]: invalid reduction operator");	\
+};									\
+}									\
+static void _KAAPIC_DECLNAME_REDINIT(name,type)( int op, void* p)	\
+{									\
+type* r = (type*)p;							\
+switch (op) {							\
+case KAAPIC_REDOP_PLUS : *r = 0; break;				\
+case KAAPIC_REDOP_MUL  : *r = 1; break;				\
+case KAAPIC_REDOP_MINUS: *r = 0; break;				\
+ext2								\
+case KAAPIC_REDOP_LAND : *r = 1; break;				\
+case KAAPIC_REDOP_LOR  : *r = 0; break;				\
+case KAAPIC_REDOP_MAX  : *r = C##_MIN; break;			\
+case KAAPIC_REDOP_MIN  : *r = C##_MAX; break;			\
+default:								\
+kaapi_assert_m(0, "[kaapic]: invalid reduction operator");	\
+};									\
+}
 
 _KAAPIC_TYPE_ITER_INTEGERS(_KAAPIC_DECL_REDOP_INTEGERS, )
 _KAAPIC_TYPE_ITER_FLOATS(_KAAPIC_DECL_REDOP_FLOATS, )
@@ -547,7 +549,7 @@ typedef void (*_kaapic_redop_func_t)(int op, void*, const void*);
 
 _kaapic_redop_func_t all_redops[] = {
 #define _KAAPI_m(C,c,type,...) \
-  _KAAPIC_DECLNAME_REDOP(c,type)
+_KAAPIC_DECLNAME_REDOP(c,type)
   _KAAPIC_TYPE_ITER_INTEGERS_COMMA(_KAAPI_m),
   _KAAPIC_TYPE_ITER_FLOATS_COMMA(_KAAPI_m)
 #undef _KAAPI_m
@@ -556,7 +558,7 @@ _kaapic_redop_func_t all_redops[] = {
 typedef void (*_kaapic_redinit_func_t)(int op, void*);
 _kaapic_redinit_func_t all_redinits[] = {
 #define _KAAPI_m(C,c,type,...) \
-  _KAAPIC_DECLNAME_REDINIT(c,type)
+_KAAPIC_DECLNAME_REDINIT(c,type)
   _KAAPIC_TYPE_ITER_INTEGERS_COMMA(_KAAPI_m),
   _KAAPIC_TYPE_ITER_FLOATS_COMMA(_KAAPI_m)
 #undef _KAAPI_m
@@ -569,14 +571,14 @@ static void kaapic_taskformat_reducor
  unsigned int i,
  void* sp,
  const void* q
-)
+ )
 {
   const kaapic_task_info_t* const ti = sp;
   const kaapic_task_sig_t* const ts = ti->sig;
   const kaapic_arg_info_t* argi = &ti->args[i];
   const kaapic_arg_sig_t* args = &ts->args[i];
-  kaapi_assert_debug( args->type <= KAAPIC_TYPE_DOUBLE );
-
+  kaapi_assert_debug( args->type <= KAAPIC_TYPE_DBL );
+  
   (*all_redops[args->type])(args->redop, argi->access.data, q);
 }
 
@@ -587,22 +589,22 @@ static void kaapic_taskformat_redinit
  unsigned int i,
  const void* sp,
  void* p
-)
+ )
 {
   const kaapic_task_info_t* const ti = sp;
   const kaapic_task_sig_t* const ts = ti->sig;
   const kaapic_arg_sig_t* args = &ts->args[i];
-  kaapi_assert_debug( args->type <= KAAPIC_TYPE_DOUBLE );
-
+  kaapi_assert_debug( args->type <= KAAPIC_TYPE_DBL );
+  
   (*all_redinits[args->type])(args->redop, p);
 }
 
 __attribute__((unused))
 static void kaapic_taskformat_get_task_binding(
- const struct kaapi_format_t* f,
- const kaapi_task_t* t,
- kaapi_task_binding_t* b
-)
+                                               const struct kaapi_format_t* f,
+                                               const kaapi_task_t* t,
+                                               kaapi_task_binding_t* b
+                                               )
 {
   b->type = KAAPI_BINDING_ANY;
 }
@@ -614,62 +616,62 @@ void _kaapic_register_task_format(void)
   struct kaapi_format_t* format = kaapi_format_allocate();
   kaapi_format_taskregister_func
   (
-    format,
-    kaapic_dfg_body,
-    (kaapi_task_body_t)kaapic_dfg_body_wh,
-    "kaapic_dfg_task",
-    kaapic_taskformat_get_size,
-    kaapic_taskformat_task_copy,
-    kaapic_taskformat_get_count_params,
-    kaapic_taskformat_get_mode_param,
-    kaapic_taskformat_get_off_param,
-    kaapic_taskformat_get_access_param,
-    kaapic_taskformat_set_access_param,
-    kaapic_taskformat_get_fmt_param,
-    kaapic_taskformat_get_view_param,
-    kaapic_taskformat_set_view_param,
-    kaapic_taskformat_reducor, /* reducor */
-    kaapic_taskformat_redinit, /* redinit */
-    0, /* task binding */
-    0  /* get_splitter */
-  );
-
+   format,
+   kaapic_dfg_body,
+   (kaapi_task_body_t)kaapic_dfg_body_wh,
+   "kaapic_dfg_task",
+   kaapic_taskformat_get_size,
+   kaapic_taskformat_task_copy,
+   kaapic_taskformat_get_count_params,
+   kaapic_taskformat_get_mode_param,
+   kaapic_taskformat_get_off_param,
+   kaapic_taskformat_get_access_param,
+   kaapic_taskformat_set_access_param,
+   kaapic_taskformat_get_fmt_param,
+   kaapic_taskformat_get_view_param,
+   kaapic_taskformat_set_view_param,
+   kaapic_taskformat_reducor, /* reducor */
+   kaapic_taskformat_redinit, /* redinit */
+   0, /* task binding */
+   0  /* get_splitter */
+   );
+  
   format = kaapi_format_allocate();
   kaapi_format_taskregister_func
   (
-    format,
-    kaapic_dfg_body_fortran,
-    (kaapi_task_body_t)kaapic_dfg_body_wh_fortran,
-    "kaapic_dfg_task",
-    kaapic_taskformat_get_size,
-    kaapic_taskformat_task_copy,
-    kaapic_taskformat_get_count_params,
-    kaapic_taskformat_get_mode_param,
-    kaapic_taskformat_get_off_param,
-    kaapic_taskformat_get_access_param,
-    kaapic_taskformat_set_access_param,
-    kaapic_taskformat_get_fmt_param,
-    kaapic_taskformat_get_view_param,
-    kaapic_taskformat_set_view_param,
-    kaapic_taskformat_reducor, /* reducor */
-    kaapic_taskformat_redinit, /* redinit */
-    0, /* task binding */
-    0  /* get_splitter */
-  );
-
+   format,
+   kaapic_dfg_body_fortran,
+   (kaapi_task_body_t)kaapic_dfg_body_wh_fortran,
+   "kaapic_dfg_task",
+   kaapic_taskformat_get_size,
+   kaapic_taskformat_task_copy,
+   kaapic_taskformat_get_count_params,
+   kaapic_taskformat_get_mode_param,
+   kaapic_taskformat_get_off_param,
+   kaapic_taskformat_get_access_param,
+   kaapic_taskformat_set_access_param,
+   kaapic_taskformat_get_fmt_param,
+   kaapic_taskformat_get_view_param,
+   kaapic_taskformat_set_view_param,
+   kaapic_taskformat_reducor, /* reducor */
+   kaapic_taskformat_redinit, /* redinit */
+   0, /* task binding */
+   0  /* get_splitter */
+   );
+  
   kaapi_hashmap_init(&hash_task_sig,0);
-
+  
 }
 
 
 
 /* dataflow interface */
 int kaapic_spawn_ti(
-  kaapi_thread_t* thread,
-  const kaapic_spawn_attr_t*attr,
-  kaapi_task_body_t body,
-  kaapic_task_info_t* ti
-)
+                    kaapi_thread_t* thread,
+                    const kaapic_spawn_attr_t*attr,
+                    kaapi_task_body_t body,
+                    kaapic_task_info_t* ti
+                    )
 {
   /* spawn the task */
   kaapi_task_init(kaapi_thread_toptask(thread), body, ti);
@@ -688,47 +690,47 @@ int kaapic_spawn_ti(
  */
 
 /* dataflow interface
-   New parsing of arguments is :
-      - MODE, [REDOP,] TYPE, count, data
-   The old one parse the type after the data which impose sever restriction for the
-   C API when pass by value argument are floating point value.
-
-   Only one function is used for all various possibility. This function
-   has its 'inline_mode' parameters known at compile time, so that all
-   _FEATURE(x) can be optimized *at compile time* (at the cost of code
-   duplication for all various main entry point) 
-*/
+ New parsing of arguments is :
+ - MODE, [REDOP,] TYPE, count, data
+ The old one parse the type after the data which impose sever restriction for the
+ C API when pass by value argument are floating point value.
+ 
+ Only one function is used for all various possibility. This function
+ has its 'inline_mode' parameters known at compile time, so that all
+ _FEATURE(x) can be optimized *at compile time* (at the cost of code
+ duplication for all various main entry point) 
+ */
 
 /* if present, FORTRAN ABI is used for V parameters (ie pointer to args) */
 #define _KAAPIC_SPAWN_FORTRAN_ABI (1<<0)
 
 /* if present, the signature ts is used as is
-   if not present, the signature is built
-   __kaapic_spawn2 will respect this flag
-   __kaapic_spawn look into the hash to (perhaps) add this flag
-*/
+ if not present, the signature is built
+ __kaapic_spawn2 will respect this flag
+ __kaapic_spawn look into the hash to (perhaps) add this flag
+ */
 #define _KAAPIC_SPAWN_SIG_PROVIDED (1<<1)
 
 /* if present and not SIG_PROVIDED, the built signature is put in the hash */
 #define _KAAPIC_SPAWN_PUT_SIG_IN_HASH (1<<2)
 
 /* if present and not SIG_PROVIDED, the signature is fully built
-   Note: some part of the signature (offset computation of values)
-   can be omitted if the built signature is used only once immediately
-*/
+ Note: some part of the signature (offset computation of values)
+ can be omitted if the built signature is used only once immediately
+ */
 #define _KAAPIC_SPAWN_KEEP_SIG (1<<3)
 
 /* if present, do the spawn (else, only signature is managed) */
 #define _KAAPIC_SPAWN_DO_SPAWN (1<<4)
 
 /* if present, mode (and redop) are read in the varargs
-   (if SIG_PROVIDED is present, in debug mode consistency checks are done )
-*/
+ (if SIG_PROVIDED is present, in debug mode consistency checks are done )
+ */
 #define _KAAPIC_SPAWN_PARSE_MODE (1<<5)
 
 /* if present, type are read in the varargs
-   (if SIG_PROVIDED is present, in debug mode consistency checks are done )
-*/
+ (if SIG_PROVIDED is present, in debug mode consistency checks are done )
+ */
 #define _KAAPIC_SPAWN_PARSE_TYPE (1<<6)
 
 /* if present, mode are read in the varargs */
@@ -755,16 +757,16 @@ static kaapi_access_t _access_temp;
 static type_info_t _type_info[] = 
 {
 #define _KAAPI_m(C,c,type,p,r,ffi_type,...)			\
-  [KAAPIC_TYPE_##C]={						\
-  .format=&kaapi_##c##_format_object,				\
-  .size=sizeof(type),						\
-  .align=alignof(type),						\
-  .v_arg_in_access=						\
-  ((sizeof(type) <= sizeof(_access_temp.version))		\
-   && (alignof(type) <= alignof(_access_temp.version))),	\
-  .use_ffi=_USE_FFI(type),					\
-  }
-
+[KAAPIC_TYPE_##C]={						\
+.format=&kaapi_##c##_format_object,				\
+.size=sizeof(type),						\
+.align=alignof(type),						\
+.v_arg_in_access=						\
+((sizeof(type) <= sizeof(_access_temp.version))		\
+&& (alignof(type) <= alignof(_access_temp.version))),	\
+.use_ffi=_USE_FFI(type),					\
+}
+  
 #define _USE_FFI(type) ((sizeof(type)<=sizeof(void*))?0:_KAAPIC_TS_USE_FFI)
   _KAAPIC_TYPE_ITER_INTEGERS_COMMA(_KAAPI_m),
 #undef _USE_FFI
@@ -780,7 +782,7 @@ static type_info_t _type_info[] =
 static ffi_type *ffi_type_type[] =
 {
 #define _KAAPI_m(C,c,type,p,r,ffi_type,...)	\
-  [KAAPIC_TYPE_ ## C]=&ffi_type_##ffi_type
+[KAAPIC_TYPE_ ## C]=&ffi_type_##ffi_type
   _KAAPIC_TYPE_ITER_COMMA(_KAAPI_m)
 #undef _KAAPI_m
 };
@@ -792,34 +794,34 @@ static ffi_type *ffi_type_type[] =
  * ########################################################################
  */
 static inline int __kaapic_spawn2(
-  int inline_mode,
-  kaapic_task_sig_t *ts,
-  const kaapic_spawn_attr_t* attr,
-  int32_t nargs,
-  void (*body)(),
-  va_list *va_args) __attribute__((always_inline));
+                                  int inline_mode,
+                                  kaapic_task_sig_t *ts,
+                                  const kaapic_spawn_attr_t* attr,
+                                  int32_t nargs,
+                                  void (*body)(),
+                                  va_list *va_args) __attribute__((always_inline));
 static inline int __kaapic_spawn2(
-  int inline_mode,
-  kaapic_task_sig_t *ts,
-  const kaapic_spawn_attr_t* attr,
-  int32_t nargs,
-  void (*body)(),
-  va_list *va_args)
+                                  int inline_mode,
+                                  kaapic_task_sig_t *ts,
+                                  const kaapic_spawn_attr_t* attr,
+                                  int32_t nargs,
+                                  void (*body)(),
+                                  va_list *va_args)
 {
 #define _FEATURE(name) \
-  (inline_mode & _KAAPIC_SPAWN_##name)
-
+(inline_mode & _KAAPIC_SPAWN_##name)
+  
   kaapi_thread_t* thread = NULL;
   kaapic_task_info_t* ti;
   void *values;
-
+  
   if (_FEATURE(DO_SPAWN)) {
     /* thread is only required when really spawning,
-       not if we only build the signature
-    */
+     not if we only build the signature
+     */
     thread = kaapi_self_thread();
   }
-
+  
   /* ######################################################################
    *                       Init task signature
    */
@@ -827,12 +829,12 @@ static inline int __kaapic_spawn2(
     kaapi_assert_debug( ts->nargs == nargs );
   } else {
     size_t taille = sizeof(kaapic_task_sig_t)
-	    + nargs*(sizeof(kaapic_arg_sig_t)+sizeof(ffi_type*));
+    + nargs*(sizeof(kaapic_arg_sig_t)+sizeof(ffi_type*));
     if (_FEATURE(PUT_SIG_IN_HASH)) {
       ts = malloc(taille);
     } else {
       ts = kaapi_thread_pushdata_align(
-	thread, taille, alignof(kaapic_task_sig_t));
+                                       thread, taille, alignof(kaapic_task_sig_t));
     }
     int flags=0;
     if (_FEATURE(FORTRAN_ABI)) {
@@ -850,36 +852,36 @@ static inline int __kaapic_spawn2(
     ts->values_size=0;
     ts->values_align=0;
   }
-
+  
   /* ######################################################################
    *                       Init task info
    */
   if (_FEATURE(DO_SPAWN)) {
     ti = kaapi_thread_pushdata_align(
-      thread,
-      sizeof(kaapic_task_info_t) + nargs*sizeof(kaapic_arg_info_t),
-      alignof(kaapic_task_info_t)
-    );
+                                     thread,
+                                     sizeof(kaapic_task_info_t) + nargs*sizeof(kaapic_arg_info_t),
+                                     alignof(kaapic_task_info_t)
+                                     );
     if (_FEATURE(SIG_PROVIDED)) {
       if (ts->values_size) {
-	values = kaapi_thread_pushdata_align(
-	  thread,
-	  ts->values_size,
-	  ts->values_align
-	);
+        values = kaapi_thread_pushdata_align(
+                                             thread,
+                                             ts->values_size,
+                                             ts->values_align
+                                             );
       } else {
-	values=NULL;
+        values=NULL;
       }
     }
     ti->body  = body;
     ti->sig   = ts;
   }
-
+  
 #ifndef __BIGGEST_ALIGNMENT__
 #  warning __BIGGEST_ALIGNMENT__ not available, using 16
 #  define __BIGGEST_ALIGNMENT__ 16
 #endif
-
+  
   /* ######################################################################
    *                       Arguments loop
    * ######################################################################
@@ -888,46 +890,46 @@ static inline int __kaapic_spawn2(
   {
     kaapic_arg_info_t* const ai = &ti->args[k];
     kaapic_arg_sig_t* const as = &ts->args[k];
-
+    
     /* ####################################################################
      *                     Parse mode
      */
     {
       if (_FEATURE(PARSE_MODE)) {
-	/* parse arg */
-	int modec;
-	int modef;
-	if(_FEATURE(FORTRAN_ABI)) {
-	  modef = *va_arg(*va_args, int *);
-	  modec = modef2modec[modef];
-	} else {
-	  modec = va_arg(*va_args, int);
-	}
-	if (_FEATURE(SIG_PROVIDED)) {
-	  kaapi_assert_debug( modec2modek[modec] == as->mode );
-	} else {
-	  if(_FEATURE(FORTRAN_ABI)) {
-	    if ((modef >= KAAPIF_MODE_MAX) || (modef <0))
-	    {
-	      KAAPI_DEBUG_INST(fprintf(stderr,"[kaapif_spawn] invalid 'mode' argument\n");)
-		return KAAPIF_ERR_EINVAL;
-	    }
-	  } else {
-	    if ((modec >= _KAAPIC_MODE_MAX) || (modec <0))
-	    {
-	      KAAPI_DEBUG_INST(fprintf(stderr,"[kaapic_spawn] invalid 'mode' argument\n");)
-		return EINVAL;
-	    }
-	  }
-	  if (modec == KAAPIC_MODE_T) {
-	    ts->flags |= _KAAPIC_TS_HAS_SCRATCH;
-	  }
-	  as->mode = modec2modek[modec];
-	}
+        /* parse arg */
+        int modec;
+        int modef;
+        if(_FEATURE(FORTRAN_ABI)) {
+          modef = *va_arg(*va_args, int *);
+          modec = modef2modec[modef];
+        } else {
+          modec = va_arg(*va_args, int);
+        }
+        if (_FEATURE(SIG_PROVIDED)) {
+          kaapi_assert_debug( modec2modek[modec] == as->mode );
+        } else {
+          if(_FEATURE(FORTRAN_ABI)) {
+            if ((modef >= KAAPIF_MODE_MAX) || (modef <0))
+            {
+              KAAPI_DEBUG_INST(fprintf(stderr,"[kaapif_spawn] invalid 'mode' argument\n");)
+              return KAAPIF_ERR_EINVAL;
+            }
+          } else {
+            if ((modec >= _KAAPIC_MODE_MAX) || (modec <0))
+            {
+              KAAPI_DEBUG_INST(fprintf(stderr,"[kaapic_spawn] invalid 'mode' argument\n");)
+              return EINVAL;
+            }
+          }
+          if (modec == KAAPIC_MODE_T) {
+            ts->flags |= _KAAPIC_TS_HAS_SCRATCH;
+          }
+          as->mode = modec2modek[modec];
+        }
       }
     }
     const int mode = as->mode;
-
+    
     /* ####################################################################
      *                     Parse redop
      */
@@ -935,54 +937,54 @@ static inline int __kaapic_spawn2(
       int redop = KAAPIC_REDOP_VOID;
       if (mode == KAAPI_ACCESS_MODE_CW)
       {
-	if(_FEATURE(FORTRAN_ABI)) {
-	  KAAPI_DEBUG_INST(fprintf(stderr,"[kaapif_spawn] reduction not implemented\n");)
-	    return KAAPIF_ERR_UNIMPL;
-	}
-	redop = va_arg(*va_args, int);
-	if (_FEATURE(SIG_PROVIDED)) {
-	  kaapi_assert_debug( redop == as->redop );
-	} else {
-	  if ((redop > KAAPIC_REDOP_MIN) || (redop <= 0))
-	  {
-	    KAAPI_DEBUG_INST(fprintf(stderr,"[kaapic_spawn] invalid reduction operator\n");)
-	      return EINVAL;
-	  }
-	}
+        if(_FEATURE(FORTRAN_ABI)) {
+          KAAPI_DEBUG_INST(fprintf(stderr,"[kaapif_spawn] reduction not implemented\n");)
+          return KAAPIF_ERR_UNIMPL;
+        }
+        redop = va_arg(*va_args, int);
+        if (_FEATURE(SIG_PROVIDED)) {
+          kaapi_assert_debug( redop == as->redop );
+        } else {
+          if ((redop > KAAPIC_REDOP_MIN) || (redop <= 0))
+          {
+            KAAPI_DEBUG_INST(fprintf(stderr,"[kaapic_spawn] invalid reduction operator\n");)
+            return EINVAL;
+          }
+        }
       }
       if (!_FEATURE(SIG_PROVIDED)) {
-	as->redop = redop;
+        as->redop = redop;
       }
     }
-
+    
     /* ####################################################################
      *                     Parse type
      */
     if (_FEATURE(PARSE_TYPE)) {
       int typec, typef;
       if(_FEATURE(FORTRAN_ABI)) {
-	typef = *va_arg(*va_args, int *);
-	typec = typef2typec[typef];
+        typef = *va_arg(*va_args, int *);
+        typec = typef2typec[typef];
       } else {
-	typec = va_arg(*va_args, int);
+        typec = va_arg(*va_args, int);
       }
       if (_FEATURE(SIG_PROVIDED)) {
-	kaapi_assert_debug( typec == as->type );
+        kaapi_assert_debug( typec == as->type );
       } else {
-	if(_FEATURE(FORTRAN_ABI)) {
-	  if ((typef >= KAAPIF_TYPE_MAX) || (typef <0))
-	  {
-	    KAAPI_DEBUG_INST(fprintf(stderr,"[kaapif_spawn] invalid 'type' argument\n");)
-	      return KAAPIF_ERR_EINVAL;
-	  }
-	} else {
-	  if ((typec >= _KAAPIC_TYPE_MAX) || (typec <0))
-	  {
-	    KAAPI_DEBUG_INST(fprintf(stderr,"[kaapic_spawn] invalid 'type' argument\n");)
-	      return EINVAL;
-	  }
-	}
-	as->type = typec;
+        if(_FEATURE(FORTRAN_ABI)) {
+          if ((typef >= KAAPIF_TYPE_MAX) || (typef <0))
+          {
+            KAAPI_DEBUG_INST(fprintf(stderr,"[kaapif_spawn] invalid 'type' argument\n");)
+            return KAAPIF_ERR_EINVAL;
+          }
+        } else {
+          if ((typec >= _KAAPIC_TYPE_MAX) || (typec <0))
+          {
+            KAAPI_DEBUG_INST(fprintf(stderr,"[kaapic_spawn] invalid 'type' argument\n");)
+            return EINVAL;
+          }
+        }
+        as->type = typec;
       }
     }
     const int type = as->type;
@@ -990,102 +992,102 @@ static inline int __kaapic_spawn2(
     if (!_FEATURE(SIG_PROVIDED)) {
       as->format = typeinfo->format;
     }
-
+    
     /* ####################################################################
      *                     Parse count
      */
     if (_FEATURE(PARSE_COUNT)) {
       int count;
       if(_FEATURE(FORTRAN_ABI)) {
-	count = *va_arg(*va_args, int *);
+        count = *va_arg(*va_args, int *);
       } else {
-	count = va_arg(*va_args, int);
+        count = va_arg(*va_args, int);
       }
       if (!_FEATURE(SIG_PROVIDED)) {
-	size_t wordsize   = typeinfo->size;
-	as->view = kaapi_memory_view_make1d(count, wordsize);
+        size_t wordsize   = typeinfo->size;
+        as->view = kaapi_memory_view_make1d(count, wordsize);
       }
       if (mode == KAAPI_ACCESS_MODE_V) {
-	kaapi_assert_debug( count == 1 );
+        kaapi_assert_debug( count == 1 );
       }
     }
-
+    
     /* ####################################################################
      *                     compute voffset for V-args
      */
     if (!_FEATURE(SIG_PROVIDED)) {
       if (mode == KAAPI_ACCESS_MODE_V) {
-	ts->flags |= typeinfo->use_ffi;
-	if (typeinfo->v_arg_in_access) {
-	  as->voffset = -1;
-	} else {
-	  if (_FEATURE(KEEP_SIG)) {
-	    size_t align = typeinfo->align;
-	    as->voffset = (ts->values_size + (align - 1)) & (align - 1);
-	    ts->values_size = as->voffset + typeinfo->size;
-	    if (ts->values_align < align) {
-	      ts->values_align = align;
-	    }
-	  } else {
-	    /* no need to compute the offset :
-	       the signature will not be reused */
-	    as->voffset = 0;
-	  }
-	}
+        ts->flags |= typeinfo->use_ffi;
+        if (typeinfo->v_arg_in_access) {
+          as->voffset = -1;
+        } else {
+          if (_FEATURE(KEEP_SIG)) {
+            size_t align = typeinfo->align;
+            as->voffset = (ts->values_size + (align - 1)) & (align - 1);
+            ts->values_size = as->voffset + typeinfo->size;
+            if (ts->values_align < align) {
+              ts->values_align = align;
+            }
+          } else {
+            /* no need to compute the offset :
+             the signature will not be reused */
+            as->voffset = 0;
+          }
+        }
       }
     }
-
+    
     /* ####################################################################
      *                     Parse argument
      */
     if (_FEATURE(PARSE_ARGS)) {
       void *addr;
       if (mode != KAAPI_ACCESS_MODE_V) {
-	addr = va_arg(*va_args, void*);
-	kaapi_access_init( &ai->access, addr );
+        addr = va_arg(*va_args, void*);
+        kaapi_access_init( &ai->access, addr );
       } else {
-	if (as->voffset==-1) {
-	  addr = &ai->access.version;
-	} else {
-	  if (_FEATURE(SIG_PROVIDED)) {
-	    /* The signature was available, one block have been allocated */
-	    addr = values + as->voffset;
-	  } else {
-	    /* The value must get some place on the stack */
-	    addr = kaapi_thread_pushdata_align(
-	      thread, typeinfo->size, typeinfo->align);
-	  }
-	}
-	kaapi_access_init( &ai->access, addr );
-	/* kaapi_access_init set access.version to 0
-	   so it must be called before the following switch
-	   that can but the value into access.version */
-	if (_FEATURE(FORTRAN_ABI)) {
+        if (as->voffset==-1) {
+          addr = &ai->access.version;
+        } else {
+          if (_FEATURE(SIG_PROVIDED)) {
+            /* The signature was available, one block have been allocated */
+            addr = values + as->voffset;
+          } else {
+            /* The value must get some place on the stack */
+            addr = kaapi_thread_pushdata_align(
+                                               thread, typeinfo->size, typeinfo->align);
+          }
+        }
+        kaapi_access_init( &ai->access, addr );
+        /* kaapi_access_init set access.version to 0
+         so it must be called before the following switch
+         that can but the value into access.version */
+        if (_FEATURE(FORTRAN_ABI)) {
           /* FORTRAN pointer is passed, but &ptr must be given to task */
-	  switch (type) {
+          switch (type) {
 #define _KAAPI_m(C,c,type,...)				\
-	    case KAAPIC_TYPE_##C:			\
-	      *(type*)addr = *va_arg(*va_args, type*);	\
-	      break
-	    _KAAPIC_TYPE_ITER_INTEGERS(_KAAPI_m, ;) ;
-	    _KAAPIC_TYPE_ITER_FLOATS(_KAAPI_m, ;) ;
+case KAAPIC_TYPE_##C:			\
+*(type*)addr = *va_arg(*va_args, type*);	\
+break
+              _KAAPIC_TYPE_ITER_INTEGERS(_KAAPI_m, ;) ;
+              _KAAPIC_TYPE_ITER_FLOATS(_KAAPI_m, ;) ;
 #undef _KAAPI_m
 #define _KAAPI_m(C,c,type,promtype,...)				\
-	    case KAAPIC_TYPE_##C:				\
-	      *(type*)addr = va_arg(*va_args, promtype);	\
-	      break
-	    _KAAPIC_TYPE_ITER_OTHERS(_KAAPI_m, ;) ;
-	  default:
-	    break;
-	  }
-	} else {
-	  switch (type) {
-	    _KAAPIC_TYPE_ITER(_KAAPI_m, ;) ;
+case KAAPIC_TYPE_##C:				\
+*(type*)addr = va_arg(*va_args, promtype);	\
+break
+              _KAAPIC_TYPE_ITER_OTHERS(_KAAPI_m, ;) ;
+            default:
+              break;
+          }
+        } else {
+          switch (type) {
+              _KAAPIC_TYPE_ITER(_KAAPI_m, ;) ;
 #undef _KAAPI_m
-	  default:
-	    break;
-	  }
-	}
+            default:
+              break;
+          }
+        }
       }
     }
   }
@@ -1093,7 +1095,7 @@ static inline int __kaapic_spawn2(
    *                       End of arguments loop
    * ######################################################################
    */
-
+  
   /* ######################################################################
    *                       Compute FFI signature
    */
@@ -1102,24 +1104,24 @@ static inline int __kaapic_spawn2(
     if (_FEATURE(FORCE_FFI)) {
       ts->flags |= _KAAPIC_TS_USE_FFI;
     }
-
+    
     /* the array of ffi_type* is put after the array of kaapic_arg_sig_t */
     ffi_type **ffi_args=(ffi_type **)&ts->args[nargs];
-
+    
     for (unsigned int k = 0; k < nargs; ++k) {
       kaapic_arg_sig_t* const as = &ts->args[k];
       if (as->mode != KAAPI_ACCESS_MODE_V) {
-	ffi_args[k]=&ffi_type_pointer;
+        ffi_args[k]=&ffi_type_pointer;
       } else {
-	ffi_args[k]=ffi_type_type[as->type];
+        ffi_args[k]=ffi_type_type[as->type];
       }
     }
     if (!ffi_prep_cif(&ts->cif, FFI_DEFAULT_ABI, nargs,
-		      &ffi_type_void, ffi_args) == FFI_OK) {
+                      &ffi_type_void, ffi_args) == FFI_OK) {
       KAAPI_DEBUG_INST(fprintf(stderr,"[kaapic_spawn] error while initializing ffi\n");)
     }
   }
-
+  
   /* ######################################################################
    *                       Store task signature
    */
@@ -1128,11 +1130,11 @@ static inline int __kaapic_spawn2(
     entry = kaapi_hashmap_findinsert(&hash_task_sig,body);
     if (entry->u.ts !=0) {
       KAAPI_DEBUG_INST(fprintf(stderr,"[kaapic_spawn] several registration of %p\n", body);)
-	free(entry->u.ts);
+      free(entry->u.ts);
     }
     entry->u.ts = ts;
   }
-
+  
   /* ######################################################################
    *                       Spawn the task
    */
@@ -1145,28 +1147,28 @@ static inline int __kaapic_spawn2(
   } else {
     return 0;
   }
-
+  
 #undef _FEATURE
 }
 
 static inline int __kaapic_spawn(
-  int inline_mode,
-  kaapic_task_sig_t *ts,
-  const kaapic_spawn_attr_t* attr,
-  int32_t nargs,
-  void (*body)(),
-  va_list *va_args) __attribute__((always_inline));
+                                 int inline_mode,
+                                 kaapic_task_sig_t *ts,
+                                 const kaapic_spawn_attr_t* attr,
+                                 int32_t nargs,
+                                 void (*body)(),
+                                 va_list *va_args) __attribute__((always_inline));
 static inline int __kaapic_spawn(
-  int inline_mode,
-  kaapic_task_sig_t *ts,
-  const kaapic_spawn_attr_t* attr,
-  int32_t nargs,
-  void (*body)(),
-  va_list *va_args)
+                                 int inline_mode,
+                                 kaapic_task_sig_t *ts,
+                                 const kaapic_spawn_attr_t* attr,
+                                 int32_t nargs,
+                                 void (*body)(),
+                                 va_list *va_args)
 {
 #define _FEATURE(name) \
-  (inline_mode & _KAAPIC_SPAWN_##name)
-
+(inline_mode & _KAAPIC_SPAWN_##name)
+  
   if (! _FEATURE(SIG_PROVIDED)) {
     kaapi_hashentries_t* entry;
     entry=kaapi_hashmap_find(&hash_task_sig, body);
@@ -1176,26 +1178,26 @@ static inline int __kaapic_spawn(
   }
   if (ts==NULL) {
     return __kaapic_spawn2(inline_mode, NULL,
-			   attr, nargs, body, va_args);
+                           attr, nargs, body, va_args);
   } else {
     return __kaapic_spawn2(inline_mode|_KAAPIC_SPAWN_SIG_PROVIDED, ts,
-			   attr, nargs, body, va_args);
+                           attr, nargs, body, va_args);
   }
 #undef _FEATURE
 }
 
 int kaapic_spawn(const kaapic_spawn_attr_t* attr, int32_t nargs,
-		 void (*body)(),  ...)
+                 void (*body)(),  ...)
 {
   int ret;
   va_list va_args;
   va_start(va_args, body);
 #define KS(name) _KAAPIC_SPAWN_##name
   ret = __kaapic_spawn(
-    0
-    |KS(PUT_SIG_IN_HASH)|KS(KEEP_SIG)|KS(DO_SPAWN)
-    |KS(PARSE_MODE)|KS(PARSE_TYPE)|KS(PARSE_COUNT)|KS(PARSE_ARGS),
-    NULL, attr, nargs, body, &va_args);
+                       0
+                       |KS(PUT_SIG_IN_HASH)|KS(KEEP_SIG)|KS(DO_SPAWN)
+                       |KS(PARSE_MODE)|KS(PARSE_TYPE)|KS(PARSE_COUNT)|KS(PARSE_ARGS),
+                       NULL, attr, nargs, body, &va_args);
 #undef KS
   va_end(va_args);
   return ret;
@@ -1206,15 +1208,15 @@ int _kaapic_spawn_fortran
  int32_t* nargs,
  void (*body)(),
  va_list *va_args
-)
+ )
 {
   int ret;
 #define KS(name) _KAAPIC_SPAWN_##name
   ret = __kaapic_spawn(
-    KS(FORTRAN_ABI)
-    |KS(PUT_SIG_IN_HASH)|KS(KEEP_SIG)|KS(DO_SPAWN)
-    |KS(PARSE_MODE)|KS(PARSE_TYPE)|KS(PARSE_COUNT)|KS(PARSE_ARGS),
-    NULL, NULL,	*nargs, body, va_args);
+                       KS(FORTRAN_ABI)
+                       |KS(PUT_SIG_IN_HASH)|KS(KEEP_SIG)|KS(DO_SPAWN)
+                       |KS(PARSE_MODE)|KS(PARSE_TYPE)|KS(PARSE_COUNT)|KS(PARSE_ARGS),
+                       NULL, NULL,	*nargs, body, va_args);
 #undef KS
   return ret;
 }
