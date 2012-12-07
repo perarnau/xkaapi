@@ -9,7 +9,7 @@ if KAAPI_API_KAAPIXX
 BFS_PRGS=bfs_kaapi++
 endif
 
-check_PROGRAMS+=$(BFS_PRGS)
+examples_PRGS+=$(BFS_PRGS)
 
 all-bfs: $(BFS_PRGS)
 

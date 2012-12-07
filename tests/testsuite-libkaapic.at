@@ -38,7 +38,7 @@ dnl ******************************************************
 dnl checking fibo implementations
 
 m4_define([KAT_ABIC_CHECK_FIBO],[
-  KAT_ABIC_CHECK_PROG([fibo_$1],[checking Fibo(30), implemented with $2],[fibo],[],[30 | grep Fibo],
+  KAT_ABIC_CHECK_PROG([fibo_$1],[checking Fibo(30), implemented with $2],[fibo],[],[30],[grep Fibo stdout],
 [Fibo(30) = 832040
 ])
 ])

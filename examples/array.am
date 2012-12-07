@@ -9,7 +9,7 @@ ARRAY_PRGS=
 if KAAPI_API_KAAPIXX
 ARRAY_PRGS+=array1_kaapi++ array2_kaapi++ array3_kaapi++ range1_kaapi++ range2_kaapi++ range3_kaapi++ 
 endif
-check_PROGRAMS+=$(ARRAY_PRGS)
+examples_PRGS+=$(ARRAY_PRGS)
 all-array: $(ARRAY_PRGS)
 
 array1_kaapi___SOURCES=array/array1_kaapi++.cpp

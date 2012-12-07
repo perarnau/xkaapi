@@ -55,19 +55,30 @@ extern "C" {
 /* This is the portable C interface the kaapi runtime */
 enum kaapic_type
 {
-  KAAPIC_TYPE_CHAR  = 0,
-  KAAPIC_TYPE_SHORT = 1,
-  KAAPIC_TYPE_INT   = 2,
-  KAAPIC_TYPE_LONG  = 3,
-  KAAPIC_TYPE_UCHAR = 4,
-  KAAPIC_TYPE_USHORT= 5,
-  KAAPIC_TYPE_UINT  = 6,
-  KAAPIC_TYPE_ULONG = 7,
-  KAAPIC_TYPE_REAL  = 8,
-  KAAPIC_TYPE_FLOAT = KAAPIC_TYPE_REAL,
-  KAAPIC_TYPE_DOUBLE= 9,
-  KAAPIC_TYPE_PTR   = 10,
-  KAAPIC_TYPE_ID    = 11/* for FORTRAN only */
+  KAAPIC_TYPE_CHAR,
+  KAAPIC_TYPE_SCHAR,
+  KAAPIC_TYPE_SHRT,
+  KAAPIC_TYPE_INT,
+  KAAPIC_TYPE_LONG,
+  KAAPIC_TYPE_LLONG,
+  KAAPIC_TYPE_INT8,
+  KAAPIC_TYPE_INT16,
+  KAAPIC_TYPE_INT32,
+  KAAPIC_TYPE_INT64,
+  KAAPIC_TYPE_UCHAR,
+  KAAPIC_TYPE_USHRT,
+  KAAPIC_TYPE_UINT,
+  KAAPIC_TYPE_ULONG,
+  KAAPIC_TYPE_ULLONG,
+  KAAPIC_TYPE_UINT8,
+  KAAPIC_TYPE_UINT16,
+  KAAPIC_TYPE_UINT32,
+  KAAPIC_TYPE_UINT64,
+  KAAPIC_TYPE_FLT,
+  KAAPIC_TYPE_DBL,
+  KAAPIC_TYPE_LDBL,
+  KAAPIC_TYPE_PTR,
+  _KAAPIC_TYPE_MAX
 };
 
 enum kaapic_mode
@@ -79,7 +90,8 @@ enum kaapic_mode
   KAAPIC_MODE_CW= 3,
   KAAPIC_MODE_V = 4,
   KAAPIC_MODE_T = 5,  /* temporary */
-  KAAPIC_MODE_S = 6   /* stack */
+  KAAPIC_MODE_S = 6,  /* stack */
+  _KAAPIC_MODE_MAX = 7   /* last mode */
 };
 
 
@@ -294,7 +306,8 @@ extern int kaapic_spawn_attr_set_kproc(
    \param ...: a list of tuple { MODE, VALUE/@, COUNT, TYPE  } tuple list.
    \retval 0 in case of success, else an error code
 */
-extern int kaapic_spawn(const kaapic_spawn_attr_t* attr, int32_t nargs, ...);
+extern int kaapic_spawn(const kaapic_spawn_attr_t* attr, int32_t nargs,
+			void (*body)(), ...);
 
 /*
 */

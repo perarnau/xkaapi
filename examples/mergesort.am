@@ -9,7 +9,7 @@ if KAAPI_API_KAAPIXX
 MERGESORT_PRGS=mergesort_kaapi++
 endif
 
-check_PROGRAMS+=$(MERGESORT_PRGS)
+examples_PRGS+=$(MERGESORT_PRGS)
 all-mergesort: $(MERGESORT_PRGS)
 
 mergesort_kaapi___SOURCES=mergesort/mergesort_kaapi++.cpp 

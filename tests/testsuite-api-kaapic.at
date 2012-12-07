@@ -1,0 +1,96 @@
+AT_BANNER([kaapic - C API for XKaapi])
+
+dnl ATX_DEFPROG([spawn_vtype],[Spawn a task with a V mode argument of type t],)
+ 
+dnl KAT_ABIC_SETUP(name, extra_keywords) 
+m4_define([KAT_ABIC_SETUP],[
+  AT_SETUP([$1])
+  AT_KEYWORDS([libkaapic kaapic api-kaapic $2])
+  AT_SKIP_IF([AS_CASE([" $KAT_TESTSUITES "],[*" libkaapic "*],[false],[:])])
+])
+dnl KAT_ABIC_CHECK_BUILD(name, extra build cmd)
+m4_define([KAT_ABIC_CHECK_BUILD],[
+  AT_CHECK([make $1 -C ${abs_top_builddir}/tests/api-kaapic 2>&1 ], 0, [ignore])
+])
+dnl KAT_ABIC_CHECK_RUN(name, stdout)
+m4_define([KAT_ABIC_CHECK_RUN],[
+  m4_if([$3],[],[dnl
+    AT_CHECK([$abs_top_builddir/tests/api-kaapic/$1 $2], 0,[$4],[])
+  ],[
+    AT_CHECK([$abs_top_builddir/tests/api-kaapic/$1 $2], 0,[stdout],[])
+    AT_CHECK([$3], 0, [$4], [])
+  ])
+])
+
+m4_define([KAT_ABIC_CHECK_PROG],[
+  KAT_ABIC_SETUP([$2],[$3 $1])
+  KAT_ABIC_CHECK_BUILD([$1],[$4])
+  KAT_ABIC_CHECK_RUN([$1],[$5],[$6],[$7])
+  AT_CLEANUP
+])
+
+dnl ******************************************************
+dnl checking spawn arguments
+
+m4_define([KAT_ABIC_CHECK_VARG],[
+  KAT_ABIC_CHECK_PROG([spawn_v-arg_$1],[checking V-mode argument with type '$2'],[spawn],[],[],[],
+[The result is : 127/127.000000
+Success
+])
+])
+
+KAT_ABIC_CHECK_VARG([char],[char])
+KAT_ABIC_CHECK_VARG([schar],[signed char])
+KAT_ABIC_CHECK_VARG([shrt],[short])
+KAT_ABIC_CHECK_VARG([int],[int])
+KAT_ABIC_CHECK_VARG([long],[long])
+KAT_ABIC_CHECK_VARG([llong],[long long])
+KAT_ABIC_CHECK_VARG([int8],[int8_t])
+KAT_ABIC_CHECK_VARG([int16],[int16_t])
+KAT_ABIC_CHECK_VARG([int32],[int32_t])
+KAT_ABIC_CHECK_VARG([int64],[int64_t])
+KAT_ABIC_CHECK_VARG([uchar],[unsigned char])
+KAT_ABIC_CHECK_VARG([ushrt],[unsigned short])
+KAT_ABIC_CHECK_VARG([uint],[unsigned int])
+KAT_ABIC_CHECK_VARG([ulong],[unsigned long])
+KAT_ABIC_CHECK_VARG([ullong],[unsigned long long])
+KAT_ABIC_CHECK_VARG([uint8],[uint8_t])
+KAT_ABIC_CHECK_VARG([uint16],[uint16_t])
+KAT_ABIC_CHECK_VARG([uint32],[uint32_t])
+KAT_ABIC_CHECK_VARG([uint64],[uint64_t])
+KAT_ABIC_CHECK_VARG([flt],[float])
+KAT_ABIC_CHECK_VARG([dbl],[double])
+KAT_ABIC_CHECK_VARG([ldbl],[long double])
+KAT_ABIC_CHECK_VARG([pointer],[void*])
+
+KAT_ABIC_CHECK_PROG([spawn_s-arg],[checking S-mode argument],[spawn],[],[],[],
+[The result is : 125
+])
+
+dnl ******************************************************
+dnl checking fibo implementations
+
+m4_define([KAT_ABIC_CHECK_FIBO],[
+  KAT_ABIC_CHECK_PROG([fibo_$1],[checking Fibo(25), implemented with $2],[fibo],[],[25],[grep Fibo stdout],
+[Fibo(25) = 75025
+])
+])
+
+KAT_ABIC_CHECK_FIBO([sync],[kaapic_sync()])
+KAT_ABIC_CHECK_FIBO([sum],[a sum task])
+KAT_ABIC_CHECK_FIBO([cumul],[an accumulator])
+
+dnl ******************************************************
+dnl checking nqueen implementations
+
+KAT_ABIC_CHECK_PROG([nqueens_stackpointer],[checking nqueens],[nqueens],[],[],[],
+[Total number of solutions: 92
+])
+
+dnl ******************************************************
+dnl checking implementation details
+
+KAT_ABIC_CHECK_PROG([test_begend_parallel],[checking iteration of parallel sections],[],[],[],[sed -e 's/Time: .*/Time:/' stdout],
+[Time:
+])
+

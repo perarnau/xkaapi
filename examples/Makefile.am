@@ -12,7 +12,8 @@ AM_CFLAGS=@AM_CFLAGS@
 AM_CXXFLAGS=@AM_CXXFLAGS@
 
 
-check_PROGRAMS=
+examples_PRGS=
+EXTRA_PROGRAMS=$(examples_PRGS)
 
 #include accumulate.am
 include array.am

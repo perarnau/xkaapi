@@ -9,7 +9,7 @@ if KAAPI_API_KAAPIXX
 HELLO_PRGS=hello_world_kaapi++
 endif
 
-check_PROGRAMS+=$(HELLO_PRGS)
+examples_PRGS+=$(HELLO_PRGS)
 
 all-hello: $(HELLO_PRGS)
 

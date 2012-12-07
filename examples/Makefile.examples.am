@@ -24,8 +24,7 @@ display:
 list_examples:
 	@echo '***********************************************************'
 	@echo 'Available example programs '
-#in $(notdir $(CURDIR)) are:'
-	@for prog in $(check_PROGRAMS); do echo " * $$prog"; done
+	@for prog in $(examples_PRGS); do echo " * $$prog"; done
 	@echo '***********************************************************'
 
 examples: check

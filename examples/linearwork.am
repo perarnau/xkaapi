@@ -9,7 +9,7 @@ LINEARWORK_PRGS=horner_kaapi
 if KAAPI_API_KAAPIXX
 LINEARWORK_PRGS+=horner_kaapi++ variance_kaapi++
 endif
-check_PROGRAMS+=$(LINEARWORK_PRGS)
+examples_PRGS+=$(LINEARWORK_PRGS)
 all-lw: $(LINEARWORK_PRGS)
 
 horner_kaapi_SOURCES=linearwork/horner_kaapi.c linearwork/modp.h

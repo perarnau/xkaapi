@@ -9,7 +9,7 @@ if KAAPI_API_KAAPIF
 KAAPIF_PRGS=foreach_kaapif
 endif
 
-check_PROGRAMS+=$(KAAPIF_PRGS)
+examples_PRGS+=$(KAAPIF_PRGS)
 all-kaapif: $(KAAPIF_PRGS)
 
 #For each using C API kaapif_foreach

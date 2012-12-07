@@ -83,7 +83,7 @@ void _kaapi_signal_dump_backtrace(int sig, siginfo_t *si, void *unused)
 #if defined(KAAPI_USE_PERFCOUNTER)
   _kaapi_signal_dump_counters(sig);  
 #endif
-  _exit(0);
+  _exit(sig);
 }
 
 

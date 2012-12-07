@@ -198,14 +198,14 @@ FormatTask::FormatTask(
 
 // --------------------------------------------------------------------------
 template <> const WrapperFormat<char> WrapperFormat<char>::format(kaapi_char_format);
-template <> const WrapperFormat<short> WrapperFormat<short>::format(kaapi_short_format);
+template <> const WrapperFormat<short> WrapperFormat<short>::format(kaapi_shrt_format);
 template <> const WrapperFormat<int> WrapperFormat<int>::format(kaapi_int_format);
 template <> const WrapperFormat<long> WrapperFormat<long>::format(kaapi_long_format);
 template <> const WrapperFormat<unsigned char> WrapperFormat<unsigned char>::format(kaapi_uchar_format);
-template <> const WrapperFormat<unsigned short> WrapperFormat<unsigned short>::format(kaapi_ushort_format);
+template <> const WrapperFormat<unsigned short> WrapperFormat<unsigned short>::format(kaapi_ushrt_format);
 template <> const WrapperFormat<unsigned int> WrapperFormat<unsigned int>::format(kaapi_uint_format);
 template <> const WrapperFormat<unsigned long> WrapperFormat<unsigned long>::format(kaapi_ulong_format);
-template <> const WrapperFormat<float> WrapperFormat<float>::format(kaapi_float_format);
-template <> const WrapperFormat<double> WrapperFormat<double>::format(kaapi_double_format);
+template <> const WrapperFormat<float> WrapperFormat<float>::format(kaapi_flt_format);
+template <> const WrapperFormat<double> WrapperFormat<double>::format(kaapi_dbl_format);
   
 } // namespace ka

@@ -12,7 +12,7 @@ NET_PRGS+=ping_xx ping_mt_xx rdma1
 endif
 endif
 
-check_PROGRAMS+=$(NET_PRGS)
+examples_PRGS+=$(NET_PRGS)
 all-net: $(NET_PRGS)
 
 #For each variation
