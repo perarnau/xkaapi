@@ -9,7 +9,7 @@ dnl http://www.mail-archive.com/autoconf@gnu.org/msg07824.html
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CANONICAL_TARGET
 AC_CONFIG_SRCDIR([src/workstealing/kaapi_sched_idle.c])
-AC_CONFIG_MACRO_DIR([acinclude])
+AC_CONFIG_MACRO_DIR([m4])
 
 dnl automake 1.6 is supposed NOT to work
 dnl automake 1.9 is supposed to work
@@ -703,7 +703,7 @@ AS_CASE([$with_gasnet],
     AC_DEFINE([KAAPI_USE_GASNET],1,[Use with GASNet])
     KAAPI_USE_GASNET=yes
     tmpfilename=`mktemp -t kaapi_XXXXXX`
-    make -f $srcdir/acinclude/gasnet_cppflags.mk GASNET_CONDUIT_MAK=$with_gasnet > $tmpfilename
+    make -f $srcdir/m4/gasnet_cppflags.mk GASNET_CONDUIT_MAK=$with_gasnet > $tmpfilename
     source $tmpfilename
     KAGASNETLIB_BUILD_CPPFLAGS=$GASNET_CPPFLAGS
     KAGASNETLIB_BUILD_CFLAGS=$GASNET_CFLAGS

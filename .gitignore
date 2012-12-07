@@ -37,8 +37,6 @@
 
 #.gitignore
 Makefile.in
-/acinclude/libtool.m4
-/acinclude/lt*.m4
 /aclocal.m4
 /autom4te.cache/
 /build-aux/
@@ -47,6 +45,8 @@ Makefile.in
 /configure
 # Should not be needed anymore with recent libtool
 /libtool
+/m4/libtool.m4
+/m4/lt*.m4
 
 /imported-soft/libffi/aclocal.m4
 /imported-soft/libffi/autom4te.cache/

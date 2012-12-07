@@ -1,6 +1,6 @@
 
 # flags to aclocal if Makefile rules trigger it
-ACLOCAL_AMFLAGS=-I acinclude
+ACLOCAL_AMFLAGS=-I m4
 
 # add bin for building tools when cuda dependcy resolved
 SUBDIRS=imported-soft . src bin api examples tests
@@ -23,7 +23,7 @@ pkgconfig_DATA+=kastl.pc
 endif
 
 # Add support for configure with gasnet
-EXTRA_DIST=acinclude/gasnet_cppflags.mk
+EXTRA_DIST=m4/gasnet_cppflags.mk
 
 # Record the last git commit when creating a tarball
 EXTRA_DIST+=gitlastcommit
