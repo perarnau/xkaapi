@@ -71,20 +71,20 @@ dnl ******************************************************
 dnl checking fibo implementations
 
 m4_define([KAT_ABIC_CHECK_FIBO],[
-  KAT_ABIC_CHECK_PROG([fibo_$1],[checking Fibo(25), implemented with $2],[fibo],[],[25],[grep Fibo stdout],
-[Fibo(25) = 75025
+  KAT_ABIC_CHECK_PROG([fibo_$1],[checking Fibo(30), implemented with $2],[fibo],[],[30],[grep Fibo stdout],
+[Fibo(30) = 832040
 ])
 ])
 
-KAT_ABIC_CHECK_FIBO([sync],[kaapic_sync()])
 KAT_ABIC_CHECK_FIBO([sum],[a sum task])
 KAT_ABIC_CHECK_FIBO([cumul],[an accumulator])
+KAT_ABIC_CHECK_FIBO([sync],[kaapic_sync()])
 
 dnl ******************************************************
 dnl checking nqueen implementations
 
-KAT_ABIC_CHECK_PROG([nqueens_stackpointer],[checking nqueens],[nqueens],[],[],[],
-[Total number of solutions: 92
+KAT_ABIC_CHECK_PROG([nqueens_stackpointer],[checking nqueens],[nqueens],[],[12],[],
+[Total number of solutions: 14200
 ])
 
 dnl ******************************************************

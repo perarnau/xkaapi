@@ -76,7 +76,6 @@ void doit::operator()(int argc, char** argv )
 
   kaapi_assert( res_value == fiboseq_verify(n) );
 
-res_value =10;  
   std::cout << ": -----------------------------------------" << std::endl;
   std::cout << ": Res  = " << res_value << std::endl;
   std::cout << ": Time(s): " << (stop_time-start_time) << std::endl;
