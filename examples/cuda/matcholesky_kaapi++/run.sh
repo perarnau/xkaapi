@@ -6,8 +6,8 @@ function run_test {
     export KAAPI_CPUSET="0"
     export KAAPI_GPUSET="0~1"
 
-#    export KAAPI_RECORD_TRACE=1
-#    export KAAPI_RECORD_MASK="COMPUTE,IDLE"
+    export KAAPI_RECORD_TRACE=1
+    export KAAPI_RECORD_MASK="COMPUTE,IDLE"
 
 #    export KAAPI_DUMP_GRAPH=1
 #    export KAAPI_DOT_NOVERSION_LINK=1
@@ -25,10 +25,10 @@ function run_test {
 
 
     execfile="./matcholesky_kaapi++"
-    msizes="4096"
-    bsizes="512"
+    msizes="10240"
+    bsizes="1024"
     niter=1
-    verif=1
+#    verif=1
     export KAAPI_WINDOW_SIZE=2
     for m in $msizes ; do
 	    for b in $bsizes; do

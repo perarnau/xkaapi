@@ -515,6 +515,84 @@ static void paje_mark_steal_status( const kaapi_event_t* event )
 static int fnc_paje_gantt_header();
 static int fnc_paje_gantt_close(uint64_t tmax);
 
+static void callback_display_paje_event_gpuevent(
+                                                   char* name,
+                                                   const kaapi_event_t* event
+                                                   )
+{
+  double d0 =0.0, d1 = 0.0;
+  char tmp[128];
+  int kid;
+  
+  if(katracereader_options.gputrace == 0)
+    return;
+  switch (event->evtno)
+  {
+    case KAAPI_EVT_CUDA_CPU_SYNC_BEG:
+      d0   = 1e-9*(double)event->date;
+      kaapi_trace_poti_PushState (d0, name, "STATE", "ksync");
+      break;
+      
+    case KAAPI_EVT_CUDA_CPU_SYNC_END:
+      d1   = 1e-9*(double)event->date;
+      kaapi_trace_poti_PopState (d1, name, "STATE");
+      break;
+      
+    case KAAPI_EVT_CUDA_GPU_DTOH_BEG:
+      if(katracereader_options.gputransfer){
+        d0   = 1e-9*(double)event->date;
+        kid = event->kid;
+        sprintf(tmp,"d2h-%i",kid);
+        kaapi_trace_poti_PushState (d0, tmp, "STATE", "kd2h");
+      }
+      break;
+      
+    case KAAPI_EVT_CUDA_GPU_DTOH_END:
+      if(katracereader_options.gputransfer){
+        d1   = 1e-9*(double)event->date;
+        kid = event->kid;
+        sprintf(tmp,"d2h-%i",kid);
+        kaapi_trace_poti_PopState (d1, tmp, "STATE");
+      }
+      break;
+      
+    case KAAPI_EVT_CUDA_GPU_HTOD_BEG:
+      if(katracereader_options.gputransfer){
+        d0   = 1e-9*(double)event->date;
+        kid = event->kid;
+        sprintf(tmp,"h2d-%i",kid);
+        kaapi_trace_poti_PushState (d0, tmp, "STATE", "kh2d");
+      }
+      break;
+      
+    case KAAPI_EVT_CUDA_GPU_HTOD_END:
+      if(katracereader_options.gputransfer){
+        d1   = 1e-9*(double)event->date;
+        kid = event->kid;
+        sprintf(tmp,"h2d-%i",kid);
+        kaapi_trace_poti_PopState (d1, tmp, "STATE");
+      }
+      break;
+      
+    case KAAPI_EVT_CUDA_GPU_KERNEL_BEG:
+      d0   = 1e-9*(double)event->date;
+      kid = event->kid;
+      sprintf(tmp,"gpu-%i",kid);
+      kaapi_trace_poti_PushState (d0, tmp, "STATE", "kgpu");
+      break;
+      
+    case KAAPI_EVT_CUDA_GPU_KERNEL_END:
+      d1   = 1e-9*(double)event->date;
+      kid = event->kid;
+      sprintf(tmp,"gpu-%i",kid);
+      kaapi_trace_poti_PopState (d1, tmp, "STATE");
+      break;
+      
+    default:
+      break;
+  }
+}
+
 static void callback_display_paje_event_stealevent(
     char* name,
     const kaapi_event_t* event
@@ -659,6 +737,18 @@ static void callback_display_paje_event(
       kid = event->kid;
       sprintf(tmp,"thread-%i",kid);
       kaapi_trace_poti_CreateContainer (d0, tmp, "THREAD", "root", tmp);
+      if(katracereader_options.gputrace){
+        if( event->type == KAAPI_PROC_TYPE_CUDA){
+          sprintf(name,"gpu-%i",kid);
+          kaapi_trace_poti_CreateContainer (d0, name, "WORKER", tmp, name);
+          if(katracereader_options.gputransfer){
+            sprintf(name,"h2d-%i",kid);
+            kaapi_trace_poti_CreateContainer (d0, name, "WORKER", tmp, name);
+            sprintf(name,"d2h-%i",kid);
+            kaapi_trace_poti_CreateContainer (d0, name, "WORKER", tmp, name);
+          }
+        }
+      }
       if(katracereader_options.stealevent){
         sprintf(name,"thief-%i",kid);
         kaapi_trace_poti_CreateContainer (d0, name, "THIEF", tmp, name);
@@ -675,6 +765,18 @@ static void callback_display_paje_event(
       if(katracereader_options.stealevent){
         sprintf(name,"thief-%i",kid);
         kaapi_trace_poti_DestroyContainer (d0, "THIEF", name);
+      }
+      if(katracereader_options.gputrace){
+        if( event->type == KAAPI_PROC_TYPE_CUDA){
+          sprintf(name,"gpu-%i",kid);
+          kaapi_trace_poti_DestroyContainer (d0, "WORKER", name);
+          if(katracereader_options.gputransfer){
+            sprintf(name,"h2d-%i",kid);
+            kaapi_trace_poti_DestroyContainer (d0, "WORKER", name);
+            sprintf(name,"d2h-%i",kid);
+            kaapi_trace_poti_DestroyContainer (d0, "WORKER", name);            
+          }
+        }
       }
       sprintf(name,"thread-%i",kid);
       kaapi_trace_poti_DestroyContainer (d0, "THREAD", name);
@@ -733,6 +835,14 @@ static void callback_display_paje_event(
       kaapi_trace_poti_PopState (d1, name, "STATE");          
     break;
 
+    case KAAPI_EVT_SCHED_SUSPEND_BEG:
+    case KAAPI_EVT_SCHED_SUSPEND_END:
+    case KAAPI_EVT_SCHED_SUSPEND_POST:
+    case KAAPI_EVT_SCHED_SUSPWAIT_BEG:
+    case KAAPI_EVT_SCHED_SUSPWAIT_END:
+      break;
+      
+#if 0
     /* suspend state */
     case KAAPI_EVT_SCHED_SUSPEND_BEG:
       d0   = 1e-9*(double)event->date;
@@ -758,6 +868,7 @@ static void callback_display_paje_event(
       d1   = 1e-9*(double)event->date;
       kaapi_trace_poti_PopState (d1, name, "STATE"); 
     break;
+#endif
 
     case KAAPI_EVT_FOREACH_BEG:
       d0   = 1e-9*(double)event->date;
@@ -783,9 +894,12 @@ static void callback_display_paje_event(
     case KAAPI_EVT_CUDA_CPU_SYNC_BEG:
     case KAAPI_EVT_CUDA_CPU_SYNC_END:
     case KAAPI_EVT_CUDA_GPU_HTOD_BEG:
+    case KAAPI_EVT_CUDA_GPU_HTOD_END:
+    case KAAPI_EVT_CUDA_GPU_DTOH_BEG:
     case KAAPI_EVT_CUDA_GPU_DTOH_END:
     case KAAPI_EVT_CUDA_GPU_KERNEL_BEG:
     case KAAPI_EVT_CUDA_GPU_KERNEL_END:
+        callback_display_paje_event_gpuevent(name, event);
       break;
 
     default:
@@ -852,7 +966,7 @@ static int fnc_paje_gantt_header()
   kaapi_trace_poti_DefineStateType("STEAL", "THIEF", "stealing");
   
   kaapi_trace_poti_DefineEventType("EVTSTEAL", "THIEF", "Request", "blue");
-  kaapi_trace_poti_DefineEventType("SUSPEND", "WORKER", "suspend", "blue");
+//  kaapi_trace_poti_DefineEventType("SUSPEND", "WORKER", "suspend", "blue");
 
   kaapi_trace_poti_DefineLinkType("LINK", "ROOT", "THREAD", "THREAD", "LINK");
 
@@ -884,7 +998,7 @@ static int fnc_paje_gantt_header()
   kaapi_trace_poti_DefineEntityValue("sok", "STEAL", "steal", "0.0 1.0 0.1");
 
   /* suspend post operation */
-  kaapi_trace_poti_DefineEntityValue("su", "SUSPEND", "suspend", "0.8 0.8 0.8");
+//  kaapi_trace_poti_DefineEntityValue("su", "SUSPEND", "suspend", "0.8 0.8 0.8");
 
   /* foreach steal event */
   kaapi_trace_poti_DefineEntityValue("fo", "EVTSTEAL", "foreachsteal", "0.5 0.25 0.0");
@@ -897,6 +1011,11 @@ static int fnc_paje_gantt_header()
 
   /* link: successfull steal  */
   kaapi_trace_poti_DefineEntityValue("riok", "LINK", "steal", "0.0 1.0 0.2");
+  
+  kaapi_trace_poti_DefineEntityValue("kgpu", "STATE", "kernel", "0.0 0.5 0.0");
+  kaapi_trace_poti_DefineEntityValue("kh2d", "STATE", "host2device", "0.5 0.5 0.0");
+  kaapi_trace_poti_DefineEntityValue("kd2h", "STATE", "device2host", "0.0 0.5 0.5");
+  kaapi_trace_poti_DefineEntityValue("ksync", "STATE", "synchronization", "1.0 1.0 0.0");    
 
   /* create the root container */
   kaapi_trace_poti_CreateContainer (0.00, "root", "ROOT", "0", "XKaapi");

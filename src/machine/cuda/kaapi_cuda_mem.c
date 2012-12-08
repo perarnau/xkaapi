@@ -516,6 +516,7 @@ kaapi_cuda_mem_copy_dtoh_from_host(kaapi_pointer_t dest,
     fflush(stdout);
     abort();
   }
+  cudaStreamDestroy(stream);
   
   return 0;
 }

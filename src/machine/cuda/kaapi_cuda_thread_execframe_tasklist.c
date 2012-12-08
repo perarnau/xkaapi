@@ -92,9 +92,11 @@ kaapi_cuda_gpu_task_callback1_exec_task(kaapi_cuda_stream_t * kstream,
                                        KAAPI_PROC_TYPE_CUDA);
   kaapi_assert_debug(body != 0);
   kaapi_assert_debug(td->task != 0);
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_STATIC_TASK_BEG);  
   kaapi_cuda_ctx_push();
   body(kaapi_task_getargs(td->task), kaapi_cuda_kernel_stream());
   kaapi_cuda_ctx_pop();
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_STATIC_TASK_END);
   kaapi_cuda_stream_push(kstream, KAAPI_CUDA_OP_KER,
                          kaapi_cuda_gpu_task_callback2_after_kernel, arg);
   return 0;
@@ -120,7 +122,9 @@ kaapi_cuda_host_task_callback1_exec_task(kaapi_cuda_stream_t * kstream,
   kaapi_taskdescr_t *const td = (kaapi_taskdescr_t *) arg;
   kaapi_task_body_t body = kaapi_format_get_task_bodywh_by_arch(td->fmt, KAAPI_PROC_TYPE_HOST);
   kaapi_assert_debug(body != 0);
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_STATIC_TASK_BEG);
   body(kaapi_task_getargs(td->task), 0);
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_STATIC_TASK_END);  
   kaapi_cuda_thread_tasklist_activate_deps(td);
   return 0;
 }
@@ -213,9 +217,7 @@ int kaapi_cuda_thread_execframe_tasklist(kaapi_thread_context_t * thread)
 
         /* start execution of the user body of the task */
         KAAPI_DEBUG_INST(kaapi_assert(td->u.acl.exec_date == 0));
-        KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_BEG);
         kaapi_cuda_thread_exec_task(kstream, stack, td);
-        KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_END);
         KAAPI_DEBUG_INST(td->u.acl.exec_date = kaapi_get_elapsedns());
         
         /* new tasks created ? */
