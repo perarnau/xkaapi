@@ -5,15 +5,24 @@
 ##  Copyright 2009,2010,2011,2012 INRIA. All rights reserved.
 ##
 
-include ./Makefile.examples.am
-
 AM_CPPFLAGS=@AM_CPPFLAGS@
 AM_CFLAGS=@AM_CFLAGS@ $(STD_C99_FLAGS)
 AM_CXXFLAGS=@AM_CXXFLAGS@ $(STD_CXX0X_FLAGS)
 
+check_headers_c_headers_SRC=
+check_headers_cxx_headers_SRC=check-headers/c++/kaapi++.c++ check-headers/c++/kaapi++.h.c++
+check_headers_cppflags=@AM_CPPFLAGS@ $(KAAPIXXPROGS_BUILD_CPPFLAGS)
+check_headers_cflags=  @AM_CFLAGS@   $(KAAPIXXPROGS_BUILD_CFLAGS)
+check_headers_cxxflags=@AM_CXXFLAGS@ $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+check_headers_ldflags= @AM_LDFLAGS@  $(KAAPIXXPROGS_BUILD_LDFLAGS)
+check_headers_libs=                  $(KAAPIXXPROGS_BUILD_LIBS)
+
 if  KAAPI_API_KAAPIXX
-check_PROGRAMS=             \
-	test_spawn                \
+
+include ../check-headers/check-headers.am
+
+noinst_PROGRAMS+=           \
+  test_spawn                \
   test_pointer              \
   test_multipleleave        \
   test_stackpointer         \
@@ -34,30 +43,26 @@ check_PROGRAMS=             \
   test_spawn_failed 
 endif
 
-
-TESTS=
-
 test_spawn_SOURCES=test_spawn.cpp test_main.cpp test_main.h test_task.h
 test_spawn_failed_SOURCES=test_spawn_failed.cpp test_main.cpp test_main.h test_task.h
 test_pointer_SOURCES=test_pointer.cpp test_main.cpp test_main.h test_task.h
 test_stackpointer_SOURCES=test_stackpointer.cpp test_main.cpp test_main.h test_task.h
 test_nqueens_stackpointer_SOURCES=test_nqueens_stackpointer.cpp test_main.cpp test_main.h
 test_multipleleave_SOURCES=test_multipleleave.cpp
-test_perfcounter1_SOURCES=test_perfcounter1.cpp test_main.cpp
+test_perfcounter1_SOURCES=test_perfcounter1.cpp test_main.cpp fib_verify.h
 test_dfgdetect1_SOURCES=test_dfgdetect1.cpp test_main.cpp test_main.h
 
-fibo_kaapi___SOURCES=    fibo_kaapi++.cpp test_main.cpp test_main.h fibo_main.cpp
-fibo_kaapi___autopointer_SOURCES= fibo_kaapi++_autopointer.cpp test_main.cpp test_main.h fibo_main.cpp
-fibo_kaapi___autovar_SOURCES=    fibo_kaapi++_autovar.cpp test_main.cpp test_main.h fibo_main.cpp
-fibo_kaapi___alloca_SOURCES=fibo_kaapi++_alloca.cpp test_main.cpp test_main.h fibo_main.cpp
-fibo_kaapi___opt_SOURCES=fibo_kaapi++_opt.cpp test_main.cpp test_main.h fibo_main.cpp
-fibo_kaapi___opt_thread_SOURCES=fibo_kaapi++_opt_thread.cpp test_main.cpp test_main.h fibo_main.cpp
-fibo_kaapi___opt_sync_SOURCES=fibo_kaapi++_opt_sync.cpp test_main.cpp test_main.h fibo_main.cpp
-fibo_kaapi___sync_SOURCES=fibo_kaapi++_sync.cpp test_main.cpp test_main.h fibo_main.cpp
-fibo_kaapi___cumul_SOURCES=fibo_kaapi++_cumul.cpp test_main.cpp test_main.h fibo_main_cumul.cpp
-fibo_kaapi___cumul_opt_SOURCES=fibo_kaapi++_cumul_opt.cpp test_main.cpp test_main.h fibo_main_cumul.cpp
-fibo_kaapi___cumul_userreduc_SOURCES=fibo_kaapi++_cumul_userreduc.cpp test_main.cpp test_main.h
-
+fibo_kaapi___SOURCES=    fibo_kaapi++.cpp test_main.cpp test_main.h fibo_main.cpp fib_verify.h
+fibo_kaapi___autopointer_SOURCES= fibo_kaapi++_autopointer.cpp test_main.cpp test_main.h fibo_main.cpp fib_verify.h
+fibo_kaapi___autovar_SOURCES=    fibo_kaapi++_autovar.cpp test_main.cpp test_main.h fibo_main.cpp fib_verify.h
+fibo_kaapi___alloca_SOURCES=fibo_kaapi++_alloca.cpp test_main.cpp test_main.h fibo_main.cpp fib_verify.h
+fibo_kaapi___opt_SOURCES=fibo_kaapi++_opt.cpp test_main.cpp test_main.h fibo_main.cpp fib_verify.h
+fibo_kaapi___opt_thread_SOURCES=fibo_kaapi++_opt_thread.cpp test_main.cpp test_main.h fibo_main.cpp fib_verify.h
+fibo_kaapi___opt_sync_SOURCES=fibo_kaapi++_opt_sync.cpp test_main.cpp test_main.h fibo_main.cpp fib_verify.h
+fibo_kaapi___sync_SOURCES=fibo_kaapi++_sync.cpp test_main.cpp test_main.h fibo_main.cpp fib_verify.h
+fibo_kaapi___cumul_SOURCES=fibo_kaapi++_cumul.cpp test_main.cpp test_main.h fibo_main_cumul.cpp fib_verify.h
+fibo_kaapi___cumul_opt_SOURCES=fibo_kaapi++_cumul_opt.cpp test_main.cpp test_main.h fibo_main_cumul.cpp fib_verify.h
+fibo_kaapi___cumul_userreduc_SOURCES=fibo_kaapi++_cumul_userreduc.cpp test_main.cpp test_main.h fib_verify.h
 
 test_spawn_CPPFLAGS=$(AM_CPPFLAGS)  $(KAAPIXXPROGS_BUILD_CPPFLAGS)  
 test_spawn_CXXFLAGS=$(AM_CXXFLAGS)  $(KAAPIXXPROGS_BUILD_CXXFLAGS)

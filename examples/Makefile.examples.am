@@ -27,7 +27,7 @@ list_examples:
 	@for prog in $(examples_PRGS); do echo " * $$prog"; done
 	@echo '***********************************************************'
 
-examples: check
+examples: $(examples_PRGS)
 
 # test generation
 TESTS_ENVIRONMENT=env KARUN_OPTS="$(KARUN_OPTS)" /bin/sh -x

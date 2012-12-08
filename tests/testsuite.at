@@ -1,12 +1,72 @@
-# Testsuite for ocl-icd
+# Testsuite for xkaapi
 
 m4_include([atenv.m4])
+m4_include([check-headers/check-headers.m4])
+
+dnl KAT_BANNER(name, testsuite, keywords, subdir, all-target)
+m4_define([KAT_BANNER],[
+  AT_BANNER([$1])
+  m4_define([_KAT_TESTSUITE],[$2])
+  m4_define([_KAT_KEYWORDS],[$2 $3])
+  m4_define([_KAT_SUBDIR],[$4])
+  m4_define([_KAT_SETUP_HOOK],[])
+  m4_define([_KAT_CHECK_BUILD_HOOK],[])
+
+  m4_if($5,[],[],[
+    KAT_SETUP([clean compilation into _KAT_SUBDIR], [clean])
+    KAT_CHECK_BUILD([clean])
+    AT_CLEANUP
+  
+    KAT_SETUP([precompile programs into _KAT_SUBDIR], [build])
+    KAT_CHECK_BUILD([$5],[-k],[ignore])
+    AT_CLEANUP
+  ])
+])
+  
+dnl KAT_SETUP(name, extra_keywords) 
+m4_define([KAT_SETUP],[
+  AT_SETUP([$1])
+  AT_KEYWORDS([_KAT_KEYWORDS $2])
+  m4_if(_KAT_TESTSUITE,[],[],[
+    AT_SKIP_IF([AS_CASE([" $KAT_TESTSUITES "],[*" _KAT_TESTSUITE "*],[false],[:])])
+  ])
+  _KAT_SETUP_HOOK([$1],[$2])
+])
+dnl KAT_CHECK_BUILD(target, options, exit-code)
+m4_define([KAT_CHECK_BUILD],[
+  _KAT_CHECK_BUILD_HOOK([$1],[$2])
+  AT_CHECK([${MAKE:-make} -C ${abs_top_builddir}/_KAT_SUBDIR $2 $1], 
+    m4_if([$3],[],[0],[$3]), [ignore], [ignore])
+])
+dnl KAT_CHECK_RUN(name, arguments, command-to-parse-stdout, stdout)
+m4_define([KAT_CHECK_RUN],[
+  AT_CHECK([$abs_top_builddir/_KAT_SUBDIR/$1 $2], 0,[m4_if([$3],[],[$4],[stdout])],[])
+  m4_if([$3],[],[],[
+    AT_CHECK([$3], 0, [$4], [])
+  ])
+])
+dnl KAT_TEST_PROG(prog-name, test-name, keywords, , arguments, command-to-parse-stdout, stdout)
+m4_define([KAT_TEST_PROG],[
+  KAT_SETUP([$2],[$3 $1])
+  KAT_CHECK_BUILD([$1])
+  KAT_CHECK_RUN([$1],[$5],[$6],[$7])
+  AT_CLEANUP
+])
+dnl KAT_TEST_BUILD_FAILED(prog-name, test-name, keywords)
+m4_define([KAT_TEST_BUILD_FAILED],[
+  KAT_SETUP([$2],[$3 $1])
+  KAT_CHECK_BUILD([$1], [], [1])
+  AT_CLEANUP
+])
 
 AT_INIT()
 AT_COPYRIGHT ([Copyright (c) 2012 Vincent Danjean <Vincent.Danjean@ens-lyon.org>])
 AT_COLOR_TESTS
 
-m4_include([testsuite-api-kaapic.at])
-m4_include([testsuite-api-kaapixx.at])
+m4_if(KAT_INSTALLED,[true],[],[
+  m4_include([testsuite-kaapi.at])
+  m4_include([testsuite-api-kaapic.at])
+  m4_include([testsuite-api-kaapixx.at])
+])
 m4_include([testsuite-examples.at])
 

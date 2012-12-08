@@ -8,5 +8,3 @@
 
 SUBDIRS=kaapixx kaapic kaapif quark kastl libgomp
 
-DIST=check-headers.am
-

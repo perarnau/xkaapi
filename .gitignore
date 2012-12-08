@@ -26,8 +26,19 @@
 /gitlastcommit
 /tests/package.m4
 /tests/testsuite
+/tests/testsuite-installed
 /tests/testsuite-examples-inc.at
-
+/tests/api-kaapic/check-headers/main.c
+/tests/api-kaapic/check-headers/c/kaapic.h.c
+/tests/api-kaapic/check-headers/c++/kaapic.h.c++
+/tests/api-kaapixx/check-headers/main.c
+/tests/api-kaapixx/check-headers/c++/kaapi++.c++
+/tests/api-kaapixx/check-headers/c++/kaapi++.h.c++
+/tests/kaapi/check-headers/main.c
+/tests/kaapi/check-headers/c/kaapi_error.h.c
+/tests/kaapi/check-headers/c/kaapi.h.c
+/tests/kaapi/check-headers/c++/kaapi_error.h.c++
+/tests/kaapi/check-headers/c++/kaapi.h.c++
 
 ########################
 # Files from bootstrap #

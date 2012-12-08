@@ -51,6 +51,10 @@
 #define KAAPIC_TYPE(s) _KAAPIC_TYPE(s)
 #define _KAAPIC_TYPE(s) KAAPIC_TYPE_##s
 
+#ifndef SERIES
+#  define SERIES 1
+#endif
+
 void body(T const n1, T const n2, T const n3, T const n4,
 	  T const n5, T const n6, T const n7, T const n8,
 	  T* result)
@@ -82,7 +86,7 @@ int main()
   kaapic_spawn(&attr, 
       9,                /* number of arguments */
       (void(*)())body,  /* the entry point for the task */
-#if 0
+#if SERIES == 0
       KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)32,
       KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)32,
       KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)32,
@@ -92,7 +96,7 @@ int main()
       KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)2,
       KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)1,
       KAAPIC_MODE_W, KAAPIC_TYPE(KT), 1, &result
-#else
+#elif SERIES == 1
       KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)0x10,
       KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)0x20,
       KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)0x30,
@@ -102,6 +106,8 @@ int main()
       KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)0x70,
       KAAPIC_MODE_V, KAAPIC_TYPE(KT), 1, (T)0x80,
       KAAPIC_MODE_W, KAAPIC_TYPE(KT), 1, &result
+#else
+#  error Bad value for SERIES
 #endif
   );
 
@@ -112,11 +118,11 @@ int main()
   printf("The result is : %i/%f\n", (int)(uintptr_t)result, (double)(uintptr_t)result );
   kaapic_finalize();
 
-#if 0
+#if SERIES == 0
   if (result == (T)127) {
     printf("Success\n");
   }
-#else
+#elif SERIES == 1
   if (result == (T)576) {
     printf("Success\n");
   }
