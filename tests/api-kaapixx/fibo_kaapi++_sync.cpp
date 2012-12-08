@@ -45,28 +45,6 @@
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
 
-/* Sum two integers
- * this task reads a and b (read acces mode) and write their sum to res (write access mode)
- * it will wait until previous write to a and b are done
- * once finished, further read of res will be possible
- */
-struct TaskSum : public ka::Task<3>::Signature<ka::W<long>, ka::R<long>, ka::R<long> > {};
-
-template<>
-struct TaskBodyCPU<TaskSum>
-{
-  void operator() ( ka::pointer_w<long> res, 
-                    ka::pointer_r<long> a, 
-                    ka::pointer_r<long> b ) 
-  {
-    /* write is used to write data to a Shared_w
-     * read is used to read data from a Shared_r
-     */
-    *res = *a + *b;
-  }
-};
-
-
 /* Kaapi Fibo task.
    A Task is a type with respect a given signature. The signature specifies the number of arguments (2),
    and the type and access mode for each parameters.
@@ -87,21 +65,18 @@ struct TaskBodyCPU<TaskFibo>
       return;
     }
     else {
-      ka::pointer<long> res1 = ka::Alloca<long>();
-      ka::pointer<long> res2 = ka::Alloca<long>();
+      long res1;
+      long res2;
 
       /* the Spawn keyword is used to spawn new task
        * new tasks are executed in parallel as long as dependencies are respected
        */
-      ka::Spawn<TaskFibo>() ( res1, n-1 );
-      ka::Spawn<TaskFibo>() ( res2, n-2 );
+      ka::Spawn<TaskFibo>() ( &res1, n-1 );
+      ka::Spawn<TaskFibo>() ( &res2, n-2 );
 
-      /* the Sum task depends on res1 and res2 which are written by previous tasks
-       * it must wait until thoses tasks are finished
-       */
-      ka::Spawn<TaskSum>() ( res, res1, res2 );
-      
       ka::Sync();
+
+      *res = res1 + res2;
     }
   }
 };
