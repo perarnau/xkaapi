@@ -49,7 +49,8 @@ int test( int argc, char** argv )
   return 0;
 }
 
-int Execute( int argc, char **argv, int (*func)( int, char** ), int returnExecpt = 2, int returnUnknownExcept = 4 )
+int Execute( int argc, char **argv, int (*func)( int, char** ), 
+            int returnExecpt = 2, int returnUnknownExcept = 4 )
 {
   try
   {

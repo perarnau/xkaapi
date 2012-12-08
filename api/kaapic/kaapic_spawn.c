@@ -660,7 +660,6 @@ void _kaapic_register_task_format(void)
    );
   
   kaapi_hashmap_init(&hash_task_sig,0);
-  
 }
 
 
