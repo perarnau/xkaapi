@@ -1,6 +1,7 @@
-AT_BANNER([kaapixx - C++ API for XKaapi])
+KAT_BANNER([kaapixx - C++ API for XKaapi],
+  [libkaapi++],[kaapixx api-kaapixx],[tests/api-kaapixx],[all])
 
 dnl ******************************************************
 dnl checking headers
-KAT_CHECK_HEADERS([api-kaapixx], [libkaapi++], [kaapixx])
+KAT_TEST_HEADERS([api-kaapixx], [libkaapi++], [kaapixx])
 

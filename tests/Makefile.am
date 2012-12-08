@@ -51,8 +51,11 @@ $(TESTSUITE): $(TESTSUITES_SRC) $(srcdir)/package.m4 $(srcdir)/atenv.m4
 	mv $@.tmp $@
 
 testsuite-examples-inc.at: Makefile.am
-	for e in $$( (cd $(top_srcdir)/examples ; grep -h  _PRG $$(ls *.am | grep -v Makefile)) \
-		| grep -v examples_PRGS | grep -v '^#\|all-' \
-		| sed -e 's/^[A-Z0-9_]*+\?=//'); do \
-	    echo "KAT_EX_CHECK_PROG([$$e])" ; \
+	for f in $$( cd $(top_srcdir)/examples ; ls *.am | grep -v Makefile) ; do \
+	    fb="$$(echo $$f | sed -e 's/\.am$$//')" ;\
+	    for e in $$( (cd $(top_srcdir)/examples ; grep -h  _PRG "$$f") \
+			| grep -v examples_PRGS | grep -v '^#\|all-' \
+			| sed -e 's/^[A-Z0-9_]*+\?=//'); do \
+		echo "KAT_EX_CHECK_PROG([$$e],[$$fb])" ; \
+	    done ;\
 	done > $(srcdir)/testsuite-examples-inc.at
