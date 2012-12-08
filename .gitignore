@@ -26,6 +26,7 @@
 /gitlastcommit
 /tests/package.m4
 /tests/testsuite
+/tests/testsuite-installed
 /tests/testsuite-examples-inc.at
 /tests/api-kaapic/check-headers/main.c
 /tests/api-kaapic/check-headers/c/kaapic.h.c

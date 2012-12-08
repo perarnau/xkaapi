@@ -12,11 +12,11 @@ m4_define([KAT_BANNER],[
   m4_define([_KAT_SETUP_HOOK],[])
   m4_define([_KAT_CHECK_BUILD_HOOK],[])
 
-  KAT_SETUP([clean compilation into _KAT_SUBDIR], [clean])
-  KAT_CHECK_BUILD([clean])
-  AT_CLEANUP
+  m4_if($5,[],[],[
+    KAT_SETUP([clean compilation into _KAT_SUBDIR], [clean])
+    KAT_CHECK_BUILD([clean])
+    AT_CLEANUP
   
-  m4_if([$5],[],[],[
     KAT_SETUP([precompile programs into _KAT_SUBDIR], [build])
     KAT_CHECK_BUILD([$5],[-k],[ignore])
     AT_CLEANUP
@@ -63,8 +63,10 @@ AT_INIT()
 AT_COPYRIGHT ([Copyright (c) 2012 Vincent Danjean <Vincent.Danjean@ens-lyon.org>])
 AT_COLOR_TESTS
 
-m4_include([testsuite-kaapi.at])
-m4_include([testsuite-api-kaapic.at])
-m4_include([testsuite-api-kaapixx.at])
+m4_if(KAT_INSTALLED,[true],[],[
+  m4_include([testsuite-kaapi.at])
+  m4_include([testsuite-api-kaapic.at])
+  m4_include([testsuite-api-kaapixx.at])
+])
 m4_include([testsuite-examples.at])
 

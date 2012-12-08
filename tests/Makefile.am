@@ -28,25 +28,31 @@ $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 TESTSUITES_SRC = testsuite.at testsuite-api-kaapic.at testsuite-api-kaapixx.at \
 	testsuite-examples.at testsuite-examples-inc.at \
 	atenv.m4 check-headers/check-headers.m4
-EXTRA_DIST = $(TESTSUITES_SRC) $(srcdir)/package.m4 $(TESTSUITE) atlocal.in
+EXTRA_DIST = $(TESTSUITES_SRC) $(srcdir)/package.m4 $(TESTSUITE) $(INSTTESTSUITE) atlocal.in
 EXTRA_DIST += check-headers/main.c
 TESTSUITE = $(srcdir)/testsuite
+INSTTESTSUITE = $(srcdir)/testsuite-installed
 DISTCLEANFILES = atconfig
 
 check-local: atconfig atlocal $(TESTSUITE)
 	$(SHELL) '$(TESTSUITE)' $(TESTSUITEFLAGS)
 
-installcheck-local: atconfig atlocal $(TESTSUITE)
-	$(SHELL) '$(TESTSUITE)' AUTOTEST_PATH='$(bindir):..' \
+installcheck-local: atconfig atlocal $(INSTTESTSUITE)
+	$(SHELL) '$(INSTTESTSUITE)' AUTOTEST_PATH='$(bindir):..' \
 	$(TESTSUITEFLAGS)
 
 clean-local:
 	test ! -f '$(TESTSUITE)' || \
 	$(SHELL) '$(TESTSUITE)' --clean
+	test ! -f '$(INSTTESTSUITE)' || \
+	$(SHELL) '$(INSTTESTSUITE)' --clean
 
 AUTOM4TE = $(SHELL) $(top_srcdir)/build-aux/missing --run autom4te
 AUTOTEST = $(AUTOM4TE) --language=autotest
 $(TESTSUITE): $(TESTSUITES_SRC) $(srcdir)/package.m4 $(srcdir)/atenv.m4
+	$(AUTOTEST) -I '$(srcdir)' -o $@.tmp $@.at
+	mv $@.tmp $@
+$(INSTTESTSUITE): $(TESTSUITES_SRC) $(srcdir)/package.m4 $(srcdir)/atenv.m4
 	$(AUTOTEST) -I '$(srcdir)' -o $@.tmp $@.at
 	mv $@.tmp $@
 

@@ -59,16 +59,6 @@ USER_MAKEFILES=\
     linearwork/Makefile \
 	prefix/Makefile
 
-
-TESTS=  
-
-installcheck-local:
-	set -e ; \
-	for f in $(USER_MAKEFILES) ; do \
-		d="$$(dirname "$$f")" ; \
-		$(MAKE) $(AM_MAKEFLAGS) -C "$(examplesdir)/$$d" ; \
-	done
-
 EXTRA_DIST=gen-Makefile.m4
 
 ###########################################
