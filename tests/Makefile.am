@@ -27,7 +27,8 @@ $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 
 TESTSUITES_SRC = testsuite.at testsuite-api-kaapic.at testsuite-api-kaapixx.at \
 	testsuite-examples.at testsuite-examples-inc.at \
-	atenv.m4 check-headers/check-headers.m4
+	m4/atenv.m4 check-headers/check-headers.m4 \
+	m4/kaapi-autotest.m4
 EXTRA_DIST = $(TESTSUITES_SRC) $(srcdir)/package.m4 $(TESTSUITE) $(INSTTESTSUITE) atlocal.in
 EXTRA_DIST += check-headers/main.c
 TESTSUITE = $(srcdir)/testsuite
@@ -49,10 +50,10 @@ clean-local:
 
 AUTOM4TE = $(SHELL) $(top_srcdir)/build-aux/missing --run autom4te
 AUTOTEST = $(AUTOM4TE) --language=autotest
-$(TESTSUITE): $(TESTSUITES_SRC) $(srcdir)/package.m4 $(srcdir)/atenv.m4
+$(TESTSUITE): $(TESTSUITES_SRC) $(srcdir)/package.m4 $(srcdir)/m4/atenv.m4
 	$(AUTOTEST) -I '$(srcdir)' -o $@.tmp $@.at
 	mv $@.tmp $@
-$(INSTTESTSUITE): $(TESTSUITES_SRC) $(srcdir)/package.m4 $(srcdir)/atenv.m4
+$(INSTTESTSUITE): $(TESTSUITES_SRC) $(srcdir)/package.m4 $(srcdir)/m4/atenv.m4
 	$(AUTOTEST) -I '$(srcdir)' -o $@.tmp $@.at
 	mv $@.tmp $@
 
