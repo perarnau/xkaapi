@@ -612,21 +612,15 @@ static void callback_display_paje_event_stealevent(
   case KAAPI_EVT_FOREACH_STEAL:
     d0   = 1e-9*(double)event->date;
     kaapi_trace_poti_NewEvent(d0, name, "STEAL", "fo");
-      break;
+    break;
       
     /* processing request */
   case KAAPI_EVT_REQUESTS_BEG:
     d0  = 1e-9*(double)event->date;
     kid = event->d0.i;
     serial = event->d1.i;
-//  #if 0 /* do no pollute gantt diagram */
-//    sprintf(key,"b%i-%i-%i",event->kid, kid, serial);
-//    kaapi_trace_poti_StartLink(d0, "root", "LINK", name, "li", key);
-//    kaapi_trace_poti_EndLink(d0, "root", "LINK", tmp, "li", key);
-//  #endif
     sprintf(tmp,"thief-%i",kid);
     kaapi_trace_poti_PushState (d0, tmp, "STEAL", "r");
-//    kaapi_trace_poti_PushState (d0, name, "STATE", "r");
     break;
     
   case KAAPI_EVT_REQUESTS_END:
@@ -635,46 +629,30 @@ static void callback_display_paje_event_stealevent(
     serial = event->d1.i;
     sprintf(tmp,"thief-%i",kid);
     kaapi_trace_poti_PopState (d1, tmp, "STEAL");
-//  #if 0
-//    sprintf(key,"e%i-%i-%i",event->kid, kid, serial);
-//    kaapi_trace_poti_StartLink(d1, "root", "LINK", tmp, "li", key);
-//    kaapi_trace_poti_EndLink(d1, "root", "LINK", name, "li", key);
-//  #endif
     break;
     
     /* emit steal */
   case KAAPI_EVT_STEAL_OP:
-    break;
     /* find in next event (safe in callback) if steal success */
     paje_mark_steal_status( event );
     
     d0  = 1e-9*(double)event->date;
     kid = event->d0.i; /* victim id */
-//  #if 0
-//    kaapi_trace_poti_NewEvent(d0, name, "STEAL", "so");
-//  #endif
     if (kid != event->kid)
     {
       sprintf(key,"s-%" PRIuPTR,event->d1.i*100000+event->kid);
-//      sprintf(tmp,"thread-%i",kid);
-      sprintf(tmp,"steal-%i",kid);
+      sprintf(tmp,"thief-%i",kid);
       
       if (   gantt_steal_op_issuccess[event->kid].find(event->d1.i)
           != gantt_steal_op_issuccess[event->kid].end()
           )
       {
-        kaapi_trace_poti_StartLink(d0, "root", "LINK", name, "riok", key);
-        kaapi_trace_poti_EndLink(d0, "root", "LINK", tmp, "riok", key);
+        kaapi_trace_poti_StartLink(d0, "root", "LINK1", name, "riok", key);
+        kaapi_trace_poti_EndLink(d0, "root", "LINK1", tmp, "riok", key);
       }
-//  #if 0 /* do no pollute gantt diagram */
-//      else {
-//        kaapi_trace_poti_StartLink(d0, "root", "LINK", name, "li", key);
-//        kaapi_trace_poti_EndLink(d0, "root", "LINK", tmp, "li", key);
-//      }
-//  #endif
     }
     break;
-    
+ 
     /* emit reply */
   case KAAPI_EVT_SEND_REPLY:
     d0  = 1e-9*(double)event->date;
@@ -682,17 +660,13 @@ static void callback_display_paje_event_stealevent(
     if (kid != (uint16_t)event->d1.i) /* thief id */
     {
       /* key using (serial, thiefid) */
-      sprintf(tmp,"steal-%i",kid);
+      sprintf(tmp,"thief-%i",kid);
       sprintf(key,"r-%" PRIuPTR,event->d2.i*100000+event->d1.i);
       
       if (   gantt_steal_op_issuccess[event->d1.i].find(event->d2.i)
           != gantt_steal_op_issuccess[event->d1.i].end()
           )
-        kaapi_trace_poti_StartLink(d0, "root", "LINK", tmp, "riok", key);
-//  #if 0 /* do no pollute gantt diagram */
-//      else
-//        kaapi_trace_poti_StartLink(d0, "root", "LINK", tmp, "ri", key);
-//  #endif
+        kaapi_trace_poti_StartLink(d0, "root", "LINK2", tmp, "ri", key);
     }
     break;
     
@@ -707,7 +681,7 @@ static void callback_display_paje_event_stealevent(
       if (   gantt_steal_op_issuccess[event->kid].find(event->d1.i)
           != gantt_steal_op_issuccess[event->kid].end()
           )
-        kaapi_trace_poti_EndLink(d0, "root", "LINK", name, "riok", key);
+        kaapi_trace_poti_EndLink(d0, "root", "LINK2", name, "ri", key);
 //  #if 0 /* do no pollute gantt diagram */
 //      else
 //        kaapi_trace_poti_EndLink(d0, "root", "LINK", name, "ri", key);
@@ -739,14 +713,14 @@ static void callback_display_paje_event(
       kaapi_trace_poti_CreateContainer (d0, tmp, "THREAD", "root", tmp);
       if(katracereader_options.gputrace){
         if( event->type == KAAPI_PROC_TYPE_CUDA){
-          sprintf(name,"gpu-%i",kid);
-          kaapi_trace_poti_CreateContainer (d0, name, "WORKER", tmp, name);
           if(katracereader_options.gputransfer){
             sprintf(name,"h2d-%i",kid);
             kaapi_trace_poti_CreateContainer (d0, name, "WORKER", tmp, name);
             sprintf(name,"d2h-%i",kid);
             kaapi_trace_poti_CreateContainer (d0, name, "WORKER", tmp, name);
           }
+          sprintf(name,"gpu-%i",kid);
+          kaapi_trace_poti_CreateContainer (d0, name, "WORKER", tmp, name);
         }
       }
       if(katracereader_options.stealevent){
@@ -768,14 +742,14 @@ static void callback_display_paje_event(
       }
       if(katracereader_options.gputrace){
         if( event->type == KAAPI_PROC_TYPE_CUDA){
-          sprintf(name,"gpu-%i",kid);
-          kaapi_trace_poti_DestroyContainer (d0, "WORKER", name);
           if(katracereader_options.gputransfer){
             sprintf(name,"h2d-%i",kid);
             kaapi_trace_poti_DestroyContainer (d0, "WORKER", name);
             sprintf(name,"d2h-%i",kid);
             kaapi_trace_poti_DestroyContainer (d0, "WORKER", name);            
           }
+          sprintf(name,"gpu-%i",kid);
+          kaapi_trace_poti_DestroyContainer (d0, "WORKER", name);          
         }
       }
       sprintf(name,"thread-%i",kid);
@@ -958,17 +932,18 @@ static int fnc_paje_gantt_header()
 
   kaapi_trace_poti_DefineContainerType ("ROOT", "0", "ROOT");  
 
-  kaapi_trace_poti_DefineContainerType("THREAD", "ROOT", "Process");
-  kaapi_trace_poti_DefineContainerType("THIEF", "THREAD", "Steal");
+  kaapi_trace_poti_DefineContainerType("THREAD", "ROOT", "process");
+  kaapi_trace_poti_DefineContainerType("THIEF", "THREAD", "steal");
   kaapi_trace_poti_DefineContainerType("WORKER", "THREAD", "running");  
   
   kaapi_trace_poti_DefineStateType("STATE", "WORKER", "work");
   kaapi_trace_poti_DefineStateType("STEAL", "THIEF", "stealing");
   
-  kaapi_trace_poti_DefineEventType("EVTSTEAL", "THIEF", "Request", "blue");
+//  kaapi_trace_poti_DefineEventType("EVTSTEAL", "THIEF", "Request", "blue");
 //  kaapi_trace_poti_DefineEventType("SUSPEND", "WORKER", "suspend", "blue");
 
-  kaapi_trace_poti_DefineLinkType("LINK", "ROOT", "THREAD", "THREAD", "LINK");
+  kaapi_trace_poti_DefineLinkType("LINK1", "ROOT", "WORKER", "THIEF", "request");
+  kaapi_trace_poti_DefineLinkType("LINK2", "ROOT", "THIEF", "WORKER", "reply");
 
   /* actif state */
   kaapi_trace_poti_DefineEntityValue("a", "STATE", "running", "0.0 0.0 1.0");
@@ -983,7 +958,7 @@ static int fnc_paje_gantt_header()
   kaapi_trace_poti_DefineEntityValue("s", "STATE", "suspended", "1.0 0.0 0.0");
 
   /* execution of steal request */
-  kaapi_trace_poti_DefineEntityValue("r", "STATE", "request", "8.0 0.6 0.4");
+  kaapi_trace_poti_DefineEntityValue("r", "STEAL", "request", "1.0 0.5 0.0");
 
   /* execution of foreach code */
   kaapi_trace_poti_DefineEntityValue("f", "STATE", "foreach", "0.0 0.2 1.0");
@@ -1001,16 +976,16 @@ static int fnc_paje_gantt_header()
 //  kaapi_trace_poti_DefineEntityValue("su", "SUSPEND", "suspend", "0.8 0.8 0.8");
 
   /* foreach steal event */
-  kaapi_trace_poti_DefineEntityValue("fo", "EVTSTEAL", "foreachsteal", "0.5 0.25 0.0");
+//  kaapi_trace_poti_DefineEntityValue("fo", "EVTSTEAL", "foreachsteal", "0.5 0.25 0.0");
 
   /* link  */
-  kaapi_trace_poti_DefineEntityValue("li", "LINK", "link", "1.0 0.1 0.1");
+//  kaapi_trace_poti_DefineEntityValue("li", "LINK", "link", "1.0 0.1 0.1");
 
   /* link  */
-  kaapi_trace_poti_DefineEntityValue("ri", "LINK", "reply", "0.2 0.2 0.2");
+  kaapi_trace_poti_DefineEntityValue("ri", "LINK2", "reply", "0.0 1.0 0.0");
 
   /* link: successfull steal  */
-  kaapi_trace_poti_DefineEntityValue("riok", "LINK", "steal", "0.0 1.0 0.2");
+  kaapi_trace_poti_DefineEntityValue("riok", "LINK1", "steal", "1.0 0.0 0.0");
   
   kaapi_trace_poti_DefineEntityValue("kgpu", "STATE", "kernel", "0.0 0.5 0.0");
   kaapi_trace_poti_DefineEntityValue("kh2d", "STATE", "host2device", "0.5 0.5 0.0");
