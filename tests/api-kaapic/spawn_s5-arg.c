@@ -2,7 +2,7 @@
 ** xkaapi
 ** 
 **
-** Copyright 2009,2010,2011,2012 INRIA.
+** Copyright 2012 INRIA.
 **
 ** Contributors :
 **
@@ -35,50 +35,52 @@
 ** enabling the security of their systems and/or data to be ensured
 ** and, more generally, to use and operate it in the same conditions
 ** as regards security.
-** 
-** The fact that you are presently reading this means that you have
 ** had knowledge of the CeCILL-C license and that you accept its
 ** terms.
 ** 
 */
-#include <kaapi++>
+#include <stdio.h>
+#include <stdint.h>
+#include "kaapic.h"
 
-int test( int argc, char** argv )
+void body(const int f1, int f2, int f3, int f4, int f5, double v)
 {
-  std::cout << "Rien ne va plus." << std::endl;
+  kaapi_assert( f1 == (int)0x10 );
+  kaapi_assert( f2 == (int)0x20 );
+  kaapi_assert( f3 == (int)0x30 );
+  kaapi_assert( f4 == (int)0x40 );
+  kaapi_assert( f5 == (int)0x50 );
+  kaapi_assert( v == (double)3.141569 );
+}
+
+
+int main()
+{
+  kaapic_spawn_attr_t attr;
+  
+  kaapic_init(KAAPIC_START_ONLY_MAIN);
+
+  kaapic_begin_parallel (KAAPIC_FLAG_DEFAULT);
+
+  /* initialize default attribut */
+  kaapic_spawn_attr_init(&attr);
+  
+  /* spawn the task */
+  kaapic_spawn(&attr, 
+      6,     /* number of arguments */
+      body,  /* the entry point for the task */
+      KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)0x10,
+      KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)0x20,
+      KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)0x30,
+      KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)0x40,
+      KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)0x50,
+      KAAPIC_MODE_V, KAAPIC_TYPE_DBL, 1, (double)3.141569
+  );
+
+  kaapic_sync();
+  
+  kaapic_end_parallel (KAAPIC_FLAG_DEFAULT);
+  
+  kaapic_finalize();
   return 0;
 }
-
-int Execute( int argc, char **argv, int (*func)( int, char** ), 
-            int returnExecpt = 2, int returnUnknownExcept = 4 )
-{
-  try
-  {
-    ka::Community com = ka::System::join_community( argc, argv );
-
-    int run = 0;
-    if (func) run = func( argc, argv );
-
-    com.leave();
-    ka::System::terminate();
-    return run;
-  }
-  catch(const std::exception& e)
-  {
-    ka::logfile()<<"Catch : "<<e.what()<<std::endl;
-    return returnExecpt;
-  } catch(...) {
-    ka::logfile()<<"Catch unknown exception"<<std::endl;
-    return returnUnknownExcept;
-  }
-}
-
-int main(int argc, char** argv)
-{
-  Execute( argc, argv, &test );
-  std::cout << "Tout va bien !" << std::endl;
-
-  Execute( argc, argv, &test );
-  std::cout << "Tout va bien !" << std::endl;
-}
-

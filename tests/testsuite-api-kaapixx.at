@@ -70,4 +70,3 @@ dnl checking implementation details
 KAT_TEST_PROG([test_perfcounter1],[checking perf counter],[perfcounter],[],[],[grep '#task' stdout],
 [: #task  : 6731341
 ])
-

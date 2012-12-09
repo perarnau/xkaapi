@@ -43,6 +43,8 @@ KAT_KAAPIC_TEST_VARG([pointer],[void*])
 KAT_TEST_PROG([spawn_s-arg],[checking S-mode argument],[spawn],[],[],[],
 [The result is : 125
 ])
+KAT_ABIC_CHECK_PROG([spawn_s5-arg],[checking 5 fives arguments],[spawn],[],[],[],
+[])
 
 dnl ******************************************************
 dnl checking fibo implementations

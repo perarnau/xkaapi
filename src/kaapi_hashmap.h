@@ -109,7 +109,7 @@ typedef struct kaapi_hashentries_t {
     struct kaapi_taskdescr_t*          td;          /* */
     struct kaapi_mem_data_t*	         kmd;
     struct kaapi_cuda_mem_cache_blk_t* block;
-    struct kaapic_task_sig*       ts;
+    struct kaapic_task_sig*            ts;
   } u;
   const void*                          key;
   struct kaapi_hashentries_t*          next; 
