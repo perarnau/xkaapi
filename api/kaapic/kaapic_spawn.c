@@ -575,7 +575,7 @@ static void kaapic_taskformat_reducor
   const kaapic_task_sig_t* const ts = ti->sig;
   const kaapic_arg_info_t* argi = &ti->args[i];
   const kaapic_arg_sig_t* args = &ts->args[i];
-  kaapi_assert_debug( args->type <= KAAPIC_TYPE_DOUBLE );
+  kaapi_assert_debug( args->type < KAAPIC_TYPE_PTR );
 
   (*all_redops[args->type])(args->redop, argi->access.data, q);
 }
@@ -592,7 +592,7 @@ static void kaapic_taskformat_redinit
   const kaapic_task_info_t* const ti = sp;
   const kaapic_task_sig_t* const ts = ti->sig;
   const kaapic_arg_sig_t* args = &ts->args[i];
-  kaapi_assert_debug( args->type <= KAAPIC_TYPE_DOUBLE );
+  kaapi_assert_debug( args->type < KAAPIC_TYPE_PTR );
 
   (*all_redinits[args->type])(args->redop, p);
 }
