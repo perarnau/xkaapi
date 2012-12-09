@@ -46,6 +46,18 @@
 #include <pthread.h>
 #include <cuda_runtime_api.h>
 
-#include "../../kaapi_impl.h"
-#include "kaapi_cuda_proc.h"
-#include "kaapi_cuda_ctx.h"
+#include "kaapi_impl.h"
+
+#if defined(KAAPI_USE_CUPTI)
+void kaapi_cuda_ctx_set_(const int dev)
+{
+  kaapi_processor_t* const kproc = kaapi_cuda_get_proc_by_dev(dev);
+  kaapi_atomic_lock(&kproc->cuda_proc.ctx.lock);
+}
+
+void kaapi_cuda_ctx_exit_(const int dev)
+{
+  kaapi_processor_t* const kproc = kaapi_cuda_get_proc_by_dev(dev);
+  kaapi_atomic_unlock(&kproc->cuda_proc.ctx.lock);
+}
+#endif /* KAAPI_USE_CUPTI */

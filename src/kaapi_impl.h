@@ -94,6 +94,8 @@ extern "C" {
 #include "kaapi_defs.h"
   
 #if defined(KAAPI_USE_CUDA)
+#include "machine/cuda/kaapi_cuda_proc.h"  
+#include "machine/cuda/kaapi_cuda_ctx.h"
 #include "machine/cuda/kaapi_cuda_mem.h"
 #include "machine/cuda/kaapi_cuda_taskmovealloc.h"
 #endif

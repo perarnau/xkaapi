@@ -104,6 +104,8 @@ int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t * proc, unsigned int idev)
   if (getenv("KAAPI_RECORD_TRACE") != 0) {
     kaapi_cuda_trace_thread_init();
   }
+  
+  kaapi_atomic_initlock(&proc->ctx.lock);
 #endif
   
   kaapi_cuda_mem_cache_init(proc);
@@ -204,6 +206,7 @@ int kaapi_cuda_proc_all_isvalid(void)
 
 void kaapi_cuda_proc_destroy(kaapi_processor_t* const kproc)
 {
+  kaapi_atomic_destroylock(&kproc->cuda_proc.ctx.lock);
 #if 0
   kaapi_cuda_cublas_finalize(&kproc->cuda_proc);
   kaapi_cuda_stream_destroy(kproc->cuda_proc.kstream);

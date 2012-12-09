@@ -50,6 +50,7 @@
 #include "kaapi_impl.h"
 #include "kaapi_event.h"
 #include "kaapi_cuda_event.h"
+#include "kaapi_cuda_trace.h"
 
 #if defined(KAAPI_USE_PERFCOUNTER) && defined(KAAPI_USE_CUPTI)
 
@@ -179,6 +180,8 @@ static uint8_t *kaapi_cuda_trace_dump(CUcontext context, uint32_t streamId)
       kaapi_cuda_trace_record(record);
     } else if (status == CUPTI_ERROR_MAX_LIMIT_REACHED) {
       break;
+    } else {
+      goto error;
     }
   }
   while (1);
@@ -188,10 +191,13 @@ static uint8_t *kaapi_cuda_trace_dump(CUcontext context, uint32_t streamId)
   cuptiActivityGetNumDroppedRecords(context, streamId, &dropped);
   if (dropped != 0)
     fprintf(stdout,
-	    "%s: ERROR Dropped %u activity records\n", __FUNCTION__,
-	    (unsigned int) dropped);
+	    "%s: (kid=%d,stream=%d) ERROR dropped %u activity records\n", __FUNCTION__,
+      kaapi_get_self_kid(), streamId,
+	    (unsigned int)dropped);
 
   return buffer;
+error:
+  return NULL;
 }
 
 static inline uint8_t *kaapi_cuda_trace_record_if_full(CUcontext context,
@@ -224,16 +230,12 @@ kaapi_cuda_trace_handle_synchronization(CUpti_CallbackId cbid,
       cuptiActivityEnqueueBuffer(syncData->context, 0, buffer,
 				 BUFFER_SIZE);
     }
-  }
-  // dump stream buffer on stream sync
-  else if (cbid == CUPTI_CBID_SYNCHRONIZE_STREAM_SYNCHRONIZED) {
+  } else if (cbid == CUPTI_CBID_SYNCHRONIZE_STREAM_SYNCHRONIZED) {
+    /* dump the first buffer at each synchronization */
     uint32_t streamId;
     cuptiGetStreamId(syncData->context, syncData->stream, &streamId);
-    buffer = kaapi_cuda_trace_record_if_full(syncData->context, streamId);
-    if (buffer != NULL) {
-      cuptiActivityEnqueueBuffer(syncData->context, streamId, buffer,
-				 BUFFER_SIZE);
-    }
+    buffer = kaapi_cuda_trace_dump(syncData->context, streamId);
+    cuptiActivityEnqueueBuffer(syncData->context, streamId, buffer, BUFFER_SIZE);
   }
 }
 
@@ -309,44 +311,6 @@ int kaapi_cuda_trace_init(void)
 
 int kaapi_cuda_trace_thread_init(void)
 {
-#if 0  
-  CUptiResult res;
-  CUcontext ctx;
-  uint32_t stream_id;
-  
-  cuCtxGetCurrent(&ctx);
-  res = cuptiGetStreamId(ctx, (CUstream) kaapi_cuda_HtoD_stream(),
-			 &stream_id);
-  if (res != CUPTI_SUCCESS) {
-    fprintf(stdout, "%s: cuptiGetStreamId ERROR %d\n", __FUNCTION__, res);
-    fflush(stdout);
-  }
-  kaapi_cuda_trace_add_buffer(ctx, stream_id);
-  fprintf( stdout, "%s: kid=%d stream_id=%d\n", __FUNCTION__,
-          kaapi_get_self_kid(), stream_id);
-
-  res = cuptiGetStreamId(ctx, (CUstream) kaapi_cuda_DtoH_stream(),
-			 &stream_id);
-  if (res != CUPTI_SUCCESS) {
-    fprintf(stdout, "%s: cuptiGetStreamId ERROR %d\n", __FUNCTION__, res);
-    fflush(stdout);
-  }
-  kaapi_cuda_trace_add_buffer(ctx, stream_id);
-  fprintf( stdout, "%s: kid=%d stream_id=%d\n", __FUNCTION__,
-          kaapi_get_self_kid(), stream_id);
-
-  res = cuptiGetStreamId(ctx, (CUstream) kaapi_cuda_kernel_stream(),
-			 &stream_id);
-  if (res != CUPTI_SUCCESS) {
-    fprintf(stdout, "%s: cuptiGetStreamId ERROR %d\n", __FUNCTION__, res);
-    fflush(stdout);
-  }
-  kaapi_cuda_trace_add_buffer(ctx, stream_id);
-  fprintf( stdout, "%s: kid=%d stream_id=%d\n", __FUNCTION__,
-          kaapi_get_self_kid(), stream_id);
-  fflush(stdout);
-#endif
-
   return 0;
 }
 
@@ -360,35 +324,38 @@ void kaapi_cuda_trace_thread_finalize(void)
   CUptiResult res;
   CUcontext ctx;
   uint32_t stream_id;
-
+  
+  kaapi_cuda_ctx_set_(kaapi_cuda_self_device());
+  
   cuCtxGetCurrent(&ctx);
   res = cuptiGetStreamId(ctx, (CUstream) kaapi_cuda_HtoD_stream(),
-			 &stream_id);
+                         &stream_id);
   if (res != CUPTI_SUCCESS) {
     fprintf(stdout, "%s: cuptiGetStreamId ERROR %d\n", __FUNCTION__, res);
     fflush(stdout);
   }
   cudaStreamSynchronize(kaapi_cuda_HtoD_stream());
   while (kaapi_cuda_trace_dump(ctx, stream_id) != NULL);
-
+  
   res = cuptiGetStreamId(ctx, (CUstream) kaapi_cuda_DtoH_stream(),
-			 &stream_id);
+                         &stream_id);
   if (res != CUPTI_SUCCESS) {
     fprintf(stdout, "%s: cuptiGetStreamId ERROR %d\n", __FUNCTION__, res);
     fflush(stdout);
   }
   cudaStreamSynchronize(kaapi_cuda_DtoH_stream());
   while (kaapi_cuda_trace_dump(ctx, stream_id) != NULL);
-
+  
   res = cuptiGetStreamId(ctx, (CUstream) kaapi_cuda_kernel_stream(),
-			 &stream_id);
+                         &stream_id);
   if (res != CUPTI_SUCCESS) {
     fprintf(stdout, "%s: cuptiGetStreamId ERROR %d\n", __FUNCTION__, res);
     fflush(stdout);
   }
   cudaStreamSynchronize(kaapi_cuda_kernel_stream());
   while (kaapi_cuda_trace_dump(ctx, stream_id) != NULL);
-
+  
+  kaapi_cuda_ctx_exit_(kaapi_cuda_self_device());
 }
 
 #endif

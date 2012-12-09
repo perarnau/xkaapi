@@ -70,6 +70,9 @@ extern kaapi_atomic_t kaapi_cuda_synchronize_barrier;
 struct kaapi_cuda_stream_t;
 
 typedef struct kaapi_cuda_ctx {
+#if defined(KAAPI_USE_CUPTI)
+  kaapi_lock_t lock;
+#endif
   cublasHandle_t handle;
 } kaapi_cuda_ctx_t;
 

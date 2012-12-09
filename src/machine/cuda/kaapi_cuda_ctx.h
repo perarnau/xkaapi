@@ -48,25 +48,53 @@
 #include <cuda_runtime_api.h>
 
 #include "kaapi_impl.h"
-#include "kaapi_cuda_proc.h"
 
-static inline void kaapi_cuda_ctx_push(void)
+#if defined(KAAPI_USE_CUPTI)
+/* Need thread-safe context for traces */
+void kaapi_cuda_ctx_set_(const int dev);
+
+void kaapi_cuda_ctx_exit_(const int dev);
+#else
+/* Need thread-safe context for traces */
+static inline void kaapi_cuda_ctx_set_(const int dev)
 {
-  /* TODO future usage. */
 }
 
-static inline void kaapi_cuda_ctx_pop(void)
+static inline void kaapi_cuda_ctx_exit_(const int dev)
 {
-  /* TODO future usage */
 }
+#endif
 
 static inline void kaapi_cuda_ctx_set(const int dev)
 {
+#if defined(KAAPI_USE_CUPTI)
+  kaapi_cuda_ctx_set_(dev);
+#endif
   const cudaError_t res = cudaSetDevice(dev);
   if (res != cudaSuccess) {
     fprintf(stderr, "%s: ERROR %d\n", __FUNCTION__, res);
     fflush(stderr);
   }
+}
+
+static inline void kaapi_cuda_ctx_exit(const int dev)
+{
+#if defined(KAAPI_USE_CUPTI)
+  kaapi_cuda_ctx_exit_(dev);
+#endif
+}
+
+
+static inline void kaapi_cuda_ctx_push(void)
+{
+  /* TODO future usage. */
+  kaapi_cuda_ctx_set_(kaapi_cuda_self_device());
+}
+
+static inline void kaapi_cuda_ctx_pop(void)
+{
+  /* TODO future usage */
+  kaapi_cuda_ctx_exit_(kaapi_cuda_self_device());
 }
 
 #endif				/* ! KAAPI_CUDA_CTX_H_INCLUDED */

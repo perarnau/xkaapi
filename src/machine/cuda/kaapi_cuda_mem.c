@@ -448,6 +448,7 @@ kaapi_cuda_mem_copy_dtod_buffer(kaapi_pointer_t dest,
   const int src_dev = kproc_src->cuda_proc.index;
   const int dest_dev = kproc_dest->cuda_proc.index;
 
+  kaapi_cuda_ctx_exit(dest_dev);
   kaapi_cuda_ctx_set(src_dev);
   res = cudaStreamCreate(&stream);
   kaapi_assert_debug( res == cudaSuccess );
@@ -458,6 +459,7 @@ kaapi_cuda_mem_copy_dtod_buffer(kaapi_pointer_t dest,
   KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END);
   kaapi_assert_debug( res == cudaSuccess );
   cudaStreamDestroy(stream);
+  kaapi_cuda_ctx_exit(src_dev);
   kaapi_cuda_ctx_set(dest_dev);
 
   return kaapi_cuda_mem_copy_htod(dest, view_dest, host, view_host);
@@ -517,6 +519,7 @@ kaapi_cuda_mem_copy_dtoh_from_host(kaapi_pointer_t dest,
     abort();
   }
   cudaStreamDestroy(stream);
+  kaapi_cuda_ctx_exit(src_dev);
   
   return 0;
 }
