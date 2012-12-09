@@ -21,6 +21,7 @@ KAT_TEST_PROG([test_pointer],[passing pointer by value],[],[],[],[],
 [ diff:0
 ])
 
+KAT_HOOK_ONCE([CHECK_RUN],[BEFORE],[AT_XFAIL_IF([true])])
 KAT_TEST_PROG([test_multipleleave],[multiple init/leave],[],[],[],[],
 [Rien ne va plus.
 Tout va bien !
