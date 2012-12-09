@@ -147,6 +147,10 @@ extern int kaapi_komp_end_parallel_count;
 static void __attribute__ ((constructor))  
 initialize_lib (void) 
 {
+  char *show_banner = getenv ("KAAPI_GOMP_SHOW_BANNER");
+  if (show_banner && *show_banner) {
+    fprintf(stderr, "Using " PACKAGE " as GNU OpenMP runtime\n");
+  }
   if (parse_unsigned_long ("OMP_NUM_THREADS", &komp_env_nthreads))
   {
 #if 0 /* This may break programs that use more threads than cores. */ 

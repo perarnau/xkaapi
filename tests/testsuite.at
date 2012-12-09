@@ -10,6 +10,7 @@ KAT_BUILDING([
   m4_include([testsuite-kaapi.at])
   m4_include([testsuite-api-kaapic.at])
   m4_include([testsuite-api-kaapixx.at])
+  m4_include([testsuite-libgomp.at])
 ])
 m4_include([testsuite-examples.at])
 

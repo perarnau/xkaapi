@@ -954,7 +954,6 @@ AC_CONFIG_FILES([
 	api/kaapif/Makefile
 	api/kastl/Makefile
 	api/libgomp/Makefile
-	api/libgomp/tests/Makefile
 	api/libgomp/testsuite/Makefile
 	api/quark/Makefile
 	bin/Makefile
@@ -969,6 +968,7 @@ AC_CONFIG_FILES([
 	tests/api-kaapic/Makefile
 	tests/api-kaapixx/Makefile
 	tests/kaapi/Makefile
+	tests/libgomp/Makefile
 
 	bin/kacc/kacc.cpp
 	src/misc/kaapi_version.c

@@ -1,6 +1,6 @@
 
-AM_CFLAGS=-fopenmp
-AM_LDFLAGS=-lgomp
+AM_CFLAGS=@AM_CFLAGS@ -fopenmp
+LIBS=@LIBS@ -lgomp
 
 PROGS= parallel \
        shared   \
@@ -18,9 +18,9 @@ PROGS= parallel \
        get_ancestor_thread_num
 #loop3 loop4
 
-check_PROGRAMS=$(PROGS)
+noinst_PROGRAMS=$(PROGS)
 
-TESTS_ENVIRONMENT = $(builddir)/../kaapi-gomp-wrapper
+TESTS_ENVIRONMENT = $(top_builddir)/api/libgomp/kaapi-gomp-wrapper
 TESTS=$(PROGS)
 
 TOOLBOX_SRC=test-toolbox.c test-toolbox.h
@@ -46,10 +46,4 @@ loop4_CPPFLAGS=-I$(top_srcdir)/api/libgomp
 loop4_LDFLAGS=-L$(top_builddir)/api/libgomp -lomp_ext
 
 task_firstprivate_SOURCES=task-firstprivate.c $(TOOLBOX_SRC)
-
-clean-local:
-	$(RM) *.c.*t.*
-
-all-local:
-	find . -type f -iname "*.c.*t.*" -not -iname "*.c.*t.*omp*" -exec rm {} \;
 
