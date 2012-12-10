@@ -7,7 +7,7 @@ check_headers_common_SRC=\
 BUILT_SOURCES=$(check_headers_c_headers_SRC) $(check_headers_cxx_headers_SRC)
 
 $(check_headers_c_headers_SRC): check-headers/c/%.c:
-	@mkdir -p $(srcdir)/check-headers/c
+	$(AM_V_at)mkdir -p $(srcdir)/check-headers/c
 	$(AM_V_GEN) echo '#include <$*>' > $(srcdir)/$@
 
 $(check_headers_cxx_headers_SRC): check-headers/c++/%.c++:

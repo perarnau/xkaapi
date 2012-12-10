@@ -18,7 +18,7 @@ BUILT_SOURCES=misc/kaapi_version.c kaapi_version_githash.h
 
 # Rebuild the version if gitlastcommit change
 kaapi_version_githash.h: $(srcdir)/../gitlastcommit
-	printf '#define KAAPI_GIT_HASH "%s"\n' "$$(cat $(srcdir)/../gitlastcommit)" > $@
+	$(AM_V_GEN)printf '#define KAAPI_GIT_HASH "%s"\n' "$$(cat $(srcdir)/../gitlastcommit)" > $@
 $(srcdir)/../gitlastcommit:
 	$(MAKE) -C .. gitlastcommit
 clean-local:
