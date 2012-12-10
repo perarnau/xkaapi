@@ -226,7 +226,7 @@ int kaapi_hw_init(void)
   kaapi_default_param.memory.numalevel = (unsigned short)-1;
   kaapi_default_param.memory.depth     = memdepth;
   kaapi_default_param.memory.levels 
-    = (kaapi_hierarchy_one_level_t*)calloc( memdepth, sizeof(kaapi_hierarchy_one_level_t) );
+    = (kaapi_hierarchy_one_level_t*)calloc( memdepth+1, sizeof(kaapi_hierarchy_one_level_t) );
   for (depth = 0; depth < topodepth; depth++) 
   {
     obj = hwloc_get_obj_by_depth(topology, depth, 0);
