@@ -3,7 +3,7 @@ KAT_BANNER([kaapic - C API for XKaapi],
 
 dnl ******************************************************
 dnl checking headers
-KAT_TEST_HEADERS([api-kaapic], [libkaapic], [kaapic])
+KAT_TEST_HEADERS()
 
 dnl ******************************************************
 dnl checking spawn arguments

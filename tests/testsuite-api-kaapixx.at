@@ -3,7 +3,7 @@ KAT_BANNER([kaapixx - C++ API for XKaapi],
 
 dnl ******************************************************
 dnl checking headers
-KAT_TEST_HEADERS([api-kaapixx], [libkaapi++], [kaapixx])
+KAT_TEST_HEADERS()
 
 m4_define([KAT_ABIC_CHECK_FAILEDCOMPIL],[
   KAT_ABIC_SETUP([$2],[$3 $1])
