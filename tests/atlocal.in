@@ -2,6 +2,7 @@ KAT_TESTSUITES="@KAT_TESTSUITES@"
 
 prefix="@prefix@"
 PACKAGE_TARNAME="@PACKAGE_TARNAME@"
+datarootdir="@datarootdir@"
 docdir="@docdir@"
 
 KAT_EX_CURRENT_LIST=
