@@ -59,61 +59,6 @@ extern "C" {
 extern long xxx_seq_grain;
 extern long xxx_par_grain;
 
-extern int kaapif_init_(int32_t*);
-extern int kaapif_finalize_(void);
-
-extern double kaapif_get_time_(void);
-
-extern int32_t kaapif_get_concurrency_(void);
-extern int32_t kaapif_get_thread_num_(void);
-
-extern void kaapif_set_max_tid_(int32_t*);
-extern int32_t kaapif_get_max_tid_(void);
-
-extern void kaapif_set_grains_(int32_t*, int32_t*);
-extern void kaapif_set_default_grains_(void);
-
-extern int kaapif_foreach_(
-  int32_t*,  /* first */
-  int32_t*,  /* last */
-  int32_t*,  /* NARGS */
-  void (*)(int32_t*, int32_t*, int32_t*, ...), 
-  ...  
-);
-extern int kaapif_foreach_with_format_(
-  int32_t*,  /* first */
-  int32_t*,  /* last */
-  int32_t*,  /* NARGS */
-  void (*)(int32_t*, int32_t*, int32_t*, ...), 
-  ...
-);
-
-extern int kaapif_spawn_(
-    int32_t*,    /* NARGS */
-    void (*f)(), /* F */
-    ...
-);
-
-extern void kaapif_sched_sync_(void);
-extern int kaapif_begin_parallel_(void);
-extern int kaapif_end_parallel_(int32_t*);
-extern int kaapif_begin_parallel_tasklist_(void);
-extern int kaapif_end_parallel_tasklist_(void);
-
-extern void kaapif_get_version_(uint8_t* s);
-
-/* addr to dim conversion
-   make and get addresses from i, j, ld
-   dataflow programming requires data to be identified
-   by a unique address. from this address, the runtime
-   can compute data dependencies. in this algorithm,
-   we choose i * n4 + j as a factice address.
- */
-
-extern int64_t kaapif_make_id2_(int64_t* i, int64_t* j, int64_t* ld);
-extern int64_t kaapif_get_id2_row_(int64_t* id, int64_t* ld);
-extern int64_t kaapif_get_id2_col_(int64_t* id, int64_t* ld);
-
 #if defined(__cplusplus)
 }
 #endif

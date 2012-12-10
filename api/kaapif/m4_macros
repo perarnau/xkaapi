@@ -1,32 +1,39 @@
 define(`M4_TMP1',`ifelse($1,1,define(`M4_TMP',`$2')M4_TMP($1),`M4_TMP1(decr($1),`$2',`$3')'`$3'define(`M4_TMP',`$2')M4_TMP($1))')dnl
 define(`M4_PARAM',`ifelse(KAAPI_NUMBER_PARAMS,0,,`$2M4_TMP1(KAAPI_NUMBER_PARAMS,``$1'',``$3'')$4')')dnl
 dnl ************************************************
-ifelse(MODE,`C',
-  `define(`KAF_GROUP',`
-/* $1 */
-
-$2')dnl
-define(`KAF_INT',`#define $1 $2
-')')dnl
+ifelse(MODE,`C',`dnl
+define(`KAF_COMMENT',`/* $1 */')
+define(`KAF_CONST_INT',`#define $1 $2')dnl
+define(`KAF_FUNC',`extern $1 kaapif_$2_($3);')dnl
+define(`KAF_CTYPE_INT',`int32_t')dnl
+define(`KAF_CTYPE_INT64',`int64_t')dnl
+define(`KAF_CTYPE_DOUBLE',`double')dnl
+')dnl
 dnl ************************************************
-ifelse(MODE,`F90',
-  `define(`KAF_GROUP',`C
-C $1
-C
-$2')dnl
-define(`KAF_INT',`	INTEGER*4 $1
-	PARAMETER ($1=$2)
-')')dnl
+ifelse(MODE,`F90',`
+define(`KAF_COMMENT',`C $1')
+define(`KAF_CONST_INT',`	INTEGER*4 $1
+	PARAMETER ($1=$2)')dnl
+define(`KAF_FUNC',`	$1 translit(`kaapif_$2',`a-z',`A-Z')')dnl
+define(`KAF_CTYPE_INT',`INTEGER*4')dnl
+define(`KAF_CTYPE_INT64',`INTEGER*8')dnl
+define(`KAF_CTYPE_DOUBLE',`REAL*8')dnl
+')dnl
 dnl ************************************************
-ifelse(MODE,`F95',
-  `define(`KAF_GROUP',`!
-! $1
-!
-$2')dnl
-define(`KAF_INT',`	INTEGER(4), PARAMETER :: $1=$2
-')')dnl
+ifelse(MODE,`F95',`
+define(`KAF_COMMENT',`! $1')dnl
+define(`KAF_CONST_INT',`	INTEGER(4), PARAMETER :: $1=$2')dnl
+define(`KAF_FUNC',`	$1 :: translit(`kaapif_$2',`a-z',`A-Z')')dnl
+define(`KAF_CTYPE_INT',`INTEGER(4)')dnl
+define(`KAF_CTYPE_INT64',`INTEGER(8)')dnl
+define(`KAF_CTYPE_DOUBLE',`REAL(8)')dnl
+')dnl
 dnl ************************************************
-ifelse(MODE,`C',
-  `define(`KAF_INT_H',`#define $1 $2
-')',
-  `define(`KAF_INT_H',`')')dnl
+ifelse(MODE,`C',`dnl
+define(`KAF_CCONST_INT',`#define $1 $2')dnl
+define(`KAF_CTYPE_VOID',`void')dnl
+define(`KAF_PROC',`KAF_FUNC(`KAF_CTYPE_VOID',`$1',`$2')')dnl
+',`dnl
+define(`KAF_CCONST_INT',`')dnl
+define(`KAF_PROC',`')dnl
+')dnl
