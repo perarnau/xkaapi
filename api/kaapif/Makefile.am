@@ -9,11 +9,11 @@ if KAAPI_API_KAAPIF
 
 lib_LTLIBRARIES=libkaapif.la
 
-libkaapif_la_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPILIB_BUILD_CPPFLAGS)
-libkaapif_la_CFLAGS=$(AM_CFLAGS) $(KAAPILIB_BUILD_CFLAGS)
-libkaapif_la_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPILIB_BUILD_CXXFLAGS)
-libkaapif_la_LDFLAGS = -version-info 1:0:1 $(KAAPILIB_BUILD_LDFLAGS)
-libkaapif_la_LIBADD=../../src/libkaapi.la $(KAAPILIB_BUILD_LIBS)
+libkaapif_la_CPPFLAGS=$(AM_CPPFLAGS)       $(KAAPIFLIB_BUILD_CPPFLAGS)
+libkaapif_la_CFLAGS=  $(AM_CFLAGS)         $(KAAPIFLIB_BUILD_CFLAGS)
+libkaapif_la_CXXFLAGS=$(AM_CXXFLAGS)       $(KAAPIFLIB_BUILD_CXXFLAGS)
+libkaapif_la_LDFLAGS = -version-info 1:0:1 $(KAAPIFLIB_BUILD_LDFLAGS)
+libkaapif_la_LIBADD=../kaapic/libkaapic.la $(KAAPIFLIB_BUILD_LIBS)
 
 
 M4_BUILT_FILES=\

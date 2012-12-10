@@ -256,28 +256,6 @@ dnl      ])
   ])
 dnl ACX_LIB_LINK([KAAPIFLIB], [FORTRAN])
 
-dnl KAAPI_FEATURE([api-kaapif], [compile fortran API],
-dnl   [fortran API compiled], [$default_experimental],
-dnl   [ ],
-dnl   [ 
-dnl     ACX_LIB_NOLIB([FORTRAN])
-dnl   ],
-dnl   [KAAPI_API_KAAPIF],
-dnl   [
-dnl     if test x"$F77" = x; then
-dnl       FEATURE_DISABLE
-dnl     else
-dnl       ACX_LIB_CHECK_PLAIN([FORTRAN],[],[
-dnl         AC_F77_LIBRARY_LDFLAGS
-dnl         ACX_LIB_FOUND([Libs="$F77LIBS"])
-dnl         FEATURE_ENABLE
-dnl       ],[
-dnl         FEATURE_DISABLE
-dnl       ])
-dnl     fi
-dnl   ])
-dnl ACX_LIB_LINK([KAAPIFLIB], [FORTRAN])
-
 dnl -----------------------------------------------------------------------
 dnl The "--enable-api-kaapixx"
 dnl -----------------------------------------------------------------------
@@ -900,7 +878,7 @@ ACX_LIB_LINK([KAAPICLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([KAAPICLIB], [PRIVATE], [CUPTI])
 ACX_LIB_LINK([KAAPICLIB], [PRIVATE], [FFI])
 
-ACX_LIB_LINK([KAAPIFLIB], [PUBLIC], [KAAPICLIB])
+ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [KAAPICLIB])
 ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [CUPTI])
 dnl ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [HWLOC])
@@ -922,8 +900,8 @@ ACX_LIB_ADD_BUILD_FLAGS([KAAPICPROGS],
 
 ACX_LIB_LINK([KAAPIFPROGS], [KAAPIFLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIFPROGS],
-	[-I\$(top_srcdir)/api/kaapif -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/api/kaapif/libkaapif.la \$(top_builddir)/api/kaapic/libkaapic.la \$(top_builddir)/src/libkaapi.la])
+	[-I\$(top_srcdir)/api/kaapif],[],[],
+	[\$(top_builddir)/api/kaapif/libkaapif.la])
 
 ACX_LIB_LINK([KAAPIXXPROGS], [KAAPIXXLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIXXPROGS],
