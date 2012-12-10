@@ -7,6 +7,8 @@
 
 DIST_SUBDIRS=api-kaapic api-kaapixx kaapi libgomp
 
+clean-recursive: SUBDIRS+=$(DIST_SUBDIRS)
+
 # The `:;' works around a Bash 3.2 bug when the output is not writable.
 $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 	:;{ \
