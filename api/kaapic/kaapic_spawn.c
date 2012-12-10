@@ -250,7 +250,7 @@ static const enum kaapic_mode modef2modec[KAAPIF_MODE_MAX] =
 static const enum kaapic_mode typef2typec[KAAPIF_TYPE_MAX] =
 {
   [KAAPIF_TYPE_CHAR] = KAAPIC_TYPE_CHAR,
-  [KAAPIF_TYPE_INT] = KAAPIC_TYPE_INT,
+  [KAAPIF_TYPE_INT] = KAAPIC_TYPE_INT32,
   [KAAPIF_TYPE_REAL] = KAAPIC_TYPE_FLT,
   [KAAPIF_TYPE_DOUBLE] = KAAPIC_TYPE_DBL,
   [KAAPIF_TYPE_PTR] = KAAPIC_TYPE_PTR,
@@ -1016,7 +1016,10 @@ static inline int __kaapic_spawn2(
      */
     if (!_FEATURE(SIG_PROVIDED)) {
       if (mode == KAAPI_ACCESS_MODE_V) {
-        ts->flags |= typeinfo->use_ffi;
+	if(!_FEATURE(FORTRAN_ABI)) {
+	  /* In fortran, all values are passed by pointer */
+	  ts->flags |= typeinfo->use_ffi;
+	}
         if (typeinfo->v_arg_in_access) {
           as->voffset = -1;
         } else {
@@ -1109,7 +1112,7 @@ break
     
     for (unsigned int k = 0; k < nargs; ++k) {
       kaapic_arg_sig_t* const as = &ts->args[k];
-      if (as->mode != KAAPI_ACCESS_MODE_V) {
+      if (_FEATURE(FORTRAN_ABI) || as->mode != KAAPI_ACCESS_MODE_V) {
         ffi_args[k]=&ffi_type_pointer;
       } else {
         ffi_args[k]=ffi_type_type[as->type];
@@ -1218,6 +1221,14 @@ int _kaapic_spawn_fortran
  )
 {
   int ret;
+
+  if(*nargs<0 || *nargs > 100) {
+    fprintf(stderr, "XKAAPI: Strange number of argument (%i) for kaapif_spawn!\n", *nargs);
+    fprintf(stderr, "XKAAPI: kaapif_spawn() change the whole order of its arguments\n");
+    fprintf(stderr, "XKAAPI: Update your code source and recompile it. Aborting.\n");
+    abort();
+  }
+
 #define KS(name) _KAAPIC_SPAWN_##name
   ret = __kaapic_spawn(
                        KS(FORTRAN_ABI)
