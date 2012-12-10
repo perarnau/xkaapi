@@ -61,6 +61,8 @@
 #define ALIGN_BUFFER(buffer, align) \
   (((uintptr_t) (buffer) & ((align)-1)) ? ((buffer) + (align) - ((uintptr_t) (buffer) & ((align)-1))) : (buffer))
 
+static size_t kaapi_cuda_trace_buffer_size = 0;
+
 #if 0
 static const char *getMemcpyKindString(CUpti_ActivityMemcpyKind kind)
 {
@@ -148,11 +150,10 @@ static inline void kaapi_cuda_trace_record(CUpti_Activity * record)
 static inline void
 kaapi_cuda_trace_add_buffer(CUcontext ctx, uint32_t stream)
 {
-  size_t size = BUFFER_SIZE;
+  size_t size = kaapi_cuda_trace_buffer_size;
   uint8_t *buffer = (uint8_t *) malloc(size + ALIGN_SIZE);
   const CUptiResult res = cuptiActivityEnqueueBuffer(ctx, stream,
-						     ALIGN_BUFFER(buffer,
-								  ALIGN_SIZE),
+						     ALIGN_BUFFER(buffer, ALIGN_SIZE),
 						     size);
   if (res != CUPTI_SUCCESS) {
     fprintf(stdout, "%s: cuptiActivityEnqueueBuffer ERROR %d\n",
@@ -191,9 +192,11 @@ static uint8_t *kaapi_cuda_trace_dump(CUcontext context, uint32_t streamId)
   cuptiActivityGetNumDroppedRecords(context, streamId, &dropped);
   if (dropped != 0)
     fprintf(stdout,
-	    "%s: (kid=%d,stream=%d) ERROR dropped %u activity records\n", __FUNCTION__,
-      kaapi_get_self_kid(), streamId,
-	    (unsigned int)dropped);
+	    "%s: *** Kaapi: (kid=%d) ERROR dropped %u CUPTI activity records (to avoid this warning see '%s').\n", __FUNCTION__,
+      kaapi_get_self_kid(),
+	    (unsigned int)dropped,
+      "KAAPI_CUDA_TRACE_BUFFER"
+      );
 
   return buffer;
 error:
@@ -221,21 +224,21 @@ kaapi_cuda_trace_handle_synchronization(CUpti_CallbackId cbid,
   // we dump a buffer add it back to the queue
   uint8_t *buffer = kaapi_cuda_trace_record_if_full(NULL, 0);
   if (buffer != NULL) {
-    cuptiActivityEnqueueBuffer(NULL, 0, buffer, BUFFER_SIZE);
+    cuptiActivityEnqueueBuffer(NULL, 0, buffer, kaapi_cuda_trace_buffer_size);
   }
   // dump context buffer on context sync
   if (cbid == CUPTI_CBID_SYNCHRONIZE_CONTEXT_SYNCHRONIZED) {
     buffer = kaapi_cuda_trace_record_if_full(syncData->context, 0);
     if (buffer != NULL) {
       cuptiActivityEnqueueBuffer(syncData->context, 0, buffer,
-				 BUFFER_SIZE);
+				 kaapi_cuda_trace_buffer_size);
     }
   } else if (cbid == CUPTI_CBID_SYNCHRONIZE_STREAM_SYNCHRONIZED) {
     /* dump the first buffer at each synchronization */
     uint32_t streamId;
     cuptiGetStreamId(syncData->context, syncData->stream, &streamId);
     buffer = kaapi_cuda_trace_dump(syncData->context, streamId);
-    cuptiActivityEnqueueBuffer(syncData->context, streamId, buffer, BUFFER_SIZE);
+    cuptiActivityEnqueueBuffer(syncData->context, streamId, buffer, kaapi_cuda_trace_buffer_size);
   }
 }
 
@@ -267,6 +270,30 @@ int kaapi_cuda_trace_init(void)
 {
   CUptiResult res;
   CUpti_SubscriberHandle subscriber;
+  const char* buffersize = getenv("KAAPI_CUDA_TRACE_BUFFER");
+  
+  if(buffersize != 0)
+  {
+    long size = atol(buffersize);
+    if(size > 0)
+    {
+      kaapi_cuda_trace_buffer_size = BUFFER_SIZE * size;
+    }
+    else
+    {
+      kaapi_cuda_trace_buffer_size = BUFFER_SIZE;
+      fprintf(stderr,"%s:%d:%s: *** Kaapi: ERROR invalid buffer size for '%s' (%s)\n",
+              __FILE__, __LINE__, __FUNCTION__,
+              "KAAPI_CUDA_TRACE_BUFFER", buffersize
+            );
+      fflush(stderr);
+    }
+  }
+  else
+  {
+    /* default buffer size is 1MB */
+    kaapi_cuda_trace_buffer_size = BUFFER_SIZE;
+  }
 
   /* library init */
   kaapi_cuda_trace_add_buffer(NULL, 0);

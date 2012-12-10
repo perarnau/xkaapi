@@ -29,7 +29,7 @@ function run_test {
     bsizes="512"
     niter=1
 #    verif=1
-    export KAAPI_WINDOW_SIZE=2
+    export KAAPI_CUDA_WINDOW_SIZE=2
     for m in $msizes ; do
 	    for b in $bsizes; do
 	    for i in `seq 1 $niter`

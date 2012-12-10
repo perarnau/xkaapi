@@ -62,3 +62,29 @@ KAAPI_DOT_NOLABEL:
 KAAPI_DUMP_PERIOD:
   Dump the internal state at given period (in second).
   Only work with debug library.
+
+KAAPI_PUSH_AFFINITY: (string)
+  Set the algorithm affinity at push operation, when a task is activated. 
+  Options are: rand, locality, writer, local.
+  Default is `local'.
+
+KAAPI_STEAL_AFFINITY: (string)
+  Set the algorithm affinity at steal operation.
+  Options are: cp, locality, writer, 1.
+  Default is 1 (first).
+
+* CUDA support
+
+KAAPI_CUDA_WINDOW_SIZE: (number)
+  Set the sliding window size of GPU tasks to overlap (default is 2).
+
+KAAPI_CUDA_PEER: (0 or 1)
+  Enable peer-to-peer memory copy (default disabled).
+
+KAAPI_CUDA_TRACE_BUFFER: (number)
+  Set the buffer size for CUDA traces in MBytes (default is 1 MB).
+
+KAAPI_CUDA_CACHE_POLICY: (string)
+  Set the software cache policy for GPUs. Options are lru (least recently used) or lru_double 
+  (least recently used based on data access). Default is lru_double. 
+

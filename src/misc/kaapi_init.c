@@ -226,7 +226,7 @@ static int kaapi_setup_param()
       );
       if (err !=0)
       {
-        fprintf(stderr, "***Kaapi: mal formed mask list 'KAAPI_RECORD_MASK': '%s'\n",
+        fprintf(stderr, "*** Kaapi: mal formed mask list 'KAAPI_RECORD_MASK': '%s'\n",
           getenv("KAAPI_RECORD_MASK")
         );
         return EINVAL;
@@ -250,7 +250,7 @@ static int kaapi_setup_param()
     else if (strcmp(affinity, "writer") ==0)
       kaapi_default_param.push_by_affinity = &kaapi_push_by_affinity_writer;
     else {
-      fprintf(stderr, "***Kaapi: bad value for 'KAAPI_PUSH_AFFINITY': '%s'\n",
+      fprintf(stderr, "*** Kaapi: bad value for 'KAAPI_PUSH_AFFINITY': '%s'\n",
         getenv("KAAPI_AFFINITY")
       );
       return EINVAL;
@@ -270,7 +270,7 @@ static int kaapi_setup_param()
     else if (strcmp(stealaffinity, "1") ==0)
       kaapi_default_param.steal_by_affinity = &kaapi_steal_by_affinity_first;
     else {
-      fprintf(stderr, "***Kaapi: bad value for 'KAAPI_STEAL_AFFINITY': '%s'\n",
+      fprintf(stderr, "*** Kaapi: bad value for 'KAAPI_STEAL_AFFINITY': '%s'\n",
         stealaffinity
       );
       return EINVAL;
@@ -295,12 +295,20 @@ static int kaapi_setup_param()
   }
 
 #if defined(KAAPI_USE_CUDA)
-  if (getenv("KAAPI_WINDOW_SIZE") !=0 ) {
-	kaapi_default_param.cudawindowsize =
-	    atoll(getenv("KAAPI_WINDOW_SIZE"));
+  /* change of name */
+  if (getenv("KAAPI_CUDA_WINDOW_SIZE") !=0 ) {
+      kaapi_default_param.cudawindowsize = atoll(getenv("KAAPI_CUDA_WINDOW_SIZE"));
+  } else if (getenv("KAAPI_WINDOW_SIZE") !=0 ) {
+    /* compatibility */
+    kaapi_default_param.cudawindowsize = atoll(getenv("KAAPI_WINDOW_SIZE"));    
+    fprintf(stderr, "%s:%d:%s: *** Kaapi: WARNING '%s' is deprecated, use '%s' instead.\n",
+            __FILE__, __LINE__, __FUNCTION__, "KAAPI_WINDOW_SIZE", "KAAPI_CUDA_WINDOW_SIZE"
+            );
+    fflush(stderr);
   }
+  
   if (getenv("KAAPI_CUDA_PEER") !=0 ) {
-	kaapi_default_param.cudapeertopeer = 1;
+    kaapi_default_param.cudapeertopeer = 1;
   }
 #endif
   

@@ -72,7 +72,7 @@ static inline void kaapi_cuda_mem_cache_lru_double_fifo_config(kaapi_cuda_proc_t
 
 int kaapi_cuda_mem_cache_init(kaapi_cuda_proc_t* proc)
 {
-  const char* gpucache = getenv("KAAPI_GPU_CACHE_POLICY");
+  const char* gpucache = getenv("KAAPI_CUDA_CACHE_POLICY");
   if( gpucache != 0 )
   {
     if (strcmp(gpucache, "lru") == 0)
@@ -80,7 +80,7 @@ int kaapi_cuda_mem_cache_init(kaapi_cuda_proc_t* proc)
     else if (strcmp(gpucache, "lru_double") == 0)
       kaapi_cuda_mem_cache_lru_double_fifo_config(proc);
     else {
-      fprintf(stdout, "%s:%d:%s: *** Kaapi: bad value for 'KAAPI_GPU_CACHE_POLICY': '%s'\n",
+      fprintf(stdout, "%s:%d:%s: *** Kaapi: bad value for 'KAAPI_CUDA_CACHE_POLICY': '%s'\n",
               __FILE__, __LINE__, __FUNCTION__, gpucache );
       fflush(stdout);
       abort();
