@@ -113,9 +113,9 @@ m4_define([KAT_CHECK_BUILD],[
 dnl KAT_CHECK_RUN(name, arguments, command-to-parse-stdout, stdout, stderr)
 m4_define([KAT_CHECK_RUN],[
   _KAT_HOOK_RUN([CHECK_RUN],[BEFORE],$@)
-  AT_CHECK([_KAT_WRAPPER $abs_top_builddir/_KAT_SUBDIR/$1 $2], 0,[m4_if([$3],[],[$4],[stdout])],[m4_if([$3],[],[$5],[stderr])])
+  AT_CHECK([_KAT_WRAPPER $abs_top_builddir/_KAT_SUBDIR/$1 $2], 0,[m4_if([$3],[],[$4],[stdout])],[$5])
   m4_if([$3],[],[],[
-    AT_CHECK([$3], 0, [$4], [$5])
+    AT_CHECK([$3], 0, [$4], [])
   ])
   _KAT_HOOK_RUN([CHECK_RUN],[AFTER],$@)
 ])
