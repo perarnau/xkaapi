@@ -1126,12 +1126,20 @@ break
    */
   if ((!_FEATURE(SIG_PROVIDED)) &&(_FEATURE(PUT_SIG_IN_HASH))) {
     kaapi_hashentries_t* entry;
+    static kaapi_lock_t lock=KAAPI_LOCK_INITIALIZER;
+    kaapi_sched_lock(&lock);
     entry = kaapi_hashmap_findinsert(&hash_task_sig,body);
     if (entry->u.ts !=0) {
       KAAPI_DEBUG_INST(fprintf(stderr,"[kaapic_spawn] several registration of %p\n", body);)
-      free(entry->u.ts);
+      free(ts);
+      ts=entry->u.ts;
+      if (_FEATURE(DO_SPAWN)) {
+	ti->sig=ts;
+      }
+    } else {
+      entry->u.ts = ts;
     }
-    entry->u.ts = ts;
+    kaapi_sched_unlock(&lock);
   }
   
   /* ######################################################################
