@@ -1,0 +1,15 @@
+KAT_BANNER([kaapif - Fortran API for XKaapi],
+  [libkaapif],[kaapif api-kaapif fortran],[tests/api-kaapif],[all])
+
+dnl ******************************************************
+dnl checking headers
+dnl KAT_TEST_HEADERS([api-kaapic], [libkaapic], [kaapic])
+
+dnl ******************************************************
+dnl checking spawn arguments
+
+KAT_TEST_PROG([spawn_v-args],[checking V-mode argument],[spawn],[],[],
+[sed -e 's/time:.*/time:/' stdout],
+[ time:
+])
+

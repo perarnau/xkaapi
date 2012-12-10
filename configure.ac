@@ -945,6 +945,7 @@ AC_CONFIG_FILES([
 	tests/Makefile
 
 	tests/api-kaapic/Makefile
+	tests/api-kaapif/Makefile
 	tests/api-kaapixx/Makefile
 	tests/kaapi/Makefile
 	tests/libgomp/Makefile

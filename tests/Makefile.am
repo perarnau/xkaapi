@@ -5,7 +5,7 @@
 ##  Copyright 2012 INRIA.
 ##
 
-DIST_SUBDIRS=api-kaapic api-kaapixx kaapi libgomp
+DIST_SUBDIRS=api-kaapic api-kaapif api-kaapixx kaapi libgomp
 
 clean-recursive: SUBDIRS+=$(DIST_SUBDIRS)
 
@@ -28,7 +28,7 @@ $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 	} >'$(srcdir)/package.m4'
 
 TESTSUITES_SRC = testsuite.at testsuite-api-kaapic.at testsuite-api-kaapixx.at \
-	testsuite-kaapi.at testsuite-libgomp.at \
+	testsuite-kaapi.at testsuite-libgomp.at testsuite-api-kaapif.at \
 	testsuite-examples.at testsuite-examples-inc.at \
 	m4/atenv.m4 check-headers/check-headers.m4 \
 	m4/kaapi-autotest.m4
