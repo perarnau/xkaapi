@@ -15,6 +15,7 @@ libkaapif_la_CXXFLAGS=$(AM_CXXFLAGS)       $(KAAPIFLIB_BUILD_CXXFLAGS)
 libkaapif_la_LDFLAGS = -version-info 1:0:1 $(KAAPIFLIB_BUILD_LDFLAGS)
 libkaapif_la_LIBADD=../kaapic/libkaapic.la $(KAAPIFLIB_BUILD_LIBS)
 
+endif
 
 M4_BUILT_FILES=\
   kaapif_inc.h \
@@ -44,6 +45,7 @@ stamp-m4_generator: $(M4_SRCS)
 clean-local:
 	$(RM) stamp-m4_generator
 
+if KAAPI_API_KAAPIF
 libkaapif_la_SOURCES=\
 	kaapif.c \
 	kaapif.h\

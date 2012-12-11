@@ -32,11 +32,11 @@ EXTRA_DIST = $(M4_SRCS)
 
 $(M4_BUILT_FILES): stamp-m4_generator
 
-# We do not track here dependencies of kaapif_inc.h itself
+# We do not track here all dependencies of kaapif_inc.h itself
 # We will need to build the project two times if
 # - this is not the first build (ie kaapif_inc.h already exists)
-# - and a dependency of kaapif_inc.h changed
-$(srcdir)/../kaapif/kaapif_inc.h:
+# - and a dependency of kaapif_inc.h not listed here changed
+$(srcdir)/../kaapif/kaapif_inc.h: $(srcdir)/../kaapif/kaapif_inc.m4
 	$(MAKE) -C ../kaapif kaapif_inc.h
 
 .INTERMEDIATE: stamp-m4_generator
