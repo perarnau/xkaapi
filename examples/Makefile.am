@@ -12,7 +12,8 @@ AM_CFLAGS=@AM_CFLAGS@
 AM_CXXFLAGS=@AM_CXXFLAGS@
 
 
-check_PROGRAMS=
+examples_PRGS=
+EXTRA_PROGRAMS=$(examples_PRGS)
 
 #include accumulate.am
 include array.am
@@ -60,16 +61,6 @@ USER_MAKEFILES=\
     linearwork/Makefile \
 	prefix/Makefile
 
-
-TESTS=  
-
-installcheck-local:
-	set -e ; \
-	for f in $(USER_MAKEFILES) ; do \
-		d="$$(dirname "$$f")" ; \
-		$(MAKE) $(AM_MAKEFLAGS) -C "$(examplesdir)/$$d" ; \
-	done
-
 EXTRA_DIST=gen-Makefile.m4
 
 ###########################################
@@ -78,6 +69,7 @@ EXTRA_DIST=gen-Makefile.m4
 pkgconfigdir = $(libdir)/pkgconfig
 
 %/Makefile: gen-Makefile.m4 gen-%.am.m4
+	$(AM_V_at)mkdir -p $*
 	$(AM_V_GEN)m4 $^ \
 		| $(SED) -e "s|^PKGCONFIG=$$|PKG_CONFIG=env PKG_CONFIG_PATH=$(pkgconfigdir) pkg-config|" \
 		| $(SED) -e "s|^CC=$$|CC=$(CC)|" \
@@ -144,6 +136,7 @@ gen-%.am.m4: gen-%.am.m4.info Makefile
 
 clean-local:
 	$(RM) gen-*.am.m4 gen-*.am.m4.info */Makefile
+	$(RM) $(EXTRA_PROGRAMS)
 
 .get-var:
 	@echo '$($(VAR))'

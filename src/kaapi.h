@@ -99,7 +99,9 @@ extern "C" {
 #elif defined(__APPLE__)
 #endif
 
-#ifdef __GNUC__
+#ifdef __BIGGEST_ALIGNMENT__
+#  define KAAPI_MAX_DATA_ALIGNMENT __BIGGEST_ALIGNMENT__
+#elif defined(__GNUC__)
 #  define KAAPI_MAX_DATA_ALIGNMENT (__alignof__(void*))
 #else
 #  define KAAPI_MAX_DATA_ALIGNMENT 8
@@ -344,7 +346,7 @@ typedef enum kaapi_access_mode_t {
 } kaapi_access_mode_t;
 
 #define KAAPI_ACCESS_MASK_RIGHT_MODE   0x7F   /* 5 bits, ie bit 0, 1, 2, 3, 4, including P mode */
-#define KAAPI_ACCESS_MASK_MODE         0x1F   /* without P mode */
+#define KAAPI_ACCESS_MASK_MODE         0x1F   /* without T, P, IP mode */
 #define KAAPI_ACCESS_MASK_MODE_P       0x80   /* only P mode */
 
 /*@}*/
@@ -377,7 +379,7 @@ typedef enum kaapi_access_mode_t {
   (KAAPI_ACCESS_IS_WRITE(m) && !KAAPI_ACCESS_IS_READ(m))
 
 #define KAAPI_ACCESS_IS_READWRITE( m ) \
-  ( ((m) & KAAPI_ACCESS_MASK_RIGHT_MODE) == (KAAPI_ACCESS_MODE_W|KAAPI_ACCESS_MODE_R))
+  ( ((m) & KAAPI_ACCESS_MASK_MODE) == (KAAPI_ACCESS_MODE_W|KAAPI_ACCESS_MODE_R))
 
 /** Return true if two modes are concurrents
     a == b and a or b is R or CW
@@ -394,34 +396,52 @@ typedef enum kaapi_access_mode_t {
 /** predefined format 
 */
 /*@{*/
+extern struct kaapi_format_t* kaapi_schar_format;
 extern struct kaapi_format_t* kaapi_char_format;
-extern struct kaapi_format_t* kaapi_short_format;
+extern struct kaapi_format_t* kaapi_shrt_format;
 extern struct kaapi_format_t* kaapi_int_format;
 extern struct kaapi_format_t* kaapi_long_format;
-extern struct kaapi_format_t* kaapi_longlong_format;
+extern struct kaapi_format_t* kaapi_llong_format;
+extern struct kaapi_format_t* kaapi_int8_format;
+extern struct kaapi_format_t* kaapi_int16_format;
+extern struct kaapi_format_t* kaapi_int32_format;
+extern struct kaapi_format_t* kaapi_int64_format;
 extern struct kaapi_format_t* kaapi_uchar_format;
-extern struct kaapi_format_t* kaapi_ushort_format;
+extern struct kaapi_format_t* kaapi_ushrt_format;
 extern struct kaapi_format_t* kaapi_uint_format;
 extern struct kaapi_format_t* kaapi_ulong_format;
-extern struct kaapi_format_t* kaapi_ulonglong_format;
-extern struct kaapi_format_t* kaapi_float_format;
-extern struct kaapi_format_t* kaapi_double_format;
-extern struct kaapi_format_t* kaapi_longdouble_format;
+extern struct kaapi_format_t* kaapi_ullong_format;
+extern struct kaapi_format_t* kaapi_uint8_format;
+extern struct kaapi_format_t* kaapi_uint16_format;
+extern struct kaapi_format_t* kaapi_uint32_format;
+extern struct kaapi_format_t* kaapi_uint64_format;
+extern struct kaapi_format_t* kaapi_flt_format;
+extern struct kaapi_format_t* kaapi_dbl_format;
+extern struct kaapi_format_t* kaapi_ldbl_format;
 extern struct kaapi_format_t* kaapi_voidp_format;
 
+extern struct kaapi_format_t* get_kaapi_schar_format(void);
 extern struct kaapi_format_t* get_kaapi_char_format(void);
-extern struct kaapi_format_t* get_kaapi_short_format(void);
+extern struct kaapi_format_t* get_kaapi_shrt_format(void);
 extern struct kaapi_format_t* get_kaapi_int_format(void);
 extern struct kaapi_format_t* get_kaapi_long_format(void);
-extern struct kaapi_format_t* get_kaapi_longlong_format(void);
+extern struct kaapi_format_t* get_kaapi_llong_format(void);
+extern struct kaapi_format_t* get_kaapi_int8_format(void);
+extern struct kaapi_format_t* get_kaapi_int16_format(void);
+extern struct kaapi_format_t* get_kaapi_int32_format(void);
+extern struct kaapi_format_t* get_kaapi_int64_format(void);
 extern struct kaapi_format_t* get_kaapi_uchar_format(void);
-extern struct kaapi_format_t* get_kaapi_ushort_format(void);
+extern struct kaapi_format_t* get_kaapi_ushrt_format(void);
 extern struct kaapi_format_t* get_kaapi_uint_format(void);
 extern struct kaapi_format_t* get_kaapi_ulong_format(void);
-extern struct kaapi_format_t* get_kaapi_ulonglong_format(void);
-extern struct kaapi_format_t* get_kaapi_float_format(void);
-extern struct kaapi_format_t* get_kaapi_double_format(void);
-extern struct kaapi_format_t* get_kaapi_longdouble_format(void);
+extern struct kaapi_format_t* get_kaapi_ullong_format(void);
+extern struct kaapi_format_t* get_kaapi_uint8_format(void);
+extern struct kaapi_format_t* get_kaapi_uint16_format(void);
+extern struct kaapi_format_t* get_kaapi_uint32_format(void);
+extern struct kaapi_format_t* get_kaapi_uint64_format(void);
+extern struct kaapi_format_t* get_kaapi_flt_format(void);
+extern struct kaapi_format_t* get_kaapi_dbl_format(void);
+extern struct kaapi_format_t* get_kaapi_ldbl_format(void);
 extern struct kaapi_format_t* get_kaapi_voidp_format(void);
 /*@}*/
 
@@ -775,11 +795,10 @@ static inline void* kaapi_thread_pushdata( kaapi_thread_t* thread, uint32_t coun
 */
 static inline void* kaapi_thread_pushdata_align(kaapi_thread_t* thread, uint32_t count, uintptr_t align)
 {
-  kaapi_assert_debug( (align !=0) && ((align == 8) || (align == 4) || (align == 2)));
+  kaapi_assert_debug( (align !=0) && (KAAPI_MAX_DATA_ALIGNMENT >= align) && ((align & (align - 1)) == 0));
   const uintptr_t mask = align - (uintptr_t)1;
 
-  if ((uintptr_t)thread->sp_data & mask)
-    thread->sp_data = (char*)((uintptr_t)(thread->sp_data + align) & ~mask);
+  thread->sp_data = (char*)((uintptr_t)(thread->sp_data + mask) & ~mask);
 
   return kaapi_thread_pushdata(thread, count);
 }

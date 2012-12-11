@@ -5,9 +5,6 @@
 ##  Copyright 2010 INRIA. All rights reserved.
 ##
 
-# flags to aclocal if Makefile rules trigger it
-ACLOCAL_AMFLAGS=-I acinclude
-
 SUBDIRS=kaapi_event_reader
 
 if KAAPI_TARGET_KACC

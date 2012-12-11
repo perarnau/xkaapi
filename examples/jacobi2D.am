@@ -9,7 +9,7 @@ if KAAPI_API_KAAPIXX
 JACOBI2D_PRGS=jacobi2d_kaapi++
 endif
 
-check_PROGRAMS+=$(JACOBI2D_PRGS)
+examples_PRGS+=$(JACOBI2D_PRGS)
 
 all-jacobi: $(JACOBI2D_PRGS)
 

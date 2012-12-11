@@ -85,75 +85,75 @@ static void convert_to_blocks(long NB, long N, double *Alin, double* A[DIM][DIM]
 */
 void TaskCholesky( int N, int NB, double* ptr )
 {
-  kaapic_begin_parallel(KAAPIC_FLAG_STATIC_SCHED);
+  //kaapic_begin_parallel(KAAPIC_FLAG_STATIC_SCHED);
   typedef double* TYPE[DIM][DIM]; 
   TYPE* A = (TYPE*)ptr;
 
   for (int k=0; k < N; ++k)
   {
     kaapic_spawn( (void*)0, 5, clapack_dpotrf,
-        KAAPIC_MODE_V, (int)CblasRowMajor, 1, KAAPIC_TYPE_INT,
-        KAAPIC_MODE_V, (int)CblasLower, 1, KAAPIC_TYPE_INT,
-        KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT,
-        KAAPIC_MODE_RW, (*A)[k][k], NB*NB, KAAPIC_TYPE_DOUBLE,
-        KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT
+        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)CblasRowMajor,
+        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)CblasLower,
+        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, NB,
+        KAAPIC_MODE_RW, KAAPIC_TYPE_DBL, NB*NB, (*A)[k][k], 
+        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, NB
     );
 
     for (int m=k+1; m < N; ++m)
     {
       kaapic_spawn( (void*)0, 12, cblas_dtrsm,
-          KAAPIC_MODE_V, (int)CblasRowMajor, 1, KAAPIC_TYPE_INT,
-          KAAPIC_MODE_V, (int)CblasRight, 1, KAAPIC_TYPE_INT,
-          KAAPIC_MODE_V, (int)CblasLower, 1, KAAPIC_TYPE_INT,
-          KAAPIC_MODE_V, (int)CblasTrans, 1, KAAPIC_TYPE_INT,
-          KAAPIC_MODE_V, (int)CblasNonUnit, 1, KAAPIC_TYPE_INT,
-          KAAPIC_MODE_V, (double)1.0, 1, KAAPIC_TYPE_DOUBLE,
-          KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT,
-          KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT,
-          KAAPIC_MODE_R, (*A)[k][k], NB*NB, KAAPIC_TYPE_DOUBLE,
-          KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT,
-          KAAPIC_MODE_RW, (*A)[m][k], NB*NB, KAAPIC_TYPE_DOUBLE,
-          KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)CblasRowMajor,
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)CblasRight,
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)CblasLower,
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)CblasTrans,
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)CblasNonUnit,
+          KAAPIC_MODE_V, KAAPIC_TYPE_DBL, 1, (double)1.0,
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, NB,
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, NB,
+          KAAPIC_MODE_R, KAAPIC_TYPE_DBL, NB*NB, (*A)[k][k],
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, NB,
+          KAAPIC_MODE_RW, KAAPIC_TYPE_DBL, NB*NB, (*A)[m][k], 
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, NB
       );
     }
 
     for (int m=k+1; m < N; ++m)
     {
       kaapic_spawn( (void*)0, 11, cblas_dsyrk,
-          KAAPIC_MODE_V, (int)CblasRowMajor, 1, KAAPIC_TYPE_INT,
-          KAAPIC_MODE_V, (int)CblasLower, 1, KAAPIC_TYPE_INT,
-          KAAPIC_MODE_V, (int)CblasNoTrans, 1, KAAPIC_TYPE_INT,
-          KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT,
-          KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT,
-          KAAPIC_MODE_V, -1.0, 1, KAAPIC_TYPE_DOUBLE,
-          KAAPIC_MODE_R, (*A)[m][k], NB*NB, KAAPIC_TYPE_DOUBLE,
-          KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT,
-          KAAPIC_MODE_V, 1.0, 1, KAAPIC_TYPE_DOUBLE,
-          KAAPIC_MODE_RW, (*A)[m][m], NB*NB, KAAPIC_TYPE_DOUBLE,
-          KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)CblasRowMajor,
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)CblasLower, 
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)CblasNoTrans,
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, NB,
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, NB,
+          KAAPIC_MODE_V, KAAPIC_TYPE_DBL, 1, -1.0,
+          KAAPIC_MODE_R, KAAPIC_TYPE_DBL, NB*NB, (*A)[m][k],
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, NB,
+          KAAPIC_MODE_V, KAAPIC_TYPE_DBL, 1, 1.0,
+          KAAPIC_MODE_RW, KAAPIC_TYPE_DBL, NB*NB, (*A)[m][m],
+          KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, NB
       );
       for (int n=k+1; n < m; ++n)
       {
         kaapic_spawn( (void*)0, 14, cblas_dgemm,
-            KAAPIC_MODE_V, (int)CblasRowMajor, 1, KAAPIC_TYPE_INT,
-            KAAPIC_MODE_V, (int)CblasNoTrans, 1, KAAPIC_TYPE_INT,
-            KAAPIC_MODE_V, (int)CblasTrans, 1, KAAPIC_TYPE_INT,
-            KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT,
-            KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT,
-            KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT,
-            KAAPIC_MODE_V, -1.0, 1, KAAPIC_TYPE_DOUBLE,
-            KAAPIC_MODE_R, (*A)[m][k], NB*NB, KAAPIC_TYPE_DOUBLE,
-            KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT,
-            KAAPIC_MODE_R, (*A)[n][k], NB*NB, KAAPIC_TYPE_DOUBLE,
-            KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT,
-            KAAPIC_MODE_V, 1.0, 1, KAAPIC_TYPE_DOUBLE,
-            KAAPIC_MODE_RW, (*A)[m][n], NB*NB, KAAPIC_TYPE_DOUBLE,
-            KAAPIC_MODE_V, NB, 1, KAAPIC_TYPE_INT
+            KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)CblasRowMajor,
+            KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)CblasNoTrans,
+            KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)CblasTrans,
+            KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, NB,
+            KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, NB,
+            KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, NB,
+            KAAPIC_MODE_V, KAAPIC_TYPE_DBL, 1, -1.0,
+            KAAPIC_MODE_R, KAAPIC_TYPE_DBL, NB*NB, (*A)[m][k],
+            KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, NB,
+            KAAPIC_MODE_R, KAAPIC_TYPE_DBL, NB*NB, (*A)[n][k],
+            KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, NB,
+            KAAPIC_MODE_V, KAAPIC_TYPE_DBL, 1, 1.0,
+            KAAPIC_MODE_RW, KAAPIC_TYPE_DBL, NB*NB, (*A)[m][n],
+            KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, NB
         );
       }
     }
   }
-  kaapic_end_parallel(KAAPIC_FLAG_STATIC_SCHED);
+  //kaapic_end_parallel(KAAPIC_FLAG_STATIC_SCHED);
 }
 
 
@@ -212,9 +212,9 @@ void doone_exp( int n, int block_count, int niter, int verif )
   {
     t0 = kaapic_get_time();
     kaapic_spawn( 0, 3, TaskCholesky,
-        KAAPIC_MODE_V, (int)block_count, 1, KAAPIC_TYPE_INT,
-        KAAPIC_MODE_V, (int)NB, 1, KAAPIC_TYPE_INT,
-        KAAPIC_MODE_V, (uintptr_t)&dAbloc
+        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)block_count,
+        KAAPIC_MODE_V, KAAPIC_TYPE_INT, 1, (int)NB, 
+        KAAPIC_MODE_V, KAAPIC_TYPE_PTR, 1, (uintptr_t)&dAbloc
     );
     kaapic_sync();
     t1 = kaapic_get_time();

@@ -1,0 +1,7 @@
+KAT_BANNER([kaapi - core XKaapi library],
+  [core],[kaapi libkaapi],[tests/kaapi],[all])
+
+dnl ******************************************************
+dnl checking headers
+KAT_TEST_HEADERS()
+

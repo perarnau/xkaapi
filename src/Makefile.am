@@ -18,7 +18,7 @@ BUILT_SOURCES=misc/kaapi_version.c kaapi_version_githash.h
 
 # Rebuild the version if gitlastcommit change
 kaapi_version_githash.h: $(srcdir)/../gitlastcommit
-	printf '#define KAAPI_GIT_HASH "%s"\n' "$$(cat $(srcdir)/../gitlastcommit)" > $@
+	$(AM_V_GEN)printf '#define KAAPI_GIT_HASH "%s"\n' "$$(cat $(srcdir)/../gitlastcommit)" > $@
 $(srcdir)/../gitlastcommit:
 	$(MAKE) -C .. gitlastcommit
 clean-local:
@@ -69,6 +69,7 @@ libkaapi_la_SOURCES=\
   misc/kaapi_collect_trace.c \
   misc/kaapi_eventrecorder.c \
   misc/kaapi_malloc_align.c \
+  misc/kaapi_malloc_protect.c \
   misc/kaapi_time_elapse.c \
   misc/kaapi_time_elapsedns.c \
   misc/kaapi_wq_init_ull.c \
@@ -103,6 +104,7 @@ libkaapi_la_SOURCES=\
   task/kaapi_task_startup_body.c \
   task/kaapi_task_steal_body.c \
   task/kaapi_task_stealready_body.c \
+  task/kaapi_task_execute.c \
   tasklist/kaapi_tasklist.c \
   tasklist/kaapi_readytasklist_init.c\
   tasklist/kaapi_readytasklist_destroy.c\

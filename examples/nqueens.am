@@ -10,7 +10,7 @@ if KAAPI_API_KAAPIXX
 NQUEENS_PRGS+=nqueens_kaapi++
 endif
 
-check_PROGRAMS+=$(NQUEENS_PRGS)
+examples_PRGS+=$(NQUEENS_PRGS)
 all-nqueens: $(NQUEENS_PRGS)
 
 #Nqueens program.

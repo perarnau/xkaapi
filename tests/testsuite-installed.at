@@ -1,0 +1,5 @@
+# Testsuite for xkaapi when installed
+
+m4_define([_KAT_INSTALLED],[true])
+
+m4_include([testsuite.at])

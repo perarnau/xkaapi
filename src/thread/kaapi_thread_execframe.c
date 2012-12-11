@@ -142,7 +142,11 @@ redo_exec:
       if ( fmt != 0 )
         kaapi_mem_host_map_sync_ptr( fmt, pc );
 #endif
+#if !defined (KAAPI_DEBUG)
       ((kaapi_task_body_internal_t)pc->body)( pc->sp, fp, pc );
+#else
+      _kaapi_task_execute_with_control( (kaapi_task_body_internal_t)pc->body, pc->sp, fp, pc );
+#endif
     }
     else 
     {

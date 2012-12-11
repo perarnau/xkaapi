@@ -8,11 +8,10 @@
 ACCUMULATE_PRGS=accumulate_kaapi
 
 if KAAPI_API_KAAPIXX
-ACCUMULATE_PRGS+=\
-	accumulate_kaapi++
+ACCUMULATE_PRGS+= accumulate_kaapi++
 endif
 
-check_PROGRAMS+=$(ACCUMULATE_PRGS)
+examples_PRGS+=$(ACCUMULATE_PRGS)
 all-accumulate: $(ACCUMULATE_PRGS)
 
 #Accumulate STL algorithm

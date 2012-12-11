@@ -42,6 +42,7 @@
  ** 
  */
 #include "kaapi_impl.h"
+
 #if defined(KAAPI_DEBUG_LOURD)
 #include <unistd.h>
 #endif
@@ -87,7 +88,11 @@ size_t kaapi_task_computeready(
        )
     {
       --wc;
-      if (  (KAAPI_ACCESS_IS_ONLYWRITE(m) && KAAPI_ACCESS_IS_READ(gd->last_mode))
+      /* set bit i in war_param, if copy on steal is required */
+      if (  
+            (KAAPI_ACCESS_IS_ONLYWRITE(m) && (gd->last_mode != KAAPI_ACCESS_MODE_VOID)) 
+/*before: KAAPI_ACCESS_IS_READ(gd->last_mode) but do not treat WaW false dependency i.e. W->RW->W->RW */
+//            (KAAPI_ACCESS_IS_ONLYWRITE(m) && KAAPI_ACCESS_IS_READ(gd->last_mode))
          || (KAAPI_ACCESS_IS_CUMULWRITE(m) && KAAPI_ACCESS_IS_CONCURRENT(m,gd->last_mode)) 
          || (KAAPI_ACCESS_IS_STACK(m))
       )

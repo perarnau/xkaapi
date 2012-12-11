@@ -9,7 +9,7 @@ dnl http://www.mail-archive.com/autoconf@gnu.org/msg07824.html
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CANONICAL_TARGET
 AC_CONFIG_SRCDIR([src/workstealing/kaapi_sched_idle.c])
-AC_CONFIG_MACRO_DIR([acinclude])
+AC_CONFIG_MACRO_DIR([m4])
 
 dnl automake 1.6 is supposed NOT to work
 dnl automake 1.9 is supposed to work
@@ -20,6 +20,7 @@ AM_INIT_AUTOMAKE([gnu 1.9 tar-pax subdir-objects])
 dnl silent-rules option is not required as it has been introduced in automake 1.11
 dnl The AMX_SILENT_RULES macro enables it if it exists
 
+AC_CONFIG_TESTDIR([tests], [tests])
 
 AC_CONFIG_HEADERS([config.h])
 
@@ -74,9 +75,8 @@ AC_LANG_POP([C++])
 AC_MSG_RESULT([$have_cxx])
 AM_CONDITIONAL([HAVE_CXX],[test $have_cxx = yes])
 
-# if next line is comented out, we can create only dynamic libraries be default
-# AC_DISABLE_STATIC
-LT_INIT
+# by default, only build shared libraries
+LT_INIT([disable-static])
 AC_SUBST(LIBTOOL_DEPS)
 
 AC_PROG_MKDIR_P
@@ -205,21 +205,39 @@ dnl -----------------------------------------------------------------------
 dnl -----------------------------------------------------------------------
 dnl -----------------------------------------------------------------------
 
+KAT_TESTSUITES="core"
+AC_SUBST([KAT_TESTSUITES])
+
 dnl -----------------------------------------------------------------------
 dnl The "--enable-api-kaapic"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([api-kaapic], [compile C API],
   [C API compiled], [yes],
-  [],
+  [KAT_TESTSUITES="$KAT_TESTSUITES libkaapic"],
   [],
   [KAAPI_API_KAAPIC])
+
+#TODO: add a --with-libffi options and allow to use external libffi
+AS_IF([test x"$enable_api_kaapic" = xyes],
+  [use_ffi=internal],
+  [use_ffi=no])
+
+AS_CASE(["$use_ffi"],
+  [no],[],
+  [internal],[
+    ACX_LIB_CHECK_PLAIN([FFI],[],[ACX_LIB_FOUND(
+	[CppFlags="-I\$(top_builddir)/imported-soft/libffi/include"],
+	[LdFlags="-L\$(top_builddir)/imported-soft/libffi"],
+	[Libs="-lffi_convenience"])]) 
+  ],
+  [AC_MSG_ERROR([Internal error in configure.ac])])
 
 dnl -----------------------------------------------------------------------
 dnl The "--enable-api-kaapif"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([api-kaapif], [compile fortran API],
   [Fortran API compiled], [check],
-  [],
+  [KAT_TESTSUITES="$KAT_TESTSUITES libkaapif"],
   [],
   [KAAPI_API_KAAPIF],
   [
@@ -238,34 +256,12 @@ dnl      ])
   ])
 dnl ACX_LIB_LINK([KAAPIFLIB], [FORTRAN])
 
-dnl KAAPI_FEATURE([api-kaapif], [compile fortran API],
-dnl   [fortran API compiled], [$default_experimental],
-dnl   [ ],
-dnl   [ 
-dnl     ACX_LIB_NOLIB([FORTRAN])
-dnl   ],
-dnl   [KAAPI_API_KAAPIF],
-dnl   [
-dnl     if test x"$F77" = x; then
-dnl       FEATURE_DISABLE
-dnl     else
-dnl       ACX_LIB_CHECK_PLAIN([FORTRAN],[],[
-dnl         AC_F77_LIBRARY_LDFLAGS
-dnl         ACX_LIB_FOUND([Libs="$F77LIBS"])
-dnl         FEATURE_ENABLE
-dnl       ],[
-dnl         FEATURE_DISABLE
-dnl       ])
-dnl     fi
-dnl   ])
-dnl ACX_LIB_LINK([KAAPIFLIB], [FORTRAN])
-
 dnl -----------------------------------------------------------------------
 dnl The "--enable-api-kaapixx"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([api-kaapixx], [compile Kaapi++ API],
   [Kaapi++ API compiled], [check],
-  [],
+  [KAT_TESTSUITES="$KAT_TESTSUITES libkaapi++"],
   [],
   [KAAPI_API_KAAPIXX],
   [
@@ -283,7 +279,7 @@ dnl The "--enable-api-quark"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([api-quark], [compile Quark API used by PLASMA library],
   [Quark API compiled], [yes],
-  [],
+  [KAT_TESTSUITES="$KAT_TESTSUITES libquark"],
   [],
   [KAAPI_API_QUARK])
 
@@ -293,7 +289,7 @@ dnl The "--enable-api-kastl"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([api-kastl], [compile KaSTL API],
   [KaSTL API compiled], [no],
-  [],
+  [KAT_TESTSUITES="$KAT_TESTSUITES kastl"],
   [],
   [KAAPI_API_KASTL],
   [
@@ -310,7 +306,7 @@ dnl The "--enable-libgomp"
 dnl -----------------------------------------------------------------------
 KAAPI_FEATURE([libgomp], [compile OpenMP libgomp library],
   [OpenMP libgomp compiled], [check],
-  [],
+  [KAT_TESTSUITES="$KAT_TESTSUITES libgomp"],
   [],
   [KAAPI_LIBGOMP],
   [
@@ -687,7 +683,7 @@ AS_CASE([$with_gasnet],
     AC_DEFINE([KAAPI_USE_GASNET],1,[Use with GASNet])
     KAAPI_USE_GASNET=yes
     tmpfilename=`mktemp -t kaapi_XXXXXX`
-    make -f $srcdir/acinclude/gasnet_cppflags.mk GASNET_CONDUIT_MAK=$with_gasnet > $tmpfilename
+    make -f $srcdir/m4/gasnet_cppflags.mk GASNET_CONDUIT_MAK=$with_gasnet > $tmpfilename
     source $tmpfilename
     KAGASNETLIB_BUILD_CPPFLAGS=$GASNET_CPPFLAGS
     KAGASNETLIB_BUILD_CFLAGS=$GASNET_CFLAGS
@@ -858,6 +854,16 @@ AM_CONDITIONAL([KAAPI_HAVE_CBLAS],[test x"$CBLAS_LDFLAGS" != x])
 AM_CONDITIONAL([KAAPI_HAVE_LAPACKE],[test x"$LAPACKE_LDFLAGS" != x])
 
 dnl -----------------------------------------------------------------------
+dnl sub configure for external (but imported) projects
+dnl -----------------------------------------------------------------------
+
+use_ffi=internal
+if test x"$use_ffi" = xinternal; then
+  mkdir -p "imported-soft/libffi"
+  AC_CONFIG_SUBDIRS([imported-soft/libffi])
+fi
+
+dnl -----------------------------------------------------------------------
 dnl Dependencies between libs
 dnl -----------------------------------------------------------------------
 ACX_LIB_LINK([KAAPIXXLIB], [PUBLIC], [KAAPILIB])
@@ -873,8 +879,9 @@ dnl ACX_LIB_LINK([KASTLLIB], [PRIVATE], [HWLOC])
 ACX_LIB_LINK([KAAPICLIB], [PUBLIC], [KAAPILIB])
 ACX_LIB_LINK([KAAPICLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([KAAPICLIB], [PRIVATE], [CUPTI])
+ACX_LIB_LINK([KAAPICLIB], [PRIVATE], [FFI])
 
-ACX_LIB_LINK([KAAPIFLIB], [PUBLIC], [KAAPICLIB])
+ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [KAAPICLIB])
 ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [CUDA])
 ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [CUPTI])
 dnl ACX_LIB_LINK([KAAPIFLIB], [PRIVATE], [HWLOC])
@@ -896,8 +903,8 @@ ACX_LIB_ADD_BUILD_FLAGS([KAAPICPROGS],
 
 ACX_LIB_LINK([KAAPIFPROGS], [KAAPIFLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIFPROGS],
-	[-I\$(top_srcdir)/api/kaapif -I\$(top_srcdir)/src],[],[],
-	[\$(top_builddir)/api/kaapif/libkaapif.la \$(top_builddir)/api/kaapic/libkaapic.la \$(top_builddir)/src/libkaapi.la])
+	[-I\$(top_srcdir)/api/kaapif],[],[],
+	[\$(top_builddir)/api/kaapif/libkaapif.la])
 
 ACX_LIB_LINK([KAAPIXXPROGS], [KAAPIXXLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIXXPROGS],
@@ -930,19 +937,28 @@ AC_CONFIG_FILES([
 	api/kaapif/Makefile
 	api/kastl/Makefile
 	api/libgomp/Makefile
-	api/libgomp/tests/Makefile
 	api/libgomp/testsuite/Makefile
 	api/quark/Makefile
-	examples/Makefile
-	src/Makefile
 	bin/Makefile
 	bin/kacc/Makefile
 	bin/kaapi_c2c/Makefile
 	bin/kaapi_f2f/Makefile
 	bin/kaapi_event_reader/Makefile
-	bin/kacc/kacc.cpp
+	examples/Makefile
+	imported-soft/Makefile
+	src/Makefile
+	tests/Makefile
 
+	tests/api-kaapic/Makefile
+	tests/api-kaapif/Makefile
+	tests/api-kaapixx/Makefile
+	tests/kaapi/Makefile
+	tests/libgomp/Makefile
+
+	bin/kacc/kacc.cpp
 	src/misc/kaapi_version.c
+	tests/atlocal
+
 	kaapi.pc
 	kaapic.pc
 	kaapif.pc

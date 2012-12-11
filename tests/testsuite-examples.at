@@ -1,0 +1,45 @@
+KAT_BANNER([examples - compilation of xkaapi examples],
+  [],[examples],[examples],[KAT_INSTALLED([],[examples])],[CPPFLAGS=-Werror])
+
+m4_define([KAT_EX_FAILING],[branchbound_kaapi++])
+m4_define([KAT_EX_noWerror],[matprod_rec_kaapi++ poisson3d_kaapi++])
+
+m4_define([KAT_EX_CHECK_BUILD_HOOK],[
+  AT_SKIP_IF([AS_CASE([" $KAT_EX_CURRENT_LIST "],[*" $1 "*],[false],[:])])
+  AT_XFAIL_IF([AS_CASE([" KAT_EX_FAILING "],[*" $1 "*],[:],[false])])
+])
+KAT_HOOK_MACRO([CHECK_BUILD],[BEFORE],[KAT_EX_CHECK_BUILD_HOOK])
+
+dnl KAT_EX_CHECK_BUILD(name)
+m4_define([KAT_EX_CHECK_BUILD],[
+  AS_CASE([" KAT_EX_noWerror "],[*" $1 "*],[
+    KAT_CHECK_BUILD([$1])
+  ],[
+    KAT_CHECK_BUILD([$1],[CPPFLAGS=-Werror])
+  ])
+])
+dnl KAT_EX_CHECK_BUILD_INSTALLED(name,subdir)
+m4_define([KAT_EX_CHECK_BUILD_INSTALLED],[
+  KAT_EX_CHECK_BUILD_HOOK([$1])
+  AS_CASE([" KAT_EX_noWerror "],[*" $1 "*],[
+    AT_CHECK([${MAKE:-make} $1 -C ${docdir}/examples/$2 ], 0, [ignore], [ignore])
+  ],[
+    AT_CHECK([${MAKE:-make} CPPFLAGS=-Werror $1 -C ${docdir}/examples/$2 ], 0, [ignore], [ignore])
+  ])
+])
+
+dnl KAT_EX_CHECK_PROG(prog, subdir, keywords)
+m4_define([KAT_EX_CHECK_PROG],[
+  KAT_SETUP([$2 / $1],[$2 $1 $3], [$1])
+  KAT_INSTALLED([
+    KAT_EX_CHECK_BUILD_INSTALLED([$1],[$2])
+  ],[
+    KAT_EX_CHECK_BUILD([$1])
+  ])
+  AT_CLEANUP
+])
+
+dnl ******************************************************
+
+m4_include([testsuite-examples-inc.at])
+

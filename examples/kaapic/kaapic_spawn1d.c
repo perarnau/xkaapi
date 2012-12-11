@@ -66,8 +66,8 @@ int main()
   kaapic_spawn(&attr, 
       2,     /* number of arguments */
       body,  /* the entry point for the task */
-      KAAPIC_MODE_V, KAAPIC_TYPE_DOUBLE, 1, (double)129,
-      KAAPIC_MODE_W, KAAPIC_TYPE_DOUBLE, 1, &result
+      KAAPIC_MODE_V, KAAPIC_TYPE_DBL, 1, (double)129,
+      KAAPIC_MODE_W, KAAPIC_TYPE_DBL, 1, &result
   );
 
   kaapic_sync();

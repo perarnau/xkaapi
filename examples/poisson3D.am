@@ -9,7 +9,7 @@ if KAAPI_API_KAAPIXX
 POISSON3D_PRGS=poisson3d_kaapi++ poisson3d_seq
 endif
 
-check_PROGRAMS+=$(POISSON3D_PRGS)
+examples_PRGS+=$(POISSON3D_PRGS)
 all-poisson3D: $(POISSON3D_PRGS)
 
 # Domain decomposition

@@ -43,8 +43,8 @@ CONFIG_AUX_DIR="build-aux"
 CLEAN_BASE_DIRS="autom4te.cache"
 CLEAN_BASE_FILES="configure"
 CLEAN_BASE_FILES="$CLEAN_BASE_FILES config.h.in config.h.in~"
-CLEAN_BASE_FILES="$CLEAN_BASE_FILES aclocal.m4 acinclude/libtool.m4 acinclude/ltoptions.m4"
-CLEAN_BASE_FILES="$CLEAN_BASE_FILES acinclude/ltversion.m4 acinclude/lt~obsolete.m4  acinclude/ltsugar.m4"
+CLEAN_BASE_FILES="$CLEAN_BASE_FILES aclocal.m4 m4/libtool.m4 m4/ltoptions.m4"
+CLEAN_BASE_FILES="$CLEAN_BASE_FILES m4/ltversion.m4 m4/lt~obsolete.m4  m4/ltsugar.m4"
 CLEAN_AUX_FILES="config.guess compile depcomp mkinstalldirs libtool ltmain.sh missing config.sub install-sh mdate-sh texinfo.tex"
 
 RM="rm -v"
@@ -103,7 +103,9 @@ if test x"$1" = x"--clean"; then
 
 else
 	set -x
-	autoreconf -vi -Wall "$@"
+	ACLOCAL_AMFLAGS="-I $(pwd)/m4"
+	export ACLOCAL_AMFLAGS
+	autoreconf -vi -Wall -Wno-obsolete "$@" .
 	set +x
 fi
 

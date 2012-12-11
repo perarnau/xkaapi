@@ -11,7 +11,7 @@ if KAAPI_API_KAAPIXX
 BB_PRGS+=branchbound_kaapi++
 endif
 
-check_PROGRAMS+=$(BB_PRGS)
+examples_PRGS+=$(BB_PRGS)
 
 all-bb: $(BB_PRGS)
 

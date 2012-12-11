@@ -8,19 +8,16 @@
 FOREACH_PRGS=for_each_adapt_kaapi
 
 if KAAPI_API_KAAPIC
-FOREACH_PRGS+=\
-	for_each_kaapic for_each_kaapic_regparallel
+FOREACH_PRGS+= for_each_kaapic for_each_kaapic_regparallel
 endif
 if KAAPI_API_KAAPIXX
-FOREACH_PRGS+=\
-	for_each_rec_kaapi++ for_each_kaapi++
+FOREACH_PRGS+= for_each_rec_kaapi++ for_each_kaapi++
 endif
 if KAAPI_API_KASTL
-FOREACH_PRGS+=\
-	for_each_kastl
+FOREACH_PRGS+= for_each_kastl
 endif
 
-check_PROGRAMS+=$(FOREACH_PRGS)
+examples_PRGS+=$(FOREACH_PRGS)
 all-for_each: $(FOREACH_PRGS)
 
 #For each variation

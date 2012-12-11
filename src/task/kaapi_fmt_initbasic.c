@@ -44,6 +44,7 @@
 */
 #include "kaapi_impl.h"
 #include <string.h>
+#include <inttypes.h>
 
 
 /**
@@ -74,19 +75,28 @@
 
 /** Predefined format
 */
+KAAPI_DECL_BASICTYPEFORMAT(kaapi_schar_format, char, "%hhu")
 KAAPI_DECL_BASICTYPEFORMAT(kaapi_char_format, char, "%hhu")
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_short_format, short, "%hi")
+KAAPI_DECL_BASICTYPEFORMAT(kaapi_shrt_format, short, "%hi")
 KAAPI_DECL_BASICTYPEFORMAT(kaapi_int_format, int, "%i")
 KAAPI_DECL_BASICTYPEFORMAT(kaapi_long_format, long, "%li")
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_longlong_format, long long, "%lli")
+KAAPI_DECL_BASICTYPEFORMAT(kaapi_llong_format, long long, "%lli")
+KAAPI_DECL_BASICTYPEFORMAT(kaapi_int8_format, int8_t, "%"PRIi8)
+KAAPI_DECL_BASICTYPEFORMAT(kaapi_int16_format, int16_t, "%"PRIi16)
+KAAPI_DECL_BASICTYPEFORMAT(kaapi_int32_format, int32_t, "%"PRIi32)
+KAAPI_DECL_BASICTYPEFORMAT(kaapi_int64_format, int64_t, "%"PRIi64)
 KAAPI_DECL_BASICTYPEFORMAT(kaapi_uchar_format, unsigned char, "%hhu")
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_ushort_format, unsigned short, "%hu")
+KAAPI_DECL_BASICTYPEFORMAT(kaapi_ushrt_format, unsigned short, "%hu")
 KAAPI_DECL_BASICTYPEFORMAT(kaapi_uint_format, unsigned int, "%u")
 KAAPI_DECL_BASICTYPEFORMAT(kaapi_ulong_format, unsigned long, "%lu")
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_ulonglong_format, unsigned long long, "%llu")
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_float_format, float, "%e")
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_double_format, double, "%e")  
-KAAPI_DECL_BASICTYPEFORMAT(kaapi_longdouble_format, long double, "%Le")  
+KAAPI_DECL_BASICTYPEFORMAT(kaapi_ullong_format, unsigned long long, "%llu")
+KAAPI_DECL_BASICTYPEFORMAT(kaapi_uint8_format, uint8_t, "%"PRIu8)
+KAAPI_DECL_BASICTYPEFORMAT(kaapi_uint16_format, uint16_t, "%"PRIu16)
+KAAPI_DECL_BASICTYPEFORMAT(kaapi_uint32_format, uint32_t, "%"PRIu32)
+KAAPI_DECL_BASICTYPEFORMAT(kaapi_uint64_format, uint64_t, "%"PRIu64)
+KAAPI_DECL_BASICTYPEFORMAT(kaapi_flt_format, float, "%e")
+KAAPI_DECL_BASICTYPEFORMAT(kaapi_dbl_format, double, "%e")  
+KAAPI_DECL_BASICTYPEFORMAT(kaapi_ldbl_format, long double, "%Le")  
 
 /* void pointer format */
 static void voidp_type_cstor(void* addr)
@@ -142,19 +152,28 @@ kaapi_format_t* kaapi_voidp_format = &kaapi_voidp_format_object;
 */
 void kaapi_format_init(void)
 {
+  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_schar_format, char, "%hhi")
   KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_char_format, char, "%hhi")
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_short_format, short, "%hi")
+  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_shrt_format, short, "%hi")
   KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_int_format, int, "%i")
   KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_long_format, long, "%li")
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_longlong_format, long long, "%lli")
+  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_llong_format, long long, "%lli")
+  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_int8_format, int8_t, "%"PRIi8)
+  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_int16_format, int16_t, "%"PRIi16)
+  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_int32_format, int32_t, "%"PRIi32)
+  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_int64_format, int64_t, "%"PRIi64)
   KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_uchar_format, unsigned char, "%hhu")
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ushort_format, unsigned short, "%hu")
+  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ushrt_format, unsigned short, "%hu")
   KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_uint_format, unsigned int, "%u")
   KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ulong_format, unsigned long, "%lu")
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ulonglong_format, unsigned long long, "%llu")
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_float_format, float, "%e")
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_double_format, double, "%e")  
-  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_longdouble_format, long double, "%le")  
+  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ullong_format, unsigned long long, "%llu")
+  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_uint8_format, uint8_t, "%"PRIu8)
+  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_uint16_format, uint16_t, "%"PRIu16)
+  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_uint32_format, uint32_t, "%"PRIu32)
+  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_uint64_format, uint64_t, "%"PRIu64)
+  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_flt_format, float, "%e")
+  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_dbl_format, double, "%e")
+  KAAPI_REGISTER_BASICTYPEFORMAT(kaapi_ldbl_format, long double, "%le")
 
   kaapi_format_structregister
   ( 

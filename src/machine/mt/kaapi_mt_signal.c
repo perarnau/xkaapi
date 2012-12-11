@@ -59,13 +59,18 @@
 
 
 // --------------------------------------------------------------------
-void _kaapi_signal_dump_backtrace(int sig)
+void _kaapi_signal_dump_backtrace(int sig, siginfo_t *si, void *unused)
 {
 #if defined(__APPLE__) || defined(__linux__)
   const unsigned int MAX_DEPTH = 100;
   void *trace[MAX_DEPTH];
   unsigned int trace_size;
   char **trace_strings;
+  
+  if (sig == SIGSEGV)
+  {
+    printf("Catch SIGSEGV, address: %p\n", si->si_addr );
+  }
 
   trace_size = backtrace(trace, MAX_DEPTH);
   trace_strings = backtrace_symbols(trace, trace_size);
@@ -78,7 +83,7 @@ void _kaapi_signal_dump_backtrace(int sig)
 #if defined(KAAPI_USE_PERFCOUNTER)
   _kaapi_signal_dump_counters(sig);  
 #endif
-  _exit(0);
+  _exit(sig);
 }
 
 

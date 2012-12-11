@@ -1,0 +1,73 @@
+KAT_BANNER([kaapic - C API for XKaapi],
+  [libkaapic],[kaapic api-kaapic],[tests/api-kaapic],[all])
+
+dnl ******************************************************
+dnl checking headers
+KAT_TEST_HEADERS()
+
+dnl ******************************************************
+dnl checking spawn arguments
+
+m4_define([KAT_KAAPIC_TEST_VARG],[
+  KAT_TEST_PROG([spawn_v-arg_$1],[checking V-mode argument with type '$2'],[spawn],[],[],
+[sed -e 's/\(The result is :\).*/\1/' stdout],
+[The result is :
+Success
+])
+])
+
+KAT_KAAPIC_TEST_VARG([char],[char])
+KAT_KAAPIC_TEST_VARG([schar],[signed char])
+KAT_KAAPIC_TEST_VARG([shrt],[short])
+KAT_KAAPIC_TEST_VARG([int],[int])
+KAT_KAAPIC_TEST_VARG([long],[long])
+KAT_KAAPIC_TEST_VARG([llong],[long long])
+KAT_KAAPIC_TEST_VARG([int8],[int8_t])
+KAT_KAAPIC_TEST_VARG([int16],[int16_t])
+KAT_KAAPIC_TEST_VARG([int32],[int32_t])
+KAT_KAAPIC_TEST_VARG([int64],[int64_t])
+KAT_KAAPIC_TEST_VARG([uchar],[unsigned char])
+KAT_KAAPIC_TEST_VARG([ushrt],[unsigned short])
+KAT_KAAPIC_TEST_VARG([uint],[unsigned int])
+KAT_KAAPIC_TEST_VARG([ulong],[unsigned long])
+KAT_KAAPIC_TEST_VARG([ullong],[unsigned long long])
+KAT_KAAPIC_TEST_VARG([uint8],[uint8_t])
+KAT_KAAPIC_TEST_VARG([uint16],[uint16_t])
+KAT_KAAPIC_TEST_VARG([uint32],[uint32_t])
+KAT_KAAPIC_TEST_VARG([uint64],[uint64_t])
+KAT_KAAPIC_TEST_VARG([flt],[float])
+KAT_KAAPIC_TEST_VARG([dbl],[double])
+KAT_KAAPIC_TEST_VARG([ldbl],[long double])
+KAT_KAAPIC_TEST_VARG([pointer],[void*])
+
+KAT_TEST_PROG([spawn_s-arg],[checking S-mode argument],[spawn],[],[],[],
+[The result is : 125
+])
+
+dnl ******************************************************
+dnl checking fibo implementations
+
+m4_define([KAT_KAAPIC_TEST_FIBO],[
+  KAT_TEST_PROG([fibo_$1],[checking Fibo(30), implemented with $2],[fibo],[],[30],[grep Fibo stdout],
+[Fibo(30) = 832040
+])
+])
+
+KAT_KAAPIC_TEST_FIBO([sum],[a sum task])
+KAT_KAAPIC_TEST_FIBO([cumul],[an accumulator])
+KAT_KAAPIC_TEST_FIBO([sync],[kaapic_sync()])
+
+dnl ******************************************************
+dnl checking nqueen implementations
+
+KAT_TEST_PROG([nqueens_stackpointer],[checking nqueens],[nqueens],[],[12],[],
+[Total number of solutions: 14200
+])
+
+dnl ******************************************************
+dnl checking implementation details
+
+KAT_TEST_PROG([test_begend_parallel],[checking iteration of parallel sections],[],[],[],[sed -e 's/Time: .*/Time:/' stdout],
+[Time:
+])
+

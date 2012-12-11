@@ -9,7 +9,7 @@ EXTRA_DIST=libgomp.map libomp_ext.map kaapi-gomp-wrapper.in
 
 if KAAPI_LIBGOMP
 
-SUBDIRS=tests testsuite
+SUBDIRS=testsuite
 
 pkglib_LTLIBRARIES=libgomp.la
 lib_LTLIBRARIES=libkomp.la libomp_ext.la
@@ -54,8 +54,8 @@ do_subst = sed -e 's,[@]libdir[@],$(libdir),g' \
                -e 's,[@]abs_top_builddir[@],$(abs_top_builddir),g'
 
 kaapi-gomp-wrapper: kaapi-gomp-wrapper.in Makefile
-	$(do_subst) < $(srcdir)/kaapi-gomp-wrapper.in > $@
-	chmod +x $@
+	$(AM_V_GEN)$(do_subst) < $(srcdir)/kaapi-gomp-wrapper.in > $@
+	$(AM_V_at)chmod +x $@
 
 install-exec-hook: kaapi-gomp-wrapper
 	sed -e '/^# BEGIN REMOVE ONCE INSTALLED$$/,/^# END REMOVE ONCE INSTALLED$$/d' \

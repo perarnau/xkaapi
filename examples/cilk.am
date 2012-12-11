@@ -9,7 +9,7 @@ if KAAPI_API_KAAPIXX
 CILK_PRGS=qsort_kaapi++ matrix_multiply_kaapi++
 endif
 
-check_PROGRAMS+=$(CILK_PRGS)
+examples_PRGS+=$(CILK_PRGS)
 
 all-cilk: $(CILK_PRGS)
 

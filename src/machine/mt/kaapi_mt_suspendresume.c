@@ -70,6 +70,14 @@ void kaapi_mt_suspendresume_init(void)
   KAAPI_ATOMIC_WRITE(&kaapi_suspendedthreads, 0);
 }
 
+void kaapi_mt_suspendresume_finalize(void)
+{
+  kaapi_assert( 0 == kproc_condunlock_destroy(&wakeupcond_threads) );
+  kaapi_assert( 0 == kproc_mutex_destroy(&wakeupmutex_threads) );
+  kaapi_suspendflag = 0;
+  KAAPI_ATOMIC_WRITE(&kaapi_suspendedthreads, 0);
+}
+
 
 void kaapi_mt_suspend_self( kaapi_processor_t* kproc )
 {

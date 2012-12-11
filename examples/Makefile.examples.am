@@ -24,11 +24,10 @@ display:
 list_examples:
 	@echo '***********************************************************'
 	@echo 'Available example programs '
-#in $(notdir $(CURDIR)) are:'
-	@for prog in $(check_PROGRAMS); do echo " * $$prog"; done
+	@for prog in $(examples_PRGS); do echo " * $$prog"; done
 	@echo '***********************************************************'
 
-examples: check
+examples: $(examples_PRGS)
 
 # test generation
 TESTS_ENVIRONMENT=env KARUN_OPTS="$(KARUN_OPTS)" /bin/sh -x

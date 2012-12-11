@@ -1,0 +1,72 @@
+KAT_BANNER([kaapixx - C++ API for XKaapi],
+  [libkaapi++],[kaapixx api-kaapixx],[tests/api-kaapixx],[all])
+
+dnl ******************************************************
+dnl checking headers
+KAT_TEST_HEADERS()
+
+m4_define([KAT_ABIC_CHECK_FAILEDCOMPIL],[
+  KAT_ABIC_SETUP([$2],[$3 $1])
+  KAT_ABIC_CHECK_BUILDFAILED([$1],[$4])
+  AT_CLEANUP
+])
+
+
+dnl ******************************************************
+dnl checking fibo implementations
+KAT_TEST_PROG([test_spawn],[all valid access mode],[],[],[],[],
+[])
+
+KAT_TEST_PROG([test_pointer],[passing pointer by value],[],[],[],[],
+[ diff:0
+])
+
+KAT_HOOK_ONCE([CHECK_RUN],[BEFORE],[AT_XFAIL_IF([true])])
+KAT_TEST_PROG([test_multipleleave],[multiple init/leave],[],[],[],[],
+[Rien ne va plus.
+Tout va bien !
+Rien ne va plus.
+Tout va bien !
+])
+
+KAT_TEST_PROG([test_stackpointer],[stack pointer],[],[],[],[],
+[])
+
+dnl ******************************************************
+dnl checking nqueen implementations
+
+KAT_TEST_PROG([test_nqueens_stackpointer],[checking nqueens],[nqueens],[],[12],[],
+[Total number of solutions: 14200
+])
+
+ 
+dnl ******************************************************
+dnl checking fibo implementations
+
+m4_define([KAT_KAAPIXX_TEST_FIBO],[
+  KAT_TEST_PROG([fibo_kaapi++$1],[checking Fibo(30), implemented $2],[fibo],[],[30],[grep Res stdout],
+[: Res  = 832040
+])
+])
+
+
+KAT_KAAPIXX_TEST_FIBO([],[])
+KAT_KAAPIXX_TEST_FIBO([_autopointer],[using autopointer])
+KAT_KAAPIXX_TEST_FIBO([_autovar],[using autovar])
+KAT_KAAPIXX_TEST_FIBO([_alloca],[using alloca])
+KAT_KAAPIXX_TEST_FIBO([_opt],[using optimisation])
+KAT_KAAPIXX_TEST_FIBO([_opt_thread],[using optimisation/thread])
+KAT_KAAPIXX_TEST_FIBO([_opt_sync],[using optimisation])
+KAT_KAAPIXX_TEST_FIBO([_sync],[using ka::Sync])
+KAT_KAAPIXX_TEST_FIBO([_cumul],[using cumulative operation])
+KAT_KAAPIXX_TEST_FIBO([_cumul_opt],[using cumulative operation with optimisation])
+KAT_KAAPIXX_TEST_FIBO([_cumul_userreduc],[using user defined cumulative operation])
+KAT_KAAPIXX_TEST_FIBO([_cumul],[using cumulative operation])
+
+
+dnl ******************************************************
+dnl checking implementation details
+
+KAT_TEST_PROG([test_perfcounter1],[checking perf counter],[perfcounter],[],[],[grep '#task' stdout],
+[: #task  : 6731341
+])

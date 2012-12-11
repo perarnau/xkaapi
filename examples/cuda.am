@@ -31,8 +31,7 @@ endif
   
 all-cuda-examples: $(CUDA_CBLAS_WARNING)
 
-check_PROGRAMS += $(CUDA_PROGS)
-
+examples_PRGS+=$(CUDA_PROGS)
 all-cuda-examples: $(CUDA_PROGS)
 
 no-cblas-cuda:
