@@ -25,6 +25,9 @@ AC_CONFIG_TESTDIR([tests], [tests])
 AC_CONFIG_HEADERS([config.h])
 
 AMX_SILENT_RULES([AM_DEFAULT_VERBOSITY=0])
+AM_MAINTAINER_MODE([enable])
+# hack to export maintainer mode to sub configure scripts
+as_fn_append ac_configure_args " '--enable-maintainer-mode=$USE_MAINTAINER_MODE'"
 
 dnl Sanity checks on prefix : do not install kaapi in the source tree
 dnl nor in the build tree

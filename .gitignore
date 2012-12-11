@@ -79,6 +79,7 @@ Makefile.in
 
 /imported-soft/libffi/doc/libffi.info
 /imported-soft/libffi/doc/stamp-vti
+/imported-soft/libffi/doc/version.texi
 
 ##########################
 # Files from compilation #
