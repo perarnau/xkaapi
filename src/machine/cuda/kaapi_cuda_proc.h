@@ -71,6 +71,7 @@ struct kaapi_cuda_stream_t;
 
 typedef struct kaapi_cuda_ctx {
 #if defined(KAAPI_USE_CUPTI)
+  /* Lock need to use CUPTI traces (which is not thread-safe) */
   kaapi_lock_t lock;
 #endif
   cublasHandle_t handle;

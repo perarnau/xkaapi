@@ -206,7 +206,9 @@ int kaapi_cuda_proc_all_isvalid(void)
 
 void kaapi_cuda_proc_destroy(kaapi_processor_t* const kproc)
 {
+#if defined(KAAPI_USE_CUPTI)
   kaapi_atomic_destroylock(&kproc->cuda_proc.ctx.lock);
+#endif
 #if 0
   kaapi_cuda_cublas_finalize(&kproc->cuda_proc);
   kaapi_cuda_stream_destroy(kproc->cuda_proc.kstream);
