@@ -30,58 +30,58 @@ int
 test1 (void)
 {
   int e = 0, idx;
-  
+
 #pragma omp parallel reduction(+:e)
   {
     long long i;
     unsigned long long j;
-#pragma omp for schedule(dynamic,1) nowait
+    #pragma omp for schedule(dynamic,1) nowait
     for (i = LLONG_MAX - 30001; LLONG_MAX - 10001 >= i; i += 10000)
-    {
-      check (i, LLONG_MAX - 30001, 0, 0)
-      check (i, LLONG_MAX - 20001, 0, 1)
-      check (i, LLONG_MAX - 10001, 0, 2)
-      e = 1;
-    }
-#pragma omp for schedule(dynamic,1) nowait
+      {
+	check (i, LLONG_MAX - 30001, 0, 0)
+	check (i, LLONG_MAX - 20001, 0, 1)
+	check (i, LLONG_MAX - 10001, 0, 2)
+	e = 1;
+      }
+    #pragma omp for schedule(dynamic,1) nowait
     for (i = -LLONG_MAX + 30000; -LLONG_MAX + 10000 <= i; i -= 10000)
-    {
-      check (i, -LLONG_MAX + 30000, 1, 0)
-      check (i, -LLONG_MAX + 20000, 1, 1)
-      check (i, -LLONG_MAX + 10000, 1, 2)
-      e = 1;
-    }
-#pragma omp for schedule(dynamic,1) nowait
+      {
+	check (i, -LLONG_MAX + 30000, 1, 0)
+	check (i, -LLONG_MAX + 20000, 1, 1)
+	check (i, -LLONG_MAX + 10000, 1, 2)
+	e = 1;
+      }
+    #pragma omp for schedule(dynamic,1) nowait
     for (j = 20; LLONG_MAX - 70 >= j; j += LLONG_MAX + 50ULL)
-    {
-      check (j, 20, 2, 0)
-      e = 1;
-    }
-#pragma omp for schedule(dynamic,1) nowait
+      {
+	check (j, 20, 2, 0)
+	e = 1;
+      }
+    #pragma omp for schedule(dynamic,1) nowait
     for (j = ULLONG_MAX - 3; LLONG_MAX + 70ULL <= j; j -= LLONG_MAX + 50ULL)
-    {
-      check (j, ULLONG_MAX - 3, 3, 0)
-      e = 1;
-    }
-#pragma omp for schedule(dynamic,1) nowait
+      {
+	check (j, ULLONG_MAX - 3, 3, 0)
+	e = 1;
+      }
+    #pragma omp for schedule(dynamic,1) nowait
     for (j = LLONG_MAX - 20000ULL; LLONG_MAX + 10000ULL >= j; j += 10000ULL)
-    {
-      check (j, LLONG_MAX - 20000ULL, 4, 0)
-      check (j, LLONG_MAX - 10000ULL, 4, 1)
-      check (j, LLONG_MAX, 4, 2)
-      check (j, LLONG_MAX + 10000ULL, 4, 3)
-      e = 1;
-    }
-#pragma omp for schedule(dynamic,1) nowait
+      {
+	check (j, LLONG_MAX - 20000ULL, 4, 0)
+	check (j, LLONG_MAX - 10000ULL, 4, 1)
+	check (j, LLONG_MAX, 4, 2)
+	check (j, LLONG_MAX + 10000ULL, 4, 3)
+	e = 1;
+      }
+    #pragma omp for schedule(dynamic,1) nowait
     for (i = -3LL * INT_MAX - 20000LL; INT_MAX + 10000LL >= i; i += INT_MAX + 200LL)
-    {
-      check (i, -3LL * INT_MAX - 20000LL, 5, 0)
-      check (i, -2LL * INT_MAX - 20000LL + 200LL, 5, 1)
-      check (i, -INT_MAX - 20000LL + 400LL, 5, 2)
-      check (i, -20000LL + 600LL, 5, 3)
-      check (i, INT_MAX - 20000LL + 800LL, 5, 4)
-      e = 1;
-    }
+      {
+	check (i, -3LL * INT_MAX - 20000LL, 5, 0)
+	check (i, -2LL * INT_MAX - 20000LL + 200LL, 5, 1)
+	check (i, -INT_MAX - 20000LL + 400LL, 5, 2)
+	check (i, -20000LL + 600LL, 5, 3)
+	check (i, INT_MAX - 20000LL + 800LL, 5, 4)
+	e = 1;
+      }
   }
   if (e)
     abort ();
@@ -98,58 +98,58 @@ int
 test2 (void)
 {
   int e = 0, idx;
-  
+
 #pragma omp parallel reduction(+:e)
   {
     long long i;
     unsigned long long j;
-#pragma omp for schedule(guided,1) nowait
+    #pragma omp for schedule(guided,1) nowait
     for (i = LLONG_MAX - 30001; LLONG_MAX - 10001 >= i; i += 10000)
-    {
-      check (i, LLONG_MAX - 30001, 0, 0)
-      check (i, LLONG_MAX - 20001, 0, 1)
-      check (i, LLONG_MAX - 10001, 0, 2)
-      e = 1;
-    }
-#pragma omp for schedule(guided,1) nowait
+      {
+	check (i, LLONG_MAX - 30001, 0, 0)
+	check (i, LLONG_MAX - 20001, 0, 1)
+	check (i, LLONG_MAX - 10001, 0, 2)
+	e = 1;
+      }
+    #pragma omp for schedule(guided,1) nowait
     for (i = -LLONG_MAX + 30000; -LLONG_MAX + 10000 <= i; i -= 10000)
-    {
-      check (i, -LLONG_MAX + 30000, 1, 0)
-      check (i, -LLONG_MAX + 20000, 1, 1)
-      check (i, -LLONG_MAX + 10000, 1, 2)
-      e = 1;
-    }
-#pragma omp for schedule(guided,1) nowait
+      {
+	check (i, -LLONG_MAX + 30000, 1, 0)
+	check (i, -LLONG_MAX + 20000, 1, 1)
+	check (i, -LLONG_MAX + 10000, 1, 2)
+	e = 1;
+      }
+    #pragma omp for schedule(guided,1) nowait
     for (j = 20; LLONG_MAX - 70 >= j; j += LLONG_MAX + 50ULL)
-    {
-      check (j, 20, 2, 0)
-      e = 1;
-    }
-#pragma omp for schedule(guided,1) nowait
+      {
+	check (j, 20, 2, 0)
+	e = 1;
+      }
+    #pragma omp for schedule(guided,1) nowait
     for (j = ULLONG_MAX - 3; LLONG_MAX + 70ULL <= j; j -= LLONG_MAX + 50ULL)
-    {
-      check (j, ULLONG_MAX - 3, 3, 0)
-      e = 1;
-    }
-#pragma omp for schedule(guided,1) nowait
+      {
+	check (j, ULLONG_MAX - 3, 3, 0)
+	e = 1;
+      }
+    #pragma omp for schedule(guided,1) nowait
     for (j = LLONG_MAX - 20000ULL; LLONG_MAX + 10000ULL >= j; j += 10000ULL)
-    {
-      check (j, LLONG_MAX - 20000ULL, 4, 0)
-      check (j, LLONG_MAX - 10000ULL, 4, 1)
-      check (j, LLONG_MAX, 4, 2)
-      check (j, LLONG_MAX + 10000ULL, 4, 3)
-      e = 1;
-    }
-#pragma omp for schedule(guided,1) nowait
+      {
+	check (j, LLONG_MAX - 20000ULL, 4, 0)
+	check (j, LLONG_MAX - 10000ULL, 4, 1)
+	check (j, LLONG_MAX, 4, 2)
+	check (j, LLONG_MAX + 10000ULL, 4, 3)
+	e = 1;
+      }
+    #pragma omp for schedule(guided,1) nowait
     for (i = -3LL * INT_MAX - 20000LL; INT_MAX + 10000LL >= i; i += INT_MAX + 200LL)
-    {
-      check (i, -3LL * INT_MAX - 20000LL, 5, 0)
-      check (i, -2LL * INT_MAX - 20000LL + 200LL, 5, 1)
-      check (i, -INT_MAX - 20000LL + 400LL, 5, 2)
-      check (i, -20000LL + 600LL, 5, 3)
-      check (i, INT_MAX - 20000LL + 800LL, 5, 4)
-      e = 1;
-    }
+      {
+	check (i, -3LL * INT_MAX - 20000LL, 5, 0)
+	check (i, -2LL * INT_MAX - 20000LL + 200LL, 5, 1)
+	check (i, -INT_MAX - 20000LL + 400LL, 5, 2)
+	check (i, -20000LL + 600LL, 5, 3)
+	check (i, INT_MAX - 20000LL + 800LL, 5, 4)
+	e = 1;
+      }
   }
   if (e)
     abort ();
@@ -166,58 +166,58 @@ int
 test3 (void)
 {
   int e = 0, idx;
-  
+
 #pragma omp parallel reduction(+:e)
   {
     long long i;
     unsigned long long j;
-#pragma omp for schedule(static) nowait
+    #pragma omp for schedule(static) nowait
     for (i = LLONG_MAX - 30001; LLONG_MAX - 10001 >= i; i += 10000)
-    {
-      check (i, LLONG_MAX - 30001, 0, 0)
-      check (i, LLONG_MAX - 20001, 0, 1)
-      check (i, LLONG_MAX - 10001, 0, 2)
-      e = 1;
-    }
-#pragma omp for schedule(static) nowait
+      {
+	check (i, LLONG_MAX - 30001, 0, 0)
+	check (i, LLONG_MAX - 20001, 0, 1)
+	check (i, LLONG_MAX - 10001, 0, 2)
+	e = 1;
+      }
+    #pragma omp for schedule(static) nowait
     for (i = -LLONG_MAX + 30000; -LLONG_MAX + 10000 <= i; i -= 10000)
-    {
-      check (i, -LLONG_MAX + 30000, 1, 0)
-      check (i, -LLONG_MAX + 20000, 1, 1)
-      check (i, -LLONG_MAX + 10000, 1, 2)
-      e = 1;
-    }
-#pragma omp for schedule(static) nowait
+      {
+	check (i, -LLONG_MAX + 30000, 1, 0)
+	check (i, -LLONG_MAX + 20000, 1, 1)
+	check (i, -LLONG_MAX + 10000, 1, 2)
+	e = 1;
+      }
+    #pragma omp for schedule(static) nowait
     for (j = 20; LLONG_MAX - 70 >= j; j += LLONG_MAX + 50ULL)
-    {
-      check (j, 20, 2, 0)
-      e = 1;
-    }
-#pragma omp for schedule(static) nowait
+      {
+	check (j, 20, 2, 0)
+	e = 1;
+      }
+    #pragma omp for schedule(static) nowait
     for (j = ULLONG_MAX - 3; LLONG_MAX + 70ULL <= j; j -= LLONG_MAX + 50ULL)
-    {
-      check (j, ULLONG_MAX - 3, 3, 0)
-      e = 1;
-    }
-#pragma omp for schedule(static) nowait
+      {
+	check (j, ULLONG_MAX - 3, 3, 0)
+	e = 1;
+      }
+    #pragma omp for schedule(static) nowait
     for (j = LLONG_MAX - 20000ULL; LLONG_MAX + 10000ULL >= j; j += 10000ULL)
-    {
-      check (j, LLONG_MAX - 20000ULL, 4, 0)
-      check (j, LLONG_MAX - 10000ULL, 4, 1)
-      check (j, LLONG_MAX, 4, 2)
-      check (j, LLONG_MAX + 10000ULL, 4, 3)
-      e = 1;
-    }
-#pragma omp for schedule(static) nowait
+      {
+	check (j, LLONG_MAX - 20000ULL, 4, 0)
+	check (j, LLONG_MAX - 10000ULL, 4, 1)
+	check (j, LLONG_MAX, 4, 2)
+	check (j, LLONG_MAX + 10000ULL, 4, 3)
+	e = 1;
+      }
+    #pragma omp for schedule(static) nowait
     for (i = -3LL * INT_MAX - 20000LL; INT_MAX + 10000LL >= i; i += INT_MAX + 200LL)
-    {
-      check (i, -3LL * INT_MAX - 20000LL, 5, 0)
-      check (i, -2LL * INT_MAX - 20000LL + 200LL, 5, 1)
-      check (i, -INT_MAX - 20000LL + 400LL, 5, 2)
-      check (i, -20000LL + 600LL, 5, 3)
-      check (i, INT_MAX - 20000LL + 800LL, 5, 4)
-      e = 1;
-    }
+      {
+	check (i, -3LL * INT_MAX - 20000LL, 5, 0)
+	check (i, -2LL * INT_MAX - 20000LL + 200LL, 5, 1)
+	check (i, -INT_MAX - 20000LL + 400LL, 5, 2)
+	check (i, -20000LL + 600LL, 5, 3)
+	check (i, INT_MAX - 20000LL + 800LL, 5, 4)
+	e = 1;
+      }
   }
   if (e)
     abort ();
@@ -234,58 +234,58 @@ int
 test4 (void)
 {
   int e = 0, idx;
-  
+
 #pragma omp parallel reduction(+:e)
   {
     long long i;
     unsigned long long j;
-#pragma omp for schedule(static,1) nowait
+    #pragma omp for schedule(static,1) nowait
     for (i = LLONG_MAX - 30001; LLONG_MAX - 10001 >= i; i += 10000)
-    {
-      check (i, LLONG_MAX - 30001, 0, 0)
-      check (i, LLONG_MAX - 20001, 0, 1)
-      check (i, LLONG_MAX - 10001, 0, 2)
-      e = 1;
-    }
-#pragma omp for schedule(static,1) nowait
+      {
+	check (i, LLONG_MAX - 30001, 0, 0)
+	check (i, LLONG_MAX - 20001, 0, 1)
+	check (i, LLONG_MAX - 10001, 0, 2)
+	e = 1;
+      }
+    #pragma omp for schedule(static,1) nowait
     for (i = -LLONG_MAX + 30000; -LLONG_MAX + 10000 <= i; i -= 10000)
-    {
-      check (i, -LLONG_MAX + 30000, 1, 0)
-      check (i, -LLONG_MAX + 20000, 1, 1)
-      check (i, -LLONG_MAX + 10000, 1, 2)
-      e = 1;
-    }
-#pragma omp for schedule(static,1) nowait
+      {
+	check (i, -LLONG_MAX + 30000, 1, 0)
+	check (i, -LLONG_MAX + 20000, 1, 1)
+	check (i, -LLONG_MAX + 10000, 1, 2)
+	e = 1;
+      }
+    #pragma omp for schedule(static,1) nowait
     for (j = 20; LLONG_MAX - 70 >= j; j += LLONG_MAX + 50ULL)
-    {
-      check (j, 20, 2, 0)
-      e = 1;
-    }
-#pragma omp for schedule(static,1) nowait
+      {
+	check (j, 20, 2, 0)
+	e = 1;
+      }
+    #pragma omp for schedule(static,1) nowait
     for (j = ULLONG_MAX - 3; LLONG_MAX + 70ULL <= j; j -= LLONG_MAX + 50ULL)
-    {
-      check (j, ULLONG_MAX - 3, 3, 0)
-      e = 1;
-    }
-#pragma omp for schedule(static,1) nowait
+      {
+	check (j, ULLONG_MAX - 3, 3, 0)
+	e = 1;
+      }
+    #pragma omp for schedule(static,1) nowait
     for (j = LLONG_MAX - 20000ULL; LLONG_MAX + 10000ULL >= j; j += 10000ULL)
-    {
-      check (j, LLONG_MAX - 20000ULL, 4, 0)
-      check (j, LLONG_MAX - 10000ULL, 4, 1)
-      check (j, LLONG_MAX, 4, 2)
-      check (j, LLONG_MAX + 10000ULL, 4, 3)
-      e = 1;
-    }
-#pragma omp for schedule(static,1) nowait
+      {
+	check (j, LLONG_MAX - 20000ULL, 4, 0)
+	check (j, LLONG_MAX - 10000ULL, 4, 1)
+	check (j, LLONG_MAX, 4, 2)
+	check (j, LLONG_MAX + 10000ULL, 4, 3)
+	e = 1;
+      }
+    #pragma omp for schedule(static,1) nowait
     for (i = -3LL * INT_MAX - 20000LL; INT_MAX + 10000LL >= i; i += INT_MAX + 200LL)
-    {
-      check (i, -3LL * INT_MAX - 20000LL, 5, 0)
-      check (i, -2LL * INT_MAX - 20000LL + 200LL, 5, 1)
-      check (i, -INT_MAX - 20000LL + 400LL, 5, 2)
-      check (i, -20000LL + 600LL, 5, 3)
-      check (i, INT_MAX - 20000LL + 800LL, 5, 4)
-      e = 1;
-    }
+      {
+	check (i, -3LL * INT_MAX - 20000LL, 5, 0)
+	check (i, -2LL * INT_MAX - 20000LL + 200LL, 5, 1)
+	check (i, -INT_MAX - 20000LL + 400LL, 5, 2)
+	check (i, -20000LL + 600LL, 5, 3)
+	check (i, INT_MAX - 20000LL + 800LL, 5, 4)
+	e = 1;
+      }
   }
   if (e)
     abort ();
@@ -302,58 +302,58 @@ int
 test5 (void)
 {
   int e = 0, idx;
-  
+
 #pragma omp parallel reduction(+:e)
   {
     long long i;
     unsigned long long j;
-#pragma omp for schedule(runtime) nowait
+    #pragma omp for schedule(runtime) nowait
     for (i = LLONG_MAX - 30001; LLONG_MAX - 10001 >= i; i += 10000)
-    {
-      check (i, LLONG_MAX - 30001, 0, 0)
-      check (i, LLONG_MAX - 20001, 0, 1)
-      check (i, LLONG_MAX - 10001, 0, 2)
-      e = 1;
-    }
-#pragma omp for schedule(runtime) nowait
+      {
+	check (i, LLONG_MAX - 30001, 0, 0)
+	check (i, LLONG_MAX - 20001, 0, 1)
+	check (i, LLONG_MAX - 10001, 0, 2)
+	e = 1;
+      }
+    #pragma omp for schedule(runtime) nowait
     for (i = -LLONG_MAX + 30000; -LLONG_MAX + 10000 <= i; i -= 10000)
-    {
-      check (i, -LLONG_MAX + 30000, 1, 0)
-      check (i, -LLONG_MAX + 20000, 1, 1)
-      check (i, -LLONG_MAX + 10000, 1, 2)
-      e = 1;
-    }
-#pragma omp for schedule(runtime) nowait
+      {
+	check (i, -LLONG_MAX + 30000, 1, 0)
+	check (i, -LLONG_MAX + 20000, 1, 1)
+	check (i, -LLONG_MAX + 10000, 1, 2)
+	e = 1;
+      }
+    #pragma omp for schedule(runtime) nowait
     for (j = 20; LLONG_MAX - 70 >= j; j += LLONG_MAX + 50ULL)
-    {
-      check (j, 20, 2, 0)
-      e = 1;
-    }
-#pragma omp for schedule(runtime) nowait
+      {
+	check (j, 20, 2, 0)
+	e = 1;
+      }
+    #pragma omp for schedule(runtime) nowait
     for (j = ULLONG_MAX - 3; LLONG_MAX + 70ULL <= j; j -= LLONG_MAX + 50ULL)
-    {
-      check (j, ULLONG_MAX - 3, 3, 0)
-      e = 1;
-    }
-#pragma omp for schedule(runtime) nowait
+      {
+	check (j, ULLONG_MAX - 3, 3, 0)
+	e = 1;
+      }
+    #pragma omp for schedule(runtime) nowait
     for (j = LLONG_MAX - 20000ULL; LLONG_MAX + 10000ULL >= j; j += 10000ULL)
-    {
-      check (j, LLONG_MAX - 20000ULL, 4, 0)
-      check (j, LLONG_MAX - 10000ULL, 4, 1)
-      check (j, LLONG_MAX, 4, 2)
-      check (j, LLONG_MAX + 10000ULL, 4, 3)
-      e = 1;
-    }
-#pragma omp for schedule(runtime) nowait
+      {
+	check (j, LLONG_MAX - 20000ULL, 4, 0)
+	check (j, LLONG_MAX - 10000ULL, 4, 1)
+	check (j, LLONG_MAX, 4, 2)
+	check (j, LLONG_MAX + 10000ULL, 4, 3)
+	e = 1;
+      }
+    #pragma omp for schedule(runtime) nowait
     for (i = -3LL * INT_MAX - 20000LL; INT_MAX + 10000LL >= i; i += INT_MAX + 200LL)
-    {
-      check (i, -3LL * INT_MAX - 20000LL, 5, 0)
-      check (i, -2LL * INT_MAX - 20000LL + 200LL, 5, 1)
-      check (i, -INT_MAX - 20000LL + 400LL, 5, 2)
-      check (i, -20000LL + 600LL, 5, 3)
-      check (i, INT_MAX - 20000LL + 800LL, 5, 4)
-      e = 1;
-    }
+      {
+	check (i, -3LL * INT_MAX - 20000LL, 5, 0)
+	check (i, -2LL * INT_MAX - 20000LL + 200LL, 5, 1)
+	check (i, -INT_MAX - 20000LL + 400LL, 5, 2)
+	check (i, -20000LL + 600LL, 5, 3)
+	check (i, INT_MAX - 20000LL + 800LL, 5, 4)
+	e = 1;
+      }
   }
   if (e)
     abort ();
