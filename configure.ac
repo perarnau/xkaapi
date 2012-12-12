@@ -59,7 +59,6 @@ dnl Checks for programs and compilers options
 dnl ----------------------------------------------------------------
 PKG_PROG_PKG_CONFIG
 AC_PROG_CC
-AC_PROG_CC_C99
 AM_PROG_CC_C_O
 AC_PROG_INSTALL
 LT_INIT

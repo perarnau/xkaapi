@@ -117,4 +117,5 @@ int main(int argc, char *argv[])
   fprintf(stdout, "Time : %f (s)\n", stop-start);
 
   kaapic_finalize();
+  return 0;
 }

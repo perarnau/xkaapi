@@ -306,7 +306,8 @@ komp_parallel_start (
     int chunk_size = num_threads / nb_worker_threads;
     int remaining_tasks = num_threads - (nb_worker_threads * chunk_size);
     
-    for (int i = 0; i < nb_worker_threads; i++)
+    int i;
+    for (i = 0; i < nb_worker_threads; i++)
       tasks_per_thread[i] = chunk_size;
     
     int thread_id = 0;
@@ -319,7 +320,7 @@ komp_parallel_start (
     
     int task_id = 1;
     /* Distribute the num_threads tasks over the nb_worker_threads workers. */
-    for (int i = 0; i < nb_worker_threads; i++)
+    for (i = 0; i < nb_worker_threads; i++)
     {
       int nb_pushed_tasks = (i == 0) ? 1 : 0; /* The master thread calls fn (data) directly. */
       
@@ -348,7 +349,8 @@ komp_parallel_start (
   { 
     /* Nested parallel region, push all nested tasks in the queue of the calling thread. */
     task = kaapi_thread_toptask(thread);
-    for (int i = 1; i < num_threads; i++)
+    int i;
+    for (i = 1; i < num_threads; i++)
     {
       komp_task_prepare (task, allarg, thread, fn, data, teaminfo, ctxt, i);
       task = kaapi_thread_nexttask(thread, task);

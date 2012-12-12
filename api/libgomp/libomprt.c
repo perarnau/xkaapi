@@ -210,7 +210,8 @@ omp_get_ancestor_thread_num (int level)
   if ((level < 0) || (hops < 0) || teaminfo == NULL)
     return -1;
  
-  for (int i = 0; i < hops; i++)
+  int i;
+  for (i = 0; i < hops; i++)
     {
       if (teaminfo->previous_team == NULL)
 	return error;
@@ -241,7 +242,8 @@ omp_get_team_size (int level)
   if (hops == 0)
     return teaminfo->numthreads;
 
-  for (int i = 0; i < hops; i++)
+  int i;
+  for (i = 0; i < hops; i++)
     {
       if (teaminfo->previous_team == NULL)
 	return error;

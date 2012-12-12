@@ -394,7 +394,8 @@ void GOMP_parallel_loop_dynamic_start (
   /* The master thread (id 0) calls fn (data) directly. That's why we
      start this loop from id = 1.*/
   task = kaapi_thread_toptask(thread);
-  for (int i = 1; i < num_threads; i++)
+  int i;
+  for (i = 1; i < num_threads; i++)
   {
     arg = allarg+i;
     arg->threadid   = i;
