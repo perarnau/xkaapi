@@ -137,7 +137,7 @@ proc libgomp_init { args } {
         lappend ALWAYS_CFLAGS "ldflags=-L${blddir}/.libs"
     }
     # libgomp_g.h/libgomp.h
-    lappend ALWAYS_CFLAGS "additional_flags=-I${srcdir}/.."
+    lappend ALWAYS_CFLAGS "additional_flags=-I${srcdir}/../../../api/libgomp"
     # kaapi_impl.h
     lappend ALWAYS_CFLAGS "additional_flags=-I${srcdir}/../../../src"
     # config.h

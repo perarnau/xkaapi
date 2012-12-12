@@ -1,4 +1,8 @@
 
+DIST_SUBDIRS=gcc-testsuite
+
+clean-recursive: SUBDIRS+=$(DIST_SUBDIRS)
+
 AM_CFLAGS=@AM_CFLAGS@ -fopenmp
 LIBS=@LIBS@ -lgomp
 
