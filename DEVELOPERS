@@ -21,6 +21,7 @@ archive this is to type "make check".
   The testsuite script has lots of useful options. For example:
 * "-l" option will list all tests with their keywords
 * "-k k1,k2 -k k3" will only run tests with keywords (k1 and k2) or k3
+  keywords can be negated with '!' (protect it from bash)
 * "-v" will run tests in verbose mode
 
   If one test fails, its number is shown and you will find information and
@@ -32,6 +33,13 @@ passed using the TESTSUITEFLAGS variable:
 make check TESTSUITEFLAGS="-k fibo"  # run all tests with the 'fibo' keyword
 make check TESTSUITEFLAGS="-l"       # list all available tests
 make check TESTSUITEFLAGS="26"       # run the test numbered 26
+# more complex: run all tests but the ones that clean the compilation
+# nor the ones from the GCC libgomp testsuite. Compilation is done in parallel.
+# This is probably very useful when doing development
+make check TESTSUITEFLAGS='-k !clean,!gcc-testsuite' -j
+
+When TESTSUITEFLAGS is not explicitely defined, its default value is
+'-k !gcc-testsuite' (ie all tests but the ones from the GCC libgomp testsuite).
 
 II.1 Writing tests for Autotest:
 ********************************

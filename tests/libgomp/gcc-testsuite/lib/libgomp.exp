@@ -101,7 +101,9 @@ proc libgomp_init { args } {
     }
 
     # Compute what needs to be put into LD_LIBRARY_PATH
-    set always_ld_library_path ".:../.libs"
+    set always_ld_library_path ".:../../../api/libgomp/.libs"
+    append always_ld_library_path ":../../../api/libgomp/.libs"
+    append always_ld_library_path ":../../../src/.libs"
 
     # Compute what needs to be added to the existing LD_LIBRARY_PATH.
     if {$gccdir != ""} {

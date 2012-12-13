@@ -6,12 +6,6 @@ KAT_HOOK([CHECK_RUN],[BEFORE],[
   AT_EXPORT([KAAPI_GOMP_SHOW_BANNER],[1])
 ])
 
-m4_define([KAT_GOMP_UNIT_TESTS_LIST],
-  [parallel shared critical nested barrier barrier2 single fibo
-   task-firstprivate loop loop2 ordered get_level get_active_level
-   get_ancestor_thread_num
-  ])
-
 m4_define([KAT_GOMP_TEST_PROG],[
   KAT_TEST_PROG([$1],[m4_if([$2],[],[test $1],[$2])],[],[],[],[],[],
 [Using xkaapi as GNU OpenMP runtime
@@ -32,3 +26,5 @@ KAT_GOMP_TEST_PROG([ordered])
 KAT_GOMP_TEST_PROG([get_level])
 KAT_GOMP_TEST_PROG([get_active_level])
 KAT_GOMP_TEST_PROG([get_ancestor_thread_num])
+
+m4_include([testsuite-libgomp-gcc.at])
