@@ -272,6 +272,16 @@ void callback_print_event(
 
     case KAAPI_EVT_FOREACH_STEAL:
     break;
+      
+    case KAAPI_EVT_CUDA_CPU_SYNC_BEG:
+    case KAAPI_EVT_CUDA_CPU_SYNC_END:
+    case KAAPI_EVT_CUDA_GPU_HTOD_BEG:
+    case KAAPI_EVT_CUDA_GPU_HTOD_END:
+    case KAAPI_EVT_CUDA_GPU_DTOH_BEG:
+    case KAAPI_EVT_CUDA_GPU_DTOH_END:
+    case KAAPI_EVT_CUDA_GPU_KERNEL_BEG:
+    case KAAPI_EVT_CUDA_GPU_KERNEL_END:
+      break;
   }
   std::cout << std::endl;
 }
