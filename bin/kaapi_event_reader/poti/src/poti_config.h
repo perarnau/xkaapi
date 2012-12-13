@@ -17,7 +17,7 @@
 #ifndef _POTI_CONFIG_H
 #define _POTI_CONFIG_H
 
-#define POTI_GITVERSION "52e8c11 fix indentation"
-#define POTI_GITDATE "2012-02-27 12:56:54 +0100"
+#define POTI_GITVERSION "7260aed better explanation"
+#define POTI_GITDATE "2012-12-13 01:08:15 +0100"
 
 #endif

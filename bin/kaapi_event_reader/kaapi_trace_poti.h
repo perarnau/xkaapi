@@ -51,32 +51,19 @@
 //pajeOpen
 static inline int kaapi_trace_poti_Open(const char* filename)
 {
-#if defined(KAAPI_USE_POTI)
   return poti_open(filename);
-#else
-  return pajeOpen(filename);
-#endif
 }
 
 //pajeClose
 static inline void kaapi_trace_poti_Close(void)
 {
-#if defined(KAAPI_USE_POTI)
   poti_close();
-#else
-  pajeClose();
-#endif  
 }
 
 //pajeHeader
-static inline void kaapi_trace_poti_Header(void)
+static inline void kaapi_trace_poti_Header( int basic, int old_header)
 {
-#if defined(KAAPI_USE_POTI)
-  /* TODO: POTI basic mode. To verify */
-  poti_header(1);
-#else
-  pajeHeader();
-#endif
+  poti_header(basic, old_header);
 }
 
 //pajeCreateContainer
@@ -86,11 +73,7 @@ static inline void kaapi_trace_poti_CreateContainer(double timestamp,
                          const char *container,
                          const char *name)
 {
-#if defined(KAAPI_USE_POTI)
   poti_CreateContainer(timestamp, alias, type, container, name);
-#else
-  pajeCreateContainer(timestamp, alias, type, container, name);
-#endif
 }
 
 //pajeDestroyContainer
@@ -98,11 +81,7 @@ static inline void kaapi_trace_poti_DestroyContainer(double timestamp,
                           const char *type,
                           const char *container)
 {
-#if defined(KAAPI_USE_POTI)
   poti_DestroyContainer(timestamp, type, container);
-#else
-  pajeDestroyContainer(timestamp, type, container);
-#endif
 }
 
 //pajeDefineContainerType
@@ -110,11 +89,7 @@ static inline void kaapi_trace_poti_DefineContainerType(const char *alias,
                              const char *containerType,
                              const char *name)
 {
-#if defined(KAAPI_USE_POTI)
   poti_DefineContainerType(alias, containerType, name);
-#else
-  pajeDefineContainerType(alias, containerType, name);
-#endif
 }
 
 //pajeDefineEntityValue
@@ -123,11 +98,7 @@ static inline void kaapi_trace_poti_DefineEntityValue(const char *alias,
                            const char *name,
                            const char *color)
 {
-#if defined(KAAPI_USE_POTI)
   poti_DefineEntityValue(alias, entityType, name, color);
-#else
-  pajeDefineEntityValue(alias, entityType, name, color);
-#endif
 }
 
 //pajeDefineStateType
@@ -135,11 +106,7 @@ static inline void kaapi_trace_poti_DefineStateType(const char *alias,
                          const char *containerType,
                          const char *name)
 {
-#if defined(KAAPI_USE_POTI)
   poti_DefineStateType(alias, containerType, name);
-#else
-  pajeDefineStateType(alias, containerType, name);
-#endif
 }
 
 //pajeDefineLinkType
@@ -149,11 +116,7 @@ static inline void kaapi_trace_poti_DefineLinkType(const char *alias,
                         const char *destContainerType,
                         const char *name)
 {
-#if defined(KAAPI_USE_POTI)
   poti_DefineLinkType(alias, containerType, sourceContainerType, destContainerType, name);
-#else
-  pajeDefineLinkType(alias, containerType, sourceContainerType, destContainerType, name);
-#endif
 }
 
 //pajeDefineEventType
@@ -162,11 +125,7 @@ static inline void kaapi_trace_poti_DefineEventType(const char *alias,
                          const char *name,
                          const char *color)
 {
-#if defined(KAAPI_USE_POTI)
-  poti_DefineEventType(alias, containerType, name, color);
-#else
-  pajeDefineEventType(alias, containerType, name, color);
-#endif
+  poti_DefineEventType(alias, containerType, name);
 }
 
 //pajeStartLink
@@ -177,11 +136,7 @@ static inline void kaapi_trace_poti_StartLink(double timestamp,
                    const char *value,
                    const char *key)
 {
-#if defined(KAAPI_USE_POTI)
   poti_StartLink(timestamp, container, type, sourceContainer, value, key);
-#else
-  pajeStartLink(timestamp, container, type, sourceContainer, value, key);
-#endif
 }
 
 //pajeEndLink
@@ -192,11 +147,7 @@ static inline void kaapi_trace_poti_EndLink(double timestamp,
                  const char *value,
                  const char *key)
 {
-#if defined(KAAPI_USE_POTI)
   poti_EndLink(timestamp, container, type, endContainer, value, key);
-#else
-  pajeEndLink(timestamp, container, type, endContainer, value, key);
-#endif
 }
 
 
@@ -205,11 +156,7 @@ static inline void kaapi_trace_poti_SetState(double timestamp,
                   const char *type,
                   const char *value)
 {
-#if defined(KAAPI_USE_POTI)
   poti_SetState(timestamp, container, type, value);
-#else
-  pajeSetState(timestamp, container, type, value);
-#endif
 }
 
 //pajePushState
@@ -218,11 +165,7 @@ static inline void kaapi_trace_poti_PushState(double timestamp,
                    const char *type,
                    const char *value)
 {
-#if defined(KAAPI_USE_POTI)
   poti_PushState(timestamp, container, type, value);
-#else
-  pajePushState(timestamp, container, type, value);
-#endif
 }
 
 //pajePopState
@@ -230,11 +173,7 @@ static inline void kaapi_trace_poti_PopState(double timestamp,
                   const char *container,
                   const char *type)
 {
-#if defined(KAAPI_USE_POTI)
   poti_PopState(timestamp, container, type);
-#else
-  pajePopState(timestamp, container, type);
-#endif
 }
 
 //pajeNewEvent
@@ -243,11 +182,7 @@ static inline void kaapi_trace_poti_NewEvent(double timestamp,
                   const char *type,
                   const char *value )
 {
-#if defined(KAAPI_USE_POTI)
   poti_NewEvent(timestamp, container, type, value);
-#else
-  pajeNewEvent(timestamp, container, type, value);
-#endif
 }
 
 #endif /* _KAAPI_TRACE_POTI_H_ */

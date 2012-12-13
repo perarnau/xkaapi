@@ -26,6 +26,8 @@ katracereader_LDADD+= $(POTI_LIBS)
 else
 katracereader_SOURCES += \
 	poti/src/poti.c \
+	poti/src/poti_header.c \
+	poti/src/poti_events.c \
 	poti/src/poti_private.h \
 	poti/src/poti_config.h\
 	poti/include/poti.h

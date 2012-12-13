@@ -112,11 +112,13 @@ static const char* kaapi_event_name[] = {
 typedef void (*kaapi_fnc_event)( int, const char** );
 
 struct katracereader_options {
+  std::string output; /* output file */
   unsigned int stealevent;
   unsigned int gputrace;
   unsigned int gputransfer;
+  unsigned int vitecompatibility; /* 1 if uses ViTE, 0 for Paje */
   
-  katracereader_options(): stealevent(0), gputrace(0), gputransfer(0) {}
+  katracereader_options(): output(""), stealevent(0), gputrace(0), gputransfer(0), vitecompatibility(0) {}
 };
 
 typedef struct katracereader_options katracereader_options_t;
@@ -129,12 +131,14 @@ static void print_usage()
 {
   fprintf(stderr, "Merge and convert internal Kaapi trace format to human readeable formats\n");
   fprintf(stderr, "*** options: -a | -p. Only one of the options may be selected at a time.\n");
-  fprintf(stderr, "  --display-data : display all data associated to each events\n");
+  fprintf(stderr, "  --display-data : display all data associated to each events.\n");
 //  fprintf(stderr, "  -m: display the mapping of tasks\n");
 //  fprintf(stderr, "  -s: display stats about runtime of all the tasks\n");
-  fprintf(stderr, "  --paje         : output Paje format for Gantt diagram, one row per core\n");
-  fprintf(stderr, "                  Output filename is gantt.trace\n");
-  fprintf(stderr, "  --steal-events : include steal events in trace.\n");
+  fprintf(stderr, "  --paje         : output Paje format for Gantt diagram, one row per core.\n");
+  fprintf(stderr, "                  Output filename is paje-gantt.trace.\n");
+  fprintf(stderr, "  --vite         : output Paje format compatible with ViTE.\n");
+  fprintf(stderr, "                  Output filename is vite-gantt.trace.\n");
+  fprintf(stderr, "  --steal-event  : include steal events in trace.\n");
   fprintf(stderr, "  --gpu-trace    : include GPU trace information.\n");
   fprintf(stderr, "  --gpu-transfer : include GPU transfers.\n");
   exit(1);
@@ -915,7 +919,7 @@ static void fnc_paje_gantt( int count, const char** filenames )
   err = fnc_paje_gantt_header();
   if (err !=0) 
   {
-    fprintf(stderr, "*** cannot open file: 'gantt.trace'\n");
+    fprintf(stderr, "*** cannot open file: '%s'\n", katracereader_options.output.c_str());
     exit(1);
   }
 
@@ -929,7 +933,7 @@ static void fnc_paje_gantt( int count, const char** filenames )
   err = fnc_paje_gantt_close(tmax);
   if (err !=0) 
   {
-    fprintf(stderr, "*** cannot close file: 'gantt.trace'\n");
+    fprintf(stderr, "*** cannot close file: '%s'\n", katracereader_options.output.c_str());
     exit(1);
   }
 }
@@ -937,8 +941,16 @@ static void fnc_paje_gantt( int count, const char** filenames )
 
 static int fnc_paje_gantt_header()
 {
-  kaapi_trace_poti_Open("gantt.trace");
-  kaapi_trace_poti_Header();
+  if( katracereader_options.vitecompatibility )
+  {
+    kaapi_trace_poti_Open(katracereader_options.output.c_str());
+    kaapi_trace_poti_Header(1,1);
+  }
+  else
+  {
+    kaapi_trace_poti_Open(katracereader_options.output.c_str());
+    kaapi_trace_poti_Header(0,0);
+  }
 
   kaapi_trace_poti_DefineContainerType ("ROOT", "0", "ROOT");  
 
@@ -1013,7 +1025,7 @@ static int fnc_paje_gantt_close(uint64_t gantt_tmax)
 {
   kaapi_trace_poti_DestroyContainer (1e-9*gantt_tmax, "ROOT", "root");
   kaapi_trace_poti_Close();
-  fprintf(stdout, "*** Paje file 'gantt.trace' closed\n");
+  fprintf(stdout, "*** Paje file '%s' closed\n", katracereader_options.output.c_str());
   return 0;
 }
 
@@ -1026,8 +1038,18 @@ static kaapi_fnc_event parse_option( const int argc, const char** argv, int* cou
     if (strcmp(argv[i], "--display-data") ==0)
       option = 'a';
     else if (strcmp(argv[i], "--paje") ==0)
+    {
       option = 'p';
-    else if (strcmp(argv[i], "--steal-events") ==0)
+      katracereader_options.vitecompatibility  = 0;
+      katracereader_options.output = "paje-gantt.trace";
+    }
+    else if (strcmp(argv[i], "--vite") ==0)
+    {
+      option = 'p';
+      katracereader_options.vitecompatibility  = 1;
+      katracereader_options.output = "vite-gantt.trace";
+    }
+    else if (strcmp(argv[i], "--steal-event") ==0)
       katracereader_options.stealevent = 1;
     else if (strcmp(argv[i], "--gpu-trace") ==0)
       katracereader_options.gputrace = 1;
