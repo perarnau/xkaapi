@@ -282,6 +282,9 @@ komp_parallel_start (
 #if KAAPI_KOMP_TRACE
   t0 = kaapic_get_time();
 #endif
+
+  int is_nested = komp_get_ctxtkproc(kproc)->icv.nested_level;
+
   teaminfo = komp_init_parallel_start( kproc, num_threads );
   thread = kaapi_threadcontext2thread(kproc->thread);
   
@@ -291,7 +294,7 @@ komp_parallel_start (
   /* allocate in the caller stack the tasks for the parallel region */
   allarg = kaapi_thread_pushdata(thread, num_threads * sizeof(komp_parallel_task_arg_t));
   
-  if (!ctxt->icv.nested_parallel)
+  if (!is_nested)
   {
     /* push the task for the i-th kprocessor queue... 
      - work fine for 1rst level parallel region.
@@ -323,7 +326,6 @@ komp_parallel_start (
     {
       int nb_pushed_tasks = (i == 0) ? 1 : 0; /* The master thread calls fn (data) directly. */
       
-#if 0
       task = kaapi_thread_toptask(thread);
       while (nb_pushed_tasks < tasks_per_thread[i])
       {
@@ -332,16 +334,6 @@ komp_parallel_start (
         task = kaapi_thread_nexttask(thread, task);      
         nb_pushed_tasks++;
       }
-#else
-      while (nb_pushed_tasks < tasks_per_thread[i])
-      {
-        task = kaapi_thread_toptask(thread);
-        komp_task_prepare (task, allarg, thread, fn, data, teaminfo, ctxt, task_id++);
-        kaapi_thread_pushtask(thread);
-        nb_pushed_tasks++;
-      }
-#endif
-
     }
   } 
   else 
