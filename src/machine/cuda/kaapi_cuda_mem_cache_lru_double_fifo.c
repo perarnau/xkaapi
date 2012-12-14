@@ -495,7 +495,7 @@ kaapi_cuda_mem_cache_lru_double_fifo_dec_use_rw(kaapi_cuda_mem_cache_lru_double_
 {
 #if defined(KAAPI_DEBUG)
   if (blk->u.wc == 0) {
-    fprintf(stdout, "[%s] kid=%lu ERROR double free ptr=%p (wc=%llu,rc=%llu)\n",
+    fprintf(stdout, "[%s] kid=%lu ERROR double free ptr=%p (wc=%lu,rc=%lu)\n",
             __FUNCTION__,
             (long unsigned int) kaapi_get_current_kid(),
             (void*)blk->ptr, blk->u.wc, blk->u.rc);
@@ -522,7 +522,7 @@ kaapi_cuda_mem_cache_lru_double_fifo_dec_use_ro(kaapi_cuda_mem_cache_lru_double_
 {
 #if defined(KAAPI_DEBUG)
   if (blk->u.rc == 0) {
-    fprintf(stdout, "[%s] kid=%lu ERROR double free ptr=%p (rc=%llu,wc=%llu)\n",
+    fprintf(stdout, "[%s] kid=%lu ERROR double free ptr=%p (rc=%lu,wc=%lu)\n",
             __FUNCTION__,
             (long unsigned int) kaapi_get_current_kid(),
             (void*)blk->ptr, blk->u.rc, blk->u.wc);
@@ -567,7 +567,7 @@ int kaapi_cuda_mem_cache_lru_double_fifo_init(void** data)
   
   cache = (kaapi_cuda_mem_cache_lru_double_fifo_t*)malloc(sizeof(kaapi_cuda_mem_cache_lru_double_fifo_t));
   /* 80% of total memory */
-  cache->total = 0.8 * kaapi_get_current_processor()->cuda_proc.deviceProp.totalGlobalMem;
+  cache->total = 0.8 * kaapi_processor_get_cudaproc(kaapi_get_current_processor())->deviceProp.totalGlobalMem;
   cache->used = 0;
   cache->ro.beg = cache->ro.end = 0;
   cache->rw.beg = cache->rw.end = 0;

@@ -45,10 +45,8 @@
 #include <inttypes.h>
 
 #if defined(KAAPI_USE_CUDA)
-# include "../machine/cuda/kaapi_cuda_execframe.h"
-# include "../machine/cuda/kaapi_cuda_threadgroup_execframe.h"
+#include "machine/cuda/kaapi_cuda_impl.h"
 #endif
-
 
 /* 
 */
@@ -331,6 +329,7 @@ static kaapi_access_t kaapi_taskformat_get_access_param(
     return kaapi_format_get_access_param(task_fmt, i, arg->sub_sp);
   {
     kaapi_access_t dummy;
+    kaapi_access_init(&dummy, 0);
     return dummy;
   }
 }
@@ -372,6 +371,7 @@ static kaapi_memory_view_t kaapi_taskformat_get_view_param(
     return kaapi_format_get_view_param(task_fmt, i, arg->sub_sp);
   {
     kaapi_memory_view_t view;
+    kaapi_memory_view_clear(&view);
     return view;
   }
 }

@@ -46,10 +46,11 @@
 #include "kaapi_impl.h"
 #include "../common/kaapi_procinfo.h"
 
+#if defined(KAAPI_USE_CUDA)
+#include "machine/cuda/kaapi_cuda_impl.h"
+#endif
 
 #if defined(KAAPI_USE_CUDA)
-
-//# include "../cuda/kaapi_cuda_proc.h"
 
 /* todo: move somewhere else */
 extern int kaapi_sched_select_victim_with_cuda_tasks
@@ -159,7 +160,8 @@ int kaapi_processor_init( kaapi_processor_t* kproc,
 #if defined(KAAPI_USE_CUDA)
   /* initialize cuda processor */
   if (kpi->proc_type == KAAPI_PROC_TYPE_CUDA) {
-    if (kaapi_cuda_proc_initialize(&kproc->cuda_proc, kpi->proc_index))
+    kproc->cuda_proc = kaapi_cuda_proc_alloc();
+    if (kaapi_cuda_proc_initialize(kproc->cuda_proc, kpi->proc_index))
       return -1;
   }
 #endif

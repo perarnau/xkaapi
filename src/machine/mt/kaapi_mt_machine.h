@@ -72,13 +72,7 @@
 #include "../../tasklist/kaapi_readytasklist.h"
 
 #if defined(KAAPI_USE_CUDA)
-#include "../cuda/kaapi_cuda_proc.h"
-#endif
-
-#if 0
-#include "../../memory/kaapi_mem.h"
-#include "../../memory/kaapi_mem_data.h"
-#include "../../memory/kaapi_mem_host_map.h"
+struct kaapi_cuda_proc_t;
 #endif
 
 /* ========================================================================== */
@@ -551,7 +545,7 @@ typedef struct kaapi_processor_t {
 
   /* cuda */
 #if defined(KAAPI_USE_CUDA)
-  kaapi_cuda_proc_t         cuda_proc;
+  struct kaapi_cuda_proc_t*         cuda_proc;
 #endif
 
 } kaapi_processor_t __attribute__ ((aligned (KAAPI_KPROCESSOR_ALIGNMENT_SIZE)));
@@ -903,6 +897,13 @@ static inline void kaapi_processor_set_self_workload
 {
   KAAPI_ATOMIC_WRITE(&kaapi_get_current_processor()->workload, workload);
 }
+
+#if defined(KAAPI_USE_CUDA)
+static inline struct kaapi_cuda_proc_t* kaapi_processor_get_cudaproc(kaapi_processor_t* kproc)
+{
+  return kproc->cuda_proc;
+}
+#endif
 
 /* Return a pointer to a memory region at least of the given size else return 0.
    The id is a value between 0 and 16-1, where 16 is the maximal number of temporary.

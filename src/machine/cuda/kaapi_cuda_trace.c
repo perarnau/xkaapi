@@ -48,9 +48,7 @@
 #include <cuda_runtime_api.h>
 
 #include "kaapi_impl.h"
-#include "kaapi_event.h"
-#include "kaapi_cuda_event.h"
-#include "kaapi_cuda_trace.h"
+#include "kaapi_cuda_impl.h"
 
 #if defined(KAAPI_USE_PERFCOUNTER) && defined(KAAPI_USE_CUPTI)
 

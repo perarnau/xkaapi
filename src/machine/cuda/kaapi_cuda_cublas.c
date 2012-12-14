@@ -69,8 +69,7 @@ void kaapi_cuda_cublas_set_stream(void)
 {
   kaapi_processor_t *const self_proc = kaapi_get_current_processor();
   const cublasStatus_t status =
-      cublasSetStream(self_proc->cuda_proc.ctx.handle,
-		      kaapi_cuda_kernel_stream());
+      cublasSetStream(kaapi_processor_get_cudaproc(self_proc)->ctx.handle, kaapi_cuda_kernel_stream());
   if (status != CUBLAS_STATUS_SUCCESS) {
     fprintf(stdout, "%s: CUBLAS ERROR %u\n", __FUNCTION__, status);
     fflush(stdout);
@@ -85,5 +84,5 @@ void kaapi_cuda_cublas_finalize(kaapi_cuda_proc_t * proc)
 
 cublasHandle_t kaapi_cuda_cublas_handle(void)
 {
-  return (kaapi_get_current_processor()->cuda_proc.ctx.handle);
+  return (kaapi_processor_get_cudaproc(kaapi_get_current_processor())->ctx.handle);
 }

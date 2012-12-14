@@ -45,6 +45,10 @@
 
 #include "kaapi_impl.h"
 
+#if defined(KAAPI_USE_CUDA)
+#include "machine/cuda/kaapi_cuda_impl.h"
+#endif
+
 /**
 */
 kaapi_pointer_t kaapi_memory_allocate( 

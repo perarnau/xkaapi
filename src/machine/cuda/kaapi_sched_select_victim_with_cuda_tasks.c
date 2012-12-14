@@ -47,7 +47,6 @@
 #include <stdlib.h>
 
 #include "kaapi_impl.h"
-#include "kaapi_cuda.h"
 #include "../common/kaapi_procinfo.h"
 
 #if 0

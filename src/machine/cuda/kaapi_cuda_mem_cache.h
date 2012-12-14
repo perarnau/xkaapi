@@ -51,4 +51,42 @@ int kaapi_cuda_mem_cache_init(kaapi_cuda_proc_t* proc);
 
 void kaapi_cuda_mem_cache_destroy(kaapi_cuda_proc_t* proc);
 
+static inline int kaapi_cuda_mem_cache_insert(kaapi_processor_t* const kproc, uintptr_t ptr, size_t size, kaapi_access_mode_t m)
+{
+  return kaapi_processor_get_cudaproc(kproc)->cache.insert(kaapi_processor_get_cudaproc(kproc)->cache.data,
+                                                     ptr,
+                                                     size,
+                                                     m);
+}
+
+static inline void* kaapi_cuda_mem_cache_remove(kaapi_processor_t* const kproc, const size_t size)
+{
+  return kaapi_processor_get_cudaproc(kproc)->cache.remove(kaapi_processor_get_cudaproc(kproc)->cache.data,
+                                                           size);
+}
+
+static inline int kaapi_cuda_mem_cache_is_full(kaapi_processor_t* const kproc, const size_t size)
+{
+  return kaapi_processor_get_cudaproc(kproc)->cache.is_full(kaapi_processor_get_cudaproc(kproc)->cache.data,
+                                                            size);
+}
+
+static inline int kaapi_cuda_mem_cache_inc_use(kaapi_processor_t* const kproc,
+                                           uintptr_t ptr, kaapi_memory_view_t* const view,
+                                           const kaapi_access_mode_t m)
+{
+  return kaapi_processor_get_cudaproc(kproc)->cache.inc_use(kaapi_processor_get_cudaproc(kproc)->cache.data,
+                                                            ptr, view, m);
+}
+
+static inline int kaapi_cuda_mem_cache_dec_use(kaapi_processor_t* const kproc, uintptr_t ptr,
+                                           kaapi_memory_view_t* const view,
+                                           const kaapi_access_mode_t m)
+{
+  return kaapi_processor_get_cudaproc(kproc)->cache.dec_use(kaapi_processor_get_cudaproc(kproc)->cache.data,
+                                                      ptr,
+                                                      view,
+                                                      m);
+}
+
 #endif				/* ! KAAPI_CUDA_MEM_CACHE_H_INCLUDED */

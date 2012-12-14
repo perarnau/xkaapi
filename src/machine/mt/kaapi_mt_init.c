@@ -55,8 +55,10 @@
 
 #if defined(KAAPI_USE_PERFCOUNTER)
 #include <signal.h>
+#endif
 
-#include "machine/cuda/kaapi_cuda_trace.h"
+#if defined(KAAPI_USE_CUDA)
+#include "machine/cuda/kaapi_cuda_impl.h"
 #endif
 
 /*
@@ -399,7 +401,7 @@ int kaapi_mt_finalize(void)
 #if defined(KAAPI_USE_CUDA)
     /* initialize cuda processor */
     if (kaapi_all_kprocessors[i]->proc_type == KAAPI_PROC_TYPE_CUDA)
-      kaapi_cuda_proc_cleanup(&kaapi_all_kprocessors[i]->cuda_proc);
+      kaapi_cuda_proc_cleanup(kaapi_all_kprocessors[i]->cuda_proc);
 #endif /* KAAPI_USE_CUDA */
     kaapi_wsqueuectxt_destroy(&kaapi_all_kprocessors[i]->lsuspend);
     kaapi_processor_destroy(kaapi_all_kprocessors[i]);

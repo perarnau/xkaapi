@@ -41,7 +41,12 @@
 ** terms.
 ** 
 */
+
 #include "kaapi_impl.h"
+
+#if defined(KAAPI_USE_CUDA)
+#include "machine/cuda/kaapi_cuda_impl.h"
+#endif
 
 typedef struct kaapi_flatemitsteal_context {
   kaapi_listrequest_t lr;   /* bit map used to post request */

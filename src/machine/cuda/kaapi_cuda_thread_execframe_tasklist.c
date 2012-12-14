@@ -190,7 +190,7 @@ int kaapi_cuda_thread_execframe_tasklist(kaapi_thread_context_t * thread)
   /* get the processor type to select correct entry point */
   proc_type = stack->proc->proc_type;
   
-  kstream = stack->proc->cuda_proc.kstream;
+  kstream = kaapi_processor_get_cudaproc(stack->proc)->kstream;
   
   kaapi_assert_debug(tasklist != 0);
   

@@ -55,6 +55,9 @@
 #include <unistd.h>
 #include <errno.h>
 
+#if defined(KAAPI_USE_CUDA)
+#include "machine/cuda/kaapi_cuda_impl.h"
+#endif
 
 /* == 0 if lib is not initialized
 */

@@ -53,7 +53,7 @@
 #include <cuda_runtime_api.h>
 
 #include "kaapi_impl.h"
-#include "kaapi_cuda_stream.h"
+#include "kaapi_cuda_impl.h"
 
 /*
 */
@@ -628,7 +628,7 @@ kaapi_cuda_waitfirst_kernel(kaapi_cuda_stream_t * stream)
 
 void kaapi_cuda_stream_poll(kaapi_processor_t * const kproc)
 {
-  kaapi_cuda_stream_t *const kstream = kproc->cuda_proc.kstream;
+  kaapi_cuda_stream_t *const kstream = kaapi_processor_get_cudaproc(kproc)->kstream;
   if (!kaapi_cuda_stream_is_empty(kstream))
     kaapi_cuda_test_stream(kstream);
 }
