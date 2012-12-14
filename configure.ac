@@ -607,17 +607,18 @@ ACX_LIB_LINK([KAAPILIB],[NUMA])
 dnl -----------------------------------------------------------------------
 dnl The "--with-cuda"
 dnl -----------------------------------------------------------------------
+USE_CUDA=no
 KAAPI_PKGLIB_CHECK([GPU programming], [cuda], [CUDA], [no], [KAAPI_USE_CUDA],
   [build CUDA support [EXPERIMENTAL]],
   [cudart], [], [cuda_runtime_api.h], [cudaDeviceGetAttribute], [
 dnl    CUDA is there
     AC_DEFINE([KAAPI_USE_CUDA],1,[Support for CUDA])
-    HACK_USE_CUDA=yes
+    USE_CUDA=yes
   ],
   [
   ],
   [-lcublas -lcudart])
-AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$HACK_USE_CUDA" = x"yes"])
+AM_CONDITIONAL([KAAPI_TARGET_CUDA],[test x"$USE_CUDA" = x"yes"])
 ACX_LIB_LINK([KAAPILIB],[CUDA])
 
 dnl -----------------------------------------------------------------------
@@ -853,7 +854,6 @@ AM_CONDITIONAL([KAAPI_TARGET_KACC],[test x"$KAAPI_USE_KACC" = x"yes"])
 
 
 AM_CONDITIONAL([KAAPI_HAVE_CBLAS],[test x"$CBLAS_LDFLAGS" != x])
-AM_CONDITIONAL([KAAPI_HAVE_LAPACKE],[test x"$LAPACKE_LDFLAGS" != x])
 
 dnl -----------------------------------------------------------------------
 dnl sub configure for external (but imported) projects
