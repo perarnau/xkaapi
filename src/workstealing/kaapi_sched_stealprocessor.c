@@ -61,8 +61,13 @@ int kaapi_sched_stealprocessor(
   kaapi_assert_debug( !kaapi_listrequest_iterator_empty(lrrange) );
   
   /* 1/ steal in ready list : to add in the futur */
-#if 1 /* to disable steal in kproc ready list */
+#if 0 /* to disable steal in kproc ready list */
   if ((kproc->mailbox.head != 0 ) || !kaapi_readytasklist_isempty(kproc->rtl))
+    kaapi_sched_stealreadytasklist( 0 /* thread: unused */, kproc, lrequests, lrrange );
+#endif
+#if 1 /* to disable steal in kproc ready list */
+  if ((kproc->mailbox.head != 0 ) || !kaapi_readytasklist_isempty(kproc->rtl) ||
+        !kaapi_readytasklist_isempty(kproc->rtl_remote))
     kaapi_sched_stealreadytasklist( 0 /* thread: unused */, kproc, lrequests, lrrange );
 #endif
 

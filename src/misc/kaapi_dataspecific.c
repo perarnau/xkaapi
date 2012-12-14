@@ -51,15 +51,30 @@ void* _kaapi_gettemporary_data(kaapi_processor_t*kproc, unsigned int id, size_t 
     kaapi_assert_debug_m(1, "[kaapi] _kaapi_gettemporary_data, internal error: too many scratch arguments");
     return 0;
   }
+  
+  /* TODO: change all calls below to kaapi_memory_alloc/kaapi_memory_dealloc */
   if (kproc->size_specific[id] < size)
   {
-    if (kproc->data_specific[id] !=0) 
-      free(kproc->data_specific[id]);
-#if defined(KAAPI_DEBUG)
-    kproc->data_specific[id] = calloc(1, size);
-#else
-    kproc->data_specific[id] = malloc(size);
+#if defined(KAAPI_USE_CUDA)
+    if( kaapi_processor_get_type(kaapi_get_current_processor()) == KAAPI_PROC_TYPE_CUDA )
+    {
+      if (kproc->data_specific[id] != 0)
+          kaapi_cuda_mem_free(kaapi_make_localpointer(kproc->data_specific[id]));
+      
+      kproc->data_specific[id] = (void*)kaapi_cuda_mem_alloc(kaapi_memory_map_get_current_asid(), size,
+                                                 (int)KAAPI_ACCESS_MODE_R);
+    }
+    else
 #endif
+    {
+      if (kproc->data_specific[id] != 0)
+        free(kproc->data_specific[id]);
+  #if defined(KAAPI_DEBUG)
+      kproc->data_specific[id] = calloc(1, size);
+  #else
+      kproc->data_specific[id] = malloc(size);
+  #endif
+    }
     kproc->size_specific[id] = size;
   }
   return kproc->data_specific[id];

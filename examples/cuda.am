@@ -1,0 +1,119 @@
+##
+##  xkaapi
+##
+##  Copyright 2009, 2010, 2011, 2012, INRIA. All rights reserved.
+##
+
+CUDA_CBLAS_WARNING=
+
+CUDA_PROGS=
+
+CUDA_PROGS_CPPFLAGS = -DCONFIG_USE_CUDA=1 -DCONFIG_USE_CUBLAS=1
+
+if KAAPI_API_KAAPIXX
+if KAAPI_TARGET_CUDA
+if KAAPI_HAVE_CBLAS
+CUDA_PROGS += dgemm_cuda_kaapi++ \
+	      sgemm_cuda_kaapi++ \
+	      dpotrf_cuda_kaapi++ \
+	      spotrf_cuda_kaapi++ \
+	      dpotrf_rec_bloc_cuda_kaapi++ \
+	      spotrf_rec_bloc_cuda_kaapi++ \
+	      dgetrf_nopiv_cuda_kaapi++ \
+	      sgetrf_nopiv_cuda_kaapi++ \
+	      dgemm_rec_cuda_kaapi++ \
+	      sgemm_rec_cuda_kaapi++
+else
+CUDA_CBLAS_WARNING += no-cblas-cuda
+endif
+endif
+endif
+  
+all-cuda-examples: $(CUDA_CBLAS_WARNING)
+
+examples_PRGS+=$(CUDA_PROGS)
+all-cuda-examples: $(CUDA_PROGS)
+
+no-cblas-cuda:
+	@echo "******************************************************************************"
+	@echo "CBLAS_LDFLAGS was empty at configure time."
+	@echo "Examples requiring CBLAS libraries have been disabled"
+	@echo "Set CBLAS_LDFLAGS/CBLAS_CPPFLAGS in your environment if required"
+	@echo "See examples/matrix/README for more information"
+	@echo "******************************************************************************"
+
+CUDA_MATRIX_DEPS = cuda/matrix/timing.inl \
+		   cuda/matrix/cblas.inl \
+		   cuda/matrix/cublas.inl \
+		   cuda/matrix/clapack.inl \
+		   cuda/matrix/lapacke.inl \
+		   cuda/matrix/plasma.inl \
+		   cuda/matrix/matrix_cpu.inl \
+		   cuda/matrix/matrix_gpu.inl \
+		   cuda/matrix/matrix_dot.inl 
+
+dgemm_cuda_kaapi___SOURCES = cuda/matprod_iter_kaapi++/matprod_iter_kaapi++.cpp $(CUDA_MATRIX_DEPS)
+sgemm_cuda_kaapi___SOURCES = cuda/matprod_iter_kaapi++/matprod_iter_kaapi++.cpp $(CUDA_MATRIX_DEPS)
+
+dgemm_rec_cuda_kaapi___SOURCES = cuda/matprod_rec_kaapi++/matprod_rec_kaapi++.cpp $(CUDA_MATRIX_DEPS)
+sgemm_rec_cuda_kaapi___SOURCES = cuda/matprod_rec_kaapi++/matprod_rec_kaapi++.cpp $(CUDA_MATRIX_DEPS)
+
+dpotrf_cuda_kaapi___SOURCES = cuda/matcholesky_kaapi++/matcholesky_kaapi++.cpp $(CUDA_MATRIX_DEPS)
+spotrf_cuda_kaapi___SOURCES = cuda/matcholesky_kaapi++/matcholesky_kaapi++.cpp $(CUDA_MATRIX_DEPS)
+
+dpotrf_rec_bloc_cuda_kaapi___SOURCES = cuda/matcholesky_rec_bloc_kaapi++/matcholesky_rec_bloc_kaapi++.cpp $(CUDA_MATRIX_DEPS)
+spotrf_rec_bloc_cuda_kaapi___SOURCES = cuda/matcholesky_rec_bloc_kaapi++/matcholesky_rec_bloc_kaapi++.cpp $(CUDA_MATRIX_DEPS)
+
+dgetrf_nopiv_cuda_kaapi___SOURCES = cuda/matlu_nopiv_kaapi++/matlu_nopiv_kaapi++.cpp $(CUDA_MATRIX_DEPS)
+sgetrf_nopiv_cuda_kaapi___SOURCES = cuda/matlu_nopiv_kaapi++/matlu_nopiv_kaapi++.cpp $(CUDA_MATRIX_DEPS)
+
+dgemm_cuda_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS) $(LAPACK_CPPFLAGS) $(LAPACKE_CPPFLAGS) $(CUDA_PROGS_CPPFLAGS) -DCONFIG_USE_DOUBLE=1
+dgemm_cuda_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+dgemm_cuda_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS) $(LAPACKE_LDFLAGS) $(LAPACK_LDFLAGS)
+dgemm_cuda_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+sgemm_cuda_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS) $(LAPACK_CPPFLAGS) $(LAPACKE_CPPFLAGS) $(CUDA_PROGS_CPPFLAGS) -DCONFIG_USE_FLOAT=1
+sgemm_cuda_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+sgemm_cuda_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS) $(LAPACKE_LDFLAGS) $(LAPACK_LDFLAGS)
+sgemm_cuda_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+dgemm_rec_cuda_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS) $(LAPACK_CPPFLAGS) $(LAPACKE_CPPFLAGS) $(CUDA_PROGS_CPPFLAGS) -DCONFIG_USE_DOUBLE=1
+dgemm_rec_cuda_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+dgemm_rec_cuda_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS) $(LAPACKE_LDFLAGS) $(LAPACK_LDFLAGS)
+dgemm_rec_cuda_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+sgemm_rec_cuda_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS) $(LAPACK_CPPFLAGS) $(LAPACKE_CPPFLAGS) $(CUDA_PROGS_CPPFLAGS) -DCONFIG_USE_FLOAT=1
+sgemm_rec_cuda_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+sgemm_rec_cuda_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS) $(LAPACKE_LDFLAGS) $(LAPACK_LDFLAGS)
+sgemm_rec_cuda_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+dpotrf_cuda_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS) $(LAPACK_CPPFLAGS) $(LAPACKE_CPPFLAGS) $(CUDA_PROGS_CPPFLAGS) -DCONFIG_USE_DOUBLE=1
+dpotrf_cuda_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+dpotrf_cuda_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS) $(LAPACKE_LDFLAGS) $(LAPACK_LDFLAGS)
+dpotrf_cuda_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+spotrf_cuda_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS) $(LAPACK_CPPFLAGS) $(LAPACKE_CPPFLAGS) $(CUDA_PROGS_CPPFLAGS) -DCONFIG_USE_FLOAT=1
+spotrf_cuda_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+spotrf_cuda_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS) $(LAPACKE_LDFLAGS) $(LAPACK_LDFLAGS)
+spotrf_cuda_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+dpotrf_rec_bloc_cuda_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS) $(LAPACK_CPPFLAGS) $(LAPACKE_CPPFLAGS) $(CUDA_PROGS_CPPFLAGS) -DCONFIG_USE_DOUBLE=1
+dpotrf_rec_bloc_cuda_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+dpotrf_rec_bloc_cuda_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS) $(LAPACKE_LDFLAGS) $(LAPACK_LDFLAGS)
+dpotrf_rec_bloc_cuda_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+spotrf_rec_bloc_cuda_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS) $(LAPACK_CPPFLAGS) $(LAPACKE_CPPFLAGS) $(CUDA_PROGS_CPPFLAGS) -DCONFIG_USE_FLOAT=1
+spotrf_rec_bloc_cuda_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+spotrf_rec_bloc_cuda_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS) $(LAPACKE_LDFLAGS) $(LAPACK_LDFLAGS)
+spotrf_rec_bloc_cuda_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+dgetrf_nopiv_cuda_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS) $(LAPACK_CPPFLAGS) $(LAPACKE_CPPFLAGS) $(CUDA_PROGS_CPPFLAGS) -DCONFIG_USE_DOUBLE=1
+dgetrf_nopiv_cuda_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+dgetrf_nopiv_cuda_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS) $(LAPACKE_LDFLAGS) $(LAPACK_LDFLAGS)
+dgetrf_nopiv_cuda_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+
+sgetrf_nopiv_cuda_kaapi___CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIXXPROGS_BUILD_CPPFLAGS) $(CBLAS_CPPFLAGS) $(LAPACK_CPPFLAGS) $(LAPACKE_CPPFLAGS) $(CUDA_PROGS_CPPFLAGS) -DCONFIG_USE_FLOAT=1
+sgetrf_nopiv_cuda_kaapi___CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIXXPROGS_BUILD_CXXFLAGS)
+sgetrf_nopiv_cuda_kaapi___LDFLAGS =$(AM_LDFLAGS)  $(KAAPIXXPROGS_BUILD_LDFLAGS) $(CBLAS_LDFLAGS) $(LAPACKE_LDFLAGS) $(LAPACK_LDFLAGS)
+sgetrf_nopiv_cuda_kaapi___LDADD   =$(LIBS)        $(KAAPIXXPROGS_BUILD_LIBS)
+

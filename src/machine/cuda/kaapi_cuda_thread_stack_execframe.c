@@ -48,7 +48,6 @@
 #include "kaapi_tasklist.h"
 
 #include "kaapi_cuda_ctx.h"
-#include "kaapi_cuda_data.h"
 
 
 static int __kaapi_try_preempt( kaapi_stack_t* stack, kaapi_task_t* pc );

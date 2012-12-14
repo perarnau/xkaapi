@@ -6,6 +6,7 @@
 ##
 
 BB_PRGS=
+
 if KAAPI_API_KAAPIXX
 BB_PRGS+=branchbound_kaapi++
 endif

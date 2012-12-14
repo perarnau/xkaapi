@@ -9,6 +9,7 @@
 **
 ** thierry.gautier@inrialpes.fr
 ** fabien.lementec@imag.fr
+** Joao.Lima@imagf.r / joao.lima@inf.ufrgs.br 
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -49,11 +50,11 @@
 
 #include "kaapi_impl.h"
 #include "kaapi_cuda_proc.h"
-#include "kaapi_cuda_kasid.h"
 #include "kaapi_cuda_dev.h"
 #include "kaapi_cuda_ctx.h"
 #include "kaapi_cuda_cublas.h"
 #include "kaapi_cuda_mem.h"
+#include "kaapi_cuda_mem_cache.h"
 
 #include "kaapi_cuda_stream.h"
 
@@ -103,8 +104,11 @@ int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t * proc, unsigned int idev)
   if (getenv("KAAPI_RECORD_TRACE") != 0) {
     kaapi_cuda_trace_thread_init();
   }
+  
+  kaapi_atomic_initlock(&proc->ctx.lock);
 #endif
-
+  
+  kaapi_cuda_mem_cache_init(proc);
   kaapi_cuda_device_sync();
 
 #if KAAPI_VERBOSE
@@ -114,11 +118,8 @@ int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t * proc, unsigned int idev)
 #endif
 
   KAAPI_ATOMIC_WRITE(&proc->synchronize_flag, 0);
-  proc->kasid_user = KAAPI_CUDA_KASID_USER_BASE + idev;
   proc->is_initialized = 1;
-  proc->asid = kaapi_memory_address_space_create
-      (idev, KAAPI_MEM_TYPE_CUDA, 0x100000000UL);
-
+  
   kaapi_cuda_all_kprocessors[idev] = kaapi_get_current_processor();
   kaapi_cuda_count_kprocessors++;
 
@@ -205,10 +206,24 @@ int kaapi_cuda_proc_all_isvalid(void)
 
 void kaapi_cuda_proc_destroy(kaapi_processor_t* const kproc)
 {
+#if defined(KAAPI_USE_CUPTI)
+  kaapi_atomic_destroylock(&kproc->cuda_proc.ctx.lock);
+#endif
 #if 0
   kaapi_cuda_cublas_finalize(&kproc->cuda_proc);
   kaapi_cuda_stream_destroy(kproc->cuda_proc.kstream);
   kaapi_cuda_mem_destroy(&kproc->cuda_proc);
   kaapi_cuda_dev_close(&kproc->cuda_proc);
 #endif
+}
+
+int kaapi_cuda_self_device(void)
+{
+  kaapi_processor_t* const kproc = kaapi_get_current_processor();
+  
+#if defined(KAAPI_DEBUG)
+  if( kaapi_processor_get_type(kproc) !=  KAAPI_PROC_TYPE_CUDA)
+    return -1;
+#endif
+  return kproc->cuda_proc.index;
 }

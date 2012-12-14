@@ -1,0 +1,64 @@
+
+
+This repository contains several examples about linear algebra:
+- matrix product (matprod_iter_kaapi++)
+- matrix product with recursive CPU tasks (matprod_rec_kaapi++)
+- LU factorization without pivoting (matlu_nopiv_kaapi++)
+- Cholesky factorization (matcholesky_kaapi++)
+- Cholesky factorization with recursive POTRF panel (matcholesky_rec_bloc_kaapi++)
+- Transform in CUDA (transform_static)
+
+All these examples are based on C BLAS and C LAPACK (ATLAS interface), 
+LAPACKE and LAPACK (for auxiliar functions). Some examples may use PLASMA functions.
+
+** Environment variables **
+
+It is mandatory to define the following environment variables:
+
+CBLAS_CPPFLAGS
+Directory of include file cblas.h and clapack.h, for
+instance, if ATLAS was installed into $HOME/install/atlas:
+$ export CBLAS_CPPFLAGS="-I$HOME/install/atlas/include"
+
+CBLAS_LDFLAGS
+Include cblas and clapack libraries.
+For instance, if ATLAS is installed in $HOME/install/atlas:
+$ export CBLAS_LDFLAGS="-L$HOME/install/atlas/lib  -lf77blas -lcblas -llapack -latlas"
+
+LAPACK_CPPFLAGS
+Include LAPACK libraries if necessary.
+
+LAPACK_LDFLAGS
+Include LAPACK library. For instance:
+$ export LAPACK_LDFLAGS="$HOME/install/lapack/libtmglib.a $HOME/install/lapack/liblapack.a"
+
+LAPACKE_CPPFLAGS
+Include LAPACKE lapacke.h header file. For instance:
+$ export LAPACKE_CPPFLAGS="-I$HOME/install/lapacke/include"
+
+LAPACKE_LDFLAGS
+Include LAPACKE library. For instance:
+$ export LAPACKE_LDFLAGS="-L$HOME/install/lapacke/lib -llapacke"
+
+** Optional **
+
+PLASMA_CPPFLAGS
+Include PLASMA header files. For instance:
+$ export PLASMA_CPPFLAGS="-I$HOME/install/plasma_2.4.6/include"
+
+PLASMA_LDFLAGS
+Include PLASMA library. For instance:
+$ export PLASMA_LDFLAGS="-L$HOME/install/plasma_2.4.6/lib -lplasma -lcoreblas -lquark"
+
+If ATLAS in into system path for finding includes or libs, then these
+environment variables are useless.
+
+** System **
+
+All programs were tested using Debian GNU/Linux (squeeze) and Mac OS X Lion, and libraries:
+- ATLAS 3.10.0 and ATLAS 3.9.69
+- LAPACK (with LAPACKE) 3.4.2
+- CUDA 4.1 and CUDA 5.0
+- PLASMA 2.4.6 and PLASMA 2.4.2.
+
+Joao Lima

@@ -33,7 +33,11 @@
 #include <math.h>
 #include "kaapi++" // this is the new C++ interface for Kaapi
 
+#if defined(CONFIG_USE_DOUBLE)
 typedef double double_type;
+#elif defined(CONFIG_USE_FLOAT)
+typedef float double_type;
+#endif
 
 #include "../matrix/matrix.h"
 
@@ -195,7 +199,7 @@ struct doit {
     
 #if CONFIG_DO_CHECK
     if( verif ){
-	    if( do_check(dA, dB, dC, dC_old, n) == -1 )
+	    if( do_check<double_type>(dA, dB, dC, dC_old, n) == -1 )
 	      fprintf(stdout, "# ERROR invalid matrix\n");
 	    else
 		    fprintf(stdout, "# output OK\n");

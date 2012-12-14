@@ -1,9 +1,7 @@
 /*
- ** kaapi_impl.h
  ** xkaapi
- ** 
- ** Created on Tue Mar 31 15:19:09 2009
- ** Copyright 2009,2010,2011,2012 INRIA.
+ **
+ ** Copyright 2009, 2010, 2011, 2012 INRIA.
  **
  ** Contributors :
  **
@@ -44,6 +42,7 @@
  ** terms.
  ** 
  */
+
 #include <iostream>
 #include <iomanip>
 #include <string>
@@ -159,19 +158,11 @@ struct TaskBodyCPU<TaskCholesky<T> > {
   void operator()(
       const ka::StaticSchedInfo* info, 
       ka::range2d_rpwp<T> A,
-      const enum CBLAS_UPLO uplo
+      const CBLAS_UPLO uplo
   )
   {
     size_t N = A->dim(0);
     size_t blocsize = global_blocsize;
-    
-    /* Distribution over the set AllGPU of kind 
-       bloc cyclic 2D (ressource grid = ngpu x 1) 
-    */
-    ka::Distribution2D<ka::BlockCyclic2D> D( 
-        ka::SetnGPU(info->count_gpu()), /* the ressource set */
-        ka::BlockCyclic2D(info->count_gpu(), blocsize, 1, blocsize) /* the template */
-    );
     
     if( uplo == CblasLower ) 
     {
@@ -201,23 +192,23 @@ struct TaskBodyCPU<TaskCholesky<T> > {
     } else if( uplo == CblasUpper ) {
       for (size_t k=0; k < N; k += blocsize) {
         ka::rangeindex rk(k, k+blocsize);
-        ka::Spawn<TaskPOTRF<T> >( )
+        ka::Spawn<TaskPOTRF<T> >( ka::SetArch(ka::ArchHost) )
 	      ( CblasColMajor, uplo, A(rk,rk) );
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
           ka::rangeindex rm(m, m+blocsize);
-          ka::Spawn<TaskTRSM<T> >()
+          ka::Spawn<TaskTRSM<T> >( ka::SetArch(ka::ArchCUDA) )
           ( CblasColMajor, CblasLeft, uplo, CblasTrans, CblasNonUnit, (T)1.0, A(rk,rk), A(rm,rk) );
         }
         
         for (size_t m=k+blocsize; m < N; m += blocsize) {
           ka::rangeindex rm(m, m+blocsize);
-          ka::Spawn<TaskSYRK<T> >( )
+          ka::Spawn<TaskSYRK<T> >( ka::SetArch(ka::ArchCUDA) )
           ( CblasColMajor, uplo, CblasTrans, (T)-1.0, A(rm,rk), (T)1.0, A(rm,rm) );
           
           for (size_t n=k+blocsize; n < m; n += blocsize) {
             ka::rangeindex rn(n, n+blocsize);
-            ka::Spawn<TaskGEMM<T> >( )
+            ka::Spawn<TaskGEMM<T> >( ka::SetArch(ka::ArchCUDA) )
             ( CblasColMajor, CblasTrans, CblasNoTrans, (T)-1.0, A(rn,rk), A(rm,rk), (T)1.0, A(rm,rn));
           }
         }
@@ -281,8 +272,18 @@ struct doit {
     for (int i=0; i<niter; ++i) 
     {
       /* based on MAGMA */
+#if defined(CONFIG_USE_PLASMA)
+      int nb = n / block_size;
+      for(int i= 0; i < nb; i++){
+        for(int j= 0; j < nb; j++){
+          PLASMA<double_type>::plgsy((double_type)n, block_size, block_size, dA+j*nb+i, n, n,
+                                     i*block_size, j*block_size, 51);
+        }
+      }
+#else
       TaskBodyCPU<TaskLARNV<double_type> >()( ka::range2d_w<double_type>(A) );
       generate_matrix<double_type>(dA, n); 
+#endif
       if (verif)
         memcpy(dAcopy, dA, n*n*sizeof(double_type) );
       
@@ -335,13 +336,11 @@ struct doit {
     
     // Number of iterations
     int niter = 1;
-    if (argc >3)
-      niter = atoi(argv[3]);
     
     // Make verification ?
     int verif = 0;
-    if (argc >4)
-      verif = atoi(argv[4]);
+    if (argc > 3)
+      verif = atoi(argv[3]);
     
     printf("# size  blocksize  #threads   time      GFlop/s\n");
     for (int k=0; k<1; ++k, ++n )

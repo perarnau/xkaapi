@@ -1,20 +1,64 @@
+/*
+ ** xkaapi
+ **
+ ** Copyright 2009,2010,2011,2012 INRIA.
+ **
+ ** Contributors :
+ **
+ ** thierry.gautier@inrialpes.fr
+ ** Joao.Lima@imagf.r / joao.lima@inf.ufrgs.br
+ **
+ ** This software is a computer program whose purpose is to execute
+ ** multithreaded computation with data flow synchronization between
+ ** threads.
+ **
+ ** This software is governed by the CeCILL-C license under French law
+ ** and abiding by the rules of distribution of free software.  You can
+ ** use, modify and/ or redistribute the software under the terms of
+ ** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
+ ** following URL "http://www.cecill.info".
+ **
+ ** As a counterpart to the access to the source code and rights to
+ ** copy, modify and redistribute granted by the license, users are
+ ** provided only with a limited warranty and the software's author,
+ ** the holder of the economic rights, and the successive licensors
+ ** have only limited liability.
+ **
+ ** In this respect, the user's attention is drawn to the risks
+ ** associated with loading, using, modifying and/or developing or
+ ** reproducing the software by the user in light of its specific
+ ** status of free software, that may mean that it is complicated to
+ ** manipulate, and that also therefore means that it is reserved for
+ ** developers and experienced professionals having in-depth computer
+ ** knowledge. Users are therefore encouraged to load and test the
+ ** software's suitability as regards their requirements in conditions
+ ** enabling the security of their systems and/or data to be ensured
+ ** and, more generally, to use and operate it in the same conditions
+ ** as regards security.
+ **
+ ** The fact that you are presently reading this means that you have
+ ** had knowledge of the CeCILL-C license and that you accept its
+ ** terms.
+ **
+ */
 
 #ifndef KAAPI_CUDA_MEM_H_INCLUDED
 #define KAAPI_CUDA_MEM_H_INCLUDED
 
-#include "../../kaapi.h"
+#include "kaapi_impl.h"
 #include "kaapi_cuda_proc.h"
 #include <cuda_runtime_api.h>
 
-int kaapi_cuda_mem_free(kaapi_pointer_t * ptr);
+int kaapi_cuda_mem_free(kaapi_pointer_t ptr);
 
 int kaapi_cuda_mem_free_(void* ptr);
 
-int kaapi_cuda_mem_alloc(kaapi_pointer_t * ptr,
-			 const kaapi_address_space_id_t kasid,
-			 const size_t size, const kaapi_access_mode_t m);
+uintptr_t kaapi_cuda_mem_alloc( const kaapi_address_space_id_t kasid,
+                              const size_t size,
+                              const kaapi_access_mode_t m
+                              );
 
-int kaapi_cuda_mem_alloc_(kaapi_mem_addr_t * addr, const size_t size);
+uintptr_t kaapi_cuda_mem_alloc_(const size_t size);
 
 int kaapi_cuda_mem_register(kaapi_pointer_t ptr,
 			    const kaapi_memory_view_t * view);
@@ -90,6 +134,13 @@ kaapi_cuda_mem_copy_dtoh(kaapi_pointer_t dest,
 				   kaapi_cuda_DtoH_stream());
 }
 
+int
+kaapi_cuda_mem_copy_dtoh_from_host(kaapi_pointer_t dest,
+                         const kaapi_memory_view_t * view_dest,
+                         const kaapi_pointer_t src,
+                         const kaapi_memory_view_t * view_src,
+                         kaapi_processor_id_t kid_src );
+
 static inline int
 kaapi_cuda_mem_1dcopy_htod(kaapi_pointer_t dest,
 			   const kaapi_memory_view_t * view_dest,
@@ -136,16 +187,9 @@ kaapi_cuda_mem_2dcopy_dtoh(kaapi_pointer_t dest,
 
 /*****************************************************************************/
 
-int kaapi_cuda_mem_sync_params(kaapi_thread_context_t * thread,
-			       kaapi_taskdescr_t * td, kaapi_task_t * pc);
+int kaapi_cuda_mem_mgmt_check(struct kaapi_processor_t * proc);
 
-int kaapi_cuda_mem_sync_params_dtoh(kaapi_thread_context_t * thread,
-				    kaapi_taskdescr_t * td,
-				    kaapi_task_t * pc);
-
-int kaapi_cuda_mem_mgmt_check(kaapi_processor_t * proc);
-
-int kaapi_cuda_mem_destroy(kaapi_cuda_proc_t * proc);
+void kaapi_cuda_mem_destroy(kaapi_cuda_proc_t * proc);
 
 static inline int kaapi_cuda_mem_register_(void *ptr, const size_t size)
 {
@@ -174,15 +218,19 @@ static inline void kaapi_cuda_mem_unregister_(void *ptr)
 #endif
 }
 
+/**
+  Transfer memory from src to dest using the host copy version.
+  It assumes that the current thread is GPU and owns pointer dest.
+ */
 int
-kaapi_cuda_mem_copy_dtod_buffer(kaapi_pointer_t dest,
-				const kaapi_memory_view_t * view_dest,
-				const int dest_dev,
-				const kaapi_pointer_t src,
-				const kaapi_memory_view_t * view_src,
-				const int src_dev,
-				const kaapi_pointer_t host,
-				const kaapi_memory_view_t * view_host);
+kaapi_cuda_mem_copy_dtod_buffer(
+                                kaapi_pointer_t dest,
+                                const kaapi_memory_view_t * view_dest,
+                                const kaapi_pointer_t src,
+                                const kaapi_memory_view_t * view_src,
+                                const kaapi_pointer_t host,
+                                const kaapi_memory_view_t * view_host
+                                );
 
 int
 kaapi_cuda_mem_copy_dtod_peer(kaapi_pointer_t dest,

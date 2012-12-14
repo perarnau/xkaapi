@@ -117,7 +117,39 @@ void kaapi_sched_stealreadytasklist(
       /* update next request to process */
       kaapi_listrequest_iterator_next( lrequests, lrrange );    
       request = kaapi_listrequest_iterator_get( lrequests, lrrange );
-    } else
+      continue;
+    }
+    
+    rtl = kproc->rtl_remote;
+    err = kaapi_readylist_steal( kproc, rtl, &td );
+    if( err == 0 )
+    {
+      /* - create the task steal that will execute the stolen task
+       The task stealtask stores:
+       - the original thread
+       - the original task pointer
+       - the pointer to shared data with R / RW access data
+       - and at the end it reserve enough space to store original task arguments
+       The original body is saved as the extra body of the original task data structure.
+       */
+      argsteal
+      = (kaapi_taskstealready_arg_t*)kaapi_request_pushdata(request, sizeof(kaapi_taskstealready_arg_t));
+      
+      argsteal->master_tasklist = td->tasklist;
+      argsteal->td              = td; /* recopy of the pointer, need synchro if range */
+      
+      tasksteal = kaapi_request_toptask(request);
+      kaapi_task_init(  tasksteal, kaapi_taskstealready_body, argsteal );
+      kaapi_request_pushtask(request, 0);
+      
+      kaapi_request_replytask( request, KAAPI_REQUEST_S_OK); /* success of steal */
+      KAAPI_DEBUG_INST( kaapi_listrequest_iterator_countreply( lrrange ) );
+      
+      /* update next request to process */
+      kaapi_listrequest_iterator_next( lrequests, lrrange );
+      request = kaapi_listrequest_iterator_get( lrequests, lrrange );
+    }
+    else
       break; 
   }
 }

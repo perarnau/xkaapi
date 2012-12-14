@@ -80,17 +80,10 @@ typedef struct kaapi_readytasklist_t {
  * inc_prio - increment 
  * Used to iterate from max_prio to min_prio inclusive
  */
-static inline void
-kaapi_readylist_get_priority_range(
+extern void kaapi_readylist_get_priority_range(
   int* const min_prio, 
   int* const max_prio, 
-  int* const inc_prio 
-)
-{
-  *min_prio = KAAPI_TASKLIST_MIN_PRIORITY-1;
-  *max_prio = KAAPI_TASKLIST_MAX_PRIORITY;
-  *inc_prio = -1;
-}
+  int* const inc_prio );
 
 static inline int kaapi_readytasklist_isempty( kaapi_readytasklist_t* rtl )
 {

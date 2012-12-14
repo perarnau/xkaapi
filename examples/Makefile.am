@@ -35,6 +35,7 @@ include nqueens.am
 include poisson3D.am
 #include prefix.am
 include papi.am
+include cuda.am
 
 USER_MAKEFILES=\
 	array/Makefile \
@@ -49,7 +50,8 @@ USER_MAKEFILES=\
 	mergesort/Makefile \
 	nqueens/Makefile \
 	poisson3D/Makefile \
-	papi/Makefile
+	papi/Makefile \
+	cuda/Makefile 
 
 #TO CORRECT	\
 	accumulate/Makefile\

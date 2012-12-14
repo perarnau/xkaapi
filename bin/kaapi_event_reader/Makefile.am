@@ -12,7 +12,7 @@ check_PROGRAMS=$(BIN_PRGS)
 
 all-bfs: $(BIN_PRGS)
 
-katracereader_SOURCES=katracereader.cpp kaapi_trace_reader.cpp kaapi_trace_reader.h 
+katracereader_SOURCES=katracereader.cpp kaapi_trace_reader.cpp kaapi_trace_reader.h  kaapi_trace_poti.h
 
 katracereader_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
 katracereader_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIPROGS_BUILD_CXXFLAGS)
@@ -26,6 +26,8 @@ katracereader_LDADD+= $(POTI_LIBS)
 else
 katracereader_SOURCES += \
 	poti/src/poti.c \
+	poti/src/poti_header.c \
+	poti/src/poti_events.c \
 	poti/src/poti_private.h \
 	poti/src/poti_config.h\
 	poti/include/poti.h

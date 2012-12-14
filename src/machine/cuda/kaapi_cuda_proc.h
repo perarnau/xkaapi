@@ -9,7 +9,7 @@
 **
 ** thierry.gautier@inrialpes.fr
 ** fabien.lementec@imag.fr
-** Joao.Lima@imag.fr
+** Joao.Lima@imagf.r / joao.lima@inf.ufrgs.br
 ** 
 ** This software is a computer program whose purpose is to execute
 ** multithreaded computation with data flow synchronization between
@@ -59,9 +59,6 @@
 #define KAAPI_CUDA_ASYNC	1
 #define KAAPI_CUDA_MEM_FREE_FACTOR	1
 
-/* Write-through memory cache in the GPU */
-//#define KAAPI_CUDA_DATA_CACHE_WT 1
-
 /* all CUDA kprocs indexed by device Id */
 extern struct kaapi_processor_t
 *kaapi_cuda_all_kprocessors[KAAPI_CUDA_MAX_DEV];
@@ -73,27 +70,34 @@ extern kaapi_atomic_t kaapi_cuda_synchronize_barrier;
 struct kaapi_cuda_stream_t;
 
 typedef struct kaapi_cuda_ctx {
+#if defined(KAAPI_USE_CUPTI)
+  /* Lock need to use CUPTI traces (which is not thread-safe) */
+  kaapi_lock_t lock;
+#endif
   cublasHandle_t handle;
 } kaapi_cuda_ctx_t;
 
-struct kaapi_cuda_mem_cache_blk_t;
+struct kaapi_cuda_proc_t;
 
-typedef struct kaapi_cuda_mem {
-  size_t total;
-  size_t used;
-  struct {
-    struct kaapi_cuda_mem_cache_blk_t *beg;
-    struct kaapi_cuda_mem_cache_blk_t *end;
-  } ro;
-  struct {
-    struct kaapi_cuda_mem_cache_blk_t *beg;
-    struct kaapi_cuda_mem_cache_blk_t *end;
-  } rw;
-
-  /* all GPU allocated pointers */
-  kaapi_big_hashmap_t kmem;
-
-  cudaEvent_t event;		/* used to H2D events */
+/*
+ Basic interface structure to GPU software cache.
+ */
+typedef struct kaapi_cuda_mem_cache {
+  int (*init)( void** data );
+  
+  int (*insert)(void *, uintptr_t, size_t, kaapi_access_mode_t);
+  
+  void* (*remove)(void *, const size_t);
+  
+  int (*is_full)(void *, const size_t);
+  
+  int (*inc_use)(void *, uintptr_t, kaapi_memory_view_t* const, const kaapi_access_mode_t);
+  
+  int (*dec_use)(void *, uintptr_t, kaapi_memory_view_t* const, const kaapi_access_mode_t );
+  
+  void (*destroy)(void *);
+  
+  void* data;
 } kaapi_cuda_mem_cache_t;
 
 typedef struct kaapi_cuda_proc_t {
@@ -106,10 +110,6 @@ typedef struct kaapi_cuda_proc_t {
   kaapi_atomic_t synchronize_flag;	/* synchronization flag */
 
   int is_initialized;
-
-  /* cached attribtues */
-  unsigned int kasid_user;
-  kaapi_address_space_id_t asid;
 
   unsigned int peers[KAAPI_CUDA_MAX_DEV];	/* enabled access peer */
 
@@ -168,5 +168,7 @@ extern int kaapi_cuda_sync(struct kaapi_processor_t *const);
 extern int kaapi_cuda_proc_all_isvalid(void);
 
 extern void kaapi_cuda_proc_destroy(struct kaapi_processor_t *const);
+
+extern int kaapi_cuda_self_device(void);
 
 #endif				/* ! KAAPI_CUDA_PROC_H_INCLUDED */

@@ -8,7 +8,7 @@
  **
  ** thierry.gautier@inrialpes.fr
  ** fabien.lementec@imag.fr
- ** Joao.Lima@imag.fr
+ ** Joao.Lima@imag.fr / joao.lima@inf.ufrgs.br
  ** 
  ** This software is a computer program whose purpose is to execute
  ** multithreaded computation with data flow synchronization between
@@ -55,11 +55,8 @@
 #include "kaapi_tasklist.h"
 
 #include "kaapi_cuda_ctx.h"
-#include "kaapi_cuda_data.h"
 #include "kaapi_cuda_cublas.h"
-
 #include "kaapi_cuda_event.h"
-
 #include "kaapi_cuda_stream.h"
 
 /* cuda task body */
@@ -73,38 +70,15 @@ kaapi_cuda_thread_tasklist_activate_deps(kaapi_taskdescr_t * td)
   KAAPI_ATOMIC_ADD(&td->tasklist->cnt_exec, 1);
 }
 
-#if defined(KAAPI_CUDA_DATA_CACHE_WT)
-static int
-kaapi_cuda_gpu_task_callback3_sync_host(kaapi_cuda_stream_t * kstream,
-                                        void *arg)
-{
-  kaapi_taskdescr_t *const td = (kaapi_taskdescr_t *) arg;
-  kaapi_cuda_data_output_dev_dec_use(kstream, td);
-  kaapi_cuda_thread_tasklist_activate_deps(td);
-  return 0;
-}
-#endif
-
 /* call back to push ready task into the tasklist after terminaison of a task */
 static int
 kaapi_cuda_gpu_task_callback2_after_kernel(kaapi_cuda_stream_t * kstream,
                                            void *arg)
 {
   kaapi_taskdescr_t *const td = (kaapi_taskdescr_t *) arg;
-#if !defined(KAAPI_CUDA_NO_H2D)
-#if defined(KAAPI_CUDA_DATA_CACHE_WT)
-  /* write-through policy */
-  kaapi_cuda_data_async_recv(kstream, td);
-  kaapi_cuda_stream_push(kstream, KAAPI_CUDA_OP_D2H,
-                         kaapi_cuda_gpu_task_callback3_sync_host, arg);
-#else				/* KAAPI_CUDA_DATA_CACHE_WT */
+  kaapi_memory_taskdescr_epilogue(td);
   /* default write-back policy (lazy) */
-  kaapi_cuda_data_output_dev_dec_use(kstream, td);
   kaapi_cuda_thread_tasklist_activate_deps(td);
-#endif				/* KAAPI_CUDA_DATA_CACHE_WT */
-#else				/* !KAAPI_CUDA_NO_H2D */
-  kaapi_cuda_thread_tasklist_activate_deps(td);
-#endif				/* !KAAPI_CUDA_NO_H2D */
   return 0;
 }
 
@@ -118,18 +92,11 @@ kaapi_cuda_gpu_task_callback1_exec_task(kaapi_cuda_stream_t * kstream,
                                        KAAPI_PROC_TYPE_CUDA);
   kaapi_assert_debug(body != 0);
   kaapi_assert_debug(td->task != 0);
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_STATIC_TASK_BEG);  
   kaapi_cuda_ctx_push();
   body(kaapi_task_getargs(td->task), kaapi_cuda_kernel_stream());
-#ifndef	    KAAPI_CUDA_ASYNC	/* Synchronous execution */
-  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(),
-                    kaapi_self_thread_context(),
-                    KAAPI_EVT_CUDA_CPU_SYNC_BEG);
-  kaapi_cuda_device_sync();
-  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(),
-                    kaapi_self_thread_context(),
-                    KAAPI_EVT_CUDA_CPU_SYNC_END);
-#endif
   kaapi_cuda_ctx_pop();
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_STATIC_TASK_END);
   kaapi_cuda_stream_push(kstream, KAAPI_CUDA_OP_KER,
                          kaapi_cuda_gpu_task_callback2_after_kernel, arg);
   return 0;
@@ -140,12 +107,9 @@ kaapi_cuda_gpu_task_callback0_sync_gpu(kaapi_cuda_stream_t * kstream,
                                        void *arg)
 {
   kaapi_taskdescr_t *const td = (kaapi_taskdescr_t *) arg;
-#if !defined(KAAPI_CUDA_NO_H2D)
   kaapi_cuda_ctx_push();
-  kaapi_cuda_data_input_alloc(kstream, td);
-  kaapi_cuda_data_input_dev_sync(kstream, td);
+  kaapi_memory_taskdescr_prologue(td);
   kaapi_cuda_ctx_pop();
-#endif
   kaapi_cuda_stream_push(kstream, KAAPI_CUDA_OP_H2D,
                          kaapi_cuda_gpu_task_callback1_exec_task, arg);
   return 0;
@@ -158,7 +122,9 @@ kaapi_cuda_host_task_callback1_exec_task(kaapi_cuda_stream_t * kstream,
   kaapi_taskdescr_t *const td = (kaapi_taskdescr_t *) arg;
   kaapi_task_body_t body = kaapi_format_get_task_bodywh_by_arch(td->fmt, KAAPI_PROC_TYPE_HOST);
   kaapi_assert_debug(body != 0);
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_STATIC_TASK_BEG);
   body(kaapi_task_getargs(td->task), 0);
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_STATIC_TASK_END);  
   kaapi_cuda_thread_tasklist_activate_deps(td);
   return 0;
 }
@@ -166,12 +132,8 @@ kaapi_cuda_host_task_callback1_exec_task(kaapi_cuda_stream_t * kstream,
 static int
 kaapi_cuda_host_task_callback0_sync_host(kaapi_cuda_stream_t * kstream, void *arg)
 {
-  kaapi_taskdescr_t *const td = (kaapi_taskdescr_t *) arg;
-#if !defined(KAAPI_CUDA_NO_D2H)
-  kaapi_cuda_ctx_push();
-  kaapi_cuda_data_input_host_sync_from_dev(kstream, td);
-  kaapi_cuda_ctx_pop();
-#endif
+//  kaapi_taskdescr_t *const td = (kaapi_taskdescr_t *) arg;
+  kaapi_assert(0); /* TODO */
   kaapi_cuda_stream_push( kstream, KAAPI_CUDA_OP_D2H,
                           kaapi_cuda_host_task_callback1_exec_task, arg);
   return 0;
@@ -255,9 +217,7 @@ int kaapi_cuda_thread_execframe_tasklist(kaapi_thread_context_t * thread)
 
         /* start execution of the user body of the task */
         KAAPI_DEBUG_INST(kaapi_assert(td->u.acl.exec_date == 0));
-        KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_BEG);
         kaapi_cuda_thread_exec_task(kstream, stack, td);
-        KAAPI_EVENT_PUSH0(stack->proc, thread, KAAPI_EVT_STATIC_TASK_END);
         KAAPI_DEBUG_INST(td->u.acl.exec_date = kaapi_get_elapsedns());
         
         /* new tasks created ? */

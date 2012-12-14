@@ -434,7 +434,7 @@ struct Initialize {
               &frhs[curr_index()],
               &solution[curr_index()] 
           );
-          ka::Spawn<PrintSubDomain>(ka::SetPartition(site))( &domain[curr_index()] );
+         // ka::Spawn<PrintSubDomain>(ka::SetPartition(site))( &domain[curr_index()] );
         }
   }
 };
@@ -524,6 +524,7 @@ struct doit {
     double residue = 0.0;
 
     threadgroup.ExecGraph<Initialize>()( domain, frhs, solution, sg );
+    ka::Sync();
 
     // Kernel loop
     std::vector<double> res2( domain.size() );
@@ -548,9 +549,11 @@ struct doit {
 #endif
 
     // Check the result
+    ka::Sync();
     threadgroup.ExecGraph<Verification>()( error, domain, solution, sg );
 
     // Compute error max
+    ka::Sync();    
     ErrorMax() ( error );    
   }
 };

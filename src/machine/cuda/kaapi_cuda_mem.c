@@ -1,27 +1,58 @@
+/*
+ ** xkaapi
+ **
+ ** Copyright 2009,2010,2011,2012 INRIA.
+ **
+ ** Contributors :
+ **
+ ** thierry.gautier@inrialpes.fr
+ ** Joao.Lima@imagf.r / joao.lima@inf.ufrgs.br
+ **
+ ** This software is a computer program whose purpose is to execute
+ ** multithreaded computation with data flow synchronization between
+ ** threads.
+ **
+ ** This software is governed by the CeCILL-C license under French law
+ ** and abiding by the rules of distribution of free software.  You can
+ ** use, modify and/ or redistribute the software under the terms of
+ ** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
+ ** following URL "http://www.cecill.info".
+ **
+ ** As a counterpart to the access to the source code and rights to
+ ** copy, modify and redistribute granted by the license, users are
+ ** provided only with a limited warranty and the software's author,
+ ** the holder of the economic rights, and the successive licensors
+ ** have only limited liability.
+ **
+ ** In this respect, the user's attention is drawn to the risks
+ ** associated with loading, using, modifying and/or developing or
+ ** reproducing the software by the user in light of its specific
+ ** status of free software, that may mean that it is complicated to
+ ** manipulate, and that also therefore means that it is reserved for
+ ** developers and experienced professionals having in-depth computer
+ ** knowledge. Users are therefore encouraged to load and test the
+ ** software's suitability as regards their requirements in conditions
+ ** enabling the security of their systems and/or data to be ensured
+ ** and, more generally, to use and operate it in the same conditions
+ ** as regards security.
+ **
+ ** The fact that you are presently reading this means that you have
+ ** had knowledge of the CeCILL-C license and that you accept its
+ ** terms.
+ **
+ */
 
 #include <stdio.h>
 #include <cuda_runtime_api.h>
 
 #include "kaapi_impl.h"
 #include "machine/mt/kaapi_mt_machine.h"
-#include "memory/kaapi_mem.h"
-#include "memory/kaapi_mem_data.h"
-#include "memory/kaapi_mem_host_map.h"
+
 #include "kaapi_cuda_mem.h"
 #include "kaapi_cuda_ctx.h"
 #include "kaapi_cuda_mem_cache.h"
 
-static inline int
-__kaapi_cuda_mem_is_full(kaapi_processor_t * proc, const size_t size)
-{
-  if ((proc->cuda_proc.cache.used + size) >=
-      (proc->cuda_proc.cache.total))
-    return 1;
-  else
-    return 0;
-}
-
-int kaapi_cuda_mem_alloc_(kaapi_mem_addr_t * addr, const size_t size)
+uintptr_t kaapi_cuda_mem_alloc_(const size_t size)
 {
   void *devptr = NULL;
   cudaError_t res;
@@ -34,51 +65,52 @@ int kaapi_cuda_mem_alloc_(kaapi_mem_addr_t * addr, const size_t size)
     fflush(stdout);
     abort();
   }
-  *addr = (kaapi_mem_addr_t) devptr;
   
-  return res;
+  return (uintptr_t)devptr;
 }
 
-int
-kaapi_cuda_mem_alloc(kaapi_pointer_t * ptr,
+uintptr_t
+kaapi_cuda_mem_alloc(
                      const kaapi_address_space_id_t kasid,
-                     const size_t size, const kaapi_access_mode_t m)
+                     const size_t size,
+                     const kaapi_access_mode_t m
+                     )
 {
   void *devptr = NULL;
   cudaError_t res = cudaSuccess;
   kaapi_processor_t *const proc = kaapi_get_current_processor();
   
-  if (__kaapi_cuda_mem_is_full(proc, size))
-    devptr = kaapi_cuda_mem_cache_remove(proc, size);
+  if (proc->cuda_proc.cache.is_full(proc->cuda_proc.cache.data, size))
+    devptr = proc->cuda_proc.cache.remove(proc->cuda_proc.cache.data, size);
   
-out_of_memory:
   if (devptr == NULL) {
     res = cudaMalloc(&devptr, size);
-    if (res == cudaErrorLaunchFailure) {
-      fprintf(stdout, "%s: ERROR cudaMalloc (%d) size=%lu kid=%lu\n",
-              __FUNCTION__, res, size,
-              (long unsigned int) kaapi_get_current_kid());
-      fflush(stdout);
-      abort();
-    }
-    if (res != cudaSuccess) {
+#if 0
+    if (res == cudaErrorMemoryAllocation) {
       devptr = kaapi_cuda_mem_cache_remove(proc, size);
       goto out_of_memory;
     }
+#endif
+    if (res != cudaSuccess) {
+      fprintf(stdout, "%s:%d:%s: ERROR %s (%d) kid=%lu size=%lu\n",
+              __FILE__, __LINE__, __FUNCTION__, cudaGetErrorString(res), res,
+              (long unsigned int)kaapi_get_current_kid(),
+              size );
+      fflush(stdout);
+      abort();
+    }
   }
   
-  ptr->ptr = (uintptr_t) devptr;
-  ptr->asid = kasid;
-  kaapi_cuda_mem_cache_insert(proc, (uintptr_t)devptr, size, m);
+  proc->cuda_proc.cache.insert(proc->cuda_proc.cache.data, (uintptr_t)devptr, size, m);
   
 #if KAAPI_VERBOSE
-  fprintf(stdout, "[%s] kid=%lu %p\n",
+  fprintf(stdout, "[%s] kid=%lu dev=%d ptr=%p size=%lu\n",
           __FUNCTION__,
-          (unsigned long) kaapi_get_current_kid(), (void *) devptr);
+          (unsigned long) kaapi_get_current_kid(), kaapi_cuda_self_device(), (void *)devptr, size);
   fflush(stdout);
 #endif
   
-  return res;
+  return (uintptr_t)devptr;
 }
 
 int kaapi_cuda_mem_free_(void* ptr)
@@ -93,18 +125,16 @@ int kaapi_cuda_mem_free_(void* ptr)
   return 0;
 }
 
-int kaapi_cuda_mem_free(kaapi_pointer_t * ptr)
+int kaapi_cuda_mem_free(kaapi_pointer_t ptr)
 {
 #if KAAPI_VERBOSE
   fprintf(stdout, "[%s] kid=%lu %p\n",
           __FUNCTION__,
           (unsigned long) kaapi_get_current_kid(),
-          __kaapi_pointer2void(*ptr));
+          __kaapi_pointer2void(ptr));
   fflush(stdout);
 #endif
-  cudaFree(__kaapi_pointer2void(*ptr));
-  ptr->ptr = 0;
-  ptr->asid = 0;
+  cudaFree(__kaapi_pointer2void(ptr));
   return 0;
 }
 
@@ -112,13 +142,15 @@ int
 kaapi_cuda_mem_inc_use(kaapi_pointer_t * ptr, kaapi_memory_view_t* const view,
     const kaapi_access_mode_t m)
 {
-  return kaapi_cuda_mem_cache_inc_use(ptr, view, m);
+  kaapi_processor_t* const kproc = kaapi_get_current_processor();
+  return kproc->cuda_proc.cache.inc_use( kproc->cuda_proc.cache.data, ptr->ptr, view, m);
 }
 
 int
 kaapi_cuda_mem_dec_use(kaapi_pointer_t * ptr, kaapi_memory_view_t* const view, const kaapi_access_mode_t m)
 {
-  return kaapi_cuda_mem_cache_dec_use(ptr, view, m);
+  kaapi_processor_t* const kproc = kaapi_get_current_processor();
+  return kproc->cuda_proc.cache.dec_use(kproc->cuda_proc.cache.data, ptr->ptr, view, m);
 }
 
 int
@@ -256,7 +288,11 @@ kaapi_cuda_mem_1dcopy_htod_(kaapi_pointer_t dest,
                                      cudaMemcpyHostToDevice);
 #endif
   if (res != cudaSuccess) {
-    fprintf(stdout, "%s: ERROR %d\n", __FUNCTION__, res);
+    fprintf(stdout, "%s:%d:%s: ERROR %s (%d) kid=%lu src=%p dst=%p size=%lu\n",
+            __FILE__, __LINE__, __FUNCTION__, cudaGetErrorString(res), res,
+            (long unsigned int) kaapi_get_current_kid(),
+            __kaapi_pointer2void(src),
+            __kaapi_pointer2void(dest), kaapi_memory_view_size(view_src));
     fflush(stdout);
     abort();
   }
@@ -286,7 +322,11 @@ kaapi_cuda_mem_1dcopy_dtoh_(kaapi_pointer_t dest,
                                      cudaMemcpyDeviceToHost);
 #endif
   if (res != cudaSuccess) {
-    fprintf(stdout, "%s: ERROR %d\n", __FUNCTION__, res);
+    fprintf(stdout, "%s:%d:%s: ERROR %s (%d) kid=%lu src=%p dst=%p size=%lu\n",
+            __FILE__, __LINE__, __FUNCTION__, cudaGetErrorString(res), res,
+            (long unsigned int) kaapi_get_current_kid(),
+            __kaapi_pointer2void(src),
+            __kaapi_pointer2void(dest), kaapi_memory_view_size(view_src));
     fflush(stdout);
     abort();
   }
@@ -331,8 +371,8 @@ kaapi_cuda_mem_2dcopy_htod_(kaapi_pointer_t dest,
                      view_dest->size[0], cudaMemcpyHostToDevice);
 #endif
   if (res != cudaSuccess) {
-    fprintf(stdout, "%s: ERROR (%d) kid=%lu src=%p dst=%p size=%lu\n",
-            __FUNCTION__, res,
+    fprintf(stdout, "%s:%d:%s: ERROR %s (%d) kid=%lu src=%p dst=%p size=%lu\n",
+            __FILE__, __LINE__, __FUNCTION__, cudaGetErrorString(res), res,
             (long unsigned int) kaapi_get_current_kid(),
             __kaapi_pointer2void(src),
             __kaapi_pointer2void(dest), kaapi_memory_view_size(view_src));
@@ -380,8 +420,8 @@ kaapi_cuda_mem_2dcopy_dtoh_(kaapi_pointer_t dest,
                      view_src->size[0], cudaMemcpyDeviceToHost);
 #endif
   if (res != cudaSuccess) {
-    fprintf(stdout, "%s: ERROR (%d) kid=%lu src=%p dst=%p size=%lu\n",
-            __FUNCTION__, res,
+    fprintf(stdout, "%s:%d:%s: ERROR %s (%d) kid=%lu src=%p dst=%p size=%lu\n",
+            __FILE__, __LINE__, __FUNCTION__, cudaGetErrorString(res), res,
             (long unsigned int) kaapi_get_current_kid(),
             __kaapi_pointer2void(src),
             __kaapi_pointer2void(dest), kaapi_memory_view_size(view_src));
@@ -395,28 +435,31 @@ kaapi_cuda_mem_2dcopy_dtoh_(kaapi_pointer_t dest,
 int
 kaapi_cuda_mem_copy_dtod_buffer(kaapi_pointer_t dest,
                                 const kaapi_memory_view_t * view_dest,
-                                const int dest_dev,
                                 const kaapi_pointer_t src,
                                 const kaapi_memory_view_t * view_src,
-                                const int src_dev,
                                 const kaapi_pointer_t host,
-                                const kaapi_memory_view_t * view_host)
+                                const kaapi_memory_view_t * view_host
+                                )
 {
   cudaError_t res;
   cudaStream_t stream;
+  kaapi_processor_t* const kproc_src = kaapi_all_kprocessors[kaapi_memory_map_asid2kid(kaapi_pointer2asid(src))];
+  kaapi_processor_t* const kproc_dest = kaapi_all_kprocessors[kaapi_memory_map_asid2kid(kaapi_pointer2asid(dest))];
+  const int src_dev = kproc_src->cuda_proc.index;
+  const int dest_dev = kproc_dest->cuda_proc.index;
 
+  kaapi_cuda_ctx_exit(dest_dev);
   kaapi_cuda_ctx_set(src_dev);
   res = cudaStreamCreate(&stream);
   kaapi_assert_debug( res == cudaSuccess );
   res = kaapi_cuda_mem_copy_dtoh_(host, view_host, src, view_src, stream );
   kaapi_assert_debug( res == cudaSuccess );
-  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(),
-		    kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG);
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_BEG);
   res = cudaStreamSynchronize(stream);
-  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(),
-		    kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END);
+  KAAPI_EVENT_PUSH0(kaapi_get_current_processor(), kaapi_self_thread(), KAAPI_EVT_CUDA_CPU_SYNC_END);
   kaapi_assert_debug( res == cudaSuccess );
   cudaStreamDestroy(stream);
+  kaapi_cuda_ctx_exit(src_dev);
   kaapi_cuda_ctx_set(dest_dev);
 
   return kaapi_cuda_mem_copy_htod(dest, view_dest, host, view_host);
@@ -437,8 +480,11 @@ kaapi_cuda_mem_copy_dtod_peer(kaapi_pointer_t dest,
                             kaapi_memory_view_size(view_src),
                             kaapi_cuda_HtoD_stream());
   if (res != cudaSuccess) {
-    fprintf(stdout, "%s: cudaMemcpyPeerAsync ERROR %d\n", __FUNCTION__,
-            res);
+    fprintf(stdout, "%s:%d:%s: ERROR %s (%d) kid=%lu src=%p dst=%p size=%lu\n",
+            __FILE__, __LINE__, __FUNCTION__, cudaGetErrorString(res), res,
+            (long unsigned int) kaapi_get_current_kid(),
+            __kaapi_pointer2void(src),
+            __kaapi_pointer2void(dest), kaapi_memory_view_size(view_src));
     fflush(stdout);
     abort();
   }
@@ -446,8 +492,40 @@ kaapi_cuda_mem_copy_dtod_peer(kaapi_pointer_t dest,
   return 0;
 }
 
-int kaapi_cuda_mem_destroy(kaapi_cuda_proc_t * proc)
+int
+kaapi_cuda_mem_copy_dtoh_from_host(kaapi_pointer_t dest,
+                                   const kaapi_memory_view_t * view_dest,
+                                   const kaapi_pointer_t src,
+                                   const kaapi_memory_view_t * view_src,
+                                   kaapi_processor_id_t kid_src )
 {
-  return kaapi_cuda_mem_cache_destroy(proc);
+  cudaError_t res;
+  kaapi_processor_t *const kproc = kaapi_all_kprocessors[kid_src];
+  const int src_dev = kproc->cuda_proc.index;
+  cudaStream_t stream;
+  
+  kaapi_cuda_ctx_set(src_dev);
+  res = cudaStreamCreate(&stream);
+  if (res != cudaSuccess) {
+    fprintf(stdout, "%s: ERROR cudaStreamCreate %d\n", __FUNCTION__, res);
+    fflush(stdout);
+    abort();
+  }
+  kaapi_cuda_mem_copy_dtoh_(dest, view_dest, src, view_src, stream);
+  res = cudaStreamSynchronize(stream);
+  if (res != cudaSuccess) {
+    fprintf(stdout, "%s: ERROR cudaStreamSynchronize %d\n", __FUNCTION__, res);
+    fflush(stdout);
+    abort();
+  }
+  cudaStreamDestroy(stream);
+  kaapi_cuda_ctx_exit(src_dev);
+  
+  return 0;
+}
+
+void kaapi_cuda_mem_destroy(kaapi_cuda_proc_t * proc)
+{
+  proc->cache.destroy(proc->cache.data);
 }
 

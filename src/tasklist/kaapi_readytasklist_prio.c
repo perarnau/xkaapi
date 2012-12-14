@@ -1,29 +1,29 @@
 /*
  ** xkaapi
- ** 
- ** Copyright 2010 INRIA.
+ **
+ **
+ ** Copyright 2009,2010,2011,2012 INRIA.
  **
  ** Contributors :
- **
+ ** joao.lima@imag.fr
  ** thierry.gautier@inrialpes.fr
- ** fabien.lementec@imag.fr
- ** 
+ **
  ** This software is a computer program whose purpose is to execute
  ** multithreaded computation with data flow synchronization between
  ** threads.
- ** 
+ **
  ** This software is governed by the CeCILL-C license under French law
  ** and abiding by the rules of distribution of free software.  You can
  ** use, modify and/ or redistribute the software under the terms of
  ** the CeCILL-C license as circulated by CEA, CNRS and INRIA at the
  ** following URL "http://www.cecill.info".
- ** 
+ **
  ** As a counterpart to the access to the source code and rights to
  ** copy, modify and redistribute granted by the license, users are
  ** provided only with a limited warranty and the software's author,
  ** the holder of the economic rights, and the successive licensors
  ** have only limited liability.
- ** 
+ **
  ** In this respect, the user's attention is drawn to the risks
  ** associated with loading, using, modifying and/or developing or
  ** reproducing the software by the user in light of its specific
@@ -35,28 +35,39 @@
  ** enabling the security of their systems and/or data to be ensured
  ** and, more generally, to use and operate it in the same conditions
  ** as regards security.
- ** 
+ **
  ** The fact that you are presently reading this means that you have
  ** had knowledge of the CeCILL-C license and that you accept its
  ** terms.
- ** 
+ **
  */
+
 #include "kaapi_impl.h"
 
-
-/* A better choice to choose the closest may be good
-*/
-kaapi_version_t* _kaapi_metadata_info_find_onewriter(
-    kaapi_metadata_info_t* kmdi,
-    kaapi_address_space_id_t kasid
-)
+/*
+ * max_prio - maximum priority of a given kproc
+ * min_prio - minimum priority of a given kproc
+ * inc_prio - increment
+ * Used to iterate from max_prio to min_prio inclusive
+ */
+void
+kaapi_readylist_get_priority_range(
+                                   int* const min_prio,
+                                   int* const max_prio,
+                                   int* const inc_prio
+                                   )
 {
-  uint16_t lid = _kaapi_memory_address_space_getlid( kasid );
-  kaapi_assert( lid < KAAPI_MAX_ADDRESS_SPACE );
-
-  int idx = __builtin_ffsll( kmdi->validbits );
-  kaapi_version_t* ver = kmdi->version[idx-1];
-  if (ver !=0) return ver;
-  
-  return ver;
+#if defined(KAAPI_USE_CUDA)
+  if( kaapi_processor_get_type(kaapi_get_current_processor()) == KAAPI_PROC_TYPE_CUDA )
+  {
+    *min_prio = KAAPI_TASKLIST_MAX_PRIORITY+1;
+    *max_prio = KAAPI_TASKLIST_MIN_PRIORITY;
+    *inc_prio = 1;
+    return;
+  }
+#endif
+  *min_prio = KAAPI_TASKLIST_MIN_PRIORITY-1;
+  *max_prio = KAAPI_TASKLIST_MAX_PRIORITY;
+  *inc_prio = -1;
 }
+

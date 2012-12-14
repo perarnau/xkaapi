@@ -47,6 +47,8 @@
 #if defined(__cplusplus)
 extern "C" {
 #endif
+  
+#include <string.h>
 
 #include "config.h"
 #include "kaapi_error.h"

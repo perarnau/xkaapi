@@ -61,8 +61,12 @@ void kaapi_collect_trace(void)
   uint64_t cnt_stealop;
   uint64_t cnt_stealin;
   uint64_t cnt_suspend;
+#if defined(KAAPI_USE_CUDA)
   uint64_t cnt_comm_out;
   uint64_t cnt_comm_in;
+  uint64_t cnt_cache_hit;
+  uint64_t cnt_cache_miss;
+#endif
   double t_sched;
   double t_preempt;
   double t_1;
@@ -79,8 +83,12 @@ void kaapi_collect_trace(void)
   cnt_stealop     = 0;
   cnt_stealin     = 0;
   cnt_suspend     = 0;
+#if defined(KAAPI_USE_CUDA)
   cnt_comm_in	  = 0;
   cnt_comm_out	  = 0;
+  cnt_cache_hit = 0;
+  cnt_cache_miss = 0;
+#endif
 
   t_sched         = 0;
   t_preempt       = 0;
@@ -103,8 +111,12 @@ void kaapi_collect_trace(void)
     t_1 +=            1e-9*(double)KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_T1); 
     t_tasklist +=     1e-9*(double)KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_TASKLISTCALC);
 
+#if defined(KAAPI_USE_CUDA)
     cnt_comm_out +=   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_COMM_OUT);
     cnt_comm_in +=   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_COMM_IN);
+    cnt_cache_hit +=   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_CACHE_HIT);
+    cnt_cache_miss +=   KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_CACHE_MISS);
+#endif
 
 #if defined(KAAPI_USE_PAPI)
     for (int cnt=KAAPI_PERF_ID_PAPI_BASE; cnt<kaapi_mt_perf_counter_num(); ++cnt)
@@ -147,12 +159,20 @@ void kaapi_collect_trace(void)
       printf("Total number of suspend operations  : %"PRIi64"\n",
         KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_SUSPEND)
       );
+#if defined(KAAPI_USE_CUDA)
       printf("Total number of transfer H2D        : %"PRIi64"\n",
         KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_COMM_OUT)
       );
       printf("Total number of transfer D2H        : %"PRIi64"\n",
         KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_COMM_IN)
       );
+      printf("Total number of cache hit           : %"PRIi64"\n",
+             KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_CACHE_HIT)
+             );
+      printf("Total number of cache miss          : %"PRIi64"\n",
+             KAAPI_PERF_REG_SYS(kaapi_all_kprocessors[i], KAAPI_PERF_ID_CACHE_MISS)
+             );
+#endif
       printf("Total compute time                  : %e\n",
          1e-9*(double)KAAPI_PERF_REG_USR(kaapi_all_kprocessors[i], KAAPI_PERF_ID_T1));
 
@@ -186,8 +206,12 @@ void kaapi_collect_trace(void)
     printf("Total number of steal operations    : %" PRIu64 "\n", cnt_stealop);
     printf("Total number of input steal request : %" PRIu64 "\n", cnt_stealin);
     printf("Total number of suspend operations  : %" PRIu64 "\n", cnt_suspend);
+#if defined(KAAPI_USE_CUDA)
     printf("Total number of transfers H2D       : %" PRIu64 "\n", cnt_comm_out);
     printf("Total number of transfers D2H       : %" PRIu64 "\n", cnt_comm_in);
+    printf("Total number of cache hit           : %" PRIu64 "\n", cnt_cache_hit);
+    printf("Total number of cache miss          : %" PRIu64 "\n", cnt_cache_miss);
+#endif
     printf("Total compute time                  : %e\n", t_1);
     printf("Total compute time of dependencies  : %e\n", t_tasklist);
     printf("Total idle time                     : %e\n", t_sched+t_preempt);

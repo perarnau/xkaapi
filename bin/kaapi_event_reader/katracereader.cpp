@@ -59,7 +59,7 @@
 #include <set>
 #include "kaapi_impl.h"
 #include "kaapi_trace_reader.h"
-#include "poti.h"
+#include "kaapi_trace_poti.h"
 
 
 /** see kaapi_event.h for coding of event name */
@@ -111,6 +111,19 @@ static const char* kaapi_event_name[] = {
 */
 typedef void (*kaapi_fnc_event)( int, const char** );
 
+struct katracereader_options {
+  std::string output; /* output file */
+  unsigned int stealevent;
+  unsigned int gputrace;
+  unsigned int gputransfer;
+  unsigned int vitecompatibility; /* 1 if uses ViTE, 0 for Paje */
+  
+  katracereader_options(): output(""), stealevent(0), gputrace(0), gputransfer(0), vitecompatibility(0) {}
+};
+
+typedef struct katracereader_options katracereader_options_t;
+
+katracereader_options_t katracereader_options;
 
 /*
 */
@@ -118,11 +131,16 @@ static void print_usage()
 {
   fprintf(stderr, "Merge and convert internal Kaapi trace format to human readeable formats\n");
   fprintf(stderr, "*** options: -a | -p. Only one of the options may be selected at a time.\n");
-  fprintf(stderr, "  -a: display all data associated to each events\n");
+  fprintf(stderr, "  --display-data : display all data associated to each events.\n");
 //  fprintf(stderr, "  -m: display the mapping of tasks\n");
 //  fprintf(stderr, "  -s: display stats about runtime of all the tasks\n");
-  fprintf(stderr, "  -p: output Paje format for Gantt diagram, one row per core\n");
-  fprintf(stderr, "      Output filename is gantt.paje\n");
+  fprintf(stderr, "  --paje         : output Paje format for Gantt diagram, one row per core.\n");
+  fprintf(stderr, "                  Output filename is paje-gantt.trace.\n");
+  fprintf(stderr, "  --vite         : output Paje format compatible with ViTE.\n");
+  fprintf(stderr, "                  Output filename is vite-gantt.trace.\n");
+  fprintf(stderr, "  --steal-event  : include steal events in trace.\n");
+  fprintf(stderr, "  --gpu-trace    : include GPU trace information.\n");
+  fprintf(stderr, "  --gpu-transfer : include GPU transfers.\n");
   exit(1);
 }
 
@@ -258,6 +276,16 @@ void callback_print_event(
 
     case KAAPI_EVT_FOREACH_STEAL:
     break;
+      
+    case KAAPI_EVT_CUDA_CPU_SYNC_BEG:
+    case KAAPI_EVT_CUDA_CPU_SYNC_END:
+    case KAAPI_EVT_CUDA_GPU_HTOD_BEG:
+    case KAAPI_EVT_CUDA_GPU_HTOD_END:
+    case KAAPI_EVT_CUDA_GPU_DTOH_BEG:
+    case KAAPI_EVT_CUDA_GPU_DTOH_END:
+    case KAAPI_EVT_CUDA_GPU_KERNEL_BEG:
+    case KAAPI_EVT_CUDA_GPU_KERNEL_END:
+      break;
   }
   std::cout << std::endl;
 }
@@ -501,70 +529,256 @@ static void paje_mark_steal_status( const kaapi_event_t* event )
 static int fnc_paje_gantt_header();
 static int fnc_paje_gantt_close(uint64_t tmax);
 
+static void callback_display_paje_event_gpuevent(
+                                                   char* name,
+                                                   const kaapi_event_t* event
+                                                   )
+{
+  double d0 =0.0, d1 = 0.0;
+  char tmp[128];
+  int kid;
+  
+  if(katracereader_options.gputrace == 0)
+    return;
+  switch (event->evtno)
+  {
+    case KAAPI_EVT_CUDA_CPU_SYNC_BEG:
+      d0   = 1e-9*(double)event->date;
+      kaapi_trace_poti_PushState (d0, name, "STATE", "ksync");
+      break;
+      
+    case KAAPI_EVT_CUDA_CPU_SYNC_END:
+      d1   = 1e-9*(double)event->date;
+      kaapi_trace_poti_PopState (d1, name, "STATE");
+      break;
+      
+    case KAAPI_EVT_CUDA_GPU_DTOH_BEG:
+      if(katracereader_options.gputransfer){
+        d0   = 1e-9*(double)event->date;
+        kid = event->kid;
+        sprintf(tmp,"d2h-%i",kid);
+        kaapi_trace_poti_PushState (d0, tmp, "STATE", "kd2h");
+      }
+      break;
+      
+    case KAAPI_EVT_CUDA_GPU_DTOH_END:
+      if(katracereader_options.gputransfer){
+        d1   = 1e-9*(double)event->date;
+        kid = event->kid;
+        sprintf(tmp,"d2h-%i",kid);
+        kaapi_trace_poti_PopState (d1, tmp, "STATE");
+      }
+      break;
+      
+    case KAAPI_EVT_CUDA_GPU_HTOD_BEG:
+      if(katracereader_options.gputransfer){
+        d0   = 1e-9*(double)event->date;
+        kid = event->kid;
+        sprintf(tmp,"h2d-%i",kid);
+        kaapi_trace_poti_PushState (d0, tmp, "STATE", "kh2d");
+      }
+      break;
+      
+    case KAAPI_EVT_CUDA_GPU_HTOD_END:
+      if(katracereader_options.gputransfer){
+        d1   = 1e-9*(double)event->date;
+        kid = event->kid;
+        sprintf(tmp,"h2d-%i",kid);
+        kaapi_trace_poti_PopState (d1, tmp, "STATE");
+      }
+      break;
+      
+    case KAAPI_EVT_CUDA_GPU_KERNEL_BEG:
+      d0   = 1e-9*(double)event->date;
+      kid = event->kid;
+      sprintf(tmp,"gpu-%i",kid);
+      kaapi_trace_poti_PushState (d0, tmp, "STATE", "kgpu");
+      break;
+      
+    case KAAPI_EVT_CUDA_GPU_KERNEL_END:
+      d1   = 1e-9*(double)event->date;
+      kid = event->kid;
+      sprintf(tmp,"gpu-%i",kid);
+      kaapi_trace_poti_PopState (d1, tmp, "STATE");
+      break;
+      
+    default:
+      break;
+  }
+}
+
+static void callback_display_paje_event_stealevent(
+    char* name,
+    const kaapi_event_t* event
+)
+{
+  double d0 =0.0, d1 = 0.0;
+  char tmp[128];
+  char key[128];
+  int kid;
+  int serial __attribute__((unused));  
+  
+  if(katracereader_options.stealevent == 0)
+    return;
+  
+  switch (event->evtno)
+  {
+  case KAAPI_EVT_FOREACH_STEAL:
+    d0   = 1e-9*(double)event->date;
+    kaapi_trace_poti_NewEvent(d0, name, "STEAL", "fo");
+    break;
+      
+    /* processing request */
+  case KAAPI_EVT_REQUESTS_BEG:
+    d0  = 1e-9*(double)event->date;
+    kid = event->d0.i;
+    serial = event->d1.i;
+    sprintf(tmp,"thief-%i",kid);
+    kaapi_trace_poti_PushState (d0, tmp, "STEAL", "r");
+    break;
+    
+  case KAAPI_EVT_REQUESTS_END:
+    d1  = 1e-9*(double)event->date;
+    kid = event->d0.i;
+    serial = event->d1.i;
+    sprintf(tmp,"thief-%i",kid);
+    kaapi_trace_poti_PopState (d1, tmp, "STEAL");
+    break;
+    
+    /* emit steal */
+  case KAAPI_EVT_STEAL_OP:
+    /* find in next event (safe in callback) if steal success */
+    paje_mark_steal_status( event );
+    
+    d0  = 1e-9*(double)event->date;
+    kid = event->d0.i; /* victim id */
+    if (kid != event->kid)
+    {
+      sprintf(key,"s-%" PRIuPTR,event->d1.i*100000+event->kid);
+      sprintf(tmp,"thief-%i",kid);
+      
+      if (   gantt_steal_op_issuccess[event->kid].find(event->d1.i)
+          != gantt_steal_op_issuccess[event->kid].end()
+          )
+      {
+        kaapi_trace_poti_StartLink(d0, "root", "LINK1", name, "riok", key);
+        kaapi_trace_poti_EndLink(d0, "root", "LINK1", tmp, "riok", key);
+      }
+    }
+    break;
+ 
+    /* emit reply */
+  case KAAPI_EVT_SEND_REPLY:
+    d0  = 1e-9*(double)event->date;
+    kid = event->d0.i; /* victimid */
+    if (kid != (uint16_t)event->d1.i) /* thief id */
+    {
+      /* key using (serial, thiefid) */
+      sprintf(tmp,"thief-%i",kid);
+      sprintf(key,"r-%" PRIuPTR,event->d2.i*100000+event->d1.i);
+      
+      if (   gantt_steal_op_issuccess[event->d1.i].find(event->d2.i)
+          != gantt_steal_op_issuccess[event->d1.i].end()
+          )
+        kaapi_trace_poti_StartLink(d0, "root", "LINK2", tmp, "ri", key);
+    }
+    break;
+    
+    /* recv reply */
+  case KAAPI_EVT_RECV_REPLY:
+    d0  = 1e-9*(double)event->date;
+    kid = event->d0.i; /* kid of the victim */
+    if (kid != event->kid)
+    {
+      /* key using (serial, thiefid) */
+      sprintf(key,"r-%"PRIuPTR,event->d1.i*100000+event->kid);
+      if (   gantt_steal_op_issuccess[event->kid].find(event->d1.i)
+          != gantt_steal_op_issuccess[event->kid].end()
+          )
+        kaapi_trace_poti_EndLink(d0, "root", "LINK2", name, "ri", key);
+//  #if 0 /* do no pollute gantt diagram */
+//      else
+//        kaapi_trace_poti_EndLink(d0, "root", "LINK", name, "ri", key);
+//  #endif
+      /* do not reset entry, because event may have same date and recv may be processed before send...
+       gantt_steal_op_issuccess[event->kid].first = (uint64_t)-1;
+       */
+    }
+    break;
+  }
+}
+
 static void callback_display_paje_event(
   char* name,
   const kaapi_event_t* event
 )
 {
   char tmp[128];
-  char key[128];
   int kid;
-  int serial __attribute__((unused)); 
+  int serial __attribute__((unused));
   double d0 =0.0, d1 = 0.0;
 
-  switch (event->evtno) 
+  switch (event->evtno)
   {
     case KAAPI_EVT_KPROC_START:
       d0   = 1e-9*(double)event->date;
       kid = event->kid;
       sprintf(tmp,"thread-%i",kid);
-      pajeCreateContainer (d0, tmp, "THREAD", "root", tmp);
-      sprintf(name,"steal-%i",kid);
-      pajeCreateContainer (d0, name, "STEAL", tmp, name);
-#if defined(KAAPI_USE_CUDA)
-      if( event->type == KAAPI_PROC_TYPE_CUDA ){
-	  sprintf(name,"htod-%i",kid);
-	  pajeCreateContainer (d0, name, "GPU", tmp, name);
-	  sprintf(name,"kernel-%i",kid);
-	  pajeCreateContainer (d0, name, "GPU", tmp, name);
-	  sprintf(name,"dtoh-%i",kid);
-	  pajeCreateContainer (d0, name, "GPU", tmp, name);
-      } 
-#endif
-      sprintf(name,"work-%i",kid);
-      pajeCreateContainer (d0, name, "WORKER", tmp, name);
+      kaapi_trace_poti_CreateContainer (d0, tmp, "THREAD", "root", tmp);
+      if(katracereader_options.gputrace){
+        if( event->type == KAAPI_PROC_TYPE_CUDA){
+          if(katracereader_options.gputransfer){
+            sprintf(name,"h2d-%i",kid);
+            kaapi_trace_poti_CreateContainer (d0, name, "WORKER", tmp, name);
+            sprintf(name,"d2h-%i",kid);
+            kaapi_trace_poti_CreateContainer (d0, name, "WORKER", tmp, name);
+          }
+          sprintf(name,"gpu-%i",kid);
+          kaapi_trace_poti_CreateContainer (d0, name, "WORKER", tmp, name);
+        }
+      }
+      if(katracereader_options.stealevent){
+        sprintf(name,"thief-%i",kid);
+        kaapi_trace_poti_CreateContainer (d0, name, "THIEF", tmp, name);
+      }
+      sprintf(name,"worker-%i",kid);
+      kaapi_trace_poti_CreateContainer (d0, name, "WORKER", tmp, name); 
       break;
 
     case KAAPI_EVT_KPROC_STOP:
       d0   = 1e-9*(double)event->date;
       kid = event->kid;
-      sprintf(name,"steal-%i",kid);
-      pajeDestroyContainer (d0, "THREAD", name);
-#if defined(KAAPI_USE_CUDA)
-      if( event->type == KAAPI_PROC_TYPE_CUDA ){
-	  sprintf(name,"dtoh-%i",kid);
-	  pajeDestroyContainer (d0, "GPU", name);
-	  sprintf(name,"kernel-%i",kid);
-	  pajeDestroyContainer (d0, "GPU", name);
-	  sprintf(name,"htod-%i",kid);
-	  pajeDestroyContainer (d0, "GPU", name);
+      sprintf(name,"worker-%i",kid);
+      kaapi_trace_poti_DestroyContainer (d0, "WORKER", name);
+      if(katracereader_options.stealevent){
+        sprintf(name,"thief-%i",kid);
+        kaapi_trace_poti_DestroyContainer (d0, "THIEF", name);
       }
-#endif
-      sprintf(name,"work-%i",kid);
-      pajeDestroyContainer (d0, "WORKER", name);
+      if(katracereader_options.gputrace){
+        if( event->type == KAAPI_PROC_TYPE_CUDA){
+          if(katracereader_options.gputransfer){
+            sprintf(name,"h2d-%i",kid);
+            kaapi_trace_poti_DestroyContainer (d0, "WORKER", name);
+            sprintf(name,"d2h-%i",kid);
+            kaapi_trace_poti_DestroyContainer (d0, "WORKER", name);            
+          }
+          sprintf(name,"gpu-%i",kid);
+          kaapi_trace_poti_DestroyContainer (d0, "WORKER", name);          
+        }
+      }
       sprintf(name,"thread-%i",kid);
-      pajeDestroyContainer (d0, "THREAD", name);
+      kaapi_trace_poti_DestroyContainer (d0, "THREAD", name);
       break;
 
     /* standard task exec */
     case KAAPI_EVT_TASK_BEG:
       d0   = 1e-9*(double)event->date;
-      pajePushState (d0, name, "STATE", "a");
+      kaapi_trace_poti_PushState (d0, name, "STATE", "a");
       break;
 
     case KAAPI_EVT_TASK_END:
       d1   = 1e-9*(double)event->date;
-      pajePopState (d1, name, "STATE");
+      kaapi_trace_poti_PopState (d1, name, "STATE");
     break;
 
     /* */
@@ -579,232 +793,102 @@ static void callback_display_paje_event(
     /* unroll graph for static schedule */
     case KAAPI_EVT_STATIC_BEG:
       d0   = 1e-9*(double)event->date;
-      pajePushState (d0, name, "STATE", "st");          
+      kaapi_trace_poti_PushState (d0, name, "STATE", "st");          
     break;
 
     case KAAPI_EVT_STATIC_END:
       d1   = 1e-9*(double)event->date;
-      pajePopState (d1, name, "STATE");
+      kaapi_trace_poti_PopState (d1, name, "STATE");
     break;
 
     /* exec task in static graph partitioning */
     case KAAPI_EVT_STATIC_TASK_BEG:
       d0   = 1e-9*(double)event->date;
-      pajePushState (d0, name, "STATE", "b");
+      kaapi_trace_poti_PushState (d0, name, "STATE", "b");
     break;
 
     case KAAPI_EVT_STATIC_TASK_END:
       d1   = 1e-9*(double)event->date;
-      pajePopState (d1, name, "STATE");
+      kaapi_trace_poti_PopState (d1, name, "STATE");
     break;
 
     /* idle = steal state */
     case KAAPI_EVT_SCHED_IDLE_BEG:
       d0   = 1e-9*(double)event->date;
-      pajePushState (d0, name, "STATE", "i");          
+      kaapi_trace_poti_PushState (d0, name, "STATE", "i");          
     break;
 
     case KAAPI_EVT_SCHED_IDLE_END:
       d1   = 1e-9*(double)event->date;
-      pajePopState (d1, name, "STATE");          
+      kaapi_trace_poti_PopState (d1, name, "STATE");          
     break;
 
+    case KAAPI_EVT_SCHED_SUSPEND_BEG:
+    case KAAPI_EVT_SCHED_SUSPEND_END:
+    case KAAPI_EVT_SCHED_SUSPEND_POST:
+    case KAAPI_EVT_SCHED_SUSPWAIT_BEG:
+    case KAAPI_EVT_SCHED_SUSPWAIT_END:
+      break;
+      
+#if 0
     /* suspend state */
     case KAAPI_EVT_SCHED_SUSPEND_BEG:
       d0   = 1e-9*(double)event->date;
-      pajePushState (d0, name, "STATE", "s");          
+      kaapi_trace_poti_PushState (d0, name, "STATE", "s");          
     break;
 
     case KAAPI_EVT_SCHED_SUSPEND_END:
       d1   = 1e-9*(double)event->date;
-      pajePopState (d1, name, "STATE");          
+      kaapi_trace_poti_PopState (d1, name, "STATE");          
     break;
 
     case KAAPI_EVT_SCHED_SUSPEND_POST:
       d0   = 1e-9*(double)event->date;
-      pajeNewEvent(d0, name, "SUSPEND", "su");
+      kaapi_trace_poti_NewEvent(d0, name, "SUSPEND", "su");
     break;
 
     case KAAPI_EVT_SCHED_SUSPWAIT_BEG:
       d0   = 1e-9*(double)event->date;
-      pajePushState (d0, name, "STATE", "s"); 
+      kaapi_trace_poti_PushState (d0, name, "STATE", "s"); 
     break;
 
     case KAAPI_EVT_SCHED_SUSPWAIT_END:
       d1   = 1e-9*(double)event->date;
-      pajePopState (d1, name, "STATE"); 
+      kaapi_trace_poti_PopState (d1, name, "STATE"); 
     break;
-
-
-    case KAAPI_EVT_FOREACH_STEAL:
-      d0   = 1e-9*(double)event->date;
-      pajeNewEvent(d0, name, "STEAL", "fo");
-    break;
+#endif
 
     case KAAPI_EVT_FOREACH_BEG:
       d0   = 1e-9*(double)event->date;
-      pajePushState (d0, name, "STATE", "f");
+      kaapi_trace_poti_PushState (d0, name, "STATE", "f");
     break;
 
     case KAAPI_EVT_FOREACH_END:
       d1   = 1e-9*(double)event->date;
-      pajePopState (d1, name, "STATE"); 
+      kaapi_trace_poti_PopState (d1, name, "STATE"); 
     break;
 
     /* processing request */
+    case KAAPI_EVT_FOREACH_STEAL:      
     case KAAPI_EVT_REQUESTS_BEG:
-      d0  = 1e-9*(double)event->date;
-      kid = event->d0.i;
-      serial = event->d1.i;
-      sprintf(tmp,"steal-%i",kid);
-#if 0 /* do no pollute gantt diagram */
-      sprintf(key,"b%i-%i-%i",event->kid, kid, serial);
-      pajeStartLink(d0, "root", "LINK", name, "li", key);
-      pajeEndLink(d0, "root", "LINK", tmp, "li", key);
-#endif
-      pajePushState (d0, tmp, "STATE", "r"); 
-    break;
-
     case KAAPI_EVT_REQUESTS_END:
-      d1  = 1e-9*(double)event->date;
-      kid = event->d0.i;
-      serial = event->d1.i;
-      sprintf(tmp,"steal-%i",kid);
-      pajePopState (d1, tmp, "STATE");
-#if 0
-      sprintf(key,"e%i-%i-%i",event->kid, kid, serial);
-      pajeStartLink(d1, "root", "LINK", tmp, "li", key);
-      pajeEndLink(d1, "root", "LINK", name, "li", key);
-#endif
-    break;
-
-    /* emit steal */
     case KAAPI_EVT_STEAL_OP:
-      /* find in next event (safe in callback) if steal success */
-      paje_mark_steal_status( event );
-
-      d0  = 1e-9*(double)event->date;
-      kid = event->d0.i; /* victim id */
-#if 0
-      pajeNewEvent(d0, name, "STEAL", "so");
-#endif
-      if (kid != event->kid)
-      {
-        sprintf(key,"s-%" PRIuPTR,event->d1.i*100000+event->kid);
-        sprintf(tmp,"steal-%i",kid);
-
-        if (   gantt_steal_op_issuccess[event->kid].find(event->d1.i) 
-             != gantt_steal_op_issuccess[event->kid].end()
-           )
-        {
-          pajeStartLink(d0, "root", "LINK", name, "riok", key);
-          pajeEndLink(d0, "root", "LINK", tmp, "riok", key);
-        }
-#if 0 /* do no pollute gantt diagram */
-        else {
-          pajeStartLink(d0, "root", "LINK", name, "li", key);
-          pajeEndLink(d0, "root", "LINK", tmp, "li", key);
-        }
-#endif
-      }
-    break;
-
-    /* emit reply */
     case KAAPI_EVT_SEND_REPLY:
-      d0  = 1e-9*(double)event->date;
-      kid = event->d0.i; /* victimid */
-      if (kid != (uint16_t)event->d1.i) /* thief id */
-      {
-        /* key using (serial, thiefid) */
-        sprintf(tmp,"steal-%i",kid);
-        sprintf(key,"r-%" PRIuPTR,event->d2.i*100000+event->d1.i);
-
-        if (   gantt_steal_op_issuccess[event->d1.i].find(event->d2.i) 
-             != gantt_steal_op_issuccess[event->d1.i].end()
-           )
-          pajeStartLink(d0, "root", "LINK", tmp, "riok", key);
-#if 0 /* do no pollute gantt diagram */
-        else
-          pajeStartLink(d0, "root", "LINK", tmp, "ri", key);
-#endif
-      }
-    break;
-
-    /* recv reply */
     case KAAPI_EVT_RECV_REPLY:
-      d0  = 1e-9*(double)event->date;
-      kid = event->d0.i; /* kid of the victim */
-      if (kid != event->kid)
-      {
-        /* key using (serial, thiefid) */
-        sprintf(key,"r-%"PRIuPTR,event->d1.i*100000+event->kid);
-        if (   gantt_steal_op_issuccess[event->kid].find(event->d1.i) 
-             != gantt_steal_op_issuccess[event->kid].end()
-           )
-          pajeEndLink(d0, "root", "LINK", name, "riok", key);
-#if 0 /* do no pollute gantt diagram */
-        else
-          pajeEndLink(d0, "root", "LINK", name, "ri", key);
-#endif        
-        /* do not reset entry, because event may have same date and recv may be processed before send... 
-        gantt_steal_op_issuccess[event->kid].first = (uint64_t)-1;
-        */
-      }
+      callback_display_paje_event_stealevent(name, event);
     break;
-
-#if defined(KAAPI_USE_CUDA)
-    case KAAPI_EVT_CUDA_GPU_HTOD_BEG:
-      d0   = 1e-9*(double)event->date;
-      kid = event->kid;
-      sprintf(tmp,"htod-%i",kid);
-      pajePushState (d0, tmp, "STATE", "htod");
-    break;
-
-    case KAAPI_EVT_CUDA_GPU_HTOD_END:
-      d1   = 1e-9*(double)event->date;
-      kid = event->kid;
-      sprintf(tmp,"htod-%i",kid);
-      pajePopState (d1, tmp, "STATE");
-    break;
-
-    case KAAPI_EVT_CUDA_GPU_KERNEL_BEG:
-      d0   = 1e-9*(double)event->date;
-      kid = event->kid;
-      sprintf(tmp,"kernel-%i",kid);
-      pajePushState (d0, tmp, "STATE", "kernel");
-    break;
-
-    case KAAPI_EVT_CUDA_GPU_KERNEL_END:
-      d1   = 1e-9*(double)event->date;
-      kid = event->kid;
-      sprintf(tmp,"kernel-%i",kid);
-      pajePopState (d1, tmp, "STATE");
-    break;
-
-    case KAAPI_EVT_CUDA_GPU_DTOH_BEG:
-      d0   = 1e-9*(double)event->date;
-      kid = event->kid;
-      sprintf(tmp,"dtoh-%i",kid);
-      pajePushState (d0, tmp, "STATE", "dtoh");
-    break;
-
-    case KAAPI_EVT_CUDA_GPU_DTOH_END:
-      d1   = 1e-9*(double)event->date;
-      kid = event->kid;
-      sprintf(tmp,"dtoh-%i",kid);
-      pajePopState (d1, tmp, "STATE");
-    break;
-
+      
+      /* GPU events */
     case KAAPI_EVT_CUDA_CPU_SYNC_BEG:
-      d0   = 1e-9*(double)event->date;
-      pajePushState (d0, name, "STATE", "sync");          
-    break;
-
     case KAAPI_EVT_CUDA_CPU_SYNC_END:
-      d1   = 1e-9*(double)event->date;
-      pajePopState (d1, name, "STATE");
-    break;
-#endif
+    case KAAPI_EVT_CUDA_GPU_HTOD_BEG:
+    case KAAPI_EVT_CUDA_GPU_HTOD_END:
+    case KAAPI_EVT_CUDA_GPU_DTOH_BEG:
+    case KAAPI_EVT_CUDA_GPU_DTOH_END:
+    case KAAPI_EVT_CUDA_GPU_KERNEL_BEG:
+    case KAAPI_EVT_CUDA_GPU_KERNEL_END:
+        callback_display_paje_event_gpuevent(name, event);
+      break;
 
     default:
       printf("***Unkown event number: %i\n", event->evtno);
@@ -835,7 +919,7 @@ static void fnc_paje_gantt( int count, const char** filenames )
   err = fnc_paje_gantt_header();
   if (err !=0) 
   {
-    fprintf(stderr, "*** cannot open file: 'gantt.paje'\n");
+    fprintf(stderr, "*** cannot open file: '%s'\n", katracereader_options.output.c_str());
     exit(1);
   }
 
@@ -849,7 +933,7 @@ static void fnc_paje_gantt( int count, const char** filenames )
   err = fnc_paje_gantt_close(tmax);
   if (err !=0) 
   {
-    fprintf(stderr, "*** cannot close file: 'gantt.paje'\n");
+    fprintf(stderr, "*** cannot close file: '%s'\n", katracereader_options.output.c_str());
     exit(1);
   }
 }
@@ -857,90 +941,81 @@ static void fnc_paje_gantt( int count, const char** filenames )
 
 static int fnc_paje_gantt_header()
 {
-  pajeOpen("gantt.paje");
-  pajeHeader();
+  if( katracereader_options.vitecompatibility )
+  {
+    kaapi_trace_poti_Open(katracereader_options.output.c_str());
+    kaapi_trace_poti_Header(1,1);
+  }
+  else
+  {
+    kaapi_trace_poti_Open(katracereader_options.output.c_str());
+    kaapi_trace_poti_Header(0,0);
+  }
 
-  pajeDefineContainerType ("ROOT", "0", "ROOT");  
+  kaapi_trace_poti_DefineContainerType ("ROOT", "0", "ROOT");  
 
-  pajeDefineContainerType("THREAD", "ROOT", "THREAD");
-  pajeDefineContainerType("WORKER", "THREAD", "WORKER");
-  pajeDefineContainerType("STEAL", "THREAD", "STEAL");
-#if defined(KAAPI_USE_CUDA)
-  pajeDefineContainerType("GPU", "THREAD", "GPU");
-#endif
+  kaapi_trace_poti_DefineContainerType("THREAD", "ROOT", "process");
+  kaapi_trace_poti_DefineContainerType("THIEF", "THREAD", "steal");
+  kaapi_trace_poti_DefineContainerType("WORKER", "THREAD", "running");  
+  
+  kaapi_trace_poti_DefineStateType("STATE", "WORKER", "work");
+  kaapi_trace_poti_DefineStateType("STEAL", "THIEF", "stealing");
+  
+//  kaapi_trace_poti_DefineEventType("EVTSTEAL", "THIEF", "Request", "blue");
+//  kaapi_trace_poti_DefineEventType("SUSPEND", "WORKER", "suspend", "blue");
 
-  pajeDefineStateType("STATE",   "THREAD", "STATE");
-
-  pajeDefineEventType("STEAL",   "THREAD", "STEAL", "blue");
-  pajeDefineEventType("SUSPEND", "THREAD", "SUSPEND", "blue");
-  pajeDefineEventType("FSTEAL",  "THREAD", "FSTEAL", "blue");
-
-  pajeDefineLinkType("LINK", "ROOT", "THREAD", "THREAD", "LINK");
+  kaapi_trace_poti_DefineLinkType("LINK1", "ROOT", "WORKER", "THIEF", "request");
+  kaapi_trace_poti_DefineLinkType("LINK2", "ROOT", "THIEF", "WORKER", "reply");
 
   /* actif state */
-  pajeDefineEntityValue("a", "STATE", "running", "0.0 0.0 1.0");
+  kaapi_trace_poti_DefineEntityValue("a", "STATE", "running", "0.0 0.0 1.0");
 
   /* actif state when executing static task */
-  pajeDefineEntityValue("b", "STATE", "running", "0.6 0.0 1.0");
+  kaapi_trace_poti_DefineEntityValue("b", "STATE", "task", "0.0 1.0 0.0");
 
   /* idle (stealing) state */
-  pajeDefineEntityValue("i", "STATE", "stealing", "1 0.5 0.0");
+  kaapi_trace_poti_DefineEntityValue("i", "STATE", "idle", "1.0 0.0 0.0");
 
   /* suspended state */
-  pajeDefineEntityValue("s", "STATE", "suspended", "1.0 0.0 0.0");
+  kaapi_trace_poti_DefineEntityValue("s", "STATE", "suspended", "1.0 0.0 0.0");
 
   /* execution of steal request */
-  pajeDefineEntityValue("r", "STATE", "request", "8.0 0.6 0.4");
+  kaapi_trace_poti_DefineEntityValue("r", "STEAL", "request", "1.0 0.5 0.0");
 
   /* execution of foreach code */
-  pajeDefineEntityValue("f", "STATE", "foreach", "0.0 0.2 1.0");
+  kaapi_trace_poti_DefineEntityValue("f", "STATE", "foreach", "0.0 0.2 1.0");
 
   /* execution of static task to unroll graph */
-  pajeDefineEntityValue("st", "STATE", "unroll", "0.5 1.0 0.0");
+  kaapi_trace_poti_DefineEntityValue("st", "STATE", "unroll", "0.6 0.0 1.0");
 
   /* steal operation */
-  pajeDefineEntityValue("so", "STEAL", "steal", "1.0 0.1 0.1");
+  kaapi_trace_poti_DefineEntityValue("so", "STEAL", "steal", "1.0 0.1 0.1");
 
   /* successful steal operation */
-  pajeDefineEntityValue("sok", "STEAL", "steal", "0.0 1.0 0.1");
+  kaapi_trace_poti_DefineEntityValue("sok", "STEAL", "steal", "0.0 1.0 0.1");
 
   /* suspend post operation */
-  pajeDefineEntityValue("su", "SUSPEND", "suspend", "0.8 0.8 0.8");
+//  kaapi_trace_poti_DefineEntityValue("su", "SUSPEND", "suspend", "0.8 0.8 0.8");
 
   /* foreach steal event */
-  pajeDefineEntityValue("fo", "STEAL", "foreachsteal", "0.5 0.25 0.0");
+//  kaapi_trace_poti_DefineEntityValue("fo", "EVTSTEAL", "foreachsteal", "0.5 0.25 0.0");
 
   /* link  */
-  pajeDefineEntityValue("li", "LINK", "link", "1.0 0.1 0.1");
+//  kaapi_trace_poti_DefineEntityValue("li", "LINK", "link", "1.0 0.1 0.1");
 
   /* link  */
-  pajeDefineEntityValue("ri", "LINK", "reply", "0.2 0.2 0.2");
+  kaapi_trace_poti_DefineEntityValue("ri", "LINK2", "reply", "0.0 1.0 0.0");
 
   /* link: successfull steal  */
-  pajeDefineEntityValue("riok", "LINK", "steal", "0.0 1.0 0.2");
-
-#if defined(KAAPI_USE_CUDA)
-  /* CUDA host-to-device copy operation */
-  pajeDefineEntityValue("htod", "STATE", "htod", "0.6 0.0 1.0");
-
-  /* CUDA kernel execution time */
-  pajeDefineEntityValue("kernel", "STATE", "kernel", "0.6 0.0 1.0");
-
-  /* CUDA device-to-host copy operation */
-  pajeDefineEntityValue("dtoh", "STATE", "dtoh", "0.6 0.0 1.0");
-
-//  /* CUDA synchronizations by CPU */
-  pajeDefineEntityValue("sync", "STATE", "sync", "0.0 0.6 0.6");
-#endif
-
-#if 0
-
-  /* CUDA device memory allocations */
-  pajeDefineEntityValue("al", "STATE", "Alloc", "0.0 0.0 0.0");
-#endif
+  kaapi_trace_poti_DefineEntityValue("riok", "LINK1", "steal", "1.0 0.0 0.0");
+  
+  kaapi_trace_poti_DefineEntityValue("kgpu", "STATE", "kernel", "0.0 0.5 0.0");
+  kaapi_trace_poti_DefineEntityValue("kh2d", "STATE", "host2device", "0.5 0.5 0.0");
+  kaapi_trace_poti_DefineEntityValue("kd2h", "STATE", "device2host", "0.0 0.5 0.5");
+  kaapi_trace_poti_DefineEntityValue("ksync", "STATE", "synchronization", "1.0 1.0 0.0");    
 
   /* create the root container */
-  pajeCreateContainer (0.00, "root", "ROOT", "0", "root");
+  kaapi_trace_poti_CreateContainer (0.00, "root", "ROOT", "0", "XKaapi");
 
   return 0;
 }
@@ -948,34 +1023,49 @@ static int fnc_paje_gantt_header()
 
 static int fnc_paje_gantt_close(uint64_t gantt_tmax)
 {
-  pajeDestroyContainer (1e-9*gantt_tmax, "ROOT", "root");
-  pajeClose();
-  fprintf(stdout, "*** Paje file 'gantt.paje' closed\n");
+  kaapi_trace_poti_DestroyContainer (1e-9*gantt_tmax, "ROOT", "root");
+  kaapi_trace_poti_Close();
+  fprintf(stdout, "*** Paje file '%s' closed\n", katracereader_options.output.c_str());
   return 0;
 }
 
-
-/* Parse options:
-   * nooption : nocode: print usage
-   * -a       : 0 : display all data, using function fnc_print_evt
-   * -m       : 1 : display the mapping of tasks only, use function fnc_print_map_task_kid
-   * -s       : 2 : display statistics
-   * -p       : 2 : display paje gantt
-*/
-static kaapi_fnc_event parse_option( const char* arg)
+static kaapi_fnc_event parse_option( const int argc, const char** argv, int* count )
 {
   char option =' ';
+  int i;
   
-  if (strcmp(arg, "-a") ==0)
-    option = 'a';
-#if 0
-  if (strcmp(arg, "-m") ==0)
-    option = 'm';
-  if (strcmp(arg, "-s") ==0)
-    option = 's';
-#endif
-  if (strcmp(arg, "-p") ==0)
-    option = 'p';
+  for(i= 1; i < argc; i++){
+    if (strcmp(argv[i], "--display-data") ==0)
+      option = 'a';
+    else if (strcmp(argv[i], "--paje") ==0)
+    {
+      option = 'p';
+      katracereader_options.vitecompatibility  = 0;
+      katracereader_options.output = "paje-gantt.trace";
+    }
+    else if (strcmp(argv[i], "--vite") ==0)
+    {
+      option = 'p';
+      katracereader_options.vitecompatibility  = 1;
+      katracereader_options.output = "vite-gantt.trace";
+    }
+    else if (strcmp(argv[i], "--steal-event") ==0)
+      katracereader_options.stealevent = 1;
+    else if (strcmp(argv[i], "--gpu-trace") ==0)
+      katracereader_options.gputrace = 1;
+    else if (strcmp(argv[i], "--gpu-transfer") ==0)
+      katracereader_options.gputransfer = 1;
+    else
+      break; /* end of options */
+  #if 0
+    else if (strcmp(argv[i], "-m") ==0)
+      option = 'm';
+    else if (strcmp(argv[i], "-s") ==0)
+      option = 's';
+  #endif
+  }
+  
+  *count = i;
   
   switch (option) {
   case 'a':
@@ -1003,17 +1093,20 @@ static kaapi_fnc_event parse_option( const char* arg)
 */
 int main(int argc, char** argv)
 {
+  int count= 0;
+  
   if (argc <2)
     print_usage();
   
-  kaapi_fnc_event function = parse_option( argv[1] );
+  kaapi_fnc_event function = parse_option( argc, (const char**)argv, &count );
 
-  if (function ==0) 
+  if (function == 0)
     return -1;
-  if (argc-2 <= 0)
+  if ((argc-count) <= 0)
     print_usage();
 
-  function( argc-2, (const char**)(argv+2) );
+//  function( argc-2, (const char**)(argv+2) );
+  function( (argc-count), (const char**)(argv+count) );
   
   return 0;
 }

@@ -196,7 +196,7 @@ void kaapi_mt_perf_thread_init( kaapi_processor_t* kproc, int isuser )
     err = PAPI_set_opt(PAPI_DOMAIN, &opt);
     kaapi_assert_m(PAPI_OK == err, "PAPI_set_opt_dom()");
 
-#if 0
+#if 1 /* TODO: verify */
     err = PAPI_add_events
       (kproc->papi_event_set, papi_event_codes, papi_event_count);
 #else

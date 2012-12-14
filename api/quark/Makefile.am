@@ -7,7 +7,7 @@ AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir)
 
 if KAAPI_API_QUARK
 
-lib_LTLIBRARIES=libquark.la
+lib_LTLIBRARIES = libquark.la
 
 libquark_la_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPILIB_BUILD_CPPFLAGS)
 libquark_la_CFLAGS=$(AM_CFLAGS) $(KAAPILIB_BUILD_CFLAGS)

@@ -49,9 +49,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <cuda.h>
+
 #include "kaapi_impl.h"
-//#include "kaapi_cuda_error.h"
-#include "../../memory/kaapi_mem.h"
 
 #if 0
 
@@ -1015,12 +1014,12 @@ int kaapi_cuda_exectask
     access = kaapi_format_get_access_param(format, i, sp);
     kaapi_assert_debug(access != NULL);
 
-    mdi = kaapi_mem_findinsert_metadata(access.data);
+    mdi = kaapi_memory_find_metadata(access.data);
     kaapi_assert_debug(mdi != NULL);
 
-    if (!_kaapi_metadata_info_is_valid(mdi, thread->asid)) {
+    if (!kaapi_metadata_info_is_valid(mdi, thread->asid)) {
       view = kaapi_format_get_view_param(format, i, task->sp);
-      _kaapi_metadata_info_bind_data(mdi, thread->asid, access.data,
+      kaapi_metadata_info_bind_data(mdi, thread->asid, access.data,
 				     &view);
       mdi->version[0] =
 	  kaapi_thread_newversion(mdi, thread->asid, access.data, &view);

@@ -1,12 +1,13 @@
 /*
  ** xkaapi
  ** 
- ** Copyright 2010 INRIA.
+ ** Copyright 2009,2010,2011,2012 INRIA.
  **
  ** Contributors :
  **
  ** thierry.gautier@inrialpes.fr
  ** fabien.lementec@imag.fr
+ ** Joao.Lima@imagf.r / joao.lima@inf.ufrgs.br
  ** 
  ** This software is a computer program whose purpose is to execute
  ** multithreaded computation with data flow synchronization between
@@ -41,167 +42,94 @@
  ** terms.
  ** 
  */
+
 #include "kaapi_impl.h"
-//#include "kaapi_memory.h"
 
-/** Global Hash map of all mapping
-*/
-#ifdef SMALL_HASH
-static kaapi_hashmap_t kmdi_hm;
-#else
-static kaapi_big_hashmap_t kmdi_hm;
-#endif
-
-
-/*
-*/
-void kaapi_memory_init(void)
-{
-#ifdef SMALL_HASH
-  kaapi_hashmap_init( &kmdi_hm, 0 );  
-#else
-  kaapi_big_hashmap_init( &kmdi_hm, 0 );  
-#endif
-}
-
-
-/*
-*/
-void kaapi_memory_destroy(void)
-{
-#ifdef SMALL_HASH
-  kaapi_hashmap_destroy( &kmdi_hm );
-#else
-  kaapi_big_hashmap_destroy( &kmdi_hm );
-#endif
-}
-
-/**
-*/
 kaapi_metadata_info_t* kaapi_memory_find_metadata( void* ptr )
 {
-  kaapi_hashentries_t* entry;
+  kaapi_memory_map_t* const kmap = kaapi_memory_map_get_current(kaapi_get_self_kid());
+  kaapi_metadata_info_t* kmdi;
   
-#ifdef SMALL_HASH
-  entry = kaapi_hashmap_find(&kmdi_hm, ptr);
-#else
-  entry = kaapi_big_hashmap_find(&kmdi_hm, ptr);
-#endif
-  if (entry ==0) return 0;
-  return entry->u.mdi;
-}
-
-
-/**
-*/
-static inline kaapi_metadata_info_t* _kaapi_memory_allocate_mdi()
-{
-#if 0//defined(KAAPI_USE_NUMA)
-  kaapi_metadata_info_t* mdi = numa_alloc_local( sizeof(kaapi_metadata_info_t) );
-#else
-  kaapi_metadata_info_t* mdi = malloc( sizeof(kaapi_metadata_info_t) );
-#endif
-  if (mdi ==0) return 0;
-  mdi->validbits = 0;
-#if defined(KAAPI_DEBUG)
-  memset(mdi->data, 0, sizeof(kaapi_data_t)*KAAPI_MAX_ADDRESS_SPACE );
-  memset(mdi->version, 0, sizeof(kaapi_version_t*)*KAAPI_MAX_ADDRESS_SPACE );
-#endif
-  return mdi;
-}
-
-
-/**
-*/
-kaapi_metadata_info_t* kaapi_mem_findinsert_metadata( void* ptr )
-{
-  kaapi_hashentries_t* entry;
+  kmdi = kaapi_memory_map_find_or_insert(kmap, ptr);
   
-#ifdef SMALL_HASH
-  entry = kaapi_hashmap_findinsert(&kmdi_hm, ptr);
-#else
-  entry = kaapi_big_hashmap_findinsert(&kmdi_hm, ptr);
+#if 0
+  kaapi_memory_address_space_fprintf(stdout, kaapi_memory_map_get_current_asid());
 #endif
-  if (entry->u.mdi ==0)
-    entry->u.mdi = _kaapi_memory_allocate_mdi();
-  return entry->u.mdi;
-}
-
-
-/**
-*/
-kaapi_version_t** _kaapi_metadata_info_bind_data( 
-    kaapi_metadata_info_t* kmdi, 
-    kaapi_address_space_id_t kasid, 
-    void* ptr, const kaapi_memory_view_t* view
-)
-{
-  uint16_t lid = _kaapi_memory_address_space_getlid( kasid );
-  kaapi_assert_debug( lid < KAAPI_MAX_ADDRESS_SPACE );
-  kmdi->data[lid].ptr  = kaapi_make_pointer(kasid, ptr);
-  kmdi->data[lid].view = *view;
-  kmdi->data[lid].mdi = kmdi; 
-  kmdi->validbits |= (1UL << lid);
-  return &kmdi->version[lid];
-}
-
-
-/**
-*/
-kaapi_metadata_info_t* kaapi_memory_bind( 
-  kaapi_address_space_id_t kasid, 
-  int flag, 
-  void* ptr, 
-  size_t size 
-)
-{
-  kaapi_hashentries_t* entry;
   
-#ifdef SMALL_HASH
-  entry = kaapi_hashmap_findinsert(&kmdi_hm, ptr);
-#else
-  entry = kaapi_big_hashmap_findinsert(&kmdi_hm, ptr);
-#endif
-  if (entry->u.mdi ==0)
-    entry->u.mdi = _kaapi_memory_allocate_mdi();
+  return kmdi;
+}
 
-  kaapi_assert_debug( entry->u.mdi->data[_kaapi_memory_address_space_getlid( kasid )].ptr.ptr == 0 );
+kaapi_version_t** kaapi_metadata_info_bind_data(
+                                                kaapi_metadata_info_t* kmdi,
+                                                kaapi_address_space_id_t kasid,
+                                                void* ptr, const kaapi_memory_view_t* view
+                                                )
+{
+  kaapi_metadata_info_set_data(kmdi, kasid, ptr, view);
+  kaapi_metadata_info_clear_dirty(kmdi, kasid);
+  return kaapi_metadata_info_get_version_by_lid_(kmdi, kaapi_memory_address_space_getlid(kasid));
+}
+
+kaapi_metadata_info_t* kaapi_memory_bind(
+                                         kaapi_address_space_id_t kasid,
+                                         int flag,
+                                         void* ptr,
+                                         size_t size
+                                         )
+{
+  kaapi_metadata_info_t* const kmdi = kaapi_memory_find_metadata(ptr);
   kaapi_memory_view_t view = kaapi_memory_view_make1d(size, 1);
-  _kaapi_metadata_info_bind_data( entry->u.mdi, kasid, ptr, &view );
-  return entry->u.mdi;
-}
-
-
-/**
-*/
-kaapi_metadata_info_t* kaapi_memory_bind_view( 
-  kaapi_address_space_id_t kasid, 
-  int flag, 
-  void* ptr, 
-  const kaapi_memory_view_t* view 
-)
-{
-  kaapi_hashentries_t* entry;
+  kaapi_metadata_info_bind_data(kmdi, kasid, ptr, &view);
   
-#ifdef SMALL_HASH
-  entry = kaapi_hashmap_findinsert(&kmdi_hm, ptr);
-#else
-  entry = kaapi_big_hashmap_findinsert(&kmdi_hm, ptr);
-#endif
-  if (entry->u.mdi ==0)
-    entry->u.mdi = _kaapi_memory_allocate_mdi();
-
-  kaapi_assert_debug( entry->u.mdi->data[_kaapi_memory_address_space_getlid( kasid )].ptr.ptr == 0 );
-  _kaapi_metadata_info_bind_data( entry->u.mdi, kasid, ptr, view );
-  return entry->u.mdi;
+  return kmdi;
 }
 
+kaapi_metadata_info_t* kaapi_memory_bind_with_metadata(
+                                                       kaapi_address_space_id_t kasid,
+                                                       kaapi_metadata_info_t* const kmdi,
+                                                       int flag,
+                                                       void* ptr,
+                                                       size_t size
+                                                       )
+{
+  kaapi_memory_map_t* const kmap = kaapi_memory_map_get_current(kaapi_get_self_kid());
+  kaapi_memory_map_find_and_insert(kmap, ptr, kmdi);
+  kaapi_memory_view_t view = kaapi_memory_view_make1d(size, 1);
+  kaapi_metadata_info_bind_data(kmdi, kasid, ptr, &view);
+  
+  return kmdi;
+}
 
-/** 
-*/
+kaapi_metadata_info_t* kaapi_memory_bind_view(
+                                              kaapi_address_space_id_t kasid,
+                                              int flag,
+                                              void* ptr,
+                                              const kaapi_memory_view_t* view
+                                              )
+{
+  kaapi_metadata_info_t* const kmdi = kaapi_memory_find_metadata(ptr);
+  kaapi_metadata_info_bind_data(kmdi, kasid, ptr, view);
+  return kmdi;
+}
+
+kaapi_metadata_info_t* kaapi_memory_bind_view_with_metadata(
+                                                            kaapi_address_space_id_t kasid,
+                                                            kaapi_metadata_info_t* const kmdi,
+                                                            int flag,
+                                                            void* ptr,
+                                                            const kaapi_memory_view_t* view
+                                                            )
+{
+  kaapi_memory_map_t* const kmap = kaapi_memory_map_get_current(kaapi_get_self_kid());
+  kaapi_memory_map_find_and_insert(kmap, ptr, kmdi);
+  kaapi_metadata_info_bind_data(kmdi, kasid, ptr, view);
+  return kmdi;
+}
+
 void* kaapi_memory_unbind( kaapi_metadata_info_t* kmdi )
 {
   kaapi_assert(0); // TODO
   void* retval = 0;
+  //  kaapi_metadata_info_unbind_alldata(kmdi); TODO
   return retval;
 }

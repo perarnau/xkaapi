@@ -1,15 +1,13 @@
 /*
- ** kaapi_impl.h
  ** xkaapi
  **
- ** Created on Tue Mar 31 15:19:09 2009
- ** Copyright 2009 INRIA.
+ ** Copyright 2009, 2010, 2011, 2012 INRIA.
  **
  ** Contributors :
  **
  ** thierry.gautier@inrialpes.fr
- ** Joao.Lima@imag.fr / joao.lima@inf.ufrgs.br
  ** fabien.lementec@gmail.com / fabien.lementec@imag.fr
+ ** Joao.Lima@imag.fr / joao.lima@inf.ufrgs.br
  **
  ** This software is a computer program whose purpose is to execute
  ** multithreaded computation with data flow synchronization between
@@ -44,6 +42,7 @@
  ** terms.
  **
  */
+
 #include <iostream>
 #include <iomanip>
 #include <string>
@@ -183,13 +182,11 @@ struct doit {
     
     // Number of iterations
     int niter = 1;
-    if (argc >3)
-      niter = atoi(argv[3]);
     
     // Make verification ?
     int verif = 0;
-    if (argc >4)
-      verif = atoi(argv[4]);
+    if (argc > 3)
+      verif = atoi(argv[3]);
     
     global_blocsize = block_size;
     n = (n / block_size) * block_size;

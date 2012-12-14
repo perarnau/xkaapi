@@ -1639,6 +1639,12 @@ extern int kaapi_memory_register( void* ptr, kaapi_memory_view_t view );
 /* Register memory for Xkaapi optimizations */
 extern void kaapi_memory_unregister( void* ptr );
 
+/* Return the host pointer from a GPU pointer (called from GPU task). */
+extern void* kaapi_memory_get_host_pointer( void* const gpu_ptr );
+
+/* Return the host pointer from a GPU pointer and validate host copy (called from GPU task). */
+extern void* kaapi_memory_get_host_pointer_and_validate( void* const gpu_ptr );
+  
 /** Create a thread group with size threads. 
     Mapping function should be set at creation step. 
     For each thread tid of the group, the function mapping is called with:
@@ -2361,9 +2367,12 @@ int kaapi_splitter_default
 #define KAAPI_PERF_ID_TASKLISTCALC  11 /* tick to compute task lists in ns */
 
 #define KAAPI_PERF_ID_COMM_OUT	    12 /* host to device transfers */
-#define KAAPI_PERF_ID_COMM_IN	    13 /* device to host transfers */
+#define KAAPI_PERF_ID_COMM_IN       13 /* device to host transfers */
+  
+#define KAAPI_PERF_ID_CACHE_HIT	    14 /* GPU cache hit */
+#define KAAPI_PERF_ID_CACHE_MISS    15 /* GPU cache miss */
 
-#define KAAPI_PERF_ID_ENDSOFTWARE   14 /* mark end of software counters */
+#define KAAPI_PERF_ID_ENDSOFTWARE   16 /* mark end of software counters */
 
 #define KAAPI_PERF_ID_PAPI_BASE    (KAAPI_PERF_ID_ENDSOFTWARE)
 #define KAAPI_PERF_ID_PAPI_0       (KAAPI_PERF_ID_PAPI_BASE + 0)

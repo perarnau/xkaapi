@@ -110,7 +110,7 @@ void Poisson3D::initialize_subdomains( Poisson3D::Index index, SubDomain& subdom
           subdom(x,y,z) = 0.0;
           solution(x,y,z) = xx*yy*zz*(xx-1.)*(yy-1.)*(zz-1.);
         }
-//     printf( "[Poisson3D::initialize_subdomains] [%d,%d,%d] - (%d,%d,%d) - frhs(0,0,0) = %f\n", nx, ny, nz, index.get_i(), index.get_j(), index.get_k(), frhs(0,0,0) );
+     //printf( "[Poisson3D::initialize_subdomains] [%d,%d,%d] - (%d,%d,%d) - frhs(0,0,0) = %f\n", nx, ny, nz, index.get_i(), index.get_j(), index.get_k(), frhs(0,0,0) );
 }
 
 //------------------------------------------------------------

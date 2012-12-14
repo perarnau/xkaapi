@@ -574,7 +574,9 @@ dnl The "--with-poti"
 dnl -----------------------------------------------------------------------
 KAAPI_PKGLIB_CHECK([POTI], [poti], [POTI], [no], [KAAPI_USE_EXTERNAL_POTI],
   [use POTI library to produce Paje traces],
-  [poti], [], [poti.h], [pajeOpen])
+  [poti], [], [poti.h], [poti_open], [
+    AC_DEFINE(KAAPI_USE_POTI, 1, [Support for POTI])
+  ])
 
 dnl -----------------------------------------------------------------------
 dnl The "--with-papi"
@@ -622,8 +624,8 @@ dnl -----------------------------------------------------------------------
 dnl The "--with-cupti"
 dnl -----------------------------------------------------------------------
 KAAPI_PKGLIB_CHECK([GPU programming], [cupti], [CUPTI], [no], [KAAPI_USE_CUPTI],
-  [build CUDA profiler support [EXPERIMENTAL]],
-  [cupti], [], [cuda_runtime_api.h], [cuDeviceGetAttribute], [
+  [build CUDA CUPTI profiler support [EXPERIMENTAL]],
+  [cupti], [], [cuda_runtime_api.h], [cuptiGetVersion], [
 dnl    CUPTI is there
     AC_DEFINE([KAAPI_USE_CUPTI],1,[Support for CUDA profiler])
     HACK_USE_CUPTI=yes
@@ -851,6 +853,7 @@ AM_CONDITIONAL([KAAPI_TARGET_KACC],[test x"$KAAPI_USE_KACC" = x"yes"])
 
 
 AM_CONDITIONAL([KAAPI_HAVE_CBLAS],[test x"$CBLAS_LDFLAGS" != x])
+AM_CONDITIONAL([KAAPI_HAVE_LAPACKE],[test x"$LAPACKE_LDFLAGS" != x])
 
 dnl -----------------------------------------------------------------------
 dnl sub configure for external (but imported) projects
@@ -909,6 +912,8 @@ ACX_LIB_LINK([KAAPIXXPROGS], [KAAPIXXLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KAAPIXXPROGS],
 	[-I\$(top_srcdir)/api/kaapixx -I\$(top_srcdir)/src],[],[],
 	[\$(top_builddir)/api/kaapixx/libkaapi++.la \$(top_builddir)/src/libkaapi.la])
+ACX_LIB_LINK([KAAPIXXPROGS], [CUDA])
+ACX_LIB_LINK([KAAPIXXPROGS], [CUPTI])
 
 ACX_LIB_LINK([KASTLPROGS], [KASTLLIB])
 ACX_LIB_ADD_BUILD_FLAGS([KASTLPROGS],
