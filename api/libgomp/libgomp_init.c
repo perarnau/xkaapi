@@ -125,7 +125,8 @@ komp_parse_cpu_affinity (void)
       int end = atoi (last_cpu);
       int hop = atoi (stride);
       
-      for (int i = begin; i < end; i += hop)
+      int i;
+      for (i = begin; i < end; i += hop)
         __append_string_with_format (kaapi_cpuset, "%d,", i); 
 
     } else {

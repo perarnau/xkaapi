@@ -1,0 +1,768 @@
+dnl KAT_HOOK([CHECK_RUN],[BEFORE],[
+dnl   AT_EXPORT([KAAPI_GOMP_SHOW_BANNER],[1])
+dnl ])
+
+dnl KAT_GLT_TEST([libgomp.c/appendix-a/a.15.1.c])
+dnl KAT_GLT_TEST([toto])
+dnl KAT_GLT_TEST_FAIL([libgomp.c/copyin-1.c],[],[dnl
+dnl FAIL: libgomp.c/copyin-1.c execution test
+dnl ])
+dnl KAT_GLT_TEST_FAIL([libgomp.c/copyin-1.c],[],[dnl
+dnl FIL: libgomp.c/copyin-1.c execution test
+dnl ])
+dnl KAT_GLT_TEST_FAIL([libgomp.c/appendix-a/a.15.1.c],[dnl
+dnl FAIL: argh
+dnl ])
+dnl KAT_GLT_TEST_FAIL([libgomp.c/loop-12.c],[timeout])
+
+dnl list extraction from a run:
+dnl cat libgomp/gcc-testsuite/all-kaapi/libgomp.sum  | grep '^[A-Z]*:' |
+dnl grep -v '^WARNING: ' |
+dnl  sed -e 's/^\([A-Z]*\): \([^ ]\+\) .*/KAT_GLT_TEST([\2])/'  | uniq
+
+
+KAT_GCC_LIBGOMP_TESTSUITE_BANNER([gcc-c],[c],
+  [C part of the GCC testsuite of libgomp],
+  [c.exp])
+
+KAT_GLT_TEST([libgomp.c/appendix-a/a.15.1.c])
+KAT_GLT_TEST([libgomp.c/appendix-a/a.16.1.c])
+KAT_GLT_TEST([libgomp.c/appendix-a/a.18.1.c])
+KAT_GLT_TEST([libgomp.c/appendix-a/a.19.1.c])
+KAT_GLT_TEST([libgomp.c/appendix-a/a.2.1.c])
+KAT_GLT_TEST([libgomp.c/appendix-a/a.21.1.c])
+KAT_GLT_TEST([libgomp.c/appendix-a/a.26.1.c])
+KAT_GLT_TEST([libgomp.c/appendix-a/a.29.1.c])
+KAT_GLT_TEST([libgomp.c/appendix-a/a.3.1.c])
+KAT_GLT_TEST([libgomp.c/appendix-a/a.33.3.c])
+KAT_GLT_TEST([libgomp.c/appendix-a/a.36.1.c])
+KAT_GLT_TEST([libgomp.c/appendix-a/a.39.1.c])
+KAT_GLT_TEST([libgomp.c/appendix-a/a.4.1.c])
+KAT_GLT_TEST([libgomp.c/appendix-a/a.40.1.c])
+KAT_GLT_TEST([libgomp.c/appendix-a/a.5.1.c])
+KAT_GLT_TEST([libgomp.c/atomic-1.c])
+KAT_GLT_TEST([libgomp.c/atomic-10.c])
+KAT_GLT_TEST([libgomp.c/atomic-2.c])
+KAT_GLT_TEST([libgomp.c/atomic-3.c])
+KAT_GLT_TEST([libgomp.c/atomic-4.c])
+KAT_GLT_TEST([libgomp.c/atomic-5.c])
+KAT_GLT_TEST([libgomp.c/atomic-6.c])
+KAT_GLT_TEST([libgomp.c/autopar-1.c])
+KAT_GLT_TEST([libgomp.c/barrier-1.c])
+KAT_GLT_TEST([libgomp.c/collapse-1.c])
+KAT_GLT_TEST_FAIL([libgomp.c/collapse-2.c],[],[dnl
+FAIL: libgomp.c/collapse-2.c execution test
+])
+KAT_GLT_TEST([libgomp.c/collapse-3.c])
+KAT_GLT_TEST_FAIL([libgomp.c/copyin-1.c],[],[dnl
+FAIL: libgomp.c/copyin-1.c execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.c/copyin-2.c],[],[dnl
+FAIL: libgomp.c/copyin-2.c execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.c/copyin-3.c],[],[dnl
+FAIL: libgomp.c/copyin-3.c execution test
+])
+KAT_GLT_TEST([libgomp.c/critical-1.c])
+KAT_GLT_TEST([libgomp.c/critical-2.c])
+KAT_GLT_TEST([libgomp.c/debug-1.c])
+KAT_GLT_TEST([libgomp.c/icv-1.c])
+KAT_GLT_TEST_FAIL([libgomp.c/icv-2.c],[],[dnl
+FAIL: libgomp.c/icv-2.c execution test
+])
+KAT_GLT_TEST([libgomp.c/lib-1.c])
+KAT_GLT_TEST([libgomp.c/lib-2.c])
+KAT_GLT_TEST([libgomp.c/lock-1.c])
+KAT_GLT_TEST([libgomp.c/lock-2.c])
+KAT_GLT_TEST_FAIL([libgomp.c/lock-3.c],[],[dnl
+FAIL: libgomp.c/lock-3.c execution test
+])
+KAT_GLT_TEST([libgomp.c/loop-1.c])
+KAT_GLT_TEST([libgomp.c/loop-10.c])
+KAT_GLT_TEST([libgomp.c/loop-11.c])
+KAT_GLT_TEST_FAIL([libgomp.c/loop-12.c],[timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.c/loop-12.c execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.c/loop-2.c],[],[dnl
+FAIL: libgomp.c/loop-2.c execution test
+])
+KAT_GLT_TEST([libgomp.c/loop-3.c])
+KAT_GLT_TEST([libgomp.c/loop-4.c])
+KAT_GLT_TEST([libgomp.c/loop-5.c])
+KAT_GLT_TEST_FAIL([libgomp.c/loop-6.c],[timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.c/loop-6.c execution test
+])
+KAT_GLT_TEST([libgomp.c/loop-7.c])
+KAT_GLT_TEST([libgomp.c/loop-8.c])
+KAT_GLT_TEST([libgomp.c/loop-9.c])
+KAT_GLT_TEST([libgomp.c/nested-1.c])
+KAT_GLT_TEST([libgomp.c/nested-2.c])
+KAT_GLT_TEST([libgomp.c/nested-3.c])
+KAT_GLT_TEST([libgomp.c/nestedfn-1.c])
+KAT_GLT_TEST([libgomp.c/nestedfn-2.c])
+KAT_GLT_TEST([libgomp.c/nestedfn-3.c])
+KAT_GLT_TEST([libgomp.c/nestedfn-4.c])
+KAT_GLT_TEST([libgomp.c/nestedfn-5.c])
+KAT_GLT_TEST([libgomp.c/nestedfn-6.c])
+KAT_GLT_TEST_FAIL([libgomp.c/nqueens-1.c],[mayfail timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.c/nqueens-1.c execution test
+])
+KAT_GLT_TEST([libgomp.c/omp-loop01.c])
+KAT_GLT_TEST([libgomp.c/omp-loop02.c])
+KAT_GLT_TEST_FAIL([libgomp.c/omp-loop03.c],[timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.c/omp-loop03.c execution test
+])
+KAT_GLT_TEST([libgomp.c/omp-nested-1.c])
+KAT_GLT_TEST([libgomp.c/omp-parallel-for.c])
+KAT_GLT_TEST([libgomp.c/omp-parallel-if.c])
+KAT_GLT_TEST([libgomp.c/omp-single-1.c])
+KAT_GLT_TEST([libgomp.c/omp-single-2.c])
+KAT_GLT_TEST([libgomp.c/omp-single-3.c])
+KAT_GLT_TEST([libgomp.c/omp_hello.c])
+KAT_GLT_TEST([libgomp.c/omp_matvec.c])
+KAT_GLT_TEST([libgomp.c/omp_orphan.c])
+KAT_GLT_TEST([libgomp.c/omp_reduction.c])
+KAT_GLT_TEST([libgomp.c/omp_workshare1.c])
+KAT_GLT_TEST([libgomp.c/omp_workshare2.c])
+KAT_GLT_TEST([libgomp.c/omp_workshare3.c])
+KAT_GLT_TEST([libgomp.c/omp_workshare4.c])
+KAT_GLT_TEST_FAIL([libgomp.c/ordered-1.c],[],[dnl
+FAIL: libgomp.c/ordered-1.c execution test
+])
+KAT_GLT_TEST([libgomp.c/ordered-2.c])
+KAT_GLT_TEST([libgomp.c/ordered-3.c])
+KAT_GLT_TEST([libgomp.c/parallel-1.c])
+KAT_GLT_TEST([libgomp.c/pr24455-1.c])
+KAT_GLT_TEST_FAIL(["libgomp.c/pr24455.c"],[],[dnl
+UNSUPPORTED: libgomp.c/pr24455.c
+])
+KAT_GLT_TEST([libgomp.c/pr26171.c])
+KAT_GLT_TEST([libgomp.c/pr26943-1.c])
+KAT_GLT_TEST_FAIL([libgomp.c/pr26943-2.c],[],[dnl
+UNRESOLVED: libgomp.c/pr26943-2.c compilation failed to produce executable
+])
+KAT_GLT_TEST_FAIL([libgomp.c/pr26943-3.c],[],[dnl
+UNRESOLVED: libgomp.c/pr26943-3.c compilation failed to produce executable
+])
+KAT_GLT_TEST_FAIL([libgomp.c/pr26943-4.c],[],[dnl
+UNRESOLVED: libgomp.c/pr26943-4.c compilation failed to produce executable
+])
+KAT_GLT_TEST_FAIL([libgomp.c/pr29947-1.c],[],[dnl
+FAIL: libgomp.c/pr29947-1.c execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.c/pr29947-2.c],[timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.c/pr29947-2.c execution test
+])
+KAT_GLT_TEST([libgomp.c/pr30494.c])
+KAT_GLT_TEST([libgomp.c/pr32362-1.c])
+KAT_GLT_TEST([libgomp.c/pr32362-2.c])
+KAT_GLT_TEST([libgomp.c/pr32362-3.c])
+KAT_GLT_TEST([libgomp.c/pr32468.c])
+KAT_GLT_TEST([libgomp.c/pr33880.c])
+KAT_GLT_TEST([libgomp.c/pr34513.c])
+KAT_GLT_TEST([libgomp.c/pr35130.c])
+KAT_GLT_TEST([libgomp.c/pr35196.c])
+KAT_GLT_TEST([libgomp.c/pr35549.c])
+KAT_GLT_TEST([libgomp.c/pr35625.c])
+KAT_GLT_TEST([libgomp.c/pr36802-1.c])
+KAT_GLT_TEST([libgomp.c/pr36802-2.c])
+KAT_GLT_TEST([libgomp.c/pr36802-3.c])
+KAT_GLT_TEST([libgomp.c/pr38650.c])
+KAT_GLT_TEST([libgomp.c/pr39154.c])
+KAT_GLT_TEST([libgomp.c/pr39591-1.c])
+KAT_GLT_TEST([libgomp.c/pr39591-2.c])
+KAT_GLT_TEST([libgomp.c/pr39591-3.c])
+KAT_GLT_TEST([libgomp.c/pr42029.c])
+KAT_GLT_TEST_FAIL([libgomp.c/pr42942.c],[],[dnl
+FAIL: libgomp.c/pr42942.c execution test
+])
+KAT_GLT_TEST([libgomp.c/pr43893.c])
+KAT_GLT_TEST([libgomp.c/pr48591.c])
+KAT_GLT_TEST_FAIL([libgomp.c/pr49897-1.c],[mayfail timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.c/pr49897-1.c execution test
+])
+KAT_GLT_TEST([libgomp.c/pr49897-2.c])
+KAT_GLT_TEST([libgomp.c/pr49898-1.c])
+KAT_GLT_TEST([libgomp.c/pr49898-2.c])
+KAT_GLT_TEST([libgomp.c/private-1.c])
+KAT_GLT_TEST([libgomp.c/reduction-1.c])
+KAT_GLT_TEST_FAIL([libgomp.c/reduction-2.c],[timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.c/reduction-2.c execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.c/reduction-3.c],[timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.c/reduction-3.c execution test
+])
+KAT_GLT_TEST([libgomp.c/reduction-4.c])
+KAT_GLT_TEST([libgomp.c/reduction-5.c])
+KAT_GLT_TEST_FAIL([libgomp.c/sections-1.c],[],[dnl
+FAIL: libgomp.c/sections-1.c execution test
+])
+KAT_GLT_TEST([libgomp.c/shared-1.c])
+KAT_GLT_TEST([libgomp.c/shared-2.c])
+KAT_GLT_TEST([libgomp.c/shared-3.c])
+KAT_GLT_TEST([libgomp.c/single-1.c])
+KAT_GLT_TEST([libgomp.c/single-2.c])
+KAT_GLT_TEST([libgomp.c/sort-1.c])
+KAT_GLT_TEST([libgomp.c/task-1.c])
+KAT_GLT_TEST([libgomp.c/task-2.c])
+KAT_GLT_TEST([libgomp.c/task-3.c])
+KAT_GLT_TEST([libgomp.c/task-4.c])
+KAT_GLT_TEST([libgomp.c/vla-1.c])
+
+KAT_GCC_LIBGOMP_TESTSUITE_BANNER([gcc-c++],[c++],
+  [C++ part of the GCC testsuite of libgomp],
+  [c++.exp])
+
+KAT_GLT_TEST_FAIL([libgomp.c++/atomic-1.C])
+KAT_GLT_TEST([libgomp.c++/collapse-1.C])
+KAT_GLT_TEST_FAIL([libgomp.c++/collapse-2.C],[],[dnl
+FAIL: libgomp.c++/collapse-2.C  -O0  execution test
+FAIL: libgomp.c++/collapse-2.C  -O1  execution test
+FAIL: libgomp.c++/collapse-2.C  -O2  execution test
+FAIL: libgomp.c++/collapse-2.C  -O3 -fomit-frame-pointer  execution test
+FAIL: libgomp.c++/collapse-2.C  -O3 -fomit-frame-pointer -funroll-loops  execution test
+FAIL: libgomp.c++/collapse-2.C  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+FAIL: libgomp.c++/collapse-2.C  -O3 -g  execution test
+FAIL: libgomp.c++/collapse-2.C  -Os  execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.c++/copyin-1.C],[],[dnl
+FAIL: libgomp.c++/copyin-1.C  -O0  execution test
+FAIL: libgomp.c++/copyin-1.C  -O1  execution test
+FAIL: libgomp.c++/copyin-1.C  -O2  execution test
+FAIL: libgomp.c++/copyin-1.C  -O3 -fomit-frame-pointer  execution test
+FAIL: libgomp.c++/copyin-1.C  -O3 -fomit-frame-pointer -funroll-loops  execution test
+FAIL: libgomp.c++/copyin-1.C  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+FAIL: libgomp.c++/copyin-1.C  -O3 -g  execution test
+FAIL: libgomp.c++/copyin-1.C  -Os  execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.c++/copyin-2.C],[],[dnl
+FAIL: libgomp.c++/copyin-2.C  -O0  execution test
+FAIL: libgomp.c++/copyin-2.C  -O1  execution test
+FAIL: libgomp.c++/copyin-2.C  -O2  execution test
+FAIL: libgomp.c++/copyin-2.C  -O3 -fomit-frame-pointer  execution test
+FAIL: libgomp.c++/copyin-2.C  -O3 -fomit-frame-pointer -funroll-loops  execution test
+FAIL: libgomp.c++/copyin-2.C  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+FAIL: libgomp.c++/copyin-2.C  -O3 -g  execution test
+FAIL: libgomp.c++/copyin-2.C  -Os  execution test
+])
+KAT_GLT_TEST([libgomp.c++/ctor-1.C])
+KAT_GLT_TEST([libgomp.c++/ctor-10.C])
+KAT_GLT_TEST([libgomp.c++/ctor-11.C])
+KAT_GLT_TEST([libgomp.c++/ctor-12.C])
+KAT_GLT_TEST([libgomp.c++/ctor-2.C])
+KAT_GLT_TEST([libgomp.c++/ctor-3.C])
+KAT_GLT_TEST([libgomp.c++/ctor-4.C])
+KAT_GLT_TEST([libgomp.c++/ctor-5.C])
+KAT_GLT_TEST([libgomp.c++/ctor-6.C])
+KAT_GLT_TEST([libgomp.c++/ctor-7.C])
+KAT_GLT_TEST([libgomp.c++/ctor-8.C])
+KAT_GLT_TEST([libgomp.c++/ctor-9.C])
+KAT_GLT_TEST([libgomp.c++/for-1.C])
+KAT_GLT_TEST([libgomp.c++/for-2.C])
+KAT_GLT_TEST_FAIL([libgomp.c++/for-3.C],[],[dnl
+FAIL: libgomp.c++/for-3.C  -O0  execution test
+FAIL: libgomp.c++/for-3.C  -O1  execution test
+FAIL: libgomp.c++/for-3.C  -O2  execution test
+FAIL: libgomp.c++/for-3.C  -O3 -fomit-frame-pointer  execution test
+FAIL: libgomp.c++/for-3.C  -O3 -fomit-frame-pointer -funroll-loops  execution test
+FAIL: libgomp.c++/for-3.C  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+FAIL: libgomp.c++/for-3.C  -O3 -g  execution test
+FAIL: libgomp.c++/for-3.C  -Os  execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.c++/for-4.C],[],[dnl
+FAIL: libgomp.c++/for-4.C  -O0  execution test
+FAIL: libgomp.c++/for-4.C  -O1  execution test
+FAIL: libgomp.c++/for-4.C  -O2  execution test
+FAIL: libgomp.c++/for-4.C  -O3 -fomit-frame-pointer  execution test
+FAIL: libgomp.c++/for-4.C  -O3 -fomit-frame-pointer -funroll-loops  execution test
+FAIL: libgomp.c++/for-4.C  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+FAIL: libgomp.c++/for-4.C  -O3 -g  execution test
+FAIL: libgomp.c++/for-4.C  -Os  execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.c++/for-5.C],[mayfail],[dnl
+FAIL: libgomp.c++/for-5.C  -O0  execution test
+FAIL: libgomp.c++/for-5.C  -O2  execution test
+FAIL: libgomp.c++/for-5.C  -O3 -fomit-frame-pointer  execution test
+])
+KAT_GLT_TEST([libgomp.c++/for-6.C])
+KAT_GLT_TEST([libgomp.c++/for-7.C])
+KAT_GLT_TEST([libgomp.c++/for-8.C])
+KAT_GLT_TEST([libgomp.c++/loop-1.C])
+KAT_GLT_TEST([libgomp.c++/loop-10.C])
+KAT_GLT_TEST([libgomp.c++/loop-11.C])
+KAT_GLT_TEST_FAIL([libgomp.c++/loop-12.C],[timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.c++/loop-12.C  -O0  execution test
+WARNING: program timed out.
+FAIL: libgomp.c++/loop-12.C  -O1  execution test
+WARNING: program timed out.
+FAIL: libgomp.c++/loop-12.C  -O2  execution test
+WARNING: program timed out.
+FAIL: libgomp.c++/loop-12.C  -O3 -fomit-frame-pointer  execution test
+WARNING: program timed out.
+FAIL: libgomp.c++/loop-12.C  -O3 -fomit-frame-pointer -funroll-loops  execution test
+WARNING: program timed out.
+FAIL: libgomp.c++/loop-12.C  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+WARNING: program timed out.
+FAIL: libgomp.c++/loop-12.C  -O3 -g  execution test
+WARNING: program timed out.
+FAIL: libgomp.c++/loop-12.C  -Os  execution test
+])
+KAT_GLT_TEST([libgomp.c++/loop-2.C])
+KAT_GLT_TEST_FAIL([libgomp.c++/loop-3.C],[timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.c++/loop-3.C  -O  execution test
+])
+KAT_GLT_TEST([libgomp.c++/loop-4.C])
+KAT_GLT_TEST([libgomp.c++/loop-5.C])
+KAT_GLT_TEST([libgomp.c++/loop-6.C])
+KAT_GLT_TEST([libgomp.c++/loop-7.C])
+KAT_GLT_TEST([libgomp.c++/loop-8.C])
+KAT_GLT_TEST_FAIL([libgomp.c++/loop-9.C],[timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.c++/loop-9.C  -O0  execution test
+WARNING: program timed out.
+FAIL: libgomp.c++/loop-9.C  -O1  execution test
+WARNING: program timed out.
+FAIL: libgomp.c++/loop-9.C  -O2  execution test
+WARNING: program timed out.
+FAIL: libgomp.c++/loop-9.C  -O3 -fomit-frame-pointer  execution test
+WARNING: program timed out.
+FAIL: libgomp.c++/loop-9.C  -O3 -fomit-frame-pointer -funroll-loops  execution test
+WARNING: program timed out.
+FAIL: libgomp.c++/loop-9.C  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+WARNING: program timed out.
+FAIL: libgomp.c++/loop-9.C  -O3 -g  execution test
+WARNING: program timed out.
+FAIL: libgomp.c++/loop-9.C  -Os  execution test
+])
+KAT_GLT_TEST([libgomp.c++/master-1.C])
+KAT_GLT_TEST([libgomp.c++/nested-1.C])
+KAT_GLT_TEST([libgomp.c++/parallel-1.C])
+KAT_GLT_TEST([libgomp.c++/pr24455-1.C])
+KAT_GLT_TEST_FAIL([libgomp.c++/pr24455.C],[],[dnl
+UNSUPPORTED: libgomp.c++/pr24455.C  -O0
+UNSUPPORTED: libgomp.c++/pr24455.C  -O1
+UNSUPPORTED: libgomp.c++/pr24455.C  -O2
+UNSUPPORTED: libgomp.c++/pr24455.C  -O3 -fomit-frame-pointer
+UNSUPPORTED: libgomp.c++/pr24455.C  -O3 -fomit-frame-pointer -funroll-loops
+UNSUPPORTED: libgomp.c++/pr24455.C  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions
+UNSUPPORTED: libgomp.c++/pr24455.C  -O3 -g
+UNSUPPORTED: libgomp.c++/pr24455.C  -Os
+])
+KAT_GLT_TEST([libgomp.c++/pr26691.C])
+KAT_GLT_TEST([libgomp.c++/pr26943.C])
+KAT_GLT_TEST([libgomp.c++/pr27337.C])
+KAT_GLT_TEST([libgomp.c++/pr30703.C])
+KAT_GLT_TEST([libgomp.c++/pr34513.C])
+KAT_GLT_TEST([libgomp.c++/pr35185.C])
+KAT_GLT_TEST([libgomp.c++/pr38650.C])
+KAT_GLT_TEST([libgomp.c++/pr39573.C])
+KAT_GLT_TEST([libgomp.c++/pr43893.C])
+KAT_GLT_TEST([libgomp.c++/pr48869.C])
+KAT_GLT_TEST([libgomp.c++/pr49043.C])
+KAT_GLT_TEST([libgomp.c++/reduction-1.C])
+KAT_GLT_TEST_FAIL([libgomp.c++/reduction-2.C],[timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.c++/reduction-2.C  -O  execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.c++/reduction-3.C],[timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.c++/reduction-3.C  -O  execution test
+])
+KAT_GLT_TEST([libgomp.c++/sections-1.C])
+KAT_GLT_TEST([libgomp.c++/shared-1.C])
+KAT_GLT_TEST_FAIL([libgomp.c++/shared-2.C],[mayfail timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.c++/shared-2.C  -O  execution test
+])
+KAT_GLT_TEST([libgomp.c++/single-1.C])
+KAT_GLT_TEST([libgomp.c++/single-2.C])
+KAT_GLT_TEST([libgomp.c++/single-3.C])
+KAT_GLT_TEST([libgomp.c++/task-1.C])
+KAT_GLT_TEST([libgomp.c++/task-2.C])
+KAT_GLT_TEST([libgomp.c++/task-3.C])
+KAT_GLT_TEST([libgomp.c++/task-4.C])
+KAT_GLT_TEST([libgomp.c++/task-5.C])
+KAT_GLT_TEST([libgomp.c++/task-6.C])
+KAT_GLT_TEST([libgomp.c++/task-7.C])
+
+KAT_GCC_LIBGOMP_TESTSUITE_BANNER([gcc-fortran],[fortran],
+  [Fortran part of the GCC testsuite of libgomp],
+  [fortran.exp])
+
+KAT_GLT_TEST([libgomp.fortran/allocatable1.f90])
+KAT_GLT_TEST_FAIL([libgomp.fortran/allocatable2.f90],[],[dnl
+FAIL: libgomp.fortran/allocatable2.f90  -O0  execution test
+FAIL: libgomp.fortran/allocatable2.f90  -O1  execution test
+FAIL: libgomp.fortran/allocatable2.f90  -O2  execution test
+FAIL: libgomp.fortran/allocatable2.f90  -O3 -fomit-frame-pointer  execution test
+FAIL: libgomp.fortran/allocatable2.f90  -O3 -fomit-frame-pointer -funroll-loops  execution test
+FAIL: libgomp.fortran/allocatable2.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+FAIL: libgomp.fortran/allocatable2.f90  -O3 -g  execution test
+FAIL: libgomp.fortran/allocatable2.f90  -Os  execution test
+])
+KAT_GLT_TEST([libgomp.fortran/allocatable3.f90])
+KAT_GLT_TEST([libgomp.fortran/allocatable4.f90])
+KAT_GLT_TEST([libgomp.fortran/allocatable5.f90])
+KAT_GLT_TEST([libgomp.fortran/allocatable6.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.15.1.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.16.1.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.18.1.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.19.1.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.2.1.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.21.1.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.22.7.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.22.8.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.26.1.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.28.1.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.28.2.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.28.3.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.28.4.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.28.5.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.3.1.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.31.4.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.31.5.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.33.3.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.38.1.f90])
+KAT_GLT_TEST_FAIL([libgomp.fortran/appendix-a/a.39.1.f90],[],[dnl
+FAIL: libgomp.fortran/appendix-a/a.39.1.f90  -O0  execution test
+FAIL: libgomp.fortran/appendix-a/a.39.1.f90  -O1  execution test
+FAIL: libgomp.fortran/appendix-a/a.39.1.f90  -O2  execution test
+FAIL: libgomp.fortran/appendix-a/a.39.1.f90  -O3 -fomit-frame-pointer  execution test
+FAIL: libgomp.fortran/appendix-a/a.39.1.f90  -O3 -fomit-frame-pointer -funroll-loops  execution test
+FAIL: libgomp.fortran/appendix-a/a.39.1.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+FAIL: libgomp.fortran/appendix-a/a.39.1.f90  -O3 -g  execution test
+FAIL: libgomp.fortran/appendix-a/a.39.1.f90  -Os  execution test
+])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.4.1.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.40.1.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a.5.1.f90])
+KAT_GLT_TEST([libgomp.fortran/appendix-a/a10.1.f90])
+KAT_GLT_TEST([libgomp.fortran/character1.f90])
+KAT_GLT_TEST([libgomp.fortran/character2.f90])
+KAT_GLT_TEST([libgomp.fortran/collapse1.f90])
+KAT_GLT_TEST([libgomp.fortran/collapse2.f90])
+KAT_GLT_TEST_FAIL([libgomp.fortran/collapse3.f90],[mayfail],[dnl
+FAIL: libgomp.fortran/collapse3.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.fortran/collapse4.f90],[mayfail],[dnl
+FAIL: libgomp.fortran/collapse4.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+])
+KAT_GLT_TEST([libgomp.fortran/condinc1.f])
+KAT_GLT_TEST([libgomp.fortran/condinc2.f])
+KAT_GLT_TEST([libgomp.fortran/condinc3.f90])
+KAT_GLT_TEST([libgomp.fortran/condinc4.f90])
+KAT_GLT_TEST([libgomp.fortran/crayptr1.f90])
+KAT_GLT_TEST([libgomp.fortran/crayptr2.f90])
+KAT_GLT_TEST_FAIL([libgomp.fortran/do1.f90],[mayfail timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.fortran/do1.f90  -O0  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/do1.f90  -O1  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/do1.f90  -O2  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/do1.f90  -O3 -fomit-frame-pointer  execution test
+FAIL: libgomp.fortran/do1.f90  -O3 -fomit-frame-pointer -funroll-loops  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/do1.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/do1.f90  -O3 -g  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/do1.f90  -Os  execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.fortran/do2.f90],[timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.fortran/do2.f90  -O0  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/do2.f90  -O1  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/do2.f90  -O2  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/do2.f90  -O3 -fomit-frame-pointer  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/do2.f90  -O3 -fomit-frame-pointer -funroll-loops  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/do2.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/do2.f90  -O3 -g  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/do2.f90  -Os  execution test
+])
+KAT_GLT_TEST([libgomp.fortran/jacobi.f])
+KAT_GLT_TEST([libgomp.fortran/lastprivate1.f90])
+KAT_GLT_TEST([libgomp.fortran/lastprivate2.f90])
+KAT_GLT_TEST_FAIL([libgomp.fortran/lib1.f90],[],[dnl
+FAIL: libgomp.fortran/lib1.f90  -O0  execution test
+FAIL: libgomp.fortran/lib1.f90  -O1  execution test
+FAIL: libgomp.fortran/lib1.f90  -O2  execution test
+FAIL: libgomp.fortran/lib1.f90  -O3 -fomit-frame-pointer  execution test
+FAIL: libgomp.fortran/lib1.f90  -O3 -fomit-frame-pointer -funroll-loops  execution test
+FAIL: libgomp.fortran/lib1.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+FAIL: libgomp.fortran/lib1.f90  -O3 -g  execution test
+FAIL: libgomp.fortran/lib1.f90  -Os  execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.fortran/lib2.f],[],[dnl
+FAIL: libgomp.fortran/lib2.f  -O0  execution test
+FAIL: libgomp.fortran/lib2.f  -O1  execution test
+FAIL: libgomp.fortran/lib2.f  -O2  execution test
+FAIL: libgomp.fortran/lib2.f  -O3 -fomit-frame-pointer  execution test
+FAIL: libgomp.fortran/lib2.f  -O3 -fomit-frame-pointer -funroll-loops  execution test
+FAIL: libgomp.fortran/lib2.f  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+FAIL: libgomp.fortran/lib2.f  -O3 -g  execution test
+FAIL: libgomp.fortran/lib2.f  -Os  execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.fortran/lib3.f],[],[dnl
+FAIL: libgomp.fortran/lib3.f  -O0  execution test
+FAIL: libgomp.fortran/lib3.f  -O1  execution test
+FAIL: libgomp.fortran/lib3.f  -O2  execution test
+FAIL: libgomp.fortran/lib3.f  -O3 -fomit-frame-pointer  execution test
+FAIL: libgomp.fortran/lib3.f  -O3 -fomit-frame-pointer -funroll-loops  execution test
+FAIL: libgomp.fortran/lib3.f  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+FAIL: libgomp.fortran/lib3.f  -O3 -g  execution test
+FAIL: libgomp.fortran/lib3.f  -Os  execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.fortran/lib4.f90],[],[dnl
+FAIL: libgomp.fortran/lib4.f90  -O0  execution test
+FAIL: libgomp.fortran/lib4.f90  -O1  execution test
+FAIL: libgomp.fortran/lib4.f90  -O2  execution test
+FAIL: libgomp.fortran/lib4.f90  -O3 -fomit-frame-pointer  execution test
+FAIL: libgomp.fortran/lib4.f90  -O3 -fomit-frame-pointer -funroll-loops  execution test
+FAIL: libgomp.fortran/lib4.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+FAIL: libgomp.fortran/lib4.f90  -O3 -g  execution test
+FAIL: libgomp.fortran/lib4.f90  -Os  execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.fortran/lock-1.f90],[],[dnl
+FAIL: libgomp.fortran/lock-1.f90  -O0  execution test
+FAIL: libgomp.fortran/lock-1.f90  -O1  execution test
+FAIL: libgomp.fortran/lock-1.f90  -O2  execution test
+FAIL: libgomp.fortran/lock-1.f90  -O3 -fomit-frame-pointer  execution test
+FAIL: libgomp.fortran/lock-1.f90  -O3 -fomit-frame-pointer -funroll-loops  execution test
+FAIL: libgomp.fortran/lock-1.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+FAIL: libgomp.fortran/lock-1.f90  -O3 -g  execution test
+FAIL: libgomp.fortran/lock-1.f90  -Os  execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.fortran/lock-2.f90],[],[dnl
+FAIL: libgomp.fortran/lock-2.f90  -O0  execution test
+FAIL: libgomp.fortran/lock-2.f90  -O1  execution test
+FAIL: libgomp.fortran/lock-2.f90  -O2  execution test
+FAIL: libgomp.fortran/lock-2.f90  -O3 -fomit-frame-pointer  execution test
+FAIL: libgomp.fortran/lock-2.f90  -O3 -fomit-frame-pointer -funroll-loops  execution test
+FAIL: libgomp.fortran/lock-2.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+FAIL: libgomp.fortran/lock-2.f90  -O3 -g  execution test
+FAIL: libgomp.fortran/lock-2.f90  -Os  execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.fortran/nested1.f90],[],[dnl
+FAIL: libgomp.fortran/nested1.f90  -O0  execution test
+FAIL: libgomp.fortran/nested1.f90  -O1  execution test
+FAIL: libgomp.fortran/nested1.f90  -O2  execution test
+FAIL: libgomp.fortran/nested1.f90  -O3 -fomit-frame-pointer  execution test
+FAIL: libgomp.fortran/nested1.f90  -O3 -fomit-frame-pointer -funroll-loops  execution test
+FAIL: libgomp.fortran/nested1.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+FAIL: libgomp.fortran/nested1.f90  -O3 -g  execution test
+FAIL: libgomp.fortran/nested1.f90  -Os  execution test
+])
+KAT_GLT_TEST([libgomp.fortran/nestedfn1.f90])
+KAT_GLT_TEST([libgomp.fortran/nestedfn2.f90])
+KAT_GLT_TEST([libgomp.fortran/nestedfn3.f90])
+KAT_GLT_TEST([libgomp.fortran/nestedfn4.f90])
+KAT_GLT_TEST([libgomp.fortran/omp_atomic1.f90])
+KAT_GLT_TEST([libgomp.fortran/omp_atomic2.f90])
+KAT_GLT_TEST([libgomp.fortran/omp_cond1.f])
+KAT_GLT_TEST([libgomp.fortran/omp_cond2.f])
+KAT_GLT_TEST([libgomp.fortran/omp_cond3.F90])
+KAT_GLT_TEST([libgomp.fortran/omp_cond4.F90])
+KAT_GLT_TEST([libgomp.fortran/omp_hello.f])
+KAT_GLT_TEST([libgomp.fortran/omp_orphan.f])
+KAT_GLT_TEST_FAIL([libgomp.fortran/omp_parse1.f90],[mayfail timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse1.f90  -O0  execution test
+FAIL: libgomp.fortran/omp_parse1.f90  -O1  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse1.f90  -O2  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse1.f90  -O3 -fomit-frame-pointer  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse1.f90  -O3 -fomit-frame-pointer -funroll-loops  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse1.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse1.f90  -O3 -g  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse1.f90  -Os  execution test
+])
+KAT_GLT_TEST([libgomp.fortran/omp_parse2.f90])
+KAT_GLT_TEST_FAIL([libgomp.fortran/omp_parse3.f90],[mayfail timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse3.f90  -O0  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse3.f90  -O1  execution test
+FAIL: libgomp.fortran/omp_parse3.f90  -O2  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse3.f90  -O3 -fomit-frame-pointer  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse3.f90  -O3 -fomit-frame-pointer -funroll-loops  execution test
+FAIL: libgomp.fortran/omp_parse3.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+FAIL: libgomp.fortran/omp_parse3.f90  -O3 -g  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse3.f90  -Os  execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.fortran/omp_parse4.f90],[timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse4.f90  -O0  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse4.f90  -O1  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse4.f90  -O2  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse4.f90  -O3 -fomit-frame-pointer  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse4.f90  -O3 -fomit-frame-pointer -funroll-loops  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse4.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse4.f90  -O3 -g  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/omp_parse4.f90  -Os  execution test
+])
+KAT_GLT_TEST([libgomp.fortran/omp_reduction.f])
+KAT_GLT_TEST([libgomp.fortran/omp_workshare1.f])
+KAT_GLT_TEST([libgomp.fortran/omp_workshare2.f])
+KAT_GLT_TEST([libgomp.fortran/pr25162.f])
+KAT_GLT_TEST([libgomp.fortran/pr25219.f90])
+KAT_GLT_TEST([libgomp.fortran/pr27395-1.f90])
+KAT_GLT_TEST([libgomp.fortran/pr27395-2.f90])
+KAT_GLT_TEST([libgomp.fortran/pr27416-1.f90])
+KAT_GLT_TEST([libgomp.fortran/pr27916-1.f90])
+KAT_GLT_TEST([libgomp.fortran/pr27916-2.f90])
+KAT_GLT_TEST([libgomp.fortran/pr28390.f])
+KAT_GLT_TEST([libgomp.fortran/pr29629.f90])
+KAT_GLT_TEST([libgomp.fortran/pr32359.f90])
+KAT_GLT_TEST([libgomp.fortran/pr32550.f90])
+KAT_GLT_TEST([libgomp.fortran/pr33880.f90])
+KAT_GLT_TEST([libgomp.fortran/pr34020.f90])
+KAT_GLT_TEST([libgomp.fortran/pr35130.f90])
+KAT_GLT_TEST([libgomp.fortran/pr42162.f90])
+KAT_GLT_TEST([libgomp.fortran/pr46753.f90])
+KAT_GLT_TEST_FAIL([libgomp.fortran/pr48894.f90],[],[dnl
+FAIL: libgomp.fortran/pr48894.f90  -O0  execution test
+FAIL: libgomp.fortran/pr48894.f90  -O1  execution test
+FAIL: libgomp.fortran/pr48894.f90  -O2  execution test
+FAIL: libgomp.fortran/pr48894.f90  -O3 -fomit-frame-pointer  execution test
+FAIL: libgomp.fortran/pr48894.f90  -O3 -fomit-frame-pointer -funroll-loops  execution test
+FAIL: libgomp.fortran/pr48894.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+FAIL: libgomp.fortran/pr48894.f90  -O3 -g  execution test
+FAIL: libgomp.fortran/pr48894.f90  -Os  execution test
+])
+KAT_GLT_TEST([libgomp.fortran/pr49792-1.f90])
+KAT_GLT_TEST([libgomp.fortran/pr49792-2.f90])
+KAT_GLT_TEST([libgomp.fortran/recursion1.f90])
+KAT_GLT_TEST([libgomp.fortran/reduction1.f90])
+KAT_GLT_TEST([libgomp.fortran/reduction2.f90])
+KAT_GLT_TEST([libgomp.fortran/reduction3.f90])
+KAT_GLT_TEST([libgomp.fortran/reduction4.f90])
+KAT_GLT_TEST([libgomp.fortran/reduction5.f90])
+KAT_GLT_TEST([libgomp.fortran/reduction6.f90])
+KAT_GLT_TEST([libgomp.fortran/reference1.f90])
+KAT_GLT_TEST([libgomp.fortran/reference2.f90])
+KAT_GLT_TEST([libgomp.fortran/retval1.f90])
+KAT_GLT_TEST([libgomp.fortran/retval2.f90])
+KAT_GLT_TEST([libgomp.fortran/sharing1.f90])
+KAT_GLT_TEST([libgomp.fortran/sharing2.f90])
+KAT_GLT_TEST([libgomp.fortran/stack.f90])
+KAT_GLT_TEST([libgomp.fortran/strassen.f90])
+KAT_GLT_TEST([libgomp.fortran/tabs1.f90])
+KAT_GLT_TEST([libgomp.fortran/tabs2.f])
+KAT_GLT_TEST([libgomp.fortran/task1.f90])
+KAT_GLT_TEST([libgomp.fortran/task2.f90])
+KAT_GLT_TEST([libgomp.fortran/task3.f90])
+KAT_GLT_TEST([libgomp.fortran/threadprivate1.f90])
+KAT_GLT_TEST_FAIL([libgomp.fortran/threadprivate2.f90],[],[dnl
+FAIL: libgomp.fortran/threadprivate2.f90  -O0  execution test
+FAIL: libgomp.fortran/threadprivate2.f90  -O1  execution test
+FAIL: libgomp.fortran/threadprivate2.f90  -O2  execution test
+FAIL: libgomp.fortran/threadprivate2.f90  -O3 -fomit-frame-pointer  execution test
+FAIL: libgomp.fortran/threadprivate2.f90  -O3 -fomit-frame-pointer -funroll-loops  execution test
+FAIL: libgomp.fortran/threadprivate2.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+FAIL: libgomp.fortran/threadprivate2.f90  -O3 -g  execution test
+FAIL: libgomp.fortran/threadprivate2.f90  -Os  execution test
+])
+KAT_GLT_TEST_FAIL([libgomp.fortran/threadprivate3.f90],[],[dnl
+FAIL: libgomp.fortran/threadprivate3.f90  -O0  execution test
+FAIL: libgomp.fortran/threadprivate3.f90  -O1  execution test
+FAIL: libgomp.fortran/threadprivate3.f90  -O2  execution test
+FAIL: libgomp.fortran/threadprivate3.f90  -O3 -fomit-frame-pointer  execution test
+FAIL: libgomp.fortran/threadprivate3.f90  -O3 -fomit-frame-pointer -funroll-loops  execution test
+FAIL: libgomp.fortran/threadprivate3.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+FAIL: libgomp.fortran/threadprivate3.f90  -O3 -g  execution test
+FAIL: libgomp.fortran/threadprivate3.f90  -Os  execution test
+])
+KAT_GLT_TEST([libgomp.fortran/vla1.f90])
+KAT_GLT_TEST([libgomp.fortran/vla2.f90])
+KAT_GLT_TEST([libgomp.fortran/vla3.f90])
+KAT_GLT_TEST_FAIL([libgomp.fortran/vla4.f90],[],[dnl
+UNRESOLVED: libgomp.fortran/vla4.f90  -O0  compilation failed to produce executable
+UNRESOLVED: libgomp.fortran/vla4.f90  -O1  compilation failed to produce executable
+UNRESOLVED: libgomp.fortran/vla4.f90  -O2  compilation failed to produce executable
+UNRESOLVED: libgomp.fortran/vla4.f90  -O3 -fomit-frame-pointer  compilation failed to produce executable
+UNRESOLVED: libgomp.fortran/vla4.f90  -O3 -fomit-frame-pointer -funroll-loops  compilation failed to produce executable
+UNRESOLVED: libgomp.fortran/vla4.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  compilation failed to produce executable
+UNRESOLVED: libgomp.fortran/vla4.f90  -O3 -g  compilation failed to produce executable
+UNRESOLVED: libgomp.fortran/vla4.f90  -Os  compilation failed to produce executable
+])
+KAT_GLT_TEST_FAIL([libgomp.fortran/vla5.f90],[],[dnl
+UNRESOLVED: libgomp.fortran/vla5.f90  -O0  compilation failed to produce executable
+UNRESOLVED: libgomp.fortran/vla5.f90  -O1  compilation failed to produce executable
+UNRESOLVED: libgomp.fortran/vla5.f90  -O2  compilation failed to produce executable
+UNRESOLVED: libgomp.fortran/vla5.f90  -O3 -fomit-frame-pointer  compilation failed to produce executable
+UNRESOLVED: libgomp.fortran/vla5.f90  -O3 -fomit-frame-pointer -funroll-loops  compilation failed to produce executable
+UNRESOLVED: libgomp.fortran/vla5.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  compilation failed to produce executable
+UNRESOLVED: libgomp.fortran/vla5.f90  -O3 -g  compilation failed to produce executable
+UNRESOLVED: libgomp.fortran/vla5.f90  -Os  compilation failed to produce executable
+])
+KAT_GLT_TEST([libgomp.fortran/vla6.f90])
+KAT_GLT_TEST_FAIL([libgomp.fortran/vla7.f90],[mayfail timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.fortran/vla7.f90  -O0  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/vla7.f90  -O2  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/vla7.f90  -O3 -fomit-frame-pointer  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/vla7.f90  -O3 -fomit-frame-pointer -funroll-loops  execution test
+WARNING: program timed out.
+FAIL: libgomp.fortran/vla7.f90  -O3 -fomit-frame-pointer -funroll-all-loops -finline-functions  execution test
+])
+KAT_GLT_TEST([libgomp.fortran/vla8.f90])
+KAT_GLT_TEST([libgomp.fortran/workshare1.f90])
+KAT_GLT_TEST_FAIL([libgomp.fortran/workshare2.f90],[timeout],[dnl
+WARNING: program timed out.
+FAIL: libgomp.fortran/workshare2.f90  -O  execution test
+])
+
+KAT_GCC_LIBGOMP_TESTSUITE_BANNER([gcc-graphite],[graphite],
+  [extra part of the GCC testsuite of libgomp],
+  [graphite.exp])
+
+KAT_GLT_TEST([libgomp.graphite/bounds.c])
+KAT_GLT_TEST([libgomp.graphite/force-parallel-1.c])
+KAT_GLT_TEST_FAIL([libgomp.graphite/force-parallel-2.c],[],[dnl
+FAIL: libgomp.graphite/force-parallel-2.c scan-tree-dump-times graphite "2 loops carried no dependency" 1
+])
+KAT_GLT_TEST([libgomp.graphite/force-parallel-3.c])
+KAT_GLT_TEST([libgomp.graphite/force-parallel-4.c])
+KAT_GLT_TEST([libgomp.graphite/force-parallel-5.c])
+KAT_GLT_TEST([libgomp.graphite/force-parallel-6.c])
+KAT_GLT_TEST([libgomp.graphite/force-parallel-7.c])
+KAT_GLT_TEST([libgomp.graphite/force-parallel-8.c])
+KAT_GLT_TEST([libgomp.graphite/force-parallel-9.c])
+KAT_GLT_TEST([libgomp.graphite/pr41118.c])

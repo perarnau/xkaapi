@@ -9,6 +9,10 @@ DIST_SUBDIRS=api-kaapic api-kaapif api-kaapixx kaapi libgomp
 
 clean-recursive: SUBDIRS+=$(DIST_SUBDIRS)
 
+# default testsuite:
+# TESTSUITEFLAGS=-k '!timeout,!mayfail'
+TESTSUITEFLAGS=-k '!gcc-testsuite'
+
 # The `:;' works around a Bash 3.2 bug when the output is not writable.
 $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 	:;{ \
@@ -27,8 +31,10 @@ $(srcdir)/package.m4: $(top_srcdir)/configure.ac
 	  echo '  [$(PACKAGE_URL)])'; \
 	} >'$(srcdir)/package.m4'
 
-TESTSUITES_SRC = testsuite.at testsuite-api-kaapic.at testsuite-api-kaapixx.at \
-	testsuite-kaapi.at testsuite-libgomp.at testsuite-api-kaapif.at \
+TESTSUITES_SRC = testsuite.at testsuite-kaapi.at \
+	testsuite-api-kaapic.at testsuite-api-kaapixx.at \
+	testsuite-api-kaapif.at \
+	testsuite-libgomp.at testsuite-libgomp-gcc.at \
 	testsuite-examples.at testsuite-examples-inc.at \
 	m4/atenv.m4 check-headers/check-headers.m4 \
 	m4/kaapi-autotest.m4

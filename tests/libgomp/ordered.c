@@ -7,8 +7,7 @@
 int
 main (int argc, char **argv)
 {
-  int cpt = 0, total = 0;
-  int nthreads = 0;
+  int nthreads = 0, i;
   
 #pragma omp parallel
   {
@@ -19,7 +18,7 @@ main (int argc, char **argv)
   char magic[nthreads + 1];
   char outstring[nthreads + 1];
   
-  for (int i = 0; i < nthreads; i++)
+  for (i = 0; i < nthreads; i++)
     sprintf (magic + i, "%i", i);
   magic[nthreads] = '\0';
 

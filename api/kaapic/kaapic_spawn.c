@@ -327,7 +327,8 @@ static inline void __kaapic_dfg_body(
     /* process scratch mode */
     int scratch_count        = 0;
     kaapi_processor_t* kproc = 0;
-    for (unsigned int i=0; i<nargs; ++i)
+    unsigned int i;
+    for (i=0; i<nargs; ++i)
     {
       if (ts->args[i].mode & KAAPI_ACCESS_MODE_T)
       {
@@ -344,7 +345,8 @@ static inline void __kaapic_dfg_body(
   {
     unsigned int nargs = ts->nargs;
     void* pvalues[nargs];
-    for (unsigned int i=0; i<nargs; ++i) 
+    unsigned int i;
+    for (i=0; i<nargs; ++i) 
     {
       pvalues[i]= get_arg(inline_mode,ti, ts, i) ;
     }
@@ -395,7 +397,8 @@ static void kaapic_taskformat_task_copy(const struct kaapi_format_t* fmt, void* 
   const kaapic_task_sig_t* const ts = ti_src->sig;
   ti_dest->body  = ti_src->body;
   ti_dest->sig   = ti_src->sig;
-  for (int i=0; i<ts->nargs; ++i)
+  int i;
+  for (i=0; i<ts->nargs; ++i)
     ti_dest->args[i] = ti_src->args[i];
 }
 
@@ -885,7 +888,8 @@ static inline int __kaapic_spawn2(
    *                       Arguments loop
    * ######################################################################
    */
-  for (unsigned int k = 0; k < nargs; ++k)
+  unsigned int k;
+  for (k = 0; k < nargs; ++k)
   {
     kaapic_arg_info_t* const ai = &ti->args[k];
     kaapic_arg_sig_t* const as = &ts->args[k];
@@ -1110,7 +1114,8 @@ break
     /* the array of ffi_type* is put after the array of kaapic_arg_sig_t */
     ffi_type **ffi_args=(ffi_type **)&ts->args[nargs];
     
-    for (unsigned int k = 0; k < nargs; ++k) {
+    unsigned int k;
+    for (k = 0; k < nargs; ++k) {
       kaapic_arg_sig_t* const as = &ts->args[k];
       if (_FEATURE(FORTRAN_ABI) || as->mode != KAAPI_ACCESS_MODE_V) {
         ffi_args[k]=&ffi_type_pointer;

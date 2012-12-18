@@ -9,8 +9,6 @@ EXTRA_DIST=libgomp.map libomp_ext.map kaapi-gomp-wrapper.in
 
 if KAAPI_LIBGOMP
 
-SUBDIRS=testsuite
-
 pkglib_LTLIBRARIES=libgomp.la
 lib_LTLIBRARIES=libkomp.la libomp_ext.la
 

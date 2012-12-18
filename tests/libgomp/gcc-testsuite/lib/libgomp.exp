@@ -101,7 +101,9 @@ proc libgomp_init { args } {
     }
 
     # Compute what needs to be put into LD_LIBRARY_PATH
-    set always_ld_library_path ".:../.libs"
+    set always_ld_library_path ".:../../../api/libgomp/.libs"
+    append always_ld_library_path ":../../../api/libgomp/.libs"
+    append always_ld_library_path ":../../../src/.libs"
 
     # Compute what needs to be added to the existing LD_LIBRARY_PATH.
     if {$gccdir != ""} {
@@ -136,8 +138,14 @@ proc libgomp_init { args } {
         lappend ALWAYS_CFLAGS "additional_flags=-I${blddir}"
         lappend ALWAYS_CFLAGS "ldflags=-L${blddir}/.libs"
     }
-    # libgomp_g.h
-    lappend ALWAYS_CFLAGS "additional_flags=-I${srcdir}/.."
+    # libgomp_g.h/libgomp.h
+    lappend ALWAYS_CFLAGS "additional_flags=-I${srcdir}/../../../api/libgomp"
+    # kaapi_impl.h
+    lappend ALWAYS_CFLAGS "additional_flags=-I${srcdir}/../../../src"
+    # config.h
+    lappend ALWAYS_CFLAGS "additional_flags=-I../../.."
+    # kaapic_impl.h
+    lappend ALWAYS_CFLAGS "additional_flags=-I${srcdir}/../../../api/kaapic"
 
     # We use atomic operations in the testcases to validate results.
     if { ([istarget i?86-*-*] || [istarget x86_64-*-*])

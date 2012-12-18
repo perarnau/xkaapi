@@ -25,6 +25,9 @@ AC_CONFIG_TESTDIR([tests], [tests])
 AC_CONFIG_HEADERS([config.h])
 
 AMX_SILENT_RULES([AM_DEFAULT_VERBOSITY=0])
+AM_MAINTAINER_MODE([enable])
+# hack to export maintainer mode to sub configure scripts
+as_fn_append ac_configure_args " '--enable-maintainer-mode=$USE_MAINTAINER_MODE'"
 
 dnl Sanity checks on prefix : do not install kaapi in the source tree
 dnl nor in the build tree
@@ -56,7 +59,6 @@ dnl Checks for programs and compilers options
 dnl ----------------------------------------------------------------
 PKG_PROG_PKG_CONFIG
 AC_PROG_CC
-AC_PROG_CC_C99
 AM_PROG_CC_C_O
 AC_PROG_INSTALL
 LT_INIT
@@ -932,7 +934,6 @@ AC_CONFIG_FILES([
 	api/kaapif/Makefile
 	api/kastl/Makefile
 	api/libgomp/Makefile
-	api/libgomp/testsuite/Makefile
 	api/quark/Makefile
 	bin/Makefile
 	bin/kacc/Makefile
@@ -949,10 +950,12 @@ AC_CONFIG_FILES([
 	tests/api-kaapixx/Makefile
 	tests/kaapi/Makefile
 	tests/libgomp/Makefile
+	tests/libgomp/gcc-testsuite/Makefile
 
 	bin/kacc/kacc.cpp
 	src/misc/kaapi_version.c
 	tests/atlocal
+	tests/libgomp/gcc-testsuite/compilers.exp
 
 	kaapi.pc
 	kaapic.pc

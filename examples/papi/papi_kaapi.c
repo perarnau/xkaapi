@@ -56,7 +56,8 @@
  */
 static void apply_cos( int i, int j, int tid, double* array )
 {
-  for (int k=i; k<j; ++k)
+  int k;
+  for (k=i; k<j; ++k)
     array[k] += cos(array[k]);
 }
 
