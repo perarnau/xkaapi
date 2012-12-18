@@ -97,7 +97,6 @@ static void komp_trampoline_task_parallel
   kaapic_foreach_attr_init( &new_ctxt->icv.attr );
 #endif
   
-  new_ctxt->inside_single      = 0;
   new_ctxt->save_ctxt          = ctxt;
   
   /* swap context: until end_parallel, new_ctxt becomes the current context */
@@ -214,7 +213,6 @@ komp_init_parallel_start (
   new_ctxt->icv.attr            = ctxt->icv.attr;            /* WARNING: spec ? */
 #endif
   
-  new_ctxt->inside_single       = 0;
   new_ctxt->save_ctxt           = ctxt;
   
   /* swap context: until end_parallel, new_ctxt becomes the current context */

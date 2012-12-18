@@ -49,7 +49,6 @@
 bool GOMP_single_start (void)
 {
   kompctxt_t* ctxt = komp_get_ctxt();
-  ctxt->inside_single = 1;
   return (ctxt->icv.thread_id == 0);
 }
 
