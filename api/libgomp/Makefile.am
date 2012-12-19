@@ -5,7 +5,7 @@
 
 AM_CPPFLAGS=@AM_CPPFLAGS@ -I$(top_srcdir)/src -I$(srcdir) -I$(top_srcdir)/api/kaapic
 
-EXTRA_DIST=libgomp.map libomp_ext.map kaapi-gomp-wrapper.in
+EXTRA_DIST=libgomp.map libomp_ext.map libkomp-run.in
 
 if KAAPI_LIBGOMP
 
@@ -44,22 +44,22 @@ libomp_ext_la_LDFLAGS = -version-info 1:0:0 $(libomp_ext_version_script) $(LIBGO
 libomp_ext_la_DEPENDENCIES = $(libomp_ext_version_dep)
 #libomp_ext_la_LIBADD=-lgomp
 
-bin_SCRIPTS = kaapi-gomp-wrapper
+bin_SCRIPTS = libkomp-run
 CLEANFILES = $(bin_SCRIPTS)
 
 do_subst = sed -e 's,[@]libdir[@],$(libdir),g' \
                -e 's,[@]pkglibdir[@],$(pkglibdir),g' \
                -e 's,[@]abs_top_builddir[@],$(abs_top_builddir),g'
 
-kaapi-gomp-wrapper: kaapi-gomp-wrapper.in Makefile
-	$(AM_V_GEN)$(do_subst) < $(srcdir)/kaapi-gomp-wrapper.in > $@
+libkomp-run: libkomp-run.in Makefile
+	$(AM_V_GEN)$(do_subst) < $(srcdir)/libkomp-run.in > $@
 	$(AM_V_at)chmod +x $@
 
-install-exec-hook: kaapi-gomp-wrapper
+install-exec-hook: libkomp-run
 	sed -e '/^# BEGIN REMOVE ONCE INSTALLED$$/,/^# END REMOVE ONCE INSTALLED$$/d' \
-		> $(DESTDIR)$(bindir)/kaapi-gomp-wrapper \
-		< kaapi-gomp-wrapper
-	chmod +x $(DESTDIR)$(bindir)/kaapi-gomp-wrapper
+		> $(DESTDIR)$(bindir)/libkomp-run \
+		< libkomp-run
+	chmod +x $(DESTDIR)$(bindir)/libkomp-run
 
 include_HEADERS=
 
