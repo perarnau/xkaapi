@@ -50,50 +50,30 @@ KAT_GLT_TEST([libgomp.c/atomic-6.c])
 KAT_GLT_TEST([libgomp.c/autopar-1.c])
 KAT_GLT_TEST([libgomp.c/barrier-1.c])
 KAT_GLT_TEST([libgomp.c/collapse-1.c])
-KAT_GLT_TEST_FAIL([libgomp.c/collapse-2.c],[],[dnl
-FAIL: libgomp.c/collapse-2.c execution test
-])
+KAT_GLT_TEST([libgomp.c/collapse-2.c])
 KAT_GLT_TEST([libgomp.c/collapse-3.c])
-KAT_GLT_TEST_FAIL([libgomp.c/copyin-1.c],[],[dnl
-FAIL: libgomp.c/copyin-1.c execution test
-])
-KAT_GLT_TEST_FAIL([libgomp.c/copyin-2.c],[],[dnl
-FAIL: libgomp.c/copyin-2.c execution test
-])
-KAT_GLT_TEST_FAIL([libgomp.c/copyin-3.c],[],[dnl
-FAIL: libgomp.c/copyin-3.c execution test
-])
+KAT_GLT_TEST([libgomp.c/copyin-1.c])
+KAT_GLT_TEST([libgomp.c/copyin-2.c])
+KAT_GLT_TEST([libgomp.c/copyin-3.c])
 KAT_GLT_TEST([libgomp.c/critical-1.c])
 KAT_GLT_TEST([libgomp.c/critical-2.c])
 KAT_GLT_TEST([libgomp.c/debug-1.c])
 KAT_GLT_TEST([libgomp.c/icv-1.c])
-KAT_GLT_TEST_FAIL([libgomp.c/icv-2.c],[],[dnl
-FAIL: libgomp.c/icv-2.c execution test
-])
+KAT_GLT_TEST([libgomp.c/icv-2.c])
 KAT_GLT_TEST([libgomp.c/lib-1.c])
 KAT_GLT_TEST([libgomp.c/lib-2.c])
 KAT_GLT_TEST([libgomp.c/lock-1.c])
 KAT_GLT_TEST([libgomp.c/lock-2.c])
-KAT_GLT_TEST_FAIL([libgomp.c/lock-3.c],[],[dnl
-FAIL: libgomp.c/lock-3.c execution test
-])
+KAT_GLT_TEST([libgomp.c/lock-3.c])
 KAT_GLT_TEST([libgomp.c/loop-1.c])
 KAT_GLT_TEST([libgomp.c/loop-10.c])
 KAT_GLT_TEST([libgomp.c/loop-11.c])
-KAT_GLT_TEST_FAIL([libgomp.c/loop-12.c],[timeout],[dnl
-WARNING: program timed out.
-FAIL: libgomp.c/loop-12.c execution test
-])
-KAT_GLT_TEST_FAIL([libgomp.c/loop-2.c],[],[dnl
-FAIL: libgomp.c/loop-2.c execution test
-])
+KAT_GLT_TEST([libgomp.c/loop-12.c])
+KAT_GLT_TEST([libgomp.c/loop-2.c])
 KAT_GLT_TEST([libgomp.c/loop-3.c])
 KAT_GLT_TEST([libgomp.c/loop-4.c])
 KAT_GLT_TEST([libgomp.c/loop-5.c])
-KAT_GLT_TEST_FAIL([libgomp.c/loop-6.c],[timeout],[dnl
-WARNING: program timed out.
-FAIL: libgomp.c/loop-6.c execution test
-])
+KAT_GLT_TEST([libgomp.c/loop-6.c])
 KAT_GLT_TEST([libgomp.c/loop-7.c])
 KAT_GLT_TEST([libgomp.c/loop-8.c])
 KAT_GLT_TEST([libgomp.c/loop-9.c])
@@ -106,16 +86,10 @@ KAT_GLT_TEST([libgomp.c/nestedfn-3.c])
 KAT_GLT_TEST([libgomp.c/nestedfn-4.c])
 KAT_GLT_TEST([libgomp.c/nestedfn-5.c])
 KAT_GLT_TEST([libgomp.c/nestedfn-6.c])
-KAT_GLT_TEST_FAIL([libgomp.c/nqueens-1.c],[mayfail timeout],[dnl
-WARNING: program timed out.
-FAIL: libgomp.c/nqueens-1.c execution test
-])
+KAT_GLT_TEST([libgomp.c/nqueens-1.c])
 KAT_GLT_TEST([libgomp.c/omp-loop01.c])
 KAT_GLT_TEST([libgomp.c/omp-loop02.c])
-KAT_GLT_TEST_FAIL([libgomp.c/omp-loop03.c],[timeout],[dnl
-WARNING: program timed out.
-FAIL: libgomp.c/omp-loop03.c execution test
-])
+KAT_GLT_TEST([libgomp.c/omp-loop03.c])
 KAT_GLT_TEST([libgomp.c/omp-nested-1.c])
 KAT_GLT_TEST([libgomp.c/omp-parallel-for.c])
 KAT_GLT_TEST([libgomp.c/omp-parallel-if.c])
@@ -130,34 +104,19 @@ KAT_GLT_TEST([libgomp.c/omp_workshare1.c])
 KAT_GLT_TEST([libgomp.c/omp_workshare2.c])
 KAT_GLT_TEST([libgomp.c/omp_workshare3.c])
 KAT_GLT_TEST([libgomp.c/omp_workshare4.c])
-KAT_GLT_TEST_FAIL([libgomp.c/ordered-1.c],[],[dnl
-FAIL: libgomp.c/ordered-1.c execution test
-])
+KAT_GLT_TEST([libgomp.c/ordered-1.c])
 KAT_GLT_TEST([libgomp.c/ordered-2.c])
 KAT_GLT_TEST([libgomp.c/ordered-3.c])
 KAT_GLT_TEST([libgomp.c/parallel-1.c])
 KAT_GLT_TEST([libgomp.c/pr24455-1.c])
-KAT_GLT_TEST_FAIL(["libgomp.c/pr24455.c"],[],[dnl
-UNSUPPORTED: libgomp.c/pr24455.c
-])
+KAT_GLT_TEST([libgomp.c/pr24455.c])
 KAT_GLT_TEST([libgomp.c/pr26171.c])
 KAT_GLT_TEST([libgomp.c/pr26943-1.c])
-KAT_GLT_TEST_FAIL([libgomp.c/pr26943-2.c],[],[dnl
-UNRESOLVED: libgomp.c/pr26943-2.c compilation failed to produce executable
-])
-KAT_GLT_TEST_FAIL([libgomp.c/pr26943-3.c],[],[dnl
-UNRESOLVED: libgomp.c/pr26943-3.c compilation failed to produce executable
-])
-KAT_GLT_TEST_FAIL([libgomp.c/pr26943-4.c],[],[dnl
-UNRESOLVED: libgomp.c/pr26943-4.c compilation failed to produce executable
-])
-KAT_GLT_TEST_FAIL([libgomp.c/pr29947-1.c],[],[dnl
-FAIL: libgomp.c/pr29947-1.c execution test
-])
-KAT_GLT_TEST_FAIL([libgomp.c/pr29947-2.c],[timeout],[dnl
-WARNING: program timed out.
-FAIL: libgomp.c/pr29947-2.c execution test
-])
+KAT_GLT_TEST([libgomp.c/pr26943-2.c])
+KAT_GLT_TEST([libgomp.c/pr26943-3.c])
+KAT_GLT_TEST([libgomp.c/pr26943-4.c])
+KAT_GLT_TEST([libgomp.c/pr29947-1.c])
+KAT_GLT_TEST([libgomp.c/pr29947-2.c])
 KAT_GLT_TEST([libgomp.c/pr30494.c])
 KAT_GLT_TEST([libgomp.c/pr32362-1.c])
 KAT_GLT_TEST([libgomp.c/pr32362-2.c])
@@ -178,33 +137,20 @@ KAT_GLT_TEST([libgomp.c/pr39591-1.c])
 KAT_GLT_TEST([libgomp.c/pr39591-2.c])
 KAT_GLT_TEST([libgomp.c/pr39591-3.c])
 KAT_GLT_TEST([libgomp.c/pr42029.c])
-KAT_GLT_TEST_FAIL([libgomp.c/pr42942.c],[],[dnl
-FAIL: libgomp.c/pr42942.c execution test
-])
+KAT_GLT_TEST([libgomp.c/pr42942.c])
 KAT_GLT_TEST([libgomp.c/pr43893.c])
 KAT_GLT_TEST([libgomp.c/pr48591.c])
-KAT_GLT_TEST_FAIL([libgomp.c/pr49897-1.c],[mayfail timeout],[dnl
-WARNING: program timed out.
-FAIL: libgomp.c/pr49897-1.c execution test
-])
+KAT_GLT_TEST([libgomp.c/pr49897-1.c])
 KAT_GLT_TEST([libgomp.c/pr49897-2.c])
 KAT_GLT_TEST([libgomp.c/pr49898-1.c])
 KAT_GLT_TEST([libgomp.c/pr49898-2.c])
 KAT_GLT_TEST([libgomp.c/private-1.c])
 KAT_GLT_TEST([libgomp.c/reduction-1.c])
-KAT_GLT_TEST_FAIL([libgomp.c/reduction-2.c],[timeout],[dnl
-WARNING: program timed out.
-FAIL: libgomp.c/reduction-2.c execution test
-])
-KAT_GLT_TEST_FAIL([libgomp.c/reduction-3.c],[timeout],[dnl
-WARNING: program timed out.
-FAIL: libgomp.c/reduction-3.c execution test
-])
+KAT_GLT_TEST([libgomp.c/reduction-2.c])
+KAT_GLT_TEST([libgomp.c/reduction-3.c])
 KAT_GLT_TEST([libgomp.c/reduction-4.c])
 KAT_GLT_TEST([libgomp.c/reduction-5.c])
-KAT_GLT_TEST_FAIL([libgomp.c/sections-1.c],[],[dnl
-FAIL: libgomp.c/sections-1.c execution test
-])
+KAT_GLT_TEST([libgomp.c/sections-1.c])
 KAT_GLT_TEST([libgomp.c/shared-1.c])
 KAT_GLT_TEST([libgomp.c/shared-2.c])
 KAT_GLT_TEST([libgomp.c/shared-3.c])
