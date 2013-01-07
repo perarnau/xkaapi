@@ -1,6 +1,6 @@
 KAT_BANNER([libgomp - GCC OpenMP runtime based on XKaapi],
   [libgomp],[OpenMP],[tests/libgomp],[all],
-  [$abs_top_builddir/api/libgomp/kaapi-gomp-wrapper])
+  [$abs_top_builddir/api/libgomp/libkomp-run])
 
 KAT_HOOK([CHECK_RUN],[BEFORE],[
   AT_EXPORT([KAAPI_GOMP_SHOW_BANNER],[1])
