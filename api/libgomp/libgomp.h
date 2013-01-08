@@ -175,7 +175,6 @@ typedef struct kompctxt_t {
   komp_workshare_t*   workshare;     /* local view of team workshare   */
   komp_teaminfo_t*    teaminfo;      /* global team information */
   komp_icv_t          icv;           /* current icv data */
-  int                 inside_single;
   struct kompctxt_t*  save_ctxt;     /* to restore on pop */
 } kompctxt_t;
 

@@ -82,7 +82,6 @@ static void GOMP_trampoline_task(
   new_ctxt->icv.thread_id       = taskarg->parentctxt->icv.thread_id;
   new_ctxt->icv.next_numthreads = taskarg->parentctxt->icv.next_numthreads; /* WARNING: spec ?*/
   
-  new_ctxt->inside_single      = 0;
   new_ctxt->save_ctxt          = ctxt;
 
   /* swap context: until end_parallel, new_ctxt becomes the current context */

@@ -98,33 +98,16 @@ komp_barrier_wait (kompctxt_t* ctxt, struct komp_barrier *barrier)
   /* _barrier_ call generated from a _single_ construct: Only the
    thread performing the single body (creating OpenMP tasks) is
    waiting for completion of created tasks. */
-#if 0
-  if (ctxt->icv.thread_id == 0)
-  {
-    kaapic_sync ();
-  }
-#endif
-
-  if (ctxt->inside_single)
-  {
-    if (ctxt->icv.thread_id == 0)
-    {
-      ctxt->inside_single = 0;
-      kaapic_sync ();
-    }
-  }
-  else
-  {
-    int nb_arrived = KAAPI_ATOMIC_INCR ((kaapi_atomic_t *)&barrier->count[current_cycle * CACHE_LINE_SIZE]);
-    
-    if (nb_arrived == nthreads)
+  int nb_arrived = KAAPI_ATOMIC_INCR ((kaapi_atomic_t *)&barrier->count[current_cycle * CACHE_LINE_SIZE]);
+  
+  if (nb_arrived == nthreads)
     {
       int cycle_to_clean = (next_cycle + 1) % BAR_CYCLES;
       
       KAAPI_ATOMIC_WRITE_BARRIER (&barrier->cycle, next_cycle);
       KAAPI_ATOMIC_WRITE ((kaapi_atomic_t *)&barrier->count[cycle_to_clean * CACHE_LINE_SIZE], 0);
     }
-    else
+  else
     {
       struct _komp_cond_barrier_t kompcond = { next_cycle, barrier };
       kaapi_processor_t* kproc = kaapi_get_current_processor();
@@ -138,7 +121,6 @@ komp_barrier_wait (kompctxt_t* ctxt, struct komp_barrier *barrier)
       /* reset affinity flag if save_stick != 1 */
       kaapi_cpuset_copy(&kproc->thread->affinity, &save_affinity);
     }
-  }
 }
 
 void GOMP_barrier (void)

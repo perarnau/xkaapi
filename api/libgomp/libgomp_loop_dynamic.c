@@ -445,7 +445,6 @@ static void komp_trampoline_task_parallelfor
   new_ctxt->icv.thread_id       = taskarg->threadid;
   new_ctxt->icv.next_numthreads = taskarg->nextnumthreads; /* WARNING: spec ?*/
   
-  new_ctxt->inside_single      = 0;
   new_ctxt->save_ctxt          = ctxt;
   
   /* swap context: until end_parallel, new_ctxt becomes the current context */
