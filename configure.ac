@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.60])
+AC_PREREQ([2.64])
 
 AC_INIT([X-KAAPI],[1.0.4],[kaapi-dev-info@lists.gforge.inria.fr],[xkaapi])
 dnl AC_CONFIG_AUX_DIR: not before, not after
