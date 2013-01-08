@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.64])
 
-AC_INIT([X-KAAPI],[1.0.4],[kaapi-dev-info@lists.gforge.inria.fr],[xkaapi])
+AC_INIT([X-KAAPI],[2.0-rc1],[kaapi-dev-info@lists.gforge.inria.fr],[xkaapi])
 dnl AC_CONFIG_AUX_DIR: not before, not after
 dnl http://www.mail-archive.com/autoconf@gnu.org/msg07824.html
 AC_CONFIG_AUX_DIR([build-aux])
