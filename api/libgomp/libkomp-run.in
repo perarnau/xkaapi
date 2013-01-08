@@ -7,6 +7,7 @@ usage() {
     echo "    -d|--gdb: debug the program with gdb"
     echo "    -t|--time: time the program"
     echo "    -h|--help: display this help"
+    echo "    -v|--version: display libkomp-run's version number"
 }
 
 use_getopt=no
@@ -16,7 +17,7 @@ if `getopt -T >/dev/null 2>&1` ; [ $? = 4 ] ; then
 fi
 
 if test $use_getopt = yes ; then
-  TEMP=`getopt -o +hdt --long time,help,gdb \
+  TEMP=`getopt -o +hdt --long time,help,gdb,version \
         -n $(basename $0) -- "$@"`
   eval set -- "$TEMP"
 fi
@@ -35,8 +36,9 @@ while test $# -gt 0; do
 	-t|--time)
 	    RUN_TIME=time
 	    ;;
-	-z|--zozo)
-	    RUN_TIME=gdb
+	-v|--version)
+	    echo "libKOMP is part of XKaapi rc1.4"
+	    exit 0
 	    ;;
 	--)
 	    shift
