@@ -92,13 +92,6 @@ extern "C" {
 #include <string.h>
 
 #include "kaapi_defs.h"
-  
-#if defined(KAAPI_USE_CUDA)
-#include "machine/cuda/kaapi_cuda_proc.h"  
-#include "machine/cuda/kaapi_cuda_ctx.h"
-#include "machine/cuda/kaapi_cuda_mem.h"
-#include "machine/cuda/kaapi_cuda_taskmovealloc.h"
-#endif
 
 /** Current implementation relies on isoaddress allocation to avoid
     communication during synchronization at the end of partitionning.
@@ -370,12 +363,12 @@ typedef struct kaapi_rtparam_t {
   unsigned int		              use_affinity;        /* use cpu affinity */
   kaapi_ct2prio_fnc_t		        ctpriority;          /* use critical path priorities, if 0 no */
   kaapi_display_perf_value_t    display_perfcounter; /* see value above for kaapi_display_perf_value_t  */
-#if defined(KAAPI_USE_CUPTI)
-   uint64_t		                  cudastartuptime;
-#endif
 #if defined(KAAPI_USE_CUDA)
    uint64_t		                  cudawindowsize;
    unsigned int		              cudapeertopeer;
+#if defined(KAAPI_USE_CUPTI)
+  uint64_t		                  cudastartuptime;
+#endif
 #endif
   uint64_t                      startuptime;         /* time at the end of kaapi_init */
   int                           alarmperiod;         /* period for alarm */

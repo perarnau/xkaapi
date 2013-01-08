@@ -6,8 +6,8 @@ function run_test {
     export KAAPI_CPUSET="0:2"
     export KAAPI_GPUSET="0~3"
 
-    export KAAPI_RECORD_TRACE=1
-    export KAAPI_RECORD_MASK="COMPUTE,IDLE,STEAL"
+#    export KAAPI_RECORD_TRACE=1
+#    export KAAPI_RECORD_MASK="COMPUTE,IDLE,STEAL"
 
 #    export KAAPI_DUMP_GRAPH=1
 #    export KAAPI_DOT_NOVERSION_LINK=1

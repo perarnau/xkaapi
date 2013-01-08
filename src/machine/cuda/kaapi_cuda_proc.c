@@ -133,6 +133,7 @@ int kaapi_cuda_proc_cleanup(kaapi_cuda_proc_t * proc)
     return -1;
 
   proc->is_initialized = 0;
+  free(proc);
 
   return 0;
 }
@@ -147,39 +148,35 @@ cudaStream_t kaapi_cuda_kernel_stream(void)
 {
   kaapi_processor_t *const self_proc = kaapi_get_current_processor();
   return
-      kaapi_cuda_get_cudastream(kaapi_cuda_get_kernel_fifo
-				(self_proc->cuda_proc.kstream));
+      kaapi_cuda_get_cudastream(kaapi_cuda_get_kernel_fifo(kaapi_processor_get_cudaproc(self_proc)->kstream));
 }
 
 cudaStream_t kaapi_cuda_HtoD_stream(void)
 {
   kaapi_processor_t *const self_proc = kaapi_get_current_processor();
   return
-      kaapi_cuda_get_cudastream(kaapi_cuda_get_input_fifo
-				(self_proc->cuda_proc.kstream));
+      kaapi_cuda_get_cudastream(kaapi_cuda_get_input_fifo(kaapi_processor_get_cudaproc(self_proc)->kstream));
 }
 
 cudaStream_t kaapi_cuda_DtoH_stream(void)
 {
   kaapi_processor_t *const self_proc = kaapi_get_current_processor();
   return
-      kaapi_cuda_get_cudastream(kaapi_cuda_get_output_fifo
-				(self_proc->cuda_proc.kstream));
+      kaapi_cuda_get_cudastream(kaapi_cuda_get_output_fifo(kaapi_processor_get_cudaproc(self_proc)->kstream));
 }
 
 cudaStream_t kaapi_cuda_DtoD_stream(void)
 {
   kaapi_processor_t *const self_proc = kaapi_get_current_processor();
   return
-      kaapi_cuda_get_cudastream(kaapi_cuda_get_output_fifo
-				(self_proc->cuda_proc.kstream));
+      kaapi_cuda_get_cudastream(kaapi_cuda_get_output_fifo(kaapi_processor_get_cudaproc(self_proc)->kstream));
 }
 
 void kaapi_cuda_proc_poll(kaapi_processor_t * const kproc)
 {
-  if (KAAPI_ATOMIC_READ(&kproc->cuda_proc.synchronize_flag) == 1) {
+  if (KAAPI_ATOMIC_READ(&kaapi_processor_get_cudaproc(kproc)->synchronize_flag) == 1) {
     kaapi_cuda_sync(kproc);
-    KAAPI_ATOMIC_WRITE(&kproc->cuda_proc.synchronize_flag, 0);
+    KAAPI_ATOMIC_WRITE(&kaapi_processor_get_cudaproc(kproc)->synchronize_flag, 0);
   } else {
     kaapi_cuda_stream_poll(kproc);
   }
@@ -187,7 +184,7 @@ void kaapi_cuda_proc_poll(kaapi_processor_t * const kproc)
 
 int kaapi_cuda_proc_end_isvalid(kaapi_processor_t * const kproc)
 {
-  return kaapi_cuda_stream_is_empty(kproc->cuda_proc.kstream);
+  return kaapi_cuda_stream_is_empty(kaapi_processor_get_cudaproc(kproc)->kstream);
 }
 
 int kaapi_cuda_proc_all_isvalid(void)
@@ -198,7 +195,7 @@ int kaapi_cuda_proc_all_isvalid(void)
   for (i = 0; i < kaapi_count_kprocessors; ++i, ++pos)
     if ((*pos)->proc_type == KAAPI_PROC_TYPE_CUDA) {
       if (!kaapi_cuda_proc_end_isvalid(*pos))
-	return 0;
+          return 0;
     }
 
   return 1;
@@ -207,7 +204,7 @@ int kaapi_cuda_proc_all_isvalid(void)
 void kaapi_cuda_proc_destroy(kaapi_processor_t* const kproc)
 {
 #if defined(KAAPI_USE_CUPTI)
-  kaapi_atomic_destroylock(&kproc->cuda_proc.ctx.lock);
+  kaapi_atomic_destroylock(&kaapi_processor_get_cudaproc(kproc)->ctx.lock);
 #endif
 #if 0
   kaapi_cuda_cublas_finalize(&kproc->cuda_proc);
@@ -225,5 +222,5 @@ int kaapi_cuda_self_device(void)
   if( kaapi_processor_get_type(kproc) !=  KAAPI_PROC_TYPE_CUDA)
     return -1;
 #endif
-  return kproc->cuda_proc.index;
+  return kaapi_processor_get_cudaproc(kproc)->index;
 }

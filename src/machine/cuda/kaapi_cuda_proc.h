@@ -115,6 +115,13 @@ typedef struct kaapi_cuda_proc_t {
 
 } kaapi_cuda_proc_t;
 
+static inline kaapi_cuda_proc_t* kaapi_cuda_proc_alloc(void)
+{
+  kaapi_cuda_proc_t* cuda_proc = (kaapi_cuda_proc_t*)malloc(sizeof(kaapi_cuda_proc_t));
+  kaapi_assert_debug(cuda_proc != 0);
+  return cuda_proc;
+}
+
 void kaapi_cuda_init(void);
 
 int kaapi_cuda_proc_initialize(kaapi_cuda_proc_t *, unsigned int);

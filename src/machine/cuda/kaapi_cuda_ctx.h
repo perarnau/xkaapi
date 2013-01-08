@@ -48,6 +48,7 @@
 #include <cuda_runtime_api.h>
 
 #include "kaapi_impl.h"
+#include "kaapi_cuda_proc.h"
 
 #if defined(KAAPI_USE_CUPTI)
 /* Need thread-safe context for traces */

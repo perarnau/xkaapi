@@ -46,8 +46,7 @@
 #include "kaapi_impl.h"
 
 #if defined(KAAPI_USE_CUDA)
-# include "../../machine/cuda/kaapi_cuda_execframe.h"
-# include "../../machine/cuda/kaapi_cuda_threadgroup_execframe.h"
+#include "machine/cuda/kaapi_cuda_impl.h"
 #endif
 
 /* \TODO: voir ici si les fonctions (a adapter si besoin): makecontext, getcontext, setcontext 

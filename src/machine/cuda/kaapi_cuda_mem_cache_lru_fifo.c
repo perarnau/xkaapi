@@ -85,7 +85,7 @@ int kaapi_cuda_mem_cache_lru_fifo_init(void** data)
   
   cache = (kaapi_cuda_mem_cache_lru_fifo_t*)malloc(sizeof(kaapi_cuda_mem_cache_lru_fifo_t));
   /* 80% of total memory */
-  cache->total = 0.8 * kaapi_get_current_processor()->cuda_proc.deviceProp.totalGlobalMem;
+  cache->total = 0.8 * kaapi_processor_get_cudaproc(kaapi_get_current_processor())->deviceProp.totalGlobalMem;
   cache->used = 0;
   cache->fifo.beg = cache->fifo.end = 0;
   kaapi_big_hashmap_init(&cache->kmem, 0);
@@ -283,7 +283,7 @@ int kaapi_cuda_mem_cache_lru_fifo_dec_use(void* data,
     
 #if defined(KAAPI_DEBUG)
   if (blk->u.count == 0) {
-    fprintf(stdout, "%s:%d:%s: (kid=%lu) ERROR double free ptr=%p (count=%llu)\n",
+    fprintf(stdout, "%s:%d:%s: (kid=%lu) ERROR double free ptr=%p (count=%lu)\n",
             __FILE__, __LINE__, __FUNCTION__,
             (long unsigned int) kaapi_get_current_kid(),
             (void*)blk->ptr, blk->u.count);

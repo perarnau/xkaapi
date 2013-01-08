@@ -80,8 +80,8 @@ kaapi_cuda_mem_alloc(
   cudaError_t res = cudaSuccess;
   kaapi_processor_t *const proc = kaapi_get_current_processor();
   
-  if (proc->cuda_proc.cache.is_full(proc->cuda_proc.cache.data, size))
-    devptr = proc->cuda_proc.cache.remove(proc->cuda_proc.cache.data, size);
+  if (kaapi_cuda_mem_cache_is_full(proc, size))
+    devptr = kaapi_cuda_mem_cache_remove(proc, size);
   
   if (devptr == NULL) {
     res = cudaMalloc(&devptr, size);
@@ -101,7 +101,7 @@ kaapi_cuda_mem_alloc(
     }
   }
   
-  proc->cuda_proc.cache.insert(proc->cuda_proc.cache.data, (uintptr_t)devptr, size, m);
+  kaapi_cuda_mem_cache_insert(proc, (uintptr_t)devptr, size, m);
   
 #if KAAPI_VERBOSE
   fprintf(stdout, "[%s] kid=%lu dev=%d ptr=%p size=%lu\n",
@@ -143,14 +143,14 @@ kaapi_cuda_mem_inc_use(kaapi_pointer_t * ptr, kaapi_memory_view_t* const view,
     const kaapi_access_mode_t m)
 {
   kaapi_processor_t* const kproc = kaapi_get_current_processor();
-  return kproc->cuda_proc.cache.inc_use( kproc->cuda_proc.cache.data, ptr->ptr, view, m);
+  return kaapi_cuda_mem_cache_inc_use(kproc, ptr->ptr, view, m);
 }
 
 int
 kaapi_cuda_mem_dec_use(kaapi_pointer_t * ptr, kaapi_memory_view_t* const view, const kaapi_access_mode_t m)
 {
   kaapi_processor_t* const kproc = kaapi_get_current_processor();
-  return kproc->cuda_proc.cache.dec_use(kproc->cuda_proc.cache.data, ptr->ptr, view, m);
+  return kaapi_cuda_mem_cache_dec_use(kproc, ptr->ptr, view, m);
 }
 
 int
@@ -445,8 +445,8 @@ kaapi_cuda_mem_copy_dtod_buffer(kaapi_pointer_t dest,
   cudaStream_t stream;
   kaapi_processor_t* const kproc_src = kaapi_all_kprocessors[kaapi_memory_map_asid2kid(kaapi_pointer2asid(src))];
   kaapi_processor_t* const kproc_dest = kaapi_all_kprocessors[kaapi_memory_map_asid2kid(kaapi_pointer2asid(dest))];
-  const int src_dev = kproc_src->cuda_proc.index;
-  const int dest_dev = kproc_dest->cuda_proc.index;
+  const int src_dev = kaapi_processor_get_cudaproc(kproc_src)->index;
+  const int dest_dev = kaapi_processor_get_cudaproc(kproc_dest)->index;
 
   kaapi_cuda_ctx_exit(dest_dev);
   kaapi_cuda_ctx_set(src_dev);
@@ -501,7 +501,7 @@ kaapi_cuda_mem_copy_dtoh_from_host(kaapi_pointer_t dest,
 {
   cudaError_t res;
   kaapi_processor_t *const kproc = kaapi_all_kprocessors[kid_src];
-  const int src_dev = kproc->cuda_proc.index;
+  const int src_dev = kaapi_processor_get_cudaproc(kproc)->index;
   cudaStream_t stream;
   
   kaapi_cuda_ctx_set(src_dev);

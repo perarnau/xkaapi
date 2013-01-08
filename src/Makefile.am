@@ -247,7 +247,7 @@ endif
 
 if KAAPI_TARGET_CUDA
 libkaapi_la_SOURCES+=\
-  machine/cuda/kaapi_cuda.h \
+  machine/cuda/kaapi_cuda_impl.h \
   machine/cuda/kaapi_cuda_register_procs.c \
   machine/cuda/kaapi_cuda_proc.c \
   machine/cuda/kaapi_cuda_proc.h \

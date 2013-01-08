@@ -89,13 +89,13 @@ int kaapi_cuda_mem_cache_init(kaapi_cuda_proc_t* proc)
   }
   else
     kaapi_cuda_mem_cache_lru_double_fifo_config(proc);
-  
-  proc->cache.init( &proc->cache.data );
+
+  proc->cache.init(&proc->cache.data);
   
   return 0;
 }
 
 void kaapi_cuda_mem_cache_destroy(kaapi_cuda_proc_t* proc)
 {
-  proc->cache.destroy( proc->cache.data );
+  proc->cache.destroy(proc->cache.data);
 }

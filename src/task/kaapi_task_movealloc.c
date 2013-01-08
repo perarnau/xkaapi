@@ -44,6 +44,10 @@
 
 #include "kaapi_impl.h"
 
+#if defined(KAAPI_USE_CUDA)
+#include "machine/cuda/kaapi_cuda_impl.h"
+#endif
+
 /* */
 void kaapi_taskmove_body( void* sp, kaapi_thread_t* thread)
 {

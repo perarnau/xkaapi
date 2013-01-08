@@ -44,8 +44,8 @@
 #include "kaapi_impl.h"
 #include "../common/kaapi_procinfo.h"
 
-#if defined(KAAPI_USE_PERFCOUNTER)
-#include "machine/cuda/kaapi_cuda_trace.h"
+#if defined(KAAPI_USE_CUDA)
+#include "machine/cuda/kaapi_cuda_impl.h"
 #endif
 
 static void* kaapi_sched_run_processor( void* arg );

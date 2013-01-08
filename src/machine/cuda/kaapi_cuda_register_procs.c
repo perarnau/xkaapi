@@ -46,7 +46,6 @@
 #include <cuda_runtime_api.h>
 
 #include "kaapi_impl.h"
-#include "kaapi_cuda.h"
 #include "../common/kaapi_procinfo.h"
 
 /* exported */
