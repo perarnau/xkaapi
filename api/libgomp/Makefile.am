@@ -63,7 +63,7 @@ install-exec-hook: libkomp-run
 	chmod +x $(DESTDIR)$(pkglibexecdir)/libkomp-run
 	chmod +x $(DESTDIR)$(pkglibexecdir)/libkomp-run
 	$(mkdir_p) $(DESTDIR)$(bindir)
-	$(LN_S) $(pkglibexecdir)/libkomp-run $(DESTDIR)$(bindir)/libkomp-run
+	$(LN_S) -f $(pkglibexecdir)/libkomp-run $(DESTDIR)$(bindir)/libkomp-run
 
 include_HEADERS=
 
