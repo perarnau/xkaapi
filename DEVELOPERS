@@ -7,6 +7,17 @@ I. Autotools:
 This project uses the autotools (autoconf, automake, autotest, etc.)
 See INSTALL for instruction about how to compile and install X-Kaapi.
 
+If you see this king of error when configuring:
+../../../../imported-soft/libffi/configure: line 12135: syntax error near unexpected token `$xlc_opt,'
+../../../../imported-soft/libffi/configure: line 12135: `         AX_CHECK_COMPILE_FLAG($xlc_opt,'
+configure: error: ../../../../imported-soft/libffi/configure failed for imported-soft/libffi
+this means that autoreconf have been called without all macros available.
+  To correct this, you can either install the required m4 macros of libffi
+on your system (generally by installing the "autoconf-archive" package if
+it exists), or you can setup ACLOCAL_AMFLAGS:
+export ACLOCAL_AMFLAGS="-I [top_source_dir]/m4"
+and then rerun autoreconf ("autoreconf -vi -Wall -Wno-obsolete" for example)
+
 II. Autotest:
 =============
 For testing this project, the autotest framework is used. Some information
