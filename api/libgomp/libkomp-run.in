@@ -4,8 +4,6 @@ usage() {
     echo "Usage: $(basename $0) [options] program [args...]"
     echo "  Execute an OpenMP program compiled with GNU (libgomp) with KAAPI runtime"
     echo "  Options:"
-    echo "    -d|--gdb: debug the program with gdb"
-    echo "    -t|--time: time the program"
     echo "    -h|--help: display this help"
     echo "    -v|--version: display libkomp-run's version number"
 }
@@ -30,14 +28,8 @@ while test $# -gt 0; do
 	    usage
 	    exit 0 
 	    ;;
-	-d|--gdb)
-	    RUN_GDB=1
-	    ;;
-	-t|--time)
-	    RUN_TIME=time
-	    ;;
 	-v|--version)
-	    echo "libKOMP is part of XKaapi rc1.4"
+	    echo "libKOMP is part of XKaapi @PACKAGE_VERSION@"
 	    exit 0
 	    ;;
 	--)
@@ -71,11 +63,11 @@ libgomp_libdir="@pkglibdir@"
 # BEGIN REMOVE ONCE INSTALLED
 # Fixing libgomp_libdir until the script is installed
 libgomp_libdir="@abs_top_builddir@/api/libgomp/.libs"
-# END REMOVE ONCE INSTALLED
 
 # Once installed, no need to take care of libkaapic and libkaapi
 # Both (dependencies of libgomp) are found due to rpath
 # tested on Linux (ELF) and MacOSX (probably >= 10.4) 
+# END REMOVE ONCE INSTALLED
 if [ $DARWIN_SYS -eq 0 ]; 
 then
 # BEGIN REMOVE ONCE INSTALLED
@@ -87,15 +79,8 @@ then
     DYLD_LIBRARY_PATH="@abs_top_builddir@/src/.libs:$DYLD_LIBRARY_PATH" 
 # END REMOVE ONCE INSTALLED
     export DYLD_LIBRARY_PATH="$libgomp_libdir:$DYLD_LIBRARY_PATH"
-    echo "set environment DYLD_LIBRARY_PATH=$libgomp_libdir:$LD_LIBRARY_PATH" > $libgomp_libdir/gdbinit
 else
     export LD_LIBRARY_PATH="$libgomp_libdir:$LD_LIBRARY_PATH"
-    echo "set environment LD_LIBRARY_PATH=$libgomp_libdir:$LD_LIBRARY_PATH" > $libgomp_libdir/gdbinit
 fi
 
-if [ $RUN_GDB -eq 1 ]
-then
-    exec gdb -x $libgomp_libdir/gdbinit "$@"
-else
-    exec $RUN_TIME "$@"
-fi
+exec "$@"
