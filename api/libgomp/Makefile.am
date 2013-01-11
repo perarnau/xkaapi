@@ -44,12 +44,13 @@ libomp_ext_la_LDFLAGS = -version-info 1:0:0 $(libomp_ext_version_script) $(LIBGO
 libomp_ext_la_DEPENDENCIES = $(libomp_ext_version_dep)
 #libomp_ext_la_LIBADD=-lgomp
 
-bin_SCRIPTS = libkomp-run
-CLEANFILES = $(bin_SCRIPTS)
+pkglibexec_SCRIPTS = libkomp-run
+CLEANFILES = $(pkglibexec_SCRIPTS)
 
 do_subst = sed -e 's,[@]libdir[@],$(libdir),g' \
                -e 's,[@]pkglibdir[@],$(pkglibdir),g' \
-               -e 's,[@]abs_top_builddir[@],$(abs_top_builddir),g'
+               -e 's,[@]abs_top_builddir[@],$(abs_top_builddir),g' \
+               -e 's,[@]PACKAGE_VERSION[@],$(PACKAGE_VERSION),g'
 
 libkomp-run: libkomp-run.in Makefile
 	$(AM_V_GEN)$(do_subst) < $(srcdir)/libkomp-run.in > $@
@@ -57,9 +58,12 @@ libkomp-run: libkomp-run.in Makefile
 
 install-exec-hook: libkomp-run
 	sed -e '/^# BEGIN REMOVE ONCE INSTALLED$$/,/^# END REMOVE ONCE INSTALLED$$/d' \
-		> $(DESTDIR)$(bindir)/libkomp-run \
+		> $(DESTDIR)$(pkglibexecdir)/libkomp-run \
 		< libkomp-run
-	chmod +x $(DESTDIR)$(bindir)/libkomp-run
+	chmod +x $(DESTDIR)$(pkglibexecdir)/libkomp-run
+	chmod +x $(DESTDIR)$(pkglibexecdir)/libkomp-run
+	$(mkdir_p) $(DESTDIR)$(bindir)
+	$(LN_S) $(pkglibexecdir)/libkomp-run $(DESTDIR)$(bindir)/libkomp-run
 
 include_HEADERS=
 
