@@ -44,10 +44,18 @@ if test -d "$prefix" ; then
 fi
 
 git_repo=yes
-dnl try to find if we are in a git repo
-GIT_LAST_COMMIT="$(cd "$srcdir" ; git log -n 1 --format="format:%H" HEAD 2>/dev/null)"
-if test -z "$GIT_LAST_COMMIT" ; then
+# try to find if we are in a git repo
+if test ! -d "$srcdir/.git" ; then
   git_repo=no
+else
+  # is it a git repo of xkaapi itself?
+  # 8915e927d2631b621238cef2b5d27da56d033271 is the first commit in xkaapi repo
+  if test "$(cd "$srcdir" ; \
+	git log --pretty=oneline \
+		HEAD..8915e927d2631b621238cef2b5d27da56d033271 \
+		2>&1 | wc -l)" != 0 ; then
+    git_repo=no
+  fi
 fi
 AM_CONDITIONAL([GIT_REPO],[test $git_repo = yes])
 
