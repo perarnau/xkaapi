@@ -57,7 +57,7 @@
 
 #include <queue>
 #include <set>
-#include "kaapi_impl.h"
+#include "kaapi.h" // for KAAPI_PROC_TYPE_CUDA
 #include "kaapi_trace_reader.h"
 #include "kaapi_trace_poti.h"
 

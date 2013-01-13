@@ -15,9 +15,9 @@ all-bfs: $(BIN_PRGS)
 katracereader_SOURCES=katracereader.cpp kaapi_trace_reader.cpp kaapi_trace_reader.h  kaapi_trace_poti.h
 
 katracereader_CPPFLAGS=$(AM_CPPFLAGS) $(KAAPIPROGS_BUILD_CPPFLAGS)
-katracereader_CXXFLAGS=$(AM_CXXFLAGS) $(KAAPIPROGS_BUILD_CXXFLAGS)
-katracereader_LDFLAGS =$(AM_LDFLAGS) $(KAAPIPROGS_BUILD_LDFLAGS)
-katracereader_LDADD   =$(LIBS) $(KAAPIPROGS_BUILD_LIBS)
+katracereader_CXXFLAGS=$(AM_CXXFLAGS)
+katracereader_LDFLAGS =$(AM_LDFLAGS)
+katracereader_LDADD   =$(LIBS)
 
 if KAAPI_USE_EXTERNAL_POTI
 katracereader_CPPFLAGS+= $(POTI_CPPFLAGS)

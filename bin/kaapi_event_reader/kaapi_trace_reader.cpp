@@ -45,6 +45,9 @@
 #include <stdint.h>
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -54,7 +57,6 @@
 #include <queue>
 #include <string>
 
-#include "kaapi_impl.h"
 //#include <float.h>
 
 
