@@ -1,7 +1,7 @@
 #
 # SYNOPSIS
 #
-#   AMX_SILENT_RULES([action-if-exists], [action-if-not-exists])
+#   AMX_SILENT_RULES([default], [action-if-exists], [action-if-not-exists])
 #
 # DESCRIPTION
 #
@@ -48,10 +48,19 @@
 
 AC_DEFUN([AMX_SILENT_RULES], [
   m4_ifdef([AM_SILENT_RULES], [
+    AS_CASE([$1],
+      [yes|no], [dnl
+        if test "${enable_silent_rules+set}" != set; then :
+          # choose default, must be yes or no (or empty)
+          enable_silent_rules=$1;
+        fi
+      ], [""], [:], [dnl
+        AC_MSG_ERROR([Invalid default '$1' for [AMX_SILENT_RULES]])
+      ])
     AM_SILENT_RULES
-    $1
+    $2
   ], [
     AC_MSG_NOTICE([Not using silent Makefile rules as automake 1.11 is required for this])
-    $2
+    $3
   ]) 
 ])dnl AMX_SILENT_RULES

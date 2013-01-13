@@ -24,7 +24,7 @@ AC_CONFIG_TESTDIR([tests], [tests])
 
 AC_CONFIG_HEADERS([config.h])
 
-AMX_SILENT_RULES([AM_DEFAULT_VERBOSITY=0])
+AMX_SILENT_RULES([yes])
 AM_MAINTAINER_MODE([enable])
 # hack to export maintainer mode to sub configure scripts
 as_fn_append ac_configure_args " '--enable-maintainer-mode=$USE_MAINTAINER_MODE'"
@@ -364,8 +364,6 @@ AS_CASE([$enable_mode],
     AC_MSG_NOTICE([Using debug compile mode])
     # not using AC*DEFINE as we want this available for examples too
     AM_CPPFLAGS="$AM_CPPFLAGS -DKAAPI_DEBUG"
-    CFLAGS=""
-    CXXFLAGS=""
     AM_CFLAGS="$AM_CFLAGS -g"
     AM_CXXFLAGS="$AM_CXXFLAGS -g"
   ], [release], [dnl
@@ -373,8 +371,6 @@ AS_CASE([$enable_mode],
     # using CFLAGS and not AM_CFLAGS as the user must be able to overwrite
     # them on the make command line
     AM_CPPFLAGS="$AM_CPPFLAGS"
-    CFLAGS=""
-    CXXFLAGS=""
     AM_CFLAGS="$AM_CFLAGS -O3 -DNDEBUG"
     AM_CXXFLAGS="$AM_CXXFLAGS -O3 -DNDEBUG"
   ], [dnl
@@ -439,7 +435,9 @@ AC_CHECK_HEADERS([stdio.h])
 # library name
 AC_DEFINE([KAAPI_MAX_ARCH],3,[Maximum number of architectures])
 
-KAAPI_FEATURE([max-processors], [Maximum number of processors (special values "host" to optimize for current host and "generic" for runtime-choice)], [], [host],
+KAAPI_FEATURE([max-processors],
+  [Maximum number of processors (special values "host" to optimize for current host and "generic" for runtime-choice)],
+  [Maximum number of processors supported], [host],
   [], [], [],
   [ 
   AS_CASE(["$enable_max_processors"],
@@ -561,7 +559,9 @@ KAAPI_FEATURE([aggregation], [build with support for work steal requests aggrega
 dnl -----------------------------------------------------------------------
 dnl The "--enable-pthreadaffinity"
 dnl -----------------------------------------------------------------------
-KAAPI_FEATURE([pthreadaffinity], [build with Pthread affinity support (pthread_attr_setaffinity_np)], [], [check],
+KAAPI_FEATURE([pthreadaffinity],
+  [build with Pthread affinity support (pthread_attr_setaffinity_np)],
+  [using pthread_attr_setaffinity_np], [check],
   [
     AC_DEFINE([KAAPI_USE_SCHED_AFFINITY],1,[Use affinity interface])
   ], [], [],
@@ -572,7 +572,10 @@ KAAPI_FEATURE([pthreadaffinity], [build with Pthread affinity support (pthread_a
     CFLAGS="$CFLAGS $PTHREAD_CPPFLAGS $PTHREAD_CFLAGS"
     LIBS="$LIBS $PTHREAD_LDFLAGS $PTHREAD_LIBS"
     AC_CHECK_FUNCS([pthread_attr_setaffinity_np],
-      [AC_DEFINE([KAAPI_USE_SCHED_AFFINITY],1,[Use affinity interface])])
+      [AC_DEFINE([KAAPI_USE_SCHED_AFFINITY],1,[Use affinity interface])
+       FEATURE_ENABLE
+      ],
+      [FEATURE_DISABLE])
     CFLAGS="$saveCFLAGS"
     LIBS="$saveLIBS"
   ])
@@ -649,13 +652,15 @@ ACX_LIB_LINK([KAAPILIB],[CUPTI])
 dnl -----------------------------------------------------------------------
 dnl The "--with-hwloc"
 dnl -----------------------------------------------------------------------
-KAAPI_FEATURE([hwloc], [build with HWloc support for discover hardware topology], [], [check],
+KAAPI_FEATURE([hwloc],
+  [build with HWLoc support for discover hardware topology],
+  [using HWLoc], [check],
   [
     AC_DEFINE([KAAPI_USE_HWLOC],1,[Use HWLoc to discover the topology])
   ], [], [],
   [ 
     KAAPI_PKGLIB_CHECK([HWLOC], [hwloc], [HWLOC], [], [KAAPI_USE_HWLOC],
-     [build with HWloc support for discover hardware topology],
+     [build with HWLoc support for discover hardware topology],
      [hwloc], [], [hwloc.h], [hwloc_topology_init], [
        FEATURE_ENABLE
      ],

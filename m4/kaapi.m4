@@ -95,7 +95,7 @@ AC_DEFUN([_KAAPI_FEATURE_CASE_YESNO],[dnl
     FEATURE_CASE_VALUE([no,auto],  [AC_MSG_NOTICE([$2... no])])
     FEATURE_CASE_VALUE([no,no],    [AC_MSG_NOTICE([$2... no])])
     FEATURE_CASE_VALUE([no,*],     [AC_MSG_ERROR([$2... no])])
-    FEATURE_CASE_VALUE([check,*],  [AC_MSG_WARN(
+    FEATURE_CASE_VALUE([check,*],  [AC_MSG_ERROR(
 	[Internal error: macro not called for --enable-$1. Please, report this bug])
 	VAR=no
 	AC_MSG_NOTICE([$2... disabled])])
