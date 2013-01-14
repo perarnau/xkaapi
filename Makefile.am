@@ -28,6 +28,9 @@ EXTRA_DIST=m4/gasnet_cppflags.mk
 # Record the last git commit when creating a tarball
 EXTRA_DIST+=gitlastcommit
 
+# Add documentation files
+EXTRA_DIST+=README.devel README.envvars
+
 if GIT_REPO
 clean-local:
 	$(RM) $(srcdir)/gitlastcommit
