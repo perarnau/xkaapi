@@ -55,8 +55,8 @@
 double kaapi_get_elapsedtime(void)
 {
 #if defined(HAVE_CLOCK_GETTIME)
-  struct timespec ts;
-  int err = clock_gettime( CLOCK_REALTIME, &ts );
+  struct timespec tv;
+  int err = clock_gettime( CLOCK_REALTIME, &tv );
   if (err !=0) return 0;
   return (double)tv.tv_sec + 1e-9*(double)tv.tv_nsec;
 #else
