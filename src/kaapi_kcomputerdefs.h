@@ -126,12 +126,12 @@ static inline uint64_t	__cmpxchg(volatile void *ptr, uint64_t o, uint64_t n, siz
  ****************************/
 
 #define __FETCHSOP(s,expr,name) 								\
-static inline uint64_t CONCAT3(__fetch_and,name,s)(volatile CONCTYPE(s) *ptr, CONCTYPE(s) value)	\
+static inline uint64_t CONCAT3(__sparcfa,name,s)(volatile CONCTYPE(s) *ptr, CONCTYPE(s) value)	\
 {											\
-	CONCTYPE(s) c, old;									\
+	CONCTYPE(s) c, old;								\
 	c = *ptr;									\
 	for(;;) {									\
-		old = cmpxchg(ptr,c,expr);					\
+		old = cmpxchg(ptr,c,expr);						\
 		if(old == c)								\
 			break;								\
 		c = old;								\
@@ -143,7 +143,7 @@ static inline uint64_t CONCAT3(__fetch_and,name,s)(volatile CONCTYPE(s) *ptr, CO
 	__FETCHSOP(8,op,name)	\
 	__FETCHSOP(16,op,name)	\
 	__FETCHSOP(32,op,name)	\
-	__FETCHSOP(64,op,name)	\
+	__FETCHSOP(64,op,name)
 
 __FETCHOP(c + value,add)
 __FETCHOP(c - value,sub)
@@ -153,18 +153,18 @@ __FETCHOP(c ^ value,xor)
 __FETCHOP(~c & value,nand)
 
 #define __FETCHSW(name) 								\
-static inline uint64_t	CONCAT2(__fetch_and,name)(volatile void *ptr, uint64_t v, size_t sz)	\
+static inline uint64_t	CONCAT2(__sparcfa,name)(volatile void *ptr, uint64_t v, size_t sz)	\
 {											\
 	switch (sz)									\
 	{	 									\
 		case 1:									\
-			return CONCAT3(__fetch_and,name,8)((volatile CONCTYPE(8) *)ptr,v); 			\
+			return CONCAT3(__sparcfa,name,8)((volatile CONCTYPE(8) *)ptr,v);	\
 		case 2:									\
-			return CONCAT3(__fetch_and,name,16)((volatile CONCTYPE(16) *)ptr,v); 			\
+			return CONCAT3(__sparcfa,name,16)((volatile CONCTYPE(16) *)ptr,v); 	\
 		case 4:									\
-			return CONCAT3(__fetch_and,name,32)((volatile CONCTYPE(32) *)ptr,v); 			\
+			return CONCAT3(__sparcfa,name,32)((volatile CONCTYPE(32) *)ptr,v); 	\
 		case 8:									\
-			return CONCAT3(__fetch_and,name,64)((volatile CONCTYPE(64) *)ptr,v); 			\
+			return CONCAT3(__sparcfa,name,64)((volatile CONCTYPE(64) *)ptr,v);	\
 	}										\
 	return v;									\
 }
@@ -179,7 +179,7 @@ __FETCHSW(nand)
 #define fetchname(ptr,v,name) 						\
 	({								\
 		__typeof__(*(ptr)) _v_ = (v);				\
-		(__typeof__(*(ptr))) CONCAT2(__fetch_and,name)((ptr), (uint64_t)_v_,	\
+		(__typeof__(*(ptr))) CONCAT2(__sparcfa,name)((ptr), (uint64_t)_v_,	\
 		sizeof(*(ptr))); 			\
 	})
 
@@ -195,7 +195,7 @@ __FETCHSW(nand)
  ****************************/
 
 #define __OPSFETCH(s,expr,name) 								\
-static inline uint64_t CONCAT3(name,and_fetch,s)(volatile CONCTYPE(s) *ptr, CONCTYPE(s) value)	\
+static inline uint64_t CONCAT3(__sparcaf,name,s)(volatile CONCTYPE(s) *ptr, CONCTYPE(s) value)	\
 {											\
 	CONCTYPE(s) c, old, v;								\
 	c = *ptr;									\
@@ -213,7 +213,7 @@ static inline uint64_t CONCAT3(name,and_fetch,s)(volatile CONCTYPE(s) *ptr, CONC
 	__OPSFETCH(8,op,name)	\
 	__OPSFETCH(16,op,name)	\
 	__OPSFETCH(32,op,name)	\
-	__OPSFETCH(64,op,name)	\
+	__OPSFETCH(64,op,name)
 
 __OPFETCH(c + value,add)
 __OPFETCH(c - value,sub)
@@ -223,18 +223,18 @@ __OPFETCH(c ^ value,xor)
 __OPFETCH(~c & value,nand)
 
 #define __OPSW(name) 								\
-static inline uint64_t	CONCAT2(name,and_fetch)(volatile void *ptr, uint64_t v, size_t sz)	\
+static inline uint64_t	CONCAT2(__sparcaf,name)(volatile void *ptr, uint64_t v, size_t sz)	\
 {											\
 	switch (sz)									\
 	{	 									\
 		case 1:									\
-			return CONCAT3(name,and_fetch,8)((volatile CONCTYPE(8) *)ptr,v); 			\
+			return CONCAT3(__sparcaf,name,8)((volatile CONCTYPE(8) *)ptr,v); 		\
 		case 2:									\
-			return CONCAT3(name,and_fetch,16)((volatile CONCTYPE(16) *)ptr,v); 			\
+			return CONCAT3(__sparcaf,name,16)((volatile CONCTYPE(16) *)ptr,v); 	\
 		case 4:									\
-			return CONCAT3(name,and_fetch,32)((volatile CONCTYPE(32) *)ptr,v); 			\
+			return CONCAT3(__sparcaf,name,32)((volatile CONCTYPE(32) *)ptr,v); 	\
 		case 8:									\
-			return CONCAT3(name,and_fetch,64)((volatile CONCTYPE(64) *)ptr,v); 			\
+			return CONCAT3(__sparcaf,name,64)((volatile CONCTYPE(64) *)ptr,v); 	\
 	}										\
 	return v;									\
 }
@@ -249,7 +249,7 @@ __OPSW(nand)
 #define opname(ptr,v,name) 						\
 	({								\
 		__typeof__(*(ptr)) _v_ = (v);				\
-		(__typeof__(*(ptr))) CONCAT2(name,and_fetch)((ptr), (uint64_t)_v_,	\
+		(__typeof__(*(ptr))) CONCAT2(__sparcaf,name)((ptr), (uint64_t)_v_,	\
 		sizeof(*(ptr))); 			\
 	})
 
