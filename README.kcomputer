@@ -1,0 +1,64 @@
+Specific comments about the K Computer port:
+--------------------------------------------
+
+Only the C API has been tested for now.
+
+The following configure command is known to work:
+
+	./configure --prefix=`pwd`/build --build=x86_64-redhat-linux-gnu
+	--host=sparc64-unknown-linux-gnu CC=fccpx CXX=FCCpx CFLAGS="-Xg
+	-O2 -noansi" CXXFLAGS="-Xg -O2"
+	--disable-futex  --enable-api-kaapic --disable-api-kaapixx
+	--disable-api-kastl --disable-api-quark --disable-libgomp
+	--disable-shared --enable-static
+
+The only caveat is the katracereader not compiling in debug mode
+(missing library include -lkaapic -lkaapi)
+
+Source code modifications:
+--------------------------
+
+The Fujitsu compiler provided on the K has a "gcc compatibility" mode,
+providing partial support for C99 and gcc builtins.
+Unfortunately, this does not include the __sync* family of functions.
+
+The compiler defines 3 macros required to identify the platform/build
+env:
+	- __sparc_v9__ for the architecture
+	- __fcc_version for the Fujitsu C compiler
+	- __FCC_version for the Fujitsu C++ compiler
+
+In gcc compatibility mode the following macro is also defined:
+
+	- __GNUC__
+	
+The build env always defines:
+
+	- __linux__
+
+Source code modifications included is this branch are:
+
+	- __sync* family implementation.
+	- defined guards for SPARC v9 architecture
+	- a few syntactic changes to avoid the Fujitsu C parser limits.
+
+Additional comments:
+--------------------
+
+The K frontend only provides the 2.59 version of the autotools. While
+this not a huge problem by itself, it does make things a bit complicated
+(autogen.sh not working, autotest not working).
+
+Futex are disabled, making the locking facility of XKaapi a bit slower.
+
+A few alignment constraints are not documented in the original source,
+so the port assumes they work without any change:
+
+	- kaapi_task_t is aligned on 64bits without any explanations.
+	- __BIGGEST_ALIGNMENT__ is (__alignof__(void*)). It is not
+	  obvious if the SPARC quadwords are handled correctly by that.
+
+After looking a bit more at the code, it seems that xkaapi could benefit
+from a better organization of architecture and system dependencies. Still, it
+wasn't so bad...
+
