@@ -209,8 +209,11 @@ static inline void* _kaapi_align_ptr_for_alloca(void* ptr, uintptr_t align)
 
 /** Define the cache line size. 
 */
+#if defined(__sparc_v9__)
+#define KAAPI_CACHE_LINE 128
+#else
 #define KAAPI_CACHE_LINE 64
-
+#endif
 
 /** Processor type
 */
