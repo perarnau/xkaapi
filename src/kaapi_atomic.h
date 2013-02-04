@@ -137,7 +137,7 @@ static inline int __kaapi_isaligned(const volatile void* a, size_t byte)
 
 /* kcomputer additional definitions */
 #if (defined(__sparc_v9__) && (defined(__fcc_version) || defined(__FCC_VERSION)))
-#include "arch/kaapi_kcomputerdefs.h"
+#include "kaapi_kcomputerdefs.h"
 #endif
 
 #  define KAAPI_ATOMIC_CAS(a, o, n) \

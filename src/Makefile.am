@@ -198,7 +198,7 @@ libkaapi_la_SOURCES=\
   static/kaapi_threadgroup_nothgrp.c\
   static/kaapi_stsched_taskrecv.c\
   static/kaapi_stsched_taskbcast.c\
-  arch/kaapi_kcomputerdefs.h
+  kaapi_kcomputerdefs.h
 
 if KAAPI_TARGET_STATICSCHED
 #Partitionning
@@ -293,7 +293,7 @@ include_HEADERS=\
   kaapi_atomic.h\
   kaapi_cpuset.h\
   kaapi_error.h\
-  arch/kaapi_kcomputerdefs.h
+  kaapi_kcomputerdefs.h
 
 if KAAPI_TARGET_CUDA
 include_HEADERS+=\

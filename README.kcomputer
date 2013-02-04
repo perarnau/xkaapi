@@ -15,6 +15,11 @@ The following configure command is known to work:
 The only caveat is the katracereader not compiling in debug mode
 (missing library include -lkaapic -lkaapi)
 
+WARNING: You NEED to tell autoconf that malloc is glibc compatible
+before calling configure:
+
+export ac_cv_func_malloc_0_nonnull=yes
+
 Source code modifications:
 --------------------------
 
