@@ -71,12 +71,17 @@ extern "C" {
 
 extern void _kaapic_register_task_format(void);
 
+typedef void (*kaapic_body_arg_f_c_t)(int32_t, int32_t, int32_t, ...);
+typedef void (*kaapic_body_arg_f_c_ull_t)(unsigned long long, unsigned long long, int32_t, ...);
+typedef void (*kaapic_body_arg_f_f_t)(int32_t*, int32_t*, int32_t*, ...);
+
+
 /* closure for the body of the for each */
 typedef struct kaapic_body_arg_t {
   union {
-    void (*f_c)(int32_t, int32_t, int32_t, ...);
-    void (*f_c_ull)(unsigned long long, unsigned long long, int32_t, ...);
-    void (*f_f)(int32_t*, int32_t*, int32_t*, ...);
+    kaapic_body_arg_f_c_t f_c;
+    kaapic_body_arg_f_c_ull_t f_c_ull;
+    kaapic_body_arg_f_f_t f_f;
   } u;
   unsigned int        nargs;
   void*               args[];

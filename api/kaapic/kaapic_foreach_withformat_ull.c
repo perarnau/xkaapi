@@ -65,7 +65,7 @@ void kaapic_foreach_with_format_ull(
   /* format of each effective parameter is a list of tuple:
        mode, @, count, type
   */
-  body_arg->u.f_c_ull = va_arg(va_args, void (*)(unsigned long long, unsigned long long, int32_t, ...));
+  body_arg->u.f_c_ull = va_arg(va_args, kaapic_body_arg_f_c_ull_t);
   body_arg->nargs = nargs;
   for (k = 0; k < nargs; ++k)
   {

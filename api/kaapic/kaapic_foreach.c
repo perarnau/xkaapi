@@ -65,7 +65,7 @@ void kaapic_foreach(
   /* format of each effective parameter is a list of tuple:
        @
   */
-  body_arg->u.f_c = va_arg(va_args, void (*)(int32_t, int32_t, int32_t, ...));
+  body_arg->u.f_c = va_arg(va_args, kaapic_body_arg_f_c_t);
   body_arg->nargs = nargs;
   for (k = 0; k < nargs; ++k)
     body_arg->args[k] = va_arg(va_args, void*);
